@@ -22,7 +22,6 @@ from themedstuff import themed_names
 
 from damagetypes import all_damage_types, Generic
 
-from typing import Tuple
 
 from colorama import Fore, Style
 
@@ -64,7 +63,7 @@ def kill_person(dead, killer):
 
     debug_log(os.path.join("logs", f"{dead.PlayerName.lower()}.txt"), f"{killer.PlayerName} killed {dead.PlayerName}, Below are stats for both...")
 
-    debug_log(os.path.join("logs", f"{dead.PlayerName.lower()}.txt"), f"Dead Person")
+    debug_log(os.path.join("logs", f"{dead.PlayerName.lower()}.txt"), "Dead Person")
 
     debug_log(os.path.join("logs", f"{dead.PlayerName.lower()}.txt"), f"Name: {dead.PlayerName}")
     debug_log(os.path.join("logs", f"{dead.PlayerName.lower()}.txt"), f"Level: {dead.level}")
@@ -78,7 +77,7 @@ def kill_person(dead, killer):
     debug_log(os.path.join("logs", f"{dead.PlayerName.lower()}.txt"), f"Crit Damage Modifier: {dead.CritDamageMod}")
     debug_log(os.path.join("logs", f"{dead.PlayerName.lower()}.txt"), f"Dodge Odds: {dead.DodgeOdds}")
     
-    debug_log(os.path.join("logs", f"{dead.PlayerName.lower()}.txt"), f"Killer")
+    debug_log(os.path.join("logs", f"{dead.PlayerName.lower()}.txt"), "Killer")
 
     debug_log(os.path.join("logs", f"{dead.PlayerName.lower()}.txt"), f"Name: {killer.PlayerName}")
     debug_log(os.path.join("logs", f"{dead.PlayerName.lower()}.txt"), f"Level: {killer.level}")
@@ -99,7 +98,7 @@ def load_config():
             config = json.load(f)
         return config
     except FileNotFoundError:
-        print(f"Config file not found. Using default settings.")
+        print("Config file not found. Using default settings.")
         return {"preferred_allies": []}  # Default empty list
     except json.JSONDecodeError:
         print(f"Error decoding JSON from {CONFIG_FILE}. Using default settings.")
@@ -136,7 +135,7 @@ def main(level):
                     preferred_themed_names.pop(0)
                     break
 
-    spinner.start(text=f"Loading Players, please wait...")
+    spinner.start(text="Loading Players, please wait...")
 
     for item in themed_names:
         if "mimic".lower() in item.lower():
@@ -209,12 +208,12 @@ def main(level):
 
     del threads
     
-    spinner.succeed(text=f"Players: Fully Loaded")
+    spinner.succeed(text="Players: Fully Loaded")
 
     pygame.init()
 
     screen = Screen(SCREEN_WIDTH, SCREEN_HEIGHT).screen
-    icon = pygame.image.load(resource_path(os.path.join("photos", f"midoriai-logo.png")))
+    icon = pygame.image.load(resource_path(os.path.join("photos", "midoriai-logo.png")))
     pygame.display.set_icon(icon)
     
     pygame.display.set_caption("Midori AI Auto Fighter", "Welcome to the fighting zone!")
@@ -229,7 +228,7 @@ def main(level):
     background_image.set_alpha(128)
 
     pygame.mixer.music.set_volume(0.05 / 2)
-    music = pygame.mixer.music.load(set_bg_music())
+    pygame.mixer.music.load(set_bg_music())
     pygame.mixer.music.play(-1)  # -1 means loop the music indefinitely
 
     screen.fill((0, 0, 0))
@@ -457,7 +456,7 @@ def main(level):
 
                     if foe.tick(bleed_mod):
                         for foe_action in foe.ActionsPerTurn:
-                            dt = clock.tick(fps_cap) / 1000
+                            clock.tick(fps_cap)
                         
                             if bleed_mod > 1.5:
                                 foe.RushStat = 0
@@ -496,7 +495,7 @@ def main(level):
 
                     if person.tick(bleed_mod):
                         for turn in person.ActionsPerTurn:
-                            dt = clock.tick(fps_cap) / 1000
+                            clock.tick(fps_cap)
                         
                             if bleed_mod > 1.5:
                                 person.gain_damage_over_time(enrage_dot, 1.1 * bleed_mod)
@@ -543,7 +542,7 @@ def main(level):
                     if person.HP > person.MHP:
                         person.HP = person.MHP
             else:
-                spinner.fail(text=f"You lost!")
+                spinner.fail(text="You lost!")
                 log(red, "you lose... restart game to load a new buffed save file")
                 pygame.quit()
                 exit()

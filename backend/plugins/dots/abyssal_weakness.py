@@ -1,5 +1,4 @@
 from autofighter.effects import DamageOverTime
-from autofighter.effects import DamageOverTime
 
 
 class AbyssalWeakness(DamageOverTime):

@@ -1,5 +1,4 @@
 import os
-import sys
 import math
 import uuid
 import random
@@ -12,10 +11,8 @@ from items import ItemType
 
 from damagetypes import DamageType
 from damagetypes import get_damage_type
-from damagetypes import Light, Dark, Wind, Lightning, Fire, Ice, Generic
 
 from items import on_stat_gain
-from items import on_passive_use
 from items import on_damage_dealt
 from items import on_damage_taken
 
@@ -26,7 +23,6 @@ from foe_passive_builder import player_stat_picker
 from damage_over_time import dot as damageovertimetype
 from healing_over_time import hot as healingovertimetype
 
-from load_photos import resource_path
 from load_photos import set_themed_photo
 from plugins.plugin_loader import PluginLoader
 

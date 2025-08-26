@@ -7,7 +7,7 @@ from load_photos import cleanup_temp_dirs
 
 try:
     os.remove("auto.pick")
-except Exception as e:
+except Exception:
     pass
 
 if __name__ == "__main__":

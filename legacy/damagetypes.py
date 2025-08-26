@@ -2,7 +2,6 @@
 import random
 
 from colorama import Fore
-from colorama import Style
 
 class DamageType():
     def __init__(self, name :str, weakness :str, color):

@@ -7,7 +7,7 @@ import platform
 
 from halo import Halo
 
-from typing import Optional, List
+from typing import List
 
 spinner = Halo(text='Loading', spinner='dots', color='green')
 

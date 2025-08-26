@@ -4,7 +4,6 @@ This module governs player-only stat logic during combat. Enemy passives are
 handled separately in :mod:`foe_passive_builder` when foes load at runtime.
 """
 
-import math
 import random
 
 from player import Player
@@ -309,7 +308,7 @@ def carly_mit_adder(target: Player, mited_damage_dealt: float):
             continue
         try:
             mited_damage_dealt = item.on_damage_taken(mited_damage_dealt)
-        except Exception as error:
+        except Exception:
             continue
     
     return mited_damage_dealt
@@ -322,7 +321,7 @@ def apply_damage_item_effects(source: Player, target: Player, mited_damage_dealt
             try:
                 mited_damage_dealt = item.on_damage_dealt(mited_damage_dealt)
                 source.DamageDealt += int(mited_damage_dealt)
-            except Exception as error:
+            except Exception:
                 continue
 
         for item in target.Items:
@@ -331,7 +330,7 @@ def apply_damage_item_effects(source: Player, target: Player, mited_damage_dealt
             try:
                 mited_damage_dealt = item.on_damage_taken(mited_damage_dealt)
                 target.DamageTaken += int(mited_damage_dealt)
-            except Exception as error:
+            except Exception:
                 continue
 
         return mited_damage_dealt

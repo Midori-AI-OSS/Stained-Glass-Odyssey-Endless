@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 import copy
-import time
 
 from quart import Blueprint
 from quart import jsonify
@@ -34,7 +33,6 @@ bp = Blueprint("rooms", __name__)
 
 @bp.post("/rooms/<run_id>/battle")
 async def battle_room(run_id: str) -> tuple[str, int, dict[str, str]]:
-    start = time.perf_counter()
     data = await request.get_json(silent=True) or {}
     action = data.get("action", "")
     if action == "snapshot":
