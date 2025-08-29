@@ -17,6 +17,8 @@ class Ice(DamageTypeBase):
 
     async def ultimate(self, user: Stats, foes: list[Stats]) -> None:
         """Strike all foes six times, ramping damage by 30% per target."""
+        if not user.use_ultimate():
+            return
         base = user.atk
         for _ in range(6):
             bonus = 1.0

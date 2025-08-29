@@ -14,6 +14,7 @@ class Dark(DamageTypeBase):
     id: str = "Dark"
     weakness: str = "Light"
     color: tuple[int, int, int] = (145, 0, 145)
+    ultimate_via_bus: bool = True
 
     _cleanup_registered: bool = False
 

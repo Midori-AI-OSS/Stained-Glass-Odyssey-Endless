@@ -31,6 +31,8 @@ class Lightning(DamageTypeBase):
                 )
 
     def ultimate(self, attacker, target) -> None:
+        if not getattr(attacker, "use_ultimate", lambda: False)():
+            return
         mgr = getattr(target, "effect_manager", None)
         if mgr is not None:
             types = ["Fire", "Ice", "Wind", "Lightning", "Light", "Dark"]
