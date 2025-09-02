@@ -199,7 +199,7 @@ def create_stat_buff(
     Keyword arguments ending with ``_mult`` are treated as multipliers for the
     corresponding stat; others are additive deltas. The new modifier is applied
     immediately and returned for tracking in an :class:`EffectManager`.
-    
+
     Args:
         bypass_diminishing_returns: If True, apply full effect without diminishing returns scaling
     """

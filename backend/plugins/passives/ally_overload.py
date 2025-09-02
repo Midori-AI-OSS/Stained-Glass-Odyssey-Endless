@@ -15,7 +15,7 @@ class AllyOverload:
     id = "ally_overload"
     name = "Overload"
     trigger = "action_taken"  # Triggers when Ally takes any action
-    max_stacks = 120  # Soft cap - show charge level with diminished returns past 120
+    max_stacks = 999  # No cap - unlimited charge building
 
     # Class-level tracking of overload charge and stance for each entity
     _overload_charge: ClassVar[dict[int, int]] = {}
@@ -34,16 +34,8 @@ class AllyOverload:
         if not self._overload_active[entity_id]:
             target.actions_per_turn = 2
 
-        # Build 10 Overload charge per pair of strikes
-        base_charge_gain = 10
-
-        # Soft cap: past 120, gain charge at reduced rate (50% effectiveness)
-        current_charge = self._overload_charge[entity_id]
-        if current_charge > 120:
-            charge_gain = base_charge_gain * 0.5  # Diminished returns
-        else:
-            charge_gain = base_charge_gain
-
+        # Build 10 Overload charge per pair of strikes (no diminishing returns as per planning doc)
+        charge_gain = 10
         self._overload_charge[entity_id] += charge_gain
 
         # Check if Overload can be triggered (100+ charge)
@@ -82,24 +74,23 @@ class AllyOverload:
         )
         target.add_effect(damage_vulnerability)
 
-        # Block HoT ticks (would need integration with effect system)
+        # Block HoT ticks - need to specifically block healing effects, not all effects
         hot_block = StatEffect(
             name=f"{self.id}_hot_block",
-            stat_modifiers={"effect_resistance": 1.0},  # 100% resistance to beneficial effects
+            stat_modifiers={"hot_resistance": 1.0},  # 100% resistance to HoT effects specifically
             duration=-1,  # Active while Overload is on
             source=self.id,
         )
         target.add_effect(hot_block)
 
-        # Cap recoverable HP at 20% of normal
-        max_recoverable_hp = int(target.max_hp * 0.2)
-        hp_cap = StatEffect(
-            name=f"{self.id}_hp_cap",
-            stat_modifiers={"max_hp": max_recoverable_hp - target.max_hp},  # Reduce max recoverable
+        # Cap recoverable HP at 20% of normal - this should limit healing amount, not reduce max HP
+        healing_cap = StatEffect(
+            name=f"{self.id}_healing_cap",
+            stat_modifiers={"healing_effectiveness": 0.2},  # Only 20% healing effectiveness
             duration=-1,  # Active while Overload is on
             source=self.id,
         )
-        target.add_effect(hp_cap)
+        target.add_effect(healing_cap)
 
     async def _deactivate_overload(self, target: "Stats") -> None:
         """Deactivate Overload stance."""
@@ -111,7 +102,7 @@ class AllyOverload:
             f"{self.id}_damage_bonus",
             f"{self.id}_damage_vulnerability",
             f"{self.id}_hot_block",
-            f"{self.id}_hp_cap"
+            f"{self.id}_healing_cap"
         ]
 
         for effect_name in effects_to_remove:

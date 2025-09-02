@@ -57,7 +57,7 @@ class CardBase:
             for attr, pct in self.effects.items():
                 changes = {f"{attr}_mult": 1 + pct}
                 mod = create_stat_buff(
-                    member, name=f"{self.id}_{attr}", turns=9999, 
+                    member, name=f"{self.id}_{attr}", turns=9999,
                     bypass_diminishing_returns=True, **changes
                 )
                 mgr.add_modifier(mod)

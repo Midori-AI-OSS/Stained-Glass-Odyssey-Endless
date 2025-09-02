@@ -23,8 +23,17 @@ class BubblesBubbleBurst:
     async def apply(self, target: "Stats") -> None:
         """Apply Bubbles' random element switching mechanics."""
         # Switch damage type randomly each turn
-        # This would need damage type system integration
-        pass
+        import random
+
+        # Available damage types (simplified - in full implementation would use actual damage type system)
+        damage_types = ["fire", "ice", "lightning", "earth", "wind", "dark", "light"]
+        new_type = random.choice(damage_types)
+
+        # Store current damage type for area damage calculation
+        setattr(target, "_bubbles_current_element", new_type)
+
+        # In a full implementation, this would actually change target.damage_type
+        # For now, we'll track it for the burst effect
 
     async def on_hit_enemy(self, bubbles: "Stats", enemy: "Stats") -> None:
         """Apply bubble stack when hitting an enemy."""
@@ -53,15 +62,15 @@ class BubblesBubbleBurst:
         if bubbles_id in self._bubble_stacks and trigger_enemy_id in self._bubble_stacks[bubbles_id]:
             self._bubble_stacks[bubbles_id][trigger_enemy_id] = 0
 
-        # Grant Bubbles permanent attack buff with soft cap logic
+        # Grant Bubbles permanent attack buff with soft cap logic (reasonable addition)
         current_stacks = len([e for e in bubbles._active_effects if 'burst_bonus' in e.name])
 
-        # Determine buff strength based on current stacks (soft cap at 20)
+        # Determine buff strength - soft cap at 20 stacks (diminished returns after)
         if current_stacks >= 20:
             # Past soft cap: reduced effectiveness (5% instead of 10%)
             attack_buff_multiplier = 0.05
         else:
-            # Normal effectiveness
+            # Normal effectiveness per planning doc
             attack_buff_multiplier = 0.1
 
         attack_buff = StatEffect(
@@ -72,8 +81,15 @@ class BubblesBubbleBurst:
         )
         bubbles.add_effect(attack_buff)
 
-        # Area damage and DoT would need battle system integration
-        # This would deal damage to all combatants and apply DoT to enemies
+        # Area damage to all combatants (would need battle system integration)
+        # This should deal area damage of the last element used to all combatants
+        # current_element = getattr(bubbles, "_bubbles_current_element", "generic")
+
+        # Apply DoT of that element to enemies (would need enemy targeting)
+        # Planning doc: "leaving a two-turn DoT of that element on enemies"
+
+        # Reset damage type for next turn (planning doc requirement)
+        setattr(bubbles, "_bubbles_current_element", None)
 
     @classmethod
     def get_bubble_stacks(cls, bubbles: "Stats", enemy: "Stats") -> int:
