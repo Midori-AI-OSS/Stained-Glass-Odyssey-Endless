@@ -39,6 +39,7 @@ class CriticalOverdrive(CardBase):
                     target,
                     name=f"{self.id}_{pid}",
                     turns=9999,
+                    bypass_diminishing_returns=True,
                     crit_rate=extra_rate,
                     crit_damage=excess * 2,
                 )

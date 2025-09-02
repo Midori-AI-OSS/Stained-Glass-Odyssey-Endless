@@ -37,6 +37,7 @@ class ElementalSpark(CardBase):
                 member,
                 name=f"{self.id}_potency",
                 turns=9999,
+                bypass_diminishing_returns=True,
                 effect_hit_rate_mult=1.05,
             )
             mgr.add_modifier(mod)

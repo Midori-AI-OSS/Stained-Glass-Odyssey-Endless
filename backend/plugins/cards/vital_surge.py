@@ -32,6 +32,7 @@ class VitalSurge(CardBase):
                     member,
                     name=f"{self.id}_atk",
                     turns=9999,
+                    bypass_diminishing_returns=True,
                     atk_mult=1.55,
                 )
                 active[pid] = mod

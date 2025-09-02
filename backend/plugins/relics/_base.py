@@ -53,7 +53,7 @@ class RelicBase:
             changes = {f"{attr}_mult": (1 + pct) ** stacks for attr, pct in self.effects.items()}
             if not changes:
                 continue
-            mod = create_stat_buff(member, name=self.id, turns=9999, **changes)
+            mod = create_stat_buff(member, name=self.id, turns=9999, bypass_diminishing_returns=True, **changes)
             mgr.add_modifier(mod)
             mods.append(mod)
 

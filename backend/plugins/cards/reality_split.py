@@ -47,6 +47,7 @@ class RealitySplit(CardBase):
                 target,
                 name=f"{self.id}_crit",
                 turns=1,
+                bypass_diminishing_returns=True,
                 crit_rate=0.5,
             )
             mgr.add_modifier(mod)

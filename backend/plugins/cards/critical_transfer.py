@@ -44,6 +44,7 @@ class CriticalTransfer(CardBase):
                 user,
                 name=f"{self.id}_atk",
                 turns=1,
+                bypass_diminishing_returns=True,
                 atk_mult=1 + 0.04 * total,
             )
             mgr.add_modifier(mod)

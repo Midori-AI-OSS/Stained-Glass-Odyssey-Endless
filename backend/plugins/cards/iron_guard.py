@@ -41,6 +41,7 @@ class IronGuard(CardBase):
                     member,
                     name=f"{self.id}_{next(seq)}",
                     turns=1,
+                    bypass_diminishing_returns=True,
                     defense_mult=1.10,
                 )
                 mgr.add_modifier(mod)

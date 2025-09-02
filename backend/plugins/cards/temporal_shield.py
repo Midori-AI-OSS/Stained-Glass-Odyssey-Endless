@@ -34,6 +34,7 @@ class TemporalShield(CardBase):
                         member,
                         name=f"{self.id}_mitigation",
                         turns=1,
+                        bypass_diminishing_returns=True,
                         mitigation_mult=100.0,
                     )
                     mgr.add_modifier(mod)
