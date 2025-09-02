@@ -12,22 +12,23 @@ from autofighter.stats import Stats
 
 # Diminishing returns configuration for buff scaling
 # Each stat has: (threshold, scaling_factor, base_offset)
+# FIXED: Reduced scaling factors to allow meaningful card bonuses
 DIMINISHING_RETURNS_CONFIG = {
-    # HP: 4x reduction per 500 HP
-    'max_hp': {'threshold': 500, 'scaling_factor': 4.0, 'base_offset': 0},
-    'hp': {'threshold': 500, 'scaling_factor': 4.0, 'base_offset': 0},
+    # HP: 2x reduction per 1000 HP (was 4x per 500)
+    'max_hp': {'threshold': 1000, 'scaling_factor': 2.0, 'base_offset': 0},
+    'hp': {'threshold': 1000, 'scaling_factor': 2.0, 'base_offset': 0},
 
-    # ATK/DEF: 100x reduction per 100 points
-    'atk': {'threshold': 100, 'scaling_factor': 100.0, 'base_offset': 0},
-    'defense': {'threshold': 100, 'scaling_factor': 100.0, 'base_offset': 0},
+    # ATK/DEF: 2x reduction per 200 points (was 100x per 100)
+    'atk': {'threshold': 200, 'scaling_factor': 2.0, 'base_offset': 0},
+    'defense': {'threshold': 200, 'scaling_factor': 2.0, 'base_offset': 0},
 
-    # Crit rate, mitigation, vitality: 100x reduction per 1% over 2%
-    'crit_rate': {'threshold': 0.01, 'scaling_factor': 100.0, 'base_offset': 0.02},
-    'mitigation': {'threshold': 0.01, 'scaling_factor': 100.0, 'base_offset': 0.02},
-    'vitality': {'threshold': 0.01, 'scaling_factor': 100.0, 'base_offset': 0.02},
+    # Crit rate, mitigation, vitality: 2x reduction per 5% over 2%
+    'crit_rate': {'threshold': 0.05, 'scaling_factor': 2.0, 'base_offset': 0.02},
+    'mitigation': {'threshold': 0.05, 'scaling_factor': 2.0, 'base_offset': 0.02},
+    'vitality': {'threshold': 0.05, 'scaling_factor': 2.0, 'base_offset': 0.02},
 
-    # Crit damage: 1000x reduction per 500% (5.0 multiplier)
-    'crit_damage': {'threshold': 5.0, 'scaling_factor': 1000.0, 'base_offset': 2.0},
+    # Crit damage: 2x reduction per 10x multiplier (was 1000x per 5x)
+    'crit_damage': {'threshold': 10.0, 'scaling_factor': 2.0, 'base_offset': 2.0},
 }
 
 
@@ -109,6 +110,7 @@ class StatModifier:
     id: str
     deltas: dict[str, float] | None = None
     multipliers: dict[str, float] | None = None
+    bypass_diminishing_returns: bool = False
     _effect_applied: bool = field(init=False, default=False)
 
     def apply(self) -> None:
@@ -119,16 +121,19 @@ class StatModifier:
         # Convert deltas and multipliers to a single stat_modifiers dict
         stat_modifiers = {}
 
-        # Handle additive deltas with diminishing returns scaling
+        # Handle additive deltas with optional diminishing returns scaling
         for name, value in (self.deltas or {}).items():
-            current_value = get_current_stat_value(self.stats, name)
-            scaling_factor = calculate_diminishing_returns(name, current_value)
+            if self.bypass_diminishing_returns:
+                # Apply full value without scaling
+                scaled_value = value
+            else:
+                current_value = get_current_stat_value(self.stats, name)
+                scaling_factor = calculate_diminishing_returns(name, current_value)
+                scaled_value = value * scaling_factor
 
-            # Apply diminishing returns to the buff value
-            scaled_value = value * scaling_factor
             stat_modifiers[name] = stat_modifiers.get(name, 0) + scaled_value
 
-        # Handle multiplicative changes by converting to additive with diminishing returns
+        # Handle multiplicative changes with optional diminishing returns
         for name, multiplier in (self.multipliers or {}).items():
             if hasattr(self.stats, name):
                 # Get base stat value for calculation
@@ -140,10 +145,14 @@ class StatModifier:
                 # Convert multiplier to additive value
                 additive_change = base_value * (multiplier - 1.0)
 
-                # Apply diminishing returns scaling to the additive change
-                current_value = get_current_stat_value(self.stats, name)
-                scaling_factor = calculate_diminishing_returns(name, current_value)
-                scaled_change = additive_change * scaling_factor
+                if self.bypass_diminishing_returns:
+                    # Apply full value without scaling
+                    scaled_change = additive_change
+                else:
+                    # Apply diminishing returns scaling to the additive change
+                    current_value = get_current_stat_value(self.stats, name)
+                    scaling_factor = calculate_diminishing_returns(name, current_value)
+                    scaled_change = additive_change * scaling_factor
 
                 stat_modifiers[name] = stat_modifiers.get(name, 0) + scaled_change
 
@@ -182,6 +191,7 @@ def create_stat_buff(
     name: str = "buff",
     turns: int = 1,
     id: str | None = None,
+    bypass_diminishing_returns: bool = False,
     **modifiers: float,
 ) -> StatModifier:
     """Create and apply a :class:`StatModifier` to ``stats``.
@@ -189,6 +199,9 @@ def create_stat_buff(
     Keyword arguments ending with ``_mult`` are treated as multipliers for the
     corresponding stat; others are additive deltas. The new modifier is applied
     immediately and returned for tracking in an :class:`EffectManager`.
+    
+    Args:
+        bypass_diminishing_returns: If True, apply full effect without diminishing returns scaling
     """
 
     deltas: dict[str, float] = {}
@@ -205,6 +218,7 @@ def create_stat_buff(
         id=id or name,
         deltas=deltas or None,
         multipliers=mults or None,
+        bypass_diminishing_returns=bypass_diminishing_returns,
     )
     effect.apply()
     return effect
