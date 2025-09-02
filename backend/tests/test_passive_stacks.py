@@ -43,7 +43,7 @@ async def test_ally_overload_stack_display():
     overload_passive = next((p for p in description if p["id"] == "ally_overload"), None)
     assert overload_passive is not None
     assert overload_passive["stacks"] == 0
-    assert overload_passive["max_stacks"] == 120
+    assert overload_passive["max_stacks"] == 999
 
     # After taking actions, should build charge
     # Note: Each action adds 10 charge but also decays 5 charge per action if inactive
@@ -166,27 +166,30 @@ async def test_soft_caps_luna_beyond_200():
 
 
 @pytest.mark.asyncio
-async def test_soft_caps_ally_beyond_120():
-    """Test that Ally Overload can stack beyond 120 with reduced charge gain."""
+async def test_ally_overload_unlimited_charge():
+    """Test that Ally Overload has unlimited charge building per planning doc."""
     registry = PassiveRegistry()
     from plugins.passives.ally_overload import AllyOverload
 
     ally = Stats(hp=1000, damage_type=Generic())
     ally.passives = ["ally_overload"]
 
-    # Take enough actions to go past the soft cap of 120
-    # We need to account for the 5 charge decay per action
-    for _ in range(30):  # 30 actions should build enough charge
+    # Take enough actions to go well beyond the old 120 soft cap
+    # Each action gives 10 charge, but also decays 5 per action when inactive
+    # Net gain is 5 per action, so 30 actions = 150 charge
+    for _ in range(30):  # 30 actions should build 150 charge
         await registry.trigger("action_taken", ally)
 
     current_charge = AllyOverload.get_charge(ally)
 
-    # Should be able to go past 120
-    if current_charge > 120:
-        description = registry.describe(ally)
-        overload_passive = next((p for p in description if p["id"] == "ally_overload"), None)
-        assert overload_passive["stacks"] == current_charge
-        assert overload_passive["max_stacks"] == 120  # Soft cap stays at 120
+    # Should be able to go well past the old 120 limit
+    # Calculation: 100 charge to activate, then +10 per action for remaining 20 actions = 300 total
+    # But the exact number depends on when overload activates and if turn_end is called
+    assert current_charge >= 150  # Should be well above old soft cap
+    description = registry.describe(ally)
+    overload_passive = next((p for p in description if p["id"] == "ally_overload"), None)
+    assert overload_passive["stacks"] == current_charge
+    assert overload_passive["max_stacks"] == 999  # No artificial cap
 
 
 @pytest.mark.asyncio
