@@ -8,7 +8,7 @@ Move the database from the embedded SQLite file in the backend to a dedicated Po
 ### 1. Database Service Setup
 - **Technology**: PostgreSQL 15+ (more web-friendly than SQLite)
 - **Port**: 5432 (PostgreSQL standard)
-- **Admin Interface**: pgAdmin 4 on port 8080
+- **Admin Interface**: pgAdmin 4 on port 38085
 - **Data Persistence**: Named Docker volume
 - **Migration**: Automated migration from existing SQLite data
 
@@ -591,7 +591,7 @@ services:
       - autofighter_pgadmin_data:/var/lib/pgadmin
       - ./pgadmin/servers.json:/pgadmin4/servers.json
     ports:
-      - "8080:80"
+      - "38085:80"
     networks:
       - autofighter-network
     depends_on:
@@ -756,14 +756,14 @@ python migrate_from_sqlite.py
 python validate_migration.py
 
 # Access pgAdmin
-# Open http://localhost:8080
+# Open http://localhost:38085
 # Login: admin@autofighter.local / admin
 ```
 
 ## Completion Criteria
 
 - [ ] PostgreSQL database container running on port 5432
-- [ ] pgAdmin web interface accessible on port 8080
+- [ ] pgAdmin web interface accessible on port 38085
 - [ ] Database schema created with all tables and constraints
 - [ ] Data successfully migrated from SQLite
 - [ ] PostgreSQL manager class implemented

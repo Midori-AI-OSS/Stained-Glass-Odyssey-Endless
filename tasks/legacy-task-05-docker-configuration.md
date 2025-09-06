@@ -9,7 +9,7 @@ Update the Docker Compose configuration to implement the new 4-service architect
 - **Frontend**: Svelte UI on port 59001
 - **Router**: FastAPI gateway on port 59000  
 - **Backend**: Quart game logic on port 59002
-- **Database**: PostgreSQL with pgAdmin on ports 5432/8080
+- **Database**: PostgreSQL with pgAdmin on ports 5432/38085
 
 ### 2. Service Communication
 - Frontend → Router → Backend
@@ -74,7 +74,7 @@ services:
       - pgadmin_data:/var/lib/pgadmin
       - ./database/pgadmin:/pgadmin4/config:ro
     ports:
-      - "${PGADMIN_PORT:-8080}:80"
+      - "${PGADMIN_PORT:-38085}:80"
     networks:
       - autofighter-network
     depends_on:
@@ -253,7 +253,7 @@ services:
 
   pgadmin:
     ports:
-      - "8080:80"
+      - "38085:80"
     profiles:
       - dev  # Always include in development
 
@@ -488,7 +488,7 @@ AF_DB_KEY=your-32-character-encryption-key-here
 FRONTEND_PORT=59001
 ROUTER_PORT=59000
 BACKEND_PORT=59002
-PGADMIN_PORT=8080
+PGADMIN_PORT=38085
 
 # Admin Interface
 PGADMIN_EMAIL=admin@autofighter.local
@@ -613,7 +613,7 @@ show_status() {
     echo "  Frontend:  http://localhost:59001"
     echo "  Router:    http://localhost:59000"
     echo "  Backend:   http://localhost:59002"
-    echo "  pgAdmin:   http://localhost:8080"
+    echo "  pgAdmin:   http://localhost:38085"
     echo "  Database:  postgresql://autofighter@localhost:5432/autofighter"
 }
 

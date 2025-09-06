@@ -58,13 +58,46 @@ router/
 ## Implementation Tasks
 
 ### Task 1.1: Project Setup
-**File**: `router/requirements.txt`
-```txt
-fastapi>=0.104.0
-uvicorn[standard]>=0.24.0
-httpx>=0.25.0
-pydantic>=2.5.0
-python-dotenv>=1.0.0
+**File**: `router/pyproject.toml`
+```toml
+[project]
+name = "midori-autofighter-router"
+version = "0.1.0"
+description = "API Router service for Midori AutoFighter"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.104.0",
+    "uvicorn[standard]>=0.24.0",
+    "httpx>=0.25.0",
+    "pydantic>=2.5.0",
+    "python-dotenv>=1.0.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.uv]
+dev-dependencies = [
+    "pytest>=7.4.0",
+    "pytest-asyncio>=0.21.0",
+    "httpx>=0.25.0",
+]
+```
+
+**Setup Commands**:
+```bash
+# Create router directory
+mkdir -p router
+cd router
+
+# Initialize uv project
+uv init --no-readme
+# Add dependencies
+uv add fastapi uvicorn[standard] httpx pydantic python-dotenv
+# Add dev dependencies  
+uv add --dev pytest pytest-asyncio
 ```
 
 **File**: `router/.env.example`
@@ -400,22 +433,51 @@ class ErrorHandlingMiddleware:
 ### Task 1.7: Docker Configuration
 **File**: `router/Dockerfile`
 ```dockerfile
-FROM python:3.12-slim
+FROM lunamidori5/pixelarch:quartz
+
+EXPOSE 59000
+
+ENV PYTHONOPTIMIZE=1
+ENV PYTHONUNBUFFERED=1
+ENV UV_LINK_MODE=copy
+ENV UV_COMPILE_BYTECODE=1
+
+# Update OS release info for clarity
+RUN sudo sed -i 's/Quartz/Router-uv-server/g' /etc/os-release
+
+# Install uv (may already be installed in base image)
+RUN yay -Syu --noconfirm uv && yay -Yccc --noconfirm
+
+# Ensure uv is on PATH
+ENV PATH="/root/.local/bin:${PATH}"
+ENV PYTHONPATH="/app"
+
+# UV cache directory
+ENV UV_CACHE_DIR="/.cache"
 
 WORKDIR /app
 
-# Install dependencies
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Setup directories and permissions
+RUN sudo chown -R $(whoami):$(whoami) /app
+RUN sudo mkdir -p ${UV_CACHE_DIR} && sudo chown -R $(whoami):$(whoami) ${UV_CACHE_DIR} && sudo chmod -R 755 ${UV_CACHE_DIR}
+RUN sudo mkdir -p /.venv && sudo chown -R $(whoami):$(whoami) /.venv && sudo chmod -R 755 /.venv
 
-# Copy application code
-COPY . .
+# Do not copy source; it will be bind-mounted at runtime
 
-# Expose port
-EXPOSE 59000
+# Run application using uv
+CMD ["bash", "-lc", "cd /app && uv run uvicorn app:app --host 0.0.0.0 --port 59000"]
+```
 
-# Run application
-CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "59000"]
+**File**: `router/docker-entrypoint.sh`
+```bash
+#!/bin/bash
+set -e
+
+echo "Installing dependencies with uv..."
+uv sync --frozen
+
+echo "Starting router service..."
+exec uv run uvicorn app:app --host 0.0.0.0 --port 59000
 ```
 
 ## Validation
