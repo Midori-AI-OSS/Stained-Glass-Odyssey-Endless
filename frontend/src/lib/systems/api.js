@@ -42,14 +42,6 @@ export async function pullGacha(count = 1) {
   return httpPost('/gacha/pull', { count });
 }
 
-export async function setAutoCraft(enabled) {
-  return httpPost('/gacha/auto-craft', { enabled });
-}
-
-export async function craftItems() {
-  return httpPost('/gacha/craft');
-}
-
 // Player customization (pronouns, damage_type, hp, attack, defense, crit_rate, crit_damage)
 export async function getPlayerConfig() {
   return httpGet('/player/editor', { cache: 'no-store' });

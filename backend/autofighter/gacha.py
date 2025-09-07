@@ -85,27 +85,13 @@ class GachaManager:
             conn.execute("DELETE FROM upgrade_items WHERE count <= 0")
 
     def _get_auto_craft(self) -> bool:
-        with self.save.connection() as conn:
-            cur = conn.execute(
-                "SELECT value FROM options WHERE key = ?", ("auto_craft",)
-            )
-            row = cur.fetchone()
-            return bool(int(row[0])) if row else False
-
-    def _set_auto_craft(self, enabled: bool) -> None:
-        with self.save.connection() as conn:
-            conn.execute(
-                "INSERT OR REPLACE INTO options (key, value) VALUES (?, ?)",
-                ("auto_craft", "1" if enabled else "0"),
-            )
+        return True
 
     def _auto_craft(self, items: dict[str, int]) -> None:
-        """Convert excess upgrade items into higher tiers or tickets.
+        """Convert excess upgrade items into higher tiers.
 
-        Crafting never creates items above 4★. Any surplus 4★ items are
-        exchanged for gacha tickets rather than upgrading to a nonexistent 5★
-        tier. This keeps rare drop rate bonuses from indirectly raising star
-        level beyond the intended cap.
+        Crafting never creates items above 4★. Surplus 4★ items remain in the
+        inventory instead of converting to tickets.
         """
 
         for element in ELEMENTS:
@@ -115,9 +101,6 @@ class GachaManager:
                 while items.get(lower, 0) >= 125:
                     items[lower] -= 125
                     items[higher] = items.get(higher, 0) + 1
-            while items.get(f"{element}_4", 0) >= 10:
-                items[f"{element}_4"] -= 10
-                items["ticket"] = items.get("ticket", 0) + 1
 
         for key in [k for k, v in items.items() if v == 0]:
             del items[key]
@@ -169,7 +152,6 @@ class GachaManager:
             raise PermissionError("insufficient tickets")
         items["ticket"] = items.get("ticket", 0) - count
         owned = self._get_owned()
-        auto_craft = self._get_auto_craft()
         for _ in range(count):
             if random.random() < 0.0001:
                 pool = [c for c in SIX_STAR if c not in owned]
@@ -200,8 +182,7 @@ class GachaManager:
                 element = random.choice(ELEMENTS)
                 key = f"{element}_{rarity}"
                 items[key] = items.get(key, 0) + 1
-                if auto_craft:
-                    self._auto_craft(items)
+                self._auto_craft(items)
                 results.append(PullResult("item", key, rarity))
                 pity += 1
         self._set_pity(pity)
@@ -225,6 +206,3 @@ class GachaManager:
             "players": players,
             "auto_craft": auto_craft,
         }
-
-    def set_auto_craft(self, enabled: bool) -> None:
-        self._set_auto_craft(enabled)

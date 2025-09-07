@@ -370,8 +370,7 @@ async def _run_battle(
                 else:
                     key = f"{entry['id']}_{entry['stars']}"
                     items[key] = items.get(key, 0) + 1
-            if manager._get_auto_craft():
-                manager._auto_craft(items)
+            manager._auto_craft(items)
             manager._set_items(items)
             result["items"] = items
             if result.get("result") == "defeat":

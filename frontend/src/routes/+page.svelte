@@ -415,10 +415,6 @@
     openOverlay('pulls');
   }
 
-  async function openCraft() {
-    if (battleActive) return;
-    openOverlay('craft');
-  }
 
   function openFeedback() {
     window.open(FEEDBACK_URL, '_blank', 'noopener');
@@ -832,10 +828,6 @@
     if (!runId) return;
     roomData = await roomAction("0", {"action": "swap"});
   }
-  async function handleRestCraft() {
-    if (!runId) return;
-    roomData = await roomAction("0", {"action": "craft"});
-  }
   async function handleRestLeave() {
     if (!runId) return;
     roomData = await roomAction("0", {"action": "leave"});
@@ -1033,7 +1025,6 @@
       openRun,
       handleParty,
       openPulls,
-      openCraft,
       openFeedback,
       openInventory,
       openSettings: () => openOverlay('settings')
@@ -1213,7 +1204,6 @@
     on:shopLeave={handleShopLeave}
     on:restPull={handleRestPull}
     on:restSwap={handleRestSwap}
-    on:restCraft={handleRestCraft}
     on:restLeave={handleRestLeave}
     on:nextRoom={handleNextRoom}
     on:lootAcknowledge={handleLootAcknowledge}

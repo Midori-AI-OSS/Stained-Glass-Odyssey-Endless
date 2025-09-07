@@ -48,24 +48,3 @@ async def gacha_pull() -> tuple[str, int, dict[str, object]]:
     return jsonify(result)
 
 
-@bp.post("/gacha/auto-craft")
-async def gacha_auto_craft() -> tuple[str, int, dict[str, object]]:
-    data = await request.get_json(silent=True) or {}
-    enabled = bool(data.get("enabled"))
-
-    def set_auto_craft():
-        manager = GachaManager(get_save_manager())
-        manager.set_auto_craft(enabled)
-
-    await asyncio.to_thread(set_auto_craft)
-    return jsonify({"status": "ok", "auto_craft": enabled})
-
-
-@bp.post("/gacha/craft")
-async def gacha_craft() -> tuple[str, int, dict[str, object]]:
-    def do_craft():
-        manager = GachaManager(get_save_manager())
-        return manager.craft()
-
-    items = await asyncio.to_thread(do_craft)
-    return jsonify({"status": "ok", "items": items})

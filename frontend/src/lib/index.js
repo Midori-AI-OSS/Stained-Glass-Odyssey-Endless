@@ -11,7 +11,6 @@ export { default as RelicInventory } from './components/RelicInventory.svelte';
 export { default as BattleView } from './components/BattleView.svelte';
 export { default as RestRoom } from './components/RestRoom.svelte';
 export { default as ShopMenu } from './components/ShopMenu.svelte';
-export { default as CraftingMenu } from './components/CraftingMenu.svelte';
 export { default as RewardOverlay } from './components/RewardOverlay.svelte';
 export { default as PopupWindow } from './components/PopupWindow.svelte';
 export { layoutForWidth } from './systems/layout.js';

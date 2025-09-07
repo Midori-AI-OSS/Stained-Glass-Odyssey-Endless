@@ -12,7 +12,7 @@
     Brain,
     Gamepad
   } from 'lucide-svelte';
-  import { endRun, endAllRuns, wipeData, exportSave, importSave, setAutoCraft, getGacha, getLrmConfig, setLrmModel, testLrmModel, getBackendHealth } from '../systems/api.js';
+  import { endRun, endAllRuns, wipeData, exportSave, importSave, getLrmConfig, setLrmModel, testLrmModel, getBackendHealth } from '../systems/api.js';
   import { getActiveRuns } from '../systems/uiApi.js';
   import { saveSettings, clearSettings, clearAllClientData } from '../systems/settingsStorage.js';
 
@@ -21,7 +21,6 @@
   export let musicVolume = 50;
   export let voiceVolume = 50;
   export let framerate = 60;
-  export let autocraft = false;
   export let reducedMotion = false;
   export let lrmModel = '';
   export let runId = '';
@@ -62,19 +61,7 @@
     }
   }
 
-  // Keep autocraft in sync with backend flag so this toggle
-  // mirrors the Crafting menu's auto-craft behavior.
   onMount(async () => {
-    try {
-      const state = await getGacha();
-      if (typeof state?.auto_craft === 'boolean') {
-        autocraft = state.auto_craft;
-        // Persist locally and notify parent so UI reflects server state
-        save();
-      }
-    } catch {
-      /* ignore network/backend issues; leave local state */
-    }
     if (showLrm) {
       try {
         const cfg = await getLrmConfig();
@@ -96,7 +83,6 @@
       musicVolume,
       voiceVolume,
       framerate: Number(framerate),
-      autocraft,
       reducedMotion
     });
     dispatch('save', {
@@ -104,7 +90,6 @@
       musicVolume,
       voiceVolume,
       framerate: Number(framerate),
-      autocraft,
       reducedMotion
     });
     saveStatus = 'Saved';
@@ -117,13 +102,6 @@
   function scheduleSave() {
     clearTimeout(saveTimeout);
     saveTimeout = setTimeout(save, 300);
-  }
-
-  async function handleAutocraftToggle() {
-    // Save locally and notify parent
-    scheduleSave();
-    // Update backend to match
-    try { await setAutoCraft(autocraft); } catch { /* ignore */ }
   }
 
   function handleModelChange() {
@@ -220,7 +198,6 @@
       musicVolume = 50;
       voiceVolume = 50;
       framerate = 60;
-      autocraft = false;
       reducedMotion = false;
       runId = '';
       wipeStatus = ok ? 'Save data wiped. Reloading…' : 'Backend wipe failed; cleared local data. Reloading…';
@@ -347,10 +324,6 @@
     </div>
   {:else if activeTab === 'gameplay'}
     <div class="panel">
-      <div class="control" title="Automatically craft materials when possible.">
-        <label>Autocraft</label>
-        <input type="checkbox" bind:checked={autocraft} on:change={handleAutocraftToggle} />
-      </div>
       <div class="control" title="End the current run.">
         <Power />
         <label>End Run</label>

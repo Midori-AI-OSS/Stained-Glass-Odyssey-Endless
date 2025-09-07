@@ -17,7 +17,7 @@ export async function loadInitialState() {
     musicVolume: saved.musicVolume ?? 50,
     voiceVolume: saved.voiceVolume ?? 50,
     framerate: saved.framerate !== undefined ? Number(saved.framerate) : 60,
-    autocraft: saved.autocraft ?? false,
+    autocraft: true,
     reducedMotion: saved.reducedMotion ?? false,
   };
   let roster = [];

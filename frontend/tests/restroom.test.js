@@ -9,7 +9,6 @@ describe('rest room menu', () => {
     expect(content).toContain('<Coins');
     expect(content).toContain('Pull Character');
     expect(content).toContain('Switch Party');
-    expect(content).toContain('Craft');
     expect(content).toContain('Leave');
   });
 });

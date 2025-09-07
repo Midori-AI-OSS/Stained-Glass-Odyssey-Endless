@@ -18,11 +18,9 @@ its pools dynamically so new recruits become pullable without code changes.
 - Failed pulls grant element-specific upgrade items. Roll table: 1★ 10%, 2★ 50%,
   3★ 30%, 4★ 10%. Higher pity shifts these odds toward rarer items.
  - The pulls menu disables pull buttons when available tickets are below the selected count.
-- Upgrade items can auto-craft within their element (125 lower-star items
-  form one higher star, ten 4★ items become a ticket), but this setting is
-  disabled by default so players can spend lower-tier items on upgrades.
-  The setting is toggled via `POST /gacha/auto-craft` and included in gacha
-  state responses.
+- Upgrade items auto-craft within their element (125 lower-star items form
+  one higher star) and surplus 4★ items remain in inventory. Auto-crafting is
+  always enabled and manual crafting/ticket conversion has been removed.
 - 5★ characters become available as pity rises from 0.001% to ~5% at pull 159, guaranteeing a 5★ at 180. 6★ characters roll independently at a flat 0.01% chance.
 - Duplicate characters apply Vitality and stat bonuses. Each stat uses the first
   duplicate's value from the player plugin and increases by 5% per additional

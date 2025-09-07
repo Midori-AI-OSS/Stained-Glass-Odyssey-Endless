@@ -10,7 +10,6 @@
   import PopupWindow from './PopupWindow.svelte';
   import PartyPicker from './PartyPicker.svelte';
   import PullsMenu from './PullsMenu.svelte';
-  import CraftingMenu from './CraftingMenu.svelte';
   import BattleReview from './BattleReview.svelte';
   import RewardOverlay from './RewardOverlay.svelte';
   import CharacterEditor from './CharacterEditor.svelte';
@@ -36,7 +35,6 @@
   export let musicVolume = 50;
   export let voiceVolume = 50;
   export let framerate = 60;
-  export let autocraft = false;
   export let reducedMotion = false;
   export let selectedParty = [];
   export let battleActive = false;
@@ -215,11 +213,6 @@
   </OverlaySurface>
 {/if}
 
-{#if $overlayView === 'craft'}
-  <OverlaySurface zIndex={1300}>
-    <CraftingMenu on:close={() => dispatch('back')} />
-  </OverlaySurface>
-{/if}
 
 {#if $overlayView === 'editor'}
   <OverlaySurface zIndex={1300}>
@@ -258,7 +251,6 @@
       {musicVolume}
       {voiceVolume}
       {framerate}
-      {autocraft}
       {reducedMotion}
       {runId}
       {backendFlavor}
@@ -338,7 +330,6 @@
       reducedMotion={reducedMotion}
       on:pull={() => dispatch('restPull')}
       on:swap={() => dispatch('restSwap')}
-      on:craft={() => dispatch('restCraft')}
       on:close={() => dispatch('restLeave')}
     />
   </OverlaySurface>

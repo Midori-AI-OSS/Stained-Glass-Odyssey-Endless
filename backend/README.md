@@ -98,13 +98,12 @@ increasing the gold reward and number of damage-type items.
 Current 5★ cards include Phantom Ally, Temporal Shield, and Reality Split.
 
 `GET /gacha` returns the current pity counter, element-based upgrade items,
-owned characters with their duplicate stacks, and whether auto-crafting is
-enabled. `POST /gacha/pull` performs 1, 5, or 10 pulls, awarding 5★ or 6★
-characters or 1★–4★ upgrade items keyed by element. Higher pity increases the
-chance of rarer items on failed pulls. Automatic crafting of upgrade items is
-disabled by default but can be toggled with `POST /gacha/auto-craft`, which
-converts 125 lower-star items into one higher star and ten 4★ items into a
-ticket.
+and owned characters with their duplicate stacks. `POST /gacha/pull` performs
+1, 5, or 10 pulls, awarding 5★ or 6★ characters or 1★–4★ upgrade items keyed
+by element. Higher pity increases the chance of rarer items on failed pulls.
+Upgrade materials now auto-craft into higher tiers immediately, and surplus
+4★ items remain as-is. Manual crafting and ticket conversion have been
+removed.
 
 `GET /players/<id>/upgrade` returns a character's current upgrade level and the
 inventory of element-based items. `POST /players/<id>/upgrade` consumes

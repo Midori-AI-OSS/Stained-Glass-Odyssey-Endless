@@ -48,7 +48,6 @@
   let musicVolume = 50;
   let voiceVolume = 50;
   let framerate = 60;
-  let autocraft = false;
   let reducedMotion = false;
   let selectedParty = [];
   let snapshotLoading = false;
@@ -60,7 +59,7 @@
       randomBg = getHourlyBackground();
     }
     const init = await loadInitialState();
-    ({ sfxVolume, musicVolume, voiceVolume, framerate, autocraft, reducedMotion } =
+    ({ sfxVolume, musicVolume, voiceVolume, framerate, reducedMotion } =
       init.settings);
     roster = init.roster;
     userState = init.user;
@@ -243,7 +242,6 @@
         {musicVolume}
         {voiceVolume}
         {framerate}
-        {autocraft}
         {reducedMotion}
         {selectedParty}
         {battleActive}
@@ -260,14 +258,13 @@
       on:editorChange={(e) => dispatch('editorChange', e.detail)}
       on:loadRun={(e) => dispatch('loadRun', e.detail)}
       on:startNewRun={() => dispatch('startNewRun')}
-      on:saveSettings={(e) => ({ sfxVolume, musicVolume, voiceVolume, framerate, autocraft, reducedMotion } = e.detail)}
+      on:saveSettings={(e) => ({ sfxVolume, musicVolume, voiceVolume, framerate, reducedMotion } = e.detail)}
       on:endRun={() => dispatch('endRun')}
       on:shopBuy={(e) => dispatch('shopBuy', e.detail)}
       on:shopReroll={() => dispatch('shopReroll')}
       on:shopLeave={() => dispatch('shopLeave')}
       on:restPull={() => dispatch('restPull')}
       on:restSwap={() => dispatch('restSwap')}
-      on:restCraft={() => dispatch('restCraft')}
       on:restLeave={() => dispatch('restLeave')}
       on:snapshot-start={() => (snapshotLoading = true)}
       on:snapshot-end={() => (snapshotLoading = false)}
