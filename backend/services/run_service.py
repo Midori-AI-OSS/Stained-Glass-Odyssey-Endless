@@ -176,8 +176,13 @@ async def get_map(run_id: str) -> dict[str, object]:
         }:
             current_room_data = snap
         elif state.get("awaiting_next"):
+            result = (
+                "boss"
+                if current_room_type == "battle-boss-floor"
+                else current_room_type.replace("-", "_") if current_room_type else "unknown"
+            )
             current_room_data = {
-                "result": current_room_type.replace("-", "_") if current_room_type else "unknown",
+                "result": result,
                 "awaiting_next": True,
                 "current_index": current_index,
                 "current_room": current_room_type,
