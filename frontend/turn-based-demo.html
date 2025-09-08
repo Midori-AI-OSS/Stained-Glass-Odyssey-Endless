@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Turn-Based Battle Recording Demo</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            margin: 0;
+            padding: 20px;
+        }
+        
+        .battle-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            padding: 20px;
+        }
+        
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+        
+        .battle-field {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            min-height: 400px;
+            position: relative;
+        }
+        
+        .party-side, .foe-side {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            flex: 1;
+        }
+        
+        .foe-side {
+            align-items: flex-end;
+        }
+        
+        .fighter {
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 8px;
+            padding: 15px;
+            min-width: 200px;
+            position: relative;
+            transition: all 0.3s ease;
+        }
+        
+        .fighter.attacking {
+            transform: scale(1.1);
+            box-shadow: 0 0 20px rgba(255, 255, 0, 0.8);
+        }
+        
+        .fighter.taking-damage {
+            animation: damage-shake 0.5s ease-in-out;
+        }
+        
+        @keyframes damage-shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+        
+        .fighter-name {
+            font-weight: bold;
+            font-size: 18px;
+            margin-bottom: 8px;
+        }
+        
+        .hp-bar {
+            background: rgba(0, 0, 0, 0.5);
+            height: 20px;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 8px;
+        }
+        
+        .hp-fill {
+            background: linear-gradient(90deg, #ff0000 0%, #ffff00 50%, #00ff00 100%);
+            height: 100%;
+            transition: width 0.8s ease;
+        }
+        
+        .damage-number {
+            position: absolute;
+            font-size: 24px;
+            font-weight: bold;
+            pointer-events: none;
+            animation: damage-float 1.5s ease-out forwards;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+        }
+        
+        @keyframes damage-float {
+            0% {
+                transform: translateY(0);
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(-80px);
+                opacity: 0;
+            }
+        }
+        
+        .action-log {
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 20px;
+            height: 200px;
+            overflow-y: auto;
+        }
+        
+        .action-item {
+            padding: 8px;
+            margin-bottom: 5px;
+            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.1);
+        }
+        
+        .controls {
+            text-align: center;
+            margin-top: 20px;
+        }
+        
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 0 10px;
+            transition: transform 0.2s ease;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+        }
+        
+        button:disabled {
+            background: #666;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .status {
+            text-align: center;
+            font-size: 18px;
+            margin: 20px 0;
+            padding: 10px;
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.1);
+        }
+        
+        .animation-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 48px;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .animation-overlay.active {
+            opacity: 1;
+            animation: spell-cast 1s ease-in-out;
+        }
+        
+        @keyframes spell-cast {
+            0% { transform: translate(-50%, -50%) scale(0.5); }
+            50% { transform: translate(-50%, -50%) scale(1.2); }
+            100% { transform: translate(-50%, -50%) scale(1); }
+        }
+    </style>
+</head>
+<body>
+    <div class="battle-container">
+        <h1>Turn-Based Battle Recording Demo</h1>
+        
+        <div class="status" id="status">
+            Demonstration of the new turn-based battle recording system
+        </div>
+        
+        <div class="battle-field" id="battleField">
+            <div class="party-side">
+                <div class="fighter" id="player1">
+                    <div class="fighter-name">Player</div>
+                    <div class="hp-bar">
+                        <div class="hp-fill" style="width: 100%"></div>
+                    </div>
+                    <div>HP: <span class="hp-text">100/100</span></div>
+                    <div>ATK: 50 | DEF: 25</div>
+                </div>
+                
+                <div class="fighter" id="ally1">
+                    <div class="fighter-name">Ally</div>
+                    <div class="hp-bar">
+                        <div class="hp-fill" style="width: 100%"></div>
+                    </div>
+                    <div>HP: <span class="hp-text">80/80</span></div>
+                    <div>ATK: 40 | DEF: 20</div>
+                </div>
+            </div>
+            
+            <div class="animation-overlay" id="animationOverlay">✨</div>
+            
+            <div class="foe-side">
+                <div class="fighter" id="enemy1">
+                    <div class="fighter-name">Fire Goblin</div>
+                    <div class="hp-bar">
+                        <div class="hp-fill" style="width: 100%"></div>
+                    </div>
+                    <div>HP: <span class="hp-text">60/60</span></div>
+                    <div>ATK: 35 | DEF: 15</div>
+                </div>
+                
+                <div class="fighter" id="enemy2">
+                    <div class="fighter-name">Ice Orc</div>
+                    <div class="hp-bar">
+                        <div class="hp-fill" style="width: 100%"></div>
+                    </div>
+                    <div>HP: <span class="hp-text">90/90</span></div>
+                    <div>ATK: 45 | DEF: 30</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="action-log" id="actionLog"></div>
+        
+        <div class="controls">
+            <button id="startDemo" onclick="startDemo()">Start Demo Battle</button>
+            <button id="nextAction" onclick="nextAction()" disabled>Next Action</button>
+            <button id="autoPlay" onclick="toggleAutoPlay()" disabled>Auto Play</button>
+            <button id="resetDemo" onclick="resetDemo()">Reset</button>
+        </div>
+    </div>
+
+    <script>
+        // Demo data - simulates what would come from the backend
+        const demoActions = [
+            {
+                action_id: "player1_attack_1",
+                action_type: "attack",
+                actor_id: "player1",
+                target_id: "enemy1",
+                amount: 25,
+                damage_type: "Fire",
+                is_critical: false,
+                animation_name: "HitFire.efkefc",
+                effect_color: "#FF4444",
+                action_name: "Fire Sword",
+                description: "Player attacks Fire Goblin with Fire Sword for 25 damage."
+            },
+            {
+                action_id: "enemy1_attack_1", 
+                action_type: "attack",
+                actor_id: "enemy1",
+                target_id: "player1",
+                amount: 18,
+                damage_type: "Fire",
+                is_critical: false,
+                animation_name: "HitFire.efkefc",
+                effect_color: "#FF4444",
+                action_name: "Claw Attack",
+                description: "Fire Goblin claws Player for 18 damage."
+            },
+            {
+                action_id: "ally1_heal_1",
+                action_type: "heal", 
+                actor_id: "ally1",
+                target_id: "player1",
+                amount: 15,
+                animation_name: "HealOne1.efkefc",
+                effect_color: "#44FF44",
+                action_name: "Healing Light",
+                description: "Ally heals Player for 15 HP."
+            },
+            {
+                action_id: "enemy2_attack_1",
+                action_type: "attack",
+                actor_id: "enemy2", 
+                target_id: "ally1",
+                amount: 22,
+                damage_type: "Ice",
+                is_critical: true,
+                animation_name: "HitIce.efkefc", 
+                effect_color: "#44AAFF",
+                action_name: "Ice Smash",
+                description: "Ice Orc critically hits Ally with Ice Smash for 22 damage!"
+            },
+            {
+                action_id: "player1_attack_2",
+                action_type: "attack",
+                actor_id: "player1",
+                target_id: "enemy2", 
+                amount: 30,
+                damage_type: "Lightning",
+                is_critical: false,
+                animation_name: "HitThunder.efkefc",
+                effect_color: "#FFFF44", 
+                action_name: "Lightning Strike",
+                description: "Player strikes Ice Orc with Lightning for 30 damage."
+            },
+            {
+                action_id: "enemy1_death_1",
+                action_type: "death",
+                actor_id: "player1",
+                target_id: "enemy1",
+                animation_name: "Death.efkefc",
+                effect_color: "#AA0000",
+                action_name: "Death",
+                description: "Fire Goblin has been defeated!"
+            }
+        ];
+        
+        let currentActionIndex = 0;
+        let isAutoPlaying = false;
+        let autoPlayInterval = null;
+        
+        // Fighter state tracking
+        const fighterStates = {
+            player1: { hp: 100, maxHp: 100 },
+            ally1: { hp: 80, maxHp: 80 },
+            enemy1: { hp: 60, maxHp: 60 },
+            enemy2: { hp: 90, maxHp: 90 }
+        };
+        
+        function startDemo() {
+            document.getElementById('startDemo').disabled = true;
+            document.getElementById('nextAction').disabled = false;
+            document.getElementById('autoPlay').disabled = false;
+            document.getElementById('status').textContent = 'Battle Started! Click "Next Action" to see each turn.';
+            currentActionIndex = 0;
+            logAction('🎮 Battle demo started!');
+        }
+        
+        function nextAction() {
+            if (currentActionIndex >= demoActions.length) {
+                endDemo();
+                return;
+            }
+            
+            const action = demoActions[currentActionIndex];
+            playAction(action);
+            currentActionIndex++;
+            
+            if (currentActionIndex >= demoActions.length) {
+                setTimeout(endDemo, 2000);
+            }
+        }
+        
+        function playAction(action) {
+            logAction(`📝 ${action.description}`);
+            
+            // Highlight the actor
+            const actor = document.getElementById(action.actor_id);
+            if (actor) {
+                actor.classList.add('attacking');
+                setTimeout(() => actor.classList.remove('attacking'), 800);
+            }
+            
+            // Show animation overlay
+            const overlay = document.getElementById('animationOverlay');
+            overlay.textContent = getAnimationEmoji(action.animation_name);
+            overlay.classList.add('active');
+            setTimeout(() => overlay.classList.remove('active'), 1000);
+            
+            // Handle damage or healing
+            if (action.action_type === 'attack' && action.target_id) {
+                applyDamage(action.target_id, action.amount, action.effect_color, action.is_critical);
+            } else if (action.action_type === 'heal' && action.target_id) {
+                applyHealing(action.target_id, action.amount, action.effect_color);
+            } else if (action.action_type === 'death' && action.target_id) {
+                markAsDead(action.target_id);
+            }
+            
+            // Update status
+            document.getElementById('status').textContent = 
+                `Action ${currentActionIndex + 1}/${demoActions.length}: ${action.action_name}`;
+        }
+        
+        function applyDamage(targetId, amount, color, isCritical) {
+            const target = document.getElementById(targetId);
+            if (!target) return;
+            
+            // Reduce HP
+            const state = fighterStates[targetId];
+            if (state) {
+                state.hp = Math.max(0, state.hp - amount);
+                updateFighterDisplay(targetId);
+            }
+            
+            // Shake animation
+            target.classList.add('taking-damage');
+            setTimeout(() => target.classList.remove('taking-damage'), 500);
+            
+            // Floating damage number
+            const damageNumber = document.createElement('div');
+            damageNumber.className = 'damage-number';
+            damageNumber.textContent = isCritical ? `${amount}!` : amount;
+            damageNumber.style.color = color;
+            damageNumber.style.left = '50%';
+            damageNumber.style.top = '30%';
+            
+            target.style.position = 'relative';
+            target.appendChild(damageNumber);
+            
+            setTimeout(() => damageNumber.remove(), 1500);
+        }
+        
+        function applyHealing(targetId, amount, color) {
+            const target = document.getElementById(targetId);
+            if (!target) return;
+            
+            // Increase HP
+            const state = fighterStates[targetId];
+            if (state) {
+                state.hp = Math.min(state.maxHp, state.hp + amount);
+                updateFighterDisplay(targetId);
+            }
+            
+            // Floating heal number
+            const healNumber = document.createElement('div');
+            healNumber.className = 'damage-number';
+            healNumber.textContent = `+${amount}`;
+            healNumber.style.color = color;
+            healNumber.style.left = '50%';
+            healNumber.style.top = '30%';
+            
+            target.style.position = 'relative';
+            target.appendChild(healNumber);
+            
+            setTimeout(() => healNumber.remove(), 1500);
+        }
+        
+        function markAsDead(targetId) {
+            const target = document.getElementById(targetId);
+            if (!target) return;
+            
+            const state = fighterStates[targetId];
+            if (state) {
+                state.hp = 0;
+                updateFighterDisplay(targetId);
+            }
+            
+            target.style.opacity = '0.3';
+            target.style.filter = 'grayscale(100%)';
+        }
+        
+        function updateFighterDisplay(fighterId) {
+            const fighter = document.getElementById(fighterId);
+            const state = fighterStates[fighterId];
+            if (!fighter || !state) return;
+            
+            const hpText = fighter.querySelector('.hp-text');
+            const hpFill = fighter.querySelector('.hp-fill');
+            
+            if (hpText) {
+                hpText.textContent = `${state.hp}/${state.maxHp}`;
+            }
+            
+            if (hpFill) {
+                const percentage = (state.hp / state.maxHp) * 100;
+                hpFill.style.width = `${percentage}%`;
+            }
+        }
+        
+        function getAnimationEmoji(animationName) {
+            const animations = {
+                'HitFire.efkefc': '🔥',
+                'HitIce.efkefc': '❄️', 
+                'HitThunder.efkefc': '⚡',
+                'HealOne1.efkefc': '💚',
+                'Death.efkefc': '💀'
+            };
+            return animations[animationName] || '✨';
+        }
+        
+        function logAction(message) {
+            const log = document.getElementById('actionLog');
+            const item = document.createElement('div');
+            item.className = 'action-item';
+            item.textContent = `${new Date().toLocaleTimeString()} - ${message}`;
+            log.appendChild(item);
+            log.scrollTop = log.scrollHeight;
+        }
+        
+        function toggleAutoPlay() {
+            if (isAutoPlaying) {
+                clearInterval(autoPlayInterval);
+                isAutoPlaying = false;
+                document.getElementById('autoPlay').textContent = 'Auto Play';
+                document.getElementById('nextAction').disabled = false;
+            } else {
+                isAutoPlaying = true;
+                document.getElementById('autoPlay').textContent = 'Stop Auto';
+                document.getElementById('nextAction').disabled = true;
+                autoPlayInterval = setInterval(() => {
+                    if (currentActionIndex >= demoActions.length) {
+                        toggleAutoPlay();
+                        return;
+                    }
+                    nextAction();
+                }, 2000);
+            }
+        }
+        
+        function endDemo() {
+            if (isAutoPlaying) {
+                toggleAutoPlay();
+            }
+            document.getElementById('nextAction').disabled = true;
+            document.getElementById('autoPlay').disabled = true;
+            document.getElementById('status').textContent = 'Battle Complete! Check the action log for details.';
+            logAction('🏆 Battle demo completed!');
+        }
+        
+        function resetDemo() {
+            // Reset all state
+            currentActionIndex = 0;
+            if (isAutoPlaying) {
+                toggleAutoPlay();
+            }
+            
+            // Reset fighter states
+            fighterStates.player1 = { hp: 100, maxHp: 100 };
+            fighterStates.ally1 = { hp: 80, maxHp: 80 };
+            fighterStates.enemy1 = { hp: 60, maxHp: 60 };
+            fighterStates.enemy2 = { hp: 90, maxHp: 90 };
+            
+            // Reset UI
+            Object.keys(fighterStates).forEach(id => {
+                const fighter = document.getElementById(id);
+                if (fighter) {
+                    fighter.style.opacity = '1';
+                    fighter.style.filter = 'none';
+                    fighter.classList.remove('attacking', 'taking-damage');
+                    updateFighterDisplay(id);
+                }
+            });
+            
+            // Reset controls
+            document.getElementById('startDemo').disabled = false;
+            document.getElementById('nextAction').disabled = true;
+            document.getElementById('autoPlay').disabled = true;
+            document.getElementById('status').textContent = 'Demonstration of the new turn-based battle recording system';
+            
+            // Clear log
+            document.getElementById('actionLog').innerHTML = '';
+            
+            logAction('🔄 Demo reset, ready to start again!');
+        }
+        
+        // Initialize
+        logAction('👋 Welcome to the Turn-Based Battle Recording Demo!');
+        logAction('💡 This shows how the new system works:');
+        logAction('   • Each action is recorded individually');
+        logAction('   • Frontend plays animations for each action');
+        logAction('   • Damage numbers show with type-specific colors');
+        logAction('   • User can control pacing or use auto-play');
+        logAction('🚀 Click "Start Demo Battle" to begin!');
+    </script>
+</body>
+</html>

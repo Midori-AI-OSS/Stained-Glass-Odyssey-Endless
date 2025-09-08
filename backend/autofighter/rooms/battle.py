@@ -9,13 +9,6 @@ import logging
 import random
 from typing import Any
 
-from battle_logging import end_battle_logging
-
-# Import battle logging
-from battle_logging import start_battle_logging
-from services.user_level_service import gain_user_exp
-from services.user_level_service import get_user_level
-
 from autofighter.cards import apply_cards
 from autofighter.cards import card_choices
 from autofighter.effects import EffectManager
@@ -163,6 +156,32 @@ class BattleRoom(Room):
     ) -> dict[str, Any]:
         from game import battle_snapshots
         from game import battle_tasks
+        
+        # Import battle logging/recording modules with fallback
+        import sys
+        import os
+        sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+        
+        try:
+            from battle_logging import start_battle_logging, end_battle_logging
+            from battle_recording import (
+                start_battle_recording, 
+                should_use_turn_based_recording,
+                wait_for_frontend_confirmation,
+                end_battle_recording
+            )
+            from services.user_level_service import gain_user_exp, get_user_level
+        except ImportError as e:
+            log.warning(f"Could not import battle logging/recording modules: {e}")
+            # Fallback - define no-op functions
+            def start_battle_logging(): return None
+            def end_battle_logging(result): pass
+            def should_use_turn_based_recording(run_id): return False
+            def start_battle_recording(run_id, battle_id): return None
+            async def wait_for_frontend_confirmation(run_id): return True
+            def end_battle_recording(run_id, result): pass
+            def gain_user_exp(user_id, amount): pass
+            def get_user_level(user_id): return 1
 
         registry = PassiveRegistry()
         start_gold = party.gold
@@ -205,6 +224,17 @@ class BattleRoom(Room):
 
         # Start battle logging once before emitting any events so participants are captured
         battle_logger = start_battle_logging()
+
+        # Start turn-based recording if enabled
+        use_turn_based = should_use_turn_based_recording(run_id) if run_id else False
+        battle_recording = None
+        if use_turn_based and run_id:
+            battle_id = f"{run_id}_battle_{self.node.index}"
+            battle_recording = start_battle_recording(run_id, battle_id)
+            battle_recording.party_members = [m.id for m in combat_party.members]
+            battle_recording.foes = [f.id for f in foes]
+            log.info(f"Started turn-based recording for battle {battle_id}")
+
         try:
             if battle_logger is not None:
                 battle_logger.summary.party_members = [m.id for m in combat_party.members]
@@ -481,6 +511,17 @@ class BattleRoom(Room):
                                                         damage_type=damage_type,
                                                         party=combat_party.members,
                                                         foes=foes)
+
+                    # Wait for frontend confirmation if using turn-based recording
+                    if battle_recording and use_turn_based:
+                        # Update current battle state for frontend
+                        battle_recording.current_party_state = [
+                            _serialize(m) for m in combat_party.members if not isinstance(m, Summon)
+                        ]
+                        battle_recording.current_foe_state = [_serialize(f) for f in foes]
+
+                        # Wait for frontend to finish playing the action
+                        await wait_for_frontend_confirmation(run_id)
                     tgt_mgr.maybe_inflict_dot(member, dmg)
                     if getattr(member.damage_type, "id", "").lower() == "wind":
                         # Compute dynamic scaling based on number of living targets.
@@ -759,6 +800,11 @@ class BattleRoom(Room):
         # End battle logging
         battle_result = "defeat" if all(m.hp <= 0 for m in combat_party.members) else "victory"
         end_battle_logging(battle_result)
+
+        # End turn-based recording if active
+        if battle_recording and use_turn_based and run_id:
+            end_battle_recording(run_id, battle_result)
+            log.info(f"Completed turn-based recording for battle {battle_recording.battle_id}")
 
         for mod in enrage_mods:
             if mod is not None:

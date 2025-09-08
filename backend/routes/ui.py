@@ -6,6 +6,7 @@ import traceback
 from typing import Any
 
 from battle_logging import end_run_logging
+from battle_recording import get_battle_recording
 from game import battle_snapshots
 from game import battle_tasks
 from game import get_save_manager
@@ -120,7 +121,7 @@ def get_available_actions(mode: str, game_state: dict[str, Any]) -> list[str]:
     elif mode == "playing":
         return ["room_action", "advance_room", "end_run"]
     elif mode == "battle":
-        return ["battle_snapshot", "pause_combat", "resume_combat"]
+        return ["battle_snapshot", "pause_combat", "resume_combat", "battle_next_action", "battle_confirm_action"]
     elif mode == "card_selection":
         return ["choose_card"]
     elif mode == "relic_selection":
@@ -380,6 +381,60 @@ async def handle_ui_action() -> tuple[str, int, dict[str, Any]]:
                 return jsonify(result)
             except ValueError as exc:
                 return create_error_response(str(exc), 400)
+
+        elif action == "battle_next_action":
+            """Get the next action in a turn-based battle recording."""
+            if not run_id:
+                return create_error_response("No active run", 400)
+
+            recording = get_battle_recording(run_id)
+            if not recording:
+                return create_error_response("No active battle recording", 404)
+
+            next_action = recording.get_next_action()
+            if not next_action:
+                # Battle is complete
+                return jsonify({
+                    "action": None,
+                    "battle_complete": True,
+                    "result": recording.result,
+                    "party_state": recording.current_party_state,
+                    "foe_state": recording.current_foe_state
+                })
+
+            # Mark as awaiting frontend confirmation
+            recording.awaiting_frontend = True
+
+            return jsonify({
+                "action": next_action.to_dict(),
+                "battle_complete": False,
+                "party_state": recording.current_party_state,
+                "foe_state": recording.current_foe_state,
+                "action_index": recording.current_action_index,
+                "total_actions": len(recording.actions)
+            })
+
+        elif action == "battle_confirm_action":
+            """Confirm that the frontend has finished playing the current action."""
+            if not run_id:
+                return create_error_response("No active run", 400)
+
+            recording = get_battle_recording(run_id)
+            if not recording:
+                return create_error_response("No active battle recording", 404)
+
+            if not recording.awaiting_frontend:
+                return create_error_response("No action awaiting confirmation", 400)
+
+            success = recording.confirm_action_complete()
+            if not success:
+                return create_error_response("Failed to advance action", 400)
+
+            return jsonify({
+                "confirmed": True,
+                "next_action_available": recording.get_next_action() is not None,
+                "battle_complete": recording.is_complete
+            })
 
         else:
             return create_error_response(f"Unknown action: {action}", 400)
