@@ -13,6 +13,7 @@ class AdvancedCombatSynergy:
     - On turn_start: Grants damage bonus if multiple allies are alive
     - On action_taken: Builds stacks that enhance party-wide effects
     """
+
     plugin_type = "passive"
     id = "advanced_combat_synergy"
     name = "Advanced Combat Synergy"
@@ -25,9 +26,9 @@ class AdvancedCombatSynergy:
 
     async def apply(self, target, **kwargs) -> None:
         """Handle hit_landed trigger with conditional logic."""
-        hit_target = kwargs.get('hit_target')
-        damage = kwargs.get('damage', 0)
-        party = kwargs.get('party', [])
+        hit_target = kwargs.get("hit_target")
+        damage = kwargs.get("damage", 0)
+        party = kwargs.get("party", [])
 
         if hit_target and damage > 0:
             # Conditional trigger: only activate if target is below 50% HP
@@ -45,7 +46,7 @@ class AdvancedCombatSynergy:
 
     async def on_turn_start(self, target, **kwargs) -> None:
         """Handle turn_start with dynamic behavior based on party state."""
-        party = kwargs.get('party', [])
+        party = kwargs.get("party", [])
         living_allies = sum(1 for ally in party if ally.hp > 0)
 
         if living_allies >= 3:  # Only trigger with 3+ living allies

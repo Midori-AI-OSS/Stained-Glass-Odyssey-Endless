@@ -26,7 +26,9 @@ async def test_enrage_stacks(monkeypatch):
     monkeypatch.setattr(rooms, "_choose_foe", lambda party: DummyFoe())
     monkeypatch.setattr(rooms, "ENRAGE_TURNS_NORMAL", 2)
 
-    node = MapNode(room_id=0, room_type="battle-normal", floor=1, index=1, loop=1, pressure=0)
+    node = MapNode(
+        room_id=0, room_type="battle-normal", floor=1, index=1, loop=1, pressure=0
+    )
     party = Party(members=[DummyPlayer()])
 
     room = rooms.BattleRoom(node)

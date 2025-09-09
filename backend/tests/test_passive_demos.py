@@ -30,7 +30,9 @@ class TestPassiveDemos:
             await registry.trigger("action_taken", luna)
 
         # Verify that actions per turn has been modified by the passive
-        assert luna.actions_per_turn >= initial_attacks, "Luna's attacks should scale with charge"
+        assert (
+            luna.actions_per_turn >= initial_attacks
+        ), "Luna's attacks should scale with charge"
 
     @pytest.mark.asyncio
     async def test_ally_passive_demo(self):
@@ -46,7 +48,9 @@ class TestPassiveDemos:
             await registry.trigger("action_taken", ally)
 
         # Verify Overload scaling
-        assert ally.actions_per_turn >= initial_attacks, "Ally should have increased attacks in Overload"
+        assert (
+            ally.actions_per_turn >= initial_attacks
+        ), "Ally should have increased attacks in Overload"
 
     @pytest.mark.asyncio
     async def test_graygray_passive_demo(self):
@@ -63,7 +67,9 @@ class TestPassiveDemos:
         await registry.trigger_damage_taken(graygray, attacker, 100)
 
         # Verify counter effects were applied
-        assert len(graygray._active_effects) > initial_effects, "Counter should add effects"
+        assert (
+            len(graygray._active_effects) > initial_effects
+        ), "Counter should add effects"
 
     @pytest.mark.asyncio
     async def test_mezzy_passive_demo(self):
@@ -78,24 +84,32 @@ class TestPassiveDemos:
         await registry.trigger("turn_start", mezzy)
 
         # Verify passive effects were applied
-        assert len(mezzy._active_effects) > initial_effects, "Mezzy should have damage reduction effects"
+        assert (
+            len(mezzy._active_effects) > initial_effects
+        ), "Mezzy should have damage reduction effects"
 
     @pytest.mark.asyncio
     async def test_multiple_passives_demo(self):
         """Test a character with multiple passives."""
         registry = PassiveRegistry()
         multi_char = Stats(hp=1000, damage_type=Generic())
-        multi_char.passives = ["attack_up", "luna_lunar_reservoir", "hilander_critical_ferment"]
+        multi_char.passives = [
+            "attack_up",
+            "luna_lunar_reservoir",
+            "hilander_critical_ferment",
+        ]
 
         initial_effects = len(multi_char._active_effects)
 
         # Trigger various events
         await registry.trigger("battle_start", multi_char)  # attack_up
         await registry.trigger("action_taken", multi_char)  # luna
-        await registry.trigger("hit_landed", multi_char)    # hilander
+        await registry.trigger("hit_landed", multi_char)  # hilander
 
         # Verify effects were applied
-        assert len(multi_char._active_effects) > initial_effects, "Multiple passives should create effects"
+        assert (
+            len(multi_char._active_effects) > initial_effects
+        ), "Multiple passives should create effects"
 
 
 async def demo_luna_passive():
@@ -111,7 +125,9 @@ async def demo_luna_passive():
     # Build charge and show scaling
     for i in range(1, 11):
         await registry.trigger("action_taken", luna)
-        print(f"After action {i}: {luna.actions_per_turn} attacks, charge unknown (class-level tracking)")
+        print(
+            f"After action {i}: {luna.actions_per_turn} attacks, charge unknown (class-level tracking)"
+        )
 
     print()
 
@@ -188,7 +204,11 @@ async def demo_multiple_passives():
 
     registry = PassiveRegistry()
     multi_char = Stats(hp=1000, damage_type=Generic())
-    multi_char.passives = ["attack_up", "luna_lunar_reservoir", "hilander_critical_ferment"]
+    multi_char.passives = [
+        "attack_up",
+        "luna_lunar_reservoir",
+        "hilander_critical_ferment",
+    ]
 
     print(f"Character has passives: {multi_char.passives}")
     print(f"Initial effects: {len(multi_char._active_effects)}")
@@ -198,7 +218,7 @@ async def demo_multiple_passives():
     # Trigger various events
     await registry.trigger("battle_start", multi_char)  # attack_up
     await registry.trigger("action_taken", multi_char)  # luna
-    await registry.trigger("hit_landed", multi_char)    # hilander
+    await registry.trigger("hit_landed", multi_char)  # hilander
 
     print("After triggers:")
     print(f"  Effects: {len(multi_char._active_effects)}")

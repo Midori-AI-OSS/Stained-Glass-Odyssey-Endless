@@ -17,12 +17,14 @@ async def list_cards():
     for cls in reg.values():
         try:
             c = cls()
-            cards.append({
-                "id": c.id,
-                "name": c.name,
-                "stars": c.stars,
-                "about": getattr(c, "about", ""),
-            })
+            cards.append(
+                {
+                    "id": c.id,
+                    "name": c.name,
+                    "stars": c.stars,
+                    "about": getattr(c, "about", ""),
+                }
+            )
         except Exception:
             # Skip malformed plugins rather than erroring the whole list
             continue
@@ -36,13 +38,15 @@ async def list_relics():
     for cls in reg.values():
         try:
             r = cls()
-            relics.append({
-                "id": r.id,
-                "name": r.name,
-                "stars": r.stars,
-                # Base about text; inventory display does not vary by stacks
-                "about": getattr(r, "about", ""),
-            })
+            relics.append(
+                {
+                    "id": r.id,
+                    "name": r.name,
+                    "stars": r.stars,
+                    # Base about text; inventory display does not vary by stacks
+                    "about": getattr(r, "about", ""),
+                }
+            )
         except Exception:
             continue
     return jsonify({"relics": relics})
@@ -75,34 +79,34 @@ async def list_dots():
                 # Find DoT classes in the module
                 for item_name in dir(module):
                     item = getattr(module, item_name)
-                    if (hasattr(item, 'plugin_type') and
-                        item.plugin_type == 'dot' and
-                        hasattr(item, 'id')):
+                    if (
+                        hasattr(item, "plugin_type")
+                        and item.plugin_type == "dot"
+                        and hasattr(item, "id")
+                    ):
 
                         # Try to create a dummy instance to get name
                         try:
                             instance = item(1, 1)  # damage=1, turns=1
-                            name = getattr(instance, 'name', item.id.replace('_', ' ').title())
+                            name = getattr(
+                                instance, "name", item.id.replace("_", " ").title()
+                            )
                         except Exception:
-                            name = item.id.replace('_', ' ').title()
+                            name = item.id.replace("_", " ").title()
 
                         # Create description based on damage type
                         description = f"{name} - Damage over time effect"
-                        if hasattr(item, '__doc__') and item.__doc__:
+                        if hasattr(item, "__doc__") and item.__doc__:
                             description = item.__doc__.strip()
 
-                        dots.append({
-                            "id": item.id,
-                            "name": name,
-                            "about": description
-                        })
+                        dots.append({"id": item.id, "name": name, "about": description})
 
             except Exception:
                 # If we can't load a plugin, skip it but don't fail the whole request
                 continue
 
     # Sort by ID for consistent ordering
-    dots.sort(key=lambda x: x['id'])
+    dots.sort(key=lambda x: x["id"])
 
     return jsonify({"dots": dots})
 
@@ -134,34 +138,33 @@ async def list_hots():
                 # Find HoT classes in the module
                 for item_name in dir(module):
                     item = getattr(module, item_name)
-                    if (hasattr(item, 'plugin_type') and
-                        item.plugin_type == 'hot' and
-                        hasattr(item, 'id')):
+                    if (
+                        hasattr(item, "plugin_type")
+                        and item.plugin_type == "hot"
+                        and hasattr(item, "id")
+                    ):
 
                         # Try to create a dummy instance to get name
                         try:
                             instance = item(1, 1)  # healing=1, turns=1
-                            name = getattr(instance, 'name', item.id.replace('_', ' ').title())
+                            name = getattr(
+                                instance, "name", item.id.replace("_", " ").title()
+                            )
                         except Exception:
-                            name = item.id.replace('_', ' ').title()
+                            name = item.id.replace("_", " ").title()
 
                         # Create description based on healing type
                         description = f"{name} - Healing over time effect"
-                        if hasattr(item, '__doc__') and item.__doc__:
+                        if hasattr(item, "__doc__") and item.__doc__:
                             description = item.__doc__.strip()
 
-                        hots.append({
-                            "id": item.id,
-                            "name": name,
-                            "about": description
-                        })
+                        hots.append({"id": item.id, "name": name, "about": description})
 
             except Exception:
                 # If we can't load a plugin, skip it but don't fail the whole request
                 continue
 
     # Sort by ID for consistent ordering
-    hots.sort(key=lambda x: x['id'])
+    hots.sort(key=lambda x: x["id"])
 
     return jsonify({"hots": hots})
-

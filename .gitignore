@@ -17,6 +17,19 @@ venv/
 # Dependency lock files
 uv.lock
 
+# Development tool artifacts
+.mypy_cache/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Editor artifacts
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
 # Game files
 Player.dat
 past_lives/

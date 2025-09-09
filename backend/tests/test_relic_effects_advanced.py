@@ -186,7 +186,7 @@ def test_stellar_compass_stacks():
     award_relic(party, "stellar_compass")
     apply_relics(party)
     BUS.emit("crit_hit", a, None, 0)
-    assert a.atk == int(100 * (1.015 ** 2))
+    assert a.atk == int(100 * (1.015**2))
     BUS.emit("gold_earned", 100)
     assert party.gold == int(100 * 0.03)
 

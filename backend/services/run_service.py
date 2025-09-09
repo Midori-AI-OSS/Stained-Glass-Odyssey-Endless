@@ -143,6 +143,7 @@ async def start_run(
 async def get_map(run_id: str) -> dict[str, object]:
     try:
         from battle_logging import get_current_run_logger  # local import
+
         logger = get_current_run_logger()
         if logger is None or getattr(logger, "run_id", None) != run_id:
             start_run_logging(run_id)
@@ -181,7 +182,11 @@ async def get_map(run_id: str) -> dict[str, object]:
             result = (
                 "boss"
                 if current_room_type == "battle-boss-floor"
-                else current_room_type.replace("-", "_") if current_room_type else "unknown"
+                else (
+                    current_room_type.replace("-", "_")
+                    if current_room_type
+                    else "unknown"
+                )
             )
             current_room_data = {
                 "result": result,
@@ -238,12 +243,17 @@ async def advance_room(run_id: str) -> dict[str, object]:
             next_floor, loop, pressure = 1, 1, 0
 
         generator = MapGenerator(
-            f"{run_id}-floor-{next_floor}", floor=next_floor, loop=loop, pressure=pressure
+            f"{run_id}-floor-{next_floor}",
+            floor=next_floor,
+            loop=loop,
+            pressure=pressure,
         )
         nodes = generator.generate_floor()
         state["rooms"] = [n.to_dict() for n in nodes]
         state["current"] = 1
-        next_type = nodes[state["current"]].room_type if state["current"] < len(nodes) else None
+        next_type = (
+            nodes[state["current"]].room_type if state["current"] < len(nodes) else None
+        )
     else:
         next_type = (
             rooms[state["current"]].room_type if state["current"] < len(rooms) else None
@@ -357,7 +367,8 @@ async def restore_save(blob: bytes) -> None:
                 "INSERT INTO options (key, value) VALUES (?, ?)", payload["options"]
             )
             conn.executemany(
-                "INSERT INTO damage_types (id, type) VALUES (?, ?)", payload["damage_types"]
+                "INSERT INTO damage_types (id, type) VALUES (?, ?)",
+                payload["damage_types"],
             )
 
     await asyncio.to_thread(restore_data)

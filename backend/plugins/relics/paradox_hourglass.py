@@ -16,7 +16,9 @@ class ParadoxHourglass(RelicBase):
     id: str = "paradox_hourglass"
     name: str = "Paradox Hourglass"
     stars: int = 5
-    effects: dict[str, float] = field(default_factory=lambda: {"atk": 2.0, "defense": 2.0})
+    effects: dict[str, float] = field(
+        default_factory=lambda: {"atk": 2.0, "defense": 2.0}
+    )
     about: str = (
         "At battle start may sacrifice allies to supercharge survivors and shred foe defense."
     )
@@ -45,12 +47,19 @@ class ParadoxHourglass(RelicBase):
                 state["foe"][id(entity)] = mod
 
                 # Track foe defense reduction
-                BUS.emit("relic_effect", "paradox_hourglass", entity, "defense_shredded", base_def - new_def, {
-                    "original_defense": base_def,
-                    "new_defense": new_def,
-                    "division_factor": div,
-                    "stacks": stacks
-                })
+                BUS.emit(
+                    "relic_effect",
+                    "paradox_hourglass",
+                    entity,
+                    "defense_shredded",
+                    base_def - new_def,
+                    {
+                        "original_defense": base_def,
+                        "new_defense": new_def,
+                        "division_factor": div,
+                        "stacks": stacks,
+                    },
+                )
                 return
 
             if state.get("done"):
@@ -63,11 +72,18 @@ class ParadoxHourglass(RelicBase):
             chance = 0.6 * (len(alive) - 1) / len(alive)
 
             # Track activation attempt
-            BUS.emit("relic_effect", "paradox_hourglass", party, "activation_attempt", int(chance * 100), {
-                "alive_count": len(alive),
-                "activation_chance": chance,
-                "max_sacrifices": min(stacks, 4, len(alive) - 1)
-            })
+            BUS.emit(
+                "relic_effect",
+                "paradox_hourglass",
+                party,
+                "activation_attempt",
+                int(chance * 100),
+                {
+                    "alive_count": len(alive),
+                    "activation_chance": chance,
+                    "max_sacrifices": min(stacks, 4, len(alive) - 1),
+                },
+            )
 
             if random.random() >= chance:
                 return
@@ -77,10 +93,17 @@ class ParadoxHourglass(RelicBase):
 
             # Track sacrifices
             for m in to_kill:
-                BUS.emit("relic_effect", "paradox_hourglass", m, "ally_sacrificed", m.hp, {
-                    "sacrifice_count": kill_count,
-                    "ally_name": getattr(m, 'id', str(m))
-                })
+                BUS.emit(
+                    "relic_effect",
+                    "paradox_hourglass",
+                    m,
+                    "ally_sacrificed",
+                    m.hp,
+                    {
+                        "sacrifice_count": kill_count,
+                        "ally_name": getattr(m, "id", str(m)),
+                    },
+                )
                 m.hp = 0
 
             survivors = [m for m in party.members if m.hp > 0]
@@ -107,12 +130,29 @@ class ParadoxHourglass(RelicBase):
                 state["buffs"][id(m)] = mod
 
                 # Track survivor supercharging
-                BUS.emit("relic_effect", "paradox_hourglass", m, "survivor_supercharged", mult, {
-                    "multiplier": mult,
-                    "sacrifices_made": kill_count,
-                    "full_heal": True,
-                    "stats_affected": ["atk", "defense", "max_hp", "crit_rate", "crit_damage", "effect_hit_rate", "effect_resistance", "vitality", "mitigation"]
-                })
+                BUS.emit(
+                    "relic_effect",
+                    "paradox_hourglass",
+                    m,
+                    "survivor_supercharged",
+                    mult,
+                    {
+                        "multiplier": mult,
+                        "sacrifices_made": kill_count,
+                        "full_heal": True,
+                        "stats_affected": [
+                            "atk",
+                            "defense",
+                            "max_hp",
+                            "crit_rate",
+                            "crit_damage",
+                            "effect_hit_rate",
+                            "effect_resistance",
+                            "vitality",
+                            "mitigation",
+                        ],
+                    },
+                )
 
         def _battle_end(entity) -> None:
             from plugins.foes._base import FoeBase

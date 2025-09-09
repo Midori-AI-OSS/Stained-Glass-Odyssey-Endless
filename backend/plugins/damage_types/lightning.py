@@ -11,6 +11,7 @@ from plugins.damage_types._base import DamageTypeBase
 @dataclass
 class Lightning(DamageTypeBase):
     """Volatile element that detonates DoTs and spreads random shocks."""
+
     id: str = "Lightning"
     weakness: str = "Wind"
     color: tuple[int, int, int] = (255, 255, 0)
@@ -42,7 +43,9 @@ class Lightning(DamageTypeBase):
         # Apply damage to all enemies
         for enemy in enemies:
             if base_damage > 0:
-                await enemy.apply_damage(base_damage, attacker=actor, action_name="Lightning Ultimate")
+                await enemy.apply_damage(
+                    base_damage, attacker=actor, action_name="Lightning Ultimate"
+                )
 
             # Apply random DoTs to each enemy
             mgr = getattr(enemy, "effect_manager", None)
@@ -59,6 +62,7 @@ class Lightning(DamageTypeBase):
         actor._lightning_aftertaste_stacks = stacks
 
         if not hasattr(actor, "_lightning_aftertaste_handler"):
+
             def _hit(atk, tgt, amount, *_args) -> None:
                 if atk is actor:
                     from plugins.effects.aftertaste import Aftertaste

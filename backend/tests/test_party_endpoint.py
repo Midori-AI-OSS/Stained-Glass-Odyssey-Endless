@@ -12,7 +12,8 @@ def app_with_db(tmp_path, monkeypatch):
     monkeypatch.setenv("AF_DB_KEY", "testkey")
     monkeypatch.syspath_prepend(Path(__file__).resolve().parents[1])
     spec = importlib.util.spec_from_file_location(
-        "app", Path(__file__).resolve().parents[1] / "app.py",
+        "app",
+        Path(__file__).resolve().parents[1] / "app.py",
     )
     app_module = importlib.util.module_from_spec(spec)
     assert spec.loader is not None
@@ -35,9 +36,7 @@ async def test_start_run_with_party(app_with_db):
 
     conn = sqlcipher3.connect(db_path)
     conn.execute("PRAGMA key = 'testkey'")
-    cur = conn.execute(
-        "SELECT type FROM damage_types WHERE id = ?", ("player",)
-    )
+    cur = conn.execute("SELECT type FROM damage_types WHERE id = ?", ("player",))
     assert cur.fetchone()[0] == "Ice"
 
 
@@ -49,14 +48,10 @@ async def test_party_validation(app_with_db):
     resp = await client.post("/run/start", json={"party": ["becca"]})
     assert resp.status_code == 400
 
-    resp = await client.post(
-        "/run/start", json={"party": ["player", "player"]}
-    )
+    resp = await client.post("/run/start", json={"party": ["player", "player"]})
     assert resp.status_code == 400
 
-    resp = await client.post(
-        "/run/start", json={"party": ["player", "becca"]}
-    )
+    resp = await client.post("/run/start", json={"party": ["player", "becca"]})
     assert resp.status_code == 400
 
     resp = await client.post(

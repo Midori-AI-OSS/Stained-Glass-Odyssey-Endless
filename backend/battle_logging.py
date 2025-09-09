@@ -5,6 +5,7 @@ Creates organized folder structure:
 /backend/logs/runs/{run_id}/battles/{battle_index}/raw/
 /backend/logs/runs/{run_id}/battles/{battle_index}/summary/
 """
+
 from dataclasses import dataclass
 from dataclasses import field
 from datetime import datetime
@@ -23,21 +24,27 @@ from autofighter.stats import BUS
 @dataclass
 class BattleEvent:
     """Represents a single battle event."""
+
     timestamp: datetime
     event_type: str
     attacker_id: Optional[str]
     target_id: Optional[str]
     amount: Optional[int]
     details: Dict[str, Any] = field(default_factory=dict)
-    source_type: Optional[str] = None  # attack, dot, hot, relic_effect, card_effect, etc.
+    source_type: Optional[str] = (
+        None  # attack, dot, hot, relic_effect, card_effect, etc.
+    )
     source_name: Optional[str] = None  # specific relic/card/effect name
     damage_type: Optional[str] = None  # fire, ice, light, etc.
-    effect_details: Dict[str, Any] = field(default_factory=dict)  # additional effect context
+    effect_details: Dict[str, Any] = field(
+        default_factory=dict
+    )  # additional effect context
 
 
 @dataclass
 class BattleSummary:
     """Summary statistics for a battle."""
+
     battle_id: str
     start_time: datetime
     end_time: Optional[datetime]
@@ -51,44 +58,86 @@ class BattleSummary:
     events: List[BattleEvent] = field(default_factory=list)
 
     # Enhanced tracking
-    damage_by_type: Dict[str, Dict[str, int]] = field(default_factory=dict)  # entity -> damage_type -> amount
-    damage_by_source: Dict[str, Dict[str, int]] = field(default_factory=dict)  # source_type -> entity -> amount
-    damage_by_action: Dict[str, Dict[str, int]] = field(default_factory=dict)  # entity -> action_name -> amount
-    healing_by_source: Dict[str, Dict[str, int]] = field(default_factory=dict)  # source_type -> entity -> amount
-    dot_damage: Dict[str, int] = field(default_factory=dict)  # entity -> total DoT damage dealt
-    hot_healing: Dict[str, int] = field(default_factory=dict)  # entity -> total HoT healing done
-    relic_effects: Dict[str, int] = field(default_factory=dict)  # relic_name -> trigger count
-    card_effects: Dict[str, int] = field(default_factory=dict)  # card_name -> trigger count
-    effect_applications: Dict[str, int] = field(default_factory=dict)  # effect_name -> application count
+    damage_by_type: Dict[str, Dict[str, int]] = field(
+        default_factory=dict
+    )  # entity -> damage_type -> amount
+    damage_by_source: Dict[str, Dict[str, int]] = field(
+        default_factory=dict
+    )  # source_type -> entity -> amount
+    damage_by_action: Dict[str, Dict[str, int]] = field(
+        default_factory=dict
+    )  # entity -> action_name -> amount
+    healing_by_source: Dict[str, Dict[str, int]] = field(
+        default_factory=dict
+    )  # source_type -> entity -> amount
+    dot_damage: Dict[str, int] = field(
+        default_factory=dict
+    )  # entity -> total DoT damage dealt
+    hot_healing: Dict[str, int] = field(
+        default_factory=dict
+    )  # entity -> total HoT healing done
+    relic_effects: Dict[str, int] = field(
+        default_factory=dict
+    )  # relic_name -> trigger count
+    card_effects: Dict[str, int] = field(
+        default_factory=dict
+    )  # card_name -> trigger count
+    effect_applications: Dict[str, int] = field(
+        default_factory=dict
+    )  # effect_name -> application count
     # Snapshot of party relics present during this battle (id -> count)
     party_relics: Dict[str, int] = field(default_factory=dict)
 
     # Extended healing tracking
-    shield_absorbed: Dict[str, int] = field(default_factory=dict)  # entity -> total shield absorption
-    temporary_hp_granted: Dict[str, int] = field(default_factory=dict)  # entity -> total temp HP granted
-    healing_prevented: Dict[str, int] = field(default_factory=dict)  # entity -> total healing prevented
+    shield_absorbed: Dict[str, int] = field(
+        default_factory=dict
+    )  # entity -> total shield absorption
+    temporary_hp_granted: Dict[str, int] = field(
+        default_factory=dict
+    )  # entity -> total temp HP granted
+    healing_prevented: Dict[str, int] = field(
+        default_factory=dict
+    )  # entity -> total healing prevented
 
     # Critical hit tracking
-    critical_hits: Dict[str, int] = field(default_factory=dict)  # entity -> critical hit count
-    critical_damage: Dict[str, int] = field(default_factory=dict)  # entity -> total critical damage
+    critical_hits: Dict[str, int] = field(
+        default_factory=dict
+    )  # entity -> critical hit count
+    critical_damage: Dict[str, int] = field(
+        default_factory=dict
+    )  # entity -> total critical damage
 
     # Resource tracking
-    resources_spent: Dict[str, Dict[str, int]] = field(default_factory=dict)  # entity -> resource_type -> amount
-    resources_gained: Dict[str, Dict[str, int]] = field(default_factory=dict)  # entity -> resource_type -> amount
+    resources_spent: Dict[str, Dict[str, int]] = field(
+        default_factory=dict
+    )  # entity -> resource_type -> amount
+    resources_gained: Dict[str, Dict[str, int]] = field(
+        default_factory=dict
+    )  # entity -> resource_type -> amount
 
     # New tracking fields for enhanced combat logging
     kills: Dict[str, int] = field(default_factory=dict)  # entity -> kill count
     dot_kills: Dict[str, int] = field(default_factory=dict)  # entity -> DOT kill count
-    ultimates_used: Dict[str, int] = field(default_factory=dict)  # entity -> ultimate usage count
-    ultimate_failures: Dict[str, int] = field(default_factory=dict)  # entity -> ultimate failure count
-    self_damage: Dict[str, int] = field(default_factory=dict)  # entity -> damage dealt to self
-    friendly_fire: Dict[str, int] = field(default_factory=dict)  # entity -> damage dealt to allies
+    ultimates_used: Dict[str, int] = field(
+        default_factory=dict
+    )  # entity -> ultimate usage count
+    ultimate_failures: Dict[str, int] = field(
+        default_factory=dict
+    )  # entity -> ultimate failure count
+    self_damage: Dict[str, int] = field(
+        default_factory=dict
+    )  # entity -> damage dealt to self
+    friendly_fire: Dict[str, int] = field(
+        default_factory=dict
+    )  # entity -> damage dealt to allies
 
 
 class BattleLogger:
     """Manages logging for individual battles."""
 
-    def __init__(self, run_id: str, battle_index: int, base_logs_path: Optional[Path] = None):
+    def __init__(
+        self, run_id: str, battle_index: int, base_logs_path: Optional[Path] = None
+    ):
         self.run_id = run_id
         self.battle_index = battle_index
         self.summary = BattleSummary(
@@ -97,13 +146,15 @@ class BattleLogger:
             end_time=None,
             result="ongoing",
             party_members=[],
-            foes=[]
+            foes=[],
         )
 
         # Create folder structure
         if base_logs_path is None:
             base_logs_path = Path(__file__).resolve().parent / "logs"
-        self.base_path = base_logs_path / "runs" / run_id / "battles" / str(battle_index)
+        self.base_path = (
+            base_logs_path / "runs" / run_id / "battles" / str(battle_index)
+        )
         self.raw_path = self.base_path / "raw"
         self.summary_path = self.base_path / "summary"
 
@@ -214,7 +265,9 @@ class BattleLogger:
                 and event.attacker_id is not None
             ):
                 types = self.summary.damage_by_type.setdefault(event.attacker_id, {})
-                types[event.damage_type] = types.get(event.damage_type, 0) + event.amount
+                types[event.damage_type] = (
+                    types.get(event.damage_type, 0) + event.amount
+                )
 
             # Log to raw file with enhanced details
             details_str = ""
@@ -236,7 +289,7 @@ class BattleLogger:
 
     def _on_battle_start(self, entity):
         """Handle battle start event."""
-        entity_id = getattr(entity, 'id', str(entity))
+        entity_id = getattr(entity, "id", str(entity))
 
         event = BattleEvent(
             timestamp=datetime.now(),
@@ -244,24 +297,33 @@ class BattleLogger:
             attacker_id=None,
             target_id=entity_id,
             amount=None,
-            details={"entity_type": type(entity).__name__}
+            details={"entity_type": type(entity).__name__},
         )
         self._log_event(event)
 
         # Participant lists are set by the battle controller; avoid guessing here
         # to prevent misclassification.
 
-    def _on_damage_dealt(self, attacker, target, amount, source_type="attack", source_name=None, damage_type=None, action_name=None):
+    def _on_damage_dealt(
+        self,
+        attacker,
+        target,
+        amount,
+        source_type="attack",
+        source_name=None,
+        damage_type=None,
+        action_name=None,
+    ):
         """Handle damage dealt event."""
-        attacker_id = getattr(attacker, 'id', str(attacker))
-        target_id = getattr(target, 'id', str(target))
+        attacker_id = getattr(attacker, "id", str(attacker))
+        target_id = getattr(target, "id", str(target))
 
         if source_type == "attack" and not action_name:
             action_name = "Normal Attack"
 
         # Get damage type if not provided
-        if damage_type is None and hasattr(attacker, 'damage_type'):
-            damage_type = getattr(attacker.damage_type, 'id', str(attacker.damage_type))
+        if damage_type is None and hasattr(attacker, "damage_type"):
+            damage_type = getattr(attacker.damage_type, "id", str(attacker.damage_type))
 
         event = BattleEvent(
             timestamp=datetime.now(),
@@ -271,7 +333,7 @@ class BattleLogger:
             amount=amount,
             source_type=source_type,
             source_name=source_name,
-            damage_type=damage_type
+            damage_type=damage_type,
         )
         self._log_event(event)
         # Determine relationships for self damage and friendly fire
@@ -285,7 +347,9 @@ class BattleLogger:
             target_is_party = target_id in self.summary.party_members
             target_is_foe = target_id in self.summary.foes
 
-            if (attacker_is_party and target_is_party) or (attacker_is_foe and target_is_foe):
+            if (attacker_is_party and target_is_party) or (
+                attacker_is_foe and target_is_foe
+            ):
                 self.summary.friendly_fire[attacker_id] = (
                     self.summary.friendly_fire.get(attacker_id, 0) + amount
                 )
@@ -298,35 +362,41 @@ class BattleLogger:
         # Track damage by source type
         if source_type not in self.summary.damage_by_source:
             self.summary.damage_by_source[source_type] = {}
-        self.summary.damage_by_source[source_type][attacker_id] = self.summary.damage_by_source[source_type].get(attacker_id, 0) + amount
+        self.summary.damage_by_source[source_type][attacker_id] = (
+            self.summary.damage_by_source[source_type].get(attacker_id, 0) + amount
+        )
 
         # Track damage by action name for more specific breakdown
         if action_name:
             if attacker_id not in self.summary.damage_by_action:
                 self.summary.damage_by_action[attacker_id] = {}
-            self.summary.damage_by_action[attacker_id][action_name] = self.summary.damage_by_action[attacker_id].get(action_name, 0) + amount
+            self.summary.damage_by_action[attacker_id][action_name] = (
+                self.summary.damage_by_action[attacker_id].get(action_name, 0) + amount
+            )
 
     def _on_damage_taken(self, target, attacker, amount):
         """Handle damage taken event."""
-        attacker_id = getattr(attacker, 'id', str(attacker)) if attacker else None
-        target_id = getattr(target, 'id', str(target))
+        attacker_id = getattr(attacker, "id", str(attacker)) if attacker else None
+        target_id = getattr(target, "id", str(target))
 
         event = BattleEvent(
             timestamp=datetime.now(),
             event_type="damage_taken",
             attacker_id=attacker_id,
             target_id=target_id,
-            amount=amount
+            amount=amount,
         )
         self._log_event(event)
 
         # Update summary stats
-        self.summary.total_damage_taken[target_id] = self.summary.total_damage_taken.get(target_id, 0) + amount
+        self.summary.total_damage_taken[target_id] = (
+            self.summary.total_damage_taken.get(target_id, 0) + amount
+        )
 
     def _on_heal(self, healer, target, amount, source_type="heal", source_name=None):
         """Handle healing event."""
-        healer_id = getattr(healer, 'id', str(healer)) if healer else None
-        target_id = getattr(target, 'id', str(target))
+        healer_id = getattr(healer, "id", str(healer)) if healer else None
+        target_id = getattr(target, "id", str(target))
 
         event = BattleEvent(
             timestamp=datetime.now(),
@@ -335,18 +405,22 @@ class BattleLogger:
             target_id=target_id,
             amount=amount,
             source_type=source_type,
-            source_name=source_name
+            source_name=source_name,
         )
         self._log_event(event)
 
         # Update summary stats
         if healer_id:
-            self.summary.total_healing_done[healer_id] = self.summary.total_healing_done.get(healer_id, 0) + amount
+            self.summary.total_healing_done[healer_id] = (
+                self.summary.total_healing_done.get(healer_id, 0) + amount
+            )
 
             # Track healing by source type
             if source_type not in self.summary.healing_by_source:
                 self.summary.healing_by_source[source_type] = {}
-            self.summary.healing_by_source[source_type][healer_id] = self.summary.healing_by_source[source_type].get(healer_id, 0) + amount
+            self.summary.healing_by_source[source_type][healer_id] = (
+                self.summary.healing_by_source[source_type].get(healer_id, 0) + amount
+            )
 
             # ALSO track healing in damage_by_action so it shows up in "Damage by Action" UI
             # Determine the action name based on source type
@@ -360,17 +434,27 @@ class BattleLogger:
 
             if healer_id not in self.summary.damage_by_action:
                 self.summary.damage_by_action[healer_id] = {}
-            self.summary.damage_by_action[healer_id][action_name] = self.summary.damage_by_action[healer_id].get(action_name, 0) + amount
+            self.summary.damage_by_action[healer_id][action_name] = (
+                self.summary.damage_by_action[healer_id].get(action_name, 0) + amount
+            )
 
-    def _on_hit_landed(self, attacker, target, amount, source_type="attack", source_name=None, action_name=None):
+    def _on_hit_landed(
+        self,
+        attacker,
+        target,
+        amount,
+        source_type="attack",
+        source_name=None,
+        action_name=None,
+    ):
         """Handle hit landed event."""
-        attacker_id = getattr(attacker, 'id', str(attacker))
-        target_id = getattr(target, 'id', str(target))
+        attacker_id = getattr(attacker, "id", str(attacker))
+        target_id = getattr(target, "id", str(target))
 
         # Get damage type if available
         damage_type = None
-        if hasattr(attacker, 'damage_type'):
-            damage_type = getattr(attacker.damage_type, 'id', str(attacker.damage_type))
+        if hasattr(attacker, "damage_type"):
+            damage_type = getattr(attacker.damage_type, "id", str(attacker.damage_type))
 
         event = BattleEvent(
             timestamp=datetime.now(),
@@ -380,16 +464,18 @@ class BattleLogger:
             amount=amount,
             source_type=source_type,
             source_name=source_name,
-            damage_type=damage_type
+            damage_type=damage_type,
         )
         self._log_event(event)
 
         # Update summary stats
-        self.summary.total_hits_landed[attacker_id] = self.summary.total_hits_landed.get(attacker_id, 0) + 1
+        self.summary.total_hits_landed[attacker_id] = (
+            self.summary.total_hits_landed.get(attacker_id, 0) + 1
+        )
 
     def _on_battle_end(self, entity):
         """Handle battle end event."""
-        entity_id = getattr(entity, 'id', str(entity))
+        entity_id = getattr(entity, "id", str(entity))
 
         event = BattleEvent(
             timestamp=datetime.now(),
@@ -397,19 +483,21 @@ class BattleLogger:
             attacker_id=None,
             target_id=entity_id,
             amount=None,
-            details={"entity_type": type(entity).__name__}
+            details={"entity_type": type(entity).__name__},
         )
         self._log_event(event)
 
-    def _on_dot_tick(self, attacker, target, amount, dot_name=None, effect_details=None):
+    def _on_dot_tick(
+        self, attacker, target, amount, dot_name=None, effect_details=None
+    ):
         """Handle DoT tick event."""
-        attacker_id = getattr(attacker, 'id', str(attacker))
-        target_id = getattr(target, 'id', str(target))
+        attacker_id = getattr(attacker, "id", str(attacker))
+        target_id = getattr(target, "id", str(target))
 
         # Get damage type if available
         damage_type = None
-        if hasattr(attacker, 'damage_type'):
-            damage_type = getattr(attacker.damage_type, 'id', str(attacker.damage_type))
+        if hasattr(attacker, "damage_type"):
+            damage_type = getattr(attacker.damage_type, "id", str(attacker.damage_type))
 
         event = BattleEvent(
             timestamp=datetime.now(),
@@ -420,26 +508,34 @@ class BattleLogger:
             source_type="dot",
             source_name=dot_name,
             damage_type=damage_type,
-            effect_details=effect_details or {}
+            effect_details=effect_details or {},
         )
         self._log_event(event)
 
         # Update DoT damage tracking
-        self.summary.dot_damage[attacker_id] = self.summary.dot_damage.get(attacker_id, 0) + amount
+        self.summary.dot_damage[attacker_id] = (
+            self.summary.dot_damage.get(attacker_id, 0) + amount
+        )
 
         # Track damage by source type
         if "dot" not in self.summary.damage_by_source:
             self.summary.damage_by_source["dot"] = {}
-        self.summary.damage_by_source["dot"][attacker_id] = self.summary.damage_by_source["dot"].get(attacker_id, 0) + amount
+        self.summary.damage_by_source["dot"][attacker_id] = (
+            self.summary.damage_by_source["dot"].get(attacker_id, 0) + amount
+        )
 
         # Fold DoT into headline totals
-        self.summary.total_damage_dealt[attacker_id] = self.summary.total_damage_dealt.get(attacker_id, 0) + amount
-        self.summary.total_damage_taken[target_id] = self.summary.total_damage_taken.get(target_id, 0) + amount
+        self.summary.total_damage_dealt[attacker_id] = (
+            self.summary.total_damage_dealt.get(attacker_id, 0) + amount
+        )
+        self.summary.total_damage_taken[target_id] = (
+            self.summary.total_damage_taken.get(target_id, 0) + amount
+        )
 
     def _on_hot_tick(self, healer, target, amount, hot_name=None, effect_details=None):
         """Handle HoT tick event."""
-        healer_id = getattr(healer, 'id', str(healer)) if healer else None
-        target_id = getattr(target, 'id', str(target))
+        healer_id = getattr(healer, "id", str(healer)) if healer else None
+        target_id = getattr(target, "id", str(target))
 
         event = BattleEvent(
             timestamp=datetime.now(),
@@ -449,25 +545,33 @@ class BattleLogger:
             amount=amount,
             source_type="hot",
             source_name=hot_name,
-            effect_details=effect_details or {}
+            effect_details=effect_details or {},
         )
         self._log_event(event)
 
         # Update HoT healing tracking
         if healer_id:
-            self.summary.hot_healing[healer_id] = self.summary.hot_healing.get(healer_id, 0) + amount
+            self.summary.hot_healing[healer_id] = (
+                self.summary.hot_healing.get(healer_id, 0) + amount
+            )
 
             # Track healing by source type
             if "hot" not in self.summary.healing_by_source:
                 self.summary.healing_by_source["hot"] = {}
-            self.summary.healing_by_source["hot"][healer_id] = self.summary.healing_by_source["hot"].get(healer_id, 0) + amount
+            self.summary.healing_by_source["hot"][healer_id] = (
+                self.summary.healing_by_source["hot"].get(healer_id, 0) + amount
+            )
 
             # Fold HoT into headline totals
-            self.summary.total_healing_done[healer_id] = self.summary.total_healing_done.get(healer_id, 0) + amount
+            self.summary.total_healing_done[healer_id] = (
+                self.summary.total_healing_done.get(healer_id, 0) + amount
+            )
 
-    def _on_relic_effect(self, relic_name, entity, effect_type=None, amount=None, details=None):
+    def _on_relic_effect(
+        self, relic_name, entity, effect_type=None, amount=None, details=None
+    ):
         """Handle relic effect event."""
-        entity_id = getattr(entity, 'id', str(entity))
+        entity_id = getattr(entity, "id", str(entity))
 
         event = BattleEvent(
             timestamp=datetime.now(),
@@ -477,12 +581,14 @@ class BattleLogger:
             amount=amount,
             source_type="relic_effect",
             source_name=relic_name,
-            effect_details=details or {"effect_type": effect_type}
+            effect_details=details or {"effect_type": effect_type},
         )
         self._log_event(event)
 
         # Update relic effect tracking
-        self.summary.relic_effects[relic_name] = self.summary.relic_effects.get(relic_name, 0) + 1
+        self.summary.relic_effects[relic_name] = (
+            self.summary.relic_effects.get(relic_name, 0) + 1
+        )
 
         # Track aftertaste and similar effects as specific actions for damage breakdown
         if relic_name == "aftertaste" and effect_type == "damage" and amount:
@@ -495,11 +601,15 @@ class BattleLogger:
                 damage_type = details["random_damage_type"]
                 action_name = f"Aftertaste ({damage_type})"
 
-            self.summary.damage_by_action[entity_id][action_name] = self.summary.damage_by_action[entity_id].get(action_name, 0) + amount
+            self.summary.damage_by_action[entity_id][action_name] = (
+                self.summary.damage_by_action[entity_id].get(action_name, 0) + amount
+            )
 
-    def _on_card_effect(self, card_name, entity, effect_type=None, amount=None, details=None):
+    def _on_card_effect(
+        self, card_name, entity, effect_type=None, amount=None, details=None
+    ):
         """Handle card effect event."""
-        entity_id = getattr(entity, 'id', str(entity))
+        entity_id = getattr(entity, "id", str(entity))
 
         event = BattleEvent(
             timestamp=datetime.now(),
@@ -509,16 +619,18 @@ class BattleLogger:
             amount=amount,
             source_type="card_effect",
             source_name=card_name,
-            effect_details=details or {"effect_type": effect_type}
+            effect_details=details or {"effect_type": effect_type},
         )
         self._log_event(event)
 
         # Update card effect tracking
-        self.summary.card_effects[card_name] = self.summary.card_effects.get(card_name, 0) + 1
+        self.summary.card_effects[card_name] = (
+            self.summary.card_effects.get(card_name, 0) + 1
+        )
 
     def _on_effect_applied(self, effect_name, entity, details=None):
         """Handle effect application event."""
-        entity_id = getattr(entity, 'id', str(entity))
+        entity_id = getattr(entity, "id", str(entity))
 
         event = BattleEvent(
             timestamp=datetime.now(),
@@ -528,16 +640,18 @@ class BattleLogger:
             amount=None,
             source_type="effect",
             source_name=effect_name,
-            effect_details=details or {}
+            effect_details=details or {},
         )
         self._log_event(event)
 
         # Update effect application tracking
-        self.summary.effect_applications[effect_name] = self.summary.effect_applications.get(effect_name, 0) + 1
+        self.summary.effect_applications[effect_name] = (
+            self.summary.effect_applications.get(effect_name, 0) + 1
+        )
 
     def _on_effect_expired(self, effect_name, entity, details=None):
         """Handle effect expiration event."""
-        entity_id = getattr(entity, 'id', str(entity))
+        entity_id = getattr(entity, "id", str(entity))
 
         event = BattleEvent(
             timestamp=datetime.now(),
@@ -547,13 +661,15 @@ class BattleLogger:
             amount=None,
             source_type="effect",
             source_name=effect_name,
-            effect_details=details or {}
+            effect_details=details or {},
         )
         self._log_event(event)
 
-    def _on_shield_absorbed(self, entity, amount, source_type="shield", source_name=None):
+    def _on_shield_absorbed(
+        self, entity, amount, source_type="shield", source_name=None
+    ):
         """Handle shield absorption event."""
-        entity_id = getattr(entity, 'id', str(entity))
+        entity_id = getattr(entity, "id", str(entity))
 
         event = BattleEvent(
             timestamp=datetime.now(),
@@ -562,16 +678,20 @@ class BattleLogger:
             target_id=entity_id,
             amount=amount,
             source_type=source_type,
-            source_name=source_name
+            source_name=source_name,
         )
         self._log_event(event)
 
         # Update shield absorption tracking
-        self.summary.shield_absorbed[entity_id] = self.summary.shield_absorbed.get(entity_id, 0) + amount
+        self.summary.shield_absorbed[entity_id] = (
+            self.summary.shield_absorbed.get(entity_id, 0) + amount
+        )
 
-    def _on_temporary_hp_granted(self, entity, amount, source_type="temp_hp", source_name=None):
+    def _on_temporary_hp_granted(
+        self, entity, amount, source_type="temp_hp", source_name=None
+    ):
         """Handle temporary HP granted event."""
-        entity_id = getattr(entity, 'id', str(entity))
+        entity_id = getattr(entity, "id", str(entity))
 
         event = BattleEvent(
             timestamp=datetime.now(),
@@ -580,16 +700,20 @@ class BattleLogger:
             target_id=entity_id,
             amount=amount,
             source_type=source_type,
-            source_name=source_name
+            source_name=source_name,
         )
         self._log_event(event)
 
         # Update temporary HP tracking
-        self.summary.temporary_hp_granted[entity_id] = self.summary.temporary_hp_granted.get(entity_id, 0) + amount
+        self.summary.temporary_hp_granted[entity_id] = (
+            self.summary.temporary_hp_granted.get(entity_id, 0) + amount
+        )
 
-    def _on_healing_prevented(self, entity, amount, source_type="heal_prevention", source_name=None):
+    def _on_healing_prevented(
+        self, entity, amount, source_type="heal_prevention", source_name=None
+    ):
         """Handle healing prevented event."""
-        entity_id = getattr(entity, 'id', str(entity))
+        entity_id = getattr(entity, "id", str(entity))
 
         event = BattleEvent(
             timestamp=datetime.now(),
@@ -598,22 +722,26 @@ class BattleLogger:
             target_id=entity_id,
             amount=amount,
             source_type=source_type,
-            source_name=source_name
+            source_name=source_name,
         )
         self._log_event(event)
 
         # Update healing prevention tracking
-        self.summary.healing_prevented[entity_id] = self.summary.healing_prevented.get(entity_id, 0) + amount
+        self.summary.healing_prevented[entity_id] = (
+            self.summary.healing_prevented.get(entity_id, 0) + amount
+        )
 
-    def _on_critical_hit(self, attacker, target, damage, source_type="attack", source_name=None):
+    def _on_critical_hit(
+        self, attacker, target, damage, source_type="attack", source_name=None
+    ):
         """Handle critical hit event."""
-        attacker_id = getattr(attacker, 'id', str(attacker))
-        target_id = getattr(target, 'id', str(target))
+        attacker_id = getattr(attacker, "id", str(attacker))
+        target_id = getattr(target, "id", str(target))
 
         # Get damage type if available
         damage_type = None
-        if hasattr(attacker, 'damage_type'):
-            damage_type = getattr(attacker.damage_type, 'id', str(attacker.damage_type))
+        if hasattr(attacker, "damage_type"):
+            damage_type = getattr(attacker.damage_type, "id", str(attacker.damage_type))
 
         event = BattleEvent(
             timestamp=datetime.now(),
@@ -624,17 +752,23 @@ class BattleLogger:
             source_type=source_type,
             source_name=source_name,
             damage_type=damage_type,
-            effect_details={"is_critical": True}
+            effect_details={"is_critical": True},
         )
         self._log_event(event)
 
         # Update critical hit tracking
-        self.summary.critical_hits[attacker_id] = self.summary.critical_hits.get(attacker_id, 0) + 1
-        self.summary.critical_damage[attacker_id] = self.summary.critical_damage.get(attacker_id, 0) + damage
+        self.summary.critical_hits[attacker_id] = (
+            self.summary.critical_hits.get(attacker_id, 0) + 1
+        )
+        self.summary.critical_damage[attacker_id] = (
+            self.summary.critical_damage.get(attacker_id, 0) + damage
+        )
 
-    def _on_resource_spent(self, entity, resource_type, amount, source_type="resource", source_name=None):
+    def _on_resource_spent(
+        self, entity, resource_type, amount, source_type="resource", source_name=None
+    ):
         """Handle resource spent event."""
-        entity_id = getattr(entity, 'id', str(entity))
+        entity_id = getattr(entity, "id", str(entity))
 
         event = BattleEvent(
             timestamp=datetime.now(),
@@ -644,18 +778,22 @@ class BattleLogger:
             amount=amount,
             source_type=source_type,
             source_name=source_name,
-            effect_details={"resource_type": resource_type}
+            effect_details={"resource_type": resource_type},
         )
         self._log_event(event)
 
         # Update resource tracking
         if entity_id not in self.summary.resources_spent:
             self.summary.resources_spent[entity_id] = {}
-        self.summary.resources_spent[entity_id][resource_type] = self.summary.resources_spent[entity_id].get(resource_type, 0) + amount
+        self.summary.resources_spent[entity_id][resource_type] = (
+            self.summary.resources_spent[entity_id].get(resource_type, 0) + amount
+        )
 
-    def _on_resource_gained(self, entity, resource_type, amount, source_type="resource", source_name=None):
+    def _on_resource_gained(
+        self, entity, resource_type, amount, source_type="resource", source_name=None
+    ):
         """Handle resource gained event."""
-        entity_id = getattr(entity, 'id', str(entity))
+        entity_id = getattr(entity, "id", str(entity))
 
         event = BattleEvent(
             timestamp=datetime.now(),
@@ -665,14 +803,16 @@ class BattleLogger:
             amount=amount,
             source_type=source_type,
             source_name=source_name,
-            effect_details={"resource_type": resource_type}
+            effect_details={"resource_type": resource_type},
         )
         self._log_event(event)
 
         # Update resource tracking
         if entity_id not in self.summary.resources_gained:
             self.summary.resources_gained[entity_id] = {}
-        self.summary.resources_gained[entity_id][resource_type] = self.summary.resources_gained[entity_id].get(resource_type, 0) + amount
+        self.summary.resources_gained[entity_id][resource_type] = (
+            self.summary.resources_gained[entity_id].get(resource_type, 0) + amount
+        )
 
     def finalize_battle(self, result: str = "completed"):
         """Finalize the battle and write summary."""
@@ -687,7 +827,9 @@ class BattleLogger:
             summary_data = {
                 "battle_id": self.summary.battle_id,
                 "start_time": self.summary.start_time.isoformat(),
-                "end_time": self.summary.end_time.isoformat() if self.summary.end_time else None,
+                "end_time": (
+                    self.summary.end_time.isoformat() if self.summary.end_time else None
+                ),
                 "result": self.summary.result,
                 "party_members": self.summary.party_members,
                 "foes": self.summary.foes,
@@ -700,7 +842,8 @@ class BattleLogger:
                 "event_count": len(self.summary.events),
                 "duration_seconds": (
                     (self.summary.end_time - self.summary.start_time).total_seconds()
-                    if self.summary.end_time else None
+                    if self.summary.end_time
+                    else None
                 ),
                 "party_relics": self.summary.party_relics,
                 # Enhanced tracking data
@@ -713,7 +856,6 @@ class BattleLogger:
                 "relic_effects": self.summary.relic_effects,
                 "card_effects": self.summary.card_effects,
                 "effect_applications": self.summary.effect_applications,
-
                 # Extended tracking data
                 "shield_absorbed": self.summary.shield_absorbed,
                 "temporary_hp_granted": self.summary.temporary_hp_granted,
@@ -722,12 +864,11 @@ class BattleLogger:
                 "critical_damage": self.summary.critical_damage,
                 "resources_spent": self.summary.resources_spent,
                 "resources_gained": self.summary.resources_gained,
-
                 # Combat tracking data (missing from original export)
                 "kills": self.summary.kills,
                 "dot_kills": self.summary.dot_kills,
                 "ultimates_used": self.summary.ultimates_used,
-                "ultimate_failures": self.summary.ultimate_failures
+                "ultimate_failures": self.summary.ultimate_failures,
             }
 
             # Write summary JSON
@@ -746,7 +887,7 @@ class BattleLogger:
                     "source_type": event.source_type,
                     "source_name": event.source_name,
                     "damage_type": event.damage_type,
-                    "effect_details": event.effect_details
+                    "effect_details": event.effect_details,
                 }
                 for event in self.summary.events
             ]
@@ -770,7 +911,8 @@ class BattleLogger:
         """Write a human-readable summary."""
         duration = (
             (self.summary.end_time - self.summary.start_time).total_seconds()
-            if self.summary.end_time else 0
+            if self.summary.end_time
+            else 0
         )
 
         lines = [
@@ -788,178 +930,256 @@ class BattleLogger:
             "Damage Dealt:",
         ]
 
-        for entity, damage in sorted(self.summary.total_damage_dealt.items(), key=lambda x: x[1], reverse=True):
+        for entity, damage in sorted(
+            self.summary.total_damage_dealt.items(), key=lambda x: x[1], reverse=True
+        ):
             lines.append(f"  {entity}: {damage}")
 
-        lines.extend([
-            "",
-            "Damage Taken:",
-        ])
+        lines.extend(
+            [
+                "",
+                "Damage Taken:",
+            ]
+        )
 
-        for entity, damage in sorted(self.summary.total_damage_taken.items(), key=lambda x: x[1], reverse=True):
+        for entity, damage in sorted(
+            self.summary.total_damage_taken.items(), key=lambda x: x[1], reverse=True
+        ):
             lines.append(f"  {entity}: {damage}")
 
         if self.summary.total_healing_done:
-            lines.extend([
-                "",
-                "Healing Done:",
-            ])
-            for entity, healing in sorted(self.summary.total_healing_done.items(), key=lambda x: x[1], reverse=True):
+            lines.extend(
+                [
+                    "",
+                    "Healing Done:",
+                ]
+            )
+            for entity, healing in sorted(
+                self.summary.total_healing_done.items(),
+                key=lambda x: x[1],
+                reverse=True,
+            ):
                 lines.append(f"  {entity}: {healing}")
 
-        lines.extend([
-            "",
-            "Hits Landed:",
-        ])
+        lines.extend(
+            [
+                "",
+                "Hits Landed:",
+            ]
+        )
 
-        for entity, hits in sorted(self.summary.total_hits_landed.items(), key=lambda x: x[1], reverse=True):
+        for entity, hits in sorted(
+            self.summary.total_hits_landed.items(), key=lambda x: x[1], reverse=True
+        ):
             lines.append(f"  {entity}: {hits}")
 
         # Enhanced tracking summaries
         if self.summary.damage_by_type:
-            lines.extend([
-                "",
-                "Damage by Element:",
-            ])
+            lines.extend(
+                [
+                    "",
+                    "Damage by Element:",
+                ]
+            )
             for entity, types in self.summary.damage_by_type.items():
                 lines.append(f"  {entity}:")
-                for dmg_type, amount in sorted(types.items(), key=lambda x: x[1], reverse=True):
+                for dmg_type, amount in sorted(
+                    types.items(), key=lambda x: x[1], reverse=True
+                ):
                     lines.append(f"    {dmg_type}: {amount}")
 
         if self.summary.damage_by_source:
-            lines.extend([
-                "",
-                "Damage by Source Type:",
-            ])
+            lines.extend(
+                [
+                    "",
+                    "Damage by Source Type:",
+                ]
+            )
             for source_type, entities in self.summary.damage_by_source.items():
                 lines.append(f"  {source_type.upper()}:")
-                for entity, damage in sorted(entities.items(), key=lambda x: x[1], reverse=True):
+                for entity, damage in sorted(
+                    entities.items(), key=lambda x: x[1], reverse=True
+                ):
                     lines.append(f"    {entity}: {damage}")
 
         if self.summary.healing_by_source:
-            lines.extend([
-                "",
-                "Healing by Source Type:",
-            ])
+            lines.extend(
+                [
+                    "",
+                    "Healing by Source Type:",
+                ]
+            )
             for source_type, entities in self.summary.healing_by_source.items():
                 lines.append(f"  {source_type.upper()}:")
-                for entity, healing in sorted(entities.items(), key=lambda x: x[1], reverse=True):
+                for entity, healing in sorted(
+                    entities.items(), key=lambda x: x[1], reverse=True
+                ):
                     lines.append(f"    {entity}: {healing}")
 
         if self.summary.dot_damage:
-            lines.extend([
-                "",
-                "DoT Damage Dealt:",
-            ])
-            for entity, damage in sorted(self.summary.dot_damage.items(), key=lambda x: x[1], reverse=True):
+            lines.extend(
+                [
+                    "",
+                    "DoT Damage Dealt:",
+                ]
+            )
+            for entity, damage in sorted(
+                self.summary.dot_damage.items(), key=lambda x: x[1], reverse=True
+            ):
                 lines.append(f"  {entity}: {damage}")
 
         if self.summary.hot_healing:
-            lines.extend([
-                "",
-                "HoT Healing Done:",
-            ])
-            for entity, healing in sorted(self.summary.hot_healing.items(), key=lambda x: x[1], reverse=True):
+            lines.extend(
+                [
+                    "",
+                    "HoT Healing Done:",
+                ]
+            )
+            for entity, healing in sorted(
+                self.summary.hot_healing.items(), key=lambda x: x[1], reverse=True
+            ):
                 lines.append(f"  {entity}: {healing}")
 
         if self.summary.relic_effects:
-            lines.extend([
-                "",
-                "Relic Effects Triggered:",
-            ])
-            for relic, count in sorted(self.summary.relic_effects.items(), key=lambda x: x[1], reverse=True):
+            lines.extend(
+                [
+                    "",
+                    "Relic Effects Triggered:",
+                ]
+            )
+            for relic, count in sorted(
+                self.summary.relic_effects.items(), key=lambda x: x[1], reverse=True
+            ):
                 lines.append(f"  {relic}: {count} times")
 
         if self.summary.party_relics:
-            lines.extend([
-                "",
-                "Relics Equipped:",
-            ])
+            lines.extend(
+                [
+                    "",
+                    "Relics Equipped:",
+                ]
+            )
             for rid, qty in sorted(self.summary.party_relics.items()):
                 lines.append(f"  {rid}: x{qty}")
 
         if self.summary.card_effects:
-            lines.extend([
-                "",
-                "Card Effects Triggered:",
-            ])
-            for card, count in sorted(self.summary.card_effects.items(), key=lambda x: x[1], reverse=True):
+            lines.extend(
+                [
+                    "",
+                    "Card Effects Triggered:",
+                ]
+            )
+            for card, count in sorted(
+                self.summary.card_effects.items(), key=lambda x: x[1], reverse=True
+            ):
                 lines.append(f"  {card}: {count} times")
 
         if self.summary.effect_applications:
-            lines.extend([
-                "",
-                "Effects Applied:",
-            ])
-            for effect, count in sorted(self.summary.effect_applications.items(), key=lambda x: x[1], reverse=True):
+            lines.extend(
+                [
+                    "",
+                    "Effects Applied:",
+                ]
+            )
+            for effect, count in sorted(
+                self.summary.effect_applications.items(),
+                key=lambda x: x[1],
+                reverse=True,
+            ):
                 lines.append(f"  {effect}: {count} times")
 
         # Extended tracking summaries
         if self.summary.shield_absorbed:
-            lines.extend([
-                "",
-                "Shield Damage Absorbed:",
-            ])
-            for entity, absorbed in sorted(self.summary.shield_absorbed.items(), key=lambda x: x[1], reverse=True):
+            lines.extend(
+                [
+                    "",
+                    "Shield Damage Absorbed:",
+                ]
+            )
+            for entity, absorbed in sorted(
+                self.summary.shield_absorbed.items(), key=lambda x: x[1], reverse=True
+            ):
                 lines.append(f"  {entity}: {absorbed}")
 
         if self.summary.temporary_hp_granted:
-            lines.extend([
-                "",
-                "Temporary HP Granted:",
-            ])
-            for entity, temp_hp in sorted(self.summary.temporary_hp_granted.items(), key=lambda x: x[1], reverse=True):
+            lines.extend(
+                [
+                    "",
+                    "Temporary HP Granted:",
+                ]
+            )
+            for entity, temp_hp in sorted(
+                self.summary.temporary_hp_granted.items(),
+                key=lambda x: x[1],
+                reverse=True,
+            ):
                 lines.append(f"  {entity}: {temp_hp}")
 
         if self.summary.healing_prevented:
-            lines.extend([
-                "",
-                "Healing Prevented:",
-            ])
-            for entity, prevented in sorted(self.summary.healing_prevented.items(), key=lambda x: x[1], reverse=True):
+            lines.extend(
+                [
+                    "",
+                    "Healing Prevented:",
+                ]
+            )
+            for entity, prevented in sorted(
+                self.summary.healing_prevented.items(), key=lambda x: x[1], reverse=True
+            ):
                 lines.append(f"  {entity}: {prevented}")
 
         if self.summary.critical_hits:
-            lines.extend([
-                "",
-                "Critical Hits:",
-            ])
-            for entity, crits in sorted(self.summary.critical_hits.items(), key=lambda x: x[1], reverse=True):
+            lines.extend(
+                [
+                    "",
+                    "Critical Hits:",
+                ]
+            )
+            for entity, crits in sorted(
+                self.summary.critical_hits.items(), key=lambda x: x[1], reverse=True
+            ):
                 crit_dmg = self.summary.critical_damage.get(entity, 0)
                 lines.append(f"  {entity}: {crits} crits ({crit_dmg} damage)")
 
         if self.summary.resources_spent:
-            lines.extend([
-                "",
-                "Resources Spent:",
-            ])
+            lines.extend(
+                [
+                    "",
+                    "Resources Spent:",
+                ]
+            )
             for entity, resources in self.summary.resources_spent.items():
                 lines.append(f"  {entity}:")
                 for resource_type, amount in sorted(resources.items()):
                     lines.append(f"    {resource_type}: {amount}")
 
         if self.summary.resources_gained:
-            lines.extend([
-                "",
-                "Resources Gained:",
-            ])
+            lines.extend(
+                [
+                    "",
+                    "Resources Gained:",
+                ]
+            )
             for entity, resources in self.summary.resources_gained.items():
                 lines.append(f"  {entity}:")
                 for resource_type, amount in sorted(resources.items()):
                     lines.append(f"    {resource_type}: {amount}")
 
-        lines.extend([
-            "",
-            f"Total Events: {len(self.summary.events)}",
-        ])
+        lines.extend(
+            [
+                "",
+                f"Total Events: {len(self.summary.events)}",
+            ]
+        )
 
         with open(self.summary_path / "human_summary.txt", "w") as f:
             f.write("\n".join(lines))
 
-    def _on_entity_killed(self, victim, killer, amount, source_type="death", details=None):
+    def _on_entity_killed(
+        self, victim, killer, amount, source_type="death", details=None
+    ):
         """Handle entity killed event."""
-        victim_id = getattr(victim, 'id', str(victim))
-        killer_id = getattr(killer, 'id', str(killer)) if killer else None
+        victim_id = getattr(victim, "id", str(victim))
+        killer_id = getattr(killer, "id", str(killer)) if killer else None
 
         event = BattleEvent(
             timestamp=datetime.now(),
@@ -969,7 +1189,7 @@ class BattleLogger:
             amount=0,
             source_type=source_type,
             source_name="death",
-            effect_details=details or {}
+            effect_details=details or {},
         )
         self._log_event(event)
 
@@ -979,8 +1199,8 @@ class BattleLogger:
 
     def _on_dot_kill(self, attacker, target, damage, dot_name, details=None):
         """Handle DOT kill event."""
-        attacker_id = getattr(attacker, 'id', str(attacker))
-        target_id = getattr(target, 'id', str(target))
+        attacker_id = getattr(attacker, "id", str(attacker))
+        target_id = getattr(target, "id", str(target))
 
         event = BattleEvent(
             timestamp=datetime.now(),
@@ -990,16 +1210,20 @@ class BattleLogger:
             amount=damage,
             source_type="dot",
             source_name=dot_name,
-            effect_details=details or {}
+            effect_details=details or {},
         )
         self._log_event(event)
 
         # Update DOT kill tracking
-        self.summary.dot_kills[attacker_id] = self.summary.dot_kills.get(attacker_id, 0) + 1
+        self.summary.dot_kills[attacker_id] = (
+            self.summary.dot_kills.get(attacker_id, 0) + 1
+        )
 
-    def _on_ultimate_used(self, caster, target, amount, source_type="ultimate", details=None):
+    def _on_ultimate_used(
+        self, caster, target, amount, source_type="ultimate", details=None
+    ):
         """Handle ultimate used event."""
-        caster_id = getattr(caster, 'id', str(caster))
+        caster_id = getattr(caster, "id", str(caster))
 
         event = BattleEvent(
             timestamp=datetime.now(),
@@ -1009,16 +1233,20 @@ class BattleLogger:
             amount=0,
             source_type=source_type,
             source_name="ultimate",
-            effect_details=details or {}
+            effect_details=details or {},
         )
         self._log_event(event)
 
         # Update ultimate usage tracking
-        self.summary.ultimates_used[caster_id] = self.summary.ultimates_used.get(caster_id, 0) + 1
+        self.summary.ultimates_used[caster_id] = (
+            self.summary.ultimates_used.get(caster_id, 0) + 1
+        )
 
-    def _on_ultimate_completed(self, caster, target, amount, source_type="ultimate", details=None):
+    def _on_ultimate_completed(
+        self, caster, target, amount, source_type="ultimate", details=None
+    ):
         """Handle ultimate completed event."""
-        caster_id = getattr(caster, 'id', str(caster))
+        caster_id = getattr(caster, "id", str(caster))
 
         event = BattleEvent(
             timestamp=datetime.now(),
@@ -1028,13 +1256,15 @@ class BattleLogger:
             amount=0,
             source_type=source_type,
             source_name="ultimate",
-            effect_details=details or {}
+            effect_details=details or {},
         )
         self._log_event(event)
 
-    def _on_ultimate_failed(self, caster, target, amount, source_type="ultimate", details=None):
+    def _on_ultimate_failed(
+        self, caster, target, amount, source_type="ultimate", details=None
+    ):
         """Handle ultimate failed event."""
-        caster_id = getattr(caster, 'id', str(caster))
+        caster_id = getattr(caster, "id", str(caster))
 
         event = BattleEvent(
             timestamp=datetime.now(),
@@ -1044,12 +1274,14 @@ class BattleLogger:
             amount=0,
             source_type=source_type,
             source_name="ultimate",
-            effect_details=details or {}
+            effect_details=details or {},
         )
         self._log_event(event)
 
         # Update ultimate failure tracking
-        self.summary.ultimate_failures[caster_id] = self.summary.ultimate_failures.get(caster_id, 0) + 1
+        self.summary.ultimate_failures[caster_id] = (
+            self.summary.ultimate_failures.get(caster_id, 0) + 1
+        )
 
 
 class RunLogger:
@@ -1070,7 +1302,11 @@ class RunLogger:
         battles_root = self.run_path / "battles"
         battles_root.mkdir(parents=True, exist_ok=True)
         try:
-            existing = [int(p.name) for p in battles_root.iterdir() if p.is_dir() and p.name.isdigit()]
+            existing = [
+                int(p.name)
+                for p in battles_root.iterdir()
+                if p.is_dir() and p.name.isdigit()
+            ]
             self.battle_count = max(existing) if existing else 0
         except Exception:
             self.battle_count = 0
@@ -1081,7 +1317,9 @@ class RunLogger:
             self.current_battle_logger.finalize_battle("interrupted")
 
         self.battle_count += 1
-        self.current_battle_logger = BattleLogger(self.run_id, self.battle_count, self.base_logs_path)
+        self.current_battle_logger = BattleLogger(
+            self.run_id, self.battle_count, self.base_logs_path
+        )
         return self.current_battle_logger
 
     def end_battle(self, result: str = "completed"):

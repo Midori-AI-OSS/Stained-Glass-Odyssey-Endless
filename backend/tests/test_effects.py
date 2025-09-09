@@ -109,4 +109,3 @@ async def test_stat_modifier_applies_and_expires():
     assert stats.atk == 10
     assert stats.defense == 20
     assert not stats.mods
-

@@ -3,7 +3,9 @@ from pathlib import Path
 import sys
 import types
 
-sys.modules.setdefault("llms.torch_checker", types.SimpleNamespace(is_torch_available=lambda: False))
+sys.modules.setdefault(
+    "llms.torch_checker", types.SimpleNamespace(is_torch_available=lambda: False)
+)
 
 from autofighter.mapgen import MapNode  # noqa: E402
 from autofighter.party import Party  # noqa: E402

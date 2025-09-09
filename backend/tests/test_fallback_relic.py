@@ -1,4 +1,5 @@
 """Test fallback relic system when card pool is exhausted."""
+
 from pathlib import Path
 import sys
 
@@ -25,7 +26,7 @@ def test_fallback_essence_relic_properties():
         "crit_rate": 0.01,
         "crit_damage": 0.01,
         "effect_hit_rate": 0.01,
-        "effect_resistance": 0.01
+        "effect_resistance": 0.01,
     }
 
     assert relic.effects == expected_effects
@@ -47,9 +48,12 @@ def test_fallback_relic_applies_correctly():
     # Since effects use {attr}_mult format, the actual boost is member.atk * 1.01
 
     # The member should have an effect manager and modifier applied
-    assert hasattr(member, 'effect_manager'), "Member should have effect manager after relic application"
-    assert len(member.effect_manager.mods) > 0, "Member should have stat modifiers applied"
-
+    assert hasattr(
+        member, "effect_manager"
+    ), "Member should have effect manager after relic application"
+    assert (
+        len(member.effect_manager.mods) > 0
+    ), "Member should have stat modifiers applied"
 
 
 def test_fallback_relic_logic():
@@ -92,11 +96,15 @@ def test_fallback_relic_not_in_normal_drops():
 
     # Test multiple attempts to ensure fallback relic doesn't appear
     for star_level in [1, 2, 3, 4, 5]:
-        relic_opts = relic_choices(party, star_level, count=10)  # Request many to increase chance
+        relic_opts = relic_choices(
+            party, star_level, count=10
+        )  # Request many to increase chance
 
         # Verify fallback relic is not in the options
         fallback_ids = [r.id for r in relic_opts if r.id == "fallback_essence"]
-        assert len(fallback_ids) == 0, f"Fallback relic should not appear in normal {star_level}-star relic drops"
+        assert (
+            len(fallback_ids) == 0
+        ), f"Fallback relic should not appear in normal {star_level}-star relic drops"
 
 
 if __name__ == "__main__":

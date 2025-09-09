@@ -46,7 +46,7 @@ class Summon(Stats):
         """Initialize summon with proper inheritance from summoner."""
         super().__post_init__()
         # Mark this as a summon for identification
-        if not hasattr(self, 'id') or not self.id:
+        if not hasattr(self, "id") or not self.id:
             self.id = f"{self.summoner_id}_{self.summon_type}_summon"
 
     @classmethod
@@ -79,10 +79,10 @@ class Summon(Stats):
             damage_type = override_damage_type
         else:
             # 70% chance to match summoner's element, 30% chance for random
-            if random.random() < 0.7 and hasattr(summoner, 'damage_type'):
+            if random.random() < 0.7 and hasattr(summoner, "damage_type"):
                 try:
                     # Try to get the same damage type as summoner
-                    summoner_element = getattr(summoner.damage_type, 'id', 'Generic')
+                    summoner_element = getattr(summoner.damage_type, "id", "Generic")
                     damage_type = get_damage_type(summoner_element)
                 except Exception:
                     # Fallback to random if summoner's type is problematic
@@ -96,7 +96,7 @@ class Summon(Stats):
             # Inherit damage type
             damage_type=damage_type,
             # Summon-specific properties
-            summoner_id=getattr(summoner, 'id', str(id(summoner))),
+            summoner_id=getattr(summoner, "id", str(id(summoner))),
             summon_type=summon_type,
             summon_source=source,
             turns_remaining=turns_remaining,
@@ -115,24 +115,28 @@ class Summon(Stats):
         summon._base_vitality = summoner._base_vitality * stat_multiplier
 
         # Copy summoner's passives at reduced effectiveness if applicable
-        if hasattr(summoner, 'passives') and summoner.passives:
+        if hasattr(summoner, "passives") and summoner.passives:
             # Only copy certain "safe" passives that make sense for summons
-            safe_passives = ['critical_boost', 'elemental_affinity']  # Add more as needed
-            summon.passives = [p for p in summoner.passives if any(sp in p for sp in safe_passives)]
+            safe_passives = [
+                "critical_boost",
+                "elemental_affinity",
+            ]  # Add more as needed
+            summon.passives = [
+                p for p in summoner.passives if any(sp in p for sp in safe_passives)
+            ]
 
         # Share beneficial effects (buffs and HOTs) from summoner but not debuffs or DOTs
         cls._share_beneficial_effects(summoner, summon, stat_multiplier)
 
-        log.debug(f"Created {summon_type} summon for {summoner.id} with {stat_multiplier*100}% stats")
+        log.debug(
+            f"Created {summon_type} summon for {summoner.id} with {stat_multiplier*100}% stats"
+        )
 
         return summon
 
     @classmethod
     def _share_beneficial_effects(
-        cls,
-        summoner: Stats,
-        summon: "Summon",
-        stat_multiplier: float
+        cls, summoner: Stats, summon: "Summon", stat_multiplier: float
     ) -> None:
         """Share beneficial effects (buffs and HOTs) from summoner to summon.
 
@@ -142,21 +146,24 @@ class Summon(Stats):
             stat_multiplier: Multiplier to apply to effect strength
         """
         # Copy beneficial StatEffects from summoner's active effects
-        if hasattr(summoner, '_active_effects') and summoner._active_effects:
+        if hasattr(summoner, "_active_effects") and summoner._active_effects:
             for effect in summoner._active_effects:
                 if cls._is_beneficial_stat_effect(effect):
                     # Create a scaled copy of the effect for the summon
                     scaled_effect = cls._scale_stat_effect(effect, stat_multiplier)
                     summon.add_effect(scaled_effect)
-                    log.debug(f"Shared beneficial StatEffect '{effect.name}' to summon {summon.id}")
+                    log.debug(
+                        f"Shared beneficial StatEffect '{effect.name}' to summon {summon.id}"
+                    )
 
         # Copy HOTs and beneficial StatModifiers from effect manager if available
-        if hasattr(summoner, 'effect_manager') and summoner.effect_manager:
+        if hasattr(summoner, "effect_manager") and summoner.effect_manager:
             effect_mgr = summoner.effect_manager
 
             # Ensure summon has an effect manager
-            if not hasattr(summon, 'effect_manager') or not summon.effect_manager:
+            if not hasattr(summon, "effect_manager") or not summon.effect_manager:
                 from autofighter.effects import EffectManager
+
                 summon.effect_manager = EffectManager(summon)
 
             # Copy all HOTs (healing over time effects are inherently beneficial)
@@ -171,7 +178,9 @@ class Summon(Stats):
                     scaled_mod = cls._scale_stat_modifier(mod, summon, stat_multiplier)
                     scaled_mod.apply()  # Apply the modifier to ensure it affects the summon's stats
                     summon.effect_manager.add_modifier(scaled_mod)
-                    log.debug(f"Shared beneficial StatModifier '{mod.name}' to summon {summon.id}")
+                    log.debug(
+                        f"Shared beneficial StatModifier '{mod.name}' to summon {summon.id}"
+                    )
 
     @classmethod
     def _is_beneficial_stat_effect(cls, effect: "StatEffect") -> bool:
@@ -190,7 +199,7 @@ class Summon(Stats):
             if value > 0:
                 positive_count += 1
             # Special case: damage_taken is beneficial when negative
-            elif stat_name in ['damage_taken'] and value < 0:
+            elif stat_name in ["damage_taken"] and value < 0:
                 positive_count += 1
 
         return positive_count > total_count / 2
@@ -205,7 +214,7 @@ class Summon(Stats):
             for stat_name, value in modifier.deltas.items():
                 if value > 0:
                     beneficial = True
-                elif stat_name in ['damage_taken'] and value < 0:
+                elif stat_name in ["damage_taken"] and value < 0:
                     beneficial = True
 
         # Check multipliers (multiplicative modifiers > 1.0 are beneficial)
@@ -213,13 +222,15 @@ class Summon(Stats):
             for stat_name, value in modifier.multipliers.items():
                 if value > 1.0:
                     beneficial = True
-                elif stat_name in ['damage_taken'] and value < 1.0:
+                elif stat_name in ["damage_taken"] and value < 1.0:
                     beneficial = True
 
         return beneficial
 
     @classmethod
-    def _scale_stat_effect(cls, effect: "StatEffect", multiplier: float) -> "StatEffect":
+    def _scale_stat_effect(
+        cls, effect: "StatEffect", multiplier: float
+    ) -> "StatEffect":
         """Create a scaled copy of a StatEffect."""
         from autofighter.stats import StatEffect
 
@@ -231,11 +242,13 @@ class Summon(Stats):
             name=f"summon_{effect.name}",
             stat_modifiers=scaled_modifiers,
             duration=effect.duration,
-            source=f"inherited_from_{effect.source}"
+            source=f"inherited_from_{effect.source}",
         )
 
     @classmethod
-    def _scale_hot_effect(cls, hot: "HealingOverTime", multiplier: float) -> "HealingOverTime":
+    def _scale_hot_effect(
+        cls, hot: "HealingOverTime", multiplier: float
+    ) -> "HealingOverTime":
         """Create a scaled copy of a HealingOverTime effect."""
         from autofighter.effects import HealingOverTime
 
@@ -244,11 +257,13 @@ class Summon(Stats):
             healing=int(hot.healing * multiplier),
             turns=hot.turns,
             id=f"summon_{hot.id}",
-            source=hot.source
+            source=hot.source,
         )
 
     @classmethod
-    def _scale_stat_modifier(cls, modifier: "StatModifier", summon: "Summon", multiplier: float) -> "StatModifier":
+    def _scale_stat_modifier(
+        cls, modifier: "StatModifier", summon: "Summon", multiplier: float
+    ) -> "StatModifier":
         """Create a scaled copy of a StatModifier for the summon."""
         from autofighter.effects import StatModifier
 
@@ -273,7 +288,7 @@ class Summon(Stats):
             id=f"summon_{modifier.id}",
             deltas=scaled_deltas,
             multipliers=scaled_multipliers,
-            bypass_diminishing=modifier.bypass_diminishing
+            bypass_diminishing=modifier.bypass_diminishing,
         )
 
         return scaled_mod
@@ -349,10 +364,12 @@ class SummonManager:
 
         # SAFEGUARD: Prevent summons from creating more summons to avoid infinite chains
         if isinstance(summoner, Summon):
-            log.warning(f"Summon {getattr(summoner, 'id', 'unknown')} attempted to create another summon - blocked for safety")
+            log.warning(
+                f"Summon {getattr(summoner, 'id', 'unknown')} attempted to create another summon - blocked for safety"
+            )
             return None
 
-        summoner_id = getattr(summoner, 'id', str(id(summoner)))
+        summoner_id = getattr(summoner, "id", str(id(summoner)))
 
         # Initialize tracking for this summoner if needed
         if summoner_id not in cls._active_summons:
@@ -366,17 +383,23 @@ class SummonManager:
             # If we're at the limit and not forcing, check if we should replace existing summons
             if not force_create:
                 decision = cls.should_resummon(summoner_id, min_health_threshold)
-                if not decision['should_resummon']:
-                    log.info(f"Skipping summon creation for {summoner_id}: {decision['reason']}")
+                if not decision["should_resummon"]:
+                    log.info(
+                        f"Skipping summon creation for {summoner_id}: {decision['reason']}"
+                    )
                     return None
                 else:
-                    log.info(f"Proceeding with summon replacement for {summoner_id}: {decision['reason']}")
+                    log.info(
+                        f"Proceeding with summon replacement for {summoner_id}: {decision['reason']}"
+                    )
                     # Remove the least viable existing summon to make room
                     existing_summons = cls.get_summons(summoner_id)
                     if existing_summons:
                         # Find the summon with lowest health percentage
-                        worst_summon = min(existing_summons,
-                                         key=lambda s: s.hp / s.max_hp if s.max_hp > 0 else 0)
+                        worst_summon = min(
+                            existing_summons,
+                            key=lambda s: s.hp / s.max_hp if s.max_hp > 0 else 0,
+                        )
                         cls.remove_summon(worst_summon, "replaced_by_healthier_summon")
             elif force_create:
                 # Force creation by removing an existing summon
@@ -389,7 +412,12 @@ class SummonManager:
 
         # Create the summon
         summon = Summon.create_from_summoner(
-            summoner, summon_type, source, stat_multiplier, turns_remaining, override_damage_type
+            summoner,
+            summon_type,
+            source,
+            stat_multiplier,
+            turns_remaining,
+            override_damage_type,
         )
 
         # Add to tracking
@@ -407,7 +435,9 @@ class SummonManager:
         return cls._active_summons.get(summoner_id, []).copy()
 
     @classmethod
-    def evaluate_summon_viability(cls, summon: Summon, min_health_percent: float = 0.25) -> dict:
+    def evaluate_summon_viability(
+        cls, summon: Summon, min_health_percent: float = 0.25
+    ) -> dict:
         """Evaluate if a summon is still viable and worth keeping.
 
         Args:
@@ -426,11 +456,11 @@ class SummonManager:
         """
         if not summon or summon.hp <= 0:
             return {
-                'viable': False,
-                'health_good': False,
-                'time_remaining': 0,
-                'expiring_soon': True,
-                'recommendation': "Summon is dead or missing"
+                "viable": False,
+                "health_good": False,
+                "time_remaining": 0,
+                "expiring_soon": True,
+                "recommendation": "Summon is dead or missing",
             }
 
         health_percent = summon.hp / summon.max_hp if summon.max_hp > 0 else 0
@@ -446,18 +476,20 @@ class SummonManager:
         if not health_good:
             recommendation = f"Low health ({health_percent:.1%}), consider replacing"
         elif expiring_soon:
-            recommendation = f"Expiring in {time_remaining} turn(s), prepare replacement"
+            recommendation = (
+                f"Expiring in {time_remaining} turn(s), prepare replacement"
+            )
         elif viable:
             recommendation = f"Healthy ({health_percent:.1%}), keep current summon"
         else:
             recommendation = "Unknown state"
 
         return {
-            'viable': viable,
-            'health_good': health_good,
-            'time_remaining': time_remaining,
-            'expiring_soon': expiring_soon,
-            'recommendation': recommendation
+            "viable": viable,
+            "health_good": health_good,
+            "time_remaining": time_remaining,
+            "expiring_soon": expiring_soon,
+            "recommendation": recommendation,
         }
 
     @classmethod
@@ -465,7 +497,7 @@ class SummonManager:
         cls,
         summoner_id: str,
         min_health_threshold: float = 0.25,
-        consider_expiration: bool = True
+        consider_expiration: bool = True,
     ) -> dict:
         """Determine if a summoner should create a new summon based on existing summon state.
 
@@ -487,10 +519,10 @@ class SummonManager:
 
         if not existing_summons:
             return {
-                'should_resummon': True,
-                'reason': "No existing summons",
-                'existing_summons': [],
-                'viable_count': 0
+                "should_resummon": True,
+                "reason": "No existing summons",
+                "existing_summons": [],
+                "viable_count": 0,
             }
 
         # Evaluate each existing summon
@@ -499,23 +531,27 @@ class SummonManager:
 
         for summon in existing_summons:
             eval_result = cls.evaluate_summon_viability(summon, min_health_threshold)
-            evaluations.append({
-                'summon_id': summon.id,
-                'summon_type': summon.summon_type,
-                'evaluation': eval_result
-            })
+            evaluations.append(
+                {
+                    "summon_id": summon.id,
+                    "summon_type": summon.summon_type,
+                    "evaluation": eval_result,
+                }
+            )
 
-            if eval_result['viable']:
+            if eval_result["viable"]:
                 viable_count += 1
 
         # Decision logic
         if viable_count > 0:
-            reason = f"Have {viable_count} viable summon(s), avoid unnecessary resummoning"
+            reason = (
+                f"Have {viable_count} viable summon(s), avoid unnecessary resummoning"
+            )
             should_resummon = False
         else:
             # Check specific reasons why existing summons aren't viable
-            low_health = any(not e['evaluation']['health_good'] for e in evaluations)
-            expiring = any(e['evaluation']['expiring_soon'] for e in evaluations)
+            low_health = any(not e["evaluation"]["health_good"] for e in evaluations)
+            expiring = any(e["evaluation"]["expiring_soon"] for e in evaluations)
 
             if low_health and expiring:
                 reason = "Existing summons are low health and expiring soon"
@@ -529,10 +565,10 @@ class SummonManager:
             should_resummon = True
 
         return {
-            'should_resummon': should_resummon,
-            'reason': reason,
-            'existing_summons': evaluations,
-            'viable_count': viable_count
+            "should_resummon": should_resummon,
+            "reason": reason,
+            "existing_summons": evaluations,
+            "viable_count": viable_count,
         }
 
     @classmethod
@@ -591,7 +627,7 @@ class SummonManager:
     @classmethod
     def _on_turn_start(cls, entity, **kwargs):
         """Handle turn start - process summon turns."""
-        entity_id = getattr(entity, 'id', str(id(entity)))
+        entity_id = getattr(entity, "id", str(id(entity)))
         if entity_id in cls._active_summons:
             summons = cls._active_summons[entity_id].copy()
             for summon in summons:
@@ -607,7 +643,7 @@ class SummonManager:
     @classmethod
     def _on_entity_defeat(cls, entity, **kwargs):
         """Handle entity defeat - remove their summons."""
-        entity_id = getattr(entity, 'id', str(id(entity)))
+        entity_id = getattr(entity, "id", str(id(entity)))
         removed = cls.remove_all_summons(entity_id, "summoner_defeated")
         if removed > 0:
             log.debug(f"Removed {removed} summons due to summoner defeat")
@@ -621,7 +657,7 @@ class SummonManager:
         for summon in all_summons:
             # Check if summoner is in the party
             summoner_in_party = any(
-                getattr(member, 'id', str(id(member))) == summon.summoner_id
+                getattr(member, "id", str(id(member))) == summon.summoner_id
                 for member in party.members
             )
 
@@ -653,7 +689,8 @@ class SummonManager:
         """Remove empty entries from tracking dictionaries."""
         # Remove summoners with no active summons
         empty_summoners = [
-            summoner_id for summoner_id, summons in cls._active_summons.items()
+            summoner_id
+            for summoner_id, summons in cls._active_summons.items()
             if not summons
         ]
         for summoner_id in empty_summoners:

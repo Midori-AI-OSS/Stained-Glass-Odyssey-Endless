@@ -5,7 +5,9 @@ from autofighter.gacha.system import GachaSystem
 
 
 def test_pity_escalation_and_reset():
-    config = GachaConfig(base_rate=0.0, pity_start=1, pity_increment=0.1, pity_threshold=3)
+    config = GachaConfig(
+        base_rate=0.0, pity_start=1, pity_increment=0.1, pity_threshold=3
+    )
     system = GachaSystem(config)
 
     assert not system.pull(rng=lambda: 0.99)
@@ -19,7 +21,9 @@ def test_pity_escalation_and_reset():
 
 
 def test_state_persistence():
-    config = GachaConfig(base_rate=0.0, pity_start=1, pity_increment=0.1, pity_threshold=3)
+    config = GachaConfig(
+        base_rate=0.0, pity_start=1, pity_increment=0.1, pity_threshold=3
+    )
     system = GachaSystem(config)
     system.pull(rng=lambda: 0.99)
     state = system.to_dict()

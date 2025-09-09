@@ -18,7 +18,9 @@ class CriticalBoost:
     @classmethod
     def get_description(cls) -> str:
         """Get the description of this effect for display purposes."""
-        return "+0.5% crit rate and +5% crit damage per stack. Removed when taking damage."
+        return (
+            "+0.5% crit rate and +5% crit damage per stack. Removed when taking damage."
+        )
 
     def apply(self, target: Stats) -> None:
         if self.target is None:

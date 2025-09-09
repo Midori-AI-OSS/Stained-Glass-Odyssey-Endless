@@ -95,4 +95,3 @@ async def test_wind_foe_hits_all_party_members(monkeypatch):
     await room.resolve(party, {}, foe=foe)
     assert "p1" in calls
     assert calls.count("f1") >= 2
-

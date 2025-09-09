@@ -9,4 +9,6 @@ class SteadyGrip(CardBase):
     id: str = "steady_grip"
     name: str = "Steady Grip"
     stars: int = 1
-    effects: dict[str, float] = field(default_factory=lambda: {"atk": 0.03, "dodge_odds": 0.03})
+    effects: dict[str, float] = field(
+        default_factory=lambda: {"atk": 0.03, "dodge_odds": 0.03}
+    )

@@ -34,7 +34,9 @@ class CriticalOverdrive(CardBase):
             if stacks > 0:
                 extra_rate = 0.10
                 # Use base crit rate to avoid compounding with other effects
-                base_crit = getattr(target, 'base_crit_rate', 0.05)  # Default 5% base crit rate
+                base_crit = getattr(
+                    target, "base_crit_rate", 0.05
+                )  # Default 5% base crit rate
                 excess = max(0.0, base_crit + extra_rate - 1.0)
                 new_mod = create_stat_buff(
                     target,

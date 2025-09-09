@@ -45,12 +45,19 @@ class NullLantern(RelicBase):
                 entity.effect_manager.add_modifier(mod)
 
                 # Track foe buffing
-                BUS.emit("relic_effect", "null_lantern", entity, "foe_buffed", int((mult - 1) * 100), {
-                    "battle_number": state["cleared"] + 1,
-                    "multiplier": mult,
-                    "escalation_percentage": 150,
-                    "stacks": stacks
-                })
+                BUS.emit(
+                    "relic_effect",
+                    "null_lantern",
+                    entity,
+                    "foe_buffed",
+                    int((mult - 1) * 100),
+                    {
+                        "battle_number": state["cleared"] + 1,
+                        "multiplier": mult,
+                        "escalation_percentage": 150,
+                        "stacks": stacks,
+                    },
+                )
 
         def _battle_end(entity) -> None:
             from plugins.foes._base import FoeBase
@@ -61,13 +68,20 @@ class NullLantern(RelicBase):
                 party.pull_tokens += pull_reward
 
                 # Track pull token generation
-                BUS.emit("relic_effect", "null_lantern", entity, "pull_tokens_awarded", pull_reward, {
-                    "battles_cleared": state["cleared"],
-                    "base_tokens": 1,
-                    "stack_bonus": stacks - 1,
-                    "disabled_shops": True,
-                    "disabled_rests": True
-                })
+                BUS.emit(
+                    "relic_effect",
+                    "null_lantern",
+                    entity,
+                    "pull_tokens_awarded",
+                    pull_reward,
+                    {
+                        "battles_cleared": state["cleared"],
+                        "base_tokens": 1,
+                        "stack_bonus": stacks - 1,
+                        "disabled_shops": True,
+                        "disabled_rests": True,
+                    },
+                )
 
         BUS.subscribe("battle_start", _battle_start)
         BUS.subscribe("battle_end", _battle_end)

@@ -62,11 +62,18 @@ class CardBase:
                 mgr.add_modifier(mod)
 
                 # Emit card effect event
-                BUS.emit("card_effect", self.id, member, f"stat_buff_{attr}", int(pct * 100), {
-                    "stat_affected": attr,
-                    "percentage_change": pct * 100,
-                    "new_modifier": f"{self.id}_{attr}"
-                })
+                BUS.emit(
+                    "card_effect",
+                    self.id,
+                    member,
+                    f"stat_buff_{attr}",
+                    int(pct * 100),
+                    {
+                        "stat_affected": attr,
+                        "percentage_change": pct * 100,
+                        "new_modifier": f"{self.id}_{attr}",
+                    },
+                )
 
                 if attr == "max_hp":
                     heal = int(getattr(member, "hp", 0) * pct)
@@ -78,10 +85,14 @@ class CardBase:
                         asyncio.create_task(member.apply_healing(heal))
 
                     # Emit card healing event
-                    BUS.emit("card_effect", self.id, member, "healing", heal, {
-                        "heal_amount": heal,
-                        "heal_type": "max_hp_increase"
-                    })
+                    BUS.emit(
+                        "card_effect",
+                        self.id,
+                        member,
+                        "healing",
+                        heal,
+                        {"heal_amount": heal, "heal_type": "max_hp_increase"},
+                    )
 
                     log.debug(
                         "Updated %s max_hp and healed %s",

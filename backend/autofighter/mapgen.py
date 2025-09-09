@@ -22,19 +22,21 @@ class MapNode:
     def from_dict(cls, data: dict) -> MapNode:
         # Provide default values for missing fields to handle legacy data
         return cls(
-            room_id=data.get('room_id', 0),
-            room_type=data.get('room_type', 'battle-weak'),
-            floor=data.get('floor', 1),
-            index=data.get('index', 0),
-            loop=data.get('loop', 1),
-            pressure=data.get('pressure', 0)
+            room_id=data.get("room_id", 0),
+            room_type=data.get("room_type", "battle-weak"),
+            floor=data.get("floor", 1),
+            index=data.get("index", 0),
+            loop=data.get("loop", 1),
+            pressure=data.get("pressure", 0),
         )
 
 
 class MapGenerator:
     rooms_per_floor: ClassVar[int] = 45
 
-    def __init__(self, seed: str, floor: int = 1, loop: int = 1, pressure: int = 0) -> None:
+    def __init__(
+        self, seed: str, floor: int = 1, loop: int = 1, pressure: int = 0
+    ) -> None:
         self._rand = Random(seed)
         self.floor = floor
         self.loop = loop
@@ -71,7 +73,10 @@ class MapGenerator:
             swap_index = rest_indices[-1]
             for i in range(first_shop + 1, len(room_types)):
                 if room_types[i] != "shop":
-                    room_types[i], room_types[swap_index] = room_types[swap_index], room_types[i]
+                    room_types[i], room_types[swap_index] = (
+                        room_types[swap_index],
+                        room_types[i],
+                    )
                     break
         if room_types and room_types[0] in {"shop", "rest"}:
             for i, rt in enumerate(room_types[1:], start=1):

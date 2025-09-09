@@ -9,4 +9,6 @@ class SpikedShield(CardBase):
     id: str = "spiked_shield"
     name: str = "Spiked Shield"
     stars: int = 1
-    effects: dict[str, float] = field(default_factory=lambda: {"atk": 0.03, "defense": 0.03})
+    effects: dict[str, float] = field(
+        default_factory=lambda: {"atk": 0.03, "defense": 0.03}
+    )

@@ -16,7 +16,9 @@ async def test_passive_stack_display():
 
     # Initially 0 charge
     description = registry.describe(luna)
-    luna_passive = next((p for p in description if p["id"] == "luna_lunar_reservoir"), None)
+    luna_passive = next(
+        (p for p in description if p["id"] == "luna_lunar_reservoir"), None
+    )
     assert luna_passive is not None
     assert luna_passive["stacks"] == 0
     assert luna_passive["max_stacks"] == 200
@@ -26,7 +28,9 @@ async def test_passive_stack_display():
         await registry.trigger("action_taken", luna)
 
     description = registry.describe(luna)
-    luna_passive = next((p for p in description if p["id"] == "luna_lunar_reservoir"), None)
+    luna_passive = next(
+        (p for p in description if p["id"] == "luna_lunar_reservoir"), None
+    )
     assert luna_passive["stacks"] == 10
 
 
@@ -40,7 +44,9 @@ async def test_ally_overload_stack_display():
 
     # Initially 0 charge
     description = registry.describe(ally)
-    overload_passive = next((p for p in description if p["id"] == "ally_overload"), None)
+    overload_passive = next(
+        (p for p in description if p["id"] == "ally_overload"), None
+    )
     assert overload_passive is not None
     assert overload_passive["stacks"] == 0
     assert overload_passive["max_stacks"] == 120
@@ -52,7 +58,9 @@ async def test_ally_overload_stack_display():
         await registry.trigger("action_taken", ally)
 
     description = registry.describe(ally)
-    overload_passive = next((p for p in description if p["id"] == "ally_overload"), None)
+    overload_passive = next(
+        (p for p in description if p["id"] == "ally_overload"), None
+    )
     assert overload_passive["stacks"] == 25
 
 
@@ -66,7 +74,9 @@ async def test_graygray_counter_stack_display():
 
     # Initially 0 stacks
     description = registry.describe(graygray)
-    counter_passive = next((p for p in description if p["id"] == "graygray_counter_maestro"), None)
+    counter_passive = next(
+        (p for p in description if p["id"] == "graygray_counter_maestro"), None
+    )
     assert counter_passive is not None
     assert counter_passive["stacks"] == 0
     assert counter_passive["max_stacks"] == 50
@@ -76,7 +86,9 @@ async def test_graygray_counter_stack_display():
         await registry.trigger("damage_taken", graygray)
 
     description = registry.describe(graygray)
-    counter_passive = next((p for p in description if p["id"] == "graygray_counter_maestro"), None)
+    counter_passive = next(
+        (p for p in description if p["id"] == "graygray_counter_maestro"), None
+    )
     assert counter_passive["stacks"] == 3
 
 
@@ -90,7 +102,9 @@ async def test_carly_guardian_stack_display():
 
     # Initially 0 stacks
     description = registry.describe(carly)
-    aegis_passive = next((p for p in description if p["id"] == "carly_guardians_aegis"), None)
+    aegis_passive = next(
+        (p for p in description if p["id"] == "carly_guardians_aegis"), None
+    )
     assert aegis_passive is not None
     assert aegis_passive["stacks"]["mitigation"] == 0
     assert aegis_passive["stacks"]["overcharged"] is False
@@ -98,6 +112,7 @@ async def test_carly_guardian_stack_display():
 
     # Simulate taking damage (which should add mitigation stacks)
     from plugins.passives.carly_guardians_aegis import CarlyGuardiansAegis
+
     carly_passive = CarlyGuardiansAegis()
 
     # Manually call on_damage_taken to simulate being hit
@@ -105,7 +120,9 @@ async def test_carly_guardian_stack_display():
         await carly_passive.on_damage_taken(carly, None, 100)
 
     description = registry.describe(carly)
-    aegis_passive = next((p for p in description if p["id"] == "carly_guardians_aegis"), None)
+    aegis_passive = next(
+        (p for p in description if p["id"] == "carly_guardians_aegis"), None
+    )
     assert aegis_passive["stacks"]["mitigation"] == 4
     assert aegis_passive["stacks"]["overcharged"] is False
 
@@ -120,7 +137,9 @@ async def test_bubbles_burst_stack_display():
 
     # Initially 0 stacks
     description = registry.describe(bubbles)
-    burst_passive = next((p for p in description if p["id"] == "bubbles_bubble_burst"), None)
+    burst_passive = next(
+        (p for p in description if p["id"] == "bubbles_bubble_burst"), None
+    )
     assert burst_passive is not None
     assert burst_passive["stacks"] == 0
     assert burst_passive["max_stacks"] == 20
@@ -139,7 +158,9 @@ async def test_bubbles_burst_stack_display():
         bubbles.add_effect(attack_buff)
 
     description = registry.describe(bubbles)
-    burst_passive = next((p for p in description if p["id"] == "bubbles_bubble_burst"), None)
+    burst_passive = next(
+        (p for p in description if p["id"] == "bubbles_bubble_burst"), None
+    )
     assert burst_passive["stacks"] == 3
 
 
@@ -157,7 +178,9 @@ async def test_soft_caps_luna_beyond_200():
         await registry.trigger("action_taken", luna)
 
     description = registry.describe(luna)
-    luna_passive = next((p for p in description if p["id"] == "luna_lunar_reservoir"), None)
+    luna_passive = next(
+        (p for p in description if p["id"] == "luna_lunar_reservoir"), None
+    )
     assert luna_passive is not None
 
     # Should show current charge (might be less due to boosted mode spending)
@@ -186,7 +209,9 @@ async def test_soft_caps_ally_beyond_120():
     # Should be able to go past 120
     if current_charge > 120:
         description = registry.describe(ally)
-        overload_passive = next((p for p in description if p["id"] == "ally_overload"), None)
+        overload_passive = next(
+            (p for p in description if p["id"] == "ally_overload"), None
+        )
         assert overload_passive["stacks"] == current_charge
         assert overload_passive["max_stacks"] == 120  # Soft cap stays at 120
 
@@ -204,7 +229,9 @@ async def test_soft_caps_graygray_beyond_50():
         await registry.trigger("damage_taken", graygray)
 
     description = registry.describe(graygray)
-    counter_passive = next((p for p in description if p["id"] == "graygray_counter_maestro"), None)
+    counter_passive = next(
+        (p for p in description if p["id"] == "graygray_counter_maestro"), None
+    )
     assert counter_passive is not None
     assert counter_passive["stacks"] == 60  # Should be able to go past 50
     assert counter_passive["max_stacks"] == 50  # Soft cap stays at 50

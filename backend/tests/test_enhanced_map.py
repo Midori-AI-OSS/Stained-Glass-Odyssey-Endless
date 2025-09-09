@@ -17,7 +17,8 @@ def app_with_db(tmp_path, monkeypatch):
         del sys.modules["game"]
     monkeypatch.syspath_prepend(Path(__file__).resolve().parents[1])
     spec = importlib.util.spec_from_file_location(
-        "app", Path(__file__).resolve().parents[1] / "app.py",
+        "app",
+        Path(__file__).resolve().parents[1] / "app.py",
     )
     app_module = importlib.util.module_from_spec(spec)
     assert spec.loader is not None
@@ -122,10 +123,14 @@ async def test_enhanced_map_backend_authority(app_with_db):
     map_current = map_data["map"]["current"]
     current_state_index = map_data["current_state"]["current_index"]
 
-    assert map_current == current_state_index, "Backend map.current should match current_state.current_index"
+    assert (
+        map_current == current_state_index
+    ), "Backend map.current should match current_state.current_index"
 
     # Verify room type consistency
     if map_data["map"]["rooms"] and current_state_index < len(map_data["map"]["rooms"]):
         expected_room_type = map_data["map"]["rooms"][current_state_index]["room_type"]
         actual_room_type = map_data["current_state"]["current_room_type"]
-        assert expected_room_type == actual_room_type, "Room type should be consistent between map and current_state"
+        assert (
+            expected_room_type == actual_room_type
+        ), "Room type should be consistent between map and current_state"

@@ -31,21 +31,28 @@ class StellarCompass(RelicBase):
                 mod = create_stat_buff(
                     attacker,
                     name=f"{self.id}_crit",
-                    atk_mult=1.015 ** copies,
+                    atk_mult=1.015**copies,
                     turns=9999,
                 )
                 attacker.effect_manager.add_modifier(mod)
                 state["gold"] += 0.015 * copies
 
                 # Track critical hit buff application
-                BUS.emit("relic_effect", "stellar_compass", attacker, "crit_buff_applied", amount, {
-                    "target": getattr(target, 'id', str(target)),
-                    "atk_boost_percentage": 1.5 * copies,
-                    "gold_rate_increase": 1.5 * copies,
-                    "total_gold_rate": state["gold"] * 100,
-                    "stacks": copies,
-                    "permanent": True
-                })
+                BUS.emit(
+                    "relic_effect",
+                    "stellar_compass",
+                    attacker,
+                    "crit_buff_applied",
+                    amount,
+                    {
+                        "target": getattr(target, "id", str(target)),
+                        "atk_boost_percentage": 1.5 * copies,
+                        "gold_rate_increase": 1.5 * copies,
+                        "total_gold_rate": state["gold"] * 100,
+                        "stacks": copies,
+                        "permanent": True,
+                    },
+                )
 
             def _gold(amount: int) -> None:
                 if state["gold"] > 0:
@@ -53,17 +60,26 @@ class StellarCompass(RelicBase):
                     party.gold += bonus_gold
 
                     # Track bonus gold generation
-                    BUS.emit("relic_effect", "stellar_compass", party, "bonus_gold_earned", bonus_gold, {
-                        "base_gold": amount,
-                        "gold_rate_multiplier": state["gold"],
-                        "total_crits_accumulated": state["gold"] / (0.015 * party.relics.count(self.id)) if party.relics.count(self.id) > 0 else 0
-                    })
+                    BUS.emit(
+                        "relic_effect",
+                        "stellar_compass",
+                        party,
+                        "bonus_gold_earned",
+                        bonus_gold,
+                        {
+                            "base_gold": amount,
+                            "gold_rate_multiplier": state["gold"],
+                            "total_crits_accumulated": (
+                                state["gold"] / (0.015 * party.relics.count(self.id))
+                                if party.relics.count(self.id) > 0
+                                else 0
+                            ),
+                        },
+                    )
 
             BUS.subscribe("critical_hit", _crit)
             BUS.subscribe("gold_earned", _gold)
 
     def describe(self, stacks: int) -> str:
         bonus = 1.5 * stacks
-        return (
-            f"Critical hits grant permanent +{bonus:.1f}% ATK and gold gain."
-        )
+        return f"Critical hits grant permanent +{bonus:.1f}% ATK and gold gain."

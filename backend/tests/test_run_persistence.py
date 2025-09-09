@@ -29,14 +29,15 @@ def reset_globals():
 def test_run_persistence_across_restart():
     """Test that runs persist in database across backend restart simulation."""
     # Use a temporary database file
-    with tempfile.NamedTemporaryFile(suffix='.db', delete=False) as tmp_db:
+    with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as tmp_db:
         db_path = Path(tmp_db.name)
 
     try:
         # Simulate first backend instance
         import os
-        original_db_url = os.environ.get('DATABASE_URL')
-        os.environ['DATABASE_URL'] = f'sqlite:///{db_path}'
+
+        original_db_url = os.environ.get("DATABASE_URL")
+        os.environ["DATABASE_URL"] = f"sqlite:///{db_path}"
 
         # Reset global state to force re-initialization
         game.SAVE_MANAGER = None
@@ -46,7 +47,7 @@ def test_run_persistence_across_restart():
         manager1 = get_save_manager()
 
         # Create a test run
-        run_id = f'test-run-{int(time.time())}'  # Use timestamp to make it unique
+        run_id = f"test-run-{int(time.time())}"  # Use timestamp to make it unique
         party_data = {
             "members": ["player"],
             "gold": 100,
@@ -55,7 +56,11 @@ def test_run_persistence_across_restart():
             "exp": {"player": 0},
             "level": {"player": 1},
             "rdr": 1.0,
-            "player": {"pronouns": "", "damage_type": "Light", "stats": {"hp": 0, "attack": 0, "defense": 0}}
+            "player": {
+                "pronouns": "",
+                "damage_type": "Light",
+                "stats": {"hp": 0, "attack": 0, "defense": 0},
+            },
         }
         map_data = {
             "rooms": [{"room_type": "start"}, {"room_type": "battle-normal"}],
@@ -69,12 +74,14 @@ def test_run_persistence_across_restart():
         with manager1.connection() as conn:
             conn.execute(
                 "INSERT INTO runs (id, party, map) VALUES (?, ?, ?)",
-                (run_id, json.dumps(party_data), json.dumps(map_data))
+                (run_id, json.dumps(party_data), json.dumps(map_data)),
             )
 
         # Verify run exists
         with manager1.connection() as conn:
-            cur = conn.execute("SELECT id, party, map FROM runs WHERE id = ?", (run_id,))
+            cur = conn.execute(
+                "SELECT id, party, map FROM runs WHERE id = ?", (run_id,)
+            )
             row = cur.fetchone()
             assert row is not None
             assert row[0] == run_id
@@ -88,7 +95,9 @@ def test_run_persistence_across_restart():
 
         # Verify run still exists after "restart"
         with manager2.connection() as conn:
-            cur = conn.execute("SELECT id, party, map FROM runs WHERE id = ?", (run_id,))
+            cur = conn.execute(
+                "SELECT id, party, map FROM runs WHERE id = ?", (run_id,)
+            )
             row = cur.fetchone()
             assert row is not None
             assert row[0] == run_id
@@ -104,9 +113,9 @@ def test_run_persistence_across_restart():
     finally:
         # Clean up
         if original_db_url:
-            os.environ['DATABASE_URL'] = original_db_url
+            os.environ["DATABASE_URL"] = original_db_url
         else:
-            os.environ.pop('DATABASE_URL', None)
+            os.environ.pop("DATABASE_URL", None)
         db_path.unlink(missing_ok=True)
 
 
@@ -117,14 +126,15 @@ def test_get_map_endpoint_after_restart():
     from services.run_service import get_map
 
     # Use a temporary database file
-    with tempfile.NamedTemporaryFile(suffix='.db', delete=False) as tmp_db:
+    with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as tmp_db:
         db_path = Path(tmp_db.name)
 
     try:
         # Simulate first backend instance
         import os
-        original_db_url = os.environ.get('DATABASE_URL')
-        os.environ['DATABASE_URL'] = f'sqlite:///{db_path}'
+
+        original_db_url = os.environ.get("DATABASE_URL")
+        os.environ["DATABASE_URL"] = f"sqlite:///{db_path}"
 
         # Reset global state to force re-initialization
         game.SAVE_MANAGER = None
@@ -134,7 +144,7 @@ def test_get_map_endpoint_after_restart():
         manager1 = get_save_manager()
 
         # Create a test run
-        run_id = 'test-run-456'
+        run_id = "test-run-456"
         party_data = {
             "members": ["player"],
             "gold": 50,
@@ -143,10 +153,18 @@ def test_get_map_endpoint_after_restart():
             "exp": {"player": 10},
             "level": {"player": 1},
             "rdr": 1.0,
-            "player": {"pronouns": "", "damage_type": "Fire", "stats": {"hp": 0, "attack": 0, "defense": 0}}
+            "player": {
+                "pronouns": "",
+                "damage_type": "Fire",
+                "stats": {"hp": 0, "attack": 0, "defense": 0},
+            },
         }
         map_data = {
-            "rooms": [{"room_type": "start"}, {"room_type": "battle-normal"}, {"room_type": "rest"}],
+            "rooms": [
+                {"room_type": "start"},
+                {"room_type": "battle-normal"},
+                {"room_type": "rest"},
+            ],
             "current": 2,
             "battle": False,
             "awaiting_card": False,
@@ -157,7 +175,7 @@ def test_get_map_endpoint_after_restart():
         with manager1.connection() as conn:
             conn.execute(
                 "INSERT INTO runs (id, party, map) VALUES (?, ?, ?)",
-                (run_id, json.dumps(party_data), json.dumps(map_data))
+                (run_id, json.dumps(party_data), json.dumps(map_data)),
             )
 
         # Simulate backend restart
@@ -178,9 +196,9 @@ def test_get_map_endpoint_after_restart():
     finally:
         # Clean up
         if original_db_url:
-            os.environ['DATABASE_URL'] = original_db_url
+            os.environ["DATABASE_URL"] = original_db_url
         else:
-            os.environ.pop('DATABASE_URL', None)
+            os.environ.pop("DATABASE_URL", None)
         db_path.unlink(missing_ok=True)
 
 
@@ -191,14 +209,15 @@ def test_enhanced_map_endpoint_current_state():
     from services.run_service import get_map
 
     # Use a temporary database file
-    with tempfile.NamedTemporaryFile(suffix='.db', delete=False) as tmp_db:
+    with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as tmp_db:
         db_path = Path(tmp_db.name)
 
     try:
         # Set up test environment
         import os
-        original_db_url = os.environ.get('DATABASE_URL')
-        os.environ['DATABASE_URL'] = f'sqlite:///{db_path}'
+
+        original_db_url = os.environ.get("DATABASE_URL")
+        os.environ["DATABASE_URL"] = f"sqlite:///{db_path}"
 
         # Reset global state
         game.SAVE_MANAGER = None
@@ -208,7 +227,7 @@ def test_enhanced_map_endpoint_current_state():
         manager = get_save_manager()
 
         # Create a test run with specific state
-        run_id = f'test-enhanced-map-{int(time.time())}'
+        run_id = f"test-enhanced-map-{int(time.time())}"
         party_data = {
             "members": ["player"],
             "gold": 100,
@@ -217,14 +236,46 @@ def test_enhanced_map_endpoint_current_state():
             "exp": {"player": 0},
             "level": {"player": 1},
             "rdr": 1.0,
-            "player": {"pronouns": "", "damage_type": "Fire", "stats": {"hp": 0, "attack": 0, "defense": 0}}
+            "player": {
+                "pronouns": "",
+                "damage_type": "Fire",
+                "stats": {"hp": 0, "attack": 0, "defense": 0},
+            },
         }
         map_data = {
             "rooms": [
-                {"room_type": "start", "floor": 1, "index": 0, "room_id": 0, "loop": 1, "pressure": 0},
-                {"room_type": "battle-weak", "floor": 1, "index": 1, "room_id": 1, "loop": 1, "pressure": 0},
-                {"room_type": "battle-normal", "floor": 1, "index": 2, "room_id": 2, "loop": 1, "pressure": 0},
-                {"room_type": "shop", "floor": 1, "index": 3, "room_id": 3, "loop": 1, "pressure": 0}
+                {
+                    "room_type": "start",
+                    "floor": 1,
+                    "index": 0,
+                    "room_id": 0,
+                    "loop": 1,
+                    "pressure": 0,
+                },
+                {
+                    "room_type": "battle-weak",
+                    "floor": 1,
+                    "index": 1,
+                    "room_id": 1,
+                    "loop": 1,
+                    "pressure": 0,
+                },
+                {
+                    "room_type": "battle-normal",
+                    "floor": 1,
+                    "index": 2,
+                    "room_id": 2,
+                    "loop": 1,
+                    "pressure": 0,
+                },
+                {
+                    "room_type": "shop",
+                    "floor": 1,
+                    "index": 3,
+                    "room_id": 3,
+                    "loop": 1,
+                    "pressure": 0,
+                },
             ],
             "current": 1,  # Currently at battle-weak
             "battle": False,
@@ -236,7 +287,7 @@ def test_enhanced_map_endpoint_current_state():
         with manager.connection() as conn:
             conn.execute(
                 "INSERT INTO runs (id, party, map) VALUES (?, ?, ?)",
-                (run_id, json.dumps(party_data), json.dumps(map_data))
+                (run_id, json.dumps(party_data), json.dumps(map_data)),
             )
 
         # Test the enhanced endpoint
@@ -269,9 +320,9 @@ def test_enhanced_map_endpoint_current_state():
     finally:
         # Clean up
         if original_db_url:
-            os.environ['DATABASE_URL'] = original_db_url
+            os.environ["DATABASE_URL"] = original_db_url
         else:
-            os.environ.pop('DATABASE_URL', None)
+            os.environ.pop("DATABASE_URL", None)
         db_path.unlink(missing_ok=True)
 
 
@@ -282,14 +333,15 @@ def test_enhanced_map_endpoint_with_awaiting_next():
     from services.run_service import get_map
 
     # Use a temporary database file
-    with tempfile.NamedTemporaryFile(suffix='.db', delete=False) as tmp_db:
+    with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as tmp_db:
         db_path = Path(tmp_db.name)
 
     try:
         # Set up test environment
         import os
-        original_db_url = os.environ.get('DATABASE_URL')
-        os.environ['DATABASE_URL'] = f'sqlite:///{db_path}'
+
+        original_db_url = os.environ.get("DATABASE_URL")
+        os.environ["DATABASE_URL"] = f"sqlite:///{db_path}"
 
         # Reset global state
         game.SAVE_MANAGER = None
@@ -299,7 +351,7 @@ def test_enhanced_map_endpoint_with_awaiting_next():
         manager = get_save_manager()
 
         # Create a test run in awaiting_next state
-        run_id = f'test-awaiting-next-{int(time.time())}'
+        run_id = f"test-awaiting-next-{int(time.time())}"
         party_data = {
             "members": ["player"],
             "gold": 50,
@@ -308,13 +360,38 @@ def test_enhanced_map_endpoint_with_awaiting_next():
             "exp": {"player": 0},
             "level": {"player": 1},
             "rdr": 1.0,
-            "player": {"pronouns": "", "damage_type": "Light", "stats": {"hp": 0, "attack": 0, "defense": 0}}
+            "player": {
+                "pronouns": "",
+                "damage_type": "Light",
+                "stats": {"hp": 0, "attack": 0, "defense": 0},
+            },
         }
         map_data = {
             "rooms": [
-                {"room_type": "start", "floor": 1, "index": 0, "room_id": 0, "loop": 1, "pressure": 0},
-                {"room_type": "battle-weak", "floor": 1, "index": 1, "room_id": 1, "loop": 1, "pressure": 0},
-                {"room_type": "rest", "floor": 1, "index": 2, "room_id": 2, "loop": 1, "pressure": 0}
+                {
+                    "room_type": "start",
+                    "floor": 1,
+                    "index": 0,
+                    "room_id": 0,
+                    "loop": 1,
+                    "pressure": 0,
+                },
+                {
+                    "room_type": "battle-weak",
+                    "floor": 1,
+                    "index": 1,
+                    "room_id": 1,
+                    "loop": 1,
+                    "pressure": 0,
+                },
+                {
+                    "room_type": "rest",
+                    "floor": 1,
+                    "index": 2,
+                    "room_id": 2,
+                    "loop": 1,
+                    "pressure": 0,
+                },
             ],
             "current": 1,  # Currently at battle-weak
             "battle": False,
@@ -326,7 +403,7 @@ def test_enhanced_map_endpoint_with_awaiting_next():
         with manager.connection() as conn:
             conn.execute(
                 "INSERT INTO runs (id, party, map) VALUES (?, ?, ?)",
-                (run_id, json.dumps(party_data), json.dumps(map_data))
+                (run_id, json.dumps(party_data), json.dumps(map_data)),
             )
 
         # Test the enhanced endpoint with awaiting_next
@@ -352,9 +429,9 @@ def test_enhanced_map_endpoint_with_awaiting_next():
     finally:
         # Clean up
         if original_db_url:
-            os.environ['DATABASE_URL'] = original_db_url
+            os.environ["DATABASE_URL"] = original_db_url
         else:
-            os.environ.pop('DATABASE_URL', None)
+            os.environ.pop("DATABASE_URL", None)
         db_path.unlink(missing_ok=True)
 
 
@@ -365,13 +442,14 @@ def test_run_not_found():
     from services.run_service import get_map
 
     # Use a temporary database file
-    with tempfile.NamedTemporaryFile(suffix='.db', delete=False) as tmp_db:
+    with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as tmp_db:
         db_path = Path(tmp_db.name)
 
     try:
         import os
-        original_db_url = os.environ.get('DATABASE_URL')
-        os.environ['DATABASE_URL'] = f'sqlite:///{db_path}'
+
+        original_db_url = os.environ.get("DATABASE_URL")
+        os.environ["DATABASE_URL"] = f"sqlite:///{db_path}"
 
         # Reset global state
         game.SAVE_MANAGER = None
@@ -383,14 +461,14 @@ def test_run_not_found():
         # Test with non-existent run
         async def test_endpoint():
             with pytest.raises(ValueError):
-                await get_map('nonexistent-run')
+                await get_map("nonexistent-run")
 
         asyncio.run(test_endpoint())
 
     finally:
         # Clean up
         if original_db_url:
-            os.environ['DATABASE_URL'] = original_db_url
+            os.environ["DATABASE_URL"] = original_db_url
         else:
-            os.environ.pop('DATABASE_URL', None)
+            os.environ.pop("DATABASE_URL", None)
         db_path.unlink(missing_ok=True)

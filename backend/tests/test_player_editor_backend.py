@@ -32,9 +32,9 @@ def make_request(
         headers = {}
 
     if data is not None:
-        data_bytes = json.dumps(data).encode('utf-8')
-        headers['Content-Type'] = 'application/json'
-        headers['Content-Length'] = str(len(data_bytes))
+        data_bytes = json.dumps(data).encode("utf-8")
+        headers["Content-Type"] = "application/json"
+        headers["Content-Length"] = str(len(data_bytes))
     else:
         data_bytes = None
 
@@ -42,14 +42,14 @@ def make_request(
 
     try:
         with urllib.request.urlopen(req, timeout=10) as response:
-            response_data = response.read().decode('utf-8')
+            response_data = response.read().decode("utf-8")
             try:
                 return response.status, json.loads(response_data)
             except json.JSONDecodeError:
                 return response.status, response_data
     except urllib.error.HTTPError as e:
         try:
-            error_data = e.read().decode('utf-8')
+            error_data = e.read().decode("utf-8")
             return e.status, json.loads(error_data)
         except json.JSONDecodeError:
             return e.status, error_data
@@ -101,7 +101,9 @@ def test_player_editor_endpoints(base_url: str):
         # Check if the settings match what we sent
         for key in ["hp", "attack", "defense", "crit_rate", "crit_damage"]:
             if data.get(key) != test_settings[key]:
-                print(f"   WARNING: {key} mismatch! Expected {test_settings[key]}, got {data.get(key)}")
+                print(
+                    f"   WARNING: {key} mismatch! Expected {test_settings[key]}, got {data.get(key)}"
+                )
     else:
         print(f"   Error: {data}")
         return False
@@ -116,13 +118,15 @@ def test_player_editor_endpoints(base_url: str):
         defense_stats = data.get("stats", {}).get("defense", {})
 
         print(f"   Core stats: HP={core.get('hp')}, Max HP={core.get('max_hp')}")
-        print(f"   Offense stats: ATK={offense.get('atk')}, CRIT Rate={offense.get('crit_rate')}, CRIT DMG={offense.get('crit_damage')}")
+        print(
+            f"   Offense stats: ATK={offense.get('atk')}, CRIT Rate={offense.get('crit_rate')}, CRIT DMG={offense.get('crit_damage')}"
+        )
         print(f"   Defense stats: DEF={defense_stats.get('defense')}")
 
         # Calculate expected values
         expected_max_hp = int(1000 * 1.5)  # 50% boost
-        expected_atk = int(100 * 1.2)      # 20% boost
-        expected_def = int(50 * 1.2)       # 20% boost
+        expected_atk = int(100 * 1.2)  # 20% boost
+        expected_def = int(50 * 1.2)  # 20% boost
         expected_cr = 0.05 * 1.05
         expected_cd = 2.0 * 1.05
 
@@ -132,27 +136,27 @@ def test_player_editor_endpoints(base_url: str):
         print(f"   DEF: {expected_def} (got {defense_stats.get('defense')})")
 
         # Check if values match expectations
-        if core.get('max_hp') == expected_max_hp:
+        if core.get("max_hp") == expected_max_hp:
             print("   ✓ Max HP is correct!")
         else:
             print("   ✗ Max HP mismatch - customization may not be applied")
 
-        if offense.get('atk') == expected_atk:
+        if offense.get("atk") == expected_atk:
             print("   ✓ ATK is correct!")
         else:
             print("   ✗ ATK mismatch - customization may not be applied")
 
-        if defense_stats.get('defense') == expected_def:
+        if defense_stats.get("defense") == expected_def:
             print("   ✓ DEF is correct!")
         else:
             print("   ✗ DEF mismatch - customization may not be applied")
 
-        if abs(offense.get('crit_rate', 0) - expected_cr) < 1e-6:
+        if abs(offense.get("crit_rate", 0) - expected_cr) < 1e-6:
             print("   ✓ CRIT Rate is correct!")
         else:
             print("   ✗ CRIT Rate mismatch")
 
-        if abs(offense.get('crit_damage', 0) - expected_cd) < 1e-6:
+        if abs(offense.get("crit_damage", 0) - expected_cd) < 1e-6:
             print("   ✓ CRIT DMG is correct!")
         else:
             print("   ✗ CRIT DMG mismatch")
@@ -168,7 +172,7 @@ def test_player_editor_endpoints(base_url: str):
 
 def main():
     if len(sys.argv) > 1:
-        base_url = sys.argv[1].rstrip('/')
+        base_url = sys.argv[1].rstrip("/")
     else:
         base_url = "http://localhost:8000"
 

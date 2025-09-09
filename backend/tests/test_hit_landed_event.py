@@ -47,6 +47,7 @@ async def test_pocket_manual_triggers_aftertaste():
     tasks_created = []
 
     import asyncio
+
     original_create_task = asyncio.get_event_loop().create_task
 
     def mock_create_task(coro):
@@ -79,7 +80,9 @@ async def test_pocket_manual_triggers_aftertaste():
         for i in range(10):
             BUS.emit("hit_landed", attacker, target, 100)
 
-        assert len(tasks_created) >= 2  # At least two aftertaste tasks should be created
+        assert (
+            len(tasks_created) >= 2
+        )  # At least two aftertaste tasks should be created
 
     finally:
         # Restore original create_task

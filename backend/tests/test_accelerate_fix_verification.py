@@ -1,4 +1,5 @@
 """Test to verify the accelerate dependency fix works."""
+
 from pathlib import Path
 import sys
 
@@ -29,7 +30,9 @@ def test_accelerate_fix_verification() -> None:
         with patch("llms.loader._IMPORT_ERROR", None):
             with patch("llms.loader.model_memory_requirements", return_value=(0, 0)):
                 with patch("llms.loader.ensure_ram"):
-                    with patch("llms.loader.pick_device", return_value=0):  # This triggers device_map="auto"
+                    with patch(
+                        "llms.loader.pick_device", return_value=0
+                    ):  # This triggers device_map="auto"
                         with patch("llms.loader.HuggingFacePipeline") as mock_hf:
                             mock_hf.return_value = MagicMock()
                             from llms.loader import ModelName
@@ -44,9 +47,13 @@ def test_accelerate_available() -> None:
     """Test that accelerate is available in the environment."""
     try:
         import accelerate
+
         assert accelerate.__version__ >= "0.26.0"
     except ImportError:
         # This test only runs if accelerate is installed
         # In CI/production it should be installed via pip install -e ".[llm-cpu]"
         import pytest
-        pytest.skip("accelerate not installed - this is expected in minimal test environment")
+
+        pytest.skip(
+            "accelerate not installed - this is expected in minimal test environment"
+        )

@@ -16,4 +16,3 @@ class LadyEcho(PlayerBase):
     gacha_rarity = 5
     damage_type: DamageTypeBase = field(default_factory=Lightning)
     passives: list[str] = field(default_factory=lambda: ["lady_echo_resonant_static"])
-

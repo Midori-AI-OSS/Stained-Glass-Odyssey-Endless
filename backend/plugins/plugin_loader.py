@@ -16,7 +16,9 @@ log = logging.getLogger(__name__)
 
 class PluginLoader:
     # never touch or load legacy code
-    def __init__(self, bus: EventBus | None = None, required: Iterable[str] | None = None) -> None:
+    def __init__(
+        self, bus: EventBus | None = None, required: Iterable[str] | None = None
+    ) -> None:
         self.bus = bus
         self.required = set(required or [])
         self._registry: dict[str, dict[str, type]] = {}

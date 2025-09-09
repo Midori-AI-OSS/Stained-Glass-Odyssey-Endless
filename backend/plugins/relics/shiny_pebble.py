@@ -14,9 +14,7 @@ class ShinyPebble(RelicBase):
     name: str = "Shiny Pebble"
     stars: int = 1
     effects: dict[str, float] = field(default_factory=lambda: {"defense": 0.03})
-    about: str = (
-        "Boosts DEF and grants extra mitigation the first time an ally is hit."
-    )
+    about: str = "Boosts DEF and grants extra mitigation the first time an ally is hit."
 
     def apply(self, party) -> None:
         super().apply(party)
@@ -42,14 +40,21 @@ class ShinyPebble(RelicBase):
                 state["active"][id(target)] = (target, mod)
 
                 # Track mitigation burst application
-                BUS.emit("relic_effect", "shiny_pebble", target, "mitigation_burst", int((mit_mult - 1) * 100), {
-                    "target": getattr(target, 'id', str(target)),
-                    "mitigation_multiplier": mit_mult,
-                    "base_mitigation": target.mitigation,
-                    "duration_turns": 1,
-                    "trigger": "first_hit",
-                    "stacks": stacks
-                })
+                BUS.emit(
+                    "relic_effect",
+                    "shiny_pebble",
+                    target,
+                    "mitigation_burst",
+                    int((mit_mult - 1) * 100),
+                    {
+                        "target": getattr(target, "id", str(target)),
+                        "mitigation_multiplier": mit_mult,
+                        "base_mitigation": target.mitigation,
+                        "duration_turns": 1,
+                        "trigger": "first_hit",
+                        "stacks": stacks,
+                    },
+                )
 
             def _reset(*_) -> None:
                 for key, (member, mod) in list(state["active"].items()):
@@ -65,12 +70,10 @@ class ShinyPebble(RelicBase):
 
     def describe(self, stacks: int) -> str:
         if stacks == 1:
-            return (
-                "+3% DEF. The first time each ally is hit, they gain +3% mitigation for one turn."
-            )
+            return "+3% DEF. The first time each ally is hit, they gain +3% mitigation for one turn."
         else:
             # Stacks are multiplicative: each copy compounds the effect
-            total_def_mult = (1.03 ** stacks - 1) * 100
+            total_def_mult = (1.03**stacks - 1) * 100
             mit = 3 * stacks  # This part still stacks additively for the special effect
             return (
                 f"+{total_def_mult:.1f}% DEF ({stacks} stacks, multiplicative). "

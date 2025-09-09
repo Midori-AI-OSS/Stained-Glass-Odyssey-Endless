@@ -67,6 +67,7 @@ async def test_lightning_ultimate_aftertaste_stacks(monkeypatch):
     # Mock apply_damage to avoid async issues
     async def mock_apply_damage(damage, attacker=None, action_name=None):
         pass
+
     target.apply_damage = mock_apply_damage
 
     hits: list[int] = []
@@ -79,6 +80,7 @@ async def test_lightning_ultimate_aftertaste_stacks(monkeypatch):
 
     # Test BUS directly
     simple_calls = []
+
     def simple_handler(*args):
         simple_calls.append(args)
 
@@ -92,7 +94,9 @@ async def test_lightning_ultimate_aftertaste_stacks(monkeypatch):
     await lightning.ultimate(attacker, [], [target])
 
     # The handler should have been set up by the ultimate call
-    print(f"Has handler attribute: {hasattr(attacker, '_lightning_aftertaste_handler')}")
+    print(
+        f"Has handler attribute: {hasattr(attacker, '_lightning_aftertaste_handler')}"
+    )
     print(f"Stacks: {getattr(attacker, '_lightning_aftertaste_stacks', 'None')}")
 
     BUS.emit("hit_landed", attacker, target, 10, "attack")

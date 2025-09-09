@@ -11,6 +11,7 @@ if TYPE_CHECKING:
 @dataclass
 class LunaLunarReservoir:
     """Luna's Lunar Reservoir passive - charge-based system that scales attack count."""
+
     plugin_type = "passive"
     id = "luna_lunar_reservoir"
     name = "Lunar Reservoir"

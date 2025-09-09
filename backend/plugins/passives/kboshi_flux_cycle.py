@@ -18,6 +18,7 @@ if TYPE_CHECKING:
 @dataclass
 class KboshiFluxCycle:
     """Kboshi's Flux Cycle passive - random element switching with bonuses."""
+
     plugin_type = "passive"
     id = "kboshi_flux_cycle"
     name = "Flux Cycle"
@@ -43,11 +44,14 @@ class KboshiFluxCycle:
         # High chance to switch to random damage type
         if random.random() < 0.8:  # 80% chance to switch
             # Get current damage type
-            current_type_id = getattr(target.damage_type, 'id', 'Dark')  # Default to Dark for Kboshi
+            current_type_id = getattr(
+                target.damage_type, "id", "Dark"
+            )  # Default to Dark for Kboshi
 
             # Filter out current type to ensure we actually switch
-            available_types = [dt for dt in self._damage_types
-                             if dt().id != current_type_id]
+            available_types = [
+                dt for dt in self._damage_types if dt().id != current_type_id
+            ]
 
             # If no different types available (shouldn't happen), use all types
             if not available_types:

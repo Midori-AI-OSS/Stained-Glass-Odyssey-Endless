@@ -140,9 +140,7 @@ class FoeBase(Stats):
             self.lrm_memory = SimpleConversationMemory()
             return
 
-        self.lrm_memory = VectorStoreRetrieverMemory(
-            retriever=store.as_retriever()
-        )
+        self.lrm_memory = VectorStoreRetrieverMemory(retriever=store.as_retriever())
 
     def __deepcopy__(self, memo):  # type: ignore[override]
         """Custom deepcopy that skips copying non-serializable memory bindings."""
@@ -167,7 +165,6 @@ class FoeBase(Stats):
         BUS.emit("ultimate_used", self)
         return True
 
-
     async def send_lrm_message(self, message: str) -> dict[str, object]:
         import asyncio
         from pathlib import Path
@@ -182,8 +179,10 @@ class FoeBase(Stats):
 
         try:
             from llms.loader import load_llm
+
             llm = await asyncio.to_thread(load_llm)
         except Exception:
+
             class _LLM:
                 async def generate_stream(self, text: str):
                     yield ""
@@ -198,9 +197,7 @@ class FoeBase(Stats):
         response = "".join(chunks)
 
         voice_path: str | None = None
-        audio = await asyncio.to_thread(
-            generate_voice, response, self.voice_sample
-        )
+        audio = await asyncio.to_thread(generate_voice, response, self.voice_sample)
         if audio:
             voices = Path("assets/voices")
             voices.mkdir(parents=True, exist_ok=True)

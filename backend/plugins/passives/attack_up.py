@@ -13,7 +13,7 @@ class AttackUp:
     stack_display = "pips"
 
     async def apply(self, target, **kwargs) -> None:
-        stack_index = kwargs.get('stack_index', 0)
+        stack_index = kwargs.get("stack_index", 0)
         effect = StatEffect(
             name=f"{self.id}_atk_up_{stack_index}",
             stat_modifiers={"atk": self.amount},

@@ -1,4 +1,5 @@
 """Test for the Dark Resonance buff fix."""
+
 from autofighter.effects import EffectManager
 from autofighter.stats import Stats
 from plugins import damage_effects

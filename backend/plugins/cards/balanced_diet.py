@@ -9,4 +9,6 @@ class BalancedDiet(CardBase):
     id: str = "balanced_diet"
     name: str = "Balanced Diet"
     stars: int = 1
-    effects: dict[str, float] = field(default_factory=lambda: {"max_hp": 0.03, "defense": 0.03})
+    effects: dict[str, float] = field(
+        default_factory=lambda: {"max_hp": 0.03, "defense": 0.03}
+    )

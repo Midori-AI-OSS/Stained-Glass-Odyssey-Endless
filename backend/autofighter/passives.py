@@ -59,13 +59,17 @@ class PassiveRegistry:
                 # If this passive provides an event-specific handler, call it too.
                 # This enables richer behaviors (e.g., on_action_taken) while
                 # preserving backward compatibility with apply-only passives.
-                if event == "action_taken" and hasattr(passive_instance, "on_action_taken"):
+                if event == "action_taken" and hasattr(
+                    passive_instance, "on_action_taken"
+                ):
                     try:
                         await passive_instance.on_action_taken(owner, **kwargs)
                     except TypeError:
                         await passive_instance.on_action_taken(owner)
 
-    async def trigger_damage_taken(self, target, attacker: Optional[Any] = None, damage: int = 0) -> None:
+    async def trigger_damage_taken(
+        self, target, attacker: Optional[Any] = None, damage: int = 0
+    ) -> None:
         """Trigger passives specifically for damage taken events."""
         counts = Counter(target.passives)
         for pid, count in counts.items():
@@ -86,7 +90,9 @@ class PassiveRegistry:
                 stacks = min(count, getattr(cls, "max_stacks", count))
                 for _ in range(stacks):
                     try:
-                        await passive_instance.apply(target, attacker=attacker, damage=damage)
+                        await passive_instance.apply(
+                            target, attacker=attacker, damage=damage
+                        )
                     except TypeError:
                         await passive_instance.apply(target)
 
@@ -120,7 +126,9 @@ class PassiveRegistry:
                 for _ in range(stacks):
                     await passive_instance.on_defeat(target)
 
-    async def trigger_hit_landed(self, attacker, target, damage: int = 0, action_type: str = "attack", **kwargs) -> None:
+    async def trigger_hit_landed(
+        self, attacker, target, damage: int = 0, action_type: str = "attack", **kwargs
+    ) -> None:
         """Trigger passives when a hit successfully lands."""
         counts = Counter(attacker.passives)
         for pid, count in counts.items():
@@ -134,13 +142,21 @@ class PassiveRegistry:
             if hasattr(passive_instance, "on_hit_landed"):
                 stacks = min(count, getattr(cls, "max_stacks", count))
                 for _ in range(stacks):
-                    await passive_instance.on_hit_landed(attacker, target, damage, action_type, **kwargs)
+                    await passive_instance.on_hit_landed(
+                        attacker, target, damage, action_type, **kwargs
+                    )
 
             # Regular passive application with enhanced context
             stacks = min(count, getattr(cls, "max_stacks", count))
             for _ in range(stacks):
                 try:
-                    await passive_instance.apply(attacker, hit_target=target, damage=damage, action_type=action_type, **kwargs)
+                    await passive_instance.apply(
+                        attacker,
+                        hit_target=target,
+                        damage=damage,
+                        action_type=action_type,
+                        **kwargs,
+                    )
                 except TypeError:
                     # Fall back to simple apply for existing passives
                     await passive_instance.apply(attacker)
@@ -156,7 +172,9 @@ class PassiveRegistry:
             passive_instance = cls()
 
             # Special handling for turn start passives
-            if getattr(cls, "trigger", None) == "turn_start" and hasattr(passive_instance, "on_turn_start"):
+            if getattr(cls, "trigger", None) == "turn_start" and hasattr(
+                passive_instance, "on_turn_start"
+            ):
                 stacks = min(count, getattr(cls, "max_stacks", count))
                 for _ in range(stacks):
                     await passive_instance.on_turn_start(target, **kwargs)
@@ -195,9 +213,7 @@ class PassiveRegistry:
                     try:
                         await passive_instance.apply(target)
                     except TypeError:
-                        log.warning(
-                            "Passive %s incompatible with level_up kwargs", pid
-                        )
+                        log.warning("Passive %s incompatible with level_up kwargs", pid)
 
     def describe(self, target) -> list[dict[str, Any]]:
         """Return structured information for a target's passives."""

@@ -50,7 +50,10 @@ class RelicBase:
                 member.effect_manager = mgr
 
             # Apply stack multiplier to effects: each additional copy multiplies the effect
-            changes = {f"{attr}_mult": (1 + pct) ** stacks for attr, pct in self.effects.items()}
+            changes = {
+                f"{attr}_mult": (1 + pct) ** stacks
+                for attr, pct in self.effects.items()
+            }
             if not changes:
                 continue
             mod = create_stat_buff(member, name=self.id, turns=9999, **changes)
@@ -59,13 +62,22 @@ class RelicBase:
 
             # Emit relic effect tracking for stat modifications
             for attr, pct in self.effects.items():
-                BUS.emit("relic_effect", self.id, member, f"stat_buff_{attr}", int(pct * 100), {
-                    "stat_affected": attr,
-                    "percentage_change": pct * 100,
-                    "stacks": stacks,
-                    "cumulative_effect": (1 + pct) ** stacks - 1 if stacks > 1 else pct,
-                    "modifier_name": self.id
-                })
+                BUS.emit(
+                    "relic_effect",
+                    self.id,
+                    member,
+                    f"stat_buff_{attr}",
+                    int(pct * 100),
+                    {
+                        "stat_affected": attr,
+                        "percentage_change": pct * 100,
+                        "stacks": stacks,
+                        "cumulative_effect": (
+                            (1 + pct) ** stacks - 1 if stacks > 1 else pct
+                        ),
+                        "modifier_name": self.id,
+                    },
+                )
 
         self._mods = mods
 

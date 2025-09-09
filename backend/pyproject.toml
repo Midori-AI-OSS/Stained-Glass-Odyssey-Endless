@@ -24,6 +24,9 @@ include = ["autofighter", "plugins"]
 [dependency-groups]
 dev = [
     "pyinstaller>=6.15.0",
+    "black>=23.0.0",
+    "mypy>=1.5.0",
+    "types-pillow",
 ]
 
 [project.optional-dependencies]
@@ -93,3 +96,57 @@ llm-amd = [
     "sentence-transformers",
     "accelerate",
 ]
+
+[tool.black]
+line-length = 88
+target-version = ['py311', 'py312']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # Exclude legacy folder
+  legacy/
+  # Exclude build artifacts
+  | build/
+  | dist/
+  | \.eggs/
+  | \.venv/
+)/
+'''
+
+[tool.mypy]
+python_version = "3.11"
+warn_return_any = false  # Start more lenient
+warn_unused_configs = true
+disallow_untyped_defs = false  # Start lenient
+disallow_incomplete_defs = false  # More lenient
+check_untyped_defs = true
+disallow_untyped_decorators = false  # More lenient
+no_implicit_optional = true
+warn_redundant_casts = false  # More lenient
+warn_unused_ignores = false  # More lenient 
+warn_no_return = true
+warn_unreachable = true
+strict_equality = true
+
+# Focus on critical security modules only initially
+[[tool.mypy.overrides]]
+module = [
+    "app",
+    "routes.*",
+]
+warn_return_any = true
+disallow_untyped_defs = true
+
+# Ignore missing imports for optional dependencies
+[[tool.mypy.overrides]]
+module = [
+    "torch.*",
+    "langchain.*", 
+    "chatterbox_tts.*",
+    "transformers.*",
+    "accelerate.*",
+    "psutil.*",
+    "huggingface_hub.*",
+    "sqlcipher3.*",
+]
+ignore_missing_imports = true

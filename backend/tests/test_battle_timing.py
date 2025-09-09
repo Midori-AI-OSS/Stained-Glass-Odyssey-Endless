@@ -10,7 +10,9 @@ from autofighter.stats import Stats
 
 @pytest.mark.asyncio
 async def test_per_actor_pacing():
-    node = MapNode(room_id=0, room_type="battle-normal", floor=1, index=1, loop=1, pressure=0)
+    node = MapNode(
+        room_id=0, room_type="battle-normal", floor=1, index=1, loop=1, pressure=0
+    )
     room = BattleRoom(node)
     # Set stats so both sides act once before the foe is defeated
     player = Stats(hp=100, max_hp=100, atk=50, defense=0)
@@ -20,6 +22,7 @@ async def test_per_actor_pacing():
     party = Party(members=[player])
 
     import autofighter.rooms.utils as rooms_module
+
     original = rooms_module._choose_foe
     rooms_module._choose_foe = lambda _party: foe
     start = time.perf_counter()

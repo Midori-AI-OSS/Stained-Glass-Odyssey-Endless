@@ -21,4 +21,3 @@ def test_themed_adjectives_import_and_decorate() -> None:
     mod = target._pending_mods[0]
     assert mod.multipliers["atk"] == 1.1
     assert mod.multipliers["max_hp"] == 1.9
-

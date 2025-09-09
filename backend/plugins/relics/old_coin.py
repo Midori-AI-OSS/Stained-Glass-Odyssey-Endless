@@ -26,11 +26,18 @@ class OldCoin(RelicBase):
             party.gold += bonus
 
             # Emit relic effect event for gold bonus
-            BUS.emit("relic_effect", "old_coin", party, "gold_bonus", bonus, {
-                "original_amount": amount,
-                "bonus_percentage": 3 * stacks,
-                "stacks": stacks
-            })
+            BUS.emit(
+                "relic_effect",
+                "old_coin",
+                party,
+                "gold_bonus",
+                bonus,
+                {
+                    "original_amount": amount,
+                    "bonus_percentage": 3 * stacks,
+                    "stacks": stacks,
+                },
+            )
 
         def _purchase(cost: int) -> None:
             if first_purchase["done"]:
@@ -41,12 +48,19 @@ class OldCoin(RelicBase):
             first_purchase["done"] = True
 
             # Emit relic effect event for purchase refund
-            BUS.emit("relic_effect", "old_coin", party, "purchase_refund", refund, {
-                "original_cost": cost,
-                "refund_percentage": 3 * stacks,
-                "stacks": stacks,
-                "first_purchase": True
-            })
+            BUS.emit(
+                "relic_effect",
+                "old_coin",
+                party,
+                "purchase_refund",
+                refund,
+                {
+                    "original_cost": cost,
+                    "refund_percentage": 3 * stacks,
+                    "stacks": stacks,
+                    "first_purchase": True,
+                },
+            )
 
         BUS.subscribe("gold_earned", _gold)
         BUS.subscribe("shop_purchase", _purchase)

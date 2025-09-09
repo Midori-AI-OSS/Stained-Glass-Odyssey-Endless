@@ -45,6 +45,7 @@ async def test_room_heal_event_and_enrage(monkeypatch):
     import importlib
 
     from autofighter import passives
+
     importlib.reload(passives)
 
     registry = PassiveRegistry()

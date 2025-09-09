@@ -1,25 +1,55 @@
 name: Backend CI
 
 on:
+  push:
+    branches: [ main, master, develop ]
+    paths:
+      - 'backend/**'
+      - 'autofighter/**'
+      - 'tests/**'
+      - '.github/workflows/backend-ci.yml'
+  pull_request:
+    branches: [ main, master, develop ]
+    paths:
+      - 'backend/**'
+      - 'autofighter/**'
+      - 'tests/**'
+      - '.github/workflows/backend-ci.yml'
   workflow_dispatch:
 
 jobs:
   backend:
     name: Backend Tests & Linting
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.10', '3.11', '3.12']
+      fail-fast: false
+      
     steps:
       - uses: actions/checkout@v4
+      
       - uses: astral-sh/setup-uv@v6.6.0
         with:
-          python-version: '3.12'
+          python-version: ${{ matrix.python-version }}
       
       - name: Install backend dependencies
         working-directory: backend
-        run: uv sync
+        run: uv sync --group dev
       
-      - name: Run backend linting
+      - name: Run black formatting check
+        working-directory: backend
+        run: uv run black --check .
+      
+      - name: Run ruff linting
         run: uvx ruff check backend
       
-      - name: Run all backend tests
+      - name: Run mypy type checking
         working-directory: backend
-        run: uv run pytest tests/
+        run: uv run mypy .
+        continue-on-error: true  # Don't fail CI on mypy errors initially
+      
+      - name: Run backend tests
+        working-directory: backend
+        run: uv run pytest tests/ -v --tb=short
+        timeout-minutes: 10

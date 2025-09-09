@@ -11,6 +11,7 @@ from plugins.damage_types._base import DamageTypeBase
 @dataclass
 class Dark(DamageTypeBase):
     """Selfish element that drains allies to fuel overwhelming strikes."""
+
     id: str = "Dark"
     weakness: str = "Light"
     color: tuple[int, int, int] = (145, 0, 145)
@@ -25,6 +26,7 @@ class Dark(DamageTypeBase):
                 mgr.add_dot(damage_effects.create_shadow_siphon(dmg, actor))
 
         if not self._cleanup_registered:
+
             def _clear(_):
                 sid = damage_effects.SHADOW_SIPHON_ID
                 for member in allies:
@@ -81,7 +83,7 @@ class Dark(DamageTypeBase):
                     name="Dark Resonance",
                     id="dark_resonance",
                     turns=9999,
-                    **changes
+                    **changes,
                 )
                 mgr.add_modifier(mod)
         except Exception:
@@ -115,11 +117,13 @@ class Dark(DamageTypeBase):
             else:
                 stacks += len(getattr(member, "dots", []))
 
-        multiplier = self.ULT_PER_STACK ** stacks
+        multiplier = self.ULT_PER_STACK**stacks
         dmg = int(actor.atk * multiplier)
         target = enemies[0]
         for _ in range(6):
-            dealt = await target.apply_damage(dmg, attacker=actor, action_name="Dark Ultimate")
+            dealt = await target.apply_damage(
+                dmg, attacker=actor, action_name="Dark Ultimate"
+            )
             await BUS.emit_async("damage", actor, target, dealt)
         return True
 

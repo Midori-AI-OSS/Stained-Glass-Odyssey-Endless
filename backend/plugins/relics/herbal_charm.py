@@ -23,11 +23,18 @@ class HerbalCharm(RelicBase):
                 heal = int(member.max_hp * 0.005 * stacks)
 
                 # Emit relic effect event for healing
-                BUS.emit("relic_effect", "herbal_charm", member, "turn_start_healing", heal, {
-                    "healing_percentage": 0.5 * stacks,
-                    "max_hp": member.max_hp,
-                    "stacks": stacks
-                })
+                BUS.emit(
+                    "relic_effect",
+                    "herbal_charm",
+                    member,
+                    "turn_start_healing",
+                    heal,
+                    {
+                        "healing_percentage": 0.5 * stacks,
+                        "max_hp": member.max_hp,
+                        "stacks": stacks,
+                    },
+                )
 
                 safe_async_task(member.apply_healing(heal))
 

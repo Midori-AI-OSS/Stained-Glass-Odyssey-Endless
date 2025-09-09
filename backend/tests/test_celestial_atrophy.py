@@ -7,7 +7,8 @@ from plugins.dots.celestial_atrophy import CelestialAtrophy
 
 @pytest.mark.asyncio
 async def test_celestial_atrophy_stacks_and_cleans_up():
-    target = Stats(atk=10)
+    target = Stats()
+    target.set_base_stat("atk", 10)  # Use the proper method to set base attack
     target.id = "t"
     manager = EffectManager(target)
     target.effect_manager = manager

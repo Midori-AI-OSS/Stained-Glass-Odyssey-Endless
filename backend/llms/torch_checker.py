@@ -19,6 +19,7 @@ try:
     from langchain_huggingface import HuggingFacePipeline  # noqa: F401
     import torch  # noqa: F401
     from transformers import pipeline  # noqa: F401
+
     _TORCH_AVAILABLE = True
     log.info("Torch and LLM dependencies are available")
 except Exception as err:

@@ -10,6 +10,7 @@ if TYPE_CHECKING:
 @dataclass
 class PlayerLevelUpBonus:
     """Player's enhanced level-up gains passive."""
+
     plugin_type = "passive"
     id = "player_level_up_bonus"
     name = "Enhanced Growth"
@@ -32,11 +33,15 @@ class PlayerLevelUpBonus:
                 "defense": target.level_up_gains.get("defense", 3.0) * 0.35,
                 "crit_rate": target.level_up_gains.get("crit_rate", 0.001) * 0.35,
                 "crit_damage": target.level_up_gains.get("crit_damage", 0.05) * 0.35,
-                "effect_hit_rate": target.level_up_gains.get("effect_hit_rate", 0.001) * 0.35,
+                "effect_hit_rate": target.level_up_gains.get("effect_hit_rate", 0.001)
+                * 0.35,
                 "mitigation": target.level_up_gains.get("mitigation", 0.01) * 0.35,
                 "regain": target.level_up_gains.get("regain", 2.0) * 0.35,
                 "dodge_odds": target.level_up_gains.get("dodge_odds", 0.001) * 0.35,
-                "effect_resistance": target.level_up_gains.get("effect_resistance", 0.001) * 0.35,
+                "effect_resistance": target.level_up_gains.get(
+                    "effect_resistance", 0.001
+                )
+                * 0.35,
                 "vitality": target.level_up_gains.get("vitality", 0.01) * 0.35,
             },
             duration=-1,

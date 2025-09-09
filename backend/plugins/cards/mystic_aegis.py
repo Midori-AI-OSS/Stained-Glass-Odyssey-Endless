@@ -11,8 +11,12 @@ class MysticAegis(CardBase):
     id: str = "mystic_aegis"
     name: str = "Mystic Aegis"
     stars: int = 2
-    effects: dict[str, float] = field(default_factory=lambda: {"effect_resistance": 0.55})
-    about: str = "+55% Effect Res; when an ally resists a debuff, they heal for 5% Max HP."
+    effects: dict[str, float] = field(
+        default_factory=lambda: {"effect_resistance": 0.55}
+    )
+    about: str = (
+        "+55% Effect Res; when an ally resists a debuff, they heal for 5% Max HP."
+    )
 
     async def apply(self, party) -> None:  # type: ignore[override]
         await super().apply(party)

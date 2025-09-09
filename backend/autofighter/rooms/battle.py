@@ -196,6 +196,7 @@ class BattleRoom(Room):
         # Mark battle as active to allow damage/heal processing
         try:
             from autofighter.stats import set_battle_active
+
             set_battle_active(True)
         except Exception:
             pass
@@ -208,7 +209,9 @@ class BattleRoom(Room):
         battle_logger = start_battle_logging()
         try:
             if battle_logger is not None:
-                battle_logger.summary.party_members = [m.id for m in combat_party.members]
+                battle_logger.summary.party_members = [
+                    m.id for m in combat_party.members
+                ]
                 battle_logger.summary.foes = [f.id for f in foes]
                 # Snapshot party relics present at battle start (id -> count)
                 relic_counts: dict[str, int] = {}
@@ -220,23 +223,31 @@ class BattleRoom(Room):
 
         for f in foes:
             await BUS.emit_async("battle_start", f)
-            await registry.trigger("battle_start", f, party=combat_party.members, foes=foes)
+            await registry.trigger(
+                "battle_start", f, party=combat_party.members, foes=foes
+            )
 
         log.info(
             "Battle start: %s vs %s",
             [f.id for f in foes],
             [m.id for m in combat_party.members],
         )
-        for member_effect, member in zip(party_effects, combat_party.members, strict=False):
+        for member_effect, member in zip(
+            party_effects, combat_party.members, strict=False
+        ):
             await BUS.emit_async("battle_start", member)
-            await registry.trigger("battle_start", member, party=combat_party.members, foes=foes)
+            await registry.trigger(
+                "battle_start", member, party=combat_party.members, foes=foes
+            )
 
         enrage_active = False
         enrage_stacks = 0
         enrage_bleed_applies = 0
         # Ensure enrage percent starts at 0 for this battle
         set_enrage_percent(0.0)
-        threshold = ENRAGE_TURNS_BOSS if isinstance(self, BossRoom) else ENRAGE_TURNS_NORMAL
+        threshold = (
+            ENRAGE_TURNS_BOSS if isinstance(self, BossRoom) else ENRAGE_TURNS_NORMAL
+        )
         exp_reward = 0
         credited_foe_ids: set[str] = set()
 
@@ -274,15 +285,28 @@ class BattleRoom(Room):
             nonlocal exp_reward, temp_rdr
             try:
                 fid = getattr(foe_obj, "id", None)
-                if getattr(foe_obj, "hp", 1) <= 0 and fid and fid not in credited_foe_ids:
+                if (
+                    getattr(foe_obj, "hp", 1) <= 0
+                    and fid
+                    and fid not in credited_foe_ids
+                ):
                     # Emit kill event - async for better performance
-                    await BUS.emit_async("entity_killed", foe_obj, None, 0, "death", {"victim_type": "foe", "killer_type": "party"})
+                    await BUS.emit_async(
+                        "entity_killed",
+                        foe_obj,
+                        None,
+                        0,
+                        "death",
+                        {"victim_type": "foe", "killer_type": "party"},
+                    )
 
                     exp_reward += foe_obj.level * 12 + 5 * self.node.index
                     temp_rdr += 0.55
                     credited_foe_ids.add(fid)
                     try:
-                        label = (getattr(foe_obj, "name", None) or getattr(foe_obj, "id", "")).lower()
+                        label = (
+                            getattr(foe_obj, "name", None) or getattr(foe_obj, "id", "")
+                        ).lower()
                         if "slime" in label:
                             for m in combat_party.members:
                                 m.exp_multiplier += 0.025
@@ -293,6 +317,7 @@ class BattleRoom(Room):
             except Exception:
                 # Never let EXP crediting break battle flow
                 pass
+
         turn = 0
         temp_rdr = party.rdr
         if progress is not None:
@@ -311,6 +336,7 @@ class BattleRoom(Room):
                     "rdr": temp_rdr,
                 }
             )
+
         # Helper to pace actions: dynamic pacing based on combatant count
         async def _pace(start_time: float) -> None:
             try:
@@ -330,7 +356,9 @@ class BattleRoom(Room):
         while any(f.hp > 0 for f in foes) and any(
             m.hp > 0 for m in combat_party.members
         ):
-            for member_effect, member in zip(party_effects, combat_party.members, strict=False):
+            for member_effect, member in zip(
+                party_effects, combat_party.members, strict=False
+            ):
                 safety = 0
                 while True:
                     safety += 1
@@ -352,7 +380,9 @@ class BattleRoom(Room):
                         # and massive damage dealt bonuses.
                         set_enrage_percent(1.35 * max(new_stacks, 0))
                         mult = 1 + 2.0 * new_stacks
-                        for i, (f, mgr) in enumerate(zip(foes, foe_effects, strict=False)):
+                        for i, (f, mgr) in enumerate(
+                            zip(foes, foe_effects, strict=False)
+                        ):
                             if enrage_mods[i] is not None:
                                 enrage_mods[i].remove()
                                 try:
@@ -361,7 +391,9 @@ class BattleRoom(Room):
                                         f.mods.remove(enrage_mods[i].id)
                                 except ValueError:
                                     pass
-                            mod = create_stat_buff(f, name="enrage_atk", atk_mult=mult, turns=9999)
+                            mod = create_stat_buff(
+                                f, name="enrage_atk", atk_mult=mult, turns=9999
+                            )
                             mgr.add_modifier(mod)
                             enrage_mods[i] = mod
                         enrage_stacks = new_stacks
@@ -389,7 +421,13 @@ class BattleRoom(Room):
                                     current_task.cancel()
                                 _abort(other_id)
                     # Also trigger the enhanced turn_start method with battle context
-                    await registry.trigger_turn_start(member, turn=turn, party=combat_party.members, foes=foes, enrage_active=enrage_active)
+                    await registry.trigger_turn_start(
+                        member,
+                        turn=turn,
+                        party=combat_party.members,
+                        foes=foes,
+                        enrage_active=enrage_active,
+                    )
                     # Emit BUS event for relics that subscribe to turn_start - async for better performance
                     await BUS.emit_async("turn_start", member)
                     log.debug("%s turn start", member.id)
@@ -409,7 +447,9 @@ class BattleRoom(Room):
                     for f in foes:
                         await _credit_if_dead(f)
                     if member.hp <= 0:
-                        await registry.trigger("turn_end", member, party=combat_party.members, foes=foes)
+                        await registry.trigger(
+                            "turn_end", member, party=combat_party.members, foes=foes
+                        )
                         await asyncio.sleep(0.001)
                         break
                     proceed = await member_effect.on_action()
@@ -422,21 +462,59 @@ class BattleRoom(Room):
                             foes,
                         )
                         proceed = True if res is None else bool(res)
-                    if getattr(member, "ultimate_ready", False) and hasattr(dt, "ultimate"):
+                    if getattr(member, "ultimate_ready", False) and hasattr(
+                        dt, "ultimate"
+                    ):
                         if hasattr(member, "use_ultimate") and member.use_ultimate():
                             try:
                                 # Emit ultimate start event
-                                await BUS.emit_async("ultimate_used", member, None, 0, "ultimate", {"ultimate_type": getattr(member.damage_type, 'id', 'generic')})
+                                await BUS.emit_async(
+                                    "ultimate_used",
+                                    member,
+                                    None,
+                                    0,
+                                    "ultimate",
+                                    {
+                                        "ultimate_type": getattr(
+                                            member.damage_type, "id", "generic"
+                                        )
+                                    },
+                                )
                                 await dt.ultimate(member, combat_party.members, foes)
                                 # Emit ultimate end event
-                                await BUS.emit_async("ultimate_completed", member, None, 0, "ultimate", {"ultimate_type": getattr(member.damage_type, 'id', 'generic')})
+                                await BUS.emit_async(
+                                    "ultimate_completed",
+                                    member,
+                                    None,
+                                    0,
+                                    "ultimate",
+                                    {
+                                        "ultimate_type": getattr(
+                                            member.damage_type, "id", "generic"
+                                        )
+                                    },
+                                )
                             except Exception as e:
                                 # Emit ultimate failed event
-                                await BUS.emit_async("ultimate_failed", member, None, 0, "ultimate", {"ultimate_type": getattr(member.damage_type, 'id', 'generic'), "error": str(e)})
+                                await BUS.emit_async(
+                                    "ultimate_failed",
+                                    member,
+                                    None,
+                                    0,
+                                    "ultimate",
+                                    {
+                                        "ultimate_type": getattr(
+                                            member.damage_type, "id", "generic"
+                                        ),
+                                        "error": str(e),
+                                    },
+                                )
                                 pass
                     if not proceed:
                         await BUS.emit_async("action_used", member, member, 0)
-                        await registry.trigger("turn_end", member, party=combat_party.members, foes=foes)
+                        await registry.trigger(
+                            "turn_end", member, party=combat_party.members, foes=foes
+                        )
                         if _EXTRA_TURNS.get(id(member), 0) > 0 and member.hp > 0:
                             _EXTRA_TURNS[id(member)] -= 1
                             await _pace(action_start)
@@ -451,7 +529,9 @@ class BattleRoom(Room):
                                         if not isinstance(m, Summon)
                                     ],
                                     "foes": [_serialize(f) for f in foes],
-                                    "party_summons": _collect_summons(combat_party.members),
+                                    "party_summons": _collect_summons(
+                                        combat_party.members
+                                    ),
                                     "foe_summons": _collect_summons(foes),
                                     "enrage": {
                                         "active": enrage_active,
@@ -464,25 +544,45 @@ class BattleRoom(Room):
                         await _pace(action_start)
                         await asyncio.sleep(0.001)
                         break
-                    dmg = await tgt_foe.apply_damage(member.atk, attacker=member, action_name="Normal Attack")
+                    dmg = await tgt_foe.apply_damage(
+                        member.atk, attacker=member, action_name="Normal Attack"
+                    )
                     if dmg <= 0:
                         log.info("%s's attack was dodged by %s", member.id, tgt_foe.id)
                     else:
                         log.info("%s hits %s for %s", member.id, tgt_foe.id, dmg)
-                        damage_type = getattr(member.damage_type, 'id', 'generic') if hasattr(member, 'damage_type') else 'generic'
-                        await BUS.emit_async("hit_landed", member, tgt_foe, dmg, "attack", f"{damage_type}_attack")
+                        damage_type = (
+                            getattr(member.damage_type, "id", "generic")
+                            if hasattr(member, "damage_type")
+                            else "generic"
+                        )
+                        await BUS.emit_async(
+                            "hit_landed",
+                            member,
+                            tgt_foe,
+                            dmg,
+                            "attack",
+                            f"{damage_type}_attack",
+                        )
                         # Trigger hit_landed passives for the attacker
-                        await registry.trigger_hit_landed(member, tgt_foe, dmg, "attack",
-                                                        damage_type=damage_type,
-                                                        party=combat_party.members,
-                                                        foes=foes)
+                        await registry.trigger_hit_landed(
+                            member,
+                            tgt_foe,
+                            dmg,
+                            "attack",
+                            damage_type=damage_type,
+                            party=combat_party.members,
+                            foes=foes,
+                        )
                     tgt_mgr.maybe_inflict_dot(member, dmg)
                     if getattr(member.damage_type, "id", "").lower() == "wind":
                         # Compute dynamic scaling based on number of living targets.
                         # Example mapping from N targets -> scale = 1 / (2N):
                         # 4 targets => 1/8, 5 targets => 1/10, etc.
                         try:
-                            living_targets = sum(1 for f in foes if getattr(f, "hp", 0) > 0)
+                            living_targets = sum(
+                                1 for f in foes if getattr(f, "hp", 0) > 0
+                            )
                         except Exception:
                             living_targets = len(foes) if isinstance(foes, list) else 1
                         living_targets = max(1, int(living_targets))
@@ -508,24 +608,43 @@ class BattleRoom(Room):
                                     extra_foe.id,
                                     extra_dmg,
                                 )
-                                await BUS.emit_async("hit_landed", member, extra_foe, extra_dmg, "attack", "wind_multi_attack")
+                                await BUS.emit_async(
+                                    "hit_landed",
+                                    member,
+                                    extra_foe,
+                                    extra_dmg,
+                                    "attack",
+                                    "wind_multi_attack",
+                                )
                                 # Trigger hit_landed passives for wind multi-attack
-                                await registry.trigger_hit_landed(member, extra_foe, extra_dmg, "wind_multi_attack",
-                                                                damage_type="wind",
-                                                                party=combat_party.members,
-                                                                foes=foes)
+                                await registry.trigger_hit_landed(
+                                    member,
+                                    extra_foe,
+                                    extra_dmg,
+                                    "wind_multi_attack",
+                                    damage_type="wind",
+                                    party=combat_party.members,
+                                    foes=foes,
+                                )
                             foe_effects[extra_idx].maybe_inflict_dot(member, extra_dmg)
                             await _credit_if_dead(extra_foe)
                     await BUS.emit_async("action_used", member, tgt_foe, dmg)
                     # Trigger action_taken passives for the acting member
-                    await registry.trigger("action_taken", member, target=tgt_foe, damage=dmg, party=combat_party.members, foes=foes)
+                    await registry.trigger(
+                        "action_taken",
+                        member,
+                        target=tgt_foe,
+                        damage=dmg,
+                        party=combat_party.members,
+                        foes=foes,
+                    )
                     # Sync any new summons into party/foes so they can act this round
                     try:
                         # Add party-side summons
                         SummonManager.add_summons_to_party(combat_party)
                         # Add foe-side summons to foes list with effect managers
                         for foe_owner in list(foes):
-                            owner_id = getattr(foe_owner, 'id', str(id(foe_owner)))
+                            owner_id = getattr(foe_owner, "id", str(id(foe_owner)))
                             for s in SummonManager.get_summons(owner_id):
                                 if s not in foes:
                                     foes.append(s)
@@ -544,12 +663,16 @@ class BattleRoom(Room):
                         if turns_since_enrage >= next_trigger:
                             stacks_to_add = 1 + enrage_bleed_applies
                             from autofighter.effects import DamageOverTime
+
                             for mgr in party_effects:
                                 for _ in range(stacks_to_add):
                                     dmg_per_tick = int(max(mgr.stats.max_hp, 1) * 0.10)
                                     mgr.add_dot(
                                         DamageOverTime(
-                                            "Enrage Bleed", dmg_per_tick, 10, "enrage_bleed"
+                                            "Enrage Bleed",
+                                            dmg_per_tick,
+                                            10,
+                                            "enrage_bleed",
                                         )
                                     )
                             for mgr, foe_obj in zip(foe_effects, foes, strict=False):
@@ -557,11 +680,16 @@ class BattleRoom(Room):
                                     dmg_per_tick = int(max(foe_obj.max_hp, 1) * 0.10)
                                     mgr.add_dot(
                                         DamageOverTime(
-                                            "Enrage Bleed", dmg_per_tick, 10, "enrage_bleed"
+                                            "Enrage Bleed",
+                                            dmg_per_tick,
+                                            10,
+                                            "enrage_bleed",
                                         )
                                     )
                             enrage_bleed_applies += 1
-                    await registry.trigger("turn_end", member, party=combat_party.members, foes=foes)
+                    await registry.trigger(
+                        "turn_end", member, party=combat_party.members, foes=foes
+                    )
                     await registry.trigger_turn_end(member)
                     if _EXTRA_TURNS.get(id(member), 0) > 0 and member.hp > 0:
                         _EXTRA_TURNS[id(member)] -= 1
@@ -584,7 +712,11 @@ class BattleRoom(Room):
                                 ],
                                 "party_summons": _collect_summons(combat_party.members),
                                 "foe_summons": _collect_summons(foes),
-                                "enrage": {"active": enrage_active, "stacks": enrage_stacks, "turns": enrage_stacks},
+                                "enrage": {
+                                    "active": enrage_active,
+                                    "stacks": enrage_stacks,
+                                    "turns": enrage_stacks,
+                                },
                                 "rdr": temp_rdr,
                             }
                         )
@@ -647,7 +779,12 @@ class BattleRoom(Room):
                     for f in foes:
                         await _credit_if_dead(f)
                     if acting_foe.hp <= 0:
-                        await registry.trigger("turn_end", acting_foe, party=combat_party.members, foes=foes)
+                        await registry.trigger(
+                            "turn_end",
+                            acting_foe,
+                            party=combat_party.members,
+                            foes=foes,
+                        )
                         await asyncio.sleep(0.001)
                         break
                     proceed = await foe_mgr.on_action()
@@ -656,23 +793,75 @@ class BattleRoom(Room):
                     if proceed and hasattr(dt, "on_action"):
                         res = await dt.on_action(acting_foe, foes, combat_party.members)
                         proceed = True if res is None else bool(res)
-                    if getattr(acting_foe, "ultimate_ready", False) and hasattr(dt, "ultimate"):
-                        if hasattr(acting_foe, "use_ultimate") and acting_foe.use_ultimate():
+                    if getattr(acting_foe, "ultimate_ready", False) and hasattr(
+                        dt, "ultimate"
+                    ):
+                        if (
+                            hasattr(acting_foe, "use_ultimate")
+                            and acting_foe.use_ultimate()
+                        ):
                             try:
                                 # Emit ultimate start event for foes
-                                await BUS.emit_async("ultimate_used", acting_foe, None, 0, "ultimate", {"ultimate_type": getattr(acting_foe.damage_type, 'id', 'generic'), "caster_type": "foe"})
-                                await dt.ultimate(acting_foe, foes, combat_party.members)
+                                await BUS.emit_async(
+                                    "ultimate_used",
+                                    acting_foe,
+                                    None,
+                                    0,
+                                    "ultimate",
+                                    {
+                                        "ultimate_type": getattr(
+                                            acting_foe.damage_type, "id", "generic"
+                                        ),
+                                        "caster_type": "foe",
+                                    },
+                                )
+                                await dt.ultimate(
+                                    acting_foe, foes, combat_party.members
+                                )
                                 # Emit ultimate end event for foes
-                                await BUS.emit_async("ultimate_completed", acting_foe, None, 0, "ultimate", {"ultimate_type": getattr(acting_foe.damage_type, 'id', 'generic'), "caster_type": "foe"})
+                                await BUS.emit_async(
+                                    "ultimate_completed",
+                                    acting_foe,
+                                    None,
+                                    0,
+                                    "ultimate",
+                                    {
+                                        "ultimate_type": getattr(
+                                            acting_foe.damage_type, "id", "generic"
+                                        ),
+                                        "caster_type": "foe",
+                                    },
+                                )
                             except Exception as e:
                                 # Emit ultimate failed event for foes
-                                await BUS.emit_async("ultimate_failed", acting_foe, None, 0, "ultimate", {"ultimate_type": getattr(acting_foe.damage_type, 'id', 'generic'), "caster_type": "foe", "error": str(e)})
+                                await BUS.emit_async(
+                                    "ultimate_failed",
+                                    acting_foe,
+                                    None,
+                                    0,
+                                    "ultimate",
+                                    {
+                                        "ultimate_type": getattr(
+                                            acting_foe.damage_type, "id", "generic"
+                                        ),
+                                        "caster_type": "foe",
+                                        "error": str(e),
+                                    },
+                                )
                                 pass
                     if not proceed:
                         await BUS.emit_async("action_used", acting_foe, acting_foe, 0)
                         acting_foe.add_ultimate_charge(acting_foe.actions_per_turn)
-                        await registry.trigger("turn_end", acting_foe, party=combat_party.members, foes=foes)
-                        if _EXTRA_TURNS.get(id(acting_foe), 0) > 0 and acting_foe.hp > 0:
+                        await registry.trigger(
+                            "turn_end",
+                            acting_foe,
+                            party=combat_party.members,
+                            foes=foes,
+                        )
+                        if (
+                            _EXTRA_TURNS.get(id(acting_foe), 0) > 0
+                            and acting_foe.hp > 0
+                        ):
                             _EXTRA_TURNS[id(acting_foe)] -= 1
                             await _pace(action_start)
                             continue
@@ -681,11 +870,24 @@ class BattleRoom(Room):
                         break
                     dmg = await target.apply_damage(acting_foe.atk, attacker=acting_foe)
                     if dmg <= 0:
-                        log.info("%s's attack was dodged by %s", acting_foe.id, target.id)
+                        log.info(
+                            "%s's attack was dodged by %s", acting_foe.id, target.id
+                        )
                     else:
                         log.info("%s hits %s for %s", acting_foe.id, target.id, dmg)
-                        damage_type = getattr(acting_foe.damage_type, 'id', 'generic') if hasattr(acting_foe, 'damage_type') else 'generic'
-                        await BUS.emit_async("hit_landed", acting_foe, target, dmg, "attack", f"foe_{damage_type}_attack")
+                        damage_type = (
+                            getattr(acting_foe.damage_type, "id", "generic")
+                            if hasattr(acting_foe, "damage_type")
+                            else "generic"
+                        )
+                        await BUS.emit_async(
+                            "hit_landed",
+                            acting_foe,
+                            target,
+                            dmg,
+                            "attack",
+                            f"foe_{damage_type}_attack",
+                        )
                     target_effect.maybe_inflict_dot(acting_foe, dmg)
                     await BUS.emit_async("action_used", acting_foe, target, dmg)
                     # Trigger action_taken passives for the acting foe
@@ -694,7 +896,7 @@ class BattleRoom(Room):
                     try:
                         SummonManager.add_summons_to_party(combat_party)
                         for foe_owner in list(foes):
-                            owner_id = getattr(foe_owner, 'id', str(id(foe_owner)))
+                            owner_id = getattr(foe_owner, "id", str(id(foe_owner)))
                             for s in SummonManager.get_summons(owner_id):
                                 if s not in foes:
                                     foes.append(s)
@@ -708,7 +910,9 @@ class BattleRoom(Room):
                     # Wind-aligned foes gain charge from ally actions too
                     for ally in foes:
                         ally.handle_ally_action(acting_foe)
-                    await registry.trigger("turn_end", acting_foe, party=combat_party.members, foes=foes)
+                    await registry.trigger(
+                        "turn_end", acting_foe, party=combat_party.members, foes=foes
+                    )
                     await registry.trigger_turn_end(acting_foe)
                     if _EXTRA_TURNS.get(id(acting_foe), 0) > 0 and acting_foe.hp > 0:
                         _EXTRA_TURNS[id(acting_foe)] -= 1
@@ -731,13 +935,15 @@ class BattleRoom(Room):
                             if not isinstance(m, Summon)
                         ],
                         "foes": [
-                            _serialize(f)
-                            for f in foes
-                            if not isinstance(f, Summon)
+                            _serialize(f) for f in foes if not isinstance(f, Summon)
                         ],
                         "party_summons": _collect_summons(combat_party.members),
                         "foe_summons": _collect_summons(foes),
-                        "enrage": {"active": enrage_active, "stacks": enrage_stacks, "turns": enrage_stacks},
+                        "enrage": {
+                            "active": enrage_active,
+                            "stacks": enrage_stacks,
+                            "turns": enrage_stacks,
+                        },
                         "rdr": temp_rdr,
                         "ended": True,
                     }
@@ -753,7 +959,9 @@ class BattleRoom(Room):
             pass
 
         # End battle logging
-        battle_result = "defeat" if all(m.hp <= 0 for m in combat_party.members) else "victory"
+        battle_result = (
+            "defeat" if all(m.hp <= 0 for m in combat_party.members) else "victory"
+        )
         end_battle_logging(battle_result)
 
         for mod in enrage_mods:
@@ -771,6 +979,7 @@ class BattleRoom(Room):
         # Mark battle inactive to drop any stray async pings
         try:
             from autofighter.stats import set_battle_active
+
             set_battle_active(False)
         except Exception:
             pass
@@ -817,24 +1026,40 @@ class BattleRoom(Room):
                 "card_choices": [],
                 "relic_choices": [],
                 "loot": loot,
-                "foes": [fd for f, fd in zip(foes, foes_data, strict=False) if not isinstance(f, Summon)],
+                "foes": [
+                    fd
+                    for f, fd in zip(foes, foes_data, strict=False)
+                    if not isinstance(f, Summon)
+                ],
                 "foe_summons": foe_summons,
                 "room_number": self.node.index,
                 "exp_reward": exp_reward,
-                "enrage": {"active": enrage_active, "stacks": enrage_stacks, "turns": enrage_stacks},
+                "enrage": {
+                    "active": enrage_active,
+                    "stacks": enrage_stacks,
+                    "turns": enrage_stacks,
+                },
                 "rdr": temp_rdr,
                 "ended": True,
             }
         # Pick cards with per-item star rolls; ensure unique choices not already owned
         selected_cards: list = []
         attempts = 0
-        log.info("Starting card selection for run %s, party has %d cards",
-                 getattr(combat_party, 'cards', []), len(getattr(combat_party, 'cards', [])))
+        log.info(
+            "Starting card selection for run %s, party has %d cards",
+            getattr(combat_party, "cards", []),
+            len(getattr(combat_party, "cards", [])),
+        )
         while len(selected_cards) < 3 and attempts < 30:
             attempts += 1
             base_stars = _pick_card_stars(self)
             cstars = _apply_rdr_to_stars(base_stars, temp_rdr)
-            log.debug("Card selection attempt %d: base_stars=%d, rdr_stars=%d", attempts, base_stars, cstars)
+            log.debug(
+                "Card selection attempt %d: base_stars=%d, rdr_stars=%d",
+                attempts,
+                base_stars,
+                cstars,
+            )
             one = card_choices(combat_party, cstars, count=1)
             log.debug("  card_choices returned %d options", len(one))
             if not one:
@@ -847,7 +1072,11 @@ class BattleRoom(Room):
                 continue
             selected_cards.append(c)
             log.debug("  Added card: %s", c.id)
-        log.info("Card selection complete: %d cards selected after %d attempts", len(selected_cards), attempts)
+        log.info(
+            "Card selection complete: %d cards selected after %d attempts",
+            len(selected_cards),
+            attempts,
+        )
         if selected_cards:
             log.info("Selected cards: %s", [c.id for c in selected_cards])
         else:
@@ -876,8 +1105,11 @@ class BattleRoom(Room):
         # Fallback relic system: if no cards are available, provide fallback relic
         if not selected_cards:
             from plugins.relics.fallback_essence import FallbackEssence
+
             fallback_relic = FallbackEssence()
-            if not relic_opts:  # If no regular relic drop, make fallback the only option
+            if (
+                not relic_opts
+            ):  # If no regular relic drop, make fallback the only option
                 relic_opts = [fallback_relic]
             else:  # If regular relic drop occurred, add fallback as an additional option
                 relic_opts.append(fallback_relic)
@@ -929,13 +1161,21 @@ class BattleRoom(Room):
             "card_choices": choice_data,
             "relic_choices": relic_choice_data,
             "loot": loot,
-            "foes": [fd for f, fd in zip(foes, foes_data, strict=False) if not isinstance(f, Summon)],
+            "foes": [
+                fd
+                for f, fd in zip(foes, foes_data, strict=False)
+                if not isinstance(f, Summon)
+            ],
             "foe_summons": foe_summons,
             "room_number": self.node.index,
             "battle_index": getattr(battle_logger, "battle_index", 0),
             "exp_reward": exp_reward,
-            "enrage": {"active": enrage_active, "stacks": enrage_stacks, "turns": enrage_stacks},
-                "rdr": party.rdr,
+            "enrage": {
+                "active": enrage_active,
+                "stacks": enrage_stacks,
+                "turns": enrage_stacks,
+            },
+            "rdr": party.rdr,
         }
 
 

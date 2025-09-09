@@ -11,6 +11,7 @@ if TYPE_CHECKING:
 @dataclass
 class LadyDarknessEclipsingVeil:
     """Lady Darkness's Eclipsing Veil passive - DoT enhancement and siphoning."""
+
     plugin_type = "passive"
     id = "lady_darkness_eclipsing_veil"
     name = "Eclipsing Veil"

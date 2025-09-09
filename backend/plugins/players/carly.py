@@ -15,9 +15,7 @@ class Carly(PlayerBase):
     char_type: CharacterType = CharacterType.B
     gacha_rarity = 5
     damage_type: DamageTypeBase = field(default_factory=Light)
-    stat_gain_map: dict[str, str] = field(
-        default_factory=lambda: {"atk": "defense"}
-    )
+    stat_gain_map: dict[str, str] = field(default_factory=lambda: {"atk": "defense"})
     passives: list[str] = field(default_factory=lambda: ["carly_guardians_aegis"])
     # UI hint: show numeric actions indicator
     actions_display: str = "number"

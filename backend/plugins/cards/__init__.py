@@ -1,2 +1,1 @@
 """Card plugins."""
-

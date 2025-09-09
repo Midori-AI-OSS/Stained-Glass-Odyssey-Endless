@@ -5,6 +5,7 @@ This test simulates the reported issue: 3 party members + 3 foes scenario
 with heavy event load while continuously pinging the backend to ensure
 the async loop doesn't block.
 """
+
 import asyncio
 import time
 
@@ -132,9 +133,15 @@ async def test_dark_ultimate_async_performance_with_backend_ping():
         print(f"Maximum ping time: {max_ping:.2f}ms")
 
         # Performance assertions
-        assert avg_ping < 50, f"Average ping too high: {avg_ping:.2f}ms - async loop may be blocked"
-        assert max_ping < 200, f"Max ping too high: {max_ping:.2f}ms - severe blocking detected"
-        assert ping_errors < len(ping_times) * 0.1, f"Too many ping errors: {ping_errors}/{len(ping_times)}"
+        assert (
+            avg_ping < 50
+        ), f"Average ping too high: {avg_ping:.2f}ms - async loop may be blocked"
+        assert (
+            max_ping < 200
+        ), f"Max ping too high: {max_ping:.2f}ms - severe blocking detected"
+        assert (
+            ping_errors < len(ping_times) * 0.1
+        ), f"Too many ping errors: {ping_errors}/{len(ping_times)}"
 
     # Verify event metrics
     if "damage" in metrics:
@@ -143,10 +150,14 @@ async def test_dark_ultimate_async_performance_with_backend_ping():
         print(f"Average damage event time: {damage_stats['avg_time']*1000:.2f}ms")
 
         # Should have processed 90 damage events (3 members * 5 rounds * 6 hits each)
-        assert damage_stats['count'] == 90, f"Expected 90 damage events, got {damage_stats['count']}"
+        assert (
+            damage_stats["count"] == 90
+        ), f"Expected 90 damage events, got {damage_stats['count']}"
 
         # Each damage event should be processed quickly in async mode
-        assert damage_stats['avg_time'] < 0.010, f"Damage events too slow: {damage_stats['avg_time']*1000:.2f}ms"
+        assert (
+            damage_stats["avg_time"] < 0.010
+        ), f"Damage events too slow: {damage_stats['avg_time']*1000:.2f}ms"
 
     print("✅ Async bus performance test passed - no blocking detected!")
 

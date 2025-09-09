@@ -31,7 +31,7 @@ async def test_phantom_ally_summon_lifecycle(monkeypatch):
     # Check that one member is a phantom summon
     phantom_found = False
     for member in party.members:
-        if hasattr(member, 'summon_type') and member.summon_type == "phantom":
+        if hasattr(member, "summon_type") and member.summon_type == "phantom":
             phantom_found = True
             break
     assert phantom_found

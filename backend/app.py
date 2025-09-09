@@ -44,7 +44,10 @@ configure_logging()
 log = logging.getLogger(__name__)
 
 # Log torch availability status on startup
-log.info("Torch availability check: %s", "available" if is_torch_available() else "not available")
+log.info(
+    "Torch availability check: %s",
+    "available" if is_torch_available() else "not available",
+)
 
 app = Quart(__name__)
 app.register_blueprint(assets_bp)
@@ -54,8 +57,8 @@ app.register_blueprint(rewards_bp)
 app.register_blueprint(config_bp)
 app.register_blueprint(catalog_bp)
 app.register_blueprint(ui_bp)
-app.register_blueprint(performance_bp, url_prefix='/performance')
-app.register_blueprint(guidebook_bp, url_prefix='/guidebook')
+app.register_blueprint(performance_bp, url_prefix="/performance")
+app.register_blueprint(guidebook_bp, url_prefix="/guidebook")
 
 BACKEND_FLAVOR = os.getenv("UV_EXTRA", "default")
 
@@ -66,7 +69,7 @@ async def status() -> Response:
 
 
 @app.after_request
-async def add_cors_headers(response):
+async def add_cors_headers(response: Response) -> Response:
     response.headers["Access-Control-Allow-Origin"] = "*"
     response.headers["Access-Control-Allow-Headers"] = "Content-Type"
     response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
@@ -74,16 +77,24 @@ async def add_cors_headers(response):
 
 
 @app.before_request
-async def handle_cors_preflight():
+async def handle_cors_preflight() -> tuple[str, int] | None:
     if request.method == "OPTIONS":
         return "", 204
+    return None
 
 
 @app.errorhandler(Exception)
-async def handle_exception(e: Exception):
+async def handle_exception(e: Exception) -> tuple[Response, int]:
     log.exception(e)
-    tb = traceback.format_exc()
-    response = jsonify({"error": str(e), "traceback": tb})
+
+    # Don't expose tracebacks in production for security
+    debug_mode = os.getenv("DEBUG", "false").lower() == "true"
+    error_response = {"error": str(e)}
+
+    if debug_mode:
+        error_response["traceback"] = traceback.format_exc()
+
+    response = jsonify(error_response)
     response.status_code = 500
     response.headers["Access-Control-Allow-Origin"] = "*"
     response.headers["Access-Control-Allow-Headers"] = "Content-Type"

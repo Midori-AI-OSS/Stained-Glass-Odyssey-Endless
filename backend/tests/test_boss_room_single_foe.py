@@ -33,4 +33,3 @@ def test_boss_rooms_spawn_one_foe(size: int, pressure: int) -> None:
     foes = utils._build_foes(node, party)
     assert len(foes) == 1
     assert foes[0].rank == "boss"
-

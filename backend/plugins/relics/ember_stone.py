@@ -25,15 +25,23 @@ class EmberStone(RelicBase):
                 dmg = int(target.atk * 0.5 * stacks)
 
                 # Emit relic effect event for burn counter-attack
-                BUS.emit("relic_effect", "ember_stone", target, "burn_counter", dmg, {
-                    "trigger_condition": "below_25_percent_hp",
-                    "current_hp_percentage": (target.hp / target.max_hp) * 100,
-                    "burn_damage": dmg,
-                    "attacker": getattr(attacker, 'id', str(attacker)),
-                    "stacks": stacks
-                })
+                BUS.emit(
+                    "relic_effect",
+                    "ember_stone",
+                    target,
+                    "burn_counter",
+                    dmg,
+                    {
+                        "trigger_condition": "below_25_percent_hp",
+                        "current_hp_percentage": (target.hp / target.max_hp) * 100,
+                        "burn_damage": dmg,
+                        "attacker": getattr(attacker, "id", str(attacker)),
+                        "stacks": stacks,
+                    },
+                )
 
                 safe_async_task(attacker.apply_damage(dmg, attacker=target))
+
         BUS.subscribe("damage_taken", _burn)
 
     def describe(self, stacks: int) -> str:

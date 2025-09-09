@@ -15,4 +15,6 @@ class LadyDarkness(PlayerBase):
     char_type: CharacterType = CharacterType.B
     gacha_rarity = 5
     damage_type: DamageTypeBase = field(default_factory=Dark)
-    passives: list[str] = field(default_factory=lambda: ["lady_darkness_eclipsing_veil"])
+    passives: list[str] = field(
+        default_factory=lambda: ["lady_darkness_eclipsing_veil"]
+    )

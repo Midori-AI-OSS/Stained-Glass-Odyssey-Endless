@@ -35,21 +35,35 @@ class GreedEngine(RelicBase):
                 party.gold += bonus_gold
 
                 # Emit relic effect event for gold bonus
-                BUS.emit("relic_effect", "greed_engine", party, "gold_bonus", bonus_gold, {
-                    "original_gold": amount,
-                    "bonus_percentage": state["gold"] * 100,
-                    "total_gold_gained": amount + bonus_gold
-                })
+                BUS.emit(
+                    "relic_effect",
+                    "greed_engine",
+                    party,
+                    "gold_bonus",
+                    bonus_gold,
+                    {
+                        "original_gold": amount,
+                        "bonus_percentage": state["gold"] * 100,
+                        "total_gold_gained": amount + bonus_gold,
+                    },
+                )
 
             def _drain() -> None:
                 for member in party.members:
                     dmg = int(member.max_hp * state["loss"])
 
                     # Emit relic effect event for HP drain
-                    BUS.emit("relic_effect", "greed_engine", member, "hp_drain", dmg, {
-                        "drain_percentage": state["loss"] * 100,
-                        "max_hp": member.max_hp
-                    })
+                    BUS.emit(
+                        "relic_effect",
+                        "greed_engine",
+                        member,
+                        "hp_drain",
+                        dmg,
+                        {
+                            "drain_percentage": state["loss"] * 100,
+                            "max_hp": member.max_hp,
+                        },
+                    )
 
                     safe_async_task(member.apply_damage(dmg))
 

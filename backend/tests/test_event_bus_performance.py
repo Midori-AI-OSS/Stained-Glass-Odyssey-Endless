@@ -2,6 +2,7 @@
 Performance tests for the event bus system to identify blocking behaviors.
 Tests with 100+ subscribers to simulate heavy effect load scenarios.
 """
+
 import asyncio
 import time
 
@@ -17,6 +18,7 @@ class TestEventBusPerformance:
     @pytest.mark.asyncio
     async def test_async_event_yield(self):
         """Ensure async emissions yield at least 2ms per event."""
+
         async def handler(*args):
             return None
 
@@ -40,12 +42,14 @@ class TestEventBusPerformance:
 
         def slow_subscriber(index):
             """Simulate a subscriber that takes time to process (like complex relic effects)."""
+
             def handler(*args):
                 start = time.perf_counter()
                 # Simulate 1ms of processing time per subscriber (realistic for complex effects)
                 time.sleep(0.001)
                 end = time.perf_counter()
                 processing_times.append((index, end - start))
+
             return handler
 
         # Subscribe 100 handlers to damage_dealt event
@@ -65,7 +69,16 @@ class TestEventBusPerformance:
             target = Stats()
             target.id = "test_target"
 
-            BUS.emit("damage_dealt", attacker, target, 100, "attack", None, None, "Normal Attack")
+            BUS.emit(
+                "damage_dealt",
+                attacker,
+                target,
+                100,
+                "attack",
+                None,
+                None,
+                "Normal Attack",
+            )
 
             end_time = time.perf_counter()
             total_time = end_time - start_time
@@ -86,7 +99,9 @@ class TestEventBusPerformance:
             assert total_time > 0.050  # Should take at least 50ms
 
             if total_time > 0.016:  # More than one 60fps frame
-                print(f"WARNING: Event emission takes {total_time*1000:.1f}ms - may cause UI lag!")
+                print(
+                    f"WARNING: Event emission takes {total_time*1000:.1f}ms - may cause UI lag!"
+                )
 
         finally:
             # Cleanup: Unsubscribe all test handlers
@@ -119,15 +134,31 @@ class TestEventBusPerformance:
             # Simulate initial attack triggering multiple Aftertaste effects
             for i in range(aftertaste_count):
                 # Each Aftertaste effect emits a relic_effect event
-                BUS.emit("relic_effect", "aftertaste", attacker, "damage", 25, {
-                    "effect_type": "aftertaste",
-                    "base_damage": 25,
-                    "random_damage_type": "Fire",
-                    "actual_damage": 25
-                })
+                BUS.emit(
+                    "relic_effect",
+                    "aftertaste",
+                    attacker,
+                    "damage",
+                    25,
+                    {
+                        "effect_type": "aftertaste",
+                        "base_damage": 25,
+                        "random_damage_type": "Fire",
+                        "actual_damage": 25,
+                    },
+                )
 
                 # Then emits damage_dealt when damage is applied
-                BUS.emit("damage_dealt", attacker, target, 25, "effect", "aftertaste", "Fire", "Aftertaste (Fire)")
+                BUS.emit(
+                    "damage_dealt",
+                    attacker,
+                    target,
+                    25,
+                    "effect",
+                    "aftertaste",
+                    "Fire",
+                    "Aftertaste (Fire)",
+                )
 
             end_time = time.perf_counter()
             total_time = end_time - start_time
@@ -140,7 +171,9 @@ class TestEventBusPerformance:
 
             # With 50 Aftertaste effects, this could easily block UI for 100+ms
             if total_time > 0.050:  # More than 50ms
-                print(f"WARNING: Aftertaste cascade takes {total_time*1000:.1f}ms - severe UI blocking!")
+                print(
+                    f"WARNING: Aftertaste cascade takes {total_time*1000:.1f}ms - severe UI blocking!"
+                )
 
         finally:
             BUS.unsubscribe("damage_dealt", track_emission)
@@ -187,7 +220,11 @@ class TestEventBusPerformance:
         print("\nSync vs Async Performance Comparison:")
         print(f"Synchronous emission: {sync_time*1000:.1f}ms")
         print(f"Asynchronous emission: {async_time*1000:.1f}ms")
-        print(f"Performance improvement: {(sync_time/async_time):.1f}x faster" if async_time > 0 else "N/A")
+        print(
+            f"Performance improvement: {(sync_time/async_time):.1f}x faster"
+            if async_time > 0
+            else "N/A"
+        )
 
         # Async should be significantly faster due to concurrent execution
         assert async_time < sync_time
@@ -226,7 +263,9 @@ class TestEventBusPerformance:
             assert len(event_times) == burst_size
 
             # Performance expectation: should handle at least 1000 events/sec
-            assert events_per_second > 1000, f"Event processing too slow: {events_per_second:.0f} events/sec"
+            assert (
+                events_per_second > 1000
+            ), f"Event processing too slow: {events_per_second:.0f} events/sec"
 
         finally:
             BUS.unsubscribe("burst_test", timing_handler)

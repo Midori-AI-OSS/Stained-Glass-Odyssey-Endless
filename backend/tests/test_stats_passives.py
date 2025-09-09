@@ -25,7 +25,8 @@ async def test_player_level_up_bonus_no_type_error(monkeypatch):
     registry = PassiveRegistry()
     await registry.trigger_level_up(stats, new_level=stats.level)
     assert any(
-        e.name == "player_level_up_bonus_level_bonus" for e in stats.get_active_effects()
+        e.name == "player_level_up_bonus_level_bonus"
+        for e in stats.get_active_effects()
     )
 
 

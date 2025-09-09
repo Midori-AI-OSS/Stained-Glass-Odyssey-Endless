@@ -16,7 +16,9 @@ class OmegaCore(RelicBase):
     id: str = "omega_core"
     name: str = "Omega Core"
     stars: int = 5
-    effects: dict[str, float] = field(default_factory=lambda: {"atk": 6.0, "defense": 6.0})
+    effects: dict[str, float] = field(
+        default_factory=lambda: {"atk": 6.0, "defense": 6.0}
+    )
     about: str = (
         "Multiplies all stats for the entire fight before draining ally health."
     )
@@ -37,12 +39,19 @@ class OmegaCore(RelicBase):
                 return
             for member in party.members:
                 # Emit relic effect event for massive stat boost
-                BUS.emit("relic_effect", "omega_core", member, "stat_amplification", mult, {
-                    "multiplier": mult,
-                    "duration": "entire_fight",
-                    "drain_delay": delay,
-                    "stacks": stacks
-                })
+                BUS.emit(
+                    "relic_effect",
+                    "omega_core",
+                    member,
+                    "stat_amplification",
+                    mult,
+                    {
+                        "multiplier": mult,
+                        "duration": "entire_fight",
+                        "drain_delay": delay,
+                        "stacks": stacks,
+                    },
+                )
 
                 mod = create_stat_buff(
                     member,
@@ -75,12 +84,19 @@ class OmegaCore(RelicBase):
                 dmg = int(member.max_hp * drain)
 
                 # Emit relic effect event for HP drain
-                BUS.emit("relic_effect", "omega_core", member, "hp_drain", dmg, {
-                    "drain_percentage": drain * 100,
-                    "turn": state["turn"],
-                    "turns_past_delay": state["turn"] - delay,
-                    "delay": delay
-                })
+                BUS.emit(
+                    "relic_effect",
+                    "omega_core",
+                    member,
+                    "hp_drain",
+                    dmg,
+                    {
+                        "drain_percentage": drain * 100,
+                        "turn": state["turn"],
+                        "turns_past_delay": state["turn"] - delay,
+                        "delay": delay,
+                    },
+                )
 
                 safe_async_task(member.apply_damage(dmg))
 

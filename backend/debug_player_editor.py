@@ -13,6 +13,7 @@ import sys
 backend_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, backend_dir)
 
+
 def test_customization_calculation():
     """Test the customization calculation logic."""
     print("=== Testing Player Customization Calculation ===")
@@ -52,6 +53,7 @@ def test_customization_calculation():
 
     return expected_stats
 
+
 def print_instructions():
     """Print instructions for the user on how to verify the system is working."""
     print("\n=== How to Verify Player Editor is Working ===")
@@ -82,6 +84,7 @@ def print_instructions():
     print("   - Frontend is calling the correct backend endpoints")
     print("   - You're looking at backend stats, not legacy game stats")
     print("   - Browser cache - try hard refresh (Ctrl+F5)")
+
 
 if __name__ == "__main__":
     print("Player Editor Debug Tool")

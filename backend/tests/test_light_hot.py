@@ -14,7 +14,9 @@ async def test_radiant_regeneration_stacks():
     ally.effect_manager = EffectManager(ally)
     await light.on_action(actor, [actor, ally], [])
     await light.on_action(actor, [actor, ally], [])
-    stacks = [h for h in ally.effect_manager.hots if h.id == "light_radiant_regeneration"]
+    stacks = [
+        h for h in ally.effect_manager.hots if h.id == "light_radiant_regeneration"
+    ]
     assert len(stacks) == 2
 
 

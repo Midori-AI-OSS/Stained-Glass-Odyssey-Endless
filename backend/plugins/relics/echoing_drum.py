@@ -33,13 +33,20 @@ class EchoingDrum(RelicBase):
             dmg = int(amount * 0.25 * stacks)
 
             # Emit relic effect event for echo attack
-            BUS.emit("relic_effect", "echoing_drum", attacker, "echo_attack", dmg, {
-                "original_amount": amount,
-                "echo_percentage": 25 * stacks,
-                "target": getattr(target, 'id', str(target)),
-                "first_attack": True,
-                "stacks": stacks
-            })
+            BUS.emit(
+                "relic_effect",
+                "echoing_drum",
+                attacker,
+                "echo_attack",
+                dmg,
+                {
+                    "original_amount": amount,
+                    "echo_percentage": 25 * stacks,
+                    "target": getattr(target, "id", str(target)),
+                    "first_attack": True,
+                    "stacks": stacks,
+                },
+            )
 
             safe_async_task(target.apply_damage(dmg, attacker=attacker))
 

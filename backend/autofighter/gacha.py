@@ -107,21 +107,31 @@ class GachaManager:
             banner_start = start_time + (i * banner_duration)
             banner_end = banner_start + banner_duration
 
-            banners.append(Banner(
-                f"custom{i+1}",
-                f"Featured Character {['I', 'II'][i]}",
-                "custom",
-                featured_pool[char_index],
-                banner_start,
-                banner_end,
-                True
-            ))
+            banners.append(
+                Banner(
+                    f"custom{i+1}",
+                    f"Featured Character {['I', 'II'][i]}",
+                    "custom",
+                    featured_pool[char_index],
+                    banner_start,
+                    banner_end,
+                    True,
+                )
+            )
 
         with self.save.connection() as conn:
             for banner in banners:
                 conn.execute(
                     "INSERT INTO banners (id, name, banner_type, featured_character, start_time, end_time, active) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                    (banner.id, banner.name, banner.banner_type, banner.featured_character, banner.start_time, banner.end_time, 1 if banner.active else 0)
+                    (
+                        banner.id,
+                        banner.name,
+                        banner.banner_type,
+                        banner.featured_character,
+                        banner.start_time,
+                        banner.end_time,
+                        1 if banner.active else 0,
+                    ),
                 )
 
     def _update_banner_rotation(self) -> None:
@@ -160,30 +170,35 @@ class GachaManager:
                 available_chars = [c for c in featured_pool if c != old_char]
                 if available_chars:
                     import random
+
                     new_char = random.choice(available_chars)
                     new_start = current_time
                     new_end = current_time + banner_duration
 
                     conn.execute(
                         "UPDATE banners SET featured_character = ?, start_time = ?, end_time = ? WHERE id = ?",
-                        (new_char, new_start, new_end, banner_id)
+                        (new_char, new_start, new_end, banner_id),
                     )
 
     def get_banners(self) -> list[Banner]:
         """Get all available banners."""
         with self.save.connection() as conn:
-            cur = conn.execute("SELECT id, name, banner_type, featured_character, start_time, end_time, active FROM banners ORDER BY banner_type, id")
+            cur = conn.execute(
+                "SELECT id, name, banner_type, featured_character, start_time, end_time, active FROM banners ORDER BY banner_type, id"
+            )
             banners = []
             for row in cur.fetchall():
-                banners.append(Banner(
-                    id=row[0],
-                    name=row[1],
-                    banner_type=row[2],
-                    featured_character=row[3],
-                    start_time=row[4],
-                    end_time=row[5],
-                    active=bool(row[6])
-                ))
+                banners.append(
+                    Banner(
+                        id=row[0],
+                        name=row[1],
+                        banner_type=row[2],
+                        featured_character=row[3],
+                        start_time=row[4],
+                        end_time=row[5],
+                        active=bool(row[6]),
+                    )
+                )
             return banners
 
     def get_active_banner(self, banner_id: str) -> Banner | None:
@@ -225,14 +240,18 @@ class GachaManager:
                 for name in getattr(player_plugins, "__all__", []):
                     cls = getattr(player_plugins, name)
                     if getattr(cls, "id", name) == banner.featured_character:
-                        featured_chars.append({
-                            "id": banner.featured_character,
-                            "name": getattr(cls, "name", banner.featured_character),
-                            "about": getattr(cls, "about", "Character description placeholder"),
-                            "gacha_rarity": getattr(cls, "gacha_rarity", 5),
-                            "char_type": str(getattr(cls, "char_type", "C")),
-                            "banner_id": banner.id
-                        })
+                        featured_chars.append(
+                            {
+                                "id": banner.featured_character,
+                                "name": getattr(cls, "name", banner.featured_character),
+                                "about": getattr(
+                                    cls, "about", "Character description placeholder"
+                                ),
+                                "gacha_rarity": getattr(cls, "gacha_rarity", 5),
+                                "char_type": str(getattr(cls, "char_type", "C")),
+                                "banner_id": banner.id,
+                            }
+                        )
                         break
 
         return featured_chars
@@ -306,9 +325,7 @@ class GachaManager:
                 "INSERT OR IGNORE INTO owned_players (id) VALUES (?)",
                 (cid,),
             )
-            cur = conn.execute(
-                "SELECT stacks FROM player_stacks WHERE id = ?", (cid,)
-            )
+            cur = conn.execute("SELECT stacks FROM player_stacks WHERE id = ?", (cid,))
             row = cur.fetchone()
             stacks = int(row[0]) + 1 if row else 1
             conn.execute(
@@ -369,12 +386,20 @@ class GachaManager:
         for _ in range(count):
             if random.random() < 0.0001:
                 # 6★ character pull
-                if banner.banner_type == "custom" and banner.featured_character and banner.featured_character in SIX_STAR:
+                if (
+                    banner.banner_type == "custom"
+                    and banner.featured_character
+                    and banner.featured_character in SIX_STAR
+                ):
                     # Featured 6★ character has higher chance
                     if random.random() < 0.5:
                         cid = banner.featured_character
                     else:
-                        pool = [c for c in SIX_STAR if c not in owned and c != banner.featured_character]
+                        pool = [
+                            c
+                            for c in SIX_STAR
+                            if c not in owned and c != banner.featured_character
+                        ]
                         cid = random.choice(pool or SIX_STAR)
                 else:
                     pool = [c for c in SIX_STAR if c not in owned]
@@ -388,12 +413,20 @@ class GachaManager:
             pity_chance = 0.00001 + pity * ((0.05 - 0.00001) / 159)
             if pity >= 179 or random.random() < pity_chance:
                 # 5★ character pull
-                if banner.banner_type == "custom" and banner.featured_character and banner.featured_character in FIVE_STAR:
+                if (
+                    banner.banner_type == "custom"
+                    and banner.featured_character
+                    and banner.featured_character in FIVE_STAR
+                ):
                     # Featured 5★ character has 50% chance
                     if random.random() < 0.5:
                         cid = banner.featured_character
                     else:
-                        pool = [c for c in FIVE_STAR if c not in owned and c != banner.featured_character]
+                        pool = [
+                            c
+                            for c in FIVE_STAR
+                            if c not in owned and c != banner.featured_character
+                        ]
                         cid = random.choice(pool or FIVE_STAR)
                 else:
                     pool = [c for c in FIVE_STAR if c not in owned]
@@ -432,9 +465,7 @@ class GachaManager:
             cur = conn.execute(
                 "SELECT p.id, COALESCE(s.stacks, 0) FROM owned_players p LEFT JOIN player_stacks s ON p.id = s.id"
             )
-            players = [
-                {"id": row[0], "stacks": row[1]} for row in cur.fetchall()
-            ]
+            players = [{"id": row[0], "stacks": row[1]} for row in cur.fetchall()]
 
         banners = self.get_available_banners()
         featured_characters = self.get_featured_characters()
@@ -443,6 +474,16 @@ class GachaManager:
             "pity": pity,
             "items": items,
             "players": players,
-            "banners": [{"id": b.id, "name": b.name, "banner_type": b.banner_type, "featured_character": b.featured_character, "start_time": b.start_time, "end_time": b.end_time} for b in banners],
+            "banners": [
+                {
+                    "id": b.id,
+                    "name": b.name,
+                    "banner_type": b.banner_type,
+                    "featured_character": b.featured_character,
+                    "start_time": b.start_time,
+                    "end_time": b.end_time,
+                }
+                for b in banners
+            ],
             "featured_characters": featured_characters,
         }

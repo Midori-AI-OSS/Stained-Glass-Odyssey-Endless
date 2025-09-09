@@ -18,8 +18,16 @@ async def test_heals_most_injured_ally():
 
     await registry.trigger_turn_start(carly, party=party, turn=1)
 
-    heal_effects_low = [e for e in ally_low.get_active_effects() if e.name == "carly_guardians_aegis_defense_heal"]
-    heal_effects_high = [e for e in ally_high.get_active_effects() if e.name == "carly_guardians_aegis_defense_heal"]
+    heal_effects_low = [
+        e
+        for e in ally_low.get_active_effects()
+        if e.name == "carly_guardians_aegis_defense_heal"
+    ]
+    heal_effects_high = [
+        e
+        for e in ally_high.get_active_effects()
+        if e.name == "carly_guardians_aegis_defense_heal"
+    ]
     assert heal_effects_low
     assert not heal_effects_high
     expected_heal = int(carly.defense * 0.1)
@@ -41,7 +49,11 @@ async def test_attack_growth_converts_to_defense_stacks():
     await registry.trigger_turn_start(carly, party=[carly], turn=2)
 
     assert carly.get_base_stat("atk") == baseline
-    defense_effects = [e for e in carly.get_active_effects() if e.name == "carly_guardians_aegis_defense_stacks"]
+    defense_effects = [
+        e
+        for e in carly.get_active_effects()
+        if e.name == "carly_guardians_aegis_defense_stacks"
+    ]
     assert defense_effects
     assert defense_effects[0].stat_modifiers["defense"] == 75
 
@@ -57,10 +69,18 @@ async def test_ultimate_distributes_mitigation():
     await passive.on_ultimate_use(carly, party)
 
     for ally in (ally1, ally2):
-        effects = [e for e in ally.get_active_effects() if e.name == "carly_guardians_aegis_shared_mitigation"]
+        effects = [
+            e
+            for e in ally.get_active_effects()
+            if e.name == "carly_guardians_aegis_shared_mitigation"
+        ]
         assert effects
         assert effects[0].stat_modifiers["mitigation"] == pytest.approx(0.25)
 
-    reduction = [e for e in carly.get_active_effects() if e.name == "carly_guardians_aegis_mitigation_reduction"]
+    reduction = [
+        e
+        for e in carly.get_active_effects()
+        if e.name == "carly_guardians_aegis_mitigation_reduction"
+    ]
     assert reduction
     assert reduction[0].stat_modifiers["mitigation"] == pytest.approx(-0.5)

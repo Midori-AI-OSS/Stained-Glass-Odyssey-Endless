@@ -28,10 +28,17 @@ class LuckyButton(RelicBase):
             pending[pid] = pending.get(pid, 0) + 1
 
             # Emit relic effect event for crit miss tracking
-            BUS.emit("relic_effect", "lucky_button", attacker, "crit_missed_tracked", 1, {
-                "target": getattr(target, 'id', str(target)),
-                "pending_stacks": pending[pid]
-            })
+            BUS.emit(
+                "relic_effect",
+                "lucky_button",
+                attacker,
+                "crit_missed_tracked",
+                1,
+                {
+                    "target": getattr(target, "id", str(target)),
+                    "pending_stacks": pending[pid],
+                },
+            )
 
         def _turn_start() -> None:
             for pid, stacks in list(pending.items()):
@@ -46,10 +53,14 @@ class LuckyButton(RelicBase):
                     effect.apply(member)
 
                 # Emit relic effect event for critical boost application
-                BUS.emit("relic_effect", "lucky_button", member, "critical_boost_applied", stacks, {
-                    "boost_stacks": stacks,
-                    "from_missed_crits": True
-                })
+                BUS.emit(
+                    "relic_effect",
+                    "lucky_button",
+                    member,
+                    "critical_boost_applied",
+                    stacks,
+                    {"boost_stacks": stacks, "from_missed_crits": True},
+                )
             pending.clear()
 
         def _turn_end() -> None:
@@ -66,7 +77,7 @@ class LuckyButton(RelicBase):
             return "+3% Crit Rate; missed crits grant Critical Boost next turn."
         else:
             # Stacks are multiplicative: each copy compounds the effect
-            total_mult = (1.03 ** stacks - 1) * 100
+            total_mult = (1.03**stacks - 1) * 100
             return (
                 f"+{total_mult:.1f}% Crit Rate ({stacks} stacks, multiplicative); missed crits grant {stacks} "
                 f"Critical Boost stack{'s' if stacks != 1 else ''} next turn."

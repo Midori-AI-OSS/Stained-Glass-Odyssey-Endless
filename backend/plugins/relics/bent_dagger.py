@@ -26,23 +26,39 @@ class BentDagger(RelicBase):
                 return
 
             # Track the kill trigger
-            BUS.emit("relic_effect", "bent_dagger", attacker, "foe_killed", amount, {
-                "target": getattr(target, 'id', str(target)),
-                "permanent_atk_boost": 1,
-                "stacks": stacks,
-                "base_atk_bonus": 3 * stacks
-            })
+            BUS.emit(
+                "relic_effect",
+                "bent_dagger",
+                attacker,
+                "foe_killed",
+                amount,
+                {
+                    "target": getattr(target, "id", str(target)),
+                    "permanent_atk_boost": 1,
+                    "stacks": stacks,
+                    "base_atk_bonus": 3 * stacks,
+                },
+            )
 
             for member in party.members:
-                mod = create_stat_buff(member, name=f"{self.id}_kill", atk_mult=1.01, turns=9999)
+                mod = create_stat_buff(
+                    member, name=f"{self.id}_kill", atk_mult=1.01, turns=9999
+                )
                 member.effect_manager.add_modifier(mod)
 
                 # Track the ATK buff application
-                BUS.emit("relic_effect", "bent_dagger", member, "atk_boost_applied", 1, {
-                    "boost_percentage": 1,
-                    "permanent": True,
-                    "triggered_by_kill": True
-                })
+                BUS.emit(
+                    "relic_effect",
+                    "bent_dagger",
+                    member,
+                    "atk_boost_applied",
+                    1,
+                    {
+                        "boost_percentage": 1,
+                        "permanent": True,
+                        "triggered_by_kill": True,
+                    },
+                )
 
         BUS.subscribe("damage_taken", _on_death)
 
@@ -51,5 +67,5 @@ class BentDagger(RelicBase):
             return "+3% ATK; killing a foe grants +1% ATK for the rest of combat."
         else:
             # Stacks are multiplicative: each copy compounds the effect
-            total_mult = (1.03 ** stacks - 1) * 100
+            total_mult = (1.03**stacks - 1) * 100
             return f"+{total_mult:.1f}% ATK ({stacks} stacks, multiplicative); killing a foe grants +1% ATK for the rest of combat."

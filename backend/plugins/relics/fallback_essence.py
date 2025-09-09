@@ -11,15 +11,17 @@ class FallbackEssence(RelicBase):
     id: str = "fallback_essence"
     name: str = "Essence of 6858"
     stars: int = 6
-    effects: dict[str, float] = field(default_factory=lambda: {
-        "atk": 0.01,
-        "defense": 0.01,
-        "max_hp": 0.01,
-        "crit_rate": 0.01,
-        "crit_damage": 0.01,
-        "effect_hit_rate": 0.01,
-        "effect_resistance": 0.01
-    })
+    effects: dict[str, float] = field(
+        default_factory=lambda: {
+            "atk": 0.01,
+            "defense": 0.01,
+            "max_hp": 0.01,
+            "crit_rate": 0.01,
+            "crit_damage": 0.01,
+            "effect_hit_rate": 0.01,
+            "effect_resistance": 0.01,
+        }
+    )
     about: str = (
         "A mystical essence that forms when one's determination transcends the need for material cards. "
         "+1% to core combat stats."
@@ -30,6 +32,6 @@ class FallbackEssence(RelicBase):
             return "When the card pool is exhausted, grants +1% to core combat stats."
         else:
             # Calculate actual multiplicative bonus: (1.01)^stacks - 1
-            multiplier = (1.01 ** stacks) - 1
+            multiplier = (1.01**stacks) - 1
             total_pct = round(multiplier * 100)
             return f"When the card pool is exhausted, grants +{total_pct}% to core combat stats ({stacks} stacks, multiplicative)."

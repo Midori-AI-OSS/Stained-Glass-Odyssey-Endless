@@ -10,4 +10,3 @@ class ThickSkin(CardBase):
     name: str = "Thick Skin"
     stars: int = 1
     effects: dict[str, float] = field(default_factory=lambda: {"bleed_resist": 0.03})
-

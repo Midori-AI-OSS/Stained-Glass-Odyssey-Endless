@@ -1,4 +1,3 @@
-
 from autofighter.stats import BUS
 from autofighter.stats import Stats
 from plugins.damage_types.generic import Generic
@@ -14,6 +13,7 @@ def test_foe_ultimate_charge_consumption():
 
     # Manually add the use_ultimate method from FoeBase
     from plugins.foes._base import FoeBase
+
     foe.use_ultimate = FoeBase.use_ultimate.__get__(foe, Stats)
 
     # Initially no charge
@@ -77,6 +77,7 @@ def test_foe_ultimate_events():
 
     # Track events
     events = []
+
     def track_event(entity):
         events.append(entity)
 

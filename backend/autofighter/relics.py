@@ -8,6 +8,7 @@ from .party import Party
 
 _loader: PluginLoader | None = None
 
+
 def _registry() -> dict[str, type[RelicBase]]:
     global _loader
     if _loader is None:
@@ -15,6 +16,7 @@ def _registry() -> dict[str, type[RelicBase]]:
         _loader = PluginLoader(required=["relic"])
         _loader.discover(str(plugin_dir))
     return _loader.get_plugins("relic")
+
 
 def award_relic(party: Party, relic_id: str) -> RelicBase | None:
     relic_cls = _registry().get(relic_id)
@@ -41,6 +43,7 @@ def relic_choices(party: Party, stars: int, count: int = 3) -> list[RelicBase]:
     # Ensure uniqueness within this call
     k = min(count, len(available))
     return random.sample(available, k=k)
+
 
 def apply_relics(party: Party) -> None:
     registry = _registry()

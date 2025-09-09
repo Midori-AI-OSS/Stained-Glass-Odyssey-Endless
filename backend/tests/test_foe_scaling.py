@@ -19,4 +19,3 @@ def test_level_up_increases_mitigation_and_vitality(monkeypatch):
     assert called
     assert foe.mitigation == pytest.approx(base_mitigation + 0.0001)
     assert foe.vitality == pytest.approx(base_vitality + 0.0001)
-

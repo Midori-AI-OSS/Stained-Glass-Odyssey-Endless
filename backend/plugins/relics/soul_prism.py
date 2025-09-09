@@ -14,8 +14,12 @@ class SoulPrism(RelicBase):
     id: str = "soul_prism"
     name: str = "Soul Prism"
     stars: int = 5
-    effects: dict[str, float] = field(default_factory=lambda: {"defense": 0.05, "mitigation": 0.05})
-    about: str = "Revives fallen allies at 1% HP with heavy Max HP penalty and small buffs."
+    effects: dict[str, float] = field(
+        default_factory=lambda: {"defense": 0.05, "mitigation": 0.05}
+    )
+    about: str = (
+        "Revives fallen allies at 1% HP with heavy Max HP penalty and small buffs."
+    )
 
     def apply(self, party) -> None:
         """Revive fallen allies after battles with reduced Max HP."""
@@ -61,26 +65,40 @@ class SoulPrism(RelicBase):
                 heal = max(1, int(member.max_hp * 0.01))
 
                 # Track the revival
-                BUS.emit("relic_effect", "soul_prism", member, "ally_revived", heal, {
-                    "ally": getattr(member, 'id', str(member)),
-                    "max_hp_penalty": penalty * 100,
-                    "defense_buff": buff * 100,
-                    "mitigation_buff": buff * 100,
-                    "revival_hp": heal,
-                    "revival_hp_percentage": 1,
-                    "stacks": stacks
-                })
+                BUS.emit(
+                    "relic_effect",
+                    "soul_prism",
+                    member,
+                    "ally_revived",
+                    heal,
+                    {
+                        "ally": getattr(member, "id", str(member)),
+                        "max_hp_penalty": penalty * 100,
+                        "defense_buff": buff * 100,
+                        "mitigation_buff": buff * 100,
+                        "revival_hp": heal,
+                        "revival_hp_percentage": 1,
+                        "stacks": stacks,
+                    },
+                )
 
                 safe_async_task(member.apply_healing(heal))
 
             # Track revival summary if any allies were revived
             if revived_count > 0:
-                BUS.emit("relic_effect", "soul_prism", party, "battle_revival_summary", revived_count, {
-                    "allies_revived": revived_count,
-                    "max_hp_penalty": penalty * 100,
-                    "buffs_applied": ["defense", "mitigation"],
-                    "buff_percentage": buff * 100
-                })
+                BUS.emit(
+                    "relic_effect",
+                    "soul_prism",
+                    party,
+                    "battle_revival_summary",
+                    revived_count,
+                    {
+                        "allies_revived": revived_count,
+                        "max_hp_penalty": penalty * 100,
+                        "buffs_applied": ["defense", "mitigation"],
+                        "buff_percentage": buff * 100,
+                    },
+                )
 
         BUS.subscribe("battle_end", _battle_end)
 

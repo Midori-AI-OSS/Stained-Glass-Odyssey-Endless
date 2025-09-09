@@ -30,7 +30,10 @@ class IronGuard(CardBase):
                 victim,  # Use victim as the event source since they triggered the effect
                 "temporary_defense",
                 10,
-                {"source": getattr(victim, "id", "victim"), "affected_members": len(party.members)},
+                {
+                    "source": getattr(victim, "id", "victim"),
+                    "affected_members": len(party.members),
+                },
             )
             for member in party.members:
                 mgr = getattr(member, "effect_manager", None)

@@ -56,4 +56,3 @@ def test_use_ultimate_emits_event():
         assert seen == [player]
     finally:
         BUS.unsubscribe("ultimate_used", _handler)
-

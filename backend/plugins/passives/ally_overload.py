@@ -11,6 +11,7 @@ if TYPE_CHECKING:
 @dataclass
 class AllyOverload:
     """Ally's Overload passive - twin dagger stance system with charge mechanics."""
+
     plugin_type = "passive"
     id = "ally_overload"
     name = "Overload"
@@ -86,7 +87,9 @@ class AllyOverload:
         # Block HoT ticks (would need integration with effect system)
         hot_block = StatEffect(
             name=f"{self.id}_hot_block",
-            stat_modifiers={"effect_resistance": 1.0},  # 100% resistance to beneficial effects
+            stat_modifiers={
+                "effect_resistance": 1.0
+            },  # 100% resistance to beneficial effects
             duration=-1,  # Active while Overload is on
             source=self.id,
         )
@@ -96,7 +99,9 @@ class AllyOverload:
         max_recoverable_hp = int(target.max_hp * 0.2)
         hp_cap = StatEffect(
             name=f"{self.id}_hp_cap",
-            stat_modifiers={"max_hp": max_recoverable_hp - target.max_hp},  # Reduce max recoverable
+            stat_modifiers={
+                "max_hp": max_recoverable_hp - target.max_hp
+            },  # Reduce max recoverable
             duration=-1,  # Active while Overload is on
             source=self.id,
         )
@@ -112,7 +117,7 @@ class AllyOverload:
             f"{self.id}_damage_bonus",
             f"{self.id}_damage_vulnerability",
             f"{self.id}_hot_block",
-            f"{self.id}_hp_cap"
+            f"{self.id}_hp_cap",
         ]
 
         for effect_name in effects_to_remove:
@@ -133,7 +138,9 @@ class AllyOverload:
 
         if self._overload_active[entity_id]:
             # Drain 20 charge per turn while active
-            self._overload_charge[entity_id] = max(0, self._overload_charge[entity_id] - 20)
+            self._overload_charge[entity_id] = max(
+                0, self._overload_charge[entity_id] - 20
+            )
 
             # Check if charge is depleted
             if self._overload_charge[entity_id] <= 0:

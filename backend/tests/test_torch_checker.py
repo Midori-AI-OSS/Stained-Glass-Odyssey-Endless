@@ -57,5 +57,11 @@ def test_torch_checker_logging(caplog):
 
     # Should have logged the torch availability status
     log_messages = [record.message for record in caplog.records]
-    torch_logs = [msg for msg in log_messages if "Torch" in msg and ("available" in msg or "not available" in msg)]
-    assert len(torch_logs) >= 1, f"Expected torch availability log message, got: {log_messages}"
+    torch_logs = [
+        msg
+        for msg in log_messages
+        if "Torch" in msg and ("available" in msg or "not available" in msg)
+    ]
+    assert (
+        len(torch_logs) >= 1
+    ), f"Expected torch availability log message, got: {log_messages}"

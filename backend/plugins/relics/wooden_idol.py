@@ -14,7 +14,9 @@ class WoodenIdol(RelicBase):
     id: str = "wooden_idol"
     name: str = "Wooden Idol"
     stars: int = 1
-    effects: dict[str, float] = field(default_factory=lambda: {"effect_resistance": 0.03})
+    effects: dict[str, float] = field(
+        default_factory=lambda: {"effect_resistance": 0.03}
+    )
     about: str = "+3% Effect Res; resisting a debuff grants +1% Effect Res next turn."
 
     def apply(self, party) -> None:
@@ -31,12 +33,19 @@ class WoodenIdol(RelicBase):
             pending[pid] = pending.get(pid, 0) + bonus
 
             # Track debuff resistance
-            BUS.emit("relic_effect", "wooden_idol", member, "debuff_resisted", int(bonus * 100), {
-                "ally": getattr(member, 'id', str(member)),
-                "resistance_bonus_next_turn": bonus * 100,
-                "total_pending_bonus": pending[pid] * 100,
-                "stacks": party.relics.count(self.id)
-            })
+            BUS.emit(
+                "relic_effect",
+                "wooden_idol",
+                member,
+                "debuff_resisted",
+                int(bonus * 100),
+                {
+                    "ally": getattr(member, "id", str(member)),
+                    "resistance_bonus_next_turn": bonus * 100,
+                    "total_pending_bonus": pending[pid] * 100,
+                    "stacks": party.relics.count(self.id),
+                },
+            )
 
         def _turn_start() -> None:
             applied_count = 0
@@ -57,12 +66,19 @@ class WoodenIdol(RelicBase):
                 applied_count += 1
 
                 # Track resistance buff application
-                BUS.emit("relic_effect", "wooden_idol", member, "resistance_buff_applied", int(bonus * 100), {
-                    "ally": getattr(member, 'id', str(member)),
-                    "resistance_bonus": bonus * 100,
-                    "new_total_resistance": member.effect_resistance * 100,
-                    "duration_turns": 1
-                })
+                BUS.emit(
+                    "relic_effect",
+                    "wooden_idol",
+                    member,
+                    "resistance_buff_applied",
+                    int(bonus * 100),
+                    {
+                        "ally": getattr(member, "id", str(member)),
+                        "resistance_bonus": bonus * 100,
+                        "new_total_resistance": member.effect_resistance * 100,
+                        "duration_turns": 1,
+                    },
+                )
 
             pending.clear()
 
@@ -84,7 +100,5 @@ class WoodenIdol(RelicBase):
             return "+3% Effect Res; resisting a debuff grants +1% Effect Res next turn."
         else:
             # Stacks are multiplicative: each copy compounds the effect
-            total_res_mult = (1.03 ** stacks - 1) * 100
-            return (
-                f"+{total_res_mult:.1f}% Effect Res ({stacks} stacks, multiplicative); resisting a debuff grants +1% Effect Res next turn."
-            )
+            total_res_mult = (1.03**stacks - 1) * 100
+            return f"+{total_res_mult:.1f}% Effect Res ({stacks} stacks, multiplicative); resisting a debuff grants +1% Effect Res next turn."

@@ -23,6 +23,7 @@ _BATTLE_ACTIVE: bool = False
 @dataclass
 class StatEffect:
     """Represents a temporary effect that modifies stats."""
+
     name: str
     stat_modifiers: Dict[str, Union[int, float]]  # stat_name -> modifier value
     duration: int = -1  # -1 for permanent effects (cards/relics), >0 for temporary
@@ -69,6 +70,7 @@ def set_battle_active(active: bool) -> None:
 
 def is_battle_active() -> bool:
     return _BATTLE_ACTIVE
+
 
 @dataclass
 class Stats:
@@ -130,27 +132,27 @@ class Stats:
     def __post_init__(self):
         """Initialize base stats from constructor values."""
         # Initialize base stats with default values if not already set
-        if not hasattr(self, '_base_max_hp') or self._base_max_hp == 0:
+        if not hasattr(self, "_base_max_hp") or self._base_max_hp == 0:
             self._base_max_hp = 1000
-        if not hasattr(self, '_base_atk') or self._base_atk == 0:
+        if not hasattr(self, "_base_atk") or self._base_atk == 0:
             self._base_atk = 200
-        if not hasattr(self, '_base_defense') or self._base_defense == 0:
+        if not hasattr(self, "_base_defense") or self._base_defense == 0:
             self._base_defense = 200
-        if not hasattr(self, '_base_crit_rate'):
+        if not hasattr(self, "_base_crit_rate"):
             self._base_crit_rate = 0.05
-        if not hasattr(self, '_base_crit_damage'):
+        if not hasattr(self, "_base_crit_damage"):
             self._base_crit_damage = 2.0
-        if not hasattr(self, '_base_effect_hit_rate'):
+        if not hasattr(self, "_base_effect_hit_rate"):
             self._base_effect_hit_rate = 1.0
-        if not hasattr(self, '_base_mitigation'):
+        if not hasattr(self, "_base_mitigation"):
             self._base_mitigation = 1.0
-        if not hasattr(self, '_base_regain'):
+        if not hasattr(self, "_base_regain"):
             self._base_regain = 100
-        if not hasattr(self, '_base_dodge_odds'):
+        if not hasattr(self, "_base_dodge_odds"):
             self._base_dodge_odds = 0.05
-        if not hasattr(self, '_base_effect_resistance'):
+        if not hasattr(self, "_base_effect_resistance"):
             self._base_effect_resistance = 0.05
-        if not hasattr(self, '_base_vitality'):
+        if not hasattr(self, "_base_vitality"):
             self._base_vitality = 1.0
 
         # Set hp to match max_hp at start
@@ -160,37 +162,47 @@ class Stats:
     @property
     def max_hp(self) -> int:
         """Calculate runtime max HP (base + effects)."""
-        return int(self._base_max_hp + self._calculate_stat_modifier('max_hp'))
+        return int(self._base_max_hp + self._calculate_stat_modifier("max_hp"))
 
     @property
     def atk(self) -> int:
         """Calculate runtime attack (base + effects)."""
-        return int(self._base_atk + self._calculate_stat_modifier('atk'))
+        return int(self._base_atk + self._calculate_stat_modifier("atk"))
 
     @property
     def defense(self) -> int:
         """Calculate runtime defense (base + effects)."""
-        return int(self._base_defense + self._calculate_stat_modifier('defense'))
+        return int(self._base_defense + self._calculate_stat_modifier("defense"))
 
     @property
     def crit_rate(self) -> float:
         """Calculate runtime crit rate (base + effects)."""
-        return max(0.0, self._base_crit_rate + self._calculate_stat_modifier('crit_rate'))
+        return max(
+            0.0, self._base_crit_rate + self._calculate_stat_modifier("crit_rate")
+        )
 
     @property
     def crit_damage(self) -> float:
         """Calculate runtime crit damage (base + effects)."""
-        return max(1.0, self._base_crit_damage + self._calculate_stat_modifier('crit_damage'))
+        return max(
+            1.0, self._base_crit_damage + self._calculate_stat_modifier("crit_damage")
+        )
 
     @property
     def effect_hit_rate(self) -> float:
         """Calculate runtime effect hit rate (base + effects)."""
-        return max(0.0, self._base_effect_hit_rate + self._calculate_stat_modifier('effect_hit_rate'))
+        return max(
+            0.0,
+            self._base_effect_hit_rate
+            + self._calculate_stat_modifier("effect_hit_rate"),
+        )
 
     @property
     def mitigation(self) -> float:
         """Calculate runtime mitigation (base + effects)."""
-        return max(0.1, self._base_mitigation + self._calculate_stat_modifier('mitigation'))
+        return max(
+            0.1, self._base_mitigation + self._calculate_stat_modifier("mitigation")
+        )
 
     @mitigation.setter
     def mitigation(self, value: float) -> None:  # type: ignore[override]
@@ -203,22 +215,33 @@ class Stats:
     @property
     def regain(self) -> int:
         """Calculate runtime regain (base + effects)."""
-        return int(max(0, self._base_regain + self._calculate_stat_modifier('regain')))
+        return int(max(0, self._base_regain + self._calculate_stat_modifier("regain")))
 
     @property
     def dodge_odds(self) -> float:
         """Calculate runtime dodge odds (base + effects)."""
-        return max(0.0, min(1.0, self._base_dodge_odds + self._calculate_stat_modifier('dodge_odds')))
+        return max(
+            0.0,
+            min(
+                1.0, self._base_dodge_odds + self._calculate_stat_modifier("dodge_odds")
+            ),
+        )
 
     @property
     def effect_resistance(self) -> float:
         """Calculate runtime effect resistance (base + effects)."""
-        return max(0.0, self._base_effect_resistance + self._calculate_stat_modifier('effect_resistance'))
+        return max(
+            0.0,
+            self._base_effect_resistance
+            + self._calculate_stat_modifier("effect_resistance"),
+        )
 
     @property
     def vitality(self) -> float:
         """Calculate runtime vitality (base + effects)."""
-        return max(0.01, self._base_vitality + self._calculate_stat_modifier('vitality'))
+        return max(
+            0.01, self._base_vitality + self._calculate_stat_modifier("vitality")
+        )
 
     @vitality.setter
     def vitality(self, value: float) -> None:  # type: ignore[override]
@@ -267,7 +290,9 @@ class Stats:
     def remove_effect_by_name(self, effect_name: str) -> bool:
         """Remove an effect by name. Returns True if an effect was removed."""
         initial_count = len(self._active_effects)
-        self._active_effects = [e for e in self._active_effects if e.name != effect_name]
+        self._active_effects = [
+            e for e in self._active_effects if e.name != effect_name
+        ]
         removed = len(self._active_effects) < initial_count
         if removed:
             log.debug(f"Removed effect {effect_name}")
@@ -311,7 +336,7 @@ class Stats:
         return str(ident or dt)
 
     def exp_to_level(self) -> int:
-        return (2 ** self.level) * 50
+        return (2**self.level) * 50
 
     async def maybe_regain(self, turn: int) -> None:
         if turn % 2 != 0:
@@ -325,9 +350,19 @@ class Stats:
         inc = random.uniform(0.003 * self.level, 0.008 * self.level)
 
         # Apply percentage increase to base stats
-        base_stat_names = ['max_hp', 'atk', 'defense', 'crit_rate', 'crit_damage',
-                          'effect_hit_rate', 'mitigation', 'regain', 'dodge_odds',
-                          'effect_resistance', 'vitality']
+        base_stat_names = [
+            "max_hp",
+            "atk",
+            "defense",
+            "crit_rate",
+            "crit_damage",
+            "effect_hit_rate",
+            "mitigation",
+            "regain",
+            "dodge_odds",
+            "effect_resistance",
+            "vitality",
+        ]
 
         for stat_name in base_stat_names:
             current_base = self.get_base_stat(stat_name)
@@ -347,6 +382,7 @@ class Stats:
         try:
             # Import locally to avoid circular imports
             from autofighter.passives import PassiveRegistry
+
             registry = PassiveRegistry()
             await registry.trigger_level_up(self, new_level=self.level)
         except Exception as e:
@@ -363,6 +399,7 @@ class Stats:
             self._on_level_up()
             # Trigger level up passives asynchronously
             import asyncio
+
             try:
                 loop = asyncio.get_event_loop()
                 if loop.is_running():
@@ -392,7 +429,6 @@ class Stats:
         if getattr(dt, "id", "").lower() == "wind":
             self.add_ultimate_charge(actor.actions_per_turn)
 
-
     async def apply_damage(
         self,
         amount: float,
@@ -403,18 +439,18 @@ class Stats:
     ) -> int:
         # Drop any stray post-battle damage tasks to avoid loops.
         from autofighter.stats import is_battle_active  # local import for clarity
+
         if not is_battle_active():
             return 0
         # If already dead, ignore further damage applications to avoid
         # post-death damage loops from async tasks or event subscribers.
         if getattr(self, "hp", 0) <= 0:
             return 0
+
         def _ensure(obj: "Stats") -> DamageTypeBase:
             dt = getattr(obj, "damage_type", Generic())
             if isinstance(dt, str):
-                module = importlib.import_module(
-                    f"plugins.damage_types.{dt.lower()}"
-                )
+                module = importlib.import_module(f"plugins.damage_types.{dt.lower()}")
                 dt = getattr(module, dt)()
                 obj.damage_type = dt
             return dt
@@ -441,24 +477,28 @@ class Stats:
         amount = self_type.on_party_damage_taken(amount, attacker, self)
         src_vit = attacker.vitality if attacker is not None else 1.0
         # Guard against division by zero if vitality/mitigation are driven to 0 by effects
-        defense_term = max(self.defense ** 5, 1)
+        defense_term = max(self.defense**5, 1)
         vit = float(self.vitality) if isinstance(self.vitality, (int, float)) else 1.0
-        mit = float(self.mitigation) if isinstance(self.mitigation, (int, float)) else 1.0
+        mit = (
+            float(self.mitigation) if isinstance(self.mitigation, (int, float)) else 1.0
+        )
         # Clamp to a tiny positive epsilon to avoid zero/NaN
         EPS = 1e-6
         vit = vit if vit > EPS else EPS
         mit = mit if mit > EPS else EPS
         denom = defense_term * vit * mit
-        amount = ((amount ** 2) * src_vit) / denom
+        amount = ((amount**2) * src_vit) / denom
         # Enrage: increase damage taken globally by N% per enrage stack
         enr = get_enrage_percent()
         if enr > 0:
-            amount *= (1.0 + enr)
+            amount *= 1.0 + enr
         amount = max(int(amount), 1)
         if critical and attacker is not None:
             log.info("Critical hit! %s -> %s for %s", attacker.id, self.id, amount)
             # Emit critical hit event for battle logging - async for better performance
-            await BUS.emit_async("critical_hit", attacker, self, amount, action_name or "attack")
+            await BUS.emit_async(
+                "critical_hit", attacker, self, amount, action_name or "attack"
+            )
         original_amount = amount
         self.last_damage_taken = amount
         self.damage_taken += amount
@@ -479,13 +519,21 @@ class Stats:
 
         # Emit kill event if this damage killed the target - async for better performance
         if old_hp > 0 and self.hp <= 0 and attacker is not None:
-            await BUS.emit_async("entity_killed", self, attacker, original_amount, "death", {"killer_id": getattr(attacker, "id", "unknown")})
+            await BUS.emit_async(
+                "entity_killed",
+                self,
+                attacker,
+                original_amount,
+                "death",
+                {"killer_id": getattr(attacker, "id", "unknown")},
+            )
 
         # Trigger passive registry for damage taken events
         if original_amount > 0:
             try:
                 # Import locally to avoid circular imports
                 from autofighter.passives import PassiveRegistry
+
                 registry = PassiveRegistry()
                 await registry.trigger_damage_taken(self, attacker, original_amount)
             except Exception as e:
@@ -495,16 +543,29 @@ class Stats:
         BUS.emit_batched("damage_taken", self, attacker, original_amount)
         if attacker is not None:
             attacker.damage_dealt += original_amount
-            BUS.emit_batched("damage_dealt", attacker, self, original_amount, "attack", None, None, action_name)
+            BUS.emit_batched(
+                "damage_dealt",
+                attacker,
+                self,
+                original_amount,
+                "attack",
+                None,
+                None,
+                action_name,
+            )
         return original_amount
 
-    async def apply_healing(self, amount: int, healer: Optional["Stats"] = None, source_type: str = "heal", source_name: Optional[str] = None) -> int:
+    async def apply_healing(
+        self,
+        amount: int,
+        healer: Optional["Stats"] = None,
+        source_type: str = "heal",
+        source_name: Optional[str] = None,
+    ) -> int:
         def _ensure(obj: "Stats") -> DamageTypeBase:
             dt = getattr(obj, "damage_type", Generic())
             if isinstance(dt, str):
-                module = importlib.import_module(
-                    f"plugins.damage_types.{dt.lower()}"
-                )
+                module = importlib.import_module(f"plugins.damage_types.{dt.lower()}")
                 dt = getattr(module, dt)()
                 obj.damage_type = dt
             return dt
@@ -543,7 +604,9 @@ class Stats:
                     # Apply diminishing returns based on current overheal percentage
                     # At 10% overheal, healing effectiveness = 1/5 = 0.2
                     # So 10 healing gives 2 shields, matching the example
-                    healing_effectiveness = 1.0 / 5.0  # 20% effectiveness when overhealed
+                    healing_effectiveness = (
+                        1.0 / 5.0
+                    )  # 20% effectiveness when overhealed
                     shields_to_add = amount * healing_effectiveness
                     self.shields += int(shields_to_add)
         else:
@@ -575,6 +638,7 @@ StatusHook = Callable[["Stats"], None]
 STATUS_HOOKS: list[StatusHook] = []
 BUS = EventBus()
 
+
 def _log_damage_taken(
     target: "Stats", attacker: Optional["Stats"], amount: int
 ) -> None:
@@ -582,9 +646,7 @@ def _log_damage_taken(
     log.info("%s takes %s from %s", target.id, amount, attacker_id)
 
 
-def _log_heal_received(
-    target: "Stats", healer: Optional["Stats"], amount: int
-) -> None:
+def _log_heal_received(target: "Stats", healer: Optional["Stats"], amount: int) -> None:
     healer_id = getattr(healer, "id", "unknown")
     log.info("%s heals %s from %s", target.id, amount, healer_id)
 

@@ -55,7 +55,7 @@ async def damage_types() -> tuple[str, int, dict[str, Any]]:
                 "color": getattr(inst, "color", None),
                 "description": str(desc).strip(),
                 "damage_mod_weak": "1.25x damage when attacking weakness",
-                "damage_mod_resist": "0.75x damage when attacking same type"
+                "damage_mod_resist": "0.75x damage when attacking same type",
             }
         )
     return jsonify({"damage_types": entries}), 200
@@ -131,7 +131,7 @@ async def passives() -> tuple[str, int, dict[str, Any]]:
                 "trigger": trigger,
                 "description": str(desc).strip() + effect_info,
                 "amount": amount,
-                "stack_display": stack_display
+                "stack_display": stack_display,
             }
         )
     return jsonify({"passives": items}), 200
@@ -139,37 +139,51 @@ async def passives() -> tuple[str, int, dict[str, Any]]:
 
 @bp.get("/shops")
 async def shops() -> tuple[str, int, dict[str, Any]]:
-    return jsonify({
-        "reroll_cost": REROLL_COST,
-        "price_by_stars": PRICE_BY_STARS,
-        "notes": [
-            "Shop stock includes cards and relics; prices scale with rarity (star rating).",
-            "Reroll generates a new stock list at a fixed gold cost.",
-            "Higher star items are more powerful but significantly more expensive.",
-            "Stock quality and quantity may improve as you progress through runs."
-        ],
-        "pricing_explanation": {
-            "1_star": f"{PRICE_BY_STARS.get(1, 10)} gold - Common items, basic effects",
-            "2_star": f"{PRICE_BY_STARS.get(2, 25)} gold - Improved effects and utility",
-            "3_star": f"{PRICE_BY_STARS.get(3, 50)} gold - Strong effects, good value",
-            "4_star": f"{PRICE_BY_STARS.get(4, 100)} gold - Very powerful, rare items",
-            "5_star": f"{PRICE_BY_STARS.get(5, 200)} gold - Extremely rare, game-changing",
-            "6_star": f"{PRICE_BY_STARS.get(6, 500)} gold - Legendary items, run-defining"
-        },
-        "strategy_tips": [
-            "Save gold early for high-star items that appear later",
-            "Reroll when current stock doesn't fit your build",
-            "4+ star items can dramatically change your strategy"
-        ]
-    }), 200
+    return (
+        jsonify(
+            {
+                "reroll_cost": REROLL_COST,
+                "price_by_stars": PRICE_BY_STARS,
+                "notes": [
+                    "Shop stock includes cards and relics; prices scale with rarity (star rating).",
+                    "Reroll generates a new stock list at a fixed gold cost.",
+                    "Higher star items are more powerful but significantly more expensive.",
+                    "Stock quality and quantity may improve as you progress through runs.",
+                ],
+                "pricing_explanation": {
+                    "1_star": f"{PRICE_BY_STARS.get(1, 10)} gold - Common items, basic effects",
+                    "2_star": f"{PRICE_BY_STARS.get(2, 25)} gold - Improved effects and utility",
+                    "3_star": f"{PRICE_BY_STARS.get(3, 50)} gold - Strong effects, good value",
+                    "4_star": f"{PRICE_BY_STARS.get(4, 100)} gold - Very powerful, rare items",
+                    "5_star": f"{PRICE_BY_STARS.get(5, 200)} gold - Extremely rare, game-changing",
+                    "6_star": f"{PRICE_BY_STARS.get(6, 500)} gold - Legendary items, run-defining",
+                },
+                "strategy_tips": [
+                    "Save gold early for high-star items that appear later",
+                    "Reroll when current stock doesn't fit your build",
+                    "4+ star items can dramatically change your strategy",
+                ],
+            }
+        ),
+        200,
+    )
 
 
 @bp.get("/ui")
 async def ui() -> tuple[str, int, dict[str, Any]]:
     tips = [
-        {"name": "Overlays", "description": "Open Settings, Inventory, and Guidebook from the main menu."},
-        {"name": "Battle Review", "description": "After battles, view damage by type and proceed to the next room."},
-        {"name": "Rewards", "description": "Choose cards, relics, and loot when available before advancing."},
+        {
+            "name": "Overlays",
+            "description": "Open Settings, Inventory, and Guidebook from the main menu.",
+        },
+        {
+            "name": "Battle Review",
+            "description": "After battles, view damage by type and proceed to the next room.",
+        },
+        {
+            "name": "Rewards",
+            "description": "Choose cards, relics, and loot when available before advancing.",
+        },
     ]
     return jsonify({"tips": tips}), 200
 
@@ -177,12 +191,30 @@ async def ui() -> tuple[str, int, dict[str, Any]]:
 @bp.get("/mechs")
 async def mechs() -> tuple[str, int, dict[str, Any]]:
     mechanics = [
-        {"name": "Ultimate Charge", "description": "Gain charge during combat; spend it to use your damage type's ultimate."},
-        {"name": "DoTs & HoTs", "description": "Damage/Healing over time effects stack and interact with some elements."},
-        {"name": "Enrage", "description": "Foes may gain enrage increasing difficulty as rooms progress."},
-        {"name": "Elemental Resistances", "description": "Each damage type has a weakness: Fire→Ice, Ice→Lightning, Lightning→Wind, Wind→Fire, Light↔Dark. Generic has no weaknesses."},
-        {"name": "Vitality Scaling", "description": "Affects healing, damage dealt, damage reduction, and experience gain."},
-        {"name": "Level Benefits", "description": "In-run leveling grants fixed stats (+10 HP, +5 ATK, +3 DEF) plus 0.3%-0.8% boost to ALL stats per level. Global user level provides persistent stat scaling across runs."},
+        {
+            "name": "Ultimate Charge",
+            "description": "Gain charge during combat; spend it to use your damage type's ultimate.",
+        },
+        {
+            "name": "DoTs & HoTs",
+            "description": "Damage/Healing over time effects stack and interact with some elements.",
+        },
+        {
+            "name": "Enrage",
+            "description": "Foes may gain enrage increasing difficulty as rooms progress.",
+        },
+        {
+            "name": "Elemental Resistances",
+            "description": "Each damage type has a weakness: Fire→Ice, Ice→Lightning, Lightning→Wind, Wind→Fire, Light↔Dark. Generic has no weaknesses.",
+        },
+        {
+            "name": "Vitality Scaling",
+            "description": "Affects healing, damage dealt, damage reduction, and experience gain.",
+        },
+        {
+            "name": "Level Benefits",
+            "description": "In-run leveling grants fixed stats (+10 HP, +5 ATK, +3 DEF) plus 0.3%-0.8% boost to ALL stats per level. Global user level provides persistent stat scaling across runs.",
+        },
     ]
     return jsonify({"mechanics": mechanics}), 200
 
@@ -195,45 +227,58 @@ async def effects() -> tuple[str, int, dict[str, Any]]:
     combat_effects = []
     try:
         from plugins.effects.aftertaste import Aftertaste
-        combat_effects.append({
-            "name": "Aftertaste",
-            "type": "Combat Effect",
-            "description": Aftertaste.get_description(),
-            "trigger": "Various sources (relics, abilities) when hitting targets with damage"
-        })
+
+        combat_effects.append(
+            {
+                "name": "Aftertaste",
+                "type": "Combat Effect",
+                "description": Aftertaste.get_description(),
+                "trigger": "Various sources (relics, abilities) when hitting targets with damage",
+            }
+        )
     except ImportError:
         pass
 
     try:
         from plugins.effects.critical_boost import CriticalBoost
-        combat_effects.append({
-            "name": "Critical Boost",
-            "type": "Buff",
-            "description": CriticalBoost.get_description(),
-            "trigger": "Various sources"
-        })
+
+        combat_effects.append(
+            {
+                "name": "Critical Boost",
+                "type": "Buff",
+                "description": CriticalBoost.get_description(),
+                "trigger": "Various sources",
+            }
+        )
     except ImportError:
         pass
 
     # Load DoT effects from plugins/dots/
     import importlib
     import os
+
     dot_effects = []
 
     dots_dir = "plugins/dots"
     if os.path.exists(dots_dir):
         for filename in os.listdir(dots_dir):
-            if filename.endswith(".py") and not filename.startswith("_") and filename != "__init__.py":
+            if (
+                filename.endswith(".py")
+                and not filename.startswith("_")
+                and filename != "__init__.py"
+            ):
                 module_name = filename[:-3]  # Remove .py extension
                 try:
                     module = importlib.import_module(f"plugins.dots.{module_name}")
                     # Find the main class in the module
                     for attr_name in dir(module):
                         attr = getattr(module, attr_name)
-                        if (isinstance(attr, type) and
-                            hasattr(attr, "plugin_type") and
-                            attr.plugin_type == "dot" and
-                            hasattr(attr, "id")):
+                        if (
+                            isinstance(attr, type)
+                            and hasattr(attr, "plugin_type")
+                            and attr.plugin_type == "dot"
+                            and hasattr(attr, "id")
+                        ):
 
                             # Get description from docstring or create one
                             desc = getattr(attr, "__doc__", None)
@@ -242,11 +287,19 @@ async def effects() -> tuple[str, int, dict[str, Any]]:
                                 dot_id = getattr(attr, "id", module_name)
                                 if "blazing" in dot_id or "fire" in dot_id:
                                     element = "Fire"
-                                elif "frozen" in dot_id or "cold" in dot_id or "ice" in dot_id:
+                                elif (
+                                    "frozen" in dot_id
+                                    or "cold" in dot_id
+                                    or "ice" in dot_id
+                                ):
                                     element = "Ice"
                                 elif "gale" in dot_id or "wind" in dot_id:
                                     element = "Wind"
-                                elif "shadow" in dot_id or "dark" in dot_id or "abyssal" in dot_id:
+                                elif (
+                                    "shadow" in dot_id
+                                    or "dark" in dot_id
+                                    or "abyssal" in dot_id
+                                ):
                                     element = "Dark"
                                 elif "charged" in dot_id or "lightning" in dot_id:
                                     element = "Lightning"
@@ -265,7 +318,9 @@ async def effects() -> tuple[str, int, dict[str, Any]]:
                                 element = "Ice"
                             elif any(x in dot_id for x in ["gale", "wind"]):
                                 element = "Wind"
-                            elif any(x in dot_id for x in ["shadow", "dark", "abyssal"]):
+                            elif any(
+                                x in dot_id for x in ["shadow", "dark", "abyssal"]
+                            ):
                                 element = "Dark"
                             elif any(x in dot_id for x in ["charged", "lightning"]):
                                 element = "Lightning"
@@ -274,26 +329,39 @@ async def effects() -> tuple[str, int, dict[str, Any]]:
                             elif "poison" in dot_id:
                                 element = "Neutral"
 
-                            dot_effects.append({
-                                "name": attr_name.replace("_", " ").title(),
-                                "type": "DoT" if "weakness" not in dot_id else "Debuff",
-                                "description": desc.strip() if desc else f"Damage over time effect: {attr_name}",
-                                "element": element
-                            })
+                            dot_effects.append(
+                                {
+                                    "name": attr_name.replace("_", " ").title(),
+                                    "type": (
+                                        "DoT" if "weakness" not in dot_id else "Debuff"
+                                    ),
+                                    "description": (
+                                        desc.strip()
+                                        if desc
+                                        else f"Damage over time effect: {attr_name}"
+                                    ),
+                                    "element": element,
+                                }
+                            )
                             break
                 except ImportError:
                     continue
 
-    return jsonify({
-        "combat_effects": combat_effects,
-        "dot_effects": dot_effects,
-        "categories": {
-            "combat_effects": "Special effects triggered during combat",
-            "dot_effects": "Damage over time and debuff effects",
-            "buffs": "Temporary stat boosts and beneficial effects",
-            "debuffs": "Negative effects that weaken enemies"
-        }
-    }), 200
+    return (
+        jsonify(
+            {
+                "combat_effects": combat_effects,
+                "dot_effects": dot_effects,
+                "categories": {
+                    "combat_effects": "Special effects triggered during combat",
+                    "dot_effects": "Damage over time and debuff effects",
+                    "buffs": "Temporary stat boosts and beneficial effects",
+                    "debuffs": "Negative effects that weaken enemies",
+                },
+            }
+        ),
+        200,
+    )
 
 
 @bp.get("/stats")
@@ -304,62 +372,62 @@ async def stats() -> tuple[str, int, dict[str, Any]]:
             "name": "Health Points (HP)",
             "description": "Your current health. When it reaches 0, you're defeated. Can be healed through various means.",
             "base_value": "1000",
-            "scaling": "+10 per level"
+            "scaling": "+10 per level",
         },
         {
             "name": "Attack (ATK)",
             "description": "Determines damage dealt to enemies. Higher attack means stronger abilities and ultimates.",
             "base_value": "200",
-            "scaling": "+5 per level"
+            "scaling": "+5 per level",
         },
         {
             "name": "Defense (DEF)",
             "description": "Reduces incoming damage. Higher defense makes you more resilient to enemy attacks.",
             "base_value": "200",
-            "scaling": "+3 per level"
+            "scaling": "+3 per level",
         },
         {
             "name": "Critical Rate",
             "description": "Chance to deal critical hits for increased damage. Default critical damage is 2x normal damage.",
             "base_value": "5%",
-            "scaling": "Affected by cards and relics"
+            "scaling": "Affected by cards and relics",
         },
         {
             "name": "Critical Damage",
             "description": "Multiplier for critical hit damage. Works with critical rate to boost damage output.",
             "base_value": "200%",
-            "scaling": "Affected by cards and relics"
+            "scaling": "Affected by cards and relics",
         },
         {
             "name": "Vitality",
             "description": "Affects healing, damage, damage reduction, and experience gain.",
             "base_value": "1.0x",
-            "scaling": "Affected by cards and relics"
+            "scaling": "Affected by cards and relics",
         },
         {
             "name": "Effect Hit Rate",
             "description": "Chance for your damage-over-time effects and debuffs to successfully apply to enemies.",
             "base_value": "100%",
-            "scaling": "Affected by cards and relics"
+            "scaling": "Affected by cards and relics",
         },
         {
             "name": "Effect Resistance",
             "description": "Reduces the chance of enemy effects (DoTs, debuffs) successfully affecting you.",
             "base_value": "5%",
-            "scaling": "Affected by cards and relics"
+            "scaling": "Affected by cards and relics",
         },
         {
             "name": "Dodge Rate",
             "description": "Chance to completely avoid incoming attacks, taking no damage.",
             "base_value": "5%",
-            "scaling": "Affected by cards and relics"
+            "scaling": "Affected by cards and relics",
         },
         {
             "name": "Mitigation",
             "description": "Additional damage reduction multiplier applied after defense calculations.",
             "base_value": "1.0x",
-            "scaling": "Affected by cards and relics"
-        }
+            "scaling": "Affected by cards and relics",
+        },
     ]
 
     # Add passive explanations
@@ -367,22 +435,27 @@ async def stats() -> tuple[str, int, dict[str, Any]]:
         {
             "name": "Room Heal",
             "description": "Heal for 1 HP at the end of each battle. Stacks provide additional healing.",
-            "trigger": "After battle"
+            "trigger": "After battle",
         },
         {
             "name": "Attack Up",
             "description": "Gain +5 attack at the start of each battle. Stacks provide additional attack.",
-            "trigger": "Before battle"
-        }
+            "trigger": "Before battle",
+        },
     ]
 
-    return jsonify({
-        "stats": stats_info,
-        "common_passives": common_passives,
-        "level_info": {
-            "description": "Multiple level systems provide character progression.",
-            "in_run_leveling": "Characters gain EXP in runs and level up for fixed stat gains (+10 HP, +5 ATK, +3 DEF) plus 0.3%-0.8% boost to ALL stats",
-            "global_user_level": "Persistent level across runs that provides permanent stat scaling to all characters",
-            "experience": "Gain XP by winning battles and completing runs. Vitality multiplies EXP gain."
-        }
-    }), 200
+    return (
+        jsonify(
+            {
+                "stats": stats_info,
+                "common_passives": common_passives,
+                "level_info": {
+                    "description": "Multiple level systems provide character progression.",
+                    "in_run_leveling": "Characters gain EXP in runs and level up for fixed stat gains (+10 HP, +5 ATK, +3 DEF) plus 0.3%-0.8% boost to ALL stats",
+                    "global_user_level": "Persistent level across runs that provides permanent stat scaling to all characters",
+                    "experience": "Gain XP by winning battles and completing runs. Vitality multiplies EXP gain.",
+                },
+            }
+        ),
+        200,
+    )

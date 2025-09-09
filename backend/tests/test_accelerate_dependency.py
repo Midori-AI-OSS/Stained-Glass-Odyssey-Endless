@@ -1,4 +1,5 @@
 """Test to reproduce the accelerate dependency issue."""
+
 from pathlib import Path
 import sys
 
@@ -26,7 +27,9 @@ def test_accelerate_missing_error() -> None:
         with patch("llms.loader._IMPORT_ERROR", None):
             with patch("llms.loader.model_memory_requirements", return_value=(0, 0)):
                 with patch("llms.loader.ensure_ram"):
-                    with patch("llms.loader.pick_device", return_value=0):  # This triggers device_map="auto"
+                    with patch(
+                        "llms.loader.pick_device", return_value=0
+                    ):  # This triggers device_map="auto"
                         from llms.loader import load_llm
 
                         # This should raise the ImportError about accelerate
@@ -54,7 +57,9 @@ def test_accelerate_not_needed_with_explicit_device() -> None:
         with patch("llms.loader._IMPORT_ERROR", None):
             with patch("llms.loader.model_memory_requirements", return_value=(0, 0)):
                 with patch("llms.loader.ensure_ram"):
-                    with patch("llms.loader.pick_device", return_value=-1):  # This triggers device=-1
+                    with patch(
+                        "llms.loader.pick_device", return_value=-1
+                    ):  # This triggers device=-1
                         with patch("llms.loader.HuggingFacePipeline") as mock_hf:
                             mock_hf.return_value = MagicMock()
                             from llms.loader import load_llm

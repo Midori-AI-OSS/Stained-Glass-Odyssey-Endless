@@ -14,12 +14,11 @@ from typing import TypeVar
 
 from autofighter.save_manager import SaveManager
 
-T = TypeVar('T')
+T = TypeVar("T")
 
 
 async def async_db_operation(
-    save_manager: SaveManager,
-    operation: Callable[[Any], T]
+    save_manager: SaveManager, operation: Callable[[Any], T]
 ) -> T:
     """
     Execute a database operation asynchronously.
@@ -31,6 +30,7 @@ async def async_db_operation(
     Returns:
         The result of the operation
     """
+
     def db_wrapper():
         with save_manager.connection() as conn:
             return operation(conn)
@@ -39,9 +39,7 @@ async def async_db_operation(
 
 
 async def async_query(
-    save_manager: SaveManager,
-    query: str,
-    params: tuple | None = None
+    save_manager: SaveManager, query: str, params: tuple | None = None
 ) -> list[tuple]:
     """
     Execute a SELECT query asynchronously.
@@ -54,6 +52,7 @@ async def async_query(
     Returns:
         List of result tuples
     """
+
     def execute_query(conn):
         if params:
             return conn.execute(query, params).fetchall()
@@ -63,9 +62,7 @@ async def async_query(
 
 
 async def async_execute(
-    save_manager: SaveManager,
-    query: str,
-    params: tuple | None = None
+    save_manager: SaveManager, query: str, params: tuple | None = None
 ) -> int:
     """
     Execute an INSERT/UPDATE/DELETE query asynchronously.
@@ -78,6 +75,7 @@ async def async_execute(
     Returns:
         Number of affected rows
     """
+
     def execute_query(conn):
         if params:
             return conn.execute(query, params).rowcount

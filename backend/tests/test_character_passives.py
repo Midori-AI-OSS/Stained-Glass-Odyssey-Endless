@@ -84,8 +84,14 @@ async def test_mezzy_gluttonous_bulwark_passive():
     second = MezzyGluttonousBulwark._siphoned_stats[id(ally)]["atk"]
 
     assert second > first
-    assert any(e.name.startswith("mezzy_gluttonous_bulwark_gain") for e in mezzy._active_effects)
-    assert any(e.name.startswith("mezzy_gluttonous_bulwark_siphon") for e in ally._active_effects)
+    assert any(
+        e.name.startswith("mezzy_gluttonous_bulwark_gain")
+        for e in mezzy._active_effects
+    )
+    assert any(
+        e.name.startswith("mezzy_gluttonous_bulwark_siphon")
+        for e in ally._active_effects
+    )
 
 
 @pytest.mark.asyncio
@@ -230,7 +236,9 @@ async def test_kboshi_flux_cycle_passive():
 
     # Verify the damage type is one of the valid types
     valid_types = ["Fire", "Ice", "Wind", "Lightning", "Light", "Dark"]
-    assert kboshi.damage_type.id in valid_types, f"Damage type should be one of {valid_types}, got {kboshi.damage_type.id}"
+    assert (
+        kboshi.damage_type.id in valid_types
+    ), f"Damage type should be one of {valid_types}, got {kboshi.damage_type.id}"
 
 
 @pytest.mark.asyncio

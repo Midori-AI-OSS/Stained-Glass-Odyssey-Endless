@@ -26,12 +26,19 @@ class ArcaneFlask(RelicBase):
             shield = int(user.max_hp * 0.2 * stacks)
 
             # Track the shield generation
-            BUS.emit("relic_effect", "arcane_flask", user, "shield_granted", shield, {
-                "shield_percentage": 20 * stacks,
-                "max_hp": user.max_hp,
-                "trigger": "ultimate_used",
-                "stacks": stacks
-            })
+            BUS.emit(
+                "relic_effect",
+                "arcane_flask",
+                user,
+                "shield_granted",
+                shield,
+                {
+                    "shield_percentage": 20 * stacks,
+                    "max_hp": user.max_hp,
+                    "trigger": "ultimate_used",
+                    "stacks": stacks,
+                },
+            )
 
             safe_async_task(user.apply_healing(shield))
 

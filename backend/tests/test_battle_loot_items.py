@@ -14,7 +14,8 @@ def app_with_db(tmp_path, monkeypatch):
     monkeypatch.setenv("AF_DB_KEY", "testkey")
     monkeypatch.syspath_prepend(Path(__file__).resolve().parents[1])
     spec = importlib.util.spec_from_file_location(
-        "app", Path(__file__).resolve().parents[1] / "app.py",
+        "app",
+        Path(__file__).resolve().parents[1] / "app.py",
     )
     app_module = importlib.util.module_from_spec(spec)
     assert spec.loader is not None

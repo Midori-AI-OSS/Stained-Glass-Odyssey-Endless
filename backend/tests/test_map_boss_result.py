@@ -29,11 +29,22 @@ def test_get_map_returns_boss_for_awaiting_next_boss_room() -> None:
             "exp": {"player": 0},
             "level": {"player": 1},
             "rdr": 1.0,
-            "player": {"pronouns": "", "damage_type": "Light", "stats": {"hp": 0, "attack": 0, "defense": 0}},
+            "player": {
+                "pronouns": "",
+                "damage_type": "Light",
+                "stats": {"hp": 0, "attack": 0, "defense": 0},
+            },
         }
         map_data = {
             "rooms": [
-                {"room_type": "start", "floor": 1, "index": 0, "room_id": 0, "loop": 1, "pressure": 0},
+                {
+                    "room_type": "start",
+                    "floor": 1,
+                    "index": 0,
+                    "room_id": 0,
+                    "loop": 1,
+                    "pressure": 0,
+                },
                 {
                     "room_type": "battle-boss-floor",
                     "floor": 1,

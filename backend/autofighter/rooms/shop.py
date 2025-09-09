@@ -16,7 +16,7 @@ REROLL_COST = 10
 
 
 def _pressure_cost(base: int, pressure: int) -> int:
-    scale = 1.26 ** pressure
+    scale = 1.26**pressure
     if pressure:
         scale *= random.uniform(0.95, 1.05)
     return int(base * scale)
@@ -69,7 +69,13 @@ def _generate_stock(party: Party, pressure: int) -> list[dict[str, Any]]:
     relic_list = []
     for _ in range(6):
         stars = _apply_rdr_to_stars(_pick_shop_stars(), party.rdr)
-        pool = [r for r in all_relics if r.stars == stars and r.id != "fallback_essence" and r.id not in seen_relics]
+        pool = [
+            r
+            for r in all_relics
+            if r.stars == stars
+            and r.id != "fallback_essence"
+            and r.id not in seen_relics
+        ]
         if not pool:
             continue
         relic = random.choice(pool)

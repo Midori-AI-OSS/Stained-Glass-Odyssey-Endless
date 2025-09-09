@@ -12,6 +12,7 @@ from plugins.damage_types._base import DamageTypeBase
 @dataclass
 class Wind(DamageTypeBase):
     """Agile element that strikes in flurries and erodes defenses."""
+
     id: str = "Wind"
     weakness: str = "Lightning"
     color: tuple[int, int, int] = (0, 255, 0)
@@ -48,7 +49,10 @@ class Wind(DamageTypeBase):
         a_mgr.add_modifier(eh_mod)
 
         # Determine dynamic hit count (allow cards/relics to override via attributes)
-        hits = int(getattr(actor, "wind_ultimate_hits", getattr(actor, "ultimate_hits", 25)) or 25)
+        hits = int(
+            getattr(actor, "wind_ultimate_hits", getattr(actor, "ultimate_hits", 25))
+            or 25
+        )
         hits = max(1, hits)
 
         # Strike each living enemy with a total budget equal to actor.atk distributed
@@ -81,10 +85,14 @@ class Wind(DamageTypeBase):
                     rem -= 1
                 # Ensure a minimum of 1 damage per hit going into the resolver
                 per_hit = max(1, int(per_hit))
-                dmg = await foe.apply_damage(per_hit, attacker=actor, action_name="Wind Ultimate")
+                dmg = await foe.apply_damage(
+                    per_hit, attacker=actor, action_name="Wind Ultimate"
+                )
                 # Emit hit event for logging/passives, mirroring battle loop behavior
                 try:
-                    await BUS.emit_async("hit_landed", actor, foe, dmg, "attack", "wind_ultimate")
+                    await BUS.emit_async(
+                        "hit_landed", actor, foe, dmg, "attack", "wind_ultimate"
+                    )
                 except Exception:
                     pass
                 # Roll Gale Erosion on each hit based on (boosted) effect hit rate

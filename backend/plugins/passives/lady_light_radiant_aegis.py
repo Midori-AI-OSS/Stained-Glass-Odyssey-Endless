@@ -11,6 +11,7 @@ if TYPE_CHECKING:
 @dataclass
 class LadyLightRadiantAegis:
     """Lady Light's Radiant Aegis passive - HoT enhancements with shields and cleansing."""
+
     plugin_type = "passive"
     id = "lady_light_radiant_aegis"
     name = "Radiant Aegis"
@@ -39,7 +40,9 @@ class LadyLightRadiantAegis:
             )
             target.add_effect(attack_bonus_effect)
 
-    async def on_hot_applied(self, target: "Stats", healed_ally: "Stats", hot_amount: int) -> None:
+    async def on_hot_applied(
+        self, target: "Stats", healed_ally: "Stats", hot_amount: int
+    ) -> None:
         """Enhance HoTs with shields and effect resistance."""
         # Grant one-turn shield to the healed ally
         shield_amount = int(hot_amount * 0.5)  # Shield equal to 50% of HoT amount
@@ -55,7 +58,9 @@ class LadyLightRadiantAegis:
         # Grant +5% effect resistance for one turn
         resistance_effect = StatEffect(
             name=f"{self.id}_hot_resistance",
-            stat_modifiers={"effect_resistance": 0.05},  # 5% resistance to negative effects
+            stat_modifiers={
+                "effect_resistance": 0.05
+            },  # 5% resistance to negative effects
             duration=1,  # One turn
             source=self.id,
         )
@@ -67,7 +72,9 @@ class LadyLightRadiantAegis:
 
         # Heal ally for additional 5% of their max HP
         additional_healing = int(cleansed_ally.max_hp * 0.05)
-        cleansed_ally.hp = min(cleansed_ally.max_hp, cleansed_ally.hp + additional_healing)
+        cleansed_ally.hp = min(
+            cleansed_ally.max_hp, cleansed_ally.hp + additional_healing
+        )
 
         # Grant Lady Light +2% attack (stacking with no cap)
         attack_increase = int(target.atk * 0.02)

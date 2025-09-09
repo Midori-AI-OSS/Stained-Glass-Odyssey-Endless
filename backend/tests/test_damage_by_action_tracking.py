@@ -1,4 +1,5 @@
 """Test damage by action tracking for battle review."""
+
 import os
 import sys
 
@@ -134,7 +135,9 @@ async def test_healing_in_damage_by_action():
     logger.start_battle([player], [])
 
     # Apply healing which should be tracked in damage_by_action
-    await player.apply_healing(25, healer=player, source_type="heal", source_name="Test Heal")
+    await player.apply_healing(
+        25, healer=player, source_type="heal", source_name="Test Heal"
+    )
 
     # Check that healing is tracked in damage_by_action
     summary = logger.export_summary()

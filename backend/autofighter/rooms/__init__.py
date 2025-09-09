@@ -28,14 +28,14 @@ from .utils import _scale_stats  # noqa: E402
 from .utils import _serialize  # noqa: E402
 
 __all__ = [
-    'BattleRoom',
-    'BossRoom',
-    'ChatRoom',
-    'RestRoom',
-    'Room',
-    'ShopRoom',
-    '_build_foes',
-    '_choose_foe',
-    '_scale_stats',
-    '_serialize',
+    "BattleRoom",
+    "BossRoom",
+    "ChatRoom",
+    "RestRoom",
+    "Room",
+    "ShopRoom",
+    "_build_foes",
+    "_choose_foe",
+    "_scale_stats",
+    "_serialize",
 ]

@@ -39,7 +39,7 @@ def test_dark_ultimate_dot_scaling(monkeypatch):
         actor.damage_type.ultimate(actor, actor.allies, actor.enemies)
     )
 
-    expected = int(100 * (Dark.ULT_PER_STACK ** 2))
+    expected = int(100 * (Dark.ULT_PER_STACK**2))
     assert hits and all(h == expected for h in hits)
 
 

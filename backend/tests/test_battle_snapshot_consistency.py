@@ -16,7 +16,8 @@ def app_with_db(tmp_path, monkeypatch):
     monkeypatch.setenv("AF_DB_KEY", "testkey")
     monkeypatch.syspath_prepend(Path(__file__).resolve().parents[1])
     spec = importlib.util.spec_from_file_location(
-        "app", Path(__file__).resolve().parents[1] / "app.py",
+        "app",
+        Path(__file__).resolve().parents[1] / "app.py",
     )
     app_module = importlib.util.module_from_spec(spec)
     assert spec.loader is not None
@@ -51,9 +52,13 @@ async def test_foe_element_stable_across_snapshots(app_with_db, monkeypatch):
 
     original_run_battle = app_module._run_battle
 
-    async def delayed_run_battle(run_id, room, foes, party, data, state, rooms, progress):
+    async def delayed_run_battle(
+        run_id, room, foes, party, data, state, rooms, progress
+    ):
         await asyncio.sleep(0)
-        return await original_run_battle(run_id, room, foes, party, data, state, rooms, progress)
+        return await original_run_battle(
+            run_id, room, foes, party, data, state, rooms, progress
+        )
 
     monkeypatch.setattr(app_module, "_run_battle", delayed_run_battle)
 

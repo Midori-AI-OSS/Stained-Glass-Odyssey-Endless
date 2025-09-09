@@ -21,7 +21,8 @@ def app_without_llm(tmp_path, monkeypatch):
     monkeypatch.setattr(builtins, "__import__", fake_import)
     monkeypatch.syspath_prepend(Path(__file__).resolve().parents[1])
     spec = importlib.util.spec_from_file_location(
-        "app", Path(__file__).resolve().parents[1] / "app.py",
+        "app",
+        Path(__file__).resolve().parents[1] / "app.py",
     )
     app_module = importlib.util.module_from_spec(spec)
     assert spec.loader is not None

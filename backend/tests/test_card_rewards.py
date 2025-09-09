@@ -50,6 +50,7 @@ NEW_CARDS: list[tuple[str, dict[str, float]]] = [
     ("elemental_spark", {"atk": 0.55, "effect_hit_rate": 0.55}),
 ]
 
+
 @pytest.fixture()
 def app_with_db(tmp_path, monkeypatch):
     db_path = tmp_path / "save.db"
@@ -57,7 +58,8 @@ def app_with_db(tmp_path, monkeypatch):
     monkeypatch.setenv("AF_DB_KEY", "testkey")
     monkeypatch.syspath_prepend(Path(__file__).resolve().parents[1])
     spec = importlib.util.spec_from_file_location(
-        "app", Path(__file__).resolve().parents[1] / "app.py",
+        "app",
+        Path(__file__).resolve().parents[1] / "app.py",
     )
     app_module = importlib.util.module_from_spec(spec)
     assert spec.loader is not None

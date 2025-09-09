@@ -30,7 +30,7 @@ async def test_many_dots_performance():
             damage=1,  # Small damage to avoid killing the target too quickly
             turns=10000,  # 10 turns each
             id=f"dot_{i}",
-            source=target
+            source=target,
         )
         manager.add_dot(dot)
 
@@ -68,7 +68,9 @@ async def test_many_dots_performance():
     print("\nBattle impact analysis:")
     print("With 1 character having 800 DOTs:")
     print(f"  - Each turn would take ~{avg_tick_time:.3f}s just for DOT processing")
-    print(f"  - A 100-turn battle would take ~{avg_tick_time * 100:.1f}s for DOTs alone")
+    print(
+        f"  - A 100-turn battle would take ~{avg_tick_time * 100:.1f}s for DOTs alone"
+    )
     print("With multiple characters each having 800 DOTs:")
     print(f"  - 4 characters = ~{avg_tick_time * 4:.3f}s per turn")
     print(f"  - 100-turn battle = ~{avg_tick_time * 4 * 100:.1f}s for DOTs alone")

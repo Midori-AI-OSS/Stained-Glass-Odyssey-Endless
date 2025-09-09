@@ -17,6 +17,7 @@ if TYPE_CHECKING:
 @dataclass
 class HilanderCriticalFerment:
     """Hilander's Critical Ferment passive - builds crit rate/damage, consumes on crit."""
+
     plugin_type = "passive"
     id = "hilander_critical_ferment"
     name = "Critical Ferment"
@@ -32,7 +33,8 @@ class HilanderCriticalFerment:
         ferment_stacks = sum(
             1
             for effect in target._active_effects
-            if effect.name.startswith(f"{self.id}_crit_stack") and effect.name.endswith("_rate")
+            if effect.name.startswith(f"{self.id}_crit_stack")
+            and effect.name.endswith("_rate")
         )
 
         if ferment_stacks >= 20:
@@ -72,6 +74,7 @@ class HilanderCriticalFerment:
             BUS.subscribe("critical_hit", _crit)
             target._hilander_crit_cb = _crit
             self._subscribed[target] = True
+
     @classmethod
     def on_critical_hit(cls, attacker: "Stats", target: "Stats", damage: int) -> None:
         """Handle critical hit - unleash Aftertaste and consume one stack."""
@@ -121,7 +124,8 @@ class HilanderCriticalFerment:
         return sum(
             1
             for effect in getattr(target, "_active_effects", [])
-            if effect.name.startswith(f"{cls.id}_crit_stack_") and effect.name.endswith("_rate")
+            if effect.name.startswith(f"{cls.id}_crit_stack_")
+            and effect.name.endswith("_rate")
         )
 
     @classmethod

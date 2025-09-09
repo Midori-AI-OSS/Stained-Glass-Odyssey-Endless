@@ -11,6 +11,7 @@ from plugins.damage_types._base import DamageTypeBase
 @dataclass
 class Light(DamageTypeBase):
     """Supportive element that heals allies and purges harmful effects."""
+
     id: str = "Light"
     weakness: str = "Dark"
     color: tuple[int, int, int] = (255, 255, 255)
@@ -53,17 +54,25 @@ class Light(DamageTypeBase):
 
             # Ensure Shadow Siphon is completely removed
             from plugins.damage_effects import SHADOW_SIPHON_ID
+
             try:
                 if SHADOW_SIPHON_ID in ally.dots:
                     ally.dots.remove(SHADOW_SIPHON_ID)
                 # Also remove from effect manager dots by id
-                mgr.dots = [d for d in mgr.dots if getattr(d, "id", "") != SHADOW_SIPHON_ID]
+                mgr.dots = [
+                    d for d in mgr.dots if getattr(d, "id", "") != SHADOW_SIPHON_ID
+                ]
             except (AttributeError, ValueError):
                 pass
 
             missing = ally.max_hp - ally.hp
             if missing > 0:
-                await ally.apply_healing(missing, healer=actor, source_type="ultimate", source_name="Light Ultimate")
+                await ally.apply_healing(
+                    missing,
+                    healer=actor,
+                    source_type="ultimate",
+                    source_name="Light Ultimate",
+                )
         for enemy in enemies:
             if enemy.hp <= 0:
                 continue

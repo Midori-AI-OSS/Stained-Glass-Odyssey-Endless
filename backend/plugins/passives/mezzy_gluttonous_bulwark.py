@@ -11,6 +11,7 @@ if TYPE_CHECKING:
 @dataclass
 class MezzyGluttonousBulwark:
     """Mezzy's Gluttonous Bulwark passive - damage reduction and stat siphoning."""
+
     plugin_type = "passive"
     id = "mezzy_gluttonous_bulwark"
     name = "Gluttonous Bulwark"
@@ -21,7 +22,9 @@ class MezzyGluttonousBulwark:
     # Class-level tracking of siphoned stats per ally
     _siphoned_stats: ClassVar[dict[int, dict[str, int]]] = {}
 
-    async def apply(self, target: "Stats", allies: list["Stats"] | None = None, **_: object) -> None:
+    async def apply(
+        self, target: "Stats", allies: list["Stats"] | None = None, **_: object
+    ) -> None:
         """Apply Mezzy's bulk and siphoning mechanics."""
         # Apply 20% damage reduction (permanent while passive is active)
         damage_reduction = StatEffect(

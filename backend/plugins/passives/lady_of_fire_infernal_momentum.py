@@ -11,6 +11,7 @@ if TYPE_CHECKING:
 @dataclass
 class LadyOfFireInfernalMomentum:
     """Lady of Fire's Infernal Momentum passive - doubled fire damage bonus and burn mechanics."""
+
     plugin_type = "passive"
     id = "lady_of_fire_infernal_momentum"
     name = "Infernal Momentum"
@@ -29,7 +30,9 @@ class LadyOfFireInfernalMomentum:
         # This would need integration with the Fire damage type system
         # For now, apply a general damage bonus based on missing HP
         missing_hp_ratio = 1.0 - (target.hp / target.max_hp)
-        doubled_fire_bonus = missing_hp_ratio * 0.6  # Assuming Fire normally gives 30%, now 60%
+        doubled_fire_bonus = (
+            missing_hp_ratio * 0.6
+        )  # Assuming Fire normally gives 30%, now 60%
 
         fire_bonus_effect = StatEffect(
             name=f"{self.id}_doubled_fire_bonus",
@@ -42,7 +45,9 @@ class LadyOfFireInfernalMomentum:
         if attacker is not None:
             await self.counter_attack(target, attacker, damage)
 
-    async def counter_attack(self, target: "Stats", attacker: "Stats", damage: int) -> None:
+    async def counter_attack(
+        self, target: "Stats", attacker: "Stats", damage: int
+    ) -> None:
         """Apply burn DoT to attacker when Lady of Fire takes damage."""
         # Apply a short burn DoT to the attacker
         burn_damage = int(damage * 0.25)  # 25% of damage taken as burn

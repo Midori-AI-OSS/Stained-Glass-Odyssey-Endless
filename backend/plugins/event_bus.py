@@ -38,19 +38,26 @@ class EventMetrics:
         for event, timings in self.event_timings.items():
             if timings:
                 stats[event] = {
-                    'count': len(timings),
-                    'avg_time': sum(timings) / len(timings),
-                    'max_time': max(timings),
-                    'errors': self.error_counts[event]
+                    "count": len(timings),
+                    "avg_time": sum(timings) / len(timings),
+                    "max_time": max(timings),
+                    "errors": self.error_counts[event],
                 }
         return stats
 
 
 class _Bus:
     def __init__(self) -> None:
-        self._subs: dict[str, list[tuple[object, Callable[..., Any]]]] = defaultdict(list)
+        self._subs: dict[str, list[tuple[object, Callable[..., Any]]]] = defaultdict(
+            list
+        )
         self._metrics = EventMetrics()
-        self._high_frequency_events = {'damage_dealt', 'damage_taken', 'hit_landed', 'heal_received'}
+        self._high_frequency_events = {
+            "damage_dealt",
+            "damage_taken",
+            "hit_landed",
+            "heal_received",
+        }
         self._batched_events = defaultdict(list)
         self._batch_timer = None
         self._batch_interval = 0.016  # Batch events for one frame (16ms at 60fps)
@@ -68,8 +75,10 @@ class _Bus:
         if obj is not None:
             # Use weak reference for comparison to handle object cleanup
             self._subs[event] = [
-                pair for pair in self._subs.get(event, [])
-                if pair[0] is not obj and (not callable(pair[0]) or pair[0]() is not obj)
+                pair
+                for pair in self._subs.get(event, [])
+                if pair[0] is not obj
+                and (not callable(pair[0]) or pair[0]() is not obj)
             ]
         else:
             self._subs[event] = [
@@ -105,7 +114,9 @@ class _Bus:
 
         # Log performance warnings for slow events
         if duration > 0.050:  # >50ms is definitely problematic
-            log.warning(f"Slow event emission: {event} took {duration*1000:.1f}ms with {len(callbacks)} subscribers")
+            log.warning(
+                f"Slow event emission: {event} took {duration*1000:.1f}ms with {len(callbacks)} subscribers"
+            )
 
     def send_batched(self, event: str, args) -> None:
         """Add event to batch for high-frequency events."""
@@ -118,18 +129,24 @@ class _Bus:
 
                 # Adaptive batching: reduce interval under high load
                 if self._dynamic_batch_interval:
-                    total_queued = sum(len(events) for events in self._batched_events.values())
+                    total_queued = sum(
+                        len(events) for events in self._batched_events.values()
+                    )
                     if total_queued > 100:
                         interval = 0.001  # Very fast processing under very high load
                     elif total_queued > 50:
-                        interval = max(0.005, self._batch_interval * 0.5)  # Faster processing under load
+                        interval = max(
+                            0.005, self._batch_interval * 0.5
+                        )  # Faster processing under load
                     else:
                         interval = self._batch_interval
                 else:
                     interval = self._batch_interval
 
                 # Schedule batch processing
-                self._batch_timer = asyncio.create_task(self._process_batches_with_interval(interval))
+                self._batch_timer = asyncio.create_task(
+                    self._process_batches_with_interval(interval)
+                )
                 return
 
             log.debug("No running event loop; processing batched events synchronously")
@@ -175,7 +192,7 @@ class _Bus:
             # Use gather with limited concurrency to avoid overwhelming the event loop
             batch_size = 100  # Process in chunks to manage memory and concurrency
             for i in range(0, len(all_events), batch_size):
-                batch = all_events[i:i + batch_size]
+                batch = all_events[i : i + batch_size]
                 await asyncio.gather(
                     *[process_single_event(event_data) for event_data in batch],
                     return_exceptions=True,
@@ -197,7 +214,9 @@ class _Bus:
                         try:
                             self.send(event, args)
                         except Exception as e:
-                            log.exception("Error processing sync batched event %s: %s", event, e)
+                            log.exception(
+                                "Error processing sync batched event %s: %s", event, e
+                            )
         finally:
             # Clear timer when all events have been processed
             self._batch_timer = None
@@ -235,7 +254,7 @@ class _Bus:
         # Run all callbacks concurrently to avoid blocking
         results = await asyncio.gather(
             *[_run_callback(obj_ref, func, args) for obj_ref, func in callbacks],
-            return_exceptions=True
+            return_exceptions=True,
         )
 
         duration = time.perf_counter() - start_time
@@ -270,10 +289,19 @@ class EventBus:
                 # - Trim extra args when subscriber expects fewer
                 # - Pad with None for required positional params when caller sent fewer
                 sig = inspect.signature(callback)
-                params = [p for p in sig.parameters.values()
-                          if p.kind in (inspect.Parameter.POSITIONAL_ONLY,
-                                        inspect.Parameter.POSITIONAL_OR_KEYWORD)]
-                accepts_varargs = any(p.kind == inspect.Parameter.VAR_POSITIONAL for p in sig.parameters.values())
+                params = [
+                    p
+                    for p in sig.parameters.values()
+                    if p.kind
+                    in (
+                        inspect.Parameter.POSITIONAL_ONLY,
+                        inspect.Parameter.POSITIONAL_OR_KEYWORD,
+                    )
+                ]
+                accepts_varargs = any(
+                    p.kind == inspect.Parameter.VAR_POSITIONAL
+                    for p in sig.parameters.values()
+                )
 
                 call_args = list(args)
                 if not accepts_varargs:
@@ -281,7 +309,9 @@ class EventBus:
                     if len(call_args) > len(params):
                         call_args = call_args[: len(params)]
                     # Pad to required positional count with None
-                    required = [p for p in params if p.default is inspect.Parameter.empty]
+                    required = [
+                        p for p in params if p.default is inspect.Parameter.empty
+                    ]
                     if len(call_args) < len(required):
                         call_args.extend([None] * (len(required) - len(call_args)))
 

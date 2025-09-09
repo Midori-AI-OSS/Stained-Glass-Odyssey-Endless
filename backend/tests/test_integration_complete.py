@@ -1,6 +1,7 @@
 """
 End-to-end test to verify the complete aftertaste and battle logging integration.
 """
+
 import json
 from pathlib import Path
 import tempfile
@@ -49,16 +50,22 @@ async def test_complete_integration():
 
         try:
             import asyncio
+
             original_create_task = asyncio.get_event_loop().create_task
 
             def mock_create_task(coro):
                 nonlocal aftertaste_count
                 # Check if this is an aftertaste coroutine
-                if hasattr(coro, '__name__') or (hasattr(coro, 'cr_code') and coro.cr_code):
-                    if 'aftertaste' in str(coro).lower() or 'Aftertaste' in str(type(coro)):
+                if hasattr(coro, "__name__") or (
+                    hasattr(coro, "cr_code") and coro.cr_code
+                ):
+                    if "aftertaste" in str(coro).lower() or "Aftertaste" in str(
+                        type(coro)
+                    ):
                         aftertaste_count += 1
                 # Return a mock task that doesn't actually run
                 from unittest.mock import AsyncMock
+
                 task = AsyncMock()
                 return task
 
@@ -91,9 +98,13 @@ async def test_complete_integration():
             assert battle_path.exists(), "Battle folder should exist"
 
             summary_path = battle_path / "summary"
-            assert (summary_path / "battle_summary.json").exists(), "Battle summary JSON should exist"
+            assert (
+                summary_path / "battle_summary.json"
+            ).exists(), "Battle summary JSON should exist"
             assert (summary_path / "events.json").exists(), "Events JSON should exist"
-            assert (summary_path / "human_summary.txt").exists(), "Human summary should exist"
+            assert (
+                summary_path / "human_summary.txt"
+            ).exists(), "Human summary should exist"
 
             # Verify summary content
             with open(summary_path / "battle_summary.json") as f:
@@ -111,7 +122,7 @@ async def test_complete_integration():
 
             assert "Result: VICTORY" in content
             assert "player: 15" in content  # hits landed
-            assert "goblin: 3" in content   # hits landed
+            assert "goblin: 3" in content  # hits landed
 
             # Verify events were captured
             with open(summary_path / "events.json") as f:
@@ -144,4 +155,5 @@ async def test_complete_integration():
 
 if __name__ == "__main__":
     import asyncio
+
     asyncio.run(test_complete_integration())

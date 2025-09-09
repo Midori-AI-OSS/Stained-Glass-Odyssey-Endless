@@ -77,4 +77,3 @@ async def test_bus_stress_party_foes_async():
         with contextlib.suppress(asyncio.CancelledError):
             await ticker_task
         BUS.unsubscribe("damage_dealt", slow_handler)
-

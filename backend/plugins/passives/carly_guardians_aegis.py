@@ -12,6 +12,7 @@ if TYPE_CHECKING:
 @dataclass
 class CarlyGuardiansAegis:
     """Carly's Guardian's Aegis passive - tank mechanics with healing and mitigation."""
+
     plugin_type = "passive"
     id = "carly_guardians_aegis"
     name = "Guardian's Aegis"
@@ -25,7 +26,9 @@ class CarlyGuardiansAegis:
     _defense_stacks: ClassVar[dict[int, int]] = {}
     _overcharged: ClassVar[dict[int, bool]] = {}
 
-    async def apply(self, target: "Stats", party: Optional[list["Stats"]] = None, **_: object) -> None:
+    async def apply(
+        self, target: "Stats", party: Optional[list["Stats"]] = None, **_: object
+    ) -> None:
         """Apply Carly's Guardian's Aegis healing and conversion mechanics."""
         entity_id = id(target)
 
@@ -41,7 +44,9 @@ class CarlyGuardiansAegis:
             self._overcharged[entity_id] = False
 
         if self._overcharged[entity_id]:
-            self._mitigation_stacks[entity_id] = max(0, self._mitigation_stacks[entity_id] - 5)
+            self._mitigation_stacks[entity_id] = max(
+                0, self._mitigation_stacks[entity_id] - 5
+            )
             if self._mitigation_stacks[entity_id] <= 10:
                 self._overcharged[entity_id] = False
                 target.remove_effect_by_name(f"{self.id}_overcharged_atk")
@@ -113,7 +118,9 @@ class CarlyGuardiansAegis:
             )
             target.add_effect(mitigation_effect)
 
-    async def on_damage_taken(self, target: "Stats", attacker: "Stats", damage: int) -> None:
+    async def on_damage_taken(
+        self, target: "Stats", attacker: "Stats", damage: int
+    ) -> None:
         """Handle Carly's damage mitigation mechanics when hit."""
         entity_id = id(target)
 

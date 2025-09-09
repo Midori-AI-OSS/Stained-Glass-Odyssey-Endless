@@ -14,20 +14,17 @@ from autofighter.stats import Stats
 # Each stat has: (threshold, scaling_factor, base_offset)
 DIMINISHING_RETURNS_CONFIG = {
     # HP: 4x reduction per 500 HP
-    'max_hp': {'threshold': 500, 'scaling_factor': 4.0, 'base_offset': 0},
-    'hp': {'threshold': 500, 'scaling_factor': 4.0, 'base_offset': 0},
-
+    "max_hp": {"threshold": 500, "scaling_factor": 4.0, "base_offset": 0},
+    "hp": {"threshold": 500, "scaling_factor": 4.0, "base_offset": 0},
     # ATK/DEF: 100x reduction per 100 points
-    'atk': {'threshold': 100, 'scaling_factor': 2.0, 'base_offset': 0},
-    'defense': {'threshold': 100, 'scaling_factor': 2.0, 'base_offset': 0},
-
+    "atk": {"threshold": 100, "scaling_factor": 2.0, "base_offset": 0},
+    "defense": {"threshold": 100, "scaling_factor": 2.0, "base_offset": 0},
     # Crit rate: 100x reduction per 1% over 75%
-    'crit_rate': {'threshold': 0.01, 'scaling_factor': 2.0, 'base_offset': 5},
-    'mitigation': {'threshold': 0.01, 'scaling_factor': 100.0, 'base_offset': 2},
-    'vitality': {'threshold': 0.01, 'scaling_factor': 100.0, 'base_offset': 2},
-
+    "crit_rate": {"threshold": 0.01, "scaling_factor": 2.0, "base_offset": 5},
+    "mitigation": {"threshold": 0.01, "scaling_factor": 100.0, "base_offset": 2},
+    "vitality": {"threshold": 0.01, "scaling_factor": 100.0, "base_offset": 2},
     # Crit damage: 1000x reduction per 500% (5.0 multiplier)
-    'crit_damage': {'threshold': 5.0, 'scaling_factor': 1000.0, 'base_offset': 2.0},
+    "crit_damage": {"threshold": 5.0, "scaling_factor": 1000.0, "base_offset": 2.0},
 }
 
 
@@ -35,18 +32,18 @@ def get_current_stat_value(stats: Stats, stat_name: str) -> Union[int, float]:
     """Get the current value of a stat from the Stats object."""
     # Map common stat names to their property accessors
     stat_mapping = {
-        'max_hp': lambda s: s.max_hp,
-        'hp': lambda s: s.max_hp,  # Use max_hp for HP calculations
-        'atk': lambda s: s.atk,
-        'defense': lambda s: s.defense,
-        'crit_rate': lambda s: s.crit_rate,
-        'crit_damage': lambda s: s.crit_damage,
-        'mitigation': lambda s: s.mitigation,
-        'vitality': lambda s: s.vitality,
-        'effect_hit_rate': lambda s: s.effect_hit_rate,
-        'effect_resistance': lambda s: s.effect_resistance,
-        'dodge_odds': lambda s: s.dodge_odds,
-        'regain': lambda s: s.regain,
+        "max_hp": lambda s: s.max_hp,
+        "hp": lambda s: s.max_hp,  # Use max_hp for HP calculations
+        "atk": lambda s: s.atk,
+        "defense": lambda s: s.defense,
+        "crit_rate": lambda s: s.crit_rate,
+        "crit_damage": lambda s: s.crit_damage,
+        "mitigation": lambda s: s.mitigation,
+        "vitality": lambda s: s.vitality,
+        "effect_hit_rate": lambda s: s.effect_hit_rate,
+        "effect_resistance": lambda s: s.effect_resistance,
+        "dodge_odds": lambda s: s.dodge_odds,
+        "regain": lambda s: s.regain,
     }
 
     if stat_name in stat_mapping:
@@ -56,7 +53,9 @@ def get_current_stat_value(stats: Stats, stat_name: str) -> Union[int, float]:
     return getattr(stats, stat_name, 0)
 
 
-def calculate_diminishing_returns(stat_name: str, current_value: Union[int, float]) -> float:
+def calculate_diminishing_returns(
+    stat_name: str, current_value: Union[int, float]
+) -> float:
     """Calculate diminishing returns scaling factor for buff effectiveness.
 
     Args:
@@ -70,9 +69,9 @@ def calculate_diminishing_returns(stat_name: str, current_value: Union[int, floa
         return 1.0  # No scaling for unconfigured stats
 
     config = DIMINISHING_RETURNS_CONFIG[stat_name]
-    threshold = config['threshold']
-    scaling_factor = config['scaling_factor']
-    base_offset = config['base_offset']
+    threshold = config["threshold"]
+    scaling_factor = config["scaling_factor"]
+    base_offset = config["base_offset"]
 
     # Calculate how far above the base offset we are
     effective_value = max(0, current_value - base_offset)
@@ -91,7 +90,7 @@ def calculate_diminishing_returns(stat_name: str, current_value: Union[int, floa
 
     # Calculate scaling: 1 / (scaling_factor ^ steps)
     try:
-        effectiveness = 1.0 / (scaling_factor ** steps)
+        effectiveness = 1.0 / (scaling_factor**steps)
         # Clamp to prevent numerical issues
         return max(1e-6, min(1.0, effectiveness))
     except (OverflowError, ZeroDivisionError):
@@ -134,7 +133,7 @@ class StatModifier:
         for name, multiplier in (self.multipliers or {}).items():
             if hasattr(self.stats, name):
                 # Get base stat value for calculation
-                if hasattr(self.stats, 'get_base_stat'):
+                if hasattr(self.stats, "get_base_stat"):
                     base_value = self.stats.get_base_stat(name)
                 else:
                     base_value = getattr(self.stats, name, 0)
@@ -158,7 +157,7 @@ class StatModifier:
                 name=self.id,
                 stat_modifiers=stat_modifiers,
                 duration=self.turns if self.turns > 0 else -1,  # -1 for permanent
-                source=f"modifier_{self.name}"
+                source=f"modifier_{self.name}",
             )
 
             self.stats.add_effect(effect)
@@ -250,11 +249,18 @@ class DamageOverTime:
             dmg = source_type.on_party_dot_damage_taken(dmg, attacker, target)
 
         # Emit DoT tick event before applying damage - async for better performance
-        await BUS.emit_async("dot_tick", attacker, target, int(dmg), self.name, {
-            "dot_id": self.id,
-            "remaining_turns": self.turns - 1,
-            "original_damage": self.damage
-        })
+        await BUS.emit_async(
+            "dot_tick",
+            attacker,
+            target,
+            int(dmg),
+            self.name,
+            {
+                "dot_id": self.id,
+                "remaining_turns": self.turns - 1,
+                "original_damage": self.damage,
+            },
+        )
 
         # Check if this DOT will kill the target
         target_hp_before = target.hp
@@ -262,11 +268,14 @@ class DamageOverTime:
 
         # If target died from this DOT, emit a DOT kill event - async for better performance
         if target_hp_before > 0 and target.hp <= 0:
-            await BUS.emit_async("dot_kill", attacker, target, int(dmg), self.name, {
-                "dot_id": self.id,
-                "dot_name": self.name,
-                "final_damage": int(dmg)
-            })
+            await BUS.emit_async(
+                "dot_kill",
+                attacker,
+                target,
+                int(dmg),
+                self.name,
+                {"dot_id": self.id, "dot_name": self.name, "final_damage": int(dmg)},
+            )
 
         self.turns -= 1
         return self.turns > 0
@@ -296,11 +305,18 @@ class HealingOverTime:
             heal = source_type.on_party_hot_heal_received(heal, healer, target)
 
         # Emit HoT tick event before applying healing - async for better performance
-        await BUS.emit_async("hot_tick", healer, target, int(heal), self.name, {
-            "hot_id": self.id,
-            "remaining_turns": self.turns - 1,
-            "original_healing": self.healing
-        })
+        await BUS.emit_async(
+            "hot_tick",
+            healer,
+            target,
+            int(heal),
+            self.name,
+            {
+                "hot_id": self.id,
+                "remaining_turns": self.turns - 1,
+                "original_healing": self.healing,
+            },
+        )
 
         await target.apply_healing(int(heal), healer=healer)
         self.turns -= 1
@@ -343,13 +359,18 @@ class EffectManager:
         self.stats.dots.append(effect.id)
 
         # Emit effect applied event - batched for performance
-        BUS.emit_batched("effect_applied", effect.name, self.stats, {
-            "effect_type": "dot",
-            "effect_id": effect.id,
-            "damage": effect.damage,
-            "turns": effect.turns,
-            "current_stacks": len([d for d in self.dots if d.id == effect.id])
-        })
+        BUS.emit_batched(
+            "effect_applied",
+            effect.name,
+            self.stats,
+            {
+                "effect_type": "dot",
+                "effect_id": effect.id,
+                "damage": effect.damage,
+                "turns": effect.turns,
+                "current_stacks": len([d for d in self.dots if d.id == effect.id]),
+            },
+        )
 
     def add_hot(self, effect: HealingOverTime) -> None:
         """Attach a HoT instance to the tracked stats.
@@ -367,13 +388,18 @@ class EffectManager:
         self.stats.hots.append(effect.id)
 
         # Emit effect applied event - batched for performance
-        BUS.emit_batched("effect_applied", effect.name, self.stats, {
-            "effect_type": "hot",
-            "effect_id": effect.id,
-            "healing": effect.healing,
-            "turns": effect.turns,
-            "current_stacks": len([h for h in self.hots if h.id == effect.id])
-        })
+        BUS.emit_batched(
+            "effect_applied",
+            effect.name,
+            self.stats,
+            {
+                "effect_type": "hot",
+                "effect_id": effect.id,
+                "healing": effect.healing,
+                "turns": effect.turns,
+                "current_stacks": len([h for h in self.hots if h.id == effect.id]),
+            },
+        )
 
     def add_modifier(self, effect: StatModifier) -> None:
         """Attach a stat modifier to the tracked stats."""
@@ -383,13 +409,18 @@ class EffectManager:
         self.stats.mods.append(effect.id)
 
         # Emit effect applied event - batched for performance
-        BUS.emit_batched("effect_applied", effect.name, self.stats, {
-            "effect_type": "stat_modifier",
-            "effect_id": effect.id,
-            "turns": effect.turns,
-            "deltas": effect.deltas,
-            "multipliers": effect.multipliers
-        })
+        BUS.emit_batched(
+            "effect_applied",
+            effect.name,
+            self.stats,
+            {
+                "effect_type": "stat_modifier",
+                "effect_id": effect.id,
+                "turns": effect.turns,
+                "deltas": effect.deltas,
+                "multipliers": effect.multipliers,
+            },
+        )
 
     def maybe_inflict_dot(
         self, attacker: Stats, damage: int, turns: Optional[int] = None
@@ -438,23 +469,33 @@ class EffectManager:
 
             # Batch logging for performance when many effects are present
             if len(collection) > 10:
-                effect_type = "HoT" if (collection and isinstance(collection[0], HealingOverTime)) else "DoT"
+                effect_type = (
+                    "HoT"
+                    if (collection and isinstance(collection[0], HealingOverTime))
+                    else "DoT"
+                )
                 color = "green" if effect_type == "HoT" else "light_red"
-                self._console.log(f"[{color}]{self.stats.id} processing {len(collection)} {effect_type} effects[/]")
+                self._console.log(
+                    f"[{color}]{self.stats.id} processing {len(collection)} {effect_type} effects[/]"
+                )
 
             # Process effects in parallel for better async performance when many are present
             if len(collection) > 20:
                 # Parallel processing for large collections
                 async def tick_effect(eff):
                     if len(collection) <= 10:
-                        color = "green" if isinstance(eff, HealingOverTime) else "light_red"
-                        self._console.log(f"[{color}]{self.stats.id} {eff.name} tick[/]")
+                        color = (
+                            "green" if isinstance(eff, HealingOverTime) else "light_red"
+                        )
+                        self._console.log(
+                            f"[{color}]{self.stats.id} {eff.name} tick[/]"
+                        )
                     return await eff.tick(self.stats), eff
 
                 # Process in batches to avoid overwhelming the event loop
                 batch_size = 50
                 for i in range(0, len(collection), batch_size):
-                    batch = collection[i:i + batch_size]
+                    batch = collection[i : i + batch_size]
                     results = await asyncio.gather(*[tick_effect(eff) for eff in batch])
                     for still_active, eff in results:
                         if not still_active:
@@ -467,8 +508,12 @@ class EffectManager:
                 for eff in collection:
                     # Only log individual effects if there are few of them
                     if len(collection) <= 10:
-                        color = "green" if isinstance(eff, HealingOverTime) else "light_red"
-                        self._console.log(f"[{color}]{self.stats.id} {eff.name} tick[/]")
+                        color = (
+                            "green" if isinstance(eff, HealingOverTime) else "light_red"
+                        )
+                        self._console.log(
+                            f"[{color}]{self.stats.id} {eff.name} tick[/]"
+                        )
                     if not await eff.tick(self.stats):
                         expired.append(eff)
                     # Early termination: if target dies, stop processing remaining effects
@@ -478,11 +523,19 @@ class EffectManager:
             for eff in expired:
                 # Emit effect expired event - async for better performance
                 from autofighter.stats import BUS
-                await BUS.emit_async("effect_expired", eff.name, self.stats, {
-                    "effect_type": "hot" if isinstance(eff, HealingOverTime) else "dot",
-                    "effect_id": eff.id,
-                    "expired_naturally": True
-                })
+
+                await BUS.emit_async(
+                    "effect_expired",
+                    eff.name,
+                    self.stats,
+                    {
+                        "effect_type": (
+                            "hot" if isinstance(eff, HealingOverTime) else "dot"
+                        ),
+                        "effect_id": eff.id,
+                        "expired_naturally": True,
+                    },
+                )
 
                 collection.remove(eff)
                 if eff.id in names:
@@ -493,7 +546,9 @@ class EffectManager:
 
         # Batch logging for performance when many stat modifiers are present
         if len(self.mods) > 10:
-            self._console.log(f"[yellow]{self.stats.id} processing {len(self.mods)} stat modifiers[/]")
+            self._console.log(
+                f"[yellow]{self.stats.id} processing {len(self.mods)} stat modifiers[/]"
+            )
 
         # Choose processing strategy based on number of modifiers
         if len(self.mods) > 15:
@@ -506,7 +561,7 @@ class EffectManager:
             # Process in batches to avoid overwhelming the event loop
             batch_size = 30
             for i in range(0, len(self.mods), batch_size):
-                batch = self.mods[i:i + batch_size]
+                batch = self.mods[i : i + batch_size]
                 results = await asyncio.gather(*[tick_modifier(mod) for mod in batch])
                 for still_active, mod in results:
                     if not still_active:
@@ -529,11 +584,17 @@ class EffectManager:
         for mod in expired_mods:
             # Emit effect expired event for stat modifiers - async for better performance
             from autofighter.stats import BUS
-            await BUS.emit_async("effect_expired", mod.name, self.stats, {
-                "effect_type": "stat_modifier",
-                "effect_id": mod.id,
-                "expired_naturally": True
-            })
+
+            await BUS.emit_async(
+                "effect_expired",
+                mod.name,
+                self.stats,
+                {
+                    "effect_type": "stat_modifier",
+                    "effect_id": mod.id,
+                    "expired_naturally": True,
+                },
+            )
 
             self.mods.remove(mod)
             if mod.id in self.stats.mods:
@@ -547,7 +608,7 @@ class EffectManager:
         Enhanced passive processing with parallelization when beneficial.
         Integrates passive ability processing into the effect manager for better performance.
         """
-        if not hasattr(self.stats, 'passives') or not self.stats.passives:
+        if not hasattr(self.stats, "passives") or not self.stats.passives:
             return
 
         from collections import Counter
@@ -565,8 +626,12 @@ class EffectManager:
             if cls is None:
                 continue
             # Check if passive has any tick-related methods
-            if hasattr(cls, 'on_turn_end') or hasattr(cls, 'tick') or getattr(cls, 'trigger', None) == 'turn_end':
-                stacks = min(count, getattr(cls, 'max_stacks', count))
+            if (
+                hasattr(cls, "on_turn_end")
+                or hasattr(cls, "tick")
+                or getattr(cls, "trigger", None) == "turn_end"
+            ):
+                stacks = min(count, getattr(cls, "max_stacks", count))
                 for _ in range(stacks):
                     tick_passives.append((pid, cls))
 
@@ -575,7 +640,9 @@ class EffectManager:
 
         # Batch logging for performance when many passives need processing
         if len(tick_passives) > 10:
-            self._console.log(f"[blue]{self.stats.id} processing {len(tick_passives)} passive abilities[/]")
+            self._console.log(
+                f"[blue]{self.stats.id} processing {len(tick_passives)} passive abilities[/]"
+            )
 
         # Choose processing strategy based on number of passives
         if len(tick_passives) > 15:
@@ -587,13 +654,13 @@ class EffectManager:
 
                 passive_instance = cls()
                 # Try turn end processing first
-                if hasattr(passive_instance, 'on_turn_end'):
+                if hasattr(passive_instance, "on_turn_end"):
                     await passive_instance.on_turn_end(self.stats)
                 # Fall back to tick method if available
-                elif hasattr(passive_instance, 'tick'):
+                elif hasattr(passive_instance, "tick"):
                     await passive_instance.tick(self.stats)
                 # Fall back to general apply for turn_end triggers
-                elif getattr(cls, 'trigger', None) == 'turn_end':
+                elif getattr(cls, "trigger", None) == "turn_end":
                     try:
                         await passive_instance.apply(self.stats)
                     except TypeError:
@@ -605,8 +672,10 @@ class EffectManager:
             # Process in batches to avoid overwhelming the event loop
             batch_size = 20
             for i in range(0, len(tick_passives), batch_size):
-                batch = tick_passives[i:i + batch_size]
-                await asyncio.gather(*[process_passive(passive_data) for passive_data in batch])
+                batch = tick_passives[i : i + batch_size]
+                await asyncio.gather(
+                    *[process_passive(passive_data) for passive_data in batch]
+                )
                 # Early termination: if character dies, stop processing
                 if self.stats.hp <= 0:
                     break
@@ -618,13 +687,13 @@ class EffectManager:
 
                 passive_instance = cls()
                 # Try turn end processing first
-                if hasattr(passive_instance, 'on_turn_end'):
+                if hasattr(passive_instance, "on_turn_end"):
                     await passive_instance.on_turn_end(self.stats)
                 # Fall back to tick method if available
-                elif hasattr(passive_instance, 'tick'):
+                elif hasattr(passive_instance, "tick"):
                     await passive_instance.tick(self.stats)
                 # Fall back to general apply for turn_end triggers
-                elif getattr(cls, 'trigger', None) == 'turn_end':
+                elif getattr(cls, "trigger", None) == "turn_end":
                     try:
                         await passive_instance.apply(self.stats)
                     except TypeError:

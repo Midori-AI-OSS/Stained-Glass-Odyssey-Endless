@@ -31,7 +31,7 @@ def test_stat_effects():
     attack_effect = StatEffect(
         name="weapon_boost",
         stat_modifiers={"atk": 50, "defense": -10},
-        source="test_weapon"
+        source="test_weapon",
     )
     stats.add_effect(attack_effect)
 
@@ -55,7 +55,7 @@ def test_effect_removal():
     effect = StatEffect(
         name="temporary_boost",
         stat_modifiers={"atk": 100, "defense": 50},
-        source="test_card"
+        source="test_card",
     )
     stats.add_effect(effect)
 
@@ -78,16 +78,8 @@ def test_multiple_effects():
     original_atk = stats.atk
 
     # Add multiple effects
-    effect1 = StatEffect(
-        name="effect1",
-        stat_modifiers={"atk": 20},
-        source="source1"
-    )
-    effect2 = StatEffect(
-        name="effect2",
-        stat_modifiers={"atk": 30},
-        source="source2"
-    )
+    effect1 = StatEffect(name="effect1", stat_modifiers={"atk": 20}, source="source1")
+    effect2 = StatEffect(name="effect2", stat_modifiers={"atk": 30}, source="source2")
 
     stats.add_effect(effect1)
     stats.add_effect(effect2)
@@ -104,18 +96,14 @@ def test_effect_replacement():
 
     # Add first effect
     effect1 = StatEffect(
-        name="weapon_damage",
-        stat_modifiers={"atk": 20},
-        source="weapon"
+        name="weapon_damage", stat_modifiers={"atk": 20}, source="weapon"
     )
     stats.add_effect(effect1)
     assert stats.atk == original_atk + 20
 
     # Add effect with same name but different value
     effect2 = StatEffect(
-        name="weapon_damage",
-        stat_modifiers={"atk": 50},
-        source="weapon"
+        name="weapon_damage", stat_modifiers={"atk": 50}, source="weapon"
     )
     stats.add_effect(effect2)
 
@@ -156,10 +144,7 @@ def test_temporary_effects():
 
     # Add temporary effect
     temp_effect = StatEffect(
-        name="temp_boost",
-        stat_modifiers={"atk": 25},
-        duration=2,
-        source="buff"
+        name="temp_boost", stat_modifiers={"atk": 25}, duration=2, source="buff"
     )
     stats.add_effect(temp_effect)
     assert stats.atk == original_atk + 25
@@ -186,4 +171,3 @@ def test_base_stat_modification():
     # Both base and runtime should change
     assert stats.get_base_stat("atk") == original_base_atk + 10
     assert stats.atk == original_runtime_atk + 10
-

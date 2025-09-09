@@ -9,7 +9,9 @@ from plugins.damage_types import ALL_DAMAGE_TYPES
 
 @pytest.mark.asyncio
 async def test_rdr_scales_relic_drop(monkeypatch):
-    node = MapNode(room_id=1, room_type="battle-normal", floor=1, index=1, loop=1, pressure=0)
+    node = MapNode(
+        room_id=1, room_type="battle-normal", floor=1, index=1, loop=1, pressure=0
+    )
     room = rooms_module.BattleRoom(node)
     member = Stats()
     member.id = "p1"
@@ -19,7 +21,10 @@ async def test_rdr_scales_relic_drop(monkeypatch):
     monkeypatch.setattr(
         rooms_module,
         "relic_choices",
-        lambda *a, **k: [type("R", (), {"id": "r", "name": "R", "stars": k.get("stars", 1)})() for _ in range(3)],
+        lambda *a, **k: [
+            type("R", (), {"id": "r", "name": "R", "stars": k.get("stars", 1)})()
+            for _ in range(3)
+        ],
     )
     monkeypatch.setattr(rooms_module.random, "random", lambda: 0.2)
     result_low = await room.resolve(low, {})
@@ -30,7 +35,9 @@ async def test_rdr_scales_relic_drop(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_rdr_scales_items_and_tickets(monkeypatch):
-    node = MapNode(room_id=1, room_type="battle-normal", floor=1, index=1, loop=1, pressure=0)
+    node = MapNode(
+        room_id=1, room_type="battle-normal", floor=1, index=1, loop=1, pressure=0
+    )
     room = rooms_module.BattleRoom(node)
     member = Stats()
     member.id = "p1"
@@ -53,7 +60,9 @@ async def test_rdr_scales_items_and_tickets(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_low_rdr_still_drops_item(monkeypatch):
-    node = MapNode(room_id=1, room_type="battle-normal", floor=1, index=1, loop=1, pressure=0)
+    node = MapNode(
+        room_id=1, room_type="battle-normal", floor=1, index=1, loop=1, pressure=0
+    )
     room = rooms_module.BattleRoom(node)
     member = Stats()
     member.id = "p1"
@@ -71,7 +80,9 @@ async def test_low_rdr_still_drops_item(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_rdr_buffs_relic_star_odds(monkeypatch):
-    node = MapNode(room_id=1, room_type="battle-normal", floor=1, index=1, loop=1, pressure=0)
+    node = MapNode(
+        room_id=1, room_type="battle-normal", floor=1, index=1, loop=1, pressure=0
+    )
     room = rooms_module.BattleRoom(node)
     member = Stats()
     member.id = "p1"
@@ -83,7 +94,9 @@ async def test_rdr_buffs_relic_star_odds(monkeypatch):
     monkeypatch.setattr(
         rooms_module,
         "relic_choices",
-        lambda *a, **k: [type("R", (), {"id": "r", "name": "R", "stars": k.get("stars", 1)})()],
+        lambda *a, **k: [
+            type("R", (), {"id": "r", "name": "R", "stars": k.get("stars", 1)})()
+        ],
     )
     monkeypatch.setattr(rooms_module.random, "random", lambda: 0.0)
     result_low = await room.resolve(low, {})
@@ -97,7 +110,9 @@ async def test_rdr_buffs_relic_star_odds(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_rdr_buffs_card_star_odds(monkeypatch):
-    node = MapNode(room_id=1, room_type="battle-boss-floor", floor=1, index=1, loop=1, pressure=0)
+    node = MapNode(
+        room_id=1, room_type="battle-boss-floor", floor=1, index=1, loop=1, pressure=0
+    )
     room = rooms_module.BossRoom(node)
     member = Stats()
     member.id = "p1"
@@ -108,7 +123,9 @@ async def test_rdr_buffs_card_star_odds(monkeypatch):
     monkeypatch.setattr(
         rooms_module,
         "card_choices",
-        lambda party, stars: [type("C", (), {"id": "c", "name": "C", "stars": stars})()],
+        lambda party, stars: [
+            type("C", (), {"id": "c", "name": "C", "stars": stars})()
+        ],
     )
     monkeypatch.setattr(rooms_module.random, "random", lambda: 0.0)
     result_low = await room.resolve(low, {})
@@ -122,7 +139,9 @@ async def test_rdr_buffs_card_star_odds(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_rdr_scales_floor_boss_items_same_star(monkeypatch):
-    node = MapNode(room_id=1, room_type="battle-boss-floor", floor=1, index=1, loop=1, pressure=0)
+    node = MapNode(
+        room_id=1, room_type="battle-boss-floor", floor=1, index=1, loop=1, pressure=0
+    )
     room = rooms_module.BattleRoom(node)
     member = Stats()
     member.id = "p1"
@@ -137,4 +156,6 @@ async def test_rdr_scales_floor_boss_items_same_star(monkeypatch):
     low_upgrades = [i for i in result_low["loot"]["items"] if i["id"] != "ticket"]
     high_upgrades = [i for i in result_high["loot"]["items"] if i["id"] != "ticket"]
     assert len(high_upgrades) > len(low_upgrades)
-    assert {i["stars"] for i in low_upgrades} == {i["stars"] for i in high_upgrades} == {3}
+    assert (
+        {i["stars"] for i in low_upgrades} == {i["stars"] for i in high_upgrades} == {3}
+    )

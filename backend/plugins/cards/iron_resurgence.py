@@ -12,7 +12,9 @@ class IronResurgence(CardBase):
     id: str = "iron_resurgence"
     name: str = "Iron Resurgence"
     stars: int = 3
-    effects: dict[str, float] = field(default_factory=lambda: {"defense": 2.0, "max_hp": 2.0})
+    effects: dict[str, float] = field(
+        default_factory=lambda: {"defense": 2.0, "max_hp": 2.0}
+    )
     about: str = (
         "+200% DEF & +200% HP; first ally death revives at 10% HP, refreshing every 4 turns."
     )

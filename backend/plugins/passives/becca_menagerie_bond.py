@@ -14,6 +14,7 @@ if TYPE_CHECKING:
 @dataclass
 class BeccaMenagerieBond:
     """Becca's Menagerie Bond passive - jellyfish summoning and spirit bonuses."""
+
     plugin_type = "passive"
     id = "becca_menagerie_bond"
     name = "Menagerie Bond"
@@ -52,7 +53,9 @@ class BeccaMenagerieBond:
 
         if current_spirit_stacks != applied_stacks:
             spirit_attack_bonus = int(target._base_atk * 0.05 * current_spirit_stacks)
-            spirit_defense_bonus = int(target._base_defense * 0.05 * current_spirit_stacks)
+            spirit_defense_bonus = int(
+                target._base_defense * 0.05 * current_spirit_stacks
+            )
 
             spirit_effect = StatEffect(
                 name=f"{self.id}_spirit_bonuses",
@@ -82,8 +85,12 @@ class BeccaMenagerieBond:
         else:
             new_ids = current_ids - buffed_ids
             if new_ids:
-                spirit_attack_bonus = int(target._base_atk * 0.05 * current_spirit_stacks)
-                spirit_defense_bonus = int(target._base_defense * 0.05 * current_spirit_stacks)
+                spirit_attack_bonus = int(
+                    target._base_atk * 0.05 * current_spirit_stacks
+                )
+                spirit_defense_bonus = int(
+                    target._base_defense * 0.05 * current_spirit_stacks
+                )
                 for summon in jellyfish_summons:
                     if id(summon) in new_ids:
                         pet_effect = StatEffect(
@@ -113,9 +120,11 @@ class BeccaMenagerieBond:
         party = kwargs.get("party")
         # Accept either a Party object or a raw members list for compatibility
         if party is not None and not hasattr(party, "members"):
+
             class _PartyShim:
                 def __init__(self, members):
                     self.members = members
+
             party = _PartyShim(party)
         try:
             await self.summon_jellyfish(target, party=party)
@@ -135,7 +144,7 @@ class BeccaMenagerieBond:
         participate in combat immediately.
         """
         entity_id = id(target)
-        target_id = getattr(target, 'id', str(id(target)))
+        target_id = getattr(target, "id", str(id(target)))
 
         # Initialize if not present
         if entity_id not in self._summon_cooldown:
@@ -158,9 +167,11 @@ class BeccaMenagerieBond:
         jellyfish_summons = [s for s in current_summons if s.summon_source == self.id]
 
         # If we have viable jellyfish and we're not changing type, skip summoning
-        if (not decision['should_resummon'] and
-            jellyfish_type == self._last_summon.get(entity_id) and
-            jellyfish_summons):
+        if (
+            not decision["should_resummon"]
+            and jellyfish_type == self._last_summon.get(entity_id)
+            and jellyfish_summons
+        ):
             return False
 
         # Pay HP cost using proper damage system
@@ -169,6 +180,7 @@ class BeccaMenagerieBond:
         # Select jellyfish type if not specified
         if jellyfish_type is None:
             import random
+
             jellyfish_type = random.choice(self.JELLYFISH_TYPES)
 
         # If changing jellyfish type, previous one becomes a spirit
@@ -217,6 +229,7 @@ class BeccaMenagerieBond:
             return load_damage_type(damage_type_name)
         except Exception:
             from plugins.damage_types.generic import Generic
+
             return Generic()
 
     async def _create_spirit(self, target: "Stats") -> None:
@@ -226,7 +239,7 @@ class BeccaMenagerieBond:
 
     async def on_summon_defeat(self, target: "Stats") -> None:
         """Handle summon defeat - still creates a spirit."""
-        target_id = getattr(target, 'id', str(id(target)))
+        target_id = getattr(target, "id", str(id(target)))
 
         # Check if any of our jellyfish were defeated
         current_summons = SummonManager.get_summons(target_id)
@@ -238,7 +251,7 @@ class BeccaMenagerieBond:
     @classmethod
     def get_active_summon_type(cls, target: "Stats") -> str:
         """Get current active summon type."""
-        target_id = getattr(target, 'id', str(id(target)))
+        target_id = getattr(target, "id", str(id(target)))
         summons = SummonManager.get_summons(target_id)
         jellyfish_summons = [s for s in summons if s.summon_source == cls.id]
 

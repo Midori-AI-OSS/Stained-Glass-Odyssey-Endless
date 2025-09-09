@@ -29,9 +29,7 @@ async def test_summons_cannot_create_more_summons(monkeypatch):
 
     # Create a summon from the original summoner
     first_summon = SummonManager.create_summon(
-        summoner=original_summoner,
-        summon_type="first_summon",
-        source="test_source"
+        summoner=original_summoner, summon_type="first_summon", source="test_source"
     )
 
     assert first_summon is not None
@@ -41,7 +39,7 @@ async def test_summons_cannot_create_more_summons(monkeypatch):
     second_summon = SummonManager.create_summon(
         summoner=first_summon,  # Summon trying to create another summon
         summon_type="second_summon",
-        source="test_source"
+        source="test_source",
     )
 
     # This should return None due to safeguard
@@ -70,15 +68,11 @@ async def test_regular_entities_can_still_create_summons(monkeypatch):
 
     # Both should be able to create summons
     summon1 = SummonManager.create_summon(
-        summoner=player1,
-        summon_type="summon1",
-        source="test_source"
+        summoner=player1, summon_type="summon1", source="test_source"
     )
 
     summon2 = SummonManager.create_summon(
-        summoner=player2,
-        summon_type="summon2",
-        source="test_source"
+        summoner=player2, summon_type="summon2", source="test_source"
     )
 
     assert summon1 is not None
@@ -104,9 +98,7 @@ async def test_summon_identification_works(monkeypatch):
     player.id = "player"
 
     summon = SummonManager.create_summon(
-        summoner=player,
-        summon_type="test_summon",
-        source="test_source"
+        summoner=player, summon_type="test_summon", source="test_source"
     )
 
     # Test identification
@@ -114,9 +106,9 @@ async def test_summon_identification_works(monkeypatch):
     assert isinstance(summon, Summon)
 
     # Test that summon has expected summon properties
-    assert hasattr(summon, 'summoner_id')
-    assert hasattr(summon, 'summon_type')
-    assert hasattr(summon, 'summon_source')
+    assert hasattr(summon, "summoner_id")
+    assert hasattr(summon, "summon_type")
+    assert hasattr(summon, "summon_source")
     assert summon.summoner_id == "player"
     assert summon.summon_type == "test_summon"
     assert summon.summon_source == "test_source"
@@ -126,6 +118,7 @@ async def test_summon_identification_works(monkeypatch):
 async def test_summon_safeguard_logging(monkeypatch, caplog):
     """Test that the safeguard logs appropriate warning when blocking summon creation."""
     import logging
+
     monkeypatch.setattr(torch_checker, "is_torch_available", lambda: False)
 
     # Set logging level to capture warnings
@@ -139,23 +132,22 @@ async def test_summon_safeguard_logging(monkeypatch, caplog):
     player.id = "test_player"
 
     first_summon = SummonManager.create_summon(
-        summoner=player,
-        summon_type="first_summon",
-        source="test_source"
+        summoner=player, summon_type="first_summon", source="test_source"
     )
 
     assert first_summon is not None
 
     # Try to create summon from summon (should be blocked and logged)
     second_summon = SummonManager.create_summon(
-        summoner=first_summon,
-        summon_type="second_summon",
-        source="test_source"
+        summoner=first_summon, summon_type="second_summon", source="test_source"
     )
 
     # Verify blocking worked
     assert second_summon is None
 
     # Verify warning was logged
-    assert any("attempted to create another summon - blocked for safety" in record.message
-              for record in caplog.records if record.levelno >= logging.WARNING)
+    assert any(
+        "attempted to create another summon - blocked for safety" in record.message
+        for record in caplog.records
+        if record.levelno >= logging.WARNING
+    )

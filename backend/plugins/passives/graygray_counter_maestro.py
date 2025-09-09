@@ -12,11 +12,14 @@ if TYPE_CHECKING:
 @dataclass
 class GraygrayCounterMaestro:
     """Graygray's Counter Maestro passive - retaliates after every hit taken."""
+
     plugin_type = "passive"
     id = "graygray_counter_maestro"
     name = "Counter Maestro"
     trigger = "damage_taken"  # Triggers when Graygray takes damage
-    max_stacks = 50  # Soft cap - show counter attack stacks with diminished returns past 50
+    max_stacks = (
+        50  # Soft cap - show counter attack stacks with diminished returns past 50
+    )
     stack_display = "number"
 
     # Track successful counter attacks for +5% attack stacks
@@ -80,7 +83,9 @@ class GraygrayCounterMaestro:
         if attacker is not None:
             await self.counter_attack(target, attacker, damage)
 
-    async def counter_attack(self, defender: "Stats", attacker: "Stats", damage_received: int) -> None:
+    async def counter_attack(
+        self, defender: "Stats", attacker: "Stats", damage_received: int
+    ) -> None:
         """Perform the actual counter attack."""
         if attacker is None:
             return
@@ -93,7 +98,7 @@ class GraygrayCounterMaestro:
             counter_damage,
             attacker=defender,
             trigger_on_hit=False,  # Avoid recursive triggers
-            action_name="Counter Attack"
+            action_name="Counter Attack",
         )
 
     @classmethod

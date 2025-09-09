@@ -9,6 +9,7 @@ from plugins.damage_types._base import DamageTypeBase
 @dataclass
 class Ice(DamageTypeBase):
     """Control element that chills foes and slows their actions."""
+
     id: str = "Ice"
     weakness: str = "Fire"
     color: tuple[int, int, int] = (0, 255, 255)

@@ -1,4 +1,5 @@
 """Integration test for dark resonance buff fix to verify async bus performance."""
+
 import asyncio
 
 import pytest
@@ -47,8 +48,8 @@ async def test_dark_resonance_buff_identifiable_in_async_context():
         assert len(mods) == 1  # One modifier created
         mod = mods[0]
         assert mod.name == "Dark Resonance"  # Proper name instead of generic "buff"
-        assert mod.id == "dark_resonance"    # Specific ID for tracking
-        assert mod.turns == 9999             # Long duration as expected
+        assert mod.id == "dark_resonance"  # Specific ID for tracking
+        assert mod.turns == 9999  # Long duration as expected
 
     # Verify that each attacker has a uniquely identifiable buff
     all_mod_names = []
@@ -80,11 +81,7 @@ def test_dark_resonance_unique_identification():
 
     # Create new-style named buff (what the code now creates)
     new_style_buff = create_stat_buff(
-        stats,
-        name="Dark Resonance",
-        id="dark_resonance",
-        turns=9999,
-        atk_mult=1.05
+        stats, name="Dark Resonance", id="dark_resonance", turns=9999, atk_mult=1.05
     )
 
     # The old style would have name="buff", id="buff"

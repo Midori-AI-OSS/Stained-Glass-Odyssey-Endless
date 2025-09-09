@@ -19,7 +19,9 @@ class GachaSystem:
 
     def current_rate(self) -> float:
         if self.pity_counter >= self.config.pity_start:
-            bonus = (self.pity_counter - self.config.pity_start + 1) * self.config.pity_increment
+            bonus = (
+                self.pity_counter - self.config.pity_start + 1
+            ) * self.config.pity_increment
             return min(1.0, self.config.base_rate + bonus)
         return self.config.base_rate
 

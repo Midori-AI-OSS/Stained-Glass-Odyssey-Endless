@@ -11,7 +11,8 @@ def app_with_db(tmp_path, monkeypatch):
     monkeypatch.setenv("AF_DB_KEY", "testkey")
     monkeypatch.syspath_prepend(Path(__file__).resolve().parents[1])
     spec = importlib.util.spec_from_file_location(
-        "app", Path(__file__).resolve().parents[1] / "app.py",
+        "app",
+        Path(__file__).resolve().parents[1] / "app.py",
     )
     app_module = importlib.util.module_from_spec(spec)
     assert spec.loader is not None
@@ -24,9 +25,7 @@ def app_with_db(tmp_path, monkeypatch):
 async def test_room_action_echoes_request(app_with_db):
     app, _ = app_with_db
     client = app.test_client()
-    response = await client.post(
-        "/rooms/test_run/123/action", json={"action": "poke"}
-    )
+    response = await client.post("/rooms/test_run/123/action", json={"action": "poke"})
     assert response.status_code == 200
     data = await response.get_json()
     assert data == {"run_id": "test_run", "room_id": "123", "action": "poke"}

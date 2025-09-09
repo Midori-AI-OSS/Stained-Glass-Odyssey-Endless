@@ -60,10 +60,10 @@ async def test_multi_foe_battle(monkeypatch) -> None:
 @pytest.mark.parametrize(
     "pressure,expected_min,expected_max",
     [
-        (0, 0, 20),       # No pressure = only scaled defense
-        (1, 8, 15),       # pressure=1: base=10, range 8.2-15
-        (5, 41, 75),      # pressure=5: base=50, range 41-75 (matches user example)
-        (10, 82, 150),    # pressure=10: base=100, range 82-150
+        (0, 0, 20),  # No pressure = only scaled defense
+        (1, 8, 15),  # pressure=1: base=10, range 8.2-15
+        (5, 41, 75),  # pressure=5: base=50, range 41-75 (matches user example)
+        (10, 82, 150),  # pressure=10: base=100, range 82-150
     ],
 )
 def test_pressure_defense_scaling(pressure, expected_min, expected_max) -> None:
@@ -157,7 +157,7 @@ def test_pressure_defense_multiple_runs() -> None:
 
     # For pressure=5, should be in the user's expected range 41-75
     assert min_defense >= 35  # Allow some tolerance
-    assert max_defense <= 80   # Allow some tolerance
+    assert max_defense <= 80  # Allow some tolerance
 
     # Most values should be in the expected range
     in_range = sum(1 for d in defense_values if 40 <= d <= 76)

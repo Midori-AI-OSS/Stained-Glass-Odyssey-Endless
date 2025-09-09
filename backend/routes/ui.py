@@ -28,12 +28,11 @@ from services.run_service import wipe_save
 bp = Blueprint("ui", __name__)
 
 
-def create_error_response(message: str, status_code: int = 400, include_traceback: bool = False) -> tuple[str, int, dict[str, Any]]:
+def create_error_response(
+    message: str, status_code: int = 400, include_traceback: bool = False
+) -> tuple[str, int, dict[str, Any]]:
     """Create a consistent error response format."""
-    error_data = {
-        "error": message,
-        "status": "error"
-    }
+    error_data = {"error": message, "status": "error"}
 
     if include_traceback:
         error_data["traceback"] = traceback.format_exc()
@@ -41,7 +40,9 @@ def create_error_response(message: str, status_code: int = 400, include_tracebac
     return jsonify(error_data), status_code
 
 
-def validate_action_params(action: str, params: dict, required_fields: list[str]) -> str | None:
+def validate_action_params(
+    action: str, params: dict, required_fields: list[str]
+) -> str | None:
     """Validate that required parameters are present for an action.
 
     Returns None if validation passes, or error message if validation fails.
@@ -139,23 +140,27 @@ async def get_ui_state() -> tuple[str, int, dict[str, Any]]:
     run_id = get_default_active_run()
 
     if not run_id:
-        return jsonify({
-            "mode": "menu",
-            "active_run": None,
-            "game_state": None,
-            "available_actions": ["start_run"]
-        })
+        return jsonify(
+            {
+                "mode": "menu",
+                "active_run": None,
+                "game_state": None,
+                "available_actions": ["start_run"],
+            }
+        )
 
     try:
         # Load map and party data directly (simpler than reusing get_map)
         state, rooms = await asyncio.to_thread(load_map, run_id)
         if not state:
-            return jsonify({
-                "mode": "menu",
-                "active_run": None,
-                "game_state": None,
-                "available_actions": ["start_run"]
-            })
+            return jsonify(
+                {
+                    "mode": "menu",
+                    "active_run": None,
+                    "game_state": None,
+                    "available_actions": ["start_run"],
+                }
+            )
 
         def get_party_data():
             with get_save_manager().connection() as conn:
@@ -181,10 +186,15 @@ async def get_ui_state() -> tuple[str, int, dict[str, Any]]:
 
             # Check if there's an active battle snapshot
             snap = battle_snapshots.get(run_id)
-            if snap is not None and current_room_type in {'battle-weak', 'battle-normal', 'battle-boss-floor'}:
+            if snap is not None and current_room_type in {
+                "battle-weak",
+                "battle-normal",
+                "battle-boss-floor",
+            }:
                 current_room_data = snap
             elif (
-                current_room_type in {'battle-weak', 'battle-normal', 'battle-boss-floor'}
+                current_room_type
+                in {"battle-weak", "battle-normal", "battle-boss-floor"}
                 and not state.get("awaiting_next")
                 and not state.get("awaiting_card")
                 and not state.get("awaiting_relic")
@@ -203,11 +213,15 @@ async def get_ui_state() -> tuple[str, int, dict[str, Any]]:
             elif state.get("awaiting_next"):
                 # Provide basic state when awaiting next room
                 current_room_data = {
-                    "result": current_room_type.replace('-', '_') if current_room_type else "unknown",
+                    "result": (
+                        current_room_type.replace("-", "_")
+                        if current_room_type
+                        else "unknown"
+                    ),
                     "awaiting_next": True,
                     "current_index": current_index,
                     "current_room": current_room_type,
-                    "next_room": next_room_type
+                    "next_room": next_room_type,
                 }
 
         game_state = {
@@ -222,29 +236,33 @@ async def get_ui_state() -> tuple[str, int, dict[str, Any]]:
                 "awaiting_relic": state.get("awaiting_relic", False),
                 "awaiting_loot": state.get("awaiting_loot", False),
                 "reward_progression": state.get("reward_progression"),
-                "room_data": current_room_data
-            }
+                "room_data": current_room_data,
+            },
         }
 
         # Determine UI mode based on game state
         mode = determine_ui_mode(game_state)
 
-        return jsonify({
-            "mode": mode,
-            "active_run": run_id,
-            "game_state": game_state,
-            "available_actions": get_available_actions(mode, game_state)
-        })
+        return jsonify(
+            {
+                "mode": mode,
+                "active_run": run_id,
+                "game_state": game_state,
+                "available_actions": get_available_actions(mode, game_state),
+            }
+        )
 
     except Exception as e:
         # If there's an error, fall back to menu mode
-        return jsonify({
-            "mode": "menu",
-            "active_run": None,
-            "game_state": None,
-            "available_actions": ["start_run"],
-            "error": str(e)
-        })
+        return jsonify(
+            {
+                "mode": "menu",
+                "active_run": None,
+                "game_state": None,
+                "available_actions": ["start_run"],
+                "error": str(e),
+            }
+        )
 
 
 @bp.post("/ui/action")
@@ -302,7 +320,9 @@ async def handle_ui_action() -> tuple[str, int, dict[str, Any]]:
                 or state.get("awaiting_relic")
                 or state.get("awaiting_loot")
             ):
-                return create_error_response("Cannot advance room while rewards are pending", 400)
+                return create_error_response(
+                    "Cannot advance room while rewards are pending", 400
+                )
 
             progression = state.get("reward_progression")
 
@@ -341,11 +361,17 @@ async def handle_ui_action() -> tuple[str, int, dict[str, Any]]:
                 await asyncio.to_thread(save_map, run_id, state)
 
                 # If we still have progression steps, return the updated state
-                if current_step != "battle_review" and progression and progression.get("current_step"):
-                    return jsonify({
-                        "progression_advanced": True,
-                        "current_step": progression["current_step"]
-                    })
+                if (
+                    current_step != "battle_review"
+                    and progression
+                    and progression.get("current_step")
+                ):
+                    return jsonify(
+                        {
+                            "progression_advanced": True,
+                            "current_step": progression["current_step"],
+                        }
+                    )
 
             try:
                 result = await advance_room(run_id)
@@ -373,7 +399,9 @@ async def handle_ui_action() -> tuple[str, int, dict[str, Any]]:
 
             relic_id = params.get("relic_id") or params.get("relic")
             if not relic_id:
-                return create_error_response("Missing required parameter: relic_id", 400)
+                return create_error_response(
+                    "Missing required parameter: relic_id", 400
+                )
 
             try:
                 result = await select_relic(run_id, relic_id)
@@ -385,7 +413,9 @@ async def handle_ui_action() -> tuple[str, int, dict[str, Any]]:
             return create_error_response(f"Unknown action: {action}", 400)
 
     except Exception as e:
-        return create_error_response(f"Action failed: {str(e)}", 500, include_traceback=True)
+        return create_error_response(
+            f"Action failed: {str(e)}", 500, include_traceback=True
+        )
 
 
 @bp.get("/battles/<int:index>/summary")
@@ -436,6 +466,7 @@ async def start_run_endpoint() -> tuple[str, int, dict[str, Any]]:
 @bp.delete("/run/<run_id>")
 async def end_run(run_id: str) -> tuple[str, int, dict[str, Any]]:
     """End a specific run by deleting it from the database."""
+
     def delete_run():
         with get_save_manager().connection() as conn:
             # Check if run exists
@@ -474,6 +505,7 @@ async def end_run(run_id: str) -> tuple[str, int, dict[str, Any]]:
 @bp.delete("/runs")
 async def end_all_runs() -> tuple[str, int, dict[str, Any]]:
     """End all runs by deleting them from the database."""
+
     def delete_all_runs():
         with get_save_manager().connection() as conn:
             # Get count of runs before deletion
@@ -500,10 +532,15 @@ async def end_all_runs() -> tuple[str, int, dict[str, Any]]:
         # Clean up all battle snapshots
         battle_snapshots.clear()
 
-        return jsonify({
-            "message": f"Ended {deleted_count} run(s) successfully",
-            "deleted_count": deleted_count
-        }), 200
+        return (
+            jsonify(
+                {
+                    "message": f"Ended {deleted_count} run(s) successfully",
+                    "deleted_count": deleted_count,
+                }
+            ),
+            200,
+        )
 
     except Exception as e:
         return jsonify({"error": f"Failed to end runs: {str(e)}"}), 500

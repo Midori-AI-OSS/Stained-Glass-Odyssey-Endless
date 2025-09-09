@@ -14,7 +14,9 @@ import sys
 import tempfile
 import time
 
-sys.path.insert(0, '/home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend')
+sys.path.insert(
+    0, "/home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend"
+)
 
 from autofighter.save_manager import SaveManager
 
@@ -23,7 +25,7 @@ async def test_sync_vs_async_db():
     """Test to show the difference between sync and async database operations."""
 
     # Create a temporary database for testing
-    with tempfile.NamedTemporaryFile(suffix='.db', delete=False) as f:
+    with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as f:
         db_path = Path(f.name)
 
     try:
@@ -87,7 +89,9 @@ async def test_sync_vs_async_db():
         await asyncio.gather(task1, task2)
         total_time = time.time() - start_time
 
-        print(f"Background task and DB operation completed in: {total_time:.2f} seconds")
+        print(
+            f"Background task and DB operation completed in: {total_time:.2f} seconds"
+        )
         print("✅ Event loop remained responsive during database operations!")
 
     finally:

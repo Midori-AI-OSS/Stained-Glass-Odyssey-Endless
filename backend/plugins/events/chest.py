@@ -11,7 +11,9 @@ class ChestEvent:
 
     @staticmethod
     def build(seed: int = 2) -> Event:
-        async def _effect(stats: Stats, items: dict[str, int], rng: random.Random) -> str:
+        async def _effect(
+            stats: Stats, items: dict[str, int], rng: random.Random
+        ) -> str:
             if rng.random() < 0.5:
                 items["Upgrade Stone"] = items.get("Upgrade Stone", 0) + 1
                 return "Inside you find an Upgrade Stone!"

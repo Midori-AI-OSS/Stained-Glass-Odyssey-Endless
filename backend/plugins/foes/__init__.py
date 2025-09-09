@@ -9,8 +9,7 @@ from ._base import FoeBase
 from .slime import Slime
 
 ADJ_CLASSES = [
-    getattr(adj_plugins, name)
-    for name in getattr(adj_plugins, "__all__", [])
+    getattr(adj_plugins, name) for name in getattr(adj_plugins, "__all__", [])
 ]
 
 
@@ -43,4 +42,3 @@ for name in getattr(player_plugins, "__all__", []):
 
 
 __all__ = ["Slime", *[cls.__name__ for cls in PLAYER_FOES.values()]]
-

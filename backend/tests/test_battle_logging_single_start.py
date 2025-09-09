@@ -16,7 +16,9 @@ async def test_battle_logging_single_start(tmp_path):
     end_run_logging()
     battle_logging._current_run_logger = RunLogger("test_run", base_logs_path=tmp_path)
     try:
-        node = MapNode(room_id=0, room_type="battle-normal", floor=1, index=1, loop=1, pressure=0)
+        node = MapNode(
+            room_id=0, room_type="battle-normal", floor=1, index=1, loop=1, pressure=0
+        )
         room = BattleRoom(node)
         player = Stats()
         player._base_max_hp = 10

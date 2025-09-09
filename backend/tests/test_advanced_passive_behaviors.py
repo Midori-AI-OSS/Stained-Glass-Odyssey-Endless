@@ -40,29 +40,33 @@ class TestAdvancedPassiveBehaviors:
         return foe
 
     @pytest.mark.asyncio
-    async def test_hit_landed_conditional_trigger(self, registry, party_member, party, target_foe):
+    async def test_hit_landed_conditional_trigger(
+        self, registry, party_member, party, target_foe
+    ):
         """Test that hit_landed passives trigger conditionally based on target HP."""
 
         # Test conditional trigger when target is below 50% HP
         await registry.trigger_hit_landed(
-            party_member,
-            target_foe,
-            damage=100,
-            action_type="attack",
-            party=party
+            party_member, target_foe, damage=100, action_type="attack", party=party
         )
 
         # Check that allies received the buff (excluding the acting member)
         for ally in party:
             if ally != party_member:
                 effects = ally.get_active_effects()
-                boost_effects = [e for e in effects if e.name == "advanced_combat_synergy_ally_atk_boost"]
+                boost_effects = [
+                    e
+                    for e in effects
+                    if e.name == "advanced_combat_synergy_ally_atk_boost"
+                ]
                 assert len(boost_effects) == 1
                 assert boost_effects[0].stat_modifiers["atk"] == 10
                 assert boost_effects[0].duration == 3
 
     @pytest.mark.asyncio
-    async def test_hit_landed_no_trigger_above_threshold(self, registry, party_member, party):
+    async def test_hit_landed_no_trigger_above_threshold(
+        self, registry, party_member, party
+    ):
         """Test that conditional trigger doesn't fire when target is above 50% HP."""
 
         healthy_foe = Stats()
@@ -71,18 +75,18 @@ class TestAdvancedPassiveBehaviors:
         healthy_foe.hp = 800  # Above 50% of 1000 max HP
 
         await registry.trigger_hit_landed(
-            party_member,
-            healthy_foe,
-            damage=100,
-            action_type="attack",
-            party=party
+            party_member, healthy_foe, damage=100, action_type="attack", party=party
         )
 
         # Check that no allies received buffs since condition wasn't met
         for ally in party:
             if ally != party_member:
                 effects = ally.get_active_effects()
-                boost_effects = [e for e in effects if e.name == "advanced_combat_synergy_ally_atk_boost"]
+                boost_effects = [
+                    e
+                    for e in effects
+                    if e.name == "advanced_combat_synergy_ally_atk_boost"
+                ]
                 assert len(boost_effects) == 0
 
     @pytest.mark.asyncio
@@ -103,7 +107,9 @@ class TestAdvancedPassiveBehaviors:
         await passive_instance.on_turn_start(turn_start_member, party=party)
 
         effects = turn_start_member.get_active_effects()
-        synergy_effects = [e for e in effects if e.name == "advanced_combat_synergy_synergy_damage"]
+        synergy_effects = [
+            e for e in effects if e.name == "advanced_combat_synergy_synergy_damage"
+        ]
         assert len(synergy_effects) == 1
         # Should be 3 allies * 5 = 15 bonus damage
         assert synergy_effects[0].stat_modifiers["atk"] == 15
@@ -114,18 +120,18 @@ class TestAdvancedPassiveBehaviors:
 
         small_party = [party_member]  # Only 1 ally (self)
 
-        await registry.trigger_turn_start(
-            party_member,
-            party=small_party,
-            turn=1
-        )
+        await registry.trigger_turn_start(party_member, party=small_party, turn=1)
 
         effects = party_member.get_active_effects()
-        synergy_effects = [e for e in effects if e.name == "advanced_combat_synergy_synergy_damage"]
+        synergy_effects = [
+            e for e in effects if e.name == "advanced_combat_synergy_synergy_damage"
+        ]
         assert len(synergy_effects) == 0
 
     @pytest.mark.asyncio
-    async def test_action_taken_stack_building(self, registry, party_member, party, target_foe):
+    async def test_action_taken_stack_building(
+        self, registry, party_member, party, target_foe
+    ):
         """Test that action_taken builds stacks and applies scaling effects."""
 
         # Create a member with action_taken behavior specifically
@@ -139,7 +145,9 @@ class TestAdvancedPassiveBehaviors:
 
         # Take multiple actions to build stacks
         for i in range(3):
-            await passive_instance.on_action_taken(action_member, hit_target=target_foe, party=party)
+            await passive_instance.on_action_taken(
+                action_member, hit_target=target_foe, party=party
+            )
 
             # Check that stacks increased by checking the actual class from registry
             stacks = passive_cls.get_stacks(action_member)
@@ -147,7 +155,11 @@ class TestAdvancedPassiveBehaviors:
 
             # Check that persistent effect updated
             effects = action_member.get_active_effects()
-            persistent_effects = [e for e in effects if e.name == "advanced_combat_synergy_persistent_buff"]
+            persistent_effects = [
+                e
+                for e in effects
+                if e.name == "advanced_combat_synergy_persistent_buff"
+            ]
             assert len(persistent_effects) == 1
 
             expected_atk = (i + 1) * 3
@@ -171,7 +183,9 @@ class TestAdvancedPassiveBehaviors:
 
         # Take more actions than max_stacks
         for _ in range(5):  # More than max_stacks of 3
-            await passive_instance.on_action_taken(limit_member, hit_target=target_foe, party=party)
+            await passive_instance.on_action_taken(
+                limit_member, hit_target=target_foe, party=party
+            )
 
         # Stacks should be capped at max_stacks, check using registry class
         stacks = passive_cls.get_stacks(limit_member)
@@ -188,10 +202,7 @@ class TestAdvancedPassiveBehaviors:
 
         # Should not raise error when called with enhanced context
         await registry.trigger(
-            "battle_start",
-            simple_member,
-            party=[simple_member],
-            foes=[]
+            "battle_start", simple_member, party=[simple_member], foes=[]
         )
 
         # Should have applied the simple effect

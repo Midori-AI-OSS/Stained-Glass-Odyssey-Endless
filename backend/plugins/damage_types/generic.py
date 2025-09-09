@@ -12,6 +12,7 @@ class Generic(DamageTypeBase):
     Serves as the baseline damage type focused on consistent damage without
     side effects.
     """
+
     id: str = "Generic"
     weakness: str = "none"
     color: tuple[int, int, int] = (255, 255, 255)
@@ -37,7 +38,9 @@ class Generic(DamageTypeBase):
         remainder = actor.atk % 64
         for i in range(64):
             dmg = base + (1 if i < remainder else 0)
-            await target.apply_damage(dmg, attacker=actor, action_name="Generic Ultimate")
+            await target.apply_damage(
+                dmg, attacker=actor, action_name="Generic Ultimate"
+            )
             await BUS.emit_async(
                 "hit_landed", actor, target, dmg, "attack", "generic_ultimate"
             )

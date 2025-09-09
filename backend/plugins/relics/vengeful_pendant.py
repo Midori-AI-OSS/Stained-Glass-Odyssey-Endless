@@ -23,13 +23,21 @@ class VengefulPendant(RelicBase):
             dmg = int(amount * 0.15)
 
             # Emit relic effect event for damage reflection
-            BUS.emit("relic_effect", "vengeful_pendant", target, "damage_reflection", dmg, {
-                "original_damage": amount,
-                "reflection_percentage": 15,
-                "reflected_to": getattr(attacker, 'id', str(attacker))
-            })
+            BUS.emit(
+                "relic_effect",
+                "vengeful_pendant",
+                target,
+                "damage_reflection",
+                dmg,
+                {
+                    "original_damage": amount,
+                    "reflection_percentage": 15,
+                    "reflected_to": getattr(attacker, "id", str(attacker)),
+                },
+            )
 
             safe_async_task(attacker.apply_damage(dmg, attacker=target))
+
         BUS.subscribe("damage_taken", _reflect)
 
     def describe(self, stacks: int) -> str:

@@ -37,10 +37,7 @@ async def test_summon_creation_basic(monkeypatch):
 
     # Create summon
     summon = Summon.create_from_summoner(
-        summoner=summoner,
-        summon_type="test",
-        source="test_source",
-        stat_multiplier=0.5
+        summoner=summoner, summon_type="test", source="test_source", stat_multiplier=0.5
     )
 
     # Verify stat inheritance
@@ -66,9 +63,7 @@ async def test_summon_manager_creation_and_tracking(monkeypatch):
 
     # Create summon via manager
     summon = SummonManager.create_summon(
-        summoner=summoner,
-        summon_type="test",
-        source="test_source"
+        summoner=summoner, summon_type="test", source="test_source"
     )
 
     assert summon is not None
@@ -92,19 +87,13 @@ async def test_summon_manager_limits(monkeypatch):
 
     # Create first summon (should succeed)
     summon1 = SummonManager.create_summon(
-        summoner=summoner,
-        summon_type="test1",
-        source="test_source",
-        max_summons=1
+        summoner=summoner, summon_type="test1", source="test_source", max_summons=1
     )
     assert summon1 is not None
 
     # Try to create second summon (should fail due to limit)
     summon2 = SummonManager.create_summon(
-        summoner=summoner,
-        summon_type="test2",
-        source="test_source",
-        max_summons=1
+        summoner=summoner, summon_type="test2", source="test_source", max_summons=1
     )
     assert summon2 is None
 
@@ -128,7 +117,7 @@ async def test_summon_battle_lifecycle(monkeypatch):
         summoner=summoner,
         summon_type="temporary",
         source="test_source",
-        turns_remaining=1
+        turns_remaining=1,
     )
     assert summon is not None
 
@@ -154,10 +143,7 @@ async def test_summon_turn_expiration(monkeypatch):
 
     # Create summon with 2 turn duration
     summon = SummonManager.create_summon(
-        summoner=summoner,
-        summon_type="timed",
-        source="test_source",
-        turns_remaining=2
+        summoner=summoner, summon_type="timed", source="test_source", turns_remaining=2
     )
 
     assert len(SummonManager.get_summons("test_summoner")) == 1
@@ -195,7 +181,7 @@ async def test_phantom_ally_new_system(monkeypatch):
     # One should be a phantom summon
     phantom = None
     for member in party.members:
-        if hasattr(member, 'summon_type') and member.summon_type == "phantom":
+        if hasattr(member, "summon_type") and member.summon_type == "phantom":
             phantom = member
             break
 
@@ -331,16 +317,16 @@ async def test_damage_type_inheritance(monkeypatch):
 
     for i in range(total_summons):
         summon = Summon.create_from_summoner(
-            summoner=summoner,
-            summon_type=f"test_{i}",
-            source="test"
+            summoner=summoner, summon_type=f"test_{i}", source="test"
         )
         if summon.damage_type.__class__.__name__ == "Lightning":
             lightning_count += 1
 
     # Should have high percentage of Lightning damage types (around 70%)
     # Allow some variance due to randomness - at least 30% should be Lightning
-    assert lightning_count >= 6  # At least 30% should be Lightning (lower bound due to randomness)
+    assert (
+        lightning_count >= 6
+    )  # At least 30% should be Lightning (lower bound due to randomness)
 
 
 @pytest.mark.asyncio
@@ -357,9 +343,7 @@ async def test_summon_party_integration(monkeypatch):
 
     # Create summon
     summon = SummonManager.create_summon(
-        summoner=ally,
-        summon_type="test",
-        source="test_source"
+        summoner=ally, summon_type="test", source="test_source"
     )
 
     # Add summons to party
@@ -382,9 +366,7 @@ async def test_summon_defeat_cleanup(monkeypatch):
 
     # Create summon
     SummonManager.create_summon(
-        summoner=summoner,
-        summon_type="test",
-        source="test_source"
+        summoner=summoner, summon_type="test", source="test_source"
     )
 
     assert len(SummonManager.get_summons("test_summoner")) == 1
@@ -410,15 +392,16 @@ async def test_summon_inheritance_with_effects(monkeypatch):
 
     # Add a temporary effect that boosts stats
     from autofighter.stats import StatEffect
+
     boost_effect = StatEffect(
         name="test_boost",
         stat_modifiers={
-            "defense": 50,       # +50 defense
-            "mitigation": 1.0,   # +1.0 mitigation
-            "vitality": 0.5      # +0.5 vitality
+            "defense": 50,  # +50 defense
+            "mitigation": 1.0,  # +1.0 mitigation
+            "vitality": 0.5,  # +0.5 vitality
         },
         duration=5,
-        source="test_card"
+        source="test_card",
     )
     summoner.add_effect(boost_effect)
 
@@ -429,10 +412,7 @@ async def test_summon_inheritance_with_effects(monkeypatch):
 
     # Create summon with 50% stat inheritance
     summon = Summon.create_from_summoner(
-        summoner=summoner,
-        summon_type="test",
-        source="test_source",
-        stat_multiplier=0.5
+        summoner=summoner, summon_type="test", source="test_source", stat_multiplier=0.5
     )
 
     # Summon should inherit from BASE stats only, ignoring temporary effects
@@ -460,14 +440,15 @@ async def test_summon_inherits_beneficial_effects(monkeypatch):
 
     # Add beneficial StatEffect (buff)
     from autofighter.stats import StatEffect
+
     buff_effect = StatEffect(
         name="test_buff",
         stat_modifiers={
-            "atk": 50,       # +50 attack - beneficial
-            "defense": 25,   # +25 defense - beneficial
+            "atk": 50,  # +50 attack - beneficial
+            "defense": 25,  # +25 defense - beneficial
         },
         duration=5,
-        source="test_card"
+        source="test_card",
     )
     summoner.add_effect(buff_effect)
 
@@ -475,15 +456,12 @@ async def test_summon_inherits_beneficial_effects(monkeypatch):
     from autofighter.effects import EffectManager
     from autofighter.effects import HealingOverTime
     from autofighter.effects import StatModifier
+
     summoner.effect_manager = EffectManager(summoner)
 
     # Add HOT (beneficial)
     hot = HealingOverTime(
-        name="test_hot",
-        healing=100,
-        turns=3,
-        id="test_hot_id",
-        source=summoner
+        name="test_hot", healing=100, turns=3, id="test_hot_id", source=summoner
     )
     summoner.effect_manager.add_hot(hot)
 
@@ -494,38 +472,43 @@ async def test_summon_inherits_beneficial_effects(monkeypatch):
         turns=4,
         id="test_stat_buff_id",
         deltas={"crit_rate": 0.1},  # +10% crit rate - beneficial
-        multipliers={"crit_damage": 1.5}  # 1.5x crit damage - beneficial
+        multipliers={"crit_damage": 1.5},  # 1.5x crit damage - beneficial
     )
     summoner.effect_manager.add_modifier(stat_mod)
 
     # Create summon with 50% stat inheritance
     summon = Summon.create_from_summoner(
-        summoner=summoner,
-        summon_type="test",
-        source="test_source",
-        stat_multiplier=0.5
+        summoner=summoner, summon_type="test", source="test_source", stat_multiplier=0.5
     )
 
     # Verify summon inherited beneficial StatEffect
     summon_effects = summon.get_active_effects()
-    assert len(summon_effects) == 2  # One from StatEffect inheritance, one from StatModifier application
+    assert (
+        len(summon_effects) == 2
+    )  # One from StatEffect inheritance, one from StatModifier application
 
     # Find the inherited StatEffect (from summoner's StatEffect)
-    stat_effect = next((e for e in summon_effects if e.name == "summon_test_buff"), None)
+    stat_effect = next(
+        (e for e in summon_effects if e.name == "summon_test_buff"), None
+    )
     assert stat_effect is not None
     assert stat_effect.stat_modifiers["atk"] == 25  # 50% of 50
     assert stat_effect.stat_modifiers["defense"] == 12.5  # 50% of 25
     assert stat_effect.duration == 5  # Same duration
 
     # Find the StatEffect created by the applied StatModifier
-    modifier_effect = next((e for e in summon_effects if e.name == "summon_test_stat_buff_id"), None)
+    modifier_effect = next(
+        (e for e in summon_effects if e.name == "summon_test_stat_buff_id"), None
+    )
     assert modifier_effect is not None
     assert modifier_effect.stat_modifiers["crit_rate"] == 0.05  # 50% of 0.1
-    assert modifier_effect.stat_modifiers["crit_damage"] == 0.25  # scaled multiplier bonus
+    assert (
+        modifier_effect.stat_modifiers["crit_damage"] == 0.25
+    )  # scaled multiplier bonus
     assert modifier_effect.duration == 4  # Same duration
 
     # Verify summon has effect manager
-    assert hasattr(summon, 'effect_manager')
+    assert hasattr(summon, "effect_manager")
     assert summon.effect_manager is not None
 
     # Verify summon inherited HOT
@@ -542,7 +525,9 @@ async def test_summon_inherits_beneficial_effects(monkeypatch):
     inherited_mod = summon_mods[0]
     assert inherited_mod.name == "summon_test_stat_buff"
     assert inherited_mod.deltas["crit_rate"] == 0.05  # 50% of 0.1
-    assert inherited_mod.multipliers["crit_damage"] == 1.25  # 1 + (0.5 * 0.5) bonus scaling
+    assert (
+        inherited_mod.multipliers["crit_damage"] == 1.25
+    )  # 1 + (0.5 * 0.5) bonus scaling
     assert inherited_mod.turns == 4  # Same duration
 
 
@@ -557,14 +542,15 @@ async def test_summon_does_not_inherit_harmful_effects(monkeypatch):
 
     # Add harmful StatEffect (debuff)
     from autofighter.stats import StatEffect
+
     debuff_effect = StatEffect(
         name="test_debuff",
         stat_modifiers={
-            "atk": -50,      # -50 attack - harmful
+            "atk": -50,  # -50 attack - harmful
             "defense": -25,  # -25 defense - harmful
         },
         duration=3,
-        source="enemy_curse"
+        source="enemy_curse",
     )
     summoner.add_effect(debuff_effect)
 
@@ -572,15 +558,12 @@ async def test_summon_does_not_inherit_harmful_effects(monkeypatch):
     from autofighter.effects import DamageOverTime
     from autofighter.effects import EffectManager
     from autofighter.effects import StatModifier
+
     summoner.effect_manager = EffectManager(summoner)
 
     # Add DOT (harmful)
     dot = DamageOverTime(
-        name="test_dot",
-        damage=50,
-        turns=3,
-        id="test_dot_id",
-        source=summoner
+        name="test_dot", damage=50, turns=3, id="test_dot_id", source=summoner
     )
     summoner.effect_manager.add_dot(dot)
 
@@ -591,16 +574,13 @@ async def test_summon_does_not_inherit_harmful_effects(monkeypatch):
         turns=4,
         id="test_stat_debuff_id",
         deltas={"crit_rate": -0.1},  # -10% crit rate - harmful
-        multipliers={"crit_damage": 0.5}  # 0.5x crit damage - harmful
+        multipliers={"crit_damage": 0.5},  # 0.5x crit damage - harmful
     )
     summoner.effect_manager.add_modifier(harmful_mod)
 
     # Create summon
     summon = Summon.create_from_summoner(
-        summoner=summoner,
-        summon_type="test",
-        source="test_source",
-        stat_multiplier=0.5
+        summoner=summoner, summon_type="test", source="test_source", stat_multiplier=0.5
     )
 
     # Verify summon did NOT inherit harmful StatEffect
@@ -608,7 +588,7 @@ async def test_summon_does_not_inherit_harmful_effects(monkeypatch):
     assert len(summon_effects) == 0  # No harmful effects should be inherited
 
     # Verify summon has effect manager but no harmful effects
-    assert hasattr(summon, 'effect_manager')
+    assert hasattr(summon, "effect_manager")
 
     # Verify summon did NOT inherit DOT
     summon_dots = summon.effect_manager.dots
@@ -630,14 +610,15 @@ async def test_summon_inherits_mixed_effects_correctly(monkeypatch):
 
     # Add mixed StatEffect (some beneficial, some harmful modifiers)
     from autofighter.stats import StatEffect
+
     mixed_effect = StatEffect(
         name="mixed_effect",
         stat_modifiers={
-            "atk": 100,      # +100 attack - beneficial
+            "atk": 100,  # +100 attack - beneficial
             "defense": -50,  # -50 defense - harmful
         },
         duration=3,
-        source="complex_spell"
+        source="complex_spell",
     )
     summoner.add_effect(mixed_effect)
 
@@ -645,24 +626,22 @@ async def test_summon_inherits_mixed_effects_correctly(monkeypatch):
     beneficial_effect = StatEffect(
         name="pure_buff",
         stat_modifiers={
-            "crit_rate": 0.2,    # +20% crit rate - beneficial
-            "vitality": 0.5,     # +0.5 vitality - beneficial
+            "crit_rate": 0.2,  # +20% crit rate - beneficial
+            "vitality": 0.5,  # +0.5 vitality - beneficial
         },
         duration=5,
-        source="blessing"
+        source="blessing",
     )
     summoner.add_effect(beneficial_effect)
 
     # Set up effect manager
     from autofighter.effects import EffectManager
+
     summoner.effect_manager = EffectManager(summoner)
 
     # Create summon
     summon = Summon.create_from_summoner(
-        summoner=summoner,
-        summon_type="test",
-        source="test_source",
-        stat_multiplier=0.5
+        summoner=summoner, summon_type="test", source="test_source", stat_multiplier=0.5
     )
 
     # Verify summon inherited only the purely beneficial effect

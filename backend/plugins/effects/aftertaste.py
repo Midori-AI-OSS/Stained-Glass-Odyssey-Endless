@@ -37,7 +37,7 @@ class Aftertaste:
             return damage_type_class()
 
         # Weighted selection favoring attacker's damage type
-        attacker_type_id = getattr(attacker.damage_type, 'id', 'Light')
+        attacker_type_id = getattr(attacker.damage_type, "id", "Light")
 
         # Find the attacker's damage type class
         attacker_damage_class = None
@@ -54,12 +54,16 @@ class Aftertaste:
             return attacker_damage_class()
         else:
             # Select from remaining types
-            other_types = [dt for dt in self._damage_types if dt != attacker_damage_class]
+            other_types = [
+                dt for dt in self._damage_types if dt != attacker_damage_class
+            ]
             damage_type_class = self.rng.choice(other_types)
             return damage_type_class()
 
     def rolls(self) -> list[int]:
-        return [int(self.base_pot * self.rng.uniform(0.1, 1.5)) for _ in range(self.hits)]
+        return [
+            int(self.base_pot * self.rng.uniform(0.1, 1.5)) for _ in range(self.hits)
+        ]
 
     async def apply(self, attacker: Stats, target: Stats) -> list[int]:
         results: list[int] = []
@@ -77,7 +81,7 @@ class Aftertaste:
                 temp_attacker._base_vitality = attacker._base_vitality
                 temp_attacker._active_effects = attacker._active_effects.copy()
                 # Copy ID if it exists to prevent logging errors
-                if hasattr(attacker, 'id'):
+                if hasattr(attacker, "id"):
                     temp_attacker.id = attacker.id
 
             # Set the random damage type
@@ -85,13 +89,27 @@ class Aftertaste:
 
             # Emit event before applying damage to track aftertaste as relic effect
             from autofighter.stats import BUS
-            BUS.emit("relic_effect", "aftertaste", attacker, "damage", amount, {
-                "effect_type": "aftertaste",
-                "base_damage": self.base_pot,
-                "random_damage_type": random_damage_type.id if hasattr(random_damage_type, 'id') else str(random_damage_type),
-                "actual_damage": amount
-            })
 
-            dmg = await target.apply_damage(amount, temp_attacker, action_name="Aftertaste")
+            BUS.emit(
+                "relic_effect",
+                "aftertaste",
+                attacker,
+                "damage",
+                amount,
+                {
+                    "effect_type": "aftertaste",
+                    "base_damage": self.base_pot,
+                    "random_damage_type": (
+                        random_damage_type.id
+                        if hasattr(random_damage_type, "id")
+                        else str(random_damage_type)
+                    ),
+                    "actual_damage": amount,
+                },
+            )
+
+            dmg = await target.apply_damage(
+                amount, temp_attacker, action_name="Aftertaste"
+            )
             results.append(dmg)
         return results

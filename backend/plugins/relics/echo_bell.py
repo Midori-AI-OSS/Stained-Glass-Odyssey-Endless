@@ -33,14 +33,21 @@ class EchoBell(RelicBase):
             echo_amount = int(amount * 0.15 * stacks)
 
             # Emit relic effect event for echo action
-            BUS.emit("relic_effect", "echo_bell", actor, "echo_action", echo_amount, {
-                "original_amount": amount,
-                "echo_percentage": 15 * stacks,
-                "target": getattr(target, 'id', str(target)),
-                "first_action": True,
-                "action_type": action_type,
-                "stacks": stacks
-            })
+            BUS.emit(
+                "relic_effect",
+                "echo_bell",
+                actor,
+                "echo_action",
+                echo_amount,
+                {
+                    "original_amount": amount,
+                    "echo_percentage": 15 * stacks,
+                    "target": getattr(target, "id", str(target)),
+                    "first_action": True,
+                    "action_type": action_type,
+                    "stacks": stacks,
+                },
+            )
 
             # Echo the same type of action - damage or healing
             if action_type == "healing":
@@ -50,7 +57,10 @@ class EchoBell(RelicBase):
 
         BUS.subscribe("battle_start", _battle_start)
         BUS.subscribe("action_used", _action)
-        BUS.subscribe("healing_used", lambda actor, target, amount: _action(actor, target, amount, "healing"))
+        BUS.subscribe(
+            "healing_used",
+            lambda actor, target, amount: _action(actor, target, amount, "healing"),
+        )
 
     def describe(self, stacks: int) -> str:
         pct = 15 * stacks

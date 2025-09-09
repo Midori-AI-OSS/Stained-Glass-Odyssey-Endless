@@ -4,10 +4,15 @@ from enum import Enum
 import os
 from typing import Protocol
 
+from .safety import ensure_ram
+from .safety import gguf_strategy
+from .safety import model_memory_requirements
+from .safety import pick_device
 from .torch_checker import is_torch_available
 from .torch_checker import require_torch
 
 # Import dependencies only if torch is available
+_IMPORT_ERROR = None  # For test compatibility
 if is_torch_available():
     from langchain_community.llms import llamacpp as LlamaCpp
     from langchain_huggingface import HuggingFacePipeline
@@ -19,15 +24,9 @@ else:
     HuggingFacePipeline = None
     pipeline = None
 
-from .safety import ensure_ram
-from .safety import gguf_strategy
-from .safety import model_memory_requirements
-from .safety import pick_device
-
 
 class SupportsStream(Protocol):
-    async def generate_stream(self, text: str) -> AsyncIterator[str]:
-        ...
+    async def generate_stream(self, text: str) -> AsyncIterator[str]: ...
 
 
 class ModelName(str, Enum):
@@ -45,7 +44,9 @@ class _LangChainWrapper:
         yield result
 
 
-def load_llm(model: str | None = None, *, gguf_path: str | None = None) -> SupportsStream:
+def load_llm(
+    model: str | None = None, *, gguf_path: str | None = None
+) -> SupportsStream:
     require_torch()
     name = model or os.getenv("AF_LLM_MODEL", ModelName.DEEPSEEK.value)
     if name == ModelName.DEEPSEEK.value:

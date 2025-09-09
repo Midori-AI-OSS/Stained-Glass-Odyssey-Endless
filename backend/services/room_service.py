@@ -91,7 +91,9 @@ async def battle_room(run_id: str, data: dict[str, Any]) -> dict[str, Any]:
                         battle_snapshots[run_id] = snapshot
 
                     task = asyncio.create_task(
-                        _run_battle(run_id, room, foes, combat_party, {}, state, rooms, progress)
+                        _run_battle(
+                            run_id, room, foes, combat_party, {}, state, rooms, progress
+                        )
                     )
                     battle_tasks[run_id] = task
         return {"result": "resumed"}
@@ -143,7 +145,11 @@ async def battle_room(run_id: str, data: dict[str, Any]) -> dict[str, Any]:
         return payload
 
     # Only check awaiting flags if this is NOT a restart scenario
-    if not is_restart_scenario and (state.get("awaiting_card") or state.get("awaiting_relic") or state.get("awaiting_loot")):
+    if not is_restart_scenario and (
+        state.get("awaiting_card")
+        or state.get("awaiting_relic")
+        or state.get("awaiting_loot")
+    ):
         snap = battle_snapshots.get(run_id)
         if snap is not None:
             return snap
@@ -342,7 +348,11 @@ async def boss_room(run_id: str, data: dict[str, Any]) -> dict[str, Any]:
         return payload
 
     # Only check awaiting flags if this is NOT a restart scenario
-    if not is_restart_scenario and (state.get("awaiting_card") or state.get("awaiting_relic") or state.get("awaiting_loot")):
+    if not is_restart_scenario and (
+        state.get("awaiting_card")
+        or state.get("awaiting_relic")
+        or state.get("awaiting_loot")
+    ):
         snap = battle_snapshots.get(run_id)
         if snap is not None:
             return snap
@@ -407,7 +417,9 @@ async def boss_room(run_id: str, data: dict[str, Any]) -> dict[str, Any]:
     return result
 
 
-async def room_action(run_id: str, room_id: str, action_data: dict[str, Any] | None = None) -> dict[str, Any]:
+async def room_action(
+    run_id: str, room_id: str, action_data: dict[str, Any] | None = None
+) -> dict[str, Any]:
     if action_data is None:
         action_data = {}
     state, rooms = await asyncio.to_thread(load_map, run_id)
@@ -415,7 +427,10 @@ async def room_action(run_id: str, room_id: str, action_data: dict[str, Any] | N
         raise ValueError("No current room or run ended")
     current_node = rooms[int(state.get("current", 0))]
     room_type = current_node.room_type
-    if action_data.get("type") == "battle" and action_data.get("action_type") == "start":
+    if (
+        action_data.get("type") == "battle"
+        and action_data.get("action_type") == "start"
+    ):
         request_data = {"action": ""}
     else:
         request_data = action_data

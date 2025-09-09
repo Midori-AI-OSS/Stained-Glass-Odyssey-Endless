@@ -70,6 +70,7 @@ def get_fernet() -> Fernet:
     assert FERNET is not None
     return FERNET
 
+
 battle_tasks: dict[str, asyncio.Task] = {}
 battle_snapshots: dict[str, dict[str, Any]] = {}
 battle_locks: dict[str, asyncio.Lock] = {}
@@ -117,6 +118,7 @@ def get_battle_state_sizes() -> dict[str, int]:
         "locks": len(battle_locks),
     }
 
+
 def _describe_passives(obj: Stats | list[str]) -> list[dict[str, Any]]:
     registry = PassiveRegistry()
     if isinstance(obj, list):
@@ -124,6 +126,7 @@ def _describe_passives(obj: Stats | list[str]) -> list[dict[str, Any]]:
         temp.passives = obj
         return registry.describe(temp)
     return registry.describe(obj)
+
 
 def _load_character_customization(pid: str) -> dict[str, int]:
     """Load saved stat allocations for a character."""
@@ -222,7 +225,8 @@ def _load_individual_stat_upgrades(pid: str) -> dict[str, float]:
     """Load individual stat upgrades from the new system."""
     with get_save_manager().connection() as conn:
         # Create table if it doesn't exist
-        conn.execute("""
+        conn.execute(
+            """
             CREATE TABLE IF NOT EXISTS player_stat_upgrades (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 player_id TEXT NOT NULL,
@@ -231,15 +235,19 @@ def _load_individual_stat_upgrades(pid: str) -> dict[str, float]:
                 source_star INTEGER NOT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
-        """)
+        """
+        )
 
         # Sum up all upgrades per stat
-        cur = conn.execute("""
+        cur = conn.execute(
+            """
             SELECT stat_name, SUM(upgrade_percent)
             FROM player_stat_upgrades
             WHERE player_id = ?
             GROUP BY stat_name
-        """, (pid,))
+        """,
+            (pid,),
+        )
 
         return {row[0]: float(row[1]) for row in cur.fetchall()}
 
@@ -282,6 +290,7 @@ def _apply_player_upgrades(player: PlayerBase) -> None:
         )
         player.mods.append(mod.id)
 
+
 def _assign_damage_type(player: PlayerBase) -> None:
     with get_save_manager().connection() as conn:
         conn.execute(
@@ -296,6 +305,7 @@ def _assign_damage_type(player: PlayerBase) -> None:
                 "INSERT INTO damage_types (id, type) VALUES (?, ?)",
                 (player.id, player.element_id),
             )
+
 
 def load_party(run_id: str) -> Party:
     with get_save_manager().connection() as conn:
@@ -353,6 +363,7 @@ def load_party(run_id: str) -> Party:
     )
     return party
 
+
 def load_map(run_id: str) -> tuple[dict, list[MapNode]]:
     with get_save_manager().connection() as conn:
         cur = conn.execute("SELECT map FROM runs WHERE id = ?", (run_id,))
@@ -363,12 +374,14 @@ def load_map(run_id: str) -> tuple[dict, list[MapNode]]:
     rooms = [MapNode.from_dict(n) for n in state.get("rooms", [])]
     return state, rooms
 
+
 def save_map(run_id: str, state: dict) -> None:
     with get_save_manager().connection() as conn:
         conn.execute(
             "UPDATE runs SET map = ? WHERE id = ?",
             (json.dumps(state), run_id),
         )
+
 
 def save_party(run_id: str, party: Party) -> None:
     with get_save_manager().connection() as conn:
@@ -397,6 +410,7 @@ def save_party(run_id: str, party: Party) -> None:
             "UPDATE runs SET party = ? WHERE id = ?",
             (json.dumps(data), run_id),
         )
+
 
 async def _run_battle(
     run_id: str,
@@ -480,16 +494,14 @@ async def _run_battle(
             has_card_choices = bool(result.get("card_choices"))
             has_relic_choices = bool(result.get("relic_choices"))
             # Check if there's loot to review (gold or items)
-            has_loot = bool(result.get("loot", {}).get("gold", 0) > 0 or
-                           len(result.get("loot", {}).get("items", [])) > 0)
+            has_loot = bool(
+                result.get("loot", {}).get("gold", 0) > 0
+                or len(result.get("loot", {}).get("items", [])) > 0
+            )
 
             # Set up reward progression sequence for proper UI flow
             if has_card_choices or has_relic_choices or has_loot:
-                progression = {
-                    "available": [],
-                    "completed": [],
-                    "current_step": None
-                }
+                progression = {"available": [], "completed": [], "current_step": None}
 
                 # Build sequence of steps based on what rewards are available
                 if has_card_choices:

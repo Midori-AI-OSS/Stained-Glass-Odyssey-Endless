@@ -11,6 +11,7 @@ if TYPE_CHECKING:
 @dataclass
 class IxiaTinyTitan:
     """Ixia's Tiny Titan passive - 4x Vitality HP gain and 500% Vitality to attack conversion."""
+
     plugin_type = "passive"
     id = "ixia_tiny_titan"
     name = "Tiny Titan"
@@ -37,9 +38,9 @@ class IxiaTinyTitan:
 
         # Apply 4x HP gain from Vitality based on BASE max_hp to avoid compounding
         try:
-            base_max_hp = int(getattr(target, 'get_base_stat')('max_hp'))
+            base_max_hp = int(getattr(target, "get_base_stat")("max_hp"))
         except Exception:
-            base_max_hp = int(getattr(target, 'max_hp', 0))
+            base_max_hp = int(getattr(target, "max_hp", 0))
         vitality_hp_bonus = int(self._vitality_bonuses[entity_id] * 4 * base_max_hp)
 
         hp_effect = StatEffect(
@@ -52,9 +53,9 @@ class IxiaTinyTitan:
 
         # Convert 500% of current Vitality into attack based on BASE atk to avoid compounding
         try:
-            base_atk = int(getattr(target, 'get_base_stat')('atk'))
+            base_atk = int(getattr(target, "get_base_stat")("atk"))
         except Exception:
-            base_atk = int(getattr(target, 'atk', 0))
+            base_atk = int(getattr(target, "atk", 0))
         vitality_attack_bonus = int(self._vitality_bonuses[entity_id] * 5 * base_atk)
 
         attack_effect = StatEffect(
@@ -66,7 +67,9 @@ class IxiaTinyTitan:
         target.add_effect(attack_effect)
 
         # Apply damage reduction from Vitality bonus
-        damage_reduction = self._vitality_bonuses[entity_id] * 0.05  # 5% per 0.01 Vitality
+        damage_reduction = (
+            self._vitality_bonuses[entity_id] * 0.05
+        )  # 5% per 0.01 Vitality
         mitigation_effect = StatEffect(
             name=f"{self.id}_vitality_mitigation",
             stat_modifiers={"mitigation": damage_reduction},
@@ -77,9 +80,9 @@ class IxiaTinyTitan:
 
         # Per-stack defense penalty: -25 DEF per stack, clamped so DEF never goes below 10
         try:
-            base_def = int(getattr(target, 'get_base_stat')('defense'))
+            base_def = int(getattr(target, "get_base_stat")("defense"))
         except Exception:
-            base_def = int(getattr(target, 'defense', 0))
+            base_def = int(getattr(target, "defense", 0))
         max_penalty = max(base_def - 10, 0)
         desired_penalty = 25 * max(stacks, 0)
         penalty = min(desired_penalty, max_penalty)
@@ -98,7 +101,9 @@ class IxiaTinyTitan:
 
         if vitality_bonus > 0:
             # Minor HoT based on Vitality bonus
-            hot_amount = int(vitality_bonus * target.max_hp * 0.02)  # 2% of max HP per 0.01 Vitality
+            hot_amount = int(
+                vitality_bonus * target.max_hp * 0.02
+            )  # 2% of max HP per 0.01 Vitality
             if hot_amount > 0:
                 target.hp = min(target.max_hp, target.hp + hot_amount)
 

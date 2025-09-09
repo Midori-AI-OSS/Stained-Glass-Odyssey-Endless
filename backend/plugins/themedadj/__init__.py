@@ -57,4 +57,3 @@ for cls in _plugins.values():
     globals()[cls.__name__] = cls
 
 __all__ = sorted(cls.__name__ for cls in _plugins.values())
-

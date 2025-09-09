@@ -29,7 +29,7 @@ async def test_optimized_performance():
             damage=1,  # Small damage to avoid killing the target too quickly
             turns=10,  # 10 turns each
             id=f"dot_{i}",
-            source=target
+            source=target,
         )
         manager.add_dot(dot)
 
@@ -65,8 +65,14 @@ async def test_optimized_performance():
     # Calculate improvement
     print("\nPerformance improvement analysis:")
     original_time = 0.446  # From previous test
-    improvement_factor = original_time / avg_tick_time if avg_tick_time > 0 else float('inf')
-    improvement_percent = ((original_time - avg_tick_time) / original_time) * 100 if original_time > 0 else 0
+    improvement_factor = (
+        original_time / avg_tick_time if avg_tick_time > 0 else float("inf")
+    )
+    improvement_percent = (
+        ((original_time - avg_tick_time) / original_time) * 100
+        if original_time > 0
+        else 0
+    )
 
     print(f"Original tick time: {original_time:.4f}s")
     print(f"Optimized tick time: {avg_tick_time:.4f}s")

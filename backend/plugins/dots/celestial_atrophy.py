@@ -1,4 +1,3 @@
-
 from autofighter.effects import DamageOverTime
 from autofighter.effects import StatModifier
 from autofighter.effects import create_stat_buff

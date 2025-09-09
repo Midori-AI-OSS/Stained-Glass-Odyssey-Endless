@@ -140,5 +140,7 @@ async def acknowledge_loot(run_id: str) -> dict[str, Any]:
         else None
     )
     await asyncio.to_thread(save_map, run_id, state)
-    await asyncio.to_thread(save_party, run_id, await asyncio.to_thread(load_party, run_id))
+    await asyncio.to_thread(
+        save_party, run_id, await asyncio.to_thread(load_party, run_id)
+    )
     return {"next_room": next_type} if next_type is not None else {"next_room": None}

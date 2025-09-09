@@ -2,6 +2,7 @@
 Comprehensive stress test to demonstrate event bus performance improvements
 with 100 fallback effects scenario requested by @lunamidori5.
 """
+
 import asyncio
 import time
 
@@ -23,6 +24,7 @@ class TestEventBusStressWithFallbackEffects:
 
         def fallback_effect_handler(effect_id):
             """Simulate a fallback effect that processes damage events."""
+
             def handler(attacker, target, amount, *args):
                 nonlocal damage_events_handled
                 start = time.perf_counter()
@@ -45,7 +47,9 @@ class TestEventBusStressWithFallbackEffects:
 
         try:
             print("\n=== 100 Fallback Effects Stress Test ===")
-            print(f"Simulating {fallback_count} fallback effects subscribed to damage events")
+            print(
+                f"Simulating {fallback_count} fallback effects subscribed to damage events"
+            )
 
             # Simulate a combat turn with multiple damage instances
             attacker = Stats()
@@ -55,12 +59,25 @@ class TestEventBusStressWithFallbackEffects:
 
             # Test single damage event processing time
             start_time = time.perf_counter()
-            BUS.emit("damage_dealt", attacker, target, 100, "attack", None, None, "Normal Attack")
+            BUS.emit(
+                "damage_dealt",
+                attacker,
+                target,
+                100,
+                "attack",
+                None,
+                None,
+                "Normal Attack",
+            )
             single_event_time = time.perf_counter() - start_time
 
-            print(f"Single damage event processing time: {single_event_time*1000:.1f}ms")
+            print(
+                f"Single damage event processing time: {single_event_time*1000:.1f}ms"
+            )
             print(f"Events handled by effects: {damage_events_handled}")
-            print(f"Average processing time per effect: {(single_event_time/fallback_count)*1000:.3f}ms")
+            print(
+                f"Average processing time per effect: {(single_event_time/fallback_count)*1000:.3f}ms"
+            )
 
             # Reset counters for burst test
             damage_events_handled = 0
@@ -71,7 +88,16 @@ class TestEventBusStressWithFallbackEffects:
             start_time = time.perf_counter()
 
             for i in range(burst_size):
-                BUS.emit("damage_dealt", attacker, target, 25 + i, "attack", None, None, f"Attack_{i}")
+                BUS.emit(
+                    "damage_dealt",
+                    attacker,
+                    target,
+                    25 + i,
+                    "attack",
+                    None,
+                    None,
+                    f"Attack_{i}",
+                )
 
             burst_time = time.perf_counter() - start_time
 
@@ -83,13 +109,19 @@ class TestEventBusStressWithFallbackEffects:
 
             # Performance analysis
             if single_event_time > 0.016:  # >16ms blocks 60fps
-                print(f"❌ PERFORMANCE ISSUE: Single event blocks UI for {single_event_time*1000:.1f}ms")
+                print(
+                    f"❌ PERFORMANCE ISSUE: Single event blocks UI for {single_event_time*1000:.1f}ms"
+                )
 
             if burst_time > 0.1:  # >100ms burst severely impacts UX
-                print(f"❌ SEVERE BLOCKING: Burst processing blocks UI for {burst_time*1000:.1f}ms")
+                print(
+                    f"❌ SEVERE BLOCKING: Burst processing blocks UI for {burst_time*1000:.1f}ms"
+                )
 
             # Expected behavior: each event should cause significant blocking
-            assert single_event_time > 0.04, f"Expected blocking behavior not observed: {single_event_time*1000:.1f}ms"
+            assert (
+                single_event_time > 0.04
+            ), f"Expected blocking behavior not observed: {single_event_time*1000:.1f}ms"
             assert damage_events_handled == burst_size * fallback_count
 
         finally:
@@ -106,6 +138,7 @@ class TestEventBusStressWithFallbackEffects:
 
         async def async_fallback_effect_handler(effect_id):
             """Async version of fallback effect handler."""
+
             async def handler(attacker, target, amount, *args):
                 nonlocal async_events_handled
                 start = time.perf_counter()
@@ -135,7 +168,16 @@ class TestEventBusStressWithFallbackEffects:
 
             # Test async single event
             start_time = time.perf_counter()
-            await BUS.emit_async("damage_dealt", attacker, target, 100, "attack", None, None, "Async Attack")
+            await BUS.emit_async(
+                "damage_dealt",
+                attacker,
+                target,
+                100,
+                "attack",
+                None,
+                None,
+                "Async Attack",
+            )
             async_single_time = time.perf_counter() - start_time
 
             print(f"Async single event time: {async_single_time*1000:.1f}ms")
@@ -150,7 +192,16 @@ class TestEventBusStressWithFallbackEffects:
             start_time = time.perf_counter()
 
             for i in range(burst_size):
-                await BUS.emit_async("damage_dealt", attacker, target, 25 + i, "attack", None, None, f"AsyncAttack_{i}")
+                await BUS.emit_async(
+                    "damage_dealt",
+                    attacker,
+                    target,
+                    25 + i,
+                    "attack",
+                    None,
+                    None,
+                    f"AsyncAttack_{i}",
+                )
 
             async_burst_time = time.perf_counter() - start_time
 
@@ -165,10 +216,14 @@ class TestEventBusStressWithFallbackEffects:
 
             # We expect dramatic improvement with async processing
             if async_single_time < 0.01:  # <10ms is much better
-                print(f"✅ ASYNC IMPROVEMENT: Event processing reduced to {async_single_time*1000:.1f}ms")
+                print(
+                    f"✅ ASYNC IMPROVEMENT: Event processing reduced to {async_single_time*1000:.1f}ms"
+                )
 
             if async_burst_time < 0.05:  # <50ms burst is much better
-                print(f"✅ ASYNC BURST IMPROVEMENT: Burst reduced to {async_burst_time*1000:.1f}ms")
+                print(
+                    f"✅ ASYNC BURST IMPROVEMENT: Burst reduced to {async_burst_time*1000:.1f}ms"
+                )
 
         finally:
             # Cleanup
@@ -183,6 +238,7 @@ class TestEventBusStressWithFallbackEffects:
         def batching_effect_handler(effect_id):
             def handler(*args):
                 batched_events.append((effect_id, time.perf_counter(), args))
+
             return handler
 
         # Subscribe handlers to high-frequency events
@@ -205,7 +261,16 @@ class TestEventBusStressWithFallbackEffects:
 
             # Use emit_batched for high-frequency events
             for i in range(10):
-                BUS.emit_batched("damage_dealt", attacker, target, 10 + i, "attack", None, None, f"Batch_{i}")
+                BUS.emit_batched(
+                    "damage_dealt",
+                    attacker,
+                    target,
+                    10 + i,
+                    "attack",
+                    None,
+                    None,
+                    f"Batch_{i}",
+                )
 
             batch_time = time.perf_counter() - start_time
 
@@ -213,7 +278,9 @@ class TestEventBusStressWithFallbackEffects:
             print(f"Events processed immediately: {len(batched_events)}")
 
             # Batching should be very fast for emission
-            assert batch_time < 0.01, f"Batching should be fast: {batch_time*1000:.1f}ms"
+            assert (
+                batch_time < 0.01
+            ), f"Batching should be fast: {batch_time*1000:.1f}ms"
 
         finally:
             for handler in handlers:

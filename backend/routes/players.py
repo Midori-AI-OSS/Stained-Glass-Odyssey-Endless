@@ -102,13 +102,15 @@ async def get_players() -> tuple[str, int, dict[str, str]]:
                 effects = []
                 for eff in getattr(obj, "get_active_effects", lambda: [])() or []:
                     # Eff might be a StatEffect or compatible object
-                    effects.append({
-                        "id": getattr(eff, "name", "effect"),
-                        "name": getattr(eff, "name", "effect"),
-                        "duration": getattr(eff, "duration", -1),
-                        "source": getattr(eff, "source", "unknown"),
-                        "modifiers": dict(getattr(eff, "stat_modifiers", {})),
-                    })
+                    effects.append(
+                        {
+                            "id": getattr(eff, "name", "effect"),
+                            "name": getattr(eff, "name", "effect"),
+                            "duration": getattr(eff, "duration", -1),
+                            "source": getattr(eff, "source", "unknown"),
+                            "modifiers": dict(getattr(eff, "stat_modifiers", {})),
+                        }
+                    )
                 data["active_effects"] = effects
             except Exception:
                 data["active_effects"] = []
@@ -116,8 +118,10 @@ async def get_players() -> tuple[str, int, dict[str, str]]:
             # base vs upgraded values without depending on effect scaling.
             try:
                 totals: dict[str, float] = {}
-                for up in _get_player_stat_upgrades(getattr(obj, 'id', '')):
-                    totals[up["stat_name"]] = totals.get(up["stat_name"], 0.0) + float(up["upgrade_percent"])
+                for up in _get_player_stat_upgrades(getattr(obj, "id", "")):
+                    totals[up["stat_name"]] = totals.get(up["stat_name"], 0.0) + float(
+                        up["upgrade_percent"]
+                    )
                 data["upgrade_totals"] = totals
             except Exception:
                 data["upgrade_totals"] = {}
@@ -207,7 +211,7 @@ async def player_stats() -> tuple[str, int, dict[str, object]]:
     # Get base stats and active effects if available
     base_stats = {}
     active_effects = []
-    if hasattr(player, 'get_base_stat'):
+    if hasattr(player, "get_base_stat"):
         base_stats = {
             "max_hp": player.get_base_stat("max_hp"),
             "atk": player.get_base_stat("atk"),
@@ -222,27 +226,31 @@ async def player_stats() -> tuple[str, int, dict[str, object]]:
             "vitality": player.get_base_stat("vitality"),
         }
 
-    if hasattr(player, 'get_active_effects'):
+    if hasattr(player, "get_active_effects"):
         for effect in player.get_active_effects():
             # Import effect descriptions
             description = "Unknown effect"
             try:
                 if effect.name == "aftertaste":
                     from plugins.effects.aftertaste import Aftertaste
+
                     description = Aftertaste.get_description()
                 elif effect.name == "critical_boost":
                     from plugins.effects.critical_boost import CriticalBoost
+
                     description = CriticalBoost.get_description()
             except Exception:
                 pass
 
-            active_effects.append({
-                "name": effect.name,
-                "source": effect.source,
-                "duration": effect.duration,
-                "modifiers": effect.stat_modifiers,
-                "description": description
-            })
+            active_effects.append(
+                {
+                    "name": effect.name,
+                    "source": effect.source,
+                    "duration": effect.duration,
+                    "modifiers": effect.stat_modifiers,
+                    "description": description,
+                }
+            )
 
     stats = {
         "core": {
@@ -326,12 +334,17 @@ async def update_player_editor() -> tuple[str, int, dict[str, str]]:
 
     # Calculate max allowed points including upgrade bonuses
     upgrade_points = _get_player_upgrade_points("player")
-    upgrade_count = upgrade_points // 3375000  # Each 4-star item = 3,375,000 points = +1 cap
+    upgrade_count = (
+        upgrade_points // 3375000
+    )  # Each 4-star item = 3,375,000 points = +1 cap
     max_allowed = 100 + upgrade_count
 
     log.debug(
         "Player editor validation: total=%d, upgrade_points=%d, upgrade_count=%d, max_allowed=%d",
-        total, upgrade_points, upgrade_count, max_allowed
+        total,
+        upgrade_points,
+        upgrade_count,
+        max_allowed,
     )
 
     if total > max_allowed:
@@ -361,13 +374,15 @@ async def update_player_editor() -> tuple[str, int, dict[str, str]]:
                 "INSERT OR REPLACE INTO options (key, value) VALUES (?, ?)",
                 (
                     "player_stats",
-                    json.dumps({
-                        "hp": hp,
-                        "attack": attack,
-                        "defense": defense,
-                        "crit_rate": crit_rate,
-                        "crit_damage": crit_damage,
-                    }),
+                    json.dumps(
+                        {
+                            "hp": hp,
+                            "attack": attack,
+                            "defense": defense,
+                            "crit_rate": crit_rate,
+                            "crit_damage": crit_damage,
+                        }
+                    ),
                 ),
             )
             if damage_type:
@@ -461,7 +476,8 @@ PLAYER_POINTS_VALUES = {1: 1, 2: 150, 3: 22500, 4: 3375000}
 def _create_upgrade_tables():
     """Create the new upgrade system database tables."""
     with get_save_manager().connection() as conn:
-        conn.execute("""
+        conn.execute(
+            """
             CREATE TABLE IF NOT EXISTS player_stat_upgrades (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 player_id TEXT NOT NULL,
@@ -470,32 +486,38 @@ def _create_upgrade_tables():
                 source_star INTEGER NOT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
-        """)
-        conn.execute("""
+        """
+        )
+        conn.execute(
+            """
             CREATE TABLE IF NOT EXISTS player_upgrade_points (
                 player_id TEXT PRIMARY KEY,
                 points INTEGER NOT NULL DEFAULT 0
             )
-        """)
+        """
+        )
 
 
 def _get_player_stat_upgrades(player_id: str) -> List[Dict]:
     """Get all stat upgrades for a player."""
     with get_save_manager().connection() as conn:
         _create_upgrade_tables()
-        cur = conn.execute("""
+        cur = conn.execute(
+            """
             SELECT id, stat_name, upgrade_percent, source_star, created_at
             FROM player_stat_upgrades
             WHERE player_id = ?
             ORDER BY created_at DESC
-        """, (player_id,))
+        """,
+            (player_id,),
+        )
         return [
             {
                 "id": row[0],
                 "stat_name": row[1],
                 "upgrade_percent": row[2],
                 "source_star": row[3],
-                "created_at": row[4]
+                "created_at": row[4],
             }
             for row in cur.fetchall()
         ]
@@ -505,7 +527,9 @@ def _get_player_upgrade_points(player_id: str) -> int:
     """Get upgrade points for a player."""
     with get_save_manager().connection() as conn:
         _create_upgrade_tables()
-        cur = conn.execute("SELECT points FROM player_upgrade_points WHERE player_id = ?", (player_id,))
+        cur = conn.execute(
+            "SELECT points FROM player_upgrade_points WHERE player_id = ?", (player_id,)
+        )
         row = cur.fetchone()
         return int(row[0]) if row else 0
 
@@ -514,18 +538,25 @@ def _add_player_upgrade_points(player_id: str, points: int):
     """Add upgrade points for a player."""
     with get_save_manager().connection() as conn:
         _create_upgrade_tables()
-        conn.execute("""
+        conn.execute(
+            """
             INSERT OR REPLACE INTO player_upgrade_points (player_id, points)
             VALUES (?, COALESCE((SELECT points FROM player_upgrade_points WHERE player_id = ?), 0) + ?)
-        """, (player_id, player_id, points))
+        """,
+            (player_id, player_id, points),
+        )
         conn.commit()
 
 
-def _spend_player_upgrade_points(player_id: str, points: int, stat_name: str, upgrade_percent: float) -> bool:
+def _spend_player_upgrade_points(
+    player_id: str, points: int, stat_name: str, upgrade_percent: float
+) -> bool:
     """Spend upgrade points for a specific stat upgrade. Returns True if successful."""
     with get_save_manager().connection() as conn:
         _create_upgrade_tables()
-        cur = conn.execute("SELECT points FROM player_upgrade_points WHERE player_id = ?", (player_id,))
+        cur = conn.execute(
+            "SELECT points FROM player_upgrade_points WHERE player_id = ?", (player_id,)
+        )
         row = cur.fetchone()
         current_points = int(row[0]) if row else 0
 
@@ -533,13 +564,19 @@ def _spend_player_upgrade_points(player_id: str, points: int, stat_name: str, up
             return False
 
         # Deduct points and add upgrade in same transaction
-        conn.execute("""
+        conn.execute(
+            """
             UPDATE player_upgrade_points SET points = points - ? WHERE player_id = ?
-        """, (points, player_id))
-        conn.execute("""
+        """,
+            (points, player_id),
+        )
+        conn.execute(
+            """
             INSERT INTO player_stat_upgrades (player_id, stat_name, upgrade_percent, source_star)
             VALUES (?, ?, ?, ?)
-        """, (player_id, stat_name, upgrade_percent, 0))  # 0 for point-based upgrades
+        """,
+            (player_id, stat_name, upgrade_percent, 0),
+        )  # 0 for point-based upgrades
         conn.commit()
         return True
 
@@ -556,7 +593,9 @@ async def get_player_upgrade(pid: str):
         stat_totals = {}
         for upgrade in stat_upgrades:
             stat_name = upgrade["stat_name"]
-            stat_totals[stat_name] = stat_totals.get(stat_name, 0) + upgrade["upgrade_percent"]
+            stat_totals[stat_name] = (
+                stat_totals.get(stat_name, 0) + upgrade["upgrade_percent"]
+            )
 
         return {
             "stat_upgrades": stat_upgrades,
@@ -566,10 +605,7 @@ async def get_player_upgrade(pid: str):
 
     new_data = await asyncio.to_thread(fetch_new_upgrade_data)
 
-    return jsonify({
-        "items": items,
-        **new_data
-    })
+    return jsonify({"items": items, **new_data})
 
 
 @bp.post("/players/<pid>/upgrade")
@@ -594,7 +630,10 @@ async def upgrade_player(pid: str):
 
     # Get the item to use (star level and count) - JSON data is required
     if not data:
-        return jsonify({"error": "JSON data required with star_level and item_count"}), 400
+        return (
+            jsonify({"error": "JSON data required with star_level and item_count"}),
+            400,
+        )
 
     star_level = data.get("star_level")
     item_count = data.get("item_count", 1)
@@ -612,7 +651,15 @@ async def upgrade_player(pid: str):
 
         if pid == "player":
             items_needed = item_count
-            for damage_type in ["generic", "light", "dark", "wind", "lightning", "fire", "ice"]:
+            for damage_type in [
+                "generic",
+                "light",
+                "dark",
+                "wind",
+                "lightning",
+                "fire",
+                "ice",
+            ]:
                 item_key = f"{damage_type}_{star_level}"
                 available = items.get(item_key, 0)
                 if available > 0:
@@ -624,7 +671,9 @@ async def upgrade_player(pid: str):
                     if items_needed <= 0:
                         break
             if items_needed > 0:
-                return {"error": f"insufficient {star_level}★ items (need {item_count}, found {item_count - items_needed})"}
+                return {
+                    "error": f"insufficient {star_level}★ items (need {item_count}, found {item_count - items_needed})"
+                }
         else:
             element = inst.element_id.lower()
             item_key = f"{element}_{star_level}"
@@ -650,16 +699,14 @@ async def upgrade_player(pid: str):
     await asyncio.to_thread(manager._set_items, items)
 
     # Get updated information
-    new_data = await asyncio.to_thread(lambda: {
-        "stat_upgrades": _get_player_stat_upgrades(pid),
-        "upgrade_points": _get_player_upgrade_points(pid),
-    })
+    new_data = await asyncio.to_thread(
+        lambda: {
+            "stat_upgrades": _get_player_stat_upgrades(pid),
+            "upgrade_points": _get_player_upgrade_points(pid),
+        }
+    )
 
-    return jsonify({
-        **result,
-        "items": items,
-        **new_data
-    })
+    return jsonify({**result, "items": items, **new_data})
 
 
 @bp.post("/players/<pid>/upgrade-stat")
@@ -671,7 +718,10 @@ async def upgrade_player_stat(pid: str):
     points_to_spend = data.get("points", 1)
 
     if stat_name not in UPGRADEABLE_STATS:
-        return jsonify({"error": f"invalid stat, must be one of: {UPGRADEABLE_STATS}"}), 400
+        return (
+            jsonify({"error": f"invalid stat, must be one of: {UPGRADEABLE_STATS}"}),
+            400,
+        )
 
     if points_to_spend < 1:
         return jsonify({"error": "points must be at least 1"}), 400
@@ -680,7 +730,9 @@ async def upgrade_player_stat(pid: str):
     upgrade_percent = points_to_spend * 0.001  # 0.1% per point
 
     def spend_points():
-        success = _spend_player_upgrade_points(pid, points_to_spend, stat_name, upgrade_percent)
+        success = _spend_player_upgrade_points(
+            pid, points_to_spend, stat_name, upgrade_percent
+        )
         if not success:
             return {"error": "insufficient upgrade points"}
 
@@ -688,7 +740,7 @@ async def upgrade_player_stat(pid: str):
             "stat_upgraded": stat_name,
             "points_spent": points_to_spend,
             "upgrade_percent": upgrade_percent,
-            "remaining_points": _get_player_upgrade_points(pid)
+            "remaining_points": _get_player_upgrade_points(pid),
         }
 
     result = await asyncio.to_thread(spend_points)

@@ -12,6 +12,7 @@ if TYPE_CHECKING:
 @dataclass
 class MimicPlayerCopy:
     """Mimic's passive - copies player stats and passive at half strength."""
+
     plugin_type = "passive"
     id = "mimic_player_copy"
     name = "Player Copy"
@@ -108,7 +109,9 @@ class MimicPlayerCopy:
             )
             target.add_effect(level_bonus_effect)
 
-    def _on_effect_applied(self, effect_name: str, entity, details: dict | None = None) -> None:
+    def _on_effect_applied(
+        self, effect_name: str, entity, details: dict | None = None
+    ) -> None:
         """Remove only positive stat buffs applied to the Mimic."""
         if self._target_id is None or id(entity) != self._target_id:
             return
@@ -159,6 +162,4 @@ class MimicPlayerCopy:
 
     @classmethod
     def get_description(cls) -> str:
-        return (
-            "Copies the player's stats at battle start with a 25% reduction and copies the player's passive at half strength while blocking other buffs."
-        )
+        return "Copies the player's stats at battle start with a 25% reduction and copies the player's passive at half strength while blocking other buffs."

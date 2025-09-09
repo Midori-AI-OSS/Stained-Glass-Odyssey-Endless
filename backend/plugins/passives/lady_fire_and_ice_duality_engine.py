@@ -12,6 +12,7 @@ if TYPE_CHECKING:
 @dataclass
 class LadyFireAndIceDualityEngine:
     """Lady Fire and Ice's Duality Engine passive - elemental flux system."""
+
     plugin_type = "passive"
     id = "lady_fire_and_ice_duality_engine"
     name = "Duality Engine"
@@ -114,7 +115,8 @@ class LadyFireAndIceDualityEngine:
                     foe.add_effect(debuff)
 
             target._active_effects = [
-                effect for effect in target._active_effects
+                effect
+                for effect in target._active_effects
                 if effect.name != f"{self.id}_flux_potency"
             ]
 

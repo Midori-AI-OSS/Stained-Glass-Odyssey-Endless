@@ -56,7 +56,11 @@ class DamageTypeBase:
     def on_hit(self, attacker: Stats, target: Stats) -> None:
         """Called when ``attacker`` successfully hits ``target``."""
         try:
-            log.debug("%s hit %s", getattr(attacker, "id", "unknown"), getattr(target, "id", "unknown"))
+            log.debug(
+                "%s hit %s",
+                getattr(attacker, "id", "unknown"),
+                getattr(target, "id", "unknown"),
+            )
         except Exception:
             pass
 
@@ -64,7 +68,12 @@ class DamageTypeBase:
         """Called before damage is applied; return the modified ``damage``."""
 
         try:
-            log.debug("%s on_damage %s -> %s", getattr(attacker, "id", "unknown"), getattr(target, "id", "unknown"), damage)
+            log.debug(
+                "%s on_damage %s -> %s",
+                getattr(attacker, "id", "unknown"),
+                getattr(target, "id", "unknown"),
+                damage,
+            )
         except Exception:
             pass
         return damage
@@ -73,7 +82,12 @@ class DamageTypeBase:
         """Called when ``target`` takes damage; return the modified ``damage``."""
 
         try:
-            log.debug("%s on_damage_taken %s -> %s", getattr(attacker, "id", "unknown"), getattr(target, "id", "unknown"), damage)
+            log.debug(
+                "%s on_damage_taken %s -> %s",
+                getattr(attacker, "id", "unknown"),
+                getattr(target, "id", "unknown"),
+                damage,
+            )
         except Exception:
             pass
         return damage
@@ -84,7 +98,12 @@ class DamageTypeBase:
         """Called when ``target`` takes DoT damage; return the modified ``damage``."""
 
         try:
-            log.debug("%s on_dot_damage_taken %s -> %s", getattr(attacker, "id", "unknown"), getattr(target, "id", "unknown"), damage)
+            log.debug(
+                "%s on_dot_damage_taken %s -> %s",
+                getattr(attacker, "id", "unknown"),
+                getattr(target, "id", "unknown"),
+                damage,
+            )
         except Exception:
             pass
         return damage
@@ -95,7 +114,12 @@ class DamageTypeBase:
         """Called when a party member takes damage; return the modified ``damage``."""
 
         try:
-            log.debug("%s on_party_damage_taken %s -> %s", getattr(attacker, "id", "unknown"), getattr(target, "id", "unknown"), damage)
+            log.debug(
+                "%s on_party_damage_taken %s -> %s",
+                getattr(attacker, "id", "unknown"),
+                getattr(target, "id", "unknown"),
+                damage,
+            )
         except Exception:
             pass
         return damage
@@ -107,7 +131,10 @@ class DamageTypeBase:
 
         try:
             log.debug(
-                "%s on_party_dot_damage_taken %s -> %s", getattr(attacker, "id", "unknown"), getattr(target, "id", "unknown"), damage
+                "%s on_party_dot_damage_taken %s -> %s",
+                getattr(attacker, "id", "unknown"),
+                getattr(target, "id", "unknown"),
+                damage,
             )
         except Exception:
             pass
@@ -116,14 +143,22 @@ class DamageTypeBase:
     def on_death(self, attacker: Stats, target: Stats) -> None:
         """Called when ``target`` dies."""
         try:
-            log.info("%s killed %s", getattr(attacker, "id", "unknown"), getattr(target, "id", "unknown"))
+            log.info(
+                "%s killed %s",
+                getattr(attacker, "id", "unknown"),
+                getattr(target, "id", "unknown"),
+            )
         except Exception:
             pass
 
     def on_party_member_death(self, attacker: Stats, target: Stats) -> None:
         """Called when a party member dies."""
         try:
-            log.info("Party member %s died to %s", getattr(target, "id", "unknown"), getattr(attacker, "id", "unknown"))
+            log.info(
+                "Party member %s died to %s",
+                getattr(target, "id", "unknown"),
+                getattr(attacker, "id", "unknown"),
+            )
         except Exception:
             pass
 
@@ -131,7 +166,12 @@ class DamageTypeBase:
         """Called before healing is applied; return the modified ``heal``."""
 
         try:
-            log.debug("%s on_heal %s -> %s", getattr(healer, "id", "unknown"), getattr(target, "id", "unknown"), heal)
+            log.debug(
+                "%s on_heal %s -> %s",
+                getattr(healer, "id", "unknown"),
+                getattr(target, "id", "unknown"),
+                heal,
+            )
         except Exception:
             pass
         return heal
@@ -140,7 +180,12 @@ class DamageTypeBase:
         """Called when ``target`` is healed; return the modified ``heal``."""
 
         try:
-            log.debug("%s on_heal_received %s -> %s", getattr(healer, "id", "unknown"), getattr(target, "id", "unknown"), heal)
+            log.debug(
+                "%s on_heal_received %s -> %s",
+                getattr(healer, "id", "unknown"),
+                getattr(target, "id", "unknown"),
+                heal,
+            )
         except Exception:
             pass
         return heal
@@ -149,7 +194,12 @@ class DamageTypeBase:
         """Called when ``target`` receives HoT healing; return the modified ``heal``."""
 
         try:
-            log.debug("%s on_hot_heal_received %s -> %s", getattr(healer, "id", "unknown"), getattr(target, "id", "unknown"), heal)
+            log.debug(
+                "%s on_hot_heal_received %s -> %s",
+                getattr(healer, "id", "unknown"),
+                getattr(target, "id", "unknown"),
+                heal,
+            )
         except Exception:
             pass
         return heal
@@ -160,7 +210,12 @@ class DamageTypeBase:
         """Called when a party member is healed; return the modified ``heal``."""
 
         try:
-            log.debug("%s on_party_heal_received %s -> %s", getattr(healer, "id", "unknown"), getattr(target, "id", "unknown"), heal)
+            log.debug(
+                "%s on_party_heal_received %s -> %s",
+                getattr(healer, "id", "unknown"),
+                getattr(target, "id", "unknown"),
+                heal,
+            )
         except Exception:
             pass
         return heal
@@ -171,7 +226,12 @@ class DamageTypeBase:
         """Called when a party member receives HoT healing; return the modified ``heal``."""
 
         try:
-            log.debug("%s on_party_hot_heal_received %s -> %s", getattr(healer, "id", "unknown"), getattr(target, "id", "unknown"), heal)
+            log.debug(
+                "%s on_party_hot_heal_received %s -> %s",
+                getattr(healer, "id", "unknown"),
+                getattr(target, "id", "unknown"),
+                heal,
+            )
         except Exception:
             pass
         return heal

@@ -14,9 +14,7 @@ from plugins.players import Player
 def test_random_player_foes() -> None:
     random.seed(0)
     party = Party(members=[Player()])
-    player_ids = {
-        getattr(players, name).id for name in getattr(players, "__all__", [])
-    }
+    player_ids = {getattr(players, name).id for name in getattr(players, "__all__", [])}
     seen = [_choose_foe(party) for _ in range(20)]
     ids = {foe.id for foe in seen}
     assert any(fid in player_ids and fid != "slime" for fid in ids)

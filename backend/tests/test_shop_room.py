@@ -65,7 +65,9 @@ async def test_shop_generate_buy_reroll():
 async def test_shop_cost_scales_with_pressure():
     random.seed(0)
     pressure = 3
-    node = MapNode(room_id=1, room_type="shop", floor=1, index=1, loop=1, pressure=pressure)
+    node = MapNode(
+        room_id=1, room_type="shop", floor=1, index=1, loop=1, pressure=pressure
+    )
     room = ShopRoom(node)
 
     p = PlayerBase()
@@ -79,8 +81,8 @@ async def test_shop_cost_scales_with_pressure():
     assert first["stock"]
     for item in first["stock"]:
         base = PRICE_BY_STARS[item["stars"]]
-        min_cost = int(base * (1.26 ** pressure) * 0.95)
-        max_cost = int(base * (1.26 ** pressure) * 1.05)
+        min_cost = int(base * (1.26**pressure) * 0.95)
+        max_cost = int(base * (1.26**pressure) * 1.05)
         assert min_cost <= item["cost"] <= max_cost
 
 
@@ -91,7 +93,8 @@ def app_with_shop(tmp_path, monkeypatch):
     monkeypatch.setenv("AF_DB_KEY", "testkey")
     monkeypatch.syspath_prepend(Path(__file__).resolve().parents[1])
     spec = importlib.util.spec_from_file_location(
-        "app", Path(__file__).resolve().parents[1] / "app.py",
+        "app",
+        Path(__file__).resolve().parents[1] / "app.py",
     )
     app_module = importlib.util.module_from_spec(spec)
     assert spec.loader is not None
@@ -117,7 +120,8 @@ async def test_shop_allows_multiple_actions(app_with_shop):
     start = await client.post("/run/start", json={"party": ["player"]})
     run_id = (await start.get_json())["run_id"]
     await client.put(
-        f"/party/{run_id}", json={"party": ["player"], "gold": 300},
+        f"/party/{run_id}",
+        json={"party": ["player"], "gold": 300},
     )
 
     first = await client.post(f"/rooms/{run_id}/shop")
@@ -133,9 +137,7 @@ async def test_shop_allows_multiple_actions(app_with_shop):
     spent = item1["cost"]
     assert data["gold"] == gold - spent
 
-    reroll1 = await client.post(
-        f"/rooms/{run_id}/shop", json={"action": "reroll"}
-    )
+    reroll1 = await client.post(f"/rooms/{run_id}/shop", json={"action": "reroll"})
     data = await reroll1.get_json()
     spent += REROLL_COST
     assert data["gold"] == gold - spent
@@ -148,9 +150,7 @@ async def test_shop_allows_multiple_actions(app_with_shop):
     spent += item2["cost"]
     assert data["gold"] == gold - spent
 
-    reroll2 = await client.post(
-        f"/rooms/{run_id}/shop", json={"action": "reroll"}
-    )
+    reroll2 = await client.post(f"/rooms/{run_id}/shop", json={"action": "reroll"})
     data = await reroll2.get_json()
     spent += REROLL_COST
     assert data["gold"] == gold - spent

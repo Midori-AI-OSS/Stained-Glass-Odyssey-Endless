@@ -15,8 +15,8 @@ from ..passives import PassiveRegistry
 from ..stats import Stats
 
 # Action caps for foes to prevent runaway turn economy
-FOE_MAX_ACTIONS_PER_TURN: int = 1     # 1 action per turn
-FOE_MAX_ACTION_POINTS: int = 1        # start and cap at very low AP
+FOE_MAX_ACTIONS_PER_TURN: int = 1  # 1 action per turn
+FOE_MAX_ACTION_POINTS: int = 1  # start and cap at very low AP
 
 
 def _scale_stats(obj: Stats, node: MapNode, strength: float = 1.0) -> None:
@@ -47,7 +47,9 @@ def _scale_stats(obj: Stats, node: MapNode, strength: float = 1.0) -> None:
             pass
         try:
             if hasattr(obj, "defense") and isinstance(obj.defense, (int, float)):
-                obj.defense = type(obj.defense)(obj.defense * min((foe_debuff * node.floor) / 4, 1))
+                obj.defense = type(obj.defense)(
+                    obj.defense * min((foe_debuff * node.floor) / 4, 1)
+                )
         except Exception:
             pass
         try:
@@ -106,7 +108,9 @@ def _scale_stats(obj: Stats, node: MapNode, strength: float = 1.0) -> None:
         try:
             apt = getattr(obj, "actions_per_turn", None)
             if isinstance(apt, (int, float)):
-                obj.actions_per_turn = int(min(max(1, int(apt)), FOE_MAX_ACTIONS_PER_TURN))
+                obj.actions_per_turn = int(
+                    min(max(1, int(apt)), FOE_MAX_ACTIONS_PER_TURN)
+                )
         except Exception:
             pass
         try:
@@ -217,9 +221,11 @@ def _get_effect_description(effect_name: str) -> str:
     try:
         if effect_name == "aftertaste":
             from plugins.effects.aftertaste import Aftertaste
+
             return Aftertaste.get_description()
         elif effect_name == "critical_boost":
             from plugins.effects.critical_boost import CriticalBoost
+
             return CriticalBoost.get_description()
         else:
             return "Unknown effect"
@@ -336,6 +342,7 @@ def _serialize(obj: Stats) -> dict[str, Any]:
     dots = []
     hots = []
     if mgr is not None:
+
         def pack(effects, key):
             grouped: dict[str, dict[str, Any]] = {}
             for eff in effects:
@@ -343,7 +350,9 @@ def _serialize(obj: Stats) -> dict[str, Any]:
                 elem = "Generic"
                 try:
                     src = getattr(eff, "source", None)
-                    dtype = getattr(eff, "damage_type", None) or getattr(src, "damage_type", None)
+                    dtype = getattr(eff, "damage_type", None) or getattr(
+                        src, "damage_type", None
+                    )
                     elem = _normalize_damage_type(dtype)
                 except Exception:
                     pass
@@ -371,15 +380,17 @@ def _serialize(obj: Stats) -> dict[str, Any]:
 
     # Add special effects (aftertaste, crit boost, etc.)
     active_effects = []
-    if hasattr(obj, '_active_effects'):
+    if hasattr(obj, "_active_effects"):
         for effect in obj.get_active_effects():
-            active_effects.append({
-                "name": effect.name,
-                "source": effect.source,
-                "duration": effect.duration,
-                "modifiers": effect.stat_modifiers,
-                "description": _get_effect_description(effect.name)
-            })
+            active_effects.append(
+                {
+                    "name": effect.name,
+                    "source": effect.source,
+                    "duration": effect.duration,
+                    "modifiers": effect.stat_modifiers,
+                    "description": _get_effect_description(effect.name),
+                }
+            )
     data["active_effects"] = active_effects
 
     # Ensure in-run (runtime) stats are present even when implemented as @property
@@ -395,33 +406,79 @@ def _serialize(obj: Stats) -> dict[str, Any]:
         data["max_hp"] = int(_num(lambda: obj.max_hp, data.get("max_hp", 0)))
         data["atk"] = int(_num(lambda: obj.atk, data.get("atk", 0)))
         data["defense"] = int(_num(lambda: obj.defense, data.get("defense", 0)))
-        data["crit_rate"] = float(_num(lambda: obj.crit_rate, data.get("crit_rate", 0.0)))
-        data["crit_damage"] = float(_num(lambda: obj.crit_damage, data.get("crit_damage", 2.0)))
-        data["effect_hit_rate"] = float(_num(lambda: obj.effect_hit_rate, data.get("effect_hit_rate", 0.0)))
-        data["effect_resistance"] = float(_num(lambda: obj.effect_resistance, data.get("effect_resistance", 0.0)))
-        data["mitigation"] = float(_num(lambda: obj.mitigation, data.get("mitigation", 1.0)))
+        data["crit_rate"] = float(
+            _num(lambda: obj.crit_rate, data.get("crit_rate", 0.0))
+        )
+        data["crit_damage"] = float(
+            _num(lambda: obj.crit_damage, data.get("crit_damage", 2.0))
+        )
+        data["effect_hit_rate"] = float(
+            _num(lambda: obj.effect_hit_rate, data.get("effect_hit_rate", 0.0))
+        )
+        data["effect_resistance"] = float(
+            _num(lambda: obj.effect_resistance, data.get("effect_resistance", 0.0))
+        )
+        data["mitigation"] = float(
+            _num(lambda: obj.mitigation, data.get("mitigation", 1.0))
+        )
         data["vitality"] = float(_num(lambda: obj.vitality, data.get("vitality", 1.0)))
         data["regain"] = int(_num(lambda: obj.regain, data.get("regain", 0)))
-        data["dodge_odds"] = float(_num(lambda: obj.dodge_odds, data.get("dodge_odds", 0.0)))
+        data["dodge_odds"] = float(
+            _num(lambda: obj.dodge_odds, data.get("dodge_odds", 0.0))
+        )
         # Add shields/overheal support
         data["shields"] = int(_num(lambda: getattr(obj, "shields", 0), 0))
         data["overheal_enabled"] = bool(getattr(obj, "overheal_enabled", False))
     else:
         # Non-Stats objects: keep provided values if present
-        data.setdefault("max_hp", int(getattr(obj, "max_hp", data.get("max_hp", 0)) or 0))
+        data.setdefault(
+            "max_hp", int(getattr(obj, "max_hp", data.get("max_hp", 0)) or 0)
+        )
         data.setdefault("atk", int(getattr(obj, "atk", data.get("atk", 0)) or 0))
-        data.setdefault("defense", int(getattr(obj, "defense", data.get("defense", 0)) or 0))
-        data.setdefault("crit_rate", float(getattr(obj, "crit_rate", data.get("crit_rate", 0.0)) or 0.0))
-        data.setdefault("crit_damage", float(getattr(obj, "crit_damage", data.get("crit_damage", 2.0)) or 2.0))
-        data.setdefault("effect_hit_rate", float(getattr(obj, "effect_hit_rate", data.get("effect_hit_rate", 0.0)) or 0.0))
-        data.setdefault("effect_resistance", float(getattr(obj, "effect_resistance", data.get("effect_resistance", 0.0)) or 0.0))
-        data.setdefault("mitigation", float(getattr(obj, "mitigation", data.get("mitigation", 1.0)) or 1.0))
-        data.setdefault("vitality", float(getattr(obj, "vitality", data.get("vitality", 1.0)) or 1.0))
-        data.setdefault("regain", int(getattr(obj, "regain", data.get("regain", 0)) or 0))
-        data.setdefault("dodge_odds", float(getattr(obj, "dodge_odds", data.get("dodge_odds", 0.0)) or 0.0))
+        data.setdefault(
+            "defense", int(getattr(obj, "defense", data.get("defense", 0)) or 0)
+        )
+        data.setdefault(
+            "crit_rate",
+            float(getattr(obj, "crit_rate", data.get("crit_rate", 0.0)) or 0.0),
+        )
+        data.setdefault(
+            "crit_damage",
+            float(getattr(obj, "crit_damage", data.get("crit_damage", 2.0)) or 2.0),
+        )
+        data.setdefault(
+            "effect_hit_rate",
+            float(
+                getattr(obj, "effect_hit_rate", data.get("effect_hit_rate", 0.0)) or 0.0
+            ),
+        )
+        data.setdefault(
+            "effect_resistance",
+            float(
+                getattr(obj, "effect_resistance", data.get("effect_resistance", 0.0))
+                or 0.0
+            ),
+        )
+        data.setdefault(
+            "mitigation",
+            float(getattr(obj, "mitigation", data.get("mitigation", 1.0)) or 1.0),
+        )
+        data.setdefault(
+            "vitality",
+            float(getattr(obj, "vitality", data.get("vitality", 1.0)) or 1.0),
+        )
+        data.setdefault(
+            "regain", int(getattr(obj, "regain", data.get("regain", 0)) or 0)
+        )
+        data.setdefault(
+            "dodge_odds",
+            float(getattr(obj, "dodge_odds", data.get("dodge_odds", 0.0)) or 0.0),
+        )
         # Add shields/overheal support
         data.setdefault("shields", int(getattr(obj, "shields", 0) or 0))
-        data.setdefault("overheal_enabled", bool(getattr(obj, "overheal_enabled", False)))
+        data.setdefault(
+            "overheal_enabled", bool(getattr(obj, "overheal_enabled", False))
+        )
 
     return data
 

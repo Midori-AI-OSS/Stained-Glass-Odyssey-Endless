@@ -6,6 +6,7 @@ import sqlcipher3
 
 POINTS_VALUES = {1: 1, 2: 150, 3: 22500, 4: 3375000}
 
+
 @pytest.fixture()
 def app_with_db(tmp_path, monkeypatch):
     db_path = tmp_path / "save.db"
@@ -13,7 +14,8 @@ def app_with_db(tmp_path, monkeypatch):
     monkeypatch.setenv("AF_DB_KEY", "testkey")
     monkeypatch.syspath_prepend(Path(__file__).resolve().parents[1])
     spec = importlib.util.spec_from_file_location(
-        "app", Path(__file__).resolve().parents[1] / "app.py",
+        "app",
+        Path(__file__).resolve().parents[1] / "app.py",
     )
     app_module = importlib.util.module_from_spec(spec)
     assert spec.loader is not None
@@ -65,8 +67,7 @@ async def test_character_point_conversion(app_with_db):
     client = app.test_client()
 
     resp = await client.post(
-        "/players/ally/upgrade",
-        json={"star_level": 2, "item_count": 2}
+        "/players/ally/upgrade", json={"star_level": 2, "item_count": 2}
     )
     data = await resp.get_json()
 
@@ -84,8 +85,7 @@ async def test_player_points_system(app_with_db):
     client = app.test_client()
 
     resp = await client.post(
-        "/players/player/upgrade",
-        json={"star_level": 1, "item_count": 5}
+        "/players/player/upgrade", json={"star_level": 1, "item_count": 5}
     )
     data = await resp.get_json()
 
@@ -106,8 +106,7 @@ async def test_player_spend_points(app_with_db):
 
     # Gain some points
     resp = await client.post(
-        "/players/player/upgrade",
-        json={"star_level": 1, "item_count": 10}
+        "/players/player/upgrade", json={"star_level": 1, "item_count": 10}
     )
     data = await resp.get_json()
     expected_points = initial_points + 10  # 10 * 1 point each
@@ -115,8 +114,7 @@ async def test_player_spend_points(app_with_db):
 
     # Now spend points on max_hp
     resp = await client.post(
-        "/players/player/upgrade-stat",
-        json={"stat_name": "max_hp", "points": 5}
+        "/players/player/upgrade-stat", json={"stat_name": "max_hp", "points": 5}
     )
     data = await resp.get_json()
 
@@ -132,14 +130,11 @@ async def test_ally_spend_points(app_with_db):
     app, db_path = app_with_db
     client = app.test_client()
 
-    await client.post(
-        "/players/ally/upgrade",
-        json={"star_level": 2, "item_count": 1}
-    )
+    await client.post("/players/ally/upgrade", json={"star_level": 2, "item_count": 1})
 
     resp = await client.post(
         "/players/ally/upgrade-stat",
-        json={"stat_name": "atk", "points": POINTS_VALUES[2]}
+        json={"stat_name": "atk", "points": POINTS_VALUES[2]},
     )
     data = await resp.get_json()
 
@@ -153,13 +148,10 @@ async def test_new_upgrade_data_in_get_endpoint(app_with_db):
     app, db_path = app_with_db
     client = app.test_client()
 
-    await client.post(
-        "/players/ally/upgrade",
-        json={"star_level": 2, "item_count": 1}
-    )
+    await client.post("/players/ally/upgrade", json={"star_level": 2, "item_count": 1})
     await client.post(
         "/players/ally/upgrade-stat",
-        json={"stat_name": "atk", "points": POINTS_VALUES[2]}
+        json={"stat_name": "atk", "points": POINTS_VALUES[2]},
     )
 
     resp = await client.get("/players/ally/upgrade")
@@ -178,7 +170,7 @@ async def test_insufficient_items_error(app_with_db):
     # Try to upgrade with more items than available
     resp = await client.post(
         "/players/ally/upgrade",
-        json={"star_level": 2, "item_count": 10}  # Only have 5 fire_2 items
+        json={"star_level": 2, "item_count": 10},  # Only have 5 fire_2 items
     )
     data = await resp.get_json()
 
@@ -196,7 +188,7 @@ async def test_invalid_star_level(app_with_db):
     # Try invalid star level
     resp = await client.post(
         "/players/ally/upgrade",
-        json={"star_level": 5, "item_count": 1}  # 5-star not valid
+        json={"star_level": 5, "item_count": 1},  # 5-star not valid
     )
     data = await resp.get_json()
 
@@ -213,14 +205,12 @@ async def test_invalid_stat_name_for_points(app_with_db):
 
     # First gain some points
     await client.post(
-        "/players/player/upgrade",
-        json={"star_level": 1, "item_count": 5}
+        "/players/player/upgrade", json={"star_level": 1, "item_count": 5}
     )
 
     # Try to spend on invalid stat
     resp = await client.post(
-        "/players/player/upgrade-stat",
-        json={"stat_name": "invalid_stat", "points": 1}
+        "/players/player/upgrade-stat", json={"stat_name": "invalid_stat", "points": 1}
     )
     data = await resp.get_json()
 
@@ -244,7 +234,7 @@ async def test_insufficient_points(app_with_db):
     points_to_spend = current_points + 100  # Definitely more than available
     resp = await client.post(
         "/players/player/upgrade-stat",
-        json={"stat_name": "max_hp", "points": points_to_spend}
+        json={"stat_name": "max_hp", "points": points_to_spend},
     )
     data = await resp.get_json()
 

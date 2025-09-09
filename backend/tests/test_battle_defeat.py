@@ -31,7 +31,8 @@ def app_with_db(tmp_path, monkeypatch):
     monkeypatch.setenv("AF_DB_KEY", "testkey")
     monkeypatch.syspath_prepend(Path(__file__).resolve().parents[1])
     spec = importlib.util.spec_from_file_location(
-        "app", Path(__file__).resolve().parents[1] / "app.py",
+        "app",
+        Path(__file__).resolve().parents[1] / "app.py",
     )
     app_module = importlib.util.module_from_spec(spec)
     assert spec.loader is not None
@@ -55,14 +56,13 @@ async def test_run_battle_handles_defeat_cleanup(app_with_db, monkeypatch):
     run_id = (await start_resp.get_json())["run_id"]
 
     # Start battle via UI action endpoint
-    battle_resp = await client.post("/ui/action", json={
-        "action": "room_action",
-        "params": {
-            "room_id": "0",
-            "type": "battle",
-            "action_type": "start"
-        }
-    })
+    battle_resp = await client.post(
+        "/ui/action",
+        json={
+            "action": "room_action",
+            "params": {"room_id": "0", "type": "battle", "action_type": "start"},
+        },
+    )
     assert battle_resp.status_code == 200
 
     # Wait for battle task to complete

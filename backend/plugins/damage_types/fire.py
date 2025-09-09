@@ -17,6 +17,7 @@ class Fire(DamageTypeBase):
     Fire attacks scale with missing HP and often inflict burning damage over
     time at the cost of self-inflicted drain.
     """
+
     id: str = "Fire"
     weakness: str = "Ice"
     color: tuple[int, int, int] = (255, 0, 0)
@@ -40,7 +41,9 @@ class Fire(DamageTypeBase):
             dmg *= math.sqrt(5)
         return dmg
 
-    async def ultimate(self, actor: Stats, allies: list[Stats], enemies: list[Stats]) -> bool:
+    async def ultimate(
+        self, actor: Stats, allies: list[Stats], enemies: list[Stats]
+    ) -> bool:
         """Blast all foes for the caster's attack and try to ignite them."""
         await super().ultimate(actor, allies, enemies)
         base = getattr(actor, "atk", 0)
@@ -48,7 +51,9 @@ class Fire(DamageTypeBase):
         if base <= 0 or not living:
             return True
         for foe in living:
-            dealt = await foe.apply_damage(base, attacker=actor, action_name="Fire Ultimate")
+            dealt = await foe.apply_damage(
+                base, attacker=actor, action_name="Fire Ultimate"
+            )
             mgr = getattr(foe, "effect_manager", None)
             if mgr is None:
                 mgr = EffectManager(foe)

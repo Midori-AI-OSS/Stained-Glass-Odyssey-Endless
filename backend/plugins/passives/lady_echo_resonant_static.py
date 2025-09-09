@@ -12,6 +12,7 @@ if TYPE_CHECKING:
 @dataclass
 class LadyEchoResonantStatic:
     """Lady Echo's Resonant Static passive - chain lightning scaling and crit buffs."""
+
     plugin_type = "passive"
     id = "lady_echo_resonant_static"
     name = "Resonant Static"
@@ -60,7 +61,9 @@ class LadyEchoResonantStatic:
         # Apply party crit rate bonus from consecutive hits
         current_crit_stacks = self._party_crit_stacks[entity_id]
         if current_crit_stacks > 0:
-            party_crit_bonus = min(current_crit_stacks * 0.02, 0.2)  # 2% per stack, max 20%
+            party_crit_bonus = min(
+                current_crit_stacks * 0.02, 0.2
+            )  # 2% per stack, max 20%
 
             party_crit_effect = StatEffect(
                 name=f"{self.id}_party_crit",
@@ -76,8 +79,10 @@ class LadyEchoResonantStatic:
         target_id = id(target_hit)
 
         # Check if this is the same target as last hit
-        if (attacker_id in self._current_target and
-                self._current_target[attacker_id] == target_id):
+        if (
+            attacker_id in self._current_target
+            and self._current_target[attacker_id] == target_id
+        ):
             # Consecutive hit on same target
             self._consecutive_hits[attacker_id] += 1
 
@@ -92,7 +97,8 @@ class LadyEchoResonantStatic:
 
             # Remove previous party crit effects
             attacker._active_effects = [
-                effect for effect in attacker._active_effects
+                effect
+                for effect in attacker._active_effects
                 if effect.name != f"{self.id}_party_crit"
             ]
 

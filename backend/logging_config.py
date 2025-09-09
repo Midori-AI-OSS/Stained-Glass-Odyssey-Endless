@@ -11,7 +11,9 @@ from rich.logging import RichHandler
 
 
 class TimedMemoryHandler(MemoryHandler):
-    def __init__(self, capacity: int, target: logging.Handler, flush_interval: float = 15.0) -> None:
+    def __init__(
+        self, capacity: int, target: logging.Handler, flush_interval: float = 15.0
+    ) -> None:
         super().__init__(capacity, target=target, flushLevel=logging.CRITICAL + 1)
         self.flush_interval = flush_interval
         self._timer = threading.Timer(self.flush_interval, self._flush)

@@ -23,7 +23,9 @@ async def test_chain_bonus_counts_effect_manager_dots():
     passive = LadyEchoResonantStatic()
     await passive.apply(attacker, hit_target=target)
 
-    effects = [e for e in attacker._active_effects if e.name == f"{passive.id}_chain_bonus"]
+    effects = [
+        e for e in attacker._active_effects if e.name == f"{passive.id}_chain_bonus"
+    ]
     assert len(effects) == 1
     assert effects[0].stat_modifiers["atk"] == int(base_atk * 0.2)
 
@@ -41,7 +43,8 @@ async def test_chain_bonus_falls_back_to_target_dots():
     passive = LadyEchoResonantStatic()
     await passive.apply(attacker, hit_target=target)
 
-    effects = [e for e in attacker._active_effects if e.name == f"{passive.id}_chain_bonus"]
+    effects = [
+        e for e in attacker._active_effects if e.name == f"{passive.id}_chain_bonus"
+    ]
     assert len(effects) == 1
     assert effects[0].stat_modifiers["atk"] == int(base_atk * 0.3)
-

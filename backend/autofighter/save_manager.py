@@ -8,12 +8,13 @@ from pathlib import Path
 import sys
 
 # Handle platform-specific SQLite encryption imports
-if sys.platform == 'win32':
+if sys.platform == "win32":
     try:
         import pysqlcipher3.dbapi2 as sqlcipher3
     except ImportError:
         # Fallback to regular sqlite3 on Windows if pysqlcipher3 fails
         import sqlite3 as sqlcipher3
+
         sqlcipher3.set_key = lambda conn, key: None  # No-op for fallback
 else:
     import sqlcipher3
@@ -43,9 +44,9 @@ class SaveManager:
     @contextmanager
     def connection(self) -> Iterator[sqlcipher3.Connection]:
         conn = sqlcipher3.connect(self.db_path)
-        if self.key and hasattr(conn, 'set_key'):
+        if self.key and hasattr(conn, "set_key"):
             conn.set_key(self.key)
-        elif self.key and sys.platform == 'win32':
+        elif self.key and sys.platform == "win32":
             # For pysqlcipher3, use execute to set key
             try:
                 conn.execute(f"PRAGMA key = '{self.key}'")

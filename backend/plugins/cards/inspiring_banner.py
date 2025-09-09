@@ -9,4 +9,6 @@ class InspiringBanner(CardBase):
     id: str = "inspiring_banner"
     name: str = "Inspiring Banner"
     stars: int = 1
-    effects: dict[str, float] = field(default_factory=lambda: {"atk": 0.02, "defense": 0.02})
+    effects: dict[str, float] = field(
+        default_factory=lambda: {"atk": 0.02, "defense": 0.02}
+    )

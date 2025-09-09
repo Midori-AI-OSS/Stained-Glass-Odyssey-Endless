@@ -11,7 +11,9 @@ class FountainEvent:
 
     @staticmethod
     def build(seed: int = 1) -> Event:
-        async def _effect(stats: Stats, _items: dict[str, int], rng: random.Random) -> str:
+        async def _effect(
+            stats: Stats, _items: dict[str, int], rng: random.Random
+        ) -> str:
             heal = rng.randint(5, 10)
             await stats.apply_healing(heal)
             return f"You feel restored: +{heal} HP"
