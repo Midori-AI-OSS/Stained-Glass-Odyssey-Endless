@@ -7,17 +7,16 @@ their actual behavior against their documented claims to identify discrepancies.
 """
 
 import ast
-import importlib.util
-import inspect
-import json
+from dataclasses import dataclass
 import logging
-import os
+from pathlib import Path
 import re
 import sys
 import traceback
-from dataclasses import dataclass, field
-from pathlib import Path
-from typing import Any, Dict, List, Optional, Set, Union
+from typing import Any
+from typing import Dict
+from typing import List
+from typing import Optional
 
 import yaml
 
@@ -57,145 +56,145 @@ class AbilityInfo:
 
 class AbilityAuditor:
     """Main auditor class for scanning and analyzing abilities."""
-    
+
     def __init__(self, repo_root: Path):
         self.repo_root = repo_root
         self.backend_root = repo_root / "backend"
         self.plugins_root = self.backend_root / "plugins"
         self.issues: List[AuditIssue] = []
         self.abilities: List[AbilityInfo] = []
-        
+
     def scan_all_abilities(self) -> None:
         """Scan all abilities in the repository."""
         log.info("Starting comprehensive ability audit...")
-        
+
         # Scan each ability type
         self._scan_characters()
         self._scan_passives()
         self._scan_cards()
         self._scan_relics()
         self._scan_damage_types()  # These contain ultimates
-        
+
         log.info(f"Found {len(self.abilities)} abilities to audit")
-        
+
     def _scan_characters(self) -> None:
         """Scan character definitions."""
         players_dir = self.plugins_root / "players"
         if not players_dir.exists():
             return
-            
+
         for py_file in players_dir.glob("*.py"):
             if py_file.name.startswith("_"):
                 continue
-                
+
             try:
                 ability = self._analyze_python_file(py_file, "char")
                 if ability:
                     self.abilities.append(ability)
             except Exception as e:
                 log.warning(f"Failed to analyze character {py_file}: {e}")
-                
+
     def _scan_passives(self) -> None:
         """Scan passive ability definitions."""
         passives_dir = self.plugins_root / "passives"
         if not passives_dir.exists():
             return
-            
+
         for py_file in passives_dir.glob("*.py"):
             if py_file.name.startswith("_"):
                 continue
-                
+
             try:
                 ability = self._analyze_python_file(py_file, "passive")
                 if ability:
                     self.abilities.append(ability)
             except Exception as e:
                 log.warning(f"Failed to analyze passive {py_file}: {e}")
-                
+
     def _scan_cards(self) -> None:
         """Scan card definitions."""
         cards_dir = self.plugins_root / "cards"
         if not cards_dir.exists():
             return
-            
+
         for py_file in cards_dir.glob("*.py"):
             if py_file.name.startswith("_"):
                 continue
-                
+
             try:
                 ability = self._analyze_python_file(py_file, "card")
                 if ability:
                     self.abilities.append(ability)
             except Exception as e:
                 log.warning(f"Failed to analyze card {py_file}: {e}")
-                
+
     def _scan_relics(self) -> None:
         """Scan relic definitions."""
         relics_dir = self.plugins_root / "relics"
         if not relics_dir.exists():
             return
-            
+
         for py_file in relics_dir.glob("*.py"):
             if py_file.name.startswith("_"):
                 continue
-                
+
             try:
                 ability = self._analyze_python_file(py_file, "relic")
                 if ability:
                     self.abilities.append(ability)
             except Exception as e:
                 log.warning(f"Failed to analyze relic {py_file}: {e}")
-                
+
     def _scan_damage_types(self) -> None:
         """Scan damage type definitions (contain ultimates)."""
         damage_types_dir = self.plugins_root / "damage_types"
         if not damage_types_dir.exists():
             return
-            
+
         for py_file in damage_types_dir.glob("*.py"):
             if py_file.name.startswith("_"):
                 continue
-                
+
             try:
                 ability = self._analyze_python_file(py_file, "ult")
                 if ability:
                     self.abilities.append(ability)
             except Exception as e:
                 log.warning(f"Failed to analyze damage type {py_file}: {e}")
-                
+
     def _analyze_python_file(self, file_path: Path, kind: str) -> Optional[AbilityInfo]:
         """Analyze a Python file to extract ability information."""
         try:
             with open(file_path, 'r', encoding='utf-8') as f:
                 content = f.read()
-                
+
             # Parse AST
             tree = ast.parse(content)
-            
+
             # Find the main class
             main_class = None
             for node in ast.walk(tree):
                 if isinstance(node, ast.ClassDef) and not node.name.startswith('_'):
                     main_class = node
                     break
-                    
+
             if not main_class:
                 return None
-                
+
             # Extract basic info
             ability_id = self._extract_id_from_class(main_class, content)
             ability_name = self._extract_name_from_class(main_class, content)
-            
+
             if not ability_id:
                 ability_id = file_path.stem
             if not ability_name:
                 ability_name = main_class.name
-                
+
             # Extract documentation and behavior
             documentation = self._extract_documentation(main_class, content)
             code_behavior = self._analyze_code_behavior(main_class, content, kind)
             claims = self._extract_claims(documentation, code_behavior)
-            
+
             return AbilityInfo(
                 id=ability_id,
                 name=ability_name,
@@ -206,11 +205,11 @@ class AbilityAuditor:
                 code_behavior=code_behavior,
                 claims=claims
             )
-            
+
         except Exception as e:
             log.warning(f"Error analyzing {file_path}: {e}")
             return None
-            
+
     def _extract_id_from_class(self, class_node: ast.ClassDef, content: str) -> Optional[str]:
         """Extract the ID field from a class definition."""
         for node in class_node.body:
@@ -223,7 +222,7 @@ class AbilityAuditor:
                         if isinstance(node.value, ast.Constant):
                             return node.value.value
         return None
-        
+
     def _extract_name_from_class(self, class_node: ast.ClassDef, content: str) -> Optional[str]:
         """Extract the name field from a class definition."""
         for node in class_node.body:
@@ -236,16 +235,16 @@ class AbilityAuditor:
                         if isinstance(node.value, ast.Constant):
                             return node.value.value
         return None
-        
+
     def _extract_documentation(self, class_node: ast.ClassDef, content: str) -> str:
         """Extract documentation from class docstring and about field."""
         docs = []
-        
+
         # Get class docstring
-        if (class_node.body and isinstance(class_node.body[0], ast.Expr) 
+        if (class_node.body and isinstance(class_node.body[0], ast.Expr)
             and isinstance(class_node.body[0].value, ast.Constant)):
             docs.append(class_node.body[0].value.value)
-            
+
         # Get about field
         for node in class_node.body:
             if isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
@@ -256,9 +255,9 @@ class AbilityAuditor:
                     if isinstance(target, ast.Name) and target.id == "about":
                         if isinstance(node.value, ast.Constant):
                             docs.append(f"About: {node.value.value}")
-                            
+
         return "\n".join(docs)
-        
+
     def _analyze_code_behavior(self, class_node: ast.ClassDef, content: str, kind: str) -> Dict[str, Any]:
         """Analyze the actual code behavior of an ability."""
         behavior = {
@@ -271,16 +270,16 @@ class AbilityAuditor:
             "healing_calculations": [],
             "conditions": [],
         }
-        
+
         # Analyze all methods
         for node in class_node.body:
             if isinstance(node, ast.FunctionDef):
                 method_info = self._analyze_method(node, content)
                 behavior["methods"].append(method_info)
-                
+
                 # Extract specific behaviors based on method content
                 self._extract_method_behaviors(node, behavior)
-                
+
         # Extract field values
         for node in class_node.body:
             if isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
@@ -297,9 +296,9 @@ class AbilityAuditor:
                             behavior["effects"] = self._extract_effects_dict(node.value)
                         elif field_name == "trigger":
                             behavior["triggers"] = self._extract_trigger_value(node.value)
-                            
+
         return behavior
-        
+
     def _analyze_method(self, method_node: ast.FunctionDef, content: str) -> Dict[str, Any]:
         """Analyze a specific method."""
         return {
@@ -309,7 +308,7 @@ class AbilityAuditor:
             "calls_made": self._extract_method_calls(method_node),
             "docstring": ast.get_docstring(method_node) or "",
         }
-        
+
     def _extract_method_calls(self, method_node: ast.FunctionDef) -> List[str]:
         """Extract method/function calls made within a method."""
         calls = []
@@ -320,12 +319,12 @@ class AbilityAuditor:
                 elif isinstance(node.func, ast.Name):
                     calls.append(node.func.id)
         return calls
-        
+
     def _extract_method_behaviors(self, method_node: ast.FunctionDef, behavior: Dict[str, Any]) -> None:
         """Extract specific behaviors from method AST."""
         for node in ast.walk(method_node):
             # Look for BUS events
-            if (isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) 
+            if (isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)
                 and isinstance(node.func.value, ast.Name) and node.func.value.id == "BUS"):
                 if node.func.attr in ["emit", "subscribe"]:
                     if node.args and isinstance(node.args[0], ast.Constant):
@@ -333,28 +332,28 @@ class AbilityAuditor:
                             "type": node.func.attr,
                             "event": node.args[0].value
                         })
-                        
+
             # Look for damage/healing calculations
             if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute):
                 if node.func.attr == "apply_damage":
                     behavior["damage_calculations"].append(self._extract_calculation_info(node))
                 elif node.func.attr in ["apply_healing", "heal"]:
                     behavior["healing_calculations"].append(self._extract_calculation_info(node))
-                    
+
     def _extract_calculation_info(self, call_node: ast.Call) -> Dict[str, Any]:
         """Extract damage/healing calculation information."""
         info = {"args": []}
         for arg in call_node.args:
             try:
                 info["args"].append(ast.unparse(arg))
-            except:
+            except Exception:
                 info["args"].append(str(arg))
         return info
-        
+
     def _extract_effects_dict(self, call_node: ast.Call) -> Dict[str, Any]:
         """Extract effects dictionary from a field(default_factory=lambda: {...}) pattern."""
         effects = {}
-        
+
         # Handle field(default_factory=lambda: {...}) pattern
         if isinstance(call_node.func, ast.Name) and call_node.func.id == "field":
             for keyword in call_node.keywords:
@@ -368,17 +367,17 @@ class AbilityAuditor:
                                 # Handle negative numbers
                                 if isinstance(value.op, ast.USub) and isinstance(value.operand, ast.Constant):
                                     effects[key.value] = -value.operand.value
-                                    
+
         # Also handle direct lambda: {...} pattern
-        elif (isinstance(call_node.func, ast.Name) and call_node.func.id == "lambda" 
+        elif (isinstance(call_node.func, ast.Name) and call_node.func.id == "lambda"
               and call_node.args and isinstance(call_node.args[0], ast.Dict)):
             dict_node = call_node.args[0]
             for key, value in zip(dict_node.keys, dict_node.values):
                 if isinstance(key, ast.Constant) and isinstance(value, ast.Constant):
                     effects[key.value] = value.value
-                    
+
         return effects
-        
+
     def _extract_trigger_value(self, value_node: ast.expr) -> List[str]:
         """Extract trigger value(s) from AST node."""
         if isinstance(value_node, ast.Constant):
@@ -390,7 +389,7 @@ class AbilityAuditor:
                     triggers.append(item.value)
             return triggers
         return []
-        
+
     def _extract_claims(self, documentation: str, code_behavior: Dict[str, Any]) -> Dict[str, Any]:
         """Extract claims from documentation for comparison with code."""
         claims = {
@@ -402,10 +401,10 @@ class AbilityAuditor:
             "cooldowns": [],
             "stacks": [],
         }
-        
+
         if not documentation:
             return claims
-            
+
         # Extract percentage claims (e.g., "+255% ATK", "50% damage")
         # Improved regex to match percentage + valid stat name
         percentage_pattern = r'[+\-]?(\d+(?:\.\d+)?)%\s+(ATK|DEF|HP|damage|healing|crit|dodge|regain|mitigation|vitality)\b'
@@ -416,7 +415,7 @@ class AbilityAuditor:
                 "stat": stat.lower(),
                 "text": match.group(0)
             })
-            
+
         # Extract trigger claims
         trigger_patterns = [
             r'when\s+(\w+(?:\s+\w+)*)',
@@ -424,11 +423,11 @@ class AbilityAuditor:
             r'after\s+(\w+(?:\s+\w+)*)',
             r'triggers?\s+(\w+(?:\s+\w+)*)',
         ]
-        
+
         for pattern in trigger_patterns:
             for match in re.finditer(pattern, documentation, re.IGNORECASE):
                 claims["triggers"].append(match.group(1).lower())
-                
+
         # Extract targeting claims
         target_patterns = [
             r'(all\s+\w+)',
@@ -438,54 +437,54 @@ class AbilityAuditor:
             r'(party)',
             r'(enemies?)',
         ]
-        
+
         for pattern in target_patterns:
             for match in re.finditer(pattern, documentation, re.IGNORECASE):
                 claims["targets"].append(match.group(1).lower())
-                
+
         return claims
-        
+
     def audit_abilities(self) -> None:
         """Run audit checks on all discovered abilities."""
         log.info("Running audit checks...")
-        
+
         for ability in self.abilities:
             self._audit_single_ability(ability)
-            
+
         log.info(f"Audit complete. Found {len(self.issues)} issues.")
-        
+
     def _audit_single_ability(self, ability: AbilityInfo) -> None:
         """Audit a single ability for discrepancies."""
         # Check stat effect claims vs code
         self._check_stat_effects(ability)
-        
+
         # Check trigger claims vs code
         self._check_triggers(ability)
-        
+
         # Check damage calculations
         self._check_damage_calculations(ability)
-        
+
         # Check targeting logic
         self._check_targeting(ability)
-        
+
         # Check special mechanics
         self._check_special_mechanics(ability)
-        
+
     def _check_stat_effects(self, ability: AbilityInfo) -> None:
         """Check if stat effects match documentation claims."""
         claims = ability.claims.get("damage_percentages", [])
         code_effects = ability.code_behavior.get("effects", {})
-        
+
         for claim in claims:
             stat = claim["stat"]
             claimed_value = claim["value"]
-            
+
             # Convert percentage to decimal for comparison
             if claimed_value > 1:
                 claimed_decimal = claimed_value / 100
             else:
                 claimed_decimal = claimed_value
-                
+
             # Check if this stat exists in code effects
             code_value = code_effects.get(stat)
             if code_value is None:
@@ -493,7 +492,7 @@ class AbilityAuditor:
                 similar_stats = [s for s in code_effects.keys() if stat in s or s in stat]
                 if similar_stats:
                     code_value = code_effects[similar_stats[0]]
-                    
+
             if code_value is not None:
                 # Allow for small floating point differences
                 if abs(code_value - claimed_decimal) > 0.001:
@@ -508,7 +507,7 @@ class AbilityAuditor:
                             f"Check effects field in {ability.file_path}",
                             f"Look for {stat} in effects dictionary"
                         ],
-                        suggested_fix=f"Update documentation to match code value or fix code to match claim",
+                        suggested_fix="Update documentation to match code value or fix code to match claim",
                         references=[ability.file_path]
                     ))
             else:
@@ -526,20 +525,20 @@ class AbilityAuditor:
                     suggested_fix=f"Either implement {stat} effect or remove claim from documentation",
                     references=[ability.file_path]
                 ))
-                
+
     def _check_triggers(self, ability: AbilityInfo) -> None:
         """Check if trigger claims match code implementation."""
         claimed_triggers = ability.claims.get("triggers", [])
         code_triggers = ability.code_behavior.get("triggers", [])
         bus_events = [e["event"] for e in ability.code_behavior.get("bus_events", []) if e["type"] == "subscribe"]
-        
+
         # Normalize trigger names for comparison
         def normalize_trigger(trigger: str) -> str:
             return trigger.lower().replace(" ", "_").replace("-", "_")
-            
+
         normalized_claimed = [normalize_trigger(t) for t in claimed_triggers]
         normalized_code = [normalize_trigger(t) for t in code_triggers + bus_events]
-        
+
         for i, claimed in enumerate(normalized_claimed):
             if claimed not in normalized_code:
                 # Look for similar triggers
@@ -559,12 +558,12 @@ class AbilityAuditor:
                         suggested_fix=f"Implement trigger for '{claimed}' or update documentation",
                         references=[ability.file_path]
                     ))
-                    
+
     def _check_damage_calculations(self, ability: AbilityInfo) -> None:
         """Check damage calculation logic."""
         damage_claims = [c for c in ability.claims.get("damage_percentages", []) if "damage" in c.get("text", "").lower()]
         damage_calculations = ability.code_behavior.get("damage_calculations", [])
-        
+
         if damage_claims and not damage_calculations:
             self.issues.append(AuditIssue(
                 path=ability.file_path,
@@ -575,22 +574,22 @@ class AbilityAuditor:
                 observed_behavior="No apply_damage calls found in implementation",
                 reproduction_steps=[
                     f"Search for 'damage' in documentation in {ability.file_path}",
-                    f"Search for apply_damage method calls in class methods"
+                    "Search for apply_damage method calls in class methods"
                 ],
                 suggested_fix="Implement damage calculation or remove damage claims from documentation",
                 references=[ability.file_path]
             ))
-            
+
     def _check_targeting(self, ability: AbilityInfo) -> None:
         """Check targeting logic claims."""
         target_claims = ability.claims.get("targets", [])
-        
+
         # This is a basic check - more sophisticated targeting analysis would require
         # examining method parameters and logic
         if target_claims:
             methods = ability.code_behavior.get("methods", [])
             apply_methods = [m for m in methods if m["name"] in ["apply", "ultimate", "use"]]
-            
+
             if apply_methods:
                 # Check if method signatures match targeting claims
                 for method in apply_methods:
@@ -598,7 +597,7 @@ class AbilityAuditor:
                     if "all" in " ".join(target_claims) and "targets" not in args and "foes" not in args:
                         # Could indicate missing multi-target support
                         pass
-                        
+
     def _check_special_mechanics(self, ability: AbilityInfo) -> None:
         """Check for special mechanic discrepancies."""
         # Check for stacking mechanics
@@ -610,7 +609,7 @@ class AbilityAuditor:
                 # Check for stack-related variables or logic
                 bus_events = ability.code_behavior.get("bus_events", [])
                 stack_events = any("stack" in e.get("event", "").lower() for e in bus_events)
-                
+
                 if not stack_events:
                     self.issues.append(AuditIssue(
                         path=ability.file_path,
@@ -621,17 +620,17 @@ class AbilityAuditor:
                         observed_behavior="No stack-related methods or events found",
                         reproduction_steps=[
                             f"Search for 'stack' in {ability.file_path}",
-                            f"Check for stack tracking variables or methods"
+                            "Check for stack tracking variables or methods"
                         ],
                         suggested_fix="Implement stacking logic or clarify documentation",
                         references=[ability.file_path]
                     ))
-                    
+
     def generate_issue_files(self) -> None:
         """Generate YAML issue files for all discovered issues."""
         issues_dir = Path(self.repo_root) / ".codex" / "issues"
         issues_dir.mkdir(parents=True, exist_ok=True)
-        
+
         if not self.issues:
             # Create a "no issues found" file
             no_issues = {
@@ -654,11 +653,11 @@ class AbilityAuditor:
                     "methodology": "AST analysis with documentation comparison"
                 }
             }
-            
+
             with open(issues_dir / "no-issues-found.issue", 'w') as f:
                 yaml.dump(no_issues, f, default_flow_style=False, sort_keys=False)
             return
-            
+
         # Generate individual issue files
         for i, issue in enumerate(self.issues):
             issue_data = {
@@ -672,24 +671,24 @@ class AbilityAuditor:
                 "suggested_fix": issue.suggested_fix,
                 "references": issue.references
             }
-            
+
             # Create filename from issue details
             safe_name = re.sub(r'[^a-zA-Z0-9_-]', '', issue.name.replace(' ', '_'))
             filename = f"{issue.kind}_{safe_name}_{i:03d}.issue"
-            
+
             with open(issues_dir / filename, 'w') as f:
                 yaml.dump(issue_data, f, default_flow_style=False, sort_keys=False)
-                
+
     def generate_audit_summary(self) -> None:
         """Generate human-readable audit summary."""
         summary_path = Path(self.repo_root) / ".codex" / "AUDIT-ults-passives-chars-cards-relics.md"
-        
+
         with open(summary_path, 'w') as f:
             f.write("# Comprehensive Ability Audit Summary\n\n")
             f.write("## Overview\n\n")
             f.write("This audit systematically examined all ultimate abilities, passives, characters, cards, and relics ")
             f.write("in the repository to verify that their implementations match their documented behavior.\n\n")
-            
+
             f.write("## Methodology\n\n")
             f.write("The audit process involved:\n\n")
             f.write("1. **Automated Discovery**: Scanning all plugin directories for ability definitions\n")
@@ -697,42 +696,42 @@ class AbilityAuditor:
             f.write("3. **Documentation Extraction**: Gathering claims from docstrings, comments, and `about` fields\n")
             f.write("4. **Behavioral Comparison**: Comparing documented claims against actual code behavior\n")
             f.write("5. **Issue Classification**: Categorizing discrepancies by severity and type\n\n")
-            
+
             f.write("## Scope\n\n")
             f.write(f"- **Total Abilities Audited**: {len(self.abilities)}\n")
-            
+
             # Count by type
             type_counts = {}
             for ability in self.abilities:
                 type_counts[ability.kind] = type_counts.get(ability.kind, 0) + 1
-                
+
             for kind, count in sorted(type_counts.items()):
                 f.write(f"- **{kind.title()}s**: {count}\n")
-                
+
             f.write("\n")
-            
+
             f.write("## Audit Results\n\n")
             f.write(f"**Total Issues Found**: {len(self.issues)}\n\n")
-            
+
             if self.issues:
                 # Group issues by severity
                 severity_counts = {}
                 for issue in self.issues:
                     severity_counts[issue.severity] = severity_counts.get(issue.severity, 0) + 1
-                    
+
                 f.write("### Issues by Severity\n\n")
                 for severity in ["critical", "high", "medium", "low"]:
                     count = severity_counts.get(severity, 0)
                     f.write(f"- **{severity.title()}**: {count}\n")
-                    
+
                 f.write("\n### Issues by Type\n\n")
                 type_counts = {}
                 for issue in self.issues:
                     type_counts[issue.kind] = type_counts.get(issue.kind, 0) + 1
-                    
+
                 for kind, count in sorted(type_counts.items()):
                     f.write(f"- **{kind.title()}**: {count}\n")
-                    
+
                 f.write("\n### Detailed Issues\n\n")
                 for i, issue in enumerate(self.issues, 1):
                     f.write(f"#### {i}. {issue.name} ({issue.kind})\n\n")
@@ -744,7 +743,7 @@ class AbilityAuditor:
             else:
                 f.write("No discrepancies were found during the audit. All abilities appear to have implementations ")
                 f.write("that match their documented behavior.\n\n")
-                
+
             f.write("## Test Coverage\n\n")
             f.write("The audit analyzed the following aspects for each ability:\n\n")
             f.write("- ✅ Stat effect claims vs implementation\n")
@@ -752,14 +751,14 @@ class AbilityAuditor:
             f.write("- ✅ Damage/healing calculation presence\n")
             f.write("- ✅ Targeting logic claims\n")
             f.write("- ✅ Special mechanic claims (stacking, etc.)\n\n")
-            
+
             f.write("## Limitations\n\n")
             f.write("This audit has the following limitations:\n\n")
             f.write("- Static analysis only - no runtime behavior testing\n")
             f.write("- Complex conditional logic may not be fully captured\n")
             f.write("- Dynamic method calls and runtime calculations not analyzed\n")
             f.write("- Integration between abilities not tested\n\n")
-            
+
             f.write("## Next Steps\n\n")
             f.write("### Immediate Actions\n\n")
             if self.issues:
@@ -769,17 +768,17 @@ class AbilityAuditor:
             else:
                 f.write("- [ ] Consider implementing runtime testing for complex abilities\n")
                 f.write("- [ ] Set up regular audit schedule to catch future discrepancies\n")
-                
+
             f.write("- [ ] Add unit tests for abilities lacking test coverage\n")
             f.write("- [ ] Consider implementing ability behavior validation framework\n")
             f.write("- [ ] Document ability design patterns and standards\n\n")
-            
+
             f.write("### Long-term Improvements\n\n")
             f.write("- [ ] Implement automated testing for all ability mechanics\n")
             f.write("- [ ] Create ability behavior specification format\n")
             f.write("- [ ] Add pre-commit hooks to validate ability implementations\n")
             f.write("- [ ] Develop integration tests for ability interactions\n\n")
-            
+
             f.write("---\n\n")
             f.write("*Audit completed on 2024-12-19 using automated analysis*\n")
             f.write("*Requested by: lunamidori5*\n")
@@ -789,22 +788,22 @@ def main():
     """Main entry point for the audit script."""
     repo_root = Path(__file__).parent.parent
     auditor = AbilityAuditor(repo_root)
-    
+
     try:
         # Run the audit
         auditor.scan_all_abilities()
         auditor.audit_abilities()
-        
+
         # Generate outputs
         auditor.generate_issue_files()
         auditor.generate_audit_summary()
-        
-        print(f"Audit complete!")
+
+        print("Audit complete!")
         print(f"- Analyzed {len(auditor.abilities)} abilities")
         print(f"- Found {len(auditor.issues)} issues")
-        print(f"- Generated issue files in .codex/issues/")
-        print(f"- Created audit summary at .codex/AUDIT-ults-passives-chars-cards-relics.md")
-        
+        print("- Generated issue files in .codex/issues/")
+        print("- Created audit summary at .codex/AUDIT-ults-passives-chars-cards-relics.md")
+
     except Exception as e:
         log.error(f"Audit failed: {e}")
         traceback.print_exc()
