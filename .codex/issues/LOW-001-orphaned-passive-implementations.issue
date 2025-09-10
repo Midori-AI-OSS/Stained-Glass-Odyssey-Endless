@@ -1,0 +1,87 @@
+# LOW-001: Orphaned Passive Implementations
+
+**Issue ID**: LOW-001  
+**Severity**: LOW  
+**Entity Type**: Passive System  
+**Entities**: advanced_combat_synergy, room_heal  
+**Status**: ACTIVE  
+**Origin**: Character Ability Audit (17001dd5)  
+
+## Problem Description
+
+Two passive abilities are implemented in the codebase but not assigned to any playable character, resulting in unreachable code that serves no gameplay function.
+
+## Claimed Behavior
+
+**Source**: Passive system design expectations  
+**Expected**: All implemented passives should be used by at least one character, or marked as deprecated/removed
+
+## Actual Behavior
+
+**Observed**: Passives exist but are never applied to characters
+- `advanced_combat_synergy` - Fully implemented but no character uses it
+- `room_heal` - Fully implemented but no character uses it
+- Code exists in passive registry but is effectively dead code
+
+## Technical Details
+
+**Orphaned Passive Files:**
+- `backend/plugins/passives/advanced_combat_synergy.py`
+- `backend/plugins/passives/room_heal.py`
+
+**Investigation Results:**
+- Both passives have complete implementations
+- No character in `backend/plugins/players/` references these passive IDs
+- Passives are discoverable by plugin system but never instantiated
+
+## Impact Assessment
+
+- **Code Maintenance**: Dead code increases maintenance burden
+- **Performance**: Minimal - passives load but aren't used
+- **Confusion**: Developers may wonder about intended usage
+- **Documentation**: May be documented but not functional
+
+## Investigation Required
+
+1. **Check git history** to see if these passives were removed from characters
+2. **Review documentation** to see if they're mentioned as available
+3. **Examine passive effects** to determine if they should be assigned
+4. **Verify no test code** depends on these passives
+
+## Passive Behaviors to Review
+
+### advanced_combat_synergy
+- **File**: `backend/plugins/passives/advanced_combat_synergy.py`
+- **Behavior**: [Need to examine implementation]
+- **Potential Characters**: [Need to determine appropriate assignment]
+
+### room_heal  
+- **File**: `backend/plugins/passives/room_heal.py`
+- **Behavior**: [Need to examine implementation]
+- **Potential Characters**: [Need to determine appropriate assignment]
+
+## Suggested Fix Options
+
+### Option 1: Assign to Characters
+Identify appropriate characters and assign these passives
+
+### Option 2: Remove Dead Code
+Delete unused passive implementations
+
+### Option 3: Mark as Templates
+Document as reference implementations for future characters
+
+### Option 4: Create Test Characters
+Add these to test characters for validation purposes
+
+## Files Requiring Action
+
+- `backend/plugins/passives/advanced_combat_synergy.py` - Review or remove
+- `backend/plugins/passives/room_heal.py` - Review or remove
+- Character files - Consider assigning orphaned passives
+- Documentation - Update passive availability lists
+
+## Related Issues
+
+- Part of broader passive system audit
+- Related to character passive assignment consistency

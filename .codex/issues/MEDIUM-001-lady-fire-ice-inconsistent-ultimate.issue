@@ -1,0 +1,82 @@
+# MEDIUM-001: Lady Fire and Ice Inconsistent Ultimate
+
+**Issue ID**: MEDIUM-001  
+**Severity**: MEDIUM  
+**Entity Type**: Character Ultimate  
+**Entity**: Lady Fire and Ice  
+**Status**: ACTIVE  
+**Origin**: Character Ability Audit (17001dd5)  
+
+## Problem Description
+
+Lady Fire and Ice character has inconsistent ultimate behavior that varies between Fire and Ice ultimates based on substring matching, rather than having a unified dual-element ultimate as suggested by the character name.
+
+## Claimed Behavior
+
+**Source**: Character name and design expectations  
+**Expected**: A unified "Fire and Ice" ultimate that incorporates both elements, or consistent behavior across game sessions
+
+## Actual Behavior
+
+**Observed**: Character gets either Fire ultimate OR Ice ultimate based on random substring matching
+- Character name "Lady Fire and Ice" contains both "fire" and "ice" substrings
+- `get_damage_type()` function randomly chooses between matching substrings
+- Results in inconsistent ultimate abilities between game sessions
+
+## Reproduction Steps
+
+1. Create a Lady Fire and Ice character instance
+2. Check damage type - may be Fire or Ice
+3. Note the ultimate abilities available
+4. Create another instance of Lady Fire and Ice
+5. Check damage type again - may be different element
+6. Observe different ultimate capabilities
+
+## Technical Root Cause
+
+**File**: `backend/plugins/damage_types/__init__.py`  
+**Function**: `get_damage_type(name: str)`
+
+```python
+def get_damage_type(name: str) -> DamageTypeBase:
+    lowered = name.lower()
+    # ... special cases ...
+    matches = [dtype for dtype in ALL_DAMAGE_TYPES if dtype.lower() in lowered]
+    if matches:
+        return _load_cls(choice(matches))()  # Random choice between fire and ice
+    # ...
+```
+
+Since "Lady Fire and Ice" contains both "fire" and "ice", the `matches` list contains both damage types, and `choice()` randomly selects one.
+
+## Impact Assessment
+
+- **Character Identity**: Undermines the dual-element character concept
+- **Player Expectations**: Inconsistent experience with same character
+- **Game Balance**: Character power level varies unpredictably
+- **Documentation**: Character guides become unreliable
+
+## Suggested Fix Options
+
+### Option 1: Create Dual-Element Damage Type
+Implement `backend/plugins/damage_types/fire_and_ice.py` with unified ultimate combining both elements
+
+### Option 2: Deterministic Selection
+Modify name resolution to consistently choose one element (e.g., always Fire for "fire and ice")
+
+### Option 3: Character Rename
+Update character to have a unique name that doesn't conflict with damage type matching
+
+### Option 4: Special Case Handling
+Add explicit special case in `get_damage_type()` for "lady fire and ice"
+
+## Files Requiring Changes
+
+- `backend/plugins/damage_types/__init__.py` - Update resolution logic
+- `backend/plugins/damage_types/fire_and_ice.py` - Create unified damage type (Option 1)
+- `backend/plugins/players/lady_fire_and_ice.py` - Verify character definition
+
+## Related Issues
+
+- See HIGH-001 for other characters with inconsistent ultimates
+- See MEDIUM-003 for dual-element passive implementation

@@ -1,0 +1,77 @@
+# MEDIUM-002: Missing Gacha Rarity Fields
+
+**Issue ID**: MEDIUM-002  
+**Severity**: MEDIUM  
+**Entity Type**: Character Configuration  
+**Entities**: Luna, Lady of Fire  
+**Status**: ACTIVE  
+**Origin**: Character Ability Audit (17001dd5)  
+
+## Problem Description
+
+Luna and Lady of Fire characters are missing `gacha_rarity` fields that are present in other character definitions, which may cause issues in gacha system or character display functionality.
+
+## Claimed Behavior
+
+**Source**: Character system consistency and gacha mechanics  
+**Expected**: All playable characters should have consistent field definitions including gacha_rarity
+
+## Actual Behavior
+
+**Observed**: Luna and Lady of Fire lack gacha_rarity field while other characters have it defined
+- Other characters have `gacha_rarity: int` field (typically 5)
+- Missing field may cause KeyError or default behavior in gacha system
+- Player character intentionally lacks gacha_rarity (expected for special character)
+
+## Reproduction Steps
+
+1. Examine character definition files in `backend/plugins/players/`
+2. Compare field definitions across characters
+3. Check gacha system code for gacha_rarity field usage
+4. Verify if missing field causes runtime issues
+
+## Technical Details
+
+**Missing gacha_rarity fields:**
+- `backend/plugins/players/luna.py`
+- `backend/plugins/players/lady_of_fire.py`
+
+**Characters with gacha_rarity defined:**
+- Most other playable characters have `gacha_rarity: 5`
+
+## Impact Assessment
+
+- **Gacha System**: May cause errors if gacha_rarity is required
+- **Character Display**: UI may not display rarity correctly
+- **Game Balance**: Characters may not appear in appropriate gacha tiers
+- **Consistency**: Breaks field consistency across character definitions
+
+## Investigation Required
+
+1. **Check gacha system implementation** to see if gacha_rarity is required
+2. **Verify UI code** to see if missing field causes display issues
+3. **Test character creation** to confirm no runtime errors occur
+4. **Review character design** to determine intended rarity for Luna and Lady of Fire
+
+## Suggested Fix Options
+
+### Option 1: Add Missing Fields
+Add appropriate `gacha_rarity` values to both characters
+
+### Option 2: Make Field Optional
+Update gacha system to handle missing gacha_rarity gracefully
+
+### Option 3: Documentation
+If intentional, document why these characters lack gacha_rarity
+
+## Files Requiring Investigation
+
+- `backend/plugins/players/luna.py` - Add gacha_rarity field
+- `backend/plugins/players/lady_of_fire.py` - Add gacha_rarity field  
+- Gacha system files - Check for gacha_rarity dependencies
+- UI components - Check for rarity display logic
+
+## Related Issues
+
+- Part of broader character field consistency audit
+- Related to CHARACTER-001 character definition standardization

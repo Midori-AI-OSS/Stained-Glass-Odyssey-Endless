@@ -1,0 +1,81 @@
+# HIGH-001: Eight Characters Have Random Ultimates
+
+**Issue ID**: HIGH-001  
+**Severity**: HIGH  
+**Entity Type**: Character Ultimate System  
+**Entities**: Ally, Becca, Bubbles, Ixia, Graygray, Hilander, Mezzy, Mimic  
+**Status**: ACTIVE  
+**Origin**: Character Ability Audit (17001dd5)  
+
+## Problem Description
+
+Eight characters have completely unpredictable ultimate abilities that change randomly each time they are instantiated, rather than having consistent character-specific ultimates.
+
+## Claimed Behavior
+
+**Source**: Character documentation and design expectations  
+**Expected**: Each character should have unique "custom damage type" ultimates that provide consistent, character-specific abilities
+
+## Actual Behavior
+
+**Observed**: Characters get random ultimates from the pool of available damage types (Light/Dark/Wind/Lightning/Fire/Ice) each time they're created
+- Characters: Ally, Becca, Bubbles, Ixia, Graygray, Hilander, Mezzy, Mimic
+- All use custom damage types that are not implemented as concrete damage type classes
+- Fall back to `random_damage_type()` during damage type resolution
+
+## Reproduction Steps
+
+1. Create a character instance for any affected character (e.g., Ally, Becca)
+2. Check their damage type - note the ultimate type (e.g., Fire)
+3. Create another instance of the same character
+4. Check their damage type again - observe it may be different (e.g., Lightning)
+5. Repeat to see random variation
+
+## Technical Root Cause
+
+**File**: `backend/plugins/damage_types/__init__.py`  
+**Function**: `get_damage_type(name: str)`
+
+```python
+def get_damage_type(name: str) -> DamageTypeBase:
+    lowered = name.lower()
+    # ... special cases for luna, kboshi ...
+    matches = [dtype for dtype in ALL_DAMAGE_TYPES if dtype.lower() in lowered]
+    if matches:
+        return _load_cls(choice(matches))()
+    return random_damage_type()  # 8 characters end up here
+```
+
+These 8 character names don't contain substrings that match existing damage types, so they fall through to the random fallback.
+
+## Impact Assessment
+
+- **Player Experience**: Completely unpredictable character behavior
+- **Game Balance**: Cannot balance characters with inconsistent abilities  
+- **Testing**: Character testing becomes extremely difficult
+- **Documentation**: All character guides become invalid
+
+## Suggested Fix Options
+
+### Option 1: Implement Custom Damage Types
+Create actual damage type classes for each character:
+- `backend/plugins/damage_types/ally.py`
+- `backend/plugins/damage_types/becca.py`
+- etc.
+
+### Option 2: Update Name Mapping
+Modify `get_damage_type()` to explicitly map these characters to specific damage types
+
+### Option 3: Design Decision
+Document whether random ultimates are intended behavior and update documentation accordingly
+
+## Files Requiring Investigation
+
+- `backend/plugins/damage_types/__init__.py` - Core resolution logic
+- Character documentation - Update expectations
+- Individual character files - Add ultimate specifications
+
+## Related Issues
+
+- See MEDIUM-001 for Lady Fire and Ice inconsistent behavior
+- See MEDIUM-002 for missing gacha_rarity fields affecting same characters

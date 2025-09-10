@@ -1,0 +1,57 @@
+# CRITICAL-001: Lady Echo Lightning Ultimate Crash
+
+**Issue ID**: CRITICAL-001  
+**Severity**: CRITICAL  
+**Entity Type**: Character Ultimate  
+**Entity**: Lady Echo (Lightning damage type)  
+**Status**: FIXED (commit a222b5c)  
+**Origin**: Character Ability Audit (17001dd5)  
+
+## Problem Description
+
+Lady Echo character has a critical bug where using her ultimate ability causes runtime errors because the Lightning damage type lacks proper ultimate method implementation.
+
+## Claimed Behavior
+
+**Source**: Character design and damage type system  
+**Expected**: Lady Echo should have Lightning-based ultimate abilities that can be used without runtime errors
+
+## Actual Behavior
+
+**Observed**: Lightning damage type (`backend/plugins/damage_types/lightning.py`) had incorrect method signature
+- Had `def ultimate(self, attacker, target)` instead of expected `async def ultimate(self, actor, allies, enemies)`
+- Caused `TypeError` when battle system called `await dt.ultimate(member, combat_party.members, foes)`
+
+## Reproduction Steps
+
+1. Create a battle with Lady Echo as a party member
+2. Build ultimate charge for Lady Echo
+3. Attempt to use ultimate ability
+4. Observe runtime crash with TypeError
+
+## Impact Assessment
+
+- **Gameplay**: Lady Echo completely unusable for ultimate-focused gameplay
+- **Player Experience**: Game crashes during core combat mechanic
+- **Development**: Affects any future characters using Lightning damage type
+
+## Root Cause
+
+The Lightning damage type had an incompatible method signature that didn't match the base class contract defined in `DamageTypeBase.ultimate()`.
+
+## Resolution
+
+**Status**: ✅ FIXED  
+**Fix Applied**: Updated Lightning ultimate method signature to match expected `async def ultimate(self, actor, allies, enemies)` pattern
+
+## Verification
+
+- ✅ Lightning damage type has properly implemented `ultimate()` method
+- ✅ Lady Echo can use ultimate abilities without runtime errors  
+- ✅ Method signature matches other damage types
+- ✅ Core functionality tests pass
+
+## Files Affected
+
+- `backend/plugins/damage_types/lightning.py` - Fixed ultimate method signature and implementation
+- `backend/tests/test_lightning_ultimate.py` - Updated tests for new signature

@@ -1,0 +1,50 @@
+# MEDIUM-003: Arc Lightning ATK Percentage Mismatch
+
+**Issue ID**: MEDIUM-003  
+**Severity**: MEDIUM  
+**Entity Type**: Card  
+**Entity**: Arc Lightning  
+**Status**: ACTIVE  
+**Origin**: Code Audit - Card Behavior Verification  
+
+## Problem Description
+
+Arc Lightning card has a discrepancy between its claimed ATK bonus (255%) and its actual implemented bonus (255% as decimal 2.55).
+
+## Claimed Behavior
+
+**Source**: `backend/plugins/cards/arc_lightning.py` line 19  
+**Description**: "+255% ATK; every attack chains 50% of dealt damage to a random foe."
+
+## Actual Behavior
+
+**Observed**: The card implements `effects: {"atk": 2.55}` which translates to a 255% increase
+- The effects system uses multipliers where 2.55 = 255% increase (155% of base + 100% = 255% total)
+- The description correctly states "+255% ATK"
+- The implementation is actually correct
+
+## Analysis
+
+**Status**: ✅ NO ISSUE - This is actually correct implementation
+- `atk: 2.55` = 2.55x multiplier = 255% increase ✓
+- Chain damage: 50% of dealt damage ✓ (implemented as `int(amount * 0.5)`)
+- Targets random foe ✓
+- Excludes original target ✓
+
+## Technical Verification
+
+**File**: `backend/plugins/cards/arc_lightning.py`
+- Line 17: `effects: {"atk": 2.55}` = 255% ATK boost ✓
+- Line 19: Description matches implementation ✓  
+- Line 45: Chain damage = 50% ✓ (`amount * 0.5`)
+- Line 44: Random target selection ✓
+- Line 41: Excludes dead foes and original target ✓
+
+## Conclusion
+
+This card implementation is **CORRECT**. No issue exists.
+- Mathematical calculation: 2.55 multiplier = 255% increase ✓
+- Chain lightning behavior matches description ✓
+- Event handling and damage application properly implemented ✓
+
+**Resolution**: Closing as false positive - implementation matches claimed behavior.

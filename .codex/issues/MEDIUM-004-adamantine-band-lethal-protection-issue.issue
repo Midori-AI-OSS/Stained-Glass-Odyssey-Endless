@@ -1,0 +1,85 @@
+# MEDIUM-004: Adamantine Band Lethal Protection Implementation Issue
+
+**Issue ID**: MEDIUM-004  
+**Severity**: MEDIUM  
+**Entity Type**: Card  
+**Entity**: Adamantine Band  
+**Status**: ACTIVE  
+**Origin**: Code Audit - Card Behavior Verification  
+
+## Problem Description
+
+Adamantine Band card implements lethal damage protection in a potentially problematic way that may not work correctly with the game's damage system.
+
+## Claimed Behavior
+
+**Source**: `backend/plugins/cards/adamantine_band.py` line 14  
+**Description**: "+4% HP; If lethal damage would reduce you below 1 HP, reduce that damage by 10%"
+
+## Actual Behavior Implementation
+
+**Observed**: The card attempts to implement damage reduction by modifying HP after damage is taken, rather than preventing the damage
+- Subscribes to "damage_taken" event (after damage is applied)
+- Checks if damage would have been lethal
+- Adds HP back to simulate damage reduction
+- May not properly prevent death or interact correctly with death mechanics
+
+## Technical Analysis
+
+**File**: `backend/plugins/cards/adamantine_band.py`  
+**Lines 19-38**: Implementation details
+
+```python
+def _on_damage_taken(target, attacker, damage):
+    if target in party.members:
+        current_hp = getattr(target, 'hp', 0)
+        # Check if this damage would be lethal
+        if current_hp <= damage and current_hp > 0:
+            damage_reduction = int(damage * 0.10)
+            # Add back HP to simulate reduced damage
+            target.hp = min(target.hp + damage_reduction, max_hp)
+```
+
+## Potential Issues
+
+1. **Timing Problem**: Reacting to "damage_taken" may be too late if death processing has already occurred
+2. **Edge Cases**: May not handle multiple damage sources or rapid consecutive attacks
+3. **Death Prevention**: Character may die before HP is restored
+4. **Integer Rounding**: `int(damage * 0.10)` always rounds down, potentially providing no protection for low damage
+
+## Investigation Required
+
+1. **Test lethal damage scenarios** to verify protection actually prevents death
+2. **Check damage event sequence** to confirm timing is correct
+3. **Verify edge cases** like damage < 10 (where int rounding gives 0 reduction)
+4. **Test with multiple attackers** or rapid damage application
+
+## Suggested Fix Options
+
+### Option 1: Pre-Damage Reduction
+Subscribe to a "before_damage" event instead and modify the damage amount
+
+### Option 2: Death Prevention Hook
+Add explicit death prevention logic that sets HP to 1 if lethal damage reduced by 10% would keep character alive
+
+### Option 3: Damage Modifier System
+Integrate with existing damage modification system if available
+
+## Test Cases Needed
+
+1. Character at 100 HP takes 100 damage → should survive with ~10 HP
+2. Character at 100 HP takes 110 damage → should survive with ~1 HP  
+3. Character at 10 HP takes 9 damage → should receive protection (0.9 → 0, no protection due to rounding)
+4. Multiple rapid attacks in same turn
+5. DoT damage interactions
+
+## Files Requiring Investigation
+
+- `backend/plugins/cards/adamantine_band.py` - Core implementation
+- Battle system damage handling - Event sequence verification
+- Death mechanics - Integration testing
+
+## Related Issues
+
+- Potential pattern issue affecting other defensive cards
+- May indicate need for standardized damage reduction system
