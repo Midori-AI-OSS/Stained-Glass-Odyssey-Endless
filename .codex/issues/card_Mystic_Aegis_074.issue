@@ -1,0 +1,12 @@
+path: /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/cards/mystic_aegis.py
+kind: card
+name: Mystic Aegis
+severity: medium
+description: Claims to trigger on 'an ally resists a debuff'
+observed_behavior: 'No matching trigger found in code. Code triggers: []'
+reproduction_steps:
+- Check trigger field in /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/cards/mystic_aegis.py
+- Check BUS.subscribe calls for event 'an_ally_resists_a_debuff'
+suggested_fix: Implement trigger for 'an_ally_resists_a_debuff' or update documentation
+references:
+- /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/cards/mystic_aegis.py

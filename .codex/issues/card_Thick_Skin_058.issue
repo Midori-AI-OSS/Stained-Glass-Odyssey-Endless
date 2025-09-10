@@ -1,0 +1,12 @@
+path: /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/cards/thick_skin.py
+kind: card
+name: Thick Skin
+severity: medium
+description: Claims to trigger on 'afflicted by bleed'
+observed_behavior: 'No matching trigger found in code. Code triggers: []'
+reproduction_steps:
+- Check trigger field in /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/cards/thick_skin.py
+- Check BUS.subscribe calls for event 'afflicted_by_bleed'
+suggested_fix: Implement trigger for 'afflicted_by_bleed' or update documentation
+references:
+- /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/cards/thick_skin.py

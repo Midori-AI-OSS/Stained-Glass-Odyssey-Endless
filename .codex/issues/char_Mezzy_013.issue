@@ -1,0 +1,12 @@
+path: /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/players/mezzy.py
+kind: char
+name: Mezzy
+severity: medium
+description: Claims to trigger on 'of'
+observed_behavior: 'No matching trigger found in code. Code triggers: []'
+reproduction_steps:
+- Check trigger field in /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/players/mezzy.py
+- Check BUS.subscribe calls for event 'of'
+suggested_fix: Implement trigger for 'of' or update documentation
+references:
+- /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/players/mezzy.py

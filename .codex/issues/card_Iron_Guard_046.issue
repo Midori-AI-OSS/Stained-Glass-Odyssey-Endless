@@ -1,0 +1,12 @@
+path: /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/cards/iron_guard.py
+kind: card
+name: Iron Guard
+severity: medium
+description: Claims +10% DEF effect
+observed_behavior: Code implements 0.55 (55.0%) for def
+reproduction_steps:
+- Check effects field in /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/cards/iron_guard.py
+- Look for def in effects dictionary
+suggested_fix: Update documentation to match code value or fix code to match claim
+references:
+- /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/cards/iron_guard.py

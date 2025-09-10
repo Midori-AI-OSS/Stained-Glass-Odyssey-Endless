@@ -1,0 +1,12 @@
+path: /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/cards/tactical_kit.py
+kind: card
+name: Tactical Kit
+severity: medium
+description: Claims 1% HP effect
+observed_behavior: Code implements 0.02 (2.0%) for hp
+reproduction_steps:
+- Check effects field in /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/cards/tactical_kit.py
+- Look for hp in effects dictionary
+suggested_fix: Update documentation to match code value or fix code to match claim
+references:
+- /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/cards/tactical_kit.py

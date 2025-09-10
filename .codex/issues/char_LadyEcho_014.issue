@@ -1,0 +1,13 @@
+path: /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/players/lady_echo.py
+kind: char
+name: LadyEcho
+severity: medium
+description: Claims to trigger on 'the price is measured in lost time'
+observed_behavior: 'No matching trigger found in code. Code triggers: []'
+reproduction_steps:
+- Check trigger field in /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/players/lady_echo.py
+- Check BUS.subscribe calls for event 'the_price_is_measured_in_lost_time'
+suggested_fix: Implement trigger for 'the_price_is_measured_in_lost_time' or update
+  documentation
+references:
+- /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/players/lady_echo.py

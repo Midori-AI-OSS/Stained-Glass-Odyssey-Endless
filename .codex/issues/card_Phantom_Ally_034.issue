@@ -1,0 +1,12 @@
+path: /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/cards/phantom_ally.py
+kind: card
+name: Phantom Ally
+severity: medium
+description: Claims to trigger on 'the first turn'
+observed_behavior: 'No matching trigger found in code. Code triggers: []'
+reproduction_steps:
+- Check trigger field in /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/cards/phantom_ally.py
+- Check BUS.subscribe calls for event 'the_first_turn'
+suggested_fix: Implement trigger for 'the_first_turn' or update documentation
+references:
+- /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/cards/phantom_ally.py

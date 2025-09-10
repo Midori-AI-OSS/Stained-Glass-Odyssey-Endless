@@ -1,0 +1,12 @@
+path: /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/cards/spiked_shield.py
+kind: card
+name: Spiked Shield
+severity: medium
+description: Claims to trigger on 'triggers'
+observed_behavior: 'No matching trigger found in code. Code triggers: []'
+reproduction_steps:
+- Check trigger field in /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/cards/spiked_shield.py
+- Check BUS.subscribe calls for event 'triggers'
+suggested_fix: Implement trigger for 'triggers' or update documentation
+references:
+- /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/cards/spiked_shield.py

@@ -1,0 +1,12 @@
+path: /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/cards/swift_footwork.py
+kind: card
+name: Swift Footwork
+severity: medium
+description: Claims to trigger on 'per turn'
+observed_behavior: 'No matching trigger found in code. Code triggers: []'
+reproduction_steps:
+- Check trigger field in /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/cards/swift_footwork.py
+- Check BUS.subscribe calls for event 'per_turn'
+suggested_fix: Implement trigger for 'per_turn' or update documentation
+references:
+- /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/cards/swift_footwork.py

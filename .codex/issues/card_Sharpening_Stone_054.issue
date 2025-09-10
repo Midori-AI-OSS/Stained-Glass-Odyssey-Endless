@@ -1,0 +1,12 @@
+path: /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/cards/sharpening_stone.py
+kind: card
+name: Sharpening Stone
+severity: medium
+description: Claims to trigger on 'scoring a crit'
+observed_behavior: 'No matching trigger found in code. Code triggers: []'
+reproduction_steps:
+- Check trigger field in /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/cards/sharpening_stone.py
+- Check BUS.subscribe calls for event 'scoring_a_crit'
+suggested_fix: Implement trigger for 'scoring_a_crit' or update documentation
+references:
+- /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/cards/sharpening_stone.py

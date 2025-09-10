@@ -1,0 +1,12 @@
+path: /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/relics/travelers_charm.py
+kind: relic
+name: Traveler's Charm
+severity: high
+description: Claims +10% mitigation effect
+observed_behavior: No mitigation effect found in code
+reproduction_steps:
+- Check effects field in /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/relics/travelers_charm.py
+- Search for mitigation modifications in class methods
+suggested_fix: Either implement mitigation effect or remove claim from documentation
+references:
+- /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/relics/travelers_charm.py

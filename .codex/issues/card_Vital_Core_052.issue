@@ -1,0 +1,12 @@
+path: /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/cards/vital_core.py
+kind: card
+name: Vital Core
+severity: medium
+description: Claims to trigger on 'below 30'
+observed_behavior: 'No matching trigger found in code. Code triggers: []'
+reproduction_steps:
+- Check trigger field in /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/cards/vital_core.py
+- Check BUS.subscribe calls for event 'below_30'
+suggested_fix: Implement trigger for 'below_30' or update documentation
+references:
+- /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/cards/vital_core.py

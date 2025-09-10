@@ -1,0 +1,12 @@
+path: /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/players/lady_light.py
+kind: char
+name: LadyLight
+severity: medium
+description: Claims to trigger on 'with her fellow fighters'
+observed_behavior: 'No matching trigger found in code. Code triggers: []'
+reproduction_steps:
+- Check trigger field in /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/players/lady_light.py
+- Check BUS.subscribe calls for event 'with_her_fellow_fighters'
+suggested_fix: Implement trigger for 'with_her_fellow_fighters' or update documentation
+references:
+- /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/players/lady_light.py

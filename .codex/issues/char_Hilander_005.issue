@@ -1,0 +1,13 @@
+path: /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/players/hilander.py
+kind: char
+name: Hilander
+severity: medium
+description: Claims to trigger on 'he brings to crafting the perfect ale'
+observed_behavior: 'No matching trigger found in code. Code triggers: []'
+reproduction_steps:
+- Check trigger field in /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/players/hilander.py
+- Check BUS.subscribe calls for event 'he_brings_to_crafting_the_perfect_ale'
+suggested_fix: Implement trigger for 'he_brings_to_crafting_the_perfect_ale' or update
+  documentation
+references:
+- /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/players/hilander.py

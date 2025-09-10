@@ -1,0 +1,12 @@
+path: /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/players/graygray.py
+kind: char
+name: Graygray
+severity: medium
+description: Claims to trigger on 'in superior combat technique'
+observed_behavior: 'No matching trigger found in code. Code triggers: []'
+reproduction_steps:
+- Check trigger field in /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/players/graygray.py
+- Check BUS.subscribe calls for event 'in_superior_combat_technique'
+suggested_fix: Implement trigger for 'in_superior_combat_technique' or update documentation
+references:
+- /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/players/graygray.py

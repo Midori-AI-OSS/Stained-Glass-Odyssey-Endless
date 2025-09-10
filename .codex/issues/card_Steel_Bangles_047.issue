@@ -1,0 +1,12 @@
+path: /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/cards/steel_bangles.py
+kind: card
+name: Steel Bangles
+severity: medium
+description: Claims to trigger on 'attack hit'
+observed_behavior: 'No matching trigger found in code. Code triggers: []'
+reproduction_steps:
+- Check trigger field in /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/cards/steel_bangles.py
+- Check BUS.subscribe calls for event 'attack_hit'
+suggested_fix: Implement trigger for 'attack_hit' or update documentation
+references:
+- /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/cards/steel_bangles.py

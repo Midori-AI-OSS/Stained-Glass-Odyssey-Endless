@@ -1,0 +1,12 @@
+path: /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/cards/lightweight_boots.py
+kind: card
+name: Lightweight Boots
+severity: medium
+description: Claims to trigger on 'successful dodge'
+observed_behavior: 'No matching trigger found in code. Code triggers: []'
+reproduction_steps:
+- Check trigger field in /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/cards/lightweight_boots.py
+- Check BUS.subscribe calls for event 'successful_dodge'
+suggested_fix: Implement trigger for 'successful_dodge' or update documentation
+references:
+- /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/cards/lightweight_boots.py

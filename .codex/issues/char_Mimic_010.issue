@@ -1,0 +1,13 @@
+path: /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/players/mimic.py
+kind: char
+name: Mimic
+severity: medium
+description: Claims to trigger on 'of whatever combat style it encounters'
+observed_behavior: 'No matching trigger found in code. Code triggers: []'
+reproduction_steps:
+- Check trigger field in /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/players/mimic.py
+- Check BUS.subscribe calls for event 'of_whatever_combat_style_it_encounters'
+suggested_fix: Implement trigger for 'of_whatever_combat_style_it_encounters' or update
+  documentation
+references:
+- /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/players/mimic.py

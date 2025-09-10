@@ -1,0 +1,12 @@
+path: /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/cards/guardian_shard.py
+kind: card
+name: Guardian Shard
+severity: medium
+description: Claims to trigger on 'for the next battle'
+observed_behavior: 'No matching trigger found in code. Code triggers: []'
+reproduction_steps:
+- Check trigger field in /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/cards/guardian_shard.py
+- Check BUS.subscribe calls for event 'for_the_next_battle'
+suggested_fix: Implement trigger for 'for_the_next_battle' or update documentation
+references:
+- /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/cards/guardian_shard.py

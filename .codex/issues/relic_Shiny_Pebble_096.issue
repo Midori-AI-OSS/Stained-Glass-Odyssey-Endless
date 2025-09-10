@@ -1,0 +1,13 @@
+path: /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/relics/shiny_pebble.py
+kind: relic
+name: Shiny Pebble
+severity: medium
+description: Claims to trigger on 'burst on the first hit'
+observed_behavior: 'No matching trigger found in code. Code triggers: [''damage_taken'',
+  ''turn_start'']'
+reproduction_steps:
+- Check trigger field in /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/relics/shiny_pebble.py
+- Check BUS.subscribe calls for event 'burst_on_the_first_hit'
+suggested_fix: Implement trigger for 'burst_on_the_first_hit' or update documentation
+references:
+- /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/relics/shiny_pebble.py

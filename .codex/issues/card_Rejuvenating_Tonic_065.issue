@@ -1,0 +1,12 @@
+path: /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/cards/rejuvenating_tonic.py
+kind: card
+name: Rejuvenating Tonic
+severity: medium
+description: Claims to trigger on 'using a heal'
+observed_behavior: 'No matching trigger found in code. Code triggers: []'
+reproduction_steps:
+- Check trigger field in /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/cards/rejuvenating_tonic.py
+- Check BUS.subscribe calls for event 'using_a_heal'
+suggested_fix: Implement trigger for 'using_a_heal' or update documentation
+references:
+- /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/cards/rejuvenating_tonic.py

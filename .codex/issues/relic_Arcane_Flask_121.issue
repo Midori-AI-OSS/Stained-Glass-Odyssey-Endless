@@ -1,0 +1,12 @@
+path: /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/relics/arcane_flask.py
+kind: relic
+name: Arcane Flask
+severity: low
+description: Documentation mentions stacking but no stack-related code found
+observed_behavior: No stack-related methods or events found
+reproduction_steps:
+- Search for 'stack' in /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/relics/arcane_flask.py
+- Check for stack tracking variables or methods
+suggested_fix: Implement stacking logic or clarify documentation
+references:
+- /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/relics/arcane_flask.py

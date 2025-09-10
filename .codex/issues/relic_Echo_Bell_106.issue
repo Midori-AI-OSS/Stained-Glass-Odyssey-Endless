@@ -1,0 +1,13 @@
+path: /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/relics/echo_bell.py
+kind: relic
+name: Echo Bell
+severity: medium
+description: Claims to trigger on 'each battle repeats at 15'
+observed_behavior: 'No matching trigger found in code. Code triggers: [''battle_start'',
+  ''action_used'', ''healing_used'']'
+reproduction_steps:
+- Check trigger field in /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/relics/echo_bell.py
+- Check BUS.subscribe calls for event 'each_battle_repeats_at_15'
+suggested_fix: Implement trigger for 'each_battle_repeats_at_15' or update documentation
+references:
+- /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/relics/echo_bell.py

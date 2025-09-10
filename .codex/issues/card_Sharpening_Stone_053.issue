@@ -1,0 +1,12 @@
+path: /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/cards/sharpening_stone.py
+kind: card
+name: Sharpening Stone
+severity: medium
+description: Claims +2% crit effect
+observed_behavior: Code implements 0.03 (3.0%) for crit
+reproduction_steps:
+- Check effects field in /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/cards/sharpening_stone.py
+- Look for crit in effects dictionary
+suggested_fix: Update documentation to match code value or fix code to match claim
+references:
+- /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/cards/sharpening_stone.py

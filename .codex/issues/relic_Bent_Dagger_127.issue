@@ -1,0 +1,12 @@
+path: /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/relics/bent_dagger.py
+kind: relic
+name: Bent Dagger
+severity: medium
+description: Claims +1% ATK effect
+observed_behavior: Code implements 0.03 (3.0%) for atk
+reproduction_steps:
+- Check effects field in /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/relics/bent_dagger.py
+- Look for atk in effects dictionary
+suggested_fix: Update documentation to match code value or fix code to match claim
+references:
+- /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/relics/bent_dagger.py

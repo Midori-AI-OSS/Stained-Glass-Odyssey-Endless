@@ -1,0 +1,12 @@
+path: /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/players/hilander.py
+kind: char
+name: Hilander
+severity: medium
+description: Claims to trigger on 'of pressure'
+observed_behavior: 'No matching trigger found in code. Code triggers: []'
+reproduction_steps:
+- Check trigger field in /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/players/hilander.py
+- Check BUS.subscribe calls for event 'of_pressure'
+suggested_fix: Implement trigger for 'of_pressure' or update documentation
+references:
+- /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/players/hilander.py

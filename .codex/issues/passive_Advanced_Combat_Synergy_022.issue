@@ -1,0 +1,13 @@
+path: /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/passives/advanced_combat_synergy.py
+kind: passive
+name: Advanced Combat Synergy
+severity: medium
+description: Claims to trigger on 'and cross'
+observed_behavior: 'No matching trigger found in code. Code triggers: [''hit_landed'',
+  ''turn_start'', ''action_taken'']'
+reproduction_steps:
+- Check trigger field in /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/passives/advanced_combat_synergy.py
+- Check BUS.subscribe calls for event 'and_cross'
+suggested_fix: Implement trigger for 'and_cross' or update documentation
+references:
+- /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/passives/advanced_combat_synergy.py

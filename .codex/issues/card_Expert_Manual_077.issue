@@ -1,0 +1,12 @@
+path: /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/cards/expert_manual.py
+kind: card
+name: Expert Manual
+severity: medium
+description: Claims to trigger on 'a kill once per battle'
+observed_behavior: 'No matching trigger found in code. Code triggers: []'
+reproduction_steps:
+- Check trigger field in /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/cards/expert_manual.py
+- Check BUS.subscribe calls for event 'a_kill_once_per_battle'
+suggested_fix: Implement trigger for 'a_kill_once_per_battle' or update documentation
+references:
+- /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/cards/expert_manual.py

@@ -1,0 +1,12 @@
+path: /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/cards/iron_resolve.py
+kind: card
+name: Iron Resolve
+severity: medium
+description: Claims 30% HP effect
+observed_behavior: Code implements 2.4 (240.0%) for hp
+reproduction_steps:
+- Check effects field in /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/cards/iron_resolve.py
+- Look for hp in effects dictionary
+suggested_fix: Update documentation to match code value or fix code to match claim
+references:
+- /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/cards/iron_resolve.py

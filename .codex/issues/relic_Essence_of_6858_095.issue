@@ -1,0 +1,13 @@
+path: /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/relics/fallback_essence.py
+kind: relic
+name: Essence of 6858
+severity: medium
+description: Claims to trigger on 'transcends the need for material cards'
+observed_behavior: 'No matching trigger found in code. Code triggers: []'
+reproduction_steps:
+- Check trigger field in /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/relics/fallback_essence.py
+- Check BUS.subscribe calls for event 'transcends_the_need_for_material_cards'
+suggested_fix: Implement trigger for 'transcends_the_need_for_material_cards' or update
+  documentation
+references:
+- /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/relics/fallback_essence.py

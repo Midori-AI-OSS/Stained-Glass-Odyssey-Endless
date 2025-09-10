@@ -1,0 +1,12 @@
+path: /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/cards/farsight_scope.py
+kind: card
+name: Farsight Scope
+severity: high
+description: Claims 50% HP effect
+observed_behavior: No hp effect found in code
+reproduction_steps:
+- Check effects field in /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/cards/farsight_scope.py
+- Search for hp modifications in class methods
+suggested_fix: Either implement hp effect or remove claim from documentation
+references:
+- /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/cards/farsight_scope.py

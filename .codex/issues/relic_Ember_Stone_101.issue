@@ -1,0 +1,12 @@
+path: /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/relics/ember_stone.py
+kind: relic
+name: Ember Stone
+severity: medium
+description: Claims to trigger on 'a low'
+observed_behavior: 'No matching trigger found in code. Code triggers: [''damage_taken'']'
+reproduction_steps:
+- Check trigger field in /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/relics/ember_stone.py
+- Check BUS.subscribe calls for event 'a_low'
+suggested_fix: Implement trigger for 'a_low' or update documentation
+references:
+- /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/relics/ember_stone.py

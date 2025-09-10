@@ -1,0 +1,12 @@
+path: /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/cards/swift_bandanna.py
+kind: card
+name: Swift Bandanna
+severity: medium
+description: Claims to trigger on 'dodge'
+observed_behavior: 'No matching trigger found in code. Code triggers: []'
+reproduction_steps:
+- Check trigger field in /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/cards/swift_bandanna.py
+- Check BUS.subscribe calls for event 'dodge'
+suggested_fix: Implement trigger for 'dodge' or update documentation
+references:
+- /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/cards/swift_bandanna.py

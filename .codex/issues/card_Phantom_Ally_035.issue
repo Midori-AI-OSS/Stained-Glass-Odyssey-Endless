@@ -1,0 +1,13 @@
+path: /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/cards/phantom_ally.py
+kind: card
+name: Phantom Ally
+severity: medium
+description: Claims to trigger on 'a permanent copy of a random ally'
+observed_behavior: 'No matching trigger found in code. Code triggers: []'
+reproduction_steps:
+- Check trigger field in /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/cards/phantom_ally.py
+- Check BUS.subscribe calls for event 'a_permanent_copy_of_a_random_ally'
+suggested_fix: Implement trigger for 'a_permanent_copy_of_a_random_ally' or update
+  documentation
+references:
+- /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/cards/phantom_ally.py

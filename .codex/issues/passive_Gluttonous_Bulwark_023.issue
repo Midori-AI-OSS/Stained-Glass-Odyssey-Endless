@@ -1,0 +1,12 @@
+path: /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/passives/mezzy_gluttonous_bulwark.py
+kind: passive
+name: Gluttonous Bulwark
+severity: medium
+description: Claims to trigger on 'and stat siphoning'
+observed_behavior: 'No matching trigger found in code. Code triggers: [''turn_start'']'
+reproduction_steps:
+- Check trigger field in /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/passives/mezzy_gluttonous_bulwark.py
+- Check BUS.subscribe calls for event 'and_stat_siphoning'
+suggested_fix: Implement trigger for 'and_stat_siphoning' or update documentation
+references:
+- /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/passives/mezzy_gluttonous_bulwark.py

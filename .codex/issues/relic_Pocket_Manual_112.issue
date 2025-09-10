@@ -1,0 +1,12 @@
+path: /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/relics/pocket_manual.py
+kind: relic
+name: Pocket Manual
+severity: high
+description: Claims +3% damage effect
+observed_behavior: No damage effect found in code
+reproduction_steps:
+- Check effects field in /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/relics/pocket_manual.py
+- Search for damage modifications in class methods
+suggested_fix: Either implement damage effect or remove claim from documentation
+references:
+- /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/relics/pocket_manual.py

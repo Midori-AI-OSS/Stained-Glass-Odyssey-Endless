@@ -1,0 +1,12 @@
+path: /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/relics/fallback_essence.py
+kind: relic
+name: Essence of 6858
+severity: medium
+description: Claims to trigger on 'the card pool is exhausted'
+observed_behavior: 'No matching trigger found in code. Code triggers: []'
+reproduction_steps:
+- Check trigger field in /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/relics/fallback_essence.py
+- Check BUS.subscribe calls for event 'the_card_pool_is_exhausted'
+suggested_fix: Implement trigger for 'the_card_pool_is_exhausted' or update documentation
+references:
+- /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/relics/fallback_essence.py

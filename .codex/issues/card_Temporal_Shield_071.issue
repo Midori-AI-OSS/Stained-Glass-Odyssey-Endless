@@ -1,0 +1,12 @@
+path: /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/cards/temporal_shield.py
+kind: card
+name: Temporal Shield
+severity: high
+description: Claims to deal damage but no damage calculations found in code
+observed_behavior: No apply_damage calls found in implementation
+reproduction_steps:
+- Search for 'damage' in documentation in /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/cards/temporal_shield.py
+- Search for apply_damage method calls in class methods
+suggested_fix: Implement damage calculation or remove damage claims from documentation
+references:
+- /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/cards/temporal_shield.py

@@ -1,0 +1,13 @@
+path: /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/relics/travelers_charm.py
+kind: relic
+name: Traveler's Charm
+severity: medium
+description: Claims to trigger on 'next turn per stack'
+observed_behavior: 'No matching trigger found in code. Code triggers: [''damage_taken'',
+  ''turn_start'', ''turn_end'']'
+reproduction_steps:
+- Check trigger field in /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/relics/travelers_charm.py
+- Check BUS.subscribe calls for event 'next_turn_per_stack'
+suggested_fix: Implement trigger for 'next_turn_per_stack' or update documentation
+references:
+- /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/relics/travelers_charm.py

@@ -1,0 +1,13 @@
+path: /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/players/graygray.py
+kind: char
+name: Graygray
+severity: medium
+description: Claims to trigger on 'into the very notes of their defeat'
+observed_behavior: 'No matching trigger found in code. Code triggers: []'
+reproduction_steps:
+- Check trigger field in /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/players/graygray.py
+- Check BUS.subscribe calls for event 'into_the_very_notes_of_their_defeat'
+suggested_fix: Implement trigger for 'into_the_very_notes_of_their_defeat' or update
+  documentation
+references:
+- /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/players/graygray.py

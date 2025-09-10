@@ -1,0 +1,12 @@
+path: /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/cards/vital_surge.py
+kind: card
+name: Vital Surge
+severity: high
+description: Claims +55% ATK effect
+observed_behavior: No atk effect found in code
+reproduction_steps:
+- Check effects field in /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/cards/vital_surge.py
+- Search for atk modifications in class methods
+suggested_fix: Either implement atk effect or remove claim from documentation
+references:
+- /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/cards/vital_surge.py

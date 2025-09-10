@@ -1,0 +1,13 @@
+path: /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/cards/coated_armor.py
+kind: card
+name: Coated Armor
+severity: medium
+description: Claims to trigger on 'mitigation reduces incoming damage'
+observed_behavior: 'No matching trigger found in code. Code triggers: []'
+reproduction_steps:
+- Check trigger field in /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/cards/coated_armor.py
+- Check BUS.subscribe calls for event 'mitigation_reduces_incoming_damage'
+suggested_fix: Implement trigger for 'mitigation_reduces_incoming_damage' or update
+  documentation
+references:
+- /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/cards/coated_armor.py

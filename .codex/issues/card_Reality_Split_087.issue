@@ -1,0 +1,12 @@
+path: /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/cards/reality_split.py
+kind: card
+name: Reality Split
+severity: high
+description: Claims +50% Crit effect
+observed_behavior: No crit effect found in code
+reproduction_steps:
+- Check effects field in /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/cards/reality_split.py
+- Search for crit modifications in class methods
+suggested_fix: Either implement crit effect or remove claim from documentation
+references:
+- /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/cards/reality_split.py

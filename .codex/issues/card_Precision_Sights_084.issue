@@ -1,0 +1,12 @@
+path: /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/cards/precision_sights.py
+kind: card
+name: Precision Sights
+severity: low
+description: Documentation mentions stacking but no stack-related code found
+observed_behavior: No stack-related methods or events found
+reproduction_steps:
+- Search for 'stack' in /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/cards/precision_sights.py
+- Check for stack tracking variables or methods
+suggested_fix: Implement stacking logic or clarify documentation
+references:
+- /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/cards/precision_sights.py

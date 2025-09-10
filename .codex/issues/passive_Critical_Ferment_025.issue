@@ -1,0 +1,12 @@
+path: /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/passives/hilander_critical_ferment.py
+kind: passive
+name: Critical Ferment
+severity: medium
+description: Claims to trigger on 'crit'
+observed_behavior: 'No matching trigger found in code. Code triggers: [''hit_landed'']'
+reproduction_steps:
+- Check trigger field in /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/passives/hilander_critical_ferment.py
+- Check BUS.subscribe calls for event 'crit'
+suggested_fix: Implement trigger for 'crit' or update documentation
+references:
+- /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/passives/hilander_critical_ferment.py

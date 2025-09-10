@@ -1,0 +1,12 @@
+path: /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/cards/enduring_will.py
+kind: card
+name: Enduring Will
+severity: medium
+description: Claims to trigger on 'next battle'
+observed_behavior: 'No matching trigger found in code. Code triggers: []'
+reproduction_steps:
+- Check trigger field in /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/cards/enduring_will.py
+- Check BUS.subscribe calls for event 'next_battle'
+suggested_fix: Implement trigger for 'next_battle' or update documentation
+references:
+- /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/cards/enduring_will.py

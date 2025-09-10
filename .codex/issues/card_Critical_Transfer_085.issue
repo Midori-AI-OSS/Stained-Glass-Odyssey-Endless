@@ -1,0 +1,12 @@
+path: /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/cards/critical_transfer.py
+kind: card
+name: Critical Transfer
+severity: high
+description: Claims +4% ATK effect
+observed_behavior: No atk effect found in code
+reproduction_steps:
+- Check effects field in /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/cards/critical_transfer.py
+- Search for atk modifications in class methods
+suggested_fix: Either implement atk effect or remove claim from documentation
+references:
+- /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/cards/critical_transfer.py

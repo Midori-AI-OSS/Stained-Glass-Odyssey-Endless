@@ -1,0 +1,12 @@
+path: /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/passives/graygray_counter_maestro.py
+kind: passive
+name: Counter Maestro
+severity: medium
+description: Claims to trigger on 'every hit taken'
+observed_behavior: 'No matching trigger found in code. Code triggers: [''damage_taken'']'
+reproduction_steps:
+- Check trigger field in /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/passives/graygray_counter_maestro.py
+- Check BUS.subscribe calls for event 'every_hit_taken'
+suggested_fix: Implement trigger for 'every_hit_taken' or update documentation
+references:
+- /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/passives/graygray_counter_maestro.py

@@ -1,0 +1,12 @@
+path: /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/cards/reinforced_cloak.py
+kind: card
+name: Reinforced Cloak
+severity: medium
+description: Claims to trigger on 'of long debuffs by 1'
+observed_behavior: 'No matching trigger found in code. Code triggers: []'
+reproduction_steps:
+- Check trigger field in /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/cards/reinforced_cloak.py
+- Check BUS.subscribe calls for event 'of_long_debuffs_by_1'
+suggested_fix: Implement trigger for 'of_long_debuffs_by_1' or update documentation
+references:
+- /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/cards/reinforced_cloak.py

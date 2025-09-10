@@ -1,0 +1,12 @@
+path: /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/cards/bulwark_totem.py
+kind: card
+name: Bulwark Totem
+severity: medium
+description: Claims to trigger on 'an ally would die'
+observed_behavior: 'No matching trigger found in code. Code triggers: []'
+reproduction_steps:
+- Check trigger field in /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/cards/bulwark_totem.py
+- Check BUS.subscribe calls for event 'an_ally_would_die'
+suggested_fix: Implement trigger for 'an_ally_would_die' or update documentation
+references:
+- /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/cards/bulwark_totem.py

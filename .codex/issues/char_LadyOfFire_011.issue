@@ -1,0 +1,12 @@
+path: /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/players/lady_of_fire.py
+kind: char
+name: LadyOfFire
+severity: medium
+description: Claims to trigger on 'into her fire magic'
+observed_behavior: 'No matching trigger found in code. Code triggers: []'
+reproduction_steps:
+- Check trigger field in /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/players/lady_of_fire.py
+- Check BUS.subscribe calls for event 'into_her_fire_magic'
+suggested_fix: Implement trigger for 'into_her_fire_magic' or update documentation
+references:
+- /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/players/lady_of_fire.py

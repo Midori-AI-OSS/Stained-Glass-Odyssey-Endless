@@ -1,0 +1,14 @@
+path: /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/players/becca.py
+kind: char
+name: Becca
+severity: medium
+description: Claims to trigger on 'that makes her tactical arrangements as elegant
+  as they are devastating'
+observed_behavior: 'No matching trigger found in code. Code triggers: []'
+reproduction_steps:
+- Check trigger field in /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/players/becca.py
+- Check BUS.subscribe calls for event 'that_makes_her_tactical_arrangements_as_elegant_as_they_are_devastating'
+suggested_fix: Implement trigger for 'that_makes_her_tactical_arrangements_as_elegant_as_they_are_devastating'
+  or update documentation
+references:
+- /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/players/becca.py

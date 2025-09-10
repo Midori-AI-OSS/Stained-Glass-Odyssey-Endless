@@ -1,0 +1,13 @@
+path: /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/relics/pocket_manual.py
+kind: relic
+name: Pocket Manual
+severity: medium
+description: Claims to trigger on 'an additional aftertaste hit dealing'
+observed_behavior: 'No matching trigger found in code. Code triggers: [''hit_landed'']'
+reproduction_steps:
+- Check trigger field in /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/relics/pocket_manual.py
+- Check BUS.subscribe calls for event 'an_additional_aftertaste_hit_dealing'
+suggested_fix: Implement trigger for 'an_additional_aftertaste_hit_dealing' or update
+  documentation
+references:
+- /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/relics/pocket_manual.py

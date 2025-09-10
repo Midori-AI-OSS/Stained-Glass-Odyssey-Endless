@@ -1,0 +1,14 @@
+path: /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/players/lady_echo.py
+kind: char
+name: LadyEcho
+severity: medium
+description: Claims to trigger on 'drives her inventive nature as she seeks to build
+  devices that might mitigate or reverse the de'
+observed_behavior: 'No matching trigger found in code. Code triggers: []'
+reproduction_steps:
+- Check trigger field in /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/players/lady_echo.py
+- Check BUS.subscribe calls for event 'drives_her_inventive_nature_as_she_seeks_to_build_devices_that_might_mitigate_or_reverse_the_de'
+suggested_fix: Implement trigger for 'drives_her_inventive_nature_as_she_seeks_to_build_devices_that_might_mitigate_or_reverse_the_de'
+  or update documentation
+references:
+- /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/players/lady_echo.py

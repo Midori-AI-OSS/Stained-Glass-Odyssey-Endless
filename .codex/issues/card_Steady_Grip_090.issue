@@ -1,0 +1,12 @@
+path: /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/cards/steady_grip.py
+kind: card
+name: Steady Grip
+severity: medium
+description: Claims to trigger on 'applying a control effect'
+observed_behavior: 'No matching trigger found in code. Code triggers: []'
+reproduction_steps:
+- Check trigger field in /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/cards/steady_grip.py
+- Check BUS.subscribe calls for event 'applying_a_control_effect'
+suggested_fix: Implement trigger for 'applying_a_control_effect' or update documentation
+references:
+- /home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/plugins/cards/steady_grip.py
