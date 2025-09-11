@@ -249,7 +249,6 @@ class Stats:
         modifier = (
             self.aggro_modifier
             + self._calculate_stat_modifier("aggro_modifier")
-            + float(getattr(getattr(self, "damage_type", None), "aggro", 0.0))
         )
         return self.base_aggro * (1 + modifier + defense_term)
 
