@@ -167,6 +167,13 @@ class Stats:
         except Exception:
             pass
 
+        try:
+            from autofighter.passives import PassiveRegistry
+            registry = PassiveRegistry()
+            registry.apply_aggro(self)
+        except Exception:
+            pass
+
     # Runtime stat properties (base stats + effects)
     @property
     def max_hp(self) -> int:
@@ -298,6 +305,28 @@ class Stats:
                 new_type.apply_aggro(self)
             else:
                 self.aggro_modifier += float(getattr(new_type, "aggro", 0.0))
+        except Exception:
+            pass
+    def add_passive(self, passive_id: str) -> None:
+        """Add a passive and apply its aggro contribution."""
+        self.passives.append(passive_id)
+        try:
+            from autofighter.passives import PassiveRegistry
+            registry = PassiveRegistry()
+            registry.apply_aggro(self, [passive_id])
+        except Exception:
+            pass
+
+    def remove_passive(self, passive_id: str) -> None:
+        """Remove a passive and adjust aggro accordingly."""
+        try:
+            self.passives.remove(passive_id)
+        except ValueError:
+            return
+        try:
+            from autofighter.passives import PassiveRegistry
+            registry = PassiveRegistry()
+            registry.remove_aggro(self, [passive_id])
         except Exception:
             pass
 

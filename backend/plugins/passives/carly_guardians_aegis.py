@@ -29,6 +29,16 @@ class CarlyGuardiansAegis:
         """Apply Carly's Guardian's Aegis healing and conversion mechanics."""
         entity_id = id(target)
 
+        effect_name = f"{self.id}_aggro_boost"
+        if not any(e.name == effect_name for e in target.get_active_effects()):
+            aggro_effect = StatEffect(
+                name=effect_name,
+                stat_modifiers={"aggro_modifier": 499.0},
+                duration=-1,
+                source=self.id,
+            )
+            target.add_effect(aggro_effect)
+
         # Initialize tracking dictionaries
         if entity_id not in self._mitigation_stacks:
             self._mitigation_stacks[entity_id] = 0

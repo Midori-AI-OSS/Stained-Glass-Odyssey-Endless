@@ -41,6 +41,46 @@ class PassiveRegistry:
     def __init__(self) -> None:
         self._registry = discover()
 
+    def apply_aggro(self, target, passives: list[str] | None = None) -> None:
+        """Apply aggro modifiers for passives on ``target``.
+
+        Passives may either declare a numeric ``aggro`` attribute or expose
+        ``apply_aggro``/``remove_aggro`` hooks similar to damage types.
+        """
+        counts = Counter(passives or target.passives)
+        for pid, count in counts.items():
+            cls = self._registry.get(pid)
+            if cls is None:
+                continue
+            stacks = min(count, getattr(cls, "max_stacks", count))
+            for _ in range(stacks):
+                try:
+                    inst = cls()
+                    if hasattr(inst, "apply_aggro"):
+                        inst.apply_aggro(target)
+                    else:
+                        target.aggro_modifier += float(getattr(inst, "aggro", 0.0))
+                except Exception:
+                    continue
+
+    def remove_aggro(self, target, passives: list[str] | None = None) -> None:
+        """Remove aggro modifiers for specified passives from ``target``."""
+        counts = Counter(passives or target.passives)
+        for pid, count in counts.items():
+            cls = self._registry.get(pid)
+            if cls is None:
+                continue
+            stacks = min(count, getattr(cls, "max_stacks", count))
+            for _ in range(stacks):
+                try:
+                    inst = cls()
+                    if hasattr(inst, "remove_aggro"):
+                        inst.remove_aggro(target)
+                    else:
+                        target.aggro_modifier -= float(getattr(inst, "aggro", 0.0))
+                except Exception:
+                    continue
+
     async def trigger(self, event: str, owner, **kwargs) -> None:
         """Trigger passives for a given event with optional context.
 

@@ -219,6 +219,7 @@ class BattleRoom(Room):
             pass
 
         for f in foes:
+            registry.apply_aggro(f)
             await BUS.emit_async("battle_start", f)
             await registry.trigger("battle_start", f, party=combat_party.members, foes=foes)
 
@@ -228,6 +229,7 @@ class BattleRoom(Room):
             [m.id for m in combat_party.members],
         )
         for member_effect, member in zip(party_effects, combat_party.members, strict=False):
+            registry.apply_aggro(member)
             await BUS.emit_async("battle_start", member)
             await registry.trigger("battle_start", member, party=combat_party.members, foes=foes)
 
@@ -346,7 +348,7 @@ class BattleRoom(Room):
                         if not enrage_active:
                             enrage_active = True
                             for f in foes:
-                                f.passives.append("Enraged")
+                                f.add_passive("Enraged")
                             log.info("Enrage activated")
                         new_stacks = turn - threshold
                         # Make enrage much stronger: each stack adds +135% damage taken
