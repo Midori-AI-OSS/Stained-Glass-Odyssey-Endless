@@ -22,17 +22,17 @@ The following screenshots demonstrate the game's user interface and progression 
 ### Main Menu - Character Selection
 ![Main Menu](.codex/screenshots/a87d7423.png)
 
-The main menu features a beautiful anime-style character with a mystical halo set against an enchanting forest background. The interface provides clear navigation options for different game modes including Run, Party, Pulls, Settings, and Feedback. The atmospheric lighting and detailed character design showcase the game's high-quality visual presentation.
+The main menu features a beautiful anime-style character with a mystical halo set against a stunning nighttime city skyline. The interface provides clear navigation options arranged in a modern 2x3 grid layout with options for Run, Party, Warp, Inventory, Guidebook, Settings, and Feedback. The left panel displays game information and player statistics, while the atmospheric lighting and detailed character design showcase the game's high-quality visual presentation with an Arknights-inspired aesthetic.
 
 ### Party Selection - Character Customization
 ![Party Selection](.codex/screenshots/3af616fb.png)
 
-The party selection interface demonstrates comprehensive character customization against a stunning fantasy landscape background featuring floating islands and crystalline formations. Players can manage character rosters (Player with Fire element, LadyDarkness with Dark element), configure damage types, distribute stat points using intuitive sliders for HP/Attack/Defense, and manage elemental items with detailed star rating systems. The interface includes full character stats display (HP: 1000/1000, EXP, Vitality, Regain) and upgrade point management for character progression.
+The party selection interface demonstrates comprehensive character customization with a stunning fantasy landscape background featuring floating islands, crystalline formations, and a vibrant sunset sky. Players can manage character rosters (Player with Fire element, LadyDarkness with Dark element shown in the roster), configure damage types, distribute stat points using intuitive sliders for HP/Attack/Defense/Crit Rate/Crit Damage, and manage character progression. The interface includes full character stats display and upgrade point management (100 points available) with an elegant layout that maintains visual consistency with the main menu design.
 
 ### Settings Interface - Audio Controls
 ![Settings Screen](.codex/screenshots/cde0fb0d.png)
 
-The settings overlay provides comprehensive audio management with dedicated controls for SFX Volume, Music Volume, and Voice Volume. The interface features a clean, modern design with tabbed navigation (Audio, System, Gameplay) while maintaining the beautiful character backdrop. The overlay demonstrates proper UI layering and accessibility with clear visual feedback for all interactive elements.
+The settings overlay provides comprehensive audio management with dedicated controls for SFX Volume, Music Volume, and Voice Volume. The interface features a clean, modern design with tabbed navigation (Audio, System, Gameplay) while maintaining the beautiful character backdrop from the main menu. The overlay demonstrates proper UI layering and accessibility with clear visual feedback for all interactive elements, including percentage-based volume controls and mute options.
 
 ### Card Reward Selection - Battle Completion
 ![Card Rewards](.codex/screenshots/b11a85b2.png)
@@ -42,7 +42,7 @@ The card reward interface appears after successful battle completion, showcasing
 ### Inventory Management 
 ![Inventory](.codex/screenshots/171ed5c8.png)
 
-The inventory interface provides access to collected items, cards, and character progression tracking. This screen becomes available during active runs and allows players to manage their collected resources and review battle rewards.
+The inventory interface provides access to collected items, cards, and character progression tracking with a clean tabbed layout (Upgrades, Cards, Relics). This screen becomes available during active runs and allows players to manage their collected resources and review battle rewards. The interface maintains the consistent visual design with the character backdrop and includes a reload button for refreshing inventory data.
 
 ### Reward Screen Progression
 
