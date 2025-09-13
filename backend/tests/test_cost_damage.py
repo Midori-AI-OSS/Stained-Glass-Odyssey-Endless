@@ -1,5 +1,6 @@
 import pytest
 
+from autofighter.passives import PassiveRegistry
 import autofighter.stats as stats
 from plugins.event_bus import EventBus
 
@@ -53,3 +54,16 @@ async def test_normal_attack_respects_defense_and_shields(bus):
     assert s.hp == start_hp
     assert s.shields == 199
     assert s.damage_taken == 1
+
+
+@pytest.mark.asyncio
+async def test_cost_damage_triggers_damage_taken_passives(bus, monkeypatch):
+    s = stats.Stats()
+    called: dict[str, tuple] = {}
+
+    async def fake_trigger(self, target, attacker, amount):
+        called["args"] = (target, attacker, amount)
+
+    monkeypatch.setattr(PassiveRegistry, "trigger_damage_taken", fake_trigger)
+    await s.apply_cost_damage(42)
+    assert called["args"] == (s, None, 42)
