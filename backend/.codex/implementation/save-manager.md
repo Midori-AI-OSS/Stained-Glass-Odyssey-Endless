@@ -1,10 +1,23 @@
 # SaveManager
 
-Wrapper around SQLCipher connections and database migrations.
+Wrapper around SQLCipher connections and database migrations with enhanced security.
 
 Use `get_save_manager()` from `game.py` to obtain an initialized instance. The
 function lazily constructs the manager, runs migrations, and performs initial
 setup so tests can override `AF_DB_PATH` and `AF_DB_KEY` before the first call.
+
+## Security Features
+
+The SaveManager implements comprehensive security measures to protect encrypted data:
+
+- **Strong Key Derivation**: PBKDF2 with SHA-256, 100,000 iterations, and 256-bit salt
+- **SQL Injection Prevention**: Proper quote escaping and input validation
+- **No Silent Fallbacks**: Hard failures when encryption is not available
+- **Secure File Permissions**: Database files restricted to owner read/write only
+- **Comprehensive Audit Logging**: Security events logged for monitoring
+- **Defense in Depth**: Multiple overlapping security controls
+
+See [save-manager-security.md](save-manager-security.md) for detailed security documentation.
 
 ## Migration safety
 - Migration filenames must start with a numeric prefix (`NNN_description.sql`).

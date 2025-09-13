@@ -158,6 +158,9 @@ class SaveManager:
             conn.execute("PRAGMA foreign_keys = ON")  # Enable foreign key constraints
             conn.execute("PRAGMA secure_delete = ON")  # Securely delete data
             
+            # Ensure secure file permissions after database is created/accessed
+            self._ensure_secure_permissions()
+            
             yield conn
             conn.commit()
         except Exception as e:
