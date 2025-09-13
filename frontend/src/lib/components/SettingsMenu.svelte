@@ -1,18 +1,11 @@
 <script>
   import { createEventDispatcher, onMount } from 'svelte';
-  import {
-    Volume2,
-    Music,
-    Mic,
-    Power,
-    Trash2,
-    Download,
-    Upload,
-    Cog,
-    Brain,
-    Gamepad
-  } from 'lucide-svelte';
+  import { Volume2, Cog, Brain, Gamepad } from 'lucide-svelte';
   import { endRun, endAllRuns, wipeData, exportSave, importSave, getLrmConfig, setLrmModel, testLrmModel, getBackendHealth } from '../systems/api.js';
+  import AudioSettings from './AudioSettings.svelte';
+  import SystemSettings from './SystemSettings.svelte';
+  import LLMSettings from './LLMSettings.svelte';
+  import GameplaySettings from './GameplaySettings.svelte';
   import { getActiveRuns } from '../systems/uiApi.js';
   import { saveSettings, clearSettings, clearAllClientData } from '../systems/settingsStorage.js';
 
@@ -35,18 +28,13 @@
   let resetTimeout;
   let lrmOptions = [];
   let testReply = '';
-
   let activeTab = 'audio';
 
-  // Feedback for End Run action
   let endingRun = false;
   let endRunStatus = '';
-
-  // Backend health (moved from floating ping indicator)
   let healthStatus = 'unknown'; // 'healthy' | 'degraded' | 'error' | 'unknown'
   let healthPing = null;
   let lastHealthFetch = 0;
-
   async function refreshHealth(force = false) {
     const now = Date.now();
     if (!force && now - lastHealthFetch < 1500) return; // throttle within tab
@@ -101,7 +89,6 @@
       saveStatus = '';
     }, 1000);
   }
-
   function scheduleSave() {
     clearTimeout(saveTimeout);
     saveTimeout = setTimeout(save, 300);
@@ -122,8 +109,6 @@
       testReply = 'Error';
     }
   }
-
-
   async function handleEndRun() {
     endingRun = true;
     endRunStatus = runId ? 'Ending run…' : 'Ending all runs…';
@@ -168,19 +153,6 @@
     dispatch('endRun');
     // Clear status after a short delay so users see feedback
     try { setTimeout(() => (endRunStatus = ''), 1200); } catch {}
-  }
-
-  async function handleEndAllRuns() {
-    try {
-      // Halt any polling to avoid races while clearing runs
-      try { if (typeof window !== 'undefined') window.afHaltSync = true; } catch {}
-      await endAllRuns();
-    } catch (e) {
-      console.error('Failed to end all runs', e);
-    } finally {
-      // Notify parent to refresh local run state
-      dispatch('endRun');
-    }
   }
 
   let wipeStatus = '';
@@ -247,99 +219,41 @@
   </div>
 
   {#if activeTab === 'audio'}
-    <div class="panel">
-      <div class="control" title="Adjust sound effect volume.">
-        <Volume2 />
-        <label>SFX Volume</label>
-        <input type="range" min="0" max="100" bind:value={sfxVolume} on:input={scheduleSave} />
-      </div>
-      <div class="control" title="Adjust background music volume.">
-        <Music />
-        <label>Music Volume</label>
-        <input type="range" min="0" max="100" bind:value={musicVolume} on:input={scheduleSave} />
-      </div>
-      <div class="control" title="Adjust voice volume.">
-        <Mic />
-        <label>Voice Volume</label>
-        <input type="range" min="0" max="100" bind:value={voiceVolume} on:input={scheduleSave} />
-      </div>
-    </div>
+    <AudioSettings
+      bind:sfxVolume
+      bind:musicVolume
+      bind:voiceVolume
+      {scheduleSave}
+    />
   {:else if activeTab === 'system'}
-    <div class="panel">
-      <div class="control" title="Backend health and network latency.">
-        <label>Backend Health</label>
-        <span class="badge" data-status={healthStatus}>
-          {healthStatus === 'healthy' ? 'Healthy' : healthStatus === 'degraded' ? 'Degraded' : healthStatus === 'error' ? 'Error' : 'Unknown'}
-        </span>
-        {#if healthPing !== null}
-          <span class="ping">{Math.round(healthPing)}ms</span>
-        {/if}
-        <button on:click={() => refreshHealth(true)}>Refresh</button>
-      </div>
-      <div class="control" title="Limit server polling frequency.">
-        <label>Framerate</label>
-        <select bind:value={framerate} on:change={scheduleSave}>
-          <option value={30}>30</option>
-          <option value={60}>60</option>
-          <option value={120}>120</option>
-        </select>
-      </div>
-      <div class="control" title="Slow down battle animations.">
-        <label>Reduced Motion</label>
-        <input type="checkbox" bind:checked={reducedMotion} on:change={scheduleSave} />
-      </div>
-      <div class="control" title="Clear all save data.">
-        <Trash2 />
-        <label>Wipe Save Data</label>
-        <button on:click={handleWipe}>Wipe</button>
-      </div>
-      {#if wipeStatus}
-        <p class="status" data-testid="wipe-status">{wipeStatus}</p>
-      {/if}
-      <div class="control" title="Download encrypted backup of save data.">
-        <Download />
-        <label>Backup Save Data</label>
-        <button on:click={handleBackup}>Backup</button>
-      </div>
-      <div class="control" title="Import an encrypted save backup.">
-        <Upload />
-        <label>Import Save Data</label>
-        <input type="file" accept=".afsave" on:change={handleImport} />
-      </div>
-    </div>
+    <SystemSettings
+      bind:framerate
+      bind:reducedMotion
+      {scheduleSave}
+      {handleWipe}
+      {wipeStatus}
+      {handleBackup}
+      {handleImport}
+      {healthStatus}
+      {healthPing}
+      {refreshHealth}
+    />
   {:else if activeTab === 'llm' && showLrm}
-    <div class="panel">
-      <div class="control" title="Select language reasoning model.">
-        <label>LRM Model</label>
-        <select bind:value={lrmModel} on:change={handleModelChange}>
-          {#each lrmOptions as opt}
-            <option value={opt}>{opt}</option>
-          {/each}
-        </select>
-      </div>
-      <div class="control" title="Send a sample prompt to the selected model.">
-        <label>Test Model</label>
-        <button on:click={handleTestModel}>Test</button>
-      </div>
-      {#if testReply}
-        <p class="status" data-testid="lrm-test-reply">{testReply}</p>
-      {/if}
-    </div>
+    <LLMSettings
+      bind:lrmModel
+      {lrmOptions}
+      {handleModelChange}
+      {handleTestModel}
+      {testReply}
+    />
   {:else if activeTab === 'gameplay'}
-    <div class="panel">
-      <div class="control" title="Display numeric action values in the turn order.">
-        <label>Show Action Values</label>
-        <input type="checkbox" bind:checked={showActionValues} on:change={scheduleSave} />
-      </div>
-      <div class="control" title="End the current run.">
-        <Power />
-        <label>End Run</label>
-        <button on:click={handleEndRun} disabled={endingRun}>{endingRun ? 'Ending…' : 'End'}</button>
-        {#if endRunStatus}
-          <span class="status" data-testid="endrun-status">{endRunStatus}</span>
-        {/if}
-      </div>
-    </div>
+    <GameplaySettings
+      bind:showActionValues
+      {scheduleSave}
+      {handleEndRun}
+      {endingRun}
+      {endRunStatus}
+    />
   {/if}
 
   <div class="actions">
@@ -349,6 +263,7 @@
   </div>
 </div>
 
+<style src="./settings-shared.css"></style>
 <style>
   .tabbed {
     min-width: 600px;
@@ -376,61 +291,10 @@
     color: #0a0a0a;
   }
 
-  .panel {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-
-  .control {
-    display: flex;
-    align-items: center;
-    gap: 0.4rem;
-  }
-
-  label {
-    flex: 1;
-    font-size: 0.85rem;
-  }
-
-  input[type='range'] {
-    flex: 2;
-  }
-
-  select {
-    flex: 2;
-    background: #0a0a0a;
-    color: #fff;
-    border: 1px solid #fff;
-  }
-
   .actions {
     display: flex;
     justify-content: flex-end;
     gap: 0.5rem;
     margin-top: 0.5rem;
   }
-
-  button {
-    border: 2px solid #fff;
-    background: #0a0a0a;
-    color: #fff;
-    padding: 0.3rem 0.6rem;
-  }
-
-  .status {
-    margin: 0;
-    font-size: 0.8rem;
-  }
-
-  .badge {
-    border: 1px solid rgba(255,255,255,0.6);
-    padding: 0.1rem 0.4rem;
-    border-radius: 2px;
-    font-size: 0.75rem;
-  }
-  .badge[data-status='healthy'] { color: #00ff88; border-color: #00ff88; }
-  .badge[data-status='degraded'] { color: #ffaa00; border-color: #ffaa00; }
-  .badge[data-status='error'] { color: #ff4444; border-color: #ff4444; }
-  .ping { font-size: 0.75rem; opacity: 0.9; }
 </style>
