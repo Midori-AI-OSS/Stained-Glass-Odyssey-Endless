@@ -12,6 +12,12 @@
   
   // State management
   let activeTab = 'standard';
+  if (browser) {
+    const saved = localStorage.getItem('pulls-active-banner');
+    if (saved) {
+      activeTab = saved;
+    }
+  }
   let pity = 0;
   let items = {};
   let loading = false;
@@ -30,10 +36,7 @@
       banners = data.banners || [];
       featuredCharacters = data.featured_characters || [];
       
-      // Set default tab to first available banner
-      if (banners.length > 0 && !banners.find(b => b.id === activeTab)) {
-        activeTab = banners[0].id;
-      }
+      ensureActiveTabValid();
     } catch (err) {
       console.error('Failed to load gacha data:', err);
     }
@@ -66,6 +69,7 @@
         banners = fresh?.banners || banners;
         featuredCharacters = fresh?.featured_characters || featuredCharacters;
       } catch {}
+      ensureActiveTabValid();
     } catch (err) {
       // Revert optimistic change on failure
       if (prevTickets >= count) {
@@ -86,6 +90,18 @@
   
   function switchTab(tabId) {
     activeTab = tabId;
+    if (browser) {
+      localStorage.setItem('pulls-active-banner', activeTab);
+    }
+  }
+
+  function ensureActiveTabValid() {
+    if (banners.length > 0 && !banners.find(b => b.id === activeTab)) {
+      activeTab = banners[0].id;
+      if (browser) {
+        localStorage.setItem('pulls-active-banner', activeTab);
+      }
+    }
   }
   
   // Get current banner info
