@@ -3,7 +3,7 @@ import random
 import pytest
 
 from autofighter.passives import PassiveRegistry
-from autofighter.stats import StatEffect
+from autofighter.stat_effect import StatEffect
 from autofighter.stats import Stats
 
 

@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 from typing import ClassVar
 
 from autofighter.effects import EffectManager
-from autofighter.stats import StatEffect
+from autofighter.stat_effect import StatEffect
 from plugins.damage_types import ALL_DAMAGE_TYPES
 from plugins.damage_types import load_damage_type
 

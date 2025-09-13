@@ -1,8 +1,8 @@
 from dataclasses import dataclass
 from dataclasses import field
 
+from autofighter.stat_effect import StatEffect
 from autofighter.stats import BUS
-from autofighter.stats import StatEffect
 from plugins.cards._base import CardBase
 
 

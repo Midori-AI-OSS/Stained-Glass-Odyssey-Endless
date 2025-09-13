@@ -3,7 +3,7 @@ import random
 from typing import TYPE_CHECKING
 from typing import ClassVar
 
-from autofighter.stats import StatEffect
+from autofighter.stat_effect import StatEffect
 from plugins.damage_types.dark import Dark
 from plugins.damage_types.fire import Fire
 from plugins.damage_types.ice import Ice

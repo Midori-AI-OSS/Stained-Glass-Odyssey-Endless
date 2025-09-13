@@ -7,7 +7,7 @@ from typing import Union
 
 from rich.console import Console
 
-from autofighter.stats import StatEffect
+from autofighter.stat_effect import StatEffect
 from autofighter.stats import Stats
 
 # Diminishing returns configuration for buff scaling

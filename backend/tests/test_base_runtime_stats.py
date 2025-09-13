@@ -1,6 +1,6 @@
 """Test the new base stats vs runtime stats system."""
 
-from autofighter.stats import StatEffect
+from autofighter.stat_effect import StatEffect
 from autofighter.stats import Stats
 
 

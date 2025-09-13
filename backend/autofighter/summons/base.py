@@ -21,7 +21,7 @@ from plugins.damage_types._base import DamageTypeBase
 if TYPE_CHECKING:
     from autofighter.effects import HealingOverTime
     from autofighter.effects import StatModifier
-    from autofighter.stats import StatEffect
+    from autofighter.stat_effect import StatEffect
 
 log = logging.getLogger(__name__)
 
@@ -216,7 +216,7 @@ class Summon(Stats):
     @classmethod
     def _scale_stat_effect(cls, effect: "StatEffect", multiplier: float) -> "StatEffect":
         """Create a scaled copy of a StatEffect."""
-        from autofighter.stats import StatEffect
+        from autofighter.stat_effect import StatEffect
 
         scaled_modifiers = {}
         for stat_name, value in effect.stat_modifiers.items():
