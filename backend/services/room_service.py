@@ -126,29 +126,18 @@ async def battle_room(run_id: str, data: dict[str, Any]) -> dict[str, Any]:
     node = rooms[state["current"]]
     if node.room_type not in {"battle-weak", "battle-normal"}:
         raise ValueError("invalid room")
-    if state.get("awaiting_next"):
-        next_type = (
-            rooms[state["current"] + 1].room_type
-            if state["current"] + 1 < len(rooms)
-            else None
-        )
-        payload: dict[str, Any] = {
-            "result": "battle",
-            "awaiting_next": True,
-            "current_index": state.get("current", 0),
-            "current_room": node.room_type,
-        }
-        if next_type is not None:
-            payload["next_room"] = next_type
-        return payload
-
     # Only check awaiting flags if this is NOT a restart scenario
-    if not is_restart_scenario and (state.get("awaiting_card") or state.get("awaiting_relic") or state.get("awaiting_loot")):
+    if not is_restart_scenario and (
+        state.get("awaiting_card")
+        or state.get("awaiting_relic")
+        or state.get("awaiting_loot")
+        or state.get("awaiting_next")
+    ):
         snap = battle_snapshots.get(run_id)
         if snap is not None:
             return snap
         party_data = [_serialize(m) for m in party.members]
-        return {
+        payload: dict[str, Any] = {
             "result": "battle",
             "party": party_data,
             "foes": [],
@@ -160,6 +149,22 @@ async def battle_room(run_id: str, data: dict[str, Any]) -> dict[str, Any]:
             "enrage": {"active": False, "stacks": 0},
             "rdr": party.rdr,
         }
+        if state.get("awaiting_next"):
+            next_type = (
+                rooms[state["current"] + 1].room_type
+                if state["current"] + 1 < len(rooms)
+                else None
+            )
+            payload.update(
+                {
+                    "awaiting_next": True,
+                    "current_index": state.get("current", 0),
+                    "current_room": node.room_type,
+                }
+            )
+            if next_type is not None:
+                payload["next_room"] = next_type
+        return payload
     if run_id in battle_tasks and not battle_tasks[run_id].done():
         snap = battle_snapshots.get(run_id, {"result": "battle"})
         return snap

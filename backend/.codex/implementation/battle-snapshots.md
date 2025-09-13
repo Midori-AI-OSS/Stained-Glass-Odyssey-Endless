@@ -41,6 +41,9 @@ poll for results:
   and each run receives an error snapshot noting that a concurrent battle was
   detected.
 
+- Repeated calls to `battle_room` while `awaiting_next` is `true` return the
+  existing snapshot rather than launching another battle.
+
 These snapshots are stored in `game.battle_snapshots` and polled by the
 frontend during combat.
 
