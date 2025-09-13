@@ -15,8 +15,8 @@
     return {
       left: Math.random() * 100,
       size: rand(3, 6),
-      duration: rand(6, 14),
-      delay: rand(0, 6),
+      duration: rand(18, 28),
+      delay: rand(0, 12),
       drift: rand(-20, 20),
       color: c
     };
@@ -95,6 +95,11 @@
 </script>
 
 <div class="stars" aria-hidden="true" style={`opacity:${fading ? 0.25 : 0.55}`}>
+  <div class="storm-blur">
+    {#each stars as s}
+      <span class="star" style={`--x:${s.left}%; --s:${s.size}px; --d:${s.duration}s; --delay:${s.delay}s; --dx:${s.drift}px; --c:${s.color};`}></span>
+    {/each}
+  </div>
   {#each stars as s}
     <span class="star" style={`--x:${s.left}%; --s:${s.size}px; --d:${s.duration}s; --delay:${s.delay}s; --dx:${s.drift}px; --c:${s.color};`}>
       <span class="core"></span>
@@ -130,8 +135,9 @@
     animation-iteration-count: infinite;
     animation-duration: var(--d);
     animation-delay: var(--delay);
+    z-index: 0;
   }
-  .star .core::after {
+.star .core::after {
     content: '';
     position: absolute;
     left: 50%;
@@ -141,6 +147,22 @@
     height: calc(var(--s) * 10);
     background: linear-gradient(180deg, color-mix(in srgb, var(--c) 75%, transparent) 0%, transparent 70%);
     filter: blur(1px);
+  }
+  .storm-blur { position:absolute; inset:0; pointer-events:none; z-index:-1; filter: blur(20px); opacity:0.5; }
+  .storm-blur .star::before {
+    content: '';
+    position: absolute;
+    top: calc(var(--s) * -1);
+    left: calc(var(--s) * -1);
+    width: calc(var(--s) * 3);
+    height: calc(var(--s) * 3);
+    background: radial-gradient(circle, var(--c) 0%, transparent 70%);
+    border-radius: 50%;
+    animation-name: af-drift;
+    animation-timing-function: linear;
+    animation-iteration-count: infinite;
+    animation-duration: var(--d);
+    animation-delay: var(--delay);
   }
   @keyframes af-fallTop {
     0% { top: -10%; opacity:0.0; }
