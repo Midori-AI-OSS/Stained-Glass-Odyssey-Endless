@@ -929,8 +929,8 @@
         try { await acknowledgeLoot(runId); } catch { /* ignore if already acknowledged */ }
       }
     } catch { /* no-op */ }
-    // If the run has ended (defeat), clear state and show defeat popup immediately
-    if (roomData?.ended) {
+    // If the run has ended due to defeat, clear state and show defeat popup immediately
+    if (roomData?.ended && roomData?.result === "defeat") {
       handleDefeat();
       return;
     }
