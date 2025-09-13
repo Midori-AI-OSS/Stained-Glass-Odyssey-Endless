@@ -16,25 +16,30 @@
       return fighter.hp >= 1;
     });
     $: activeIndex = displayQueue.findIndex((e) => !e.bonus);
+    $: needsFade = (displayQueue?.length || 0) > 8;
   </script>
 
 <div class="action-queue" data-testid="action-queue">
-  {#each displayQueue as entry, i (entry.bonus ? `b-${entry.id}-${i}` : entry.id)}
-    {@const fighter = findCombatant(entry.id)}
-    {@const elColor = getElementColor(fighter.element)}
-    <div
-      class="entry"
-      class:active={i === activeIndex}
-      class:bonus={entry.bonus}
-      style="--element-color: {elColor}"
-      animate:flip={{ duration: reducedMotion ? 0 : 220 }}
-    >
-      <img src={getCharacterImage(fighter.summon_type || fighter.id)} alt="" class="portrait" />
-      {#if showActionValues}
-        <div class="av">{Math.round(entry.action_value)}</div>
-      {/if}
+  <div class="viewport" class:masked={needsFade}>
+    <div class="list">
+      {#each displayQueue as entry, i (entry.bonus ? `b-${entry.id}-${i}` : entry.id)}
+        {@const fighter = findCombatant(entry.id)}
+        {@const elColor = getElementColor(fighter.element)}
+        <div
+          class="entry"
+          class:active={i === activeIndex}
+          class:bonus={entry.bonus}
+          style="--element-color: {elColor}"
+          animate:flip={{ duration: reducedMotion ? 0 : 220 }}
+        >
+          <img src={getCharacterImage(fighter.summon_type || fighter.id)} alt="" class="portrait" />
+          {#if showActionValues}
+            <div class="av">{Math.round(entry.action_value)}</div>
+          {/if}
+        </div>
+      {/each}
     </div>
-  {/each}
+  </div>
 </div>
 
 <style>
@@ -43,17 +48,41 @@
     left: 0.75rem;
     top: 50%;
     transform: translateY(-50%);
+    --entry-w: 192px;
+    --entry-h: 108px; /* 16:9 */
+    --gap: 0.5rem;
+    display: block;
+    z-index: 2;
+  }
+  .viewport {
+    position: relative;
+    max-height: min(calc((var(--entry-h) + var(--gap)) * 8 - var(--gap)), calc(100vh - 2rem));
+    overflow: hidden;
+  }
+  .viewport.masked::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 18px;
+    pointer-events: none;
+    z-index: 1;
+  }
+  .viewport.masked::after {
+    bottom: 0;
+    background: linear-gradient(to top, rgba(0,0,0,0.6), rgba(0,0,0,0));
+  }
+  .list {
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
-    justify-content: center;
+    gap: var(--gap);
     align-items: center;
-    z-index: 2;
+    justify-content: center;
   }
   .entry {
     position: relative;
-    width: 160px;
-    height: 90px; /* 16:9 */
+    width: var(--entry-w);
+    height: var(--entry-h); /* 16:9 */
     will-change: transform;
     border: 2px solid var(--element-color);
     border-radius: 8px;
