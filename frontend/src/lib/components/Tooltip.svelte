@@ -14,4 +14,6 @@
   <span class="tooltip" role="tooltip" class:visible={show}>{text}</span>
 </div>
 
-<style src="./settings-shared.css"></style>
+<style>
+  @import './settings-shared.css';
+</style>

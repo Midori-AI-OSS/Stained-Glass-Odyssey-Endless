@@ -3,26 +3,38 @@
   flex-direction: column;
   gap: 0.6rem;
   width: 100%;
+  max-width: 100%;
 }
 
 .settings-panel .control {
   display: grid;
-  grid-template-columns: minmax(0, 4fr) minmax(0, 1fr); /* ~80% / ~20% */
+  /* Fixed split: ~70% label / ~30% actions */
+  grid-template-columns: minmax(0, 7fr) minmax(0, 3fr);
   align-items: center;
-  gap: 0.6rem;
+  column-gap: 0; /* divider sits exactly at split */
   padding: 0.5rem 0.7rem;
-  border-radius: 8px;
-  border: 2px solid rgba(255, 255, 255, 0.7); /* strong outline */
+  border-radius: 0; /* square edges as requested */
+  border: 1px solid rgba(0, 0, 0, 0.55); /* dark edge visible on light bg */
   background-color: rgba(255, 255, 255, 0.04);
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.35); /* light edge visible on dark bg */
   transition: background-color 0.2s;
+  box-sizing: border-box;
+  max-width: 100%;
 }
 
 /* Right column wrapper to keep actions aligned */
 .settings-panel .control .control-right {
-  justify-self: end;
-  display: inline-flex;
+  justify-self: stretch; /* fill full 30% column so rows are consistent */
+  display: flex;
+  justify-content: flex-start; /* left-align controls within the right column */
   align-items: center;
   gap: 0.5rem;
+  min-width: 0;
+  max-width: 100%;
+  flex-wrap: wrap;
+  /* vertical divider between columns */
+  border-left: 1px solid rgba(255,255,255,0.35);
+  padding-left: 0.6rem;
 }
 
 .settings-panel .control:hover {
@@ -34,7 +46,12 @@
   align-items: center;
   gap: 0.4rem;
   font-size: 0.85rem;
+  white-space: nowrap; /* keep label in one line so divider sits after text */
 }
+
+/* Ensure left and right wrappers map to columns */
+.settings-panel .control-left { grid-column: 1; min-width: 0; display: flex; align-items: center; }
+.settings-panel .control-right { grid-column: 2; }
 
 /* Column alignment: first child left, .control-right on the right */
 .settings-panel .control > :first-child {
@@ -42,10 +59,10 @@
   grid-column: 1;
 }
 .settings-panel .control > .control-right {
-  justify-self: end;
+  justify-self: stretch; /* ensure divider touches left column */
   grid-column: 2;
   min-width: 0;
-  display: inline-flex;
+  display: flex;
   align-items: center;
   gap: 0.5rem;
 }
@@ -104,6 +121,7 @@
 
 /* SettingsMenu layout */
 .tabbed {
+  width: 100%;
   min-width: 600px;
   min-height: 360px;
 }

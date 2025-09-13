@@ -16,23 +16,31 @@
 
 <div class="settings-panel">
   <div class="control" title="Adjust sound effect volume.">
-    <span class="label"><Volume2 /> SFX Volume</span>
+    <div class="control-left">
+      <span class="label"><Volume2 /> SFX Volume</span>
+    </div>
     <div class="control-right">
       <DotSelector bind:value={dotSfx} on:change={() => { sfxVolume = Math.round(dotSfx / 10); scheduleSave(); }} />
     </div>
   </div>
   <div class="control" title="Adjust background music volume.">
-    <span class="label"><Music /> Music Volume</span>
+    <div class="control-left">
+      <span class="label"><Music /> Music Volume</span>
+    </div>
     <div class="control-right">
       <DotSelector bind:value={dotMusic} on:change={() => { musicVolume = Math.round(dotMusic / 10); scheduleSave(); }} />
     </div>
   </div>
   <div class="control" title="Adjust voice volume.">
-    <span class="label"><Mic /> Voice Volume</span>
+    <div class="control-left">
+      <span class="label"><Mic /> Voice Volume</span>
+    </div>
     <div class="control-right">
       <DotSelector bind:value={dotVoice} on:change={() => { voiceVolume = Math.round(dotVoice / 10); scheduleSave(); }} />
     </div>
   </div>
 </div>
 
-<style src="./settings-shared.css"></style>
+<style>
+  @import './settings-shared.css';
+</style>

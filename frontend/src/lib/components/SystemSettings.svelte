@@ -14,7 +14,9 @@
 
 <div class="settings-panel">
   <div class="control" title="Backend health and network latency.">
-    <span class="label"><Activity /> Backend Health</span>
+    <div class="control-left">
+      <span class="label"><Activity /> Backend Health</span>
+    </div>
     <div class="control-right">
       <span class="badge" data-status={healthStatus}>
         {healthStatus === 'healthy'
@@ -32,7 +34,9 @@
     </div>
   </div>
   <div class="control" title="Limit server polling frequency.">
-    <span class="label"><Gauge /> Framerate</span>
+    <div class="control-left">
+      <span class="label"><Gauge /> Framerate</span>
+    </div>
     <div class="control-right">
       <select bind:value={framerate} on:change={scheduleSave}>
         <option value={30}>30</option>
@@ -42,13 +46,17 @@
     </div>
   </div>
   <div class="control" title="Slow down battle animations.">
-    <span class="label"><Move /> Reduced Motion</span>
+    <div class="control-left">
+      <span class="label"><Move /> Reduced Motion</span>
+    </div>
     <div class="control-right">
       <input type="checkbox" bind:checked={reducedMotion} on:change={scheduleSave} />
     </div>
   </div>
   <div class="control" title="Clear all save data.">
-    <span class="label"><Trash2 /> Wipe Save Data</span>
+    <div class="control-left">
+      <span class="label"><Trash2 /> Wipe Save Data</span>
+    </div>
     <div class="control-right">
       <button on:click={handleWipe}>Wipe</button>
     </div>
@@ -57,17 +65,23 @@
     <p class="status" data-testid="wipe-status">{wipeStatus}</p>
   {/if}
   <div class="control" title="Download encrypted backup of save data.">
-    <span class="label"><Download /> Backup Save Data</span>
+    <div class="control-left">
+      <span class="label"><Download /> Backup Save Data</span>
+    </div>
     <div class="control-right">
       <button on:click={handleBackup}>Backup</button>
     </div>
   </div>
   <div class="control" title="Import an encrypted save backup.">
-    <span class="label"><Upload /> Import Save Data</span>
+    <div class="control-left">
+      <span class="label"><Upload /> Import Save Data</span>
+    </div>
     <div class="control-right">
       <input type="file" accept=".afsave" on:change={handleImport} />
     </div>
   </div>
 </div>
 
-<style src="./settings-shared.css"></style>
+<style>
+  @import './settings-shared.css';
+</style>

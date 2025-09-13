@@ -263,4 +263,6 @@
   </div>
 </div>
 
-<style src="./settings-shared.css"></style>
+<style>
+  @import './settings-shared.css';
+</style>

@@ -8,7 +8,9 @@
 
 <div class="settings-panel">
   <div class="control" title="Select language reasoning model.">
-    <span class="label">LRM Model</span>
+    <div class="control-left">
+      <span class="label">LRM Model</span>
+    </div>
     <div class="control-right">
       <select bind:value={lrmModel} on:change={handleModelChange}>
         {#each lrmOptions as opt}
@@ -18,7 +20,9 @@
     </div>
   </div>
   <div class="control" title="Send a sample prompt to the selected model.">
-    <span class="label">Test Model</span>
+    <div class="control-left">
+      <span class="label">Test Model</span>
+    </div>
     <div class="control-right">
       <button on:click={handleTestModel}>Test</button>
     </div>
@@ -28,4 +32,6 @@
   {/if}
 </div>
 
-<style src="./settings-shared.css"></style>
+<style>
+  @import './settings-shared.css';
+</style>
