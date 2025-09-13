@@ -38,6 +38,7 @@ async def test_battle_loot_items_update_inventory(app_with_db, monkeypatch):
             "card_choices": [],
             "relic_choices": [],
             "items": [
+                # include a ticket despite the 0.05% × rdr base drop rate for determinism
                 {"id": "fire", "stars": 1},
                 {"id": "ticket", "stars": 0},
             ],

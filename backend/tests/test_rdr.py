@@ -39,7 +39,8 @@ async def test_rdr_scales_items_and_tickets(monkeypatch):
     monkeypatch.setattr(rooms_module, "card_choices", lambda *a, **k: [])
     monkeypatch.setattr(rooms_module, "relic_choices", lambda *a, **k: [])
     monkeypatch.setattr(rooms_module.random, "choice", lambda seq: seq[0])
-    monkeypatch.setattr(rooms_module.random, "random", lambda: 0.15)
+    monkeypatch.setattr(rooms_module.random, "random", lambda: 0.00075)
+    # low roll so only high RDR triggers the 0.05% × rdr ticket chance
     result_low = await room.resolve(low, {})
     result_high = await room.resolve(high, {})
     low_upgrades = [i for i in result_low["loot"]["items"] if i["id"] != "ticket"]
