@@ -22,6 +22,9 @@ poll for results:
 - Progress snapshots now include `active_id`, the id of the combatant whose
   action produced the snapshot, so user interfaces can highlight the active
   fighter for both party and foe turns.
+- The action queue advances **after** progress snapshots are dispatched so the
+  active combatant remains at the head of the queue until user interfaces
+  receive and render the update.
 
 - Foe snapshots include a `rank` field describing encounter difficulty.
   Supported ranks are `"normal"`, `"prime"`, `"glitched prime"`, `"boss"`, and
