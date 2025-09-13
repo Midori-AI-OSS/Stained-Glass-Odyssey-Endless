@@ -13,17 +13,21 @@
     <Tooltip text="Display numeric action values in the turn order.">
       <span class="label">Show Action Values</span>
     </Tooltip>
-    <input type="checkbox" bind:checked={showActionValues} on:change={scheduleSave} />
+    <div class="control-right">
+      <input type="checkbox" bind:checked={showActionValues} on:change={scheduleSave} />
+    </div>
   </div>
   <div class="control">
     <Tooltip text="End the current run.">
       <span class="label"><Power /> End Run</span>
     </Tooltip>
-    <button on:click={handleEndRun} disabled={endingRun}>{endingRun ? 'Ending…' : 'End'}</button>
-    {#if endRunStatus}
-      <span class="status" data-testid="endrun-status">{endRunStatus}</span>
-    {/if}
+    <div class="control-right">
+      <button on:click={handleEndRun} disabled={endingRun}>{endingRun ? 'Ending…' : 'End'}</button>
+    </div>
   </div>
+  {#if endRunStatus}
+    <p class="status" data-testid="endrun-status">{endRunStatus}</p>
+  {/if}
 </div>
 
 <style src="./settings-shared.css"></style>

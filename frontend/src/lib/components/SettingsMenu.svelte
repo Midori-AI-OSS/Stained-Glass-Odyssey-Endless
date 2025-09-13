@@ -264,37 +264,3 @@
 </div>
 
 <style src="./settings-shared.css"></style>
-<style>
-  .tabbed {
-    min-width: 600px;
-    min-height: 360px;
-  }
-
-  .tabs {
-    display: flex;
-    gap: 0.5rem;
-    margin-bottom: 0.5rem;
-  }
-
-  .tabs button {
-    border: 2px solid #fff;
-    background: #0a0a0a;
-    color: #fff;
-    padding: 0.3rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .tabs button.active {
-    background: #fff;
-    color: #0a0a0a;
-  }
-
-  .actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: 0.5rem;
-    margin-top: 0.5rem;
-  }
-</style>

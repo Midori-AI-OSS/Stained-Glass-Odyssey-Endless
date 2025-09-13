@@ -1,21 +1,32 @@
 .settings-panel {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.6rem;
+  width: 100%;
 }
 
 .settings-panel .control {
   display: grid;
-  grid-template-columns: auto 1fr;
+  grid-template-columns: minmax(0, 4fr) minmax(0, 1fr); /* ~80% / ~20% */
   align-items: center;
-  gap: 0.4rem;
-  padding: 0.2rem 0.3rem;
-  border-radius: 4px;
+  gap: 0.6rem;
+  padding: 0.5rem 0.7rem;
+  border-radius: 8px;
+  border: 2px solid rgba(255, 255, 255, 0.7); /* strong outline */
+  background-color: rgba(255, 255, 255, 0.04);
   transition: background-color 0.2s;
 }
 
+/* Right column wrapper to keep actions aligned */
+.settings-panel .control .control-right {
+  justify-self: end;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 .settings-panel .control:hover {
-  background-color: rgba(255, 255, 255, 0.05);
+  background-color: rgba(255, 255, 255, 0.08);
 }
 
 .settings-panel .label {
@@ -25,11 +36,20 @@
   font-size: 0.85rem;
 }
 
-.settings-panel select,
-.settings-panel input[type='checkbox'],
-.settings-panel input[type='file'] {
+/* Column alignment: first child left, .control-right on the right */
+.settings-panel .control > :first-child {
   justify-self: start;
+  grid-column: 1;
 }
+.settings-panel .control > .control-right {
+  justify-self: end;
+  grid-column: 2;
+  min-width: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.settings-panel .control { width: 100%; }
 
 .settings-panel button {
   padding: 0.3rem 0.6rem;
@@ -80,4 +100,38 @@
 
 .tooltip.visible {
   opacity: 1;
+}
+
+/* SettingsMenu layout */
+.tabbed {
+  min-width: 600px;
+  min-height: 360px;
+}
+
+.tabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.tabs button {
+  border: 2px solid #fff;
+  background: #0a0a0a;
+  color: #fff;
+  padding: 0.3rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tabs button.active {
+  background: #fff;
+  color: #0a0a0a;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
 }

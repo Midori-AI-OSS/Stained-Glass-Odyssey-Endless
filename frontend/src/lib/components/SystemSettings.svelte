@@ -15,46 +15,58 @@
 <div class="settings-panel">
   <div class="control" title="Backend health and network latency.">
     <span class="label"><Activity /> Backend Health</span>
-    <span class="badge" data-status={healthStatus}>
-      {healthStatus === 'healthy'
-        ? 'Healthy'
-        : healthStatus === 'degraded'
-        ? 'Degraded'
-        : healthStatus === 'error'
-        ? 'Error'
-        : 'Unknown'}
-    </span>
-    {#if healthPing !== null}
-      <span class="ping">{Math.round(healthPing)}ms</span>
-    {/if}
-    <button on:click={() => refreshHealth(true)}>Refresh</button>
+    <div class="control-right">
+      <span class="badge" data-status={healthStatus}>
+        {healthStatus === 'healthy'
+          ? 'Healthy'
+          : healthStatus === 'degraded'
+          ? 'Degraded'
+          : healthStatus === 'error'
+          ? 'Error'
+          : 'Unknown'}
+      </span>
+      {#if healthPing !== null}
+        <span class="ping">{Math.round(healthPing)}ms</span>
+      {/if}
+      <button on:click={() => refreshHealth(true)}>Refresh</button>
+    </div>
   </div>
   <div class="control" title="Limit server polling frequency.">
     <span class="label"><Gauge /> Framerate</span>
-    <select bind:value={framerate} on:change={scheduleSave}>
-      <option value={30}>30</option>
-      <option value={60}>60</option>
-      <option value={120}>120</option>
-    </select>
+    <div class="control-right">
+      <select bind:value={framerate} on:change={scheduleSave}>
+        <option value={30}>30</option>
+        <option value={60}>60</option>
+        <option value={120}>120</option>
+      </select>
+    </div>
   </div>
   <div class="control" title="Slow down battle animations.">
     <span class="label"><Move /> Reduced Motion</span>
-    <input type="checkbox" bind:checked={reducedMotion} on:change={scheduleSave} />
+    <div class="control-right">
+      <input type="checkbox" bind:checked={reducedMotion} on:change={scheduleSave} />
+    </div>
   </div>
   <div class="control" title="Clear all save data.">
     <span class="label"><Trash2 /> Wipe Save Data</span>
-    <button on:click={handleWipe}>Wipe</button>
+    <div class="control-right">
+      <button on:click={handleWipe}>Wipe</button>
+    </div>
   </div>
   {#if wipeStatus}
     <p class="status" data-testid="wipe-status">{wipeStatus}</p>
   {/if}
   <div class="control" title="Download encrypted backup of save data.">
     <span class="label"><Download /> Backup Save Data</span>
-    <button on:click={handleBackup}>Backup</button>
+    <div class="control-right">
+      <button on:click={handleBackup}>Backup</button>
+    </div>
   </div>
   <div class="control" title="Import an encrypted save backup.">
     <span class="label"><Upload /> Import Save Data</span>
-    <input type="file" accept=".afsave" on:change={handleImport} />
+    <div class="control-right">
+      <input type="file" accept=".afsave" on:change={handleImport} />
+    </div>
   </div>
 </div>
 
