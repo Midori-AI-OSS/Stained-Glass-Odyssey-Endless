@@ -703,7 +703,6 @@ class BattleRoom(Room):
                         await asyncio.sleep(0.001)
                         continue
                     if progress is not None:
-                        _advance_queue(member)
                         await progress(
                             {
                                 "result": "battle",
@@ -725,6 +724,7 @@ class BattleRoom(Room):
                                 "active_id": member.id,
                             }
                         )
+                        _advance_queue(member)
                     await _pace(action_start)
                     if tgt_foe.hp <= 0:
                         await _credit_if_dead(tgt_foe)
@@ -831,7 +831,6 @@ class BattleRoom(Room):
                             await _pace(action_start)
                             continue
                         if progress is not None:
-                            _advance_queue(acting_foe)
                             await progress(
                                 {
                                     "result": "battle",
@@ -857,6 +856,7 @@ class BattleRoom(Room):
                                     "active_id": acting_foe.id,
                                 }
                             )
+                            _advance_queue(acting_foe)
                         await _pace(action_start)
                         await asyncio.sleep(0.001)
                         break
@@ -913,7 +913,6 @@ class BattleRoom(Room):
                         await asyncio.sleep(0.001)
                         continue
                     if progress is not None:
-                        _advance_queue(acting_foe)
                         await progress(
                             {
                                 "result": "battle",
@@ -939,6 +938,7 @@ class BattleRoom(Room):
                                 "active_id": acting_foe.id,
                             }
                         )
+                        _advance_queue(acting_foe)
                     await _pace(action_start)
                     await asyncio.sleep(0.001)
                     break
