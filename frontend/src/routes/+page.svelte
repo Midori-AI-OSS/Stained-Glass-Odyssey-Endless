@@ -589,7 +589,7 @@
       }
     } catch {}
     if (battleActive && !haltSync && runId) {
-      battleTimer = setTimeout(pollBattle, 1000 / 60);
+      battleTimer = setTimeout(pollBattle, 1000 / 4); // 4 FPS instead of 60 FPS to reduce backend load
     }
   }
 
