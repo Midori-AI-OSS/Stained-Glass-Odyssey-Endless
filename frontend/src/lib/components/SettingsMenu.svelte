@@ -201,7 +201,7 @@
 </script>
 
 <div data-testid="settings-menu" class="tabbed">
-  <div class="tabs">
+  <div class="tabs stained-glass-bar">
     <button class:active={activeTab === 'audio'} on:click={() => (activeTab = 'audio')} title="Audio">
       <Volume2 />
     </button>

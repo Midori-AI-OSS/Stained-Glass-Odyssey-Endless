@@ -126,6 +126,16 @@
   min-height: 360px;
 }
 
+.stained-glass-bar {
+  padding: 0.5rem 0.7rem;
+  border-radius: 0;
+  background: var(--glass-bg);
+  box-shadow: var(--glass-shadow);
+  border: var(--glass-border);
+  backdrop-filter: var(--glass-filter);
+  opacity: 0.99;
+}
+
 .tabs {
   display: flex;
   gap: 0.5rem;
@@ -133,18 +143,24 @@
 }
 
 .tabs button {
-  border: 2px solid #fff;
-  background: #0a0a0a;
-  color: #fff;
-  padding: 0.3rem;
+  background: rgba(255,255,255,0.10);
+  border: none;
+  border-radius: 0;
+  width: 2.9rem;
+  height: 2.9rem;
   display: flex;
   align-items: center;
   justify-content: center;
+  color: #fff;
+  cursor: pointer;
+  transition: background 0.18s, box-shadow 0.18s;
+  box-shadow: 0 1px 4px 0 rgba(0,40,120,0.10);
 }
 
+.tabs button:hover,
 .tabs button.active {
-  background: #fff;
-  color: #0a0a0a;
+  background: rgba(120,180,255,0.22);
+  box-shadow: 0 2px 8px 0 rgba(0,40,120,0.18);
 }
 
 .actions {
