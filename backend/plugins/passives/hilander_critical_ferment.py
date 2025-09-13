@@ -5,8 +5,8 @@ from typing import ClassVar
 from weakref import WeakKeyDictionary
 from weakref import ref
 
+from autofighter.stat_effect import StatEffect
 from autofighter.stats import BUS
-from autofighter.stats import StatEffect
 from plugins.effects.aftertaste import Aftertaste
 from plugins.relics._base import safe_async_task
 

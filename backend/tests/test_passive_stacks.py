@@ -126,7 +126,7 @@ async def test_bubbles_burst_stack_display():
     assert burst_passive["max_stacks"] == 20
 
     # Simulate bubble bursts by manually adding attack buff effects
-    from autofighter.stats import StatEffect
+    from autofighter.stat_effect import StatEffect
 
     # Add a couple of bubble burst attack buffs
     for i in range(3):

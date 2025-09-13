@@ -4,10 +4,10 @@ from dataclasses import field
 import importlib
 import logging
 import random
-from typing import Dict
 from typing import Optional
 from typing import Union
 
+from autofighter.stat_effect import StatEffect
 from plugins.damage_types._base import DamageTypeBase
 from plugins.damage_types.generic import Generic
 from plugins.event_bus import EventBus
@@ -21,24 +21,6 @@ _BATTLE_ACTIVE: bool = False
 
 # Starting value for action gauges.
 GAUGE_START: int = 10_000
-
-
-@dataclass
-class StatEffect:
-    """Represents a temporary effect that modifies stats."""
-    name: str
-    stat_modifiers: Dict[str, Union[int, float]]  # stat_name -> modifier value
-    duration: int = -1  # -1 for permanent effects (cards/relics), >0 for temporary
-    source: str = "unknown"  # source identifier (card name, relic name, etc.)
-
-    def is_expired(self) -> bool:
-        """Check if this effect has expired."""
-        return self.duration == 0
-
-    def tick(self) -> None:
-        """Reduce duration by 1 if it's a temporary effect."""
-        if self.duration > 0:
-            self.duration -= 1
 
 
 class _PassiveList(list):

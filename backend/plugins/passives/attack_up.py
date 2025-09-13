@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from autofighter.stats import StatEffect
+from autofighter.stat_effect import StatEffect
 
 
 @dataclass

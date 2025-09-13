@@ -10,7 +10,7 @@ import sys
 sys.path.append('.')
 
 from autofighter.effects import create_stat_buff
-from autofighter.stats import StatEffect
+from autofighter.stat_effect import StatEffect
 from autofighter.stats import Stats
 from plugins.players._base import PlayerBase
 

@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING
 from typing import ClassVar
 from typing import Optional
 
-from autofighter.stats import StatEffect
+from autofighter.stat_effect import StatEffect
 
 if TYPE_CHECKING:
     from autofighter.stats import Stats

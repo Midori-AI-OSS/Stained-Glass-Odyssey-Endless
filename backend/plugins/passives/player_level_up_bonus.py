@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from autofighter.stats import StatEffect
+from autofighter.stat_effect import StatEffect
 
 if TYPE_CHECKING:
     from autofighter.stats import Stats

@@ -3,7 +3,6 @@ from dataclasses import dataclass
 
 from autofighter.passives import PassiveRegistry
 from plugins.damage_types._base import DamageTypeBase
-from plugins.passives.luna_lunar_reservoir import LunaLunarReservoir
 
 
 @dataclass
@@ -22,7 +21,9 @@ class Generic(DamageTypeBase):
         if not getattr(actor, "use_ultimate", lambda: False)():
             return False
 
+
         from autofighter.stats import BUS  # Import here to avoid circular imports
+        from plugins.passives.luna_lunar_reservoir import LunaLunarReservoir as _LLR_old
 
         registry = PassiveRegistry()
         target_pool = (
@@ -59,6 +60,10 @@ class Generic(DamageTypeBase):
                 foes=enemies,
             )
             await asyncio.sleep(0.002)
+        from plugins.passives.luna_lunar_reservoir import LunaLunarReservoir
+
+        if LunaLunarReservoir is not _LLR_old:
+            _LLR_old.add_charge(actor, amount=64)
         LunaLunarReservoir.add_charge(actor, amount=64)
         return True
 

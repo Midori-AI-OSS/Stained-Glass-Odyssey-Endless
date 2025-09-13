@@ -434,7 +434,7 @@ async def test_summon_inheritance_with_effects(monkeypatch):
     summoner._base_vitality = 1.5
 
     # Add a temporary effect that boosts stats
-    from autofighter.stats import StatEffect
+    from autofighter.stat_effect import StatEffect
     boost_effect = StatEffect(
         name="test_boost",
         stat_modifiers={
@@ -484,7 +484,7 @@ async def test_summon_inherits_beneficial_effects(monkeypatch):
     summoner._base_atk = 200
 
     # Add beneficial StatEffect (buff)
-    from autofighter.stats import StatEffect
+    from autofighter.stat_effect import StatEffect
     buff_effect = StatEffect(
         name="test_buff",
         stat_modifiers={
@@ -581,7 +581,7 @@ async def test_summon_does_not_inherit_harmful_effects(monkeypatch):
     summoner.id = "test_summoner"
 
     # Add harmful StatEffect (debuff)
-    from autofighter.stats import StatEffect
+    from autofighter.stat_effect import StatEffect
     debuff_effect = StatEffect(
         name="test_debuff",
         stat_modifiers={
@@ -654,7 +654,7 @@ async def test_summon_inherits_mixed_effects_correctly(monkeypatch):
     summoner.id = "test_summoner"
 
     # Add mixed StatEffect (some beneficial, some harmful modifiers)
-    from autofighter.stats import StatEffect
+    from autofighter.stat_effect import StatEffect
     mixed_effect = StatEffect(
         name="mixed_effect",
         stat_modifiers={

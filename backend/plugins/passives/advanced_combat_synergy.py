@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import ClassVar
 
-from autofighter.stats import StatEffect
+from autofighter.stat_effect import StatEffect
 
 
 @dataclass
