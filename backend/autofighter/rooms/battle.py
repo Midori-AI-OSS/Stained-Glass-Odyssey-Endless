@@ -681,8 +681,7 @@ class BattleRoom(Room):
                     await registry.trigger_turn_end(member)
                     member.action_points = max(0, member.action_points - 1)
                     if (
-                        member.action_points > 0
-                        and _EXTRA_TURNS.get(id(member), 0) > 0
+                        _EXTRA_TURNS.get(id(member), 0) > 0
                         and member.hp > 0
                     ):
                         _EXTRA_TURNS[id(member)] -= 1
@@ -892,8 +891,7 @@ class BattleRoom(Room):
                     await registry.trigger_turn_end(acting_foe)
                     acting_foe.action_points = max(0, acting_foe.action_points - 1)
                     if (
-                        acting_foe.action_points > 0
-                        and _EXTRA_TURNS.get(id(acting_foe), 0) > 0
+                        _EXTRA_TURNS.get(id(acting_foe), 0) > 0
                         and acting_foe.hp > 0
                     ):
                         _EXTRA_TURNS[id(acting_foe)] -= 1
