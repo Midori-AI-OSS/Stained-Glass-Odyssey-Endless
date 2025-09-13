@@ -12,7 +12,7 @@
   export let refreshHealth;
 </script>
 
-<div class="panel">
+<div class="settings-panel">
   <div class="control" title="Backend health and network latency.">
     <label>Backend Health</label>
     <span class="badge" data-status={healthStatus}>

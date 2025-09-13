@@ -6,7 +6,7 @@
   export let testReply = '';
 </script>
 
-<div class="panel">
+<div class="settings-panel">
   <div class="control" title="Select language reasoning model.">
     <label>LRM Model</label>
     <select bind:value={lrmModel} on:change={handleModelChange}>
