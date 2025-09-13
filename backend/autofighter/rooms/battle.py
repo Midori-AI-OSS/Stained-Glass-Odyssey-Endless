@@ -49,15 +49,23 @@ ENRAGE_TURNS_BOSS = 500
 TURN_PACING = 0.5
 
 _EXTRA_TURNS: dict[int, int] = {}
+_VISUAL_QUEUE: ActionQueue | None = None
 
 
 def _grant_extra_turn(entity: Stats) -> None:
     ident = id(entity)
     _EXTRA_TURNS[ident] = _EXTRA_TURNS.get(ident, 0) + 1
+    try:
+        if _VISUAL_QUEUE is not None:
+            _VISUAL_QUEUE.grant_extra_turn(entity)
+    except Exception:
+        pass
 
 
 def _clear_extra_turns(_entity: Stats) -> None:
     _EXTRA_TURNS.clear()
+    global _VISUAL_QUEUE
+    _VISUAL_QUEUE = None
 
 
 BUS.subscribe("extra_turn", _grant_extra_turn)
@@ -217,6 +225,8 @@ class BattleRoom(Room):
             _visual_queue = ActionQueue(q_entities)
         except Exception:
             _visual_queue = None
+        global _VISUAL_QUEUE
+        _VISUAL_QUEUE = _visual_queue
 
         # Start battle logging once before emitting any events so participants are captured
         battle_logger = start_battle_logging()
