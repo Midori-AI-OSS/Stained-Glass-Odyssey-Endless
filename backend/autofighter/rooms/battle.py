@@ -178,6 +178,7 @@ class BattleRoom(Room):
         from game import battle_tasks
 
         registry = PassiveRegistry()
+        SummonManager.reset_all()
         start_gold = party.gold
         if foe is None:
             foes = _build_foes(self.node, party)
@@ -1010,6 +1011,17 @@ class BattleRoom(Room):
                 )
             except Exception:
                 pass
+
+        # Emit defeat events for any fallen entities to trigger cleanup
+        try:
+            for foe_obj in foes:
+                if getattr(foe_obj, "hp", 1) <= 0:
+                    await BUS.emit_async("entity_defeat", foe_obj)
+            for member in combat_party.members:
+                if getattr(member, "hp", 1) <= 0:
+                    await BUS.emit_async("entity_defeat", member)
+        except Exception:
+            pass
 
         # Emit battle_end for each foe to allow relics/effects to clean up.
         try:

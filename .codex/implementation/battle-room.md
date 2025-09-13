@@ -4,8 +4,9 @@
 
 The room deep-copies the run's party for combat. When the fight ends, remaining
 HP and accumulated experience are synced back so level-ups and damage persist
-into subsequent rooms. All summons and related tracking are cleared to prevent
-them from leaking into later encounters.
+into subsequent rooms. `SummonManager.reset_all()` runs at battle start so all
+summons and related tracking are cleared, preventing leftovers from leaking
+into later encounters.
 
 ## Action Queue Flow
 
