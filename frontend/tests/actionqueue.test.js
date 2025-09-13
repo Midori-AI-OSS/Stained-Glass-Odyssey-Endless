@@ -9,6 +9,7 @@ import { join } from 'path';
       expect(content).toContain('showActionValues');
       expect(content).toContain('animate:flip');
       expect(content).toContain('class:bonus');
+      expect(content).toContain('.entry.active');
     });
   });
 
