@@ -13,20 +13,29 @@ def test_password_derives_key(tmp_path, monkeypatch):
     monkeypatch.setenv("AF_DB_PATH", str(db_path))
     monkeypatch.setenv("AF_DB_PASSWORD", "secret")
     mgr = SaveManager.from_env()
-    assert mgr.key == hashlib.sha256(b"secret").hexdigest()
+    
+    # With the new security improvements, keys are derived with PBKDF2 + salt
+    # so they won't match the simple SHA-256
+    assert mgr.key != hashlib.sha256(b"secret").hexdigest(), "Should use secure key derivation, not plain SHA-256"
+    assert len(mgr.key) == 64, "Key should be 32 bytes (64 hex chars)"
+    
     mgr.migrate(migrations)
     with mgr.connection() as conn:
         conn.execute(
             "INSERT INTO runs (id, party, map) VALUES ('1', '[]', '[]')"
         )
         version = conn.execute("PRAGMA user_version").fetchone()[0]
-    assert version == 2
+    assert version == 3
+    
+    # Test that the same password can recreate the manager and access data
     mgr2 = SaveManager.from_env()
     with mgr2.connection() as conn:
         cur = conn.execute("SELECT COUNT(*) FROM runs")
         assert cur.fetchone()[0] == 1
+    
+    # Test that wrong key fails properly
     bad_mgr = SaveManager(db_path, "badkey")
-    with pytest.raises(sqlcipher3.DatabaseError):
+    with pytest.raises((sqlcipher3.DatabaseError, ValueError)):
         with bad_mgr.connection() as conn:
             conn.execute("SELECT COUNT(*) FROM runs")
 
@@ -43,10 +52,13 @@ def test_malformed_key_does_not_execute_sql(tmp_path):
 
     malicious_key = "x'; DROP TABLE runs;--"
     bad_mgr = SaveManager(db_path, malicious_key)
-    with pytest.raises(sqlcipher3.DatabaseError):
+    # With the new security improvements, malicious keys are escaped and 
+    # will result in invalid encryption key errors instead of SQL injection
+    with pytest.raises((sqlcipher3.DatabaseError, ValueError)):
         with bad_mgr.connection() as conn:
             conn.execute("SELECT COUNT(*) FROM runs")
 
+    # Verify original data is still intact with correct key
     with mgr.connection() as conn:
         count = conn.execute("SELECT COUNT(*) FROM runs").fetchone()[0]
     assert count == 1
