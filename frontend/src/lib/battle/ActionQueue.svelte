@@ -32,10 +32,12 @@
           style="--element-color: {elColor}"
           animate:flip={{ duration: reducedMotion ? 0 : 220 }}
         >
-          <img src={getCharacterImage(fighter.summon_type || fighter.id)} alt="" class="portrait" />
-          {#if showActionValues}
-            <div class="av">{Math.round(entry.action_value)}</div>
-          {/if}
+          <div class="inner">
+            <img src={getCharacterImage(fighter.summon_type || fighter.id)} alt="" class="portrait" />
+            {#if showActionValues}
+              <div class="av">{Math.round(entry.action_value)}</div>
+            {/if}
+          </div>
         </div>
       {/each}
     </div>
@@ -50,7 +52,9 @@
     transform: translateY(-50%);
     --entry-w: 192px;
     --entry-h: 108px; /* 16:9 */
-    --gap: 0.5rem;
+    --gap: 0.25rem; /* baseline spacing */
+    --gap-s: 0.125rem; /* compact spacing for non-active */
+    --gap-l: 0.375rem; /* extra spacing after active */
     display: block;
     z-index: 2;
   }
@@ -75,8 +79,8 @@
   .list {
     display: flex;
     flex-direction: column;
-    gap: var(--gap);
-    align-items: center;
+    gap: 0; /* manage spacing per-entry to compress non-active */
+    align-items: flex-start; /* left-align entries */
     justify-content: center;
   }
   .entry {
@@ -84,15 +88,26 @@
     width: var(--entry-w);
     height: var(--entry-h); /* 16:9 */
     will-change: transform;
+    margin-bottom: var(--gap-s);
+  }
+  .entry.active { margin-bottom: var(--gap-l); }
+  .entry:last-child { margin-bottom: 0; }
+  .inner {
+    position: absolute;
+    inset: 0;
     border: 2px solid var(--element-color);
     border-radius: 8px;
     overflow: hidden;
+    transform-origin: left center; /* keep scaled items hugged to the left */
+    transform: scale(0.75); /* about 25% smaller for non-active */
+    transition: transform 160ms ease, box-shadow 160ms ease, border-width 160ms ease;
   }
-  .entry.active {
+  .entry.active .inner {
+    transform: scale(1);
     border-width: 4px;
     box-shadow: 0 0 8px 2px color-mix(in oklab, var(--element-color) 80%, white);
   }
-  .entry.active::before {
+  .entry.active .inner::before {
     content: '';
     position: absolute;
     left: -0.75rem;
@@ -102,6 +117,9 @@
     border-right-color: var(--element-color);
   }
   .entry.bonus {
+    /* Slightly de-emphasize bonus entries */
+  }
+  .entry.bonus .inner {
     opacity: 0.6;
   }
   .portrait {
