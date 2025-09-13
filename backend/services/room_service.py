@@ -123,12 +123,12 @@ async def battle_room(run_id: str, data: dict[str, Any]) -> dict[str, Any]:
     if node.room_type not in {"battle-weak", "battle-normal"}:
         raise ValueError("invalid room")
     # Check awaiting flags before attempting to launch a new battle
-    if (
-        state.get("awaiting_card")
-        or state.get("awaiting_relic")
-        or state.get("awaiting_loot")
-        or state.get("awaiting_next")
-    ):
+    awaiting_card = state.get("awaiting_card")
+    awaiting_relic = state.get("awaiting_relic")
+    awaiting_loot = state.get("awaiting_loot")
+    awaiting_next = state.get("awaiting_next")
+
+    if awaiting_next:
         snap = battle_snapshots.get(run_id)
         if snap is not None:
             return snap
@@ -145,22 +145,26 @@ async def battle_room(run_id: str, data: dict[str, Any]) -> dict[str, Any]:
             "enrage": {"active": False, "stacks": 0},
             "rdr": party.rdr,
         }
-        if state.get("awaiting_next"):
-            next_type = (
-                rooms[state["current"] + 1].room_type
-                if state["current"] + 1 < len(rooms)
-                else None
-            )
-            payload.update(
-                {
-                    "awaiting_next": True,
-                    "current_index": state.get("current", 0),
-                    "current_room": node.room_type,
-                }
-            )
-            if next_type is not None:
-                payload["next_room"] = next_type
+        next_type = (
+            rooms[state["current"] + 1].room_type
+            if state["current"] + 1 < len(rooms)
+            else None
+        )
+        payload.update(
+            {
+                "awaiting_next": True,
+                "current_index": state.get("current", 0),
+                "current_room": node.room_type,
+            }
+        )
+        if next_type is not None:
+            payload["next_room"] = next_type
         return payload
+
+    if awaiting_card or awaiting_relic or awaiting_loot:
+        snap = battle_snapshots.get(run_id)
+        if snap is not None:
+            return snap
     if run_id in battle_tasks and not battle_tasks[run_id].done():
         snap = battle_snapshots.get(run_id, {"result": "battle"})
         return snap
