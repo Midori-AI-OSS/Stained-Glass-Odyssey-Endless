@@ -58,7 +58,7 @@ class RustyBuckle(RelicBase):
                     },
                 )
 
-                safe_async_task(entity.apply_damage(dmg, attacker=entity))
+                safe_async_task(entity.apply_cost_damage(dmg))
 
         def _damage(target, attacker, _original) -> None:
             if target not in party.members:

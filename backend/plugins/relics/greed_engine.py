@@ -51,7 +51,7 @@ class GreedEngine(RelicBase):
                         "max_hp": member.max_hp
                     })
 
-                    safe_async_task(member.apply_damage(dmg))
+                    safe_async_task(member.apply_cost_damage(dmg))
 
             BUS.subscribe("gold_earned", _gold)
             BUS.subscribe("turn_start", _drain)

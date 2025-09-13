@@ -668,6 +668,29 @@ class Stats:
             BUS.emit_batched("damage_dealt", attacker, self, original_amount, "attack", None, None, action_name)
         return original_amount
 
+    async def apply_cost_damage(self, amount: int) -> int:
+        """Apply self-inflicted damage that ignores mitigation and shields."""
+        from autofighter.stats import is_battle_active  # local import for clarity
+
+        if not is_battle_active():
+            return 0
+        if getattr(self, "hp", 0) <= 0:
+            return 0
+        amount = max(int(amount), 0)
+        self.last_damage_taken = amount
+        self.damage_taken += amount
+        if amount > 0:
+            self.hp = max(self.hp - amount, 1)
+            try:
+                from autofighter.passives import PassiveRegistry
+
+                registry = PassiveRegistry()
+                await registry.trigger_damage_taken(self, None, amount)
+            except Exception as e:  # pragma: no cover - defensive
+                log.warning("Error triggering damage_taken passives: %s", e)
+        BUS.emit_batched("damage_taken", self, None, amount)
+        return amount
+
     async def apply_healing(self, amount: int, healer: Optional["Stats"] = None, source_type: str = "heal", source_name: Optional[str] = None) -> int:
         def _ensure(obj: "Stats") -> DamageTypeBase:
             dt = getattr(obj, "damage_type", Generic())
