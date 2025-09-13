@@ -82,7 +82,7 @@ class OmegaCore(RelicBase):
                     "delay": delay
                 })
 
-                safe_async_task(member.apply_damage(dmg))
+                safe_async_task(member.apply_cost_damage(dmg))
 
         def _battle_end(entity) -> None:
             from plugins.foes._base import FoeBase
