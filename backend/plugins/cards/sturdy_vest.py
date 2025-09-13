@@ -1,9 +1,13 @@
+import asyncio
 from dataclasses import dataclass
 from dataclasses import field
+import logging
 
 from autofighter.effects import EffectManager
 from autofighter.stats import BUS
 from plugins.cards._base import CardBase
+
+log = logging.getLogger(__name__)
 
 
 @dataclass
@@ -17,52 +21,80 @@ class SturdyVest(CardBase):
     async def apply(self, party) -> None:  # type: ignore[override]
         await super().apply(party)
 
-        # Track which members have the HoT active to avoid stacking
-        active_hots = set()
+        # Track active HoTs and remaining turns per member
+        active_hots: dict[int, tuple[object, int]] = {}
 
-        def _check_low_hp():
+        async def _check_low_hp(apply_tick: bool = False) -> None:
+            # Apply existing HoTs at the start of each turn
+            if apply_tick:
+                for member_id, (member, turns_left) in list(active_hots.items()):
+                    hot_amount = int(getattr(member, "max_hp", 1) * 0.03)
+
+                    async def apply_hot(
+                        member: object = member,
+                        hot_amount: int = hot_amount,
+                    ) -> None:
+                        try:
+                            await member.apply_healing(
+                                hot_amount,
+                                source_type="hot",
+                                source_name="sturdy_vest",
+                            )
+                        except Exception as exc:  # pragma: no cover - logging only
+                            log.warning("Error applying Sturdy Vest HoT: %s", exc)
+
+                    try:
+                        loop = asyncio.get_running_loop()
+                    except RuntimeError:
+                        asyncio.run(apply_hot())
+                    else:
+                        loop.create_task(apply_hot())
+
+                    turns_left -= 1
+                    if turns_left <= 0:
+                        del active_hots[member_id]
+                    else:
+                        active_hots[member_id] = (member, turns_left)
+
+            # Check for new HoT activations
             for member in party.members:
                 member_id = id(member)
-                current_hp = getattr(member, 'hp', 0)
-                max_hp = getattr(member, 'max_hp', 1)
+                current_hp = getattr(member, "hp", 0)
+                max_hp = getattr(member, "max_hp", 1)
 
-                # Check if below 35% HP and not already has HoT
                 if current_hp / max_hp < 0.35 and member_id not in active_hots:
-                    # Add to active set
-                    active_hots.add(member_id)
-
-                    # Apply 3% HoT for 2 turns
-                    effect_manager = getattr(member, 'effect_manager', None)
+                    effect_manager = getattr(member, "effect_manager", None)
                     if effect_manager is None:
                         effect_manager = EffectManager(member)
                         member.effect_manager = effect_manager
 
-                    # Create HoT effect (3% of max HP per turn for 2 turns)
+                    active_hots[member_id] = (member, 2)
                     hot_amount = int(max_hp * 0.03)
-                    import asyncio
-                    import logging
-                    log = logging.getLogger(__name__)
 
-                    async def apply_hot():
-                        try:
-                            await member.apply_healing(hot_amount, source_type="hot", source_name="sturdy_vest")
-                        except Exception as e:
-                            log.warning("Error applying Sturdy Vest HoT: %s", e)
-                        finally:
-                            # Remove from active set after 2 turns (simplified)
-                            if member_id in active_hots:
-                                active_hots.remove(member_id)
+                    log.debug(
+                        "Sturdy Vest activated HoT for %s: %d HP/turn for 2 turns",
+                        member.id,
+                        hot_amount,
+                    )
+                    BUS.emit(
+                        "card_effect",
+                        self.id,
+                        member,
+                        "hot_activation",
+                        hot_amount,
+                        {
+                            "hot_amount": hot_amount,
+                            "duration": 2,
+                            "trigger_threshold": 0.35,
+                        },
+                    )
 
-                    # Schedule HoT for next 2 turns
-                    asyncio.create_task(apply_hot())
+        async def _on_turn_start(*_) -> None:
+            await _check_low_hp(apply_tick=True)
 
-                    log.debug("Sturdy Vest activated HoT for %s: %d HP/turn for 2 turns", member.id, hot_amount)
-                    BUS.emit("card_effect", self.id, member, "hot_activation", hot_amount, {
-                        "hot_amount": hot_amount,
-                        "duration": 2,
-                        "trigger_threshold": 0.35
-                    })
+        async def _on_damage_taken(*_) -> None:
+            await _check_low_hp()
 
         # Check HP at the start of each turn and after damage taken
-        BUS.subscribe("turn_start", _check_low_hp)
-        BUS.subscribe("damage_taken", lambda target, attacker, damage: _check_low_hp())
+        BUS.subscribe("turn_start", _on_turn_start)
+        BUS.subscribe("damage_taken", _on_damage_taken)
