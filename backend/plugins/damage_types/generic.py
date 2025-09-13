@@ -3,6 +3,7 @@ from dataclasses import dataclass
 
 from autofighter.passives import PassiveRegistry
 from plugins.damage_types._base import DamageTypeBase
+from plugins.passives.luna_lunar_reservoir import LunaLunarReservoir
 
 
 @dataclass
@@ -58,6 +59,7 @@ class Generic(DamageTypeBase):
                 foes=enemies,
             )
             await asyncio.sleep(0.002)
+        LunaLunarReservoir.add_charge(actor, amount=64)
         return True
 
     @classmethod
