@@ -22,5 +22,7 @@ additional effects in their `ultimate` methods or respond to the
 ## Pacing
 
 Each action calls the internal `_pace` helper, which yields for roughly half a
-second based on the time spent executing the move. This per-actor pacing keeps
+second based on the time spent executing the move. After `_turn_end` resolves,
+the loop now pauses an additional **2.2 seconds** before advancing to the next
+actor so turn-end events can finish processing. This per-actor pacing keeps
 combat readable while avoiding full-turn delays.

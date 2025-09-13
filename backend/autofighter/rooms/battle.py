@@ -219,10 +219,7 @@ class BattleRoom(Room):
 
         # Initialize a visual action queue for UI snapshots (mid-left action bar)
         try:
-            q_entities = [
-                e for e in list(combat_party.members) + list(foes)
-                if not isinstance(e, Summon)
-            ]
+            q_entities = list(combat_party.members) + list(foes)
             _visual_queue = ActionQueue(q_entities)
         except Exception:
             _visual_queue = None
@@ -270,6 +267,8 @@ class BattleRoom(Room):
         ) -> dict[str, list[dict[str, Any]]]:
             snapshots: dict[str, list[dict[str, Any]]] = {}
             for ent in entities:
+                if isinstance(ent, Summon):
+                    continue
                 sid = getattr(ent, "id", str(id(ent)))
                 for summon in SummonManager.get_summons(sid):
                     snap = _serialize(summon)
@@ -279,11 +278,7 @@ class BattleRoom(Room):
 
         def _queue_snapshot() -> list[dict[str, Any]]:
             ordered = sorted(
-                [
-                    c
-                    for c in combat_party.members + foes
-                    if not isinstance(c, Summon)
-                ],
+                combat_party.members + foes,
                 key=lambda c: getattr(c, "action_value", 0.0),
             )
             extras: list[dict[str, Any]] = []
@@ -759,8 +754,9 @@ class BattleRoom(Room):
                                 "active_id": member.id,
                             }
                         )
-                    await _turn_end(member)
                     await _pace(action_start)
+                    await _turn_end(member)
+                    await asyncio.sleep(2.2)
                     await asyncio.sleep(0.001)
                     if battle_over:
                         break
@@ -890,8 +886,9 @@ class BattleRoom(Room):
                                     "active_id": acting_foe.id,
                                 }
                             )
-                        await _turn_end(acting_foe)
                         await _pace(action_start)
+                        await _turn_end(acting_foe)
+                        await asyncio.sleep(2.2)
                         await asyncio.sleep(0.001)
                         break
                     dmg = await target.apply_damage(acting_foe.atk, attacker=acting_foe)
@@ -974,8 +971,9 @@ class BattleRoom(Room):
                                 "active_id": acting_foe.id,
                             }
                         )
-                    await _turn_end(acting_foe)
                     await _pace(action_start)
+                    await _turn_end(acting_foe)
+                    await asyncio.sleep(2.2)
                     await asyncio.sleep(0.001)
                     if battle_over:
                         break
