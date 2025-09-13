@@ -7,7 +7,7 @@
   export let endRunStatus = '';
 </script>
 
-<div class="panel">
+<div class="settings-panel">
   <div class="control" title="Display numeric action values in the turn order.">
     <label>Show Action Values</label>
     <input type="checkbox" bind:checked={showActionValues} on:change={scheduleSave} />

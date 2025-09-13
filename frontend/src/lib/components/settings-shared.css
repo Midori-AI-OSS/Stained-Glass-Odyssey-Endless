@@ -1,58 +1,52 @@
-.panel {
+.settings-panel {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
 }
 
-.control {
+.settings-panel .control {
   display: flex;
   align-items: center;
   gap: 0.4rem;
 }
 
-.control[title] {
+.settings-panel .control[title] {
   cursor: help;
 }
 
-label {
+.settings-panel label {
   flex: 1;
   font-size: 0.85rem;
 }
 
-input[type='range'] {
+.settings-panel input[type='range'] {
   flex: 2;
 }
 
-select {
+.settings-panel select {
   flex: 2;
-  background: #0a0a0a;
-  color: #fff;
-  border: 1px solid #fff;
 }
 
-button {
-  border: 2px solid #fff;
-  background: #0a0a0a;
-  color: #fff;
+.settings-panel button {
   padding: 0.3rem 0.6rem;
 }
 
-.status {
+.settings-panel .status {
   margin: 0;
   font-size: 0.8rem;
 }
 
-.badge {
+.settings-panel .badge {
   border: 1px solid rgba(255,255,255,0.6);
   padding: 0.1rem 0.4rem;
   border-radius: 2px;
   font-size: 0.75rem;
 }
-.badge[data-status='healthy'] { color: #00ff88; border-color: #00ff88; }
-.badge[data-status='degraded'] { color: #ffaa00; border-color: #ffaa00; }
-.badge[data-status='error'] { color: #ff4444; border-color: #ff4444; }
+.settings-panel .badge[data-status='healthy'] { color: #00ff88; border-color: #00ff88; }
+.settings-panel .badge[data-status='degraded'] { color: #ffaa00; border-color: #ffaa00; }
+.settings-panel .badge[data-status='error'] { color: #ff4444; border-color: #ff4444; }
 
-.ping {
+.settings-panel .ping {
   font-size: 0.75rem;
   opacity: 0.9;
 }

@@ -6,7 +6,7 @@
   export let scheduleSave;
 </script>
 
-<div class="panel">
+<div class="settings-panel">
   <div class="control" title="Adjust sound effect volume.">
     <Volume2 />
     <label>SFX Volume</label>
