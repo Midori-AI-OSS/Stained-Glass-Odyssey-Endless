@@ -1,26 +1,24 @@
 <script>
   import { Volume2, Music, Mic } from 'lucide-svelte';
-  export let sfxVolume = 5;
-  export let musicVolume = 5;
-  export let voiceVolume = 5;
+  import DotSelector from './DotSelector.svelte';
+  export let sfxVolume = 50;
+  export let musicVolume = 50;
+  export let voiceVolume = 50;
   export let scheduleSave;
 </script>
 
 <div class="settings-panel">
   <div class="control" title="Adjust sound effect volume.">
-    <Volume2 />
-    <label>SFX Volume</label>
-    <input type="range" min="0" max="100" bind:value={sfxVolume} on:input={scheduleSave} />
+    <span class="label"><Volume2 /> SFX Volume</span>
+    <DotSelector bind:value={sfxVolume} on:change={scheduleSave} />
   </div>
   <div class="control" title="Adjust background music volume.">
-    <Music />
-    <label>Music Volume</label>
-    <input type="range" min="0" max="100" bind:value={musicVolume} on:input={scheduleSave} />
+    <span class="label"><Music /> Music Volume</span>
+    <DotSelector bind:value={musicVolume} on:change={scheduleSave} />
   </div>
   <div class="control" title="Adjust voice volume.">
-    <Mic />
-    <label>Voice Volume</label>
-    <input type="range" min="0" max="100" bind:value={voiceVolume} on:input={scheduleSave} />
+    <span class="label"><Mic /> Voice Volume</span>
+    <DotSelector bind:value={voiceVolume} on:change={scheduleSave} />
   </div>
 </div>
 

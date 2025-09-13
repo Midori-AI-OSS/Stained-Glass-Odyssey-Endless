@@ -1,62 +1,65 @@
 # Options Menu
 
-The Options submenu lets players adjust audio levels, system behaviour, and gameplay automation. Controls appear under **Audio**, **System**, and **Gameplay** headings.
+The Options submenu lets players adjust audio levels, system behaviour, and gameplay automation. Controls appear under **Audio**, **System**, and **Gameplay** headings and use a two-column grid with labels and icons on the left and interactive controls on the right. Rows highlight on hover for clarity.
 
 ## Controls
 
 - **Sound Effects Volume**
-  - Slider adjusting sound effect levels.
+  - Ten-dot selector adjusting sound effect levels in 10% increments.
+  - Component: `DotSelector`
   - Lucide icon: `volume-2`
   - Label: `SFX Volume`
   - Tooltip: `Adjust sound effect volume.`
 
 - **Music Volume**
-  - Slider adjusting background music levels.
+  - Ten-dot selector adjusting background music levels.
+  - Component: `DotSelector`
   - Lucide icon: `music`
   - Label: `Music Volume`
   - Tooltip: `Adjust background music volume.`
 
 - **Voice Volume**
-  - Slider adjusting voice levels.
+  - Ten-dot selector adjusting voice levels.
+  - Component: `DotSelector`
   - Lucide icon: `mic`
   - Label: `Voice Volume`
   - Tooltip: `Adjust voice volume.`
 
+- **Backend Health**
+  - Badge shows backend status with latency ping.
+  - Lucide icon: `activity`
+  - Tooltip: `Backend health and network latency.`
+
 - **Framerate**
   - Select box limiting server polling frequency.
-  - Label: `Framerate`
+  - Lucide icon: `gauge`
   - Tooltip: `Limit server polling frequency.`
 - **Reduced Motion**
   - Toggle that slows animation effects for accessibility.
-  - Label: `Reduced Motion`
+  - Lucide icon: `move`
   - Tooltip: `Slow down battle animations.`
 - **Show Action Values**
   - Toggle that reveals numeric action values in the turn order UI.
-  - Label: `Show Action Values`
-  - Tooltip: `Display numeric action values in battle.`
+  - Tooltip component: `Tooltip` with text `Display numeric action values in the turn order.`
 
 - **Animation Speed**
   - Slider that scales the global `TURN_PACING` for all actions.
-  - Label: `Animation Speed`
   - Tooltip: `Adjust battle animation pacing.`
 
 - **Wipe Save Data**
   - Button that clears all save records after confirmation.
   - Lucide icon: `trash-2`
-  - Label: `Wipe Save Data`
   - Tooltip: `Clear all save data.`
   - Behavior: also clears all frontend client storage (localStorage, sessionStorage, IndexedDB), deletes CacheStorage entries, unregisters service workers, and then forces a full page reload so stale roster or party data cannot persist.
 
 - **Backup Save Data**
   - Button that downloads an encrypted snapshot of save tables.
   - Lucide icon: `download`
-  - Label: `Backup Save Data`
   - Tooltip: `Download encrypted save backup.`
 
 - **Import Save Data**
   - File picker that uploads an encrypted backup and restores it if valid.
   - Lucide icon: `upload`
-  - Label: `Import Save Data`
   - Tooltip: `Import encrypted save backup.`
 
 - **Autocraft**
@@ -68,11 +71,11 @@ The Options submenu lets players adjust audio levels, system behaviour, and game
 - **End Current Run**
   - Button that terminates the active run.
   - Lucide icon: `power`
-  - Label: `End Current Run`
-  - Tooltip: `End the current run.`
+  - Tooltip component: `Tooltip` with text `End the current run.`
 
 ## Guidelines
 
-- Each control must include its Lucide icon, visible label, and hover tooltip.
+- Each control uses the shared grid layout and hover transitions from `settings-shared.css`.
+- Controls must include Lucide icons where specified and accessible tooltips via `title` or `Tooltip` component.
 - Changes take effect immediately and should persist between sessions.
 - For turn order debugging, enable [Action Value Display](action-value-display.md).
