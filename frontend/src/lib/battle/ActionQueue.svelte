@@ -11,58 +11,22 @@
       return combatants.find((c) => c.id === id) || { id };
     }
 
-    // Track visual fade state when the active actor cycles to bottom
-    let prevKeys = [];
-    let prevActiveKey = null;
-    let exiting = {}; // key -> true while fading out
-    let entering = {}; // key -> true while fading in at bottom
-
-    function markExiting(key) {
-      exiting = { ...exiting, [key]: true };
-    }
-    function clearExiting(key) {
-      const { [key]: _, ...rest } = exiting; exiting = rest;
-    }
-    function markEntering(key) {
-      entering = { ...entering, [key]: true };
-    }
-    function clearEntering(key) {
-      const { [key]: _, ...rest } = entering; entering = rest;
-    }
-
     $: displayQueue = queue.filter((e) => {
       const fighter = findCombatant(e.id);
       // Include if unknown (so summons still render) or alive
       return fighter?.hp == null ? true : Number(fighter.hp) >= 1;
     });
-    // Stable keys: one normal (N) per id, optional bonus (B) per id
-    $: displayItems = displayQueue.map((e) => ({ entry: e, key: `${e.id}|${e.bonus ? 'B' : 'N'}` }));
+    $: displayItems = (() => {
+      const counts = new Map();
+      return displayQueue.map((e) => {
+        const n = (counts.get(e.id) || 0) + 1;
+        counts.set(e.id, n);
+        return { entry: e, key: `${e.id}#${n}` };
+      });
+    })();
     $: activeIndex = displayQueue.findIndex((e) => !e.bonus);
     $: needsFade = (displayQueue?.length || 0) > 8;
 
-    // Detect when the previously active item moves down the list and apply fade-out->in
-    $: {
-      const keys = displayItems.map((i) => i.key);
-      const activeKey = displayItems[activeIndex]?.key;
-      if (prevActiveKey && prevActiveKey !== activeKey) {
-        const newIndex = keys.indexOf(prevActiveKey);
-        // If the previous active still exists and moved below the active index, treat as completed
-        if (newIndex !== -1 && newIndex > activeIndex) {
-          const outMs = reducedMotion ? 0 : 180;
-          const moveMs = reducedMotion ? 0 : 220; // matches flip duration
-          const inMs = reducedMotion ? 0 : 240;
-          markExiting(prevActiveKey);
-          // Keep hidden until movement completes, then fade-in
-          setTimeout(() => {
-            clearExiting(prevActiveKey);
-            markEntering(prevActiveKey);
-            setTimeout(() => { clearEntering(prevActiveKey); }, inMs);
-          }, outMs + moveMs);
-        }
-      }
-      prevKeys = keys;
-      prevActiveKey = activeKey || prevActiveKey;
-    }
   </script>
 
 <div class="action-queue" data-testid="action-queue">
@@ -76,8 +40,6 @@
           class="entry"
           class:active={i === activeIndex}
           class:bonus={entry.bonus}
-          class:exiting={Boolean(exiting[item.key])}
-          class:entering={Boolean(entering[item.key])}
           style="--element-color: {elColor}"
           animate:flip={{ duration: reducedMotion ? 0 : 220 }}
         >
@@ -149,8 +111,7 @@
     overflow: hidden;
     transform-origin: left center; /* keep scaled items hugged to the left */
     transform: scale(0.75); /* about 25% smaller for non-active */
-    transition: transform 160ms ease, box-shadow 160ms ease, border-width 160ms ease, opacity 160ms ease;
-    opacity: 1;
+    transition: transform 160ms ease, box-shadow 160ms ease, border-width 160ms ease;
   }
   .entry.active .inner {
     transform: scale(1);
@@ -171,17 +132,6 @@
   }
   .entry.bonus .inner {
     opacity: 0.6;
-  }
-  /* Fade behavior for completed actors cycling to bottom */
-  .entry.exiting .inner {
-    opacity: 0; /* fade out as it moves down */
-  }
-  .entry.entering .inner {
-    animation: aq-fade-in 240ms ease both;
-  }
-  @keyframes aq-fade-in {
-    from { opacity: 0; }
-    to { opacity: 1; }
   }
   .portrait {
     width: 100%;
