@@ -1,11 +1,13 @@
 import asyncio
 from unittest.mock import patch
 
+from autofighter.action_queue import ActionQueue
 from autofighter.cards import apply_cards
 from autofighter.cards import award_card
 from autofighter.effects import DamageOverTime
 from autofighter.effects import EffectManager
 from autofighter.party import Party
+from autofighter.rooms import battle as battle_module
 from autofighter.stats import BUS
 from plugins.players._base import PlayerBase
 
@@ -16,22 +18,49 @@ def setup_event_loop():
     return loop
 
 
-def test_overclock_double_action():
+def test_overclock_extra_turn_queue():
     loop = setup_event_loop()
     party = Party()
     ally = PlayerBase()
+    ally.id = "ally"
+    ally.set_base_stat("spd", 100)
     foe = PlayerBase()
-    ally.set_base_stat('atk', 100)
-    foe.hp = foe.set_base_stat('max_hp', 1000)
+    foe.id = "foe"
+    foe.set_base_stat("spd", 200)
     party.members.append(ally)
     award_card(party, "overclock")
     loop.run_until_complete(apply_cards(party))
-
+    battle_module._VISUAL_QUEUE = ActionQueue([ally, foe])
+    battle_module._EXTRA_TURNS.clear()
     BUS.emit("battle_start", foe)
     BUS.emit("battle_start", ally)
     loop.run_until_complete(asyncio.sleep(0))
-    expected = int(ally.atk * 2)
-    assert foe.hp == 1000 - expected
+    ordered = [ally, foe]
+    def _snapshot() -> list[dict[str, str | bool]]:
+        extras: list[dict[str, str | bool]] = []
+        for ent in sorted(ordered, key=lambda c: getattr(c, "action_value", 0.0)):
+            turns = battle_module._EXTRA_TURNS.get(id(ent), 0)
+            for _ in range(turns):
+                extras.append({"id": ent.id, "bonus": True})
+        normal = [{"id": c.id} for c in sorted(ordered, key=lambda c: getattr(c, "action_value", 0.0))]
+        return extras + normal
+    snap = _snapshot()
+    assert [e["id"] for e in snap] == ["ally", "ally", "foe", "ally"]
+    assert snap[0]["bonus"] and snap[1]["bonus"]
+    actions: list[str] = []
+    for _ in range(3):
+        if battle_module._EXTRA_TURNS.get(id(ally), 0) > 0:
+            battle_module._EXTRA_TURNS[id(ally)] -= 1
+            actions.append("ally")
+            continue
+        actor = min(ordered, key=lambda c: getattr(c, "action_value", 0.0))
+        spent = getattr(actor, "action_value", 0.0)
+        for c in ordered:
+            c.action_value = getattr(c, "action_value", 0.0) - spent
+        actor.action_value = getattr(actor, "base_action_value", 0.0)
+        actions.append(actor.id)
+    battle_module._VISUAL_QUEUE = None
+    assert actions == ["ally", "ally", "foe"]
 
 
 def test_iron_resolve_revives_and_cooldown():

@@ -1,7 +1,6 @@
 import asyncio
 from dataclasses import dataclass
 from dataclasses import field
-import random
 
 from autofighter.stats import BUS
 from autofighter.stats import Stats
@@ -27,30 +26,21 @@ class Overclock(CardBase):
     async def apply(self, party) -> None:  # type: ignore[override]
         await super().apply(party)
 
-        foes: list[Stats] = []
-
         async def _double_act(ally: Stats) -> None:
             for _ in range(2):
-                alive = [f for f in foes if f.hp > 0]
-                if ally.hp <= 0 or not alive:
-                    break
-                target = random.choice(alive)
-                dmg = await target.apply_damage(ally.atk, attacker=ally)
-                BUS.emit("attack_used", ally, target, dmg)
+                BUS.emit("extra_turn", ally)
                 BUS.emit(
                     "card_effect",
                     self.id,
                     ally,
                     "extra_action",
-                    dmg,
-                    {"target": getattr(target, "id", str(target)), "damage": dmg},
+                    0,
+                    {},
                 )
                 await asyncio.sleep(0.002)
 
         def _battle_start(entity: Stats) -> None:
             if entity in party.members:
                 safe_async_task(_double_act(entity))
-            else:
-                foes.append(entity)
 
         BUS.subscribe("battle_start", _battle_start)
