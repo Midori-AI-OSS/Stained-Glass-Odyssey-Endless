@@ -1170,7 +1170,7 @@ class BattleRoom(Room):
             {"id": random.choice(ELEMENTS), "stars": _pick_item_stars(self)}
             for _ in range(item_count)
         ]
-        ticket_chance = 0.1 * temp_rdr
+        ticket_chance = 0.0005 * temp_rdr
         if random.random() < ticket_chance:
             items.append({"id": "ticket", "stars": 0})
         loot = {

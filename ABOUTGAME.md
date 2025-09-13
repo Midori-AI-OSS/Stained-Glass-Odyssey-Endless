@@ -94,7 +94,7 @@ All LLM operations are asynchronous and won't block the game interface. Models a
 
 ### Loot and Rare Drop Rate
 
-Battles award gold, relic choices, upgrade items, and occasionally pull tickets. Gold equals a base value of 5/20/200 for normal, boss, and floor-boss rooms, multiplied by the loop, a random range, and the party's rare drop rate (`rdr`). Relics drop with `10% x rdr` odds in normal fights or `50% x rdr` in boss rooms. Upgrade items use the foe's element, cap at 4★, and their quantity scales with `rdr`-fractions have a matching chance to grant an extra item. Each battle also rolls a `10% x rdr` chance for a pull ticket. `rdr` improves drop quantity and odds and can even upgrade relic or card star ranks with lucky rolls at extreme values: climbing from 3★ to 4★ requires 1000% `rdr`, while 5★ demands a colossal 1,000,000%.
+Battles award gold, relic choices, upgrade items, and occasionally pull tickets. Gold equals a base value of 5/20/200 for normal, boss, and floor-boss rooms, multiplied by the loop, a random range, and the party's rare drop rate (`rdr`). Relics drop with `10% x rdr` odds in normal fights or `50% x rdr` in boss rooms. Upgrade items use the foe's element, cap at 4★, and their quantity scales with `rdr`-fractions have a matching chance to grant an extra item. Each battle also rolls a `0.05% x rdr` chance for a pull ticket. `rdr` improves drop quantity and odds and can even upgrade relic or card star ranks with lucky rolls at extreme values: climbing from 3★ to 4★ requires 1000% `rdr`, while 5★ demands a colossal 1,000,000%.
 
 Each foe defeated during a battle temporarily grants +55% `rdr` for that room, raising gold payouts and damage-type item drops.
 
