@@ -9,11 +9,25 @@
   
   const dispatch = createEventDispatcher();
   export let reducedMotion = false;
-  
+
   // State management
+  function safeLocalStorageGet(key) {
+    try {
+      return localStorage.getItem(key);
+    } catch {
+      return null;
+    }
+  }
+
+  function safeLocalStorageSet(key, value) {
+    try {
+      localStorage.setItem(key, value);
+    } catch {}
+  }
+
   let activeTab = 'standard';
   if (browser) {
-    const saved = localStorage.getItem('pulls-active-banner');
+    const saved = safeLocalStorageGet('pulls-active-banner');
     if (saved) {
       activeTab = saved;
     }
@@ -91,7 +105,7 @@
   function switchTab(tabId) {
     activeTab = tabId;
     if (browser) {
-      localStorage.setItem('pulls-active-banner', activeTab);
+      safeLocalStorageSet('pulls-active-banner', activeTab);
     }
   }
 
@@ -99,7 +113,7 @@
     if (banners.length > 0 && !banners.find(b => b.id === activeTab)) {
       activeTab = banners[0].id;
       if (browser) {
-        localStorage.setItem('pulls-active-banner', activeTab);
+        safeLocalStorageSet('pulls-active-banner', activeTab);
       }
     }
   }

@@ -23,8 +23,8 @@ describe('PullsMenu component', () => {
       join(import.meta.dir, '../src/lib/components/PullsMenu.svelte'),
       'utf8'
     );
-    expect(content).toContain("localStorage.getItem('pulls-active-banner')");
-    expect(content).toContain("localStorage.setItem('pulls-active-banner', activeTab)");
+    expect(content).toContain("safeLocalStorageGet('pulls-active-banner')");
+    expect(content).toContain("safeLocalStorageSet('pulls-active-banner', activeTab)");
   });
 
   test('validates active banner after pull or reload', () => {
