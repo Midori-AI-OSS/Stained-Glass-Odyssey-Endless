@@ -26,6 +26,7 @@
   import { updateParty, acknowledgeLoot } from '$lib/systems/uiApi.js';
   import { buildRunMenu } from '$lib/components/RunButtons.svelte';
   import { browser, dev } from '$app/environment';
+  import { loadSettings } from '$lib/systems/settingsStorage.js';
 
   let runId = '';
   let backendFlavor = '';
@@ -47,6 +48,9 @@
   let lastBattleSnapshot = null;
   // Prevent overlapping room fetches
   let enterRoomPending = false;
+
+  // Load user settings including framerate for polling
+  let framerate = 60; // Default fallback
 
   // Normalize status fields so downstream components can rely on
   // `passives`, `dots`, and `hots` arrays of objects on each fighter.
@@ -82,6 +86,17 @@
   }
 
   onMount(async () => {
+    // Load user settings including framerate
+    try {
+      const settings = loadSettings();
+      if (settings.framerate !== undefined) {
+        framerate = Number(settings.framerate) || 60;
+      }
+    } catch {
+      // Use default framerate if settings can't be loaded
+      framerate = 60;
+    }
+
     // Always ensure sync is not halted on load
     if (typeof window !== 'undefined') {
       window.afHaltSync = false;
@@ -589,7 +604,7 @@
       }
     } catch {}
     if (battleActive && !haltSync && runId) {
-      battleTimer = setTimeout(pollBattle, 1000 / 4); // 4 FPS instead of 60 FPS to reduce backend load
+      battleTimer = setTimeout(pollBattle, 1000 / framerate); // Use user's framerate setting for polling
     }
   }
 
