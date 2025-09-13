@@ -41,6 +41,8 @@ The Midori AI AutoFighter now has a unified summons system that provides a consi
 - Battle event integration for cleanup
 - Turn-based expiration for temporary summons
 - Summoner defeat cleanup
+- `SummonManager.reset_all()` runs at the start of each battle to remove any
+  leftover summons from previous encounters
 
 ## Usage Examples
 
@@ -115,7 +117,8 @@ The summons system integrates with the existing event bus:
 - `battle_start`: Resets temporary tracking
 - `battle_end`: Cleans up temporary summons
 - `turn_start`: Processes turn expiration
-- `entity_defeat`: Removes summoner's summons
+- `entity_defeat`: Emitted automatically when an entity's HP reaches zero and
+  again during battle cleanup; removes the summoner's active summons
 
 ## Testing
 

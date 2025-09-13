@@ -647,9 +647,18 @@ class Stats:
         if amount > 0:
             self.hp = max(self.hp - amount, 0)
 
-        # Emit kill event if this damage killed the target - async for better performance
-        if old_hp > 0 and self.hp <= 0 and attacker is not None:
-            await BUS.emit_async("entity_killed", self, attacker, original_amount, "death", {"killer_id": getattr(attacker, "id", "unknown")})
+        # Emit defeat/kill events if this damage reduced HP to zero
+        if old_hp > 0 and self.hp <= 0:
+            if attacker is not None:
+                await BUS.emit_async(
+                    "entity_killed",
+                    self,
+                    attacker,
+                    original_amount,
+                    "death",
+                    {"killer_id": getattr(attacker, "id", "unknown")},
+                )
+            await BUS.emit_async("entity_defeat", self)
 
         # Trigger passive registry for damage taken events
         if original_amount > 0:

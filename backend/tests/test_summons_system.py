@@ -2,6 +2,7 @@
 Tests for the unified summons system.
 """
 
+import asyncio
 from pathlib import Path
 import sys
 
@@ -10,7 +11,9 @@ import pytest
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 import llms.torch_checker as torch_checker
 
+from autofighter.mapgen import MapNode
 from autofighter.party import Party
+from autofighter.rooms import BattleRoom
 from autofighter.stats import BUS
 from autofighter.summons.base import Summon
 from autofighter.summons.manager import SummonManager
@@ -404,6 +407,7 @@ async def test_summon_defeat_cleanup(monkeypatch):
 
     summoner = Ally()
     summoner.id = "test_summoner"
+    summoner.hp = 1
 
     # Create summon
     SummonManager.create_summon(
@@ -414,12 +418,55 @@ async def test_summon_defeat_cleanup(monkeypatch):
 
     assert len(SummonManager.get_summons("test_summoner")) == 1
 
-    # Emit entity defeat for summoner
-    BUS.emit("entity_defeat", summoner)
+    # Apply lethal damage; defeat event should fire and clean up summons
+    from autofighter.stats import set_battle_active
 
-    # Summons should be cleaned up
+    set_battle_active(True)
+    await summoner.apply_damage(summoner.hp, None)
+    set_battle_active(False)
+
     assert len(SummonManager.get_summons("test_summoner")) == 0
 
+
+@pytest.mark.asyncio
+async def test_summons_reset_before_new_battle(monkeypatch):
+    """A new battle should start with no leftover summons."""
+    monkeypatch.setattr(torch_checker, "is_torch_available", lambda: False)
+
+    async def fast_sleep(*_, **__):
+        return None
+
+    monkeypatch.setattr(asyncio, "sleep", fast_sleep)
+
+    SummonManager.cleanup()
+
+    summoner = Ally()
+    summoner.id = "test_summoner"
+
+    SummonManager.create_summon(
+        summoner=summoner,
+        summon_type="test",
+        source="test_source",
+    )
+
+    assert SummonManager._active_summons
+
+    node = MapNode(room_id=1, room_type="battle-normal", floor=1, index=0, loop=1, pressure=0)
+    room = BattleRoom(node)
+    foe = FoeBase()
+    foe.id = "foe"
+    foe.hp = 0
+    party = Party(members=[summoner])
+
+    progress_called = False
+
+    async def progress(_):
+        nonlocal progress_called
+        progress_called = True
+        assert not SummonManager._active_summons
+
+    await room.resolve(party, {}, progress=progress, foe=foe)
+    assert progress_called
 
 @pytest.mark.asyncio
 async def test_summon_inheritance_with_effects(monkeypatch):
