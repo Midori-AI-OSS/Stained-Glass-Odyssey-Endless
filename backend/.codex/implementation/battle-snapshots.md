@@ -19,6 +19,8 @@ poll for results:
   Both maps are keyed by the owning combatant's id and store arrays of
   serialized summons. Each summon snapshot also includes an `owner_id` for
   convenience.
+- Action queue snapshots now include summons so their action gauge values are
+  serialized alongside party and foe combatants.
 - Progress snapshots now include `active_id`, the id of the combatant whose
   action produced the snapshot, so user interfaces can highlight the active
   fighter for both party and foe turns.
