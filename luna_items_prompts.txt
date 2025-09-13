@@ -1,28 +1,40 @@
 === Cards ===
-Adamantine Band: Luna slipping on an adamantine band, a dark steel ring engraved with tiny sigils, shimmering with unyielding, rock-hard resilience.
-Balanced Diet: Luna enjoying a balanced diet, holding a rustic plate stacked with colorful vegetables, golden grains, and succulent fruits, each morsel radiating vitality.
+Adamantine Band: Luna carefully sliding an adamantine band onto her finger, the dark steel ring etched with ancient sigils; it gleams with a cold, mineral sheen that speaks of unyielding protection and slow, immovable strength.
 
-Battle Meditation: Luna seated cross-legged, battle meditation flowing, a faint aura swirling around her as she grips a carved wooden focus, channeling calm amid chaos.
-Bulwark Totem: Luna planting a bulwark totem, a stout wooden pillar studded with iron nails and protective runes, its base rooted in the earth like a guardian.
+Balanced Diet: Luna seated at a sunlit wooden table, savoring a balanced plate piled with colorful vegetables, whole grains, and ripe fruits; each bite glows faintly with nourishing light, suggesting restored vigor and quiet contentment.
+
+Battle Meditation: Luna settled cross-legged on a mossy stone, entering a deep battle meditation as a soft, swirling aura circles her; her hands cradle a carved wooden focus while her face shows serene concentration amid imagined chaos.
+
+Bulwark Totem: Luna driving a stout bulwark totem into the ground, the rough-hewn pillar studded with iron nails and rune-carvings; tendrils of earthen energy root it in place, radiating a steady protective presence.
+
+Arc Lightning: Luna raising a palm to call forth an arc of electric blue lightning that forks and dances across the air between her fingers; the light casts sharp highlights on her features and throws shadows that crackle with raw energy.
+
+Arcane Repeater: Luna adjusting the brass and crystal mechanism of an arcane repeater, watching as runic chambers hum and spool tiny bolts of magical energy outward in rapid succession; sparks scatter from its barrel like controlled starlight.
+
+Critical Focus: Luna closing one eye and aligning her sight through a faint crystalline overlay, the scene narrowing into a single, perfect mark; the air around that point shivers as she channels every ounce of precision and intent.
+
+Critical Overdrive: Luna erupting into a violent overdrive, her weapons and aura flaring with crimson and amber energy as motion blurs streak outward; the moment feels like a condensed surge of raw power and unstoppable momentum.
+
+Critical Transfer: Luna placing both hands on an ethereal conduit as a pulse of charged intent flows from one blade to another, the energy forming a visible ribbon that transfers ferocity and finesse between weapons.
+
+Elemental Spark: Luna cupping a tiny radiant orb in her palms that flickers with miniature elements—a flame that warms, a shard of frost, and a breath of wind—each element spinning and combining into a delicate, luminous whole.
+
+Iron Guard: Luna standing resolute behind a heavy iron shield scarred from past fights; the shield's rivets and dents tell stories while her posture and steady eyes radiate a calm, immovable defense.
+
+Iron Resolve: Luna planted on a wind-lashed cliff, cloak whipping around her as she surveys the horizon with unshakable determination; the light catches the edges of her armor like tempered steel, reflecting an inner fortitude.
+
+Iron Resurgence: Luna rising from a battered position as embers, metal shards, and soldered fragments coalesce into new protective plating about her; the scene captures a fierce rebirth of armored strength.
+
+Mystic Aegis: Luna tracing glowing sigils in the air as a translucent, glyph-studded aegis forms above and around her, the protective dome pulsing with a soft, otherworldly luminescence that hums with quiet reassurance.
+
+Overclock: Luna surrounded by a whirl of clockwork cogs and neon runes, her limbs moving with uncanny rapidity as time-feel distorts; small sparks of energy leap between gears, hinting at an artificially accelerated precision.
+
+Swift Footwork: Luna performing a rapid, balletic sequence of footwork across gritty terrain, each step a studied motion blurred into graceful arcs; dust and displaced pebbles trace the path of her speed and nimble control.
+
+Vital Surge: Luna clutching a pulsing, heart-shaped relic that emits warm, crimson light; the lifeblood glow flows through her and ripples outward, invigorating the surrounding flora with renewed vitality.
 
 === Missing Cards Art ===
-adamantine_band
-arc_lightning
-arcane_repeater
-balanced_diet
-battle_meditation
-bulwark_totem
-critical_focus
-critical_overdrive
-critical_transfer
-elemental_spark
-iron_guard
-iron_resolve
-iron_resurgence
-mystic_aegis
-overclock
-swift_footwork
-vital_surge
+None detected — card art glyphs present for plugin cards.
 
 === Missing Relics Art ===
 None detected — relic art glyphs present for plugin relics.
