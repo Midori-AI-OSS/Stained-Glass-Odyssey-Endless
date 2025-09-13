@@ -44,14 +44,10 @@ def _collect_summons(entities: list) -> dict[str, list[dict[str, Any]]]:
 async def battle_room(run_id: str, data: dict[str, Any]) -> dict[str, Any]:
     action = data.get("action", "")
 
-    # Flag to track if this is a restart scenario (snapshot requested but none exists)
-    is_restart_scenario = False
-
     if action == "snapshot":
         snap = battle_snapshots.get(run_id)
         if snap is not None:
             return snap
-        is_restart_scenario = True
         action = ""
         data = {k: v for k, v in data.items() if k != "action"}
 
@@ -126,8 +122,8 @@ async def battle_room(run_id: str, data: dict[str, Any]) -> dict[str, Any]:
     node = rooms[state["current"]]
     if node.room_type not in {"battle-weak", "battle-normal"}:
         raise ValueError("invalid room")
-    # Only check awaiting flags if this is NOT a restart scenario
-    if not is_restart_scenario and (
+    # Check awaiting flags before attempting to launch a new battle
+    if (
         state.get("awaiting_card")
         or state.get("awaiting_relic")
         or state.get("awaiting_loot")
