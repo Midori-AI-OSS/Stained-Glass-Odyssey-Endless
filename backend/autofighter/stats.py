@@ -681,6 +681,13 @@ class Stats:
         self.damage_taken += amount
         if amount > 0:
             self.hp = max(self.hp - amount, 1)
+            try:
+                from autofighter.passives import PassiveRegistry
+
+                registry = PassiveRegistry()
+                await registry.trigger_damage_taken(self, None, amount)
+            except Exception as e:  # pragma: no cover - defensive
+                log.warning("Error triggering damage_taken passives: %s", e)
         BUS.emit_batched("damage_taken", self, None, amount)
         return amount
 
