@@ -13,8 +13,17 @@
 
     $: displayQueue = queue.filter((e) => {
       const fighter = findCombatant(e.id);
-      return fighter.hp >= 1;
+      // Include if unknown (so summons still render) or alive
+      return fighter?.hp == null ? true : Number(fighter.hp) >= 1;
     });
+    $: displayItems = (() => {
+      const counts = new Map();
+      return displayQueue.map((e) => {
+        const n = (counts.get(e.id) || 0) + 1;
+        counts.set(e.id, n);
+        return { entry: e, key: `${e.id}#${n}` };
+      });
+    })();
     $: activeIndex = displayQueue.findIndex((e) => !e.bonus);
     $: needsFade = (displayQueue?.length || 0) > 8;
   </script>
@@ -22,7 +31,8 @@
 <div class="action-queue" data-testid="action-queue">
   <div class="viewport" class:masked={needsFade}>
     <div class="list">
-      {#each displayQueue as entry, i (entry.bonus ? `b-${entry.id}-${i}` : entry.id)}
+      {#each displayItems as item, i (item.key)}
+        {@const entry = item.entry}
         {@const fighter = findCombatant(entry.id)}
         {@const elColor = getElementColor(fighter.element)}
         <div

@@ -24,7 +24,12 @@
   let queue = [];
   let serverShowActionValues = false;
   let combatants = [];
-  $: combatants = [...(party || []), ...(foes || [])];
+  $: combatants = [
+    ...(party || []),
+    ...((party || []).flatMap(p => p?.summons || [])),
+    ...(foes || []),
+    ...((foes || []).flatMap(f => f?.summons || [])),
+  ];
   $: foeCount = (foes || []).length;
   $: displayActionValues = Boolean(showActionValues || serverShowActionValues);
   function getFoeSizePx(count) {

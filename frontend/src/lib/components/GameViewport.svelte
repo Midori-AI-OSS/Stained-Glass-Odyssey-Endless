@@ -229,12 +229,14 @@
   }
   .arrow { margin: 0 0.5rem; opacity: 0.9; }
   .user-level-bar {
-    position: absolute;
+    position: fixed; /* stick to the user's screen, not the viewport box */
     bottom: 0;
     left: 0;
-    width: 100%;
+    right: 0;
     height: 6px;
     background: #222;
+    z-index: 9999; /* above game overlays */
+    pointer-events: none; /* do not block clicks */
   }
   .user-level-bar .fill {
     height: 100%;
