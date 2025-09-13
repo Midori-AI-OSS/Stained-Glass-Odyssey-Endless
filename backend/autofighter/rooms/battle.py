@@ -357,6 +357,15 @@ class BattleRoom(Room):
                     enrage_mods.pop(i)
         turn = 0
         temp_rdr = party.rdr
+
+        # Initialize action points and queue extras before the first snapshot
+        for ent in list(combat_party.members) + list(foes):
+            ent.action_points = ent.actions_per_turn
+            for _ in range(max(0, ent.action_points - 1)):
+                try:
+                    BUS.emit("extra_turn", ent)
+                except Exception:
+                    pass
         if progress is not None:
             await progress(
                 {
@@ -401,6 +410,13 @@ class BattleRoom(Room):
             m.hp > 0 for m in combat_party.members
         ):
             for member_effect, member in zip(party_effects, combat_party.members, strict=False):
+                if member.action_points <= 0:
+                    member.action_points = member.actions_per_turn
+                    for _ in range(max(0, member.action_points - 1)):
+                        try:
+                            BUS.emit("extra_turn", member)
+                        except Exception:
+                            pass
                 safety = 0
                 while True:
                     safety += 1
@@ -663,7 +679,12 @@ class BattleRoom(Room):
                             enrage_bleed_applies += 1
                     await registry.trigger("turn_end", member, party=combat_party.members, foes=foes)
                     await registry.trigger_turn_end(member)
-                    if _EXTRA_TURNS.get(id(member), 0) > 0 and member.hp > 0:
+                    member.action_points = max(0, member.action_points - 1)
+                    if (
+                        member.action_points > 0
+                        and _EXTRA_TURNS.get(id(member), 0) > 0
+                        and member.hp > 0
+                    ):
                         _EXTRA_TURNS[id(member)] -= 1
                         await _pace(action_start)
                         await asyncio.sleep(0.001)
@@ -711,6 +732,13 @@ class BattleRoom(Room):
             # Foes: each living foe takes exactly one action per round
             # Iterate over a snapshot to avoid mutating while iterating
             for foe_idx, acting_foe in enumerate(list(foes)):
+                if acting_foe.action_points <= 0:
+                    acting_foe.action_points = acting_foe.actions_per_turn
+                    for _ in range(max(0, acting_foe.action_points - 1)):
+                        try:
+                            BUS.emit("extra_turn", acting_foe)
+                        except Exception:
+                            pass
                 safety = 0
                 while True:
                     safety += 1
@@ -862,7 +890,12 @@ class BattleRoom(Room):
                         ally.handle_ally_action(acting_foe)
                     await registry.trigger("turn_end", acting_foe, party=combat_party.members, foes=foes)
                     await registry.trigger_turn_end(acting_foe)
-                    if _EXTRA_TURNS.get(id(acting_foe), 0) > 0 and acting_foe.hp > 0:
+                    acting_foe.action_points = max(0, acting_foe.action_points - 1)
+                    if (
+                        acting_foe.action_points > 0
+                        and _EXTRA_TURNS.get(id(acting_foe), 0) > 0
+                        and acting_foe.hp > 0
+                    ):
                         _EXTRA_TURNS[id(acting_foe)] -= 1
                         await _pace(action_start)
                         await asyncio.sleep(0.001)

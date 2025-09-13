@@ -32,6 +32,7 @@ class SwiftFootwork(CardBase):
                 return
 
             actor.action_points += 1
+            BUS.emit("extra_turn", actor)
             used.add(pid)
             BUS.emit("card_effect", self.id, actor, "free_action", 0, {})
 
