@@ -30,7 +30,10 @@ class SturdyVest(CardBase):
                 for member_id, (member, turns_left) in list(active_hots.items()):
                     hot_amount = int(getattr(member, "max_hp", 1) * 0.03)
 
-                    async def apply_hot() -> None:
+                    async def apply_hot(
+                        member: object = member,
+                        hot_amount: int = hot_amount,
+                    ) -> None:
                         try:
                             await member.apply_healing(
                                 hot_amount,
