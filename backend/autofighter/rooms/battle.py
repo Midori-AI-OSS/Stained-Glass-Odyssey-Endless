@@ -413,12 +413,44 @@ class BattleRoom(Room):
                     await asyncio.sleep(wait)
                 except Exception:
                     pass
-
             # Always pause an additional half-second between turns
             try:
                 await asyncio.sleep(TURN_PACING)
             except Exception:
                 pass
+
+        async def _turn_end(actor: Stats) -> None:
+            """Advance the queue and emit a post-turn snapshot."""
+            try:
+                _advance_queue(actor)
+            except Exception:
+                return
+            if progress is not None:
+                await progress(
+                    {
+                        "result": "battle",
+                        "party": [
+                            _serialize(m)
+                            for m in combat_party.members
+                            if not isinstance(m, Summon)
+                        ],
+                        "foes": [
+                            _serialize(f)
+                            for f in foes
+                            if not isinstance(f, Summon)
+                        ],
+                        "party_summons": _collect_summons(combat_party.members),
+                        "foe_summons": _collect_summons(foes),
+                        "enrage": {
+                            "active": enrage_active,
+                            "stacks": enrage_stacks,
+                            "turns": enrage_stacks,
+                        },
+                        "rdr": temp_rdr,
+                        "action_queue": _queue_snapshot(),
+                        "active_id": actor.id,
+                    }
+                )
 
         while any(f.hp > 0 for f in foes) and any(
             m.hp > 0 for m in combat_party.members
@@ -633,8 +665,6 @@ class BattleRoom(Room):
                             _remove_dead_foes()
                             if not foes:
                                 break
-                        if not foes:
-                            break
                     await BUS.emit_async("action_used", member, tgt_foe, dmg)
                     duration = calc_animation_time(member, targets_hit)
                     if duration > 0:
@@ -691,12 +721,16 @@ class BattleRoom(Room):
                                         )
                                     )
                             enrage_bleed_applies += 1
+                    await _credit_if_dead(tgt_foe)
+                    _remove_dead_foes()
+                    battle_over = not foes
                     await registry.trigger("turn_end", member, party=combat_party.members, foes=foes)
                     await registry.trigger_turn_end(member)
                     member.action_points = max(0, member.action_points - 1)
                     if (
                         _EXTRA_TURNS.get(id(member), 0) > 0
                         and member.hp > 0
+                        and not battle_over
                     ):
                         _EXTRA_TURNS[id(member)] -= 1
                         await _pace(action_start)
@@ -724,17 +758,11 @@ class BattleRoom(Room):
                                 "active_id": member.id,
                             }
                         )
-                        _advance_queue(member)
+                    await _turn_end(member)
                     await _pace(action_start)
-                    if tgt_foe.hp <= 0:
-                        await _credit_if_dead(tgt_foe)
-                        _remove_dead_foes()
-                        await asyncio.sleep(0.001)
-                        if not foes:
-                            break
-                        await asyncio.sleep(0.001)
-                        continue
                     await asyncio.sleep(0.001)
+                    if battle_over:
+                        break
                     break
             # End of party member loop
             if not foes:
@@ -825,8 +853,13 @@ class BattleRoom(Room):
                     if not proceed:
                         await BUS.emit_async("action_used", acting_foe, acting_foe, 0)
                         acting_foe.add_ultimate_charge(acting_foe.actions_per_turn)
+                        battle_over = not any(m.hp > 0 for m in combat_party.members)
                         await registry.trigger("turn_end", acting_foe, party=combat_party.members, foes=foes)
-                        if _EXTRA_TURNS.get(id(acting_foe), 0) > 0 and acting_foe.hp > 0:
+                        if (
+                            _EXTRA_TURNS.get(id(acting_foe), 0) > 0
+                            and acting_foe.hp > 0
+                            and not battle_over
+                        ):
                             _EXTRA_TURNS[id(acting_foe)] -= 1
                             await _pace(action_start)
                             continue
@@ -856,7 +889,7 @@ class BattleRoom(Room):
                                     "active_id": acting_foe.id,
                                 }
                             )
-                            _advance_queue(acting_foe)
+                        await _turn_end(acting_foe)
                         await _pace(action_start)
                         await asyncio.sleep(0.001)
                         break
@@ -901,12 +934,14 @@ class BattleRoom(Room):
                     # Wind-aligned foes gain charge from ally actions too
                     for ally in foes:
                         ally.handle_ally_action(acting_foe)
+                    battle_over = not any(m.hp > 0 for m in combat_party.members)
                     await registry.trigger("turn_end", acting_foe, party=combat_party.members, foes=foes)
                     await registry.trigger_turn_end(acting_foe)
                     acting_foe.action_points = max(0, acting_foe.action_points - 1)
                     if (
                         _EXTRA_TURNS.get(id(acting_foe), 0) > 0
                         and acting_foe.hp > 0
+                        and not battle_over
                     ):
                         _EXTRA_TURNS[id(acting_foe)] -= 1
                         await _pace(action_start)
@@ -938,9 +973,11 @@ class BattleRoom(Room):
                                 "active_id": acting_foe.id,
                             }
                         )
-                        _advance_queue(acting_foe)
+                    await _turn_end(acting_foe)
                     await _pace(action_start)
                     await asyncio.sleep(0.001)
+                    if battle_over:
+                        break
                     break
             _remove_dead_foes()
             if not foes:

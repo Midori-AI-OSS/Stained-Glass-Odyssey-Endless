@@ -25,6 +25,9 @@ poll for results:
 - The action queue advances **after** progress snapshots are dispatched so the
   active combatant remains at the head of the queue until user interfaces
   receive and render the update.
+- A dedicated `turn_end` handler now advances the queue once damage resolution
+  and `turn_end` triggers complete. It emits a final snapshot reflecting the
+  updated queue state so clients can accurately track turn progression.
 
 - Foe snapshots include a `rank` field describing encounter difficulty.
   Supported ranks are `"normal"`, `"prime"`, `"glitched prime"`, `"boss"`, and
