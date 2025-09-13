@@ -87,7 +87,20 @@
     border: 2px solid var(--element-color);
     border-radius: 8px;
     overflow: hidden;
-    }
+  }
+  .entry.active {
+    border-width: 4px;
+    box-shadow: 0 0 8px 2px color-mix(in oklab, var(--element-color) 80%, white);
+  }
+  .entry.active::before {
+    content: '';
+    position: absolute;
+    left: -0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    border: 8px solid transparent;
+    border-right-color: var(--element-color);
+  }
   .entry.bonus {
     opacity: 0.6;
   }

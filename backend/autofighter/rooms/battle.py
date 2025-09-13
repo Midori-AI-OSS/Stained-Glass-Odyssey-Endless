@@ -394,6 +394,10 @@ class BattleRoom(Room):
                     "active_id": None,
                 }
             )
+            try:
+                await asyncio.sleep(3)
+            except Exception:
+                pass
         # Helper to pace actions: dynamic pacing based on combatant count
         async def _pace(start_time: float) -> None:
             try:
