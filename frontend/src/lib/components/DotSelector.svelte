@@ -10,6 +10,15 @@
 </script>
 
 <div class="dot-selector">
+  <button
+    type="button"
+    class="mute"
+    class:selected={value === 0}
+    aria-label="Mute"
+    on:click={() => select(0)}
+  >
+    ✕
+  </button>
   {#each Array(10) as _, i}
     <button
       type="button"
@@ -33,8 +42,16 @@
     background: rgba(255, 255, 255, 0.3);
     cursor: pointer;
     transition: background 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .dot-selector button.mute {
+    font-size: 0.5rem;
+    color: rgba(255, 255, 255, 0.9);
   }
   .dot-selector button.selected {
     background: #fff;
+    color: #000;
   }
 </style>
