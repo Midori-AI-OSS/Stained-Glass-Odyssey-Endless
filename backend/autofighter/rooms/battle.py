@@ -205,7 +205,6 @@ class BattleRoom(Room):
             foe_effects.append(mgr)
         enrage_mods: list[StatModifier | None] = [None for _ in foes]
 
-        party_effects = []
         # Mark battle as active to allow damage/heal processing
         try:
             from autofighter.stats import set_battle_active
@@ -215,7 +214,6 @@ class BattleRoom(Room):
         for member in combat_party.members:
             mgr = EffectManager(member)
             member.effect_manager = mgr
-            party_effects.append(mgr)
 
         # Initialize a visual action queue for UI snapshots (mid-left action bar)
         try:
@@ -249,7 +247,7 @@ class BattleRoom(Room):
             [f.id for f in foes],
             [m.id for m in combat_party.members],
         )
-        for member_effect, member in zip(party_effects, combat_party.members, strict=False):
+        for member in combat_party.members:
             await BUS.emit_async("battle_start", member)
             await registry.trigger("battle_start", member, party=combat_party.members, foes=foes)
 
@@ -451,7 +449,8 @@ class BattleRoom(Room):
         while any(f.hp > 0 for f in foes) and any(
             m.hp > 0 for m in combat_party.members
         ):
-            for member_effect, member in zip(party_effects, combat_party.members, strict=False):
+            for member in combat_party.members:
+                member_effect = member.effect_manager
                 if member.action_points <= 0:
                     member.action_points = member.actions_per_turn
                     for _ in range(max(0, member.action_points - 1)):
@@ -700,7 +699,8 @@ class BattleRoom(Room):
                         if turns_since_enrage >= next_trigger:
                             stacks_to_add = 1 + enrage_bleed_applies
                             from autofighter.effects import DamageOverTime
-                            for mgr in party_effects:
+                            for member in combat_party.members:
+                                mgr = member.effect_manager
                                 for _ in range(stacks_to_add):
                                     dmg_per_tick = int(max(mgr.stats.max_hp, 1) * 0.10)
                                     mgr.add_dot(
@@ -800,7 +800,7 @@ class BattleRoom(Room):
                         )[0]
                     else:
                         pidx, target = random.choice(alive_targets)
-                    target_effect = party_effects[pidx]
+                    target_effect = target.effect_manager
                     foe_mgr = foe_effects[foe_idx]
                     await registry.trigger("turn_start", acting_foe)
                     if run_id is not None:
@@ -1035,7 +1035,8 @@ class BattleRoom(Room):
         for mod in enrage_mods:
             if mod is not None:
                 mod.remove()
-        for member, mgr in zip(combat_party.members, party_effects, strict=False):
+        for member in combat_party.members:
+            mgr = member.effect_manager
             await mgr.cleanup(member)
         for foe_obj, mgr in zip(foes, foe_effects, strict=False):
             await mgr.cleanup(foe_obj)
