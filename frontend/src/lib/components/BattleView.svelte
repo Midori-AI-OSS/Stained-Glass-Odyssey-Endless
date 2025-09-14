@@ -64,8 +64,10 @@
 
   let knownSummons = new Set();
   const dispatch = createEventDispatcher();
-  let pollDelay = 1000 / framerate;
-  $: pollDelay = 1000 / framerate;
+  // Poll battle snapshots at (framerate / 10) times per second.
+  // Example: 30fps -> 3/s, 60fps -> 6/s, 120fps -> 12/s
+  let pollDelay = 10000 / framerate;
+  $: pollDelay = 10000 / framerate;
   let bg = getRandomBackground();
 
   function logToEvent(line) {

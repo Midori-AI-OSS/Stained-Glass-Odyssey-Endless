@@ -466,7 +466,31 @@
 
   let battleTimer;
   let stateTimer;
-  const STALL_TICKS = 60 * 3;
+  // Determine framerate-derived polling. We read from localStorage to avoid
+  // pulling in settings modules here and to honor the user's FPS setting.
+  function getFramerateSetting() {
+    try {
+      const raw = localStorage.getItem('autofighter_settings');
+      if (!raw) return 60;
+      const data = JSON.parse(raw);
+      const fps = Number(data?.framerate ?? 60);
+      return Number.isFinite(fps) && fps > 0 ? fps : 60;
+    } catch {
+      return 60;
+    }
+  }
+  function getBattlePollDelayMs() {
+    const fps = getFramerateSetting();
+    // Polls/sec = fps/10, so delay = 1000 / (fps/10) = 10000 / fps
+    return 10000 / Math.max(1, fps);
+  }
+  function getStallTicks() {
+    // Keep stall window ~3 seconds regardless of polling rate
+    // pollsPerSecond = fps / 10
+    const fps = getFramerateSetting();
+    const pollsPerSecond = Math.max(0.1, fps / 10);
+    return Math.max(1, Math.round(pollsPerSecond * 3));
+  }
   let stalledTicks = 0;
   let missingSnapTicks = 0;
 
@@ -509,7 +533,7 @@
       const snap = mapStatuses(await roomAction("0", {"action": "snapshot"}));
       if (snap?.snapshot_missing) {
         missingSnapTicks += 1;
-        if (missingSnapTicks > STALL_TICKS) {
+        if (missingSnapTicks > getStallTicks()) {
           battleActive = false;
           stopBattlePoll();
           // Surface reconnect prompt when snapshot cannot be recovered
@@ -574,7 +598,7 @@
         // Update snapshot but keep polling until rewards are available
         roomData = snap;
         stalledTicks += 1;
-        if (stalledTicks > STALL_TICKS) {
+        if (stalledTicks > getStallTicks()) {
           battleActive = false;
           stopBattlePoll();
           roomData = { ...snap, error: 'Battle results could not be fetched.' };
@@ -604,7 +628,7 @@
       }
     } catch {}
     if (battleActive && !haltSync && runId) {
-      battleTimer = setTimeout(pollBattle, 1000 / 60);
+      battleTimer = setTimeout(pollBattle, getBattlePollDelayMs());
     }
   }
 
