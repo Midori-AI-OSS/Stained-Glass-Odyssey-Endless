@@ -45,3 +45,13 @@ async def test_error_handler_returns_traceback(app_client):
     assert "RuntimeError" in data["traceback"]
     assert response.headers["Access-Control-Allow-Origin"] == "*"
     assert called["flag"] is True
+
+
+@pytest.mark.asyncio
+async def test_http_exception_does_not_shutdown(app_client):
+    client, called = app_client
+    response = await client.get("/missing")
+    assert response.status_code == 404
+    data = await response.get_json()
+    assert "traceback" not in data
+    assert called["flag"] is False
