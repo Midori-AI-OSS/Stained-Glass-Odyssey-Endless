@@ -38,6 +38,7 @@ from routes.performance import perf_bp as performance_bp
 from routes.players import bp as players_bp
 from routes.rewards import bp as rewards_bp
 from routes.ui import bp as ui_bp
+from werkzeug.exceptions import HTTPException
 
 configure_logging()
 
@@ -58,6 +59,25 @@ app.register_blueprint(performance_bp, url_prefix='/performance')
 app.register_blueprint(guidebook_bp, url_prefix='/guidebook')
 
 BACKEND_FLAVOR = os.getenv("UV_EXTRA", "default")
+
+
+async def request_shutdown() -> None:
+    """Cancel tasks, flush logs, and stop the event loop."""
+    loop = asyncio.get_running_loop()
+    tasks = [t for t in asyncio.all_tasks(loop) if t is not asyncio.current_task()]
+    for task in tasks:
+        task.cancel()
+    await asyncio.gather(*tasks, return_exceptions=True)
+
+    root_logger = logging.getLogger()
+    for handler in root_logger.handlers:
+        try:
+            handler.flush()
+        except Exception:
+            pass
+
+    await app.shutdown()
+    loop.stop()
 
 
 @app.get("/")
@@ -82,9 +102,16 @@ async def handle_cors_preflight():
 @app.errorhandler(Exception)
 async def handle_exception(e: Exception):
     log.exception(e)
-    tb = traceback.format_exc()
-    response = jsonify({"error": str(e), "traceback": tb})
-    response.status_code = 500
+    response: Response
+    if isinstance(e, HTTPException):
+        response = jsonify({"error": str(e)})
+        response.status_code = e.code or 500
+    else:
+        tb = traceback.format_exc()
+        response = jsonify({"error": str(e), "traceback": tb})
+        response.status_code = 500
+        await request_shutdown()
+
     response.headers["Access-Control-Allow-Origin"] = "*"
     response.headers["Access-Control-Allow-Headers"] = "Content-Type"
     response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"

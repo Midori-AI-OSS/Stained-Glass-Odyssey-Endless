@@ -46,6 +46,17 @@ The backend uses a queued, buffered logging pipeline:
 - Records land in a rotating log file at `logs/backend.log`.
 - A `RichHandler` remains attached for colorful console output.
 
+## Safe Shutdown
+
+`request_shutdown()` cancels running tasks, flushes buffered logs, and stops the event loop.
+Battle errors and unhandled exceptions call it automatically. During debugging,
+you can invoke it manually:
+
+```python
+from app import request_shutdown
+await request_shutdown()
+```
+
 ## Performance and Memory Metrics
 
 `GET /performance/metrics` exposes the sizes of the in-memory battle tracking structures (`battle_tasks`, `battle_snapshots`, and `battle_locks`) along with current process memory usage (via `psutil` if installed or `tracemalloc` otherwise). Operators can trigger manual cleanup of completed battles with `POST /performance/gc`, which purges stale state and runs garbage collection.

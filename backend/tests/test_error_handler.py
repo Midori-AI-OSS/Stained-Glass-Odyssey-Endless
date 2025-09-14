@@ -21,18 +21,37 @@ def app_client(tmp_path, monkeypatch):
     spec.loader.exec_module(app_module)
     app_module.app.testing = True
 
+    called = {"flag": False}
+
+    async def fake_shutdown() -> None:
+        called["flag"] = True
+
+    monkeypatch.setattr(app_module, "request_shutdown", fake_shutdown)
+
     @app_module.app.route("/explode")
     async def explode() -> None:
         raise RuntimeError("boom")
 
-    return app_module.app.test_client()
+    return app_module.app.test_client(), called
 
 
 @pytest.mark.asyncio
 async def test_error_handler_returns_traceback(app_client):
-    response = await app_client.get("/explode")
+    client, called = app_client
+    response = await client.get("/explode")
     assert response.status_code == 500
     data = await response.get_json()
     assert "traceback" in data
     assert "RuntimeError" in data["traceback"]
     assert response.headers["Access-Control-Allow-Origin"] == "*"
+    assert called["flag"] is True
+
+
+@pytest.mark.asyncio
+async def test_http_exception_does_not_shutdown(app_client):
+    client, called = app_client
+    response = await client.get("/missing")
+    assert response.status_code == 404
+    data = await response.get_json()
+    assert "traceback" not in data
+    assert called["flag"] is False
