@@ -402,4 +402,6 @@ async def room_action(run_id: str, room_id: str, action_data: dict[str, Any] | N
         return await shop_room(run_id, request_data)
     if room_type == "chat":
         return await chat_room(run_id, request_data)
+    if room_type == "rest":
+        raise LookupError("run ended or room out of range")
     raise ValueError(f"Unsupported room type: {room_type}")
