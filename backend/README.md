@@ -46,6 +46,17 @@ The backend uses a queued, buffered logging pipeline:
 - Records land in a rotating log file at `logs/backend.log`.
 - A `RichHandler` remains attached for colorful console output.
 
+## Error Handling and Safe Shutdown
+
+The backend implements comprehensive error handling with automatic safe shutdown:
+
+- **Battle resolution failures**: When critical battle errors occur, the backend automatically triggers a graceful shutdown to prevent data corruption.
+- **Unhandled exceptions**: Any unhandled exception reaching the top level triggers safe shutdown after generating a 500 response.
+- **Graceful shutdown process**: The shutdown sequence flushes all logs, cancels running tasks gracefully, and stops the event loop cleanly.
+- **Testing protection**: Shutdown is automatically disabled during pytest execution to prevent breaking tests.
+
+The safe shutdown mechanism ensures logs are preserved, data integrity is maintained, and the system can be safely restarted. See `.codex/implementation/error-handling.md` for detailed documentation.
+
 ## Performance and Memory Metrics
 
 `GET /performance/metrics` exposes the sizes of the in-memory battle tracking structures (`battle_tasks`, `battle_snapshots`, and `battle_locks`) along with current process memory usage (via `psutil` if installed or `tracemalloc` otherwise). Operators can trigger manual cleanup of completed battles with `POST /performance/gc`, which purges stale state and runs garbage collection.

@@ -15,6 +15,7 @@ from typing import Any
 # Import battle logging
 from battle_logging import end_run_logging
 from cryptography.fernet import Fernet
+from shutdown_utils import request_shutdown
 
 from autofighter.effects import create_stat_buff
 from autofighter.gacha import GachaManager
@@ -467,6 +468,8 @@ async def _run_battle(
         except Exception as exc:
             state["battle"] = False
             log.exception("Battle resolution failed for %s", run_id)
+            # Trigger backend shutdown after critical battle failure
+            await request_shutdown()
             if run_id not in battle_snapshots:
                 battle_snapshots[run_id] = {
                     "result": "error",

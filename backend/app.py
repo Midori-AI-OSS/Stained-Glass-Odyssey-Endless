@@ -38,6 +38,7 @@ from routes.performance import perf_bp as performance_bp
 from routes.players import bp as players_bp
 from routes.rewards import bp as rewards_bp
 from routes.ui import bp as ui_bp
+from shutdown_utils import request_shutdown
 
 configure_logging()
 
@@ -88,6 +89,8 @@ async def handle_exception(e: Exception):
     response.headers["Access-Control-Allow-Origin"] = "*"
     response.headers["Access-Control-Allow-Headers"] = "Content-Type"
     response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+    # Trigger backend shutdown after unhandled exception
+    await request_shutdown()
     return response
 
 
