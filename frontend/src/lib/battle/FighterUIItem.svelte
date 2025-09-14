@@ -32,6 +32,10 @@
   $: ultRatio = Math.max(0, Math.min(1, Number(fighter?.ultimate_charge || 0) / 15));
   $: tiltAngle = Math.min(ultRatio, 0.98) / 0.98;
 
+  // Randomized, slow pulse timing for the ult icon
+  let ultIconPulseDelay = (Math.random() * 4 + 2).toFixed(2); // 2–6s
+  let ultIconPulseDur = (Math.random() * 6 + 6).toFixed(2);   // 6–12s
+
   function getStackCount(p) {
     const stacks = p?.stacks;
     if (typeof stacks === 'object') {
@@ -171,7 +175,12 @@
       aria-label="Ultimate Gauge"
       >
         <div class="ult-fill"></div>
-        <svelte:component this={elIcon} class="ult-icon" aria-hidden="true" />
+        <svelte:component
+          this={elIcon}
+          class="ult-icon"
+          style={`--ult-icon-pulse-delay: ${ultIconPulseDelay}s; --ult-icon-pulse-dur: ${ultIconPulseDur}s;`}
+          aria-hidden="true"
+        />
         {#if !fighter?.ultimate_ready}
           <div class="ult-pulse" style={`animation-duration: ${Math.max(0.4, 1.6 - 1.2 * ultRatio)}s`}></div>
         {/if}
@@ -562,19 +571,28 @@
   .ult-icon {
     /* Centered by the parent grid; keep relative for stacking */
     position: relative;
-    width: 60%;
-    height: 60%;
+    width: 80%;
+    height: 80%;
+    color: rgba(190, 190, 190, 0.95); /* more gray */
     filter: grayscale(100%);
-    opacity: 0.5;
+    opacity: 0.5; /* more transparent */
     z-index: 1;
     pointer-events: none;
     /* Prevent the SVG from shrinking oddly */
     display: block;
     transition: opacity 0.3s ease;
+    transform-origin: center;
+    will-change: transform, opacity;
+    animation: ult-icon-pulse var(--ult-icon-pulse-dur, 9s) ease-in-out var(--ult-icon-pulse-delay, 0s) infinite alternate;
   }
-  .ult-ready .ult-icon {
-    filter: none;
-    opacity: 1;
+  .ult-ready .ult-icon { opacity: 0.8; }
+  .ult-gauge.reduced .ult-icon {
+    animation: none !important;
+  }
+  @keyframes ult-icon-pulse {
+    0% { transform: scale(1); opacity: 0.4; }
+    50% { transform: scale(1.12); opacity: 0.6; }
+    100% { transform: scale(1); opacity: 0.4; }
   }
   /* Breathing pulse while charging; speeds up as --p increases */
   .ult-pulse {

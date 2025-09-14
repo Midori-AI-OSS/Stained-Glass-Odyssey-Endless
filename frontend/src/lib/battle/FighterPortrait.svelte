@@ -85,6 +85,10 @@
     if (name === 'dark') return true;
     return isLowBrightness(elColor);
   })();
+
+  // NOTE: Do not add ult icon pulse/size logic here.
+  // The Fighter UI overlays and ult gauge behavior live in FighterUIItem.svelte.
+  // This portrait component is used in multiple contexts; keep it minimal.
 </script>
 
 <div class="portrait-wrap">
