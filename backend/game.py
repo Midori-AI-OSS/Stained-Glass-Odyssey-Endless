@@ -484,6 +484,9 @@ async def _run_battle(
                 await asyncio.to_thread(save_party, run_id, party)
             except Exception:
                 pass
+            from app import request_shutdown
+
+            await request_shutdown()
             return
         state["battle"] = False
         try:

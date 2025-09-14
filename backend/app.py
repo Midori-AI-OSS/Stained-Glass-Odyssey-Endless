@@ -60,6 +60,25 @@ app.register_blueprint(guidebook_bp, url_prefix='/guidebook')
 BACKEND_FLAVOR = os.getenv("UV_EXTRA", "default")
 
 
+async def request_shutdown() -> None:
+    """Cancel tasks, flush logs, and stop the event loop."""
+    loop = asyncio.get_running_loop()
+    tasks = [t for t in asyncio.all_tasks(loop) if t is not asyncio.current_task()]
+    for task in tasks:
+        task.cancel()
+    await asyncio.gather(*tasks, return_exceptions=True)
+
+    root_logger = logging.getLogger()
+    for handler in root_logger.handlers:
+        try:
+            handler.flush()
+        except Exception:
+            pass
+
+    await app.shutdown()
+    loop.stop()
+
+
 @app.get("/")
 async def status() -> Response:
     return jsonify({"status": "ok", "flavor": BACKEND_FLAVOR})
@@ -88,6 +107,7 @@ async def handle_exception(e: Exception):
     response.headers["Access-Control-Allow-Origin"] = "*"
     response.headers["Access-Control-Allow-Headers"] = "Content-Type"
     response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+    await request_shutdown()
     return response
 
 

@@ -10,6 +10,13 @@ log = logging.getLogger(__name__)
 
 Use `log.debug`, `log.info`, and so on instead of `print`. Records propagate through the queued buffer and are written to `backend/logs/backend.log` roughly every 15 seconds.
 
+## Safe Shutdown
+
+`request_shutdown()` flushes buffered log handlers before stopping the event
+loop. Battle errors and unhandled exceptions call this helper automatically, but
+it can also be imported and awaited manually during debugging to guarantee that
+all log messages reach disk.
+
 ## Battle Modules
 
 ```python
