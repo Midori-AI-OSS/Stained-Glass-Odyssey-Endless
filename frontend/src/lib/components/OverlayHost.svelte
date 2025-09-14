@@ -39,6 +39,7 @@
   export let framerate = 60;
   export let reducedMotion = false;
   export let showActionValues = false;
+  export let fullIdleMode = false;
   export let selectedParty = [];
   export let battleActive = false;
   export let backendFlavor = '';
@@ -261,6 +262,7 @@
       {framerate}
       {reducedMotion}
       {showActionValues}
+      {fullIdleMode}
       {runId}
       {backendFlavor}
       on:save={(e) => dispatch('saveSettings', e.detail)}
@@ -289,6 +291,7 @@
         relics={roomData.relic_choices || []}
         items={roomData.loot?.items || []}
         gold={roomData.loot?.gold || 0}
+        {fullIdleMode}
         on:select={(e) => dispatch('rewardSelect', e.detail)}
         on:next={() => dispatch('nextRoom')}
         on:lootAcknowledge={() => dispatch('lootAcknowledge')}

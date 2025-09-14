@@ -14,9 +14,13 @@ import { join } from 'path';
   });
 
 describe('Settings menu toggle', () => {
-  const content = readFileSync(join(import.meta.dir, '../src/lib/components/SettingsMenu.svelte'), 'utf8');
+  const content = readFileSync(join(import.meta.dir, '../src/lib/components/GameplaySettings.svelte'), 'utf8');
   test('includes Show Action Values control', () => {
     expect(content).toContain('Show Action Values');
     expect(content).toContain('bind:checked={showActionValues}');
+  });
+  test('includes Full Idle Mode control', () => {
+    expect(content).toContain('Full Idle Mode');
+    expect(content).toContain('bind:checked={fullIdleMode}');
   });
 });

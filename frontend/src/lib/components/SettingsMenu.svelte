@@ -16,6 +16,7 @@
   export let framerate = 60;
   export let reducedMotion = false;
   export let showActionValues = false;
+  export let fullIdleMode = false;
   export let lrmModel = '';
   export let runId = '';
   export let backendFlavor = typeof window !== 'undefined' ? window.backendFlavor || '' : '';
@@ -73,7 +74,8 @@
       voiceVolume,
       framerate: Number(framerate),
       reducedMotion,
-      showActionValues
+      showActionValues,
+      fullIdleMode
     });
     dispatch('save', {
       sfxVolume,
@@ -81,7 +83,8 @@
       voiceVolume,
       framerate: Number(framerate),
       reducedMotion,
-      showActionValues
+      showActionValues,
+      fullIdleMode
     });
     saveStatus = 'Saved';
     clearTimeout(resetTimeout);
@@ -249,6 +252,7 @@
   {:else if activeTab === 'gameplay'}
     <GameplaySettings
       bind:showActionValues
+      bind:fullIdleMode
       {scheduleSave}
       {handleEndRun}
       {endingRun}

@@ -20,6 +20,7 @@ export async function loadInitialState() {
     autocraft: true,
     reducedMotion: saved.reducedMotion ?? false,
     showActionValues: saved.showActionValues ?? false,
+    fullIdleMode: saved.fullIdleMode ?? false,
   };
   let roster = [];
   let user = { level: 1, exp: 0, next_level_exp: 100 };

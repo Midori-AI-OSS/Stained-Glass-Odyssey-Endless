@@ -10,11 +10,21 @@
   export let partyStats = [];
   export let ended = false;
   export let nextRoom = '';
+  export let fullIdleMode = false;
 
   const dispatch = createEventDispatcher();
 
   // Render immediately; CSS animations handle reveal on mount
-  onMount(() => {});
+  onMount(() => {
+    if (fullIdleMode) {
+      if (cards.length > 0) {
+        dispatch('select', { type: 'card', id: cards[0].id });
+      } else if (relics.length > 0) {
+        dispatch('select', { type: 'relic', id: relics[0].id });
+      }
+      setTimeout(() => dispatch('next'), 0);
+    }
+  });
 
   function titleForItem(item) {
     if (!item) return '';

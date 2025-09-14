@@ -43,6 +43,7 @@
   let battleActive = false;
   // When true, suppress backend syncing/polling (e.g., during defeat popup)
   let haltSync = false;
+  let fullIdleMode = false;
   // Preserve the last live battle snapshot (with statuses) for review UI
   let lastBattleSnapshot = null;
   // Prevent overlapping room fetches
@@ -873,6 +874,44 @@
     }
     // Do not auto-advance; show Battle Review popup next.
   }
+
+  let autoHandling = false;
+  async function maybeAutoHandle() {
+    if (!fullIdleMode || autoHandling || !runId || !roomData) return;
+    autoHandling = true;
+    try {
+      if (roomData.card_choices?.length > 0) {
+        const choice = roomData.card_choices[0];
+        const res = await chooseCard(choice.id);
+        roomData = { ...roomData, card_choices: [] };
+        if (res && res.next_room) { nextRoom = res.next_room; }
+        return;
+      }
+      if (roomData.relic_choices?.length > 0) {
+        const choice = roomData.relic_choices[0];
+        const res = await chooseRelic(choice.id);
+        roomData = { ...roomData, relic_choices: [] };
+        if (res && res.next_room) { nextRoom = res.next_room; }
+        return;
+      }
+      const hasLoot = (roomData.loot?.gold || 0) > 0 || (roomData.loot?.items || []).length > 0;
+      if (roomData.awaiting_loot || hasLoot) {
+        await handleLootAcknowledge();
+        return;
+      }
+      if (roomData.result === 'shop') {
+        await handleNextRoom();
+        return;
+      }
+      if (roomData.awaiting_next) {
+        await handleNextRoom();
+      }
+    } finally {
+      autoHandling = false;
+    }
+  }
+
+  $: fullIdleMode && roomData && maybeAutoHandle();
   async function handleShopBuy(item) {
     if (!runId) return;
     roomData = await roomAction('0', { id: item.id, cost: item.cost });
@@ -1302,6 +1341,7 @@
     editorState={editorState}
     battleActive={battleActive}
     backendFlavor={backendFlavor}
+    bind:fullIdleMode
     on:startRun={handleStart}
     on:editorSave={(e) => handleEditorSave(e)}
     on:editorChange={(e) => handleEditorChange(e)}
