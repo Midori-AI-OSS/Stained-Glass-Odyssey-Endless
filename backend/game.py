@@ -76,7 +76,11 @@ battle_locks: dict[str, asyncio.Lock] = {}
 
 
 async def cleanup_battle_state() -> None:
-    """Remove completed battle tasks and associated state."""
+    """Remove completed battle tasks and associated state.
+
+    Snapshots and locks for runs awaiting reward selection or room advancement
+    are preserved until those transitions complete.
+    """
 
     completed = [run_id for run_id, task in battle_tasks.items() if task.done()]
 
@@ -87,10 +91,38 @@ async def cleanup_battle_state() -> None:
     for run_id in completed:
         if battle_tasks.pop(run_id, None) is not None:
             tasks_removed += 1
-        if battle_snapshots.pop(run_id, None) is not None:
-            snapshots_removed += 1
-        if battle_locks.pop(run_id, None) is not None:
-            locks_removed += 1
+
+        snap = battle_snapshots.get(run_id, {})
+        awaiting_next = snap.get("awaiting_next")
+        awaiting_card = snap.get("awaiting_card")
+        awaiting_relic = snap.get("awaiting_relic")
+        awaiting_loot = snap.get("awaiting_loot")
+        ended = snap.get("ended")
+
+        if None in {
+            awaiting_next,
+            awaiting_card,
+            awaiting_relic,
+            awaiting_loot,
+            ended,
+        }:
+            try:
+                state, _ = await asyncio.to_thread(load_map, run_id)
+            except Exception:
+                state = {}
+            awaiting_next = state.get("awaiting_next", False)
+            awaiting_card = state.get("awaiting_card", False)
+            awaiting_relic = state.get("awaiting_relic", False)
+            awaiting_loot = state.get("awaiting_loot", False)
+            ended = state.get("ended", False)
+
+        has_rewards = any([awaiting_card, awaiting_relic, awaiting_loot])
+
+        if ended or (not awaiting_next and not has_rewards):
+            if battle_snapshots.pop(run_id, None) is not None:
+                snapshots_removed += 1
+            if battle_locks.pop(run_id, None) is not None:
+                locks_removed += 1
 
     removed_total = tasks_removed + snapshots_removed + locks_removed
     if removed_total:

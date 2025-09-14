@@ -36,8 +36,12 @@ poll for results:
   `"glitched boss"`.
 
 - Requesting a battle `snapshot` with none available will now start the fight
-  using the current room state and return the newly created snapshot instead of
-  raising an error.
+- When `get_ui_state` detects an active battle without a snapshot, it returns
+  `snapshot_missing: true` rather than starting a new fight. Clients should
+  poll the battle snapshot endpoint until a snapshot becomes available.
+- The `cleanup_battle_state` routine keeps snapshots for runs that still need
+  to choose rewards or advance. Snapshots and locks are only removed once the
+  run ends or moves beyond the battle.
 
 - If a second battle task is detected during combat, both tasks are cancelled
   and each run receives an error snapshot noting that a concurrent battle was

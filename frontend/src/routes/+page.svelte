@@ -468,6 +468,7 @@
   let stateTimer;
   const STALL_TICKS = 60 * 3;
   let stalledTicks = 0;
+  let missingSnapTicks = 0;
 
   function hasRewards(snap) {
     if (!snap) return false;
@@ -505,7 +506,20 @@
     } catch {}
     try {
       const snap = mapStatuses(await roomAction("0", {"action": "snapshot"}));
-      lastBattleSnapshot = snap || lastBattleSnapshot;
+      if (snap?.snapshot_missing) {
+        missingSnapTicks += 1;
+        if (missingSnapTicks > STALL_TICKS) {
+          battleActive = false;
+          stopBattlePoll();
+          // Surface reconnect prompt when snapshot cannot be recovered
+          try { openOverlay('error', { message: 'Battle state unavailable. Please reconnect.', traceback: '' }); } catch {}
+          startStatePoll();
+          return;
+        }
+      } else {
+        missingSnapTicks = 0;
+        lastBattleSnapshot = snap || lastBattleSnapshot;
+      }
       if (snap?.error) {
         roomData = snap;
         lastBattleSnapshot = snap || lastBattleSnapshot;
@@ -1156,10 +1170,18 @@
           saveRunState(runId);
         }
       } else if (uiState.mode === 'battle') {
-        // Battle mode - backend will handle battle state
+        // Battle mode - backend reports an active combat
         runId = uiState.active_run || runId || '';
+        const roomState = uiState.game_state?.current_state?.room_data;
+        if (roomState && !roomState.snapshot_missing) {
+          roomData = roomState;
+          lastBattleSnapshot = roomState;
+        } else {
+          roomData = null;
+        }
         battleActive = true;
         if (typeof window !== 'undefined') window.afBattleActive = true;
+        startBattlePoll();
       } else {
         // Other modes like card_selection, relic_selection, etc.
         runId = uiState.active_run || runId || '';

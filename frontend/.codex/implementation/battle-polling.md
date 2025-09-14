@@ -6,6 +6,11 @@ no rewards or completion flags have arrived. After roughly three seconds of
 such stalled polling, the function stops the battle, records an error on the
 snapshot, and logs a warning so the reward overlay or reset flow can proceed.
 
+If the UI reports an active battle but provides no snapshot data, `pollBattle`
+polls a dedicated snapshot endpoint until a snapshot is returned. After the
+same three‑second timeout without a snapshot, polling halts and an error overlay
+prompts the player to reconnect rather than silently starting a new battle.
+
 Battle snapshot polling halts any time the rewards or battle review overlays are
 visible. `window.afRewardOpen` and `window.afReviewOpen` flags stop the poller,
 clear its timer, and prevent rescheduling until the "Next Room" action closes
