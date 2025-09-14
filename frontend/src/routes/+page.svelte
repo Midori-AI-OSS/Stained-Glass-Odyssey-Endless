@@ -488,6 +488,7 @@
 
   function startBattlePoll() {
     stopBattlePoll(); // Clear any existing timer
+    missingSnapTicks = 0;
     try {
       if (typeof window !== 'undefined' && (window.afRewardOpen === true || window.afReviewOpen === true)) return;
     } catch {}
