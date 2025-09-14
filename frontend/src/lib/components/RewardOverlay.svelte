@@ -1,5 +1,5 @@
 <script>
-  import { createEventDispatcher, onMount } from 'svelte';
+  import { createEventDispatcher, onDestroy } from 'svelte';
   import RewardCard from './RewardCard.svelte';
   import CurioChoice from './CurioChoice.svelte';
 
@@ -10,11 +10,11 @@
   export let partyStats = [];
   export let ended = false;
   export let nextRoom = '';
+  export let fullIdleMode = false;
 
   const dispatch = createEventDispatcher();
 
   // Render immediately; CSS animations handle reveal on mount
-  onMount(() => {});
 
   function titleForItem(item) {
     if (!item) return '';
@@ -52,7 +52,6 @@
     }
   }
   // Cleanup timer on unmount
-  import { onDestroy } from 'svelte';
   onDestroy(() => clearTimeout(autoTimer));
 
   // Show Next Room button when there's loot but no choices

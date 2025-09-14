@@ -32,7 +32,7 @@ class MapNode:
 
 
 class MapGenerator:
-    rooms_per_floor: ClassVar[int] = 45
+    rooms_per_floor: ClassVar[int] = 10
 
     def __init__(self, seed: str, floor: int = 1, loop: int = 1, pressure: int = 0) -> None:
         self._rand = Random(seed)
@@ -55,7 +55,7 @@ class MapGenerator:
         )
         index += 1
         middle = self.rooms_per_floor - 2
-        quotas = {"shop": 2, "rest": 2}
+        quotas = {"shop": 1}
         room_types: list[str] = []
         for key, count in quotas.items():
             room_types.extend([key] * count)
@@ -65,17 +65,9 @@ class MapGenerator:
         room_types.extend(["battle-weak"] * weak)
         room_types.extend(["battle-normal"] * normal)
         self._rand.shuffle(room_types)
-        first_shop = room_types.index("shop") if "shop" in room_types else -1
-        rest_indices = [i for i, rt in enumerate(room_types) if rt == "rest"]
-        if first_shop >= 0 and rest_indices and max(rest_indices) < first_shop:
-            swap_index = rest_indices[-1]
-            for i in range(first_shop + 1, len(room_types)):
-                if room_types[i] != "shop":
-                    room_types[i], room_types[swap_index] = room_types[swap_index], room_types[i]
-                    break
-        if room_types and room_types[0] in {"shop", "rest"}:
+        if room_types and room_types[0] == "shop":
             for i, rt in enumerate(room_types[1:], start=1):
-                if rt not in {"shop", "rest"}:
+                if rt != "shop":
                     room_types[0], room_types[i] = room_types[i], room_types[0]
                     break
         for rt in room_types:

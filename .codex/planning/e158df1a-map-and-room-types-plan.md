@@ -1,7 +1,7 @@
 # Map and Room Types
 
-1. Room categories: rest, chat, battle-weak, battle-normal, battle-boss, **battle-boss-floor**, shop.
-   - Each floor has at least two shops and two rest stops.
+1. Room categories: chat, battle-weak, battle-normal, battle-boss, **battle-boss-floor**, shop.
+   - Each floor has at least one shop.
    - Chats occur after fights without consuming room count.
    - Chat rooms let players RP with an LLM copy of a character that offers one-message tips or comments about the run.
    - Players may send only one message per chat room, capped at six chats per floor.
@@ -30,7 +30,7 @@
    - Cards are unique collectibles with one copy each; design ~100 cards per combat theme (DoT, melee, etc.), with 1★ effects providing minor perks (e.g., heal 1% when dealing DoT) and 5★ effects offering major boons (e.g., temporary ally joins the party).
 10. Code structure:
     - Create a `MapNode` dataclass storing room type, links, and reward data.
-    - Implement `Room` subclasses (`RestRoom`, `BattleRoom`, `ChatRoom`, etc.) with shared interfaces for entry, reward, and exit hooks.
+    - Implement `Room` subclasses (`BattleRoom`, `ChatRoom`, etc.) with shared interfaces for entry, reward, and exit hooks.
     - Build a `chat/` module that routes one-shot messages to local or remote LLMs stored under `llms/`.
     - Seed each floor from a run-specific base seed, mutate it several times, and forbid seed reuse so players cannot reproduce identical maps.
     - Expand event plugins with branching outcomes and tests to cover failure paths.

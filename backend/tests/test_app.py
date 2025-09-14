@@ -50,7 +50,7 @@ async def test_run_flow(app_with_db):
     map_resp = await client.get(f"/map/{run_id}")
     map_data = await map_resp.get_json()
     assert map_data["map"]["current"] == 1
-    assert len(map_data["map"]["rooms"]) == 45
+    assert len(map_data["map"]["rooms"]) == 10
     assert map_data["map"]["battle"] is False
 
     conn = sqlcipher3.connect(db_path)
@@ -91,7 +91,6 @@ async def test_players_and_rooms(app_with_db):
                 "battle-normal": "battle",
                 "battle-boss-floor": "boss",
                 "shop": "shop",
-                "rest": "rest",
             }[rt]
             url = f"/rooms/{run_id}/{endpoint}"
             if rt == "shop":
@@ -121,11 +120,6 @@ async def test_players_and_rooms(app_with_db):
     shop_data = await shop_resp.get_json()
     assert "party" in shop_data
 
-    rest_resp = await advance_until(lambda rt: rt == "rest")
-    assert rest_resp.status_code == 200
-    rest_data = await rest_resp.get_json()
-    assert "party" in rest_data
-
 
 @pytest.mark.asyncio
 async def test_room_images(app_with_db):
@@ -140,5 +134,4 @@ async def test_room_images(app_with_db):
         "battle-normal",
         "battle-boss-floor",
         "shop",
-        "rest",
     } <= data["images"].keys()

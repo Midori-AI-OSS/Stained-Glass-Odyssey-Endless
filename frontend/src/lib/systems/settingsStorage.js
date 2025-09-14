@@ -9,6 +9,7 @@ export function loadSettings() {
     if (data.reducedMotion !== undefined) data.reducedMotion = Boolean(data.reducedMotion);
     if (data.lrmModel !== undefined) data.lrmModel = String(data.lrmModel);
     if (data.showActionValues !== undefined) data.showActionValues = Boolean(data.showActionValues);
+    if (data.fullIdleMode !== undefined) data.fullIdleMode = Boolean(data.fullIdleMode);
     return data;
   } catch {
     return {};
@@ -19,6 +20,7 @@ export function saveSettings(settings) {
   try {
     const current = loadSettings();
     const merged = { ...current, ...settings };
+    if (merged.fullIdleMode !== undefined) merged.fullIdleMode = Boolean(merged.fullIdleMode);
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(merged));
   } catch {
     // ignore write errors

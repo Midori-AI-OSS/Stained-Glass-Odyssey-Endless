@@ -146,7 +146,7 @@ def test_get_map_endpoint_after_restart():
             "player": {"pronouns": "", "damage_type": "Fire", "stats": {"hp": 0, "attack": 0, "defense": 0}}
         }
         map_data = {
-            "rooms": [{"room_type": "start"}, {"room_type": "battle-normal"}, {"room_type": "rest"}],
+            "rooms": [{"room_type": "start"}, {"room_type": "battle-normal"}, {"room_type": "shop"}],
             "current": 2,
             "battle": False,
             "awaiting_card": False,
@@ -314,7 +314,7 @@ def test_enhanced_map_endpoint_with_awaiting_next():
             "rooms": [
                 {"room_type": "start", "floor": 1, "index": 0, "room_id": 0, "loop": 1, "pressure": 0},
                 {"room_type": "battle-weak", "floor": 1, "index": 1, "room_id": 1, "loop": 1, "pressure": 0},
-                {"room_type": "rest", "floor": 1, "index": 2, "room_id": 2, "loop": 1, "pressure": 0}
+                {"room_type": "shop", "floor": 1, "index": 2, "room_id": 2, "loop": 1, "pressure": 0}
             ],
             "current": 1,  # Currently at battle-weak
             "battle": False,
@@ -338,14 +338,14 @@ def test_enhanced_map_endpoint_with_awaiting_next():
             assert current_state["awaiting_next"] is True
             assert current_state["current_index"] == 1
             assert current_state["current_room_type"] == "battle-weak"
-            assert current_state["next_room_type"] == "rest"
+            assert current_state["next_room_type"] == "shop"
 
             # Verify room_data includes awaiting info
             room_data = current_state["room_data"]
             assert room_data is not None
             assert room_data["awaiting_next"] is True
             assert room_data["current_room"] == "battle-weak"
-            assert room_data["next_room"] == "rest"
+            assert room_data["next_room"] == "shop"
 
         asyncio.run(test_awaiting_next())
 

@@ -43,6 +43,7 @@
   let battleActive = false;
   // When true, suppress backend syncing/polling (e.g., during defeat popup)
   let haltSync = false;
+  let fullIdleMode = false;
   // Preserve the last live battle snapshot (with statuses) for review UI
   let lastBattleSnapshot = null;
   // Prevent overlapping room fetches
@@ -873,6 +874,44 @@
     }
     // Do not auto-advance; show Battle Review popup next.
   }
+
+  let autoHandling = false;
+  async function maybeAutoHandle() {
+    if (!fullIdleMode || autoHandling || !runId || !roomData) return;
+    autoHandling = true;
+    try {
+      if (roomData.card_choices?.length > 0) {
+        const choice = roomData.card_choices[0];
+        const res = await chooseCard(choice.id);
+        roomData = { ...roomData, card_choices: [] };
+        if (res && res.next_room) { nextRoom = res.next_room; }
+        return;
+      }
+      if (roomData.relic_choices?.length > 0) {
+        const choice = roomData.relic_choices[0];
+        const res = await chooseRelic(choice.id);
+        roomData = { ...roomData, relic_choices: [] };
+        if (res && res.next_room) { nextRoom = res.next_room; }
+        return;
+      }
+      const hasLoot = (roomData.loot?.gold || 0) > 0 || (roomData.loot?.items || []).length > 0;
+      if (roomData.awaiting_loot || hasLoot) {
+        await handleLootAcknowledge();
+        return;
+      }
+      if (roomData.result === 'shop') {
+        await handleNextRoom();
+        return;
+      }
+      if (roomData.awaiting_next) {
+        await handleNextRoom();
+      }
+    } finally {
+      autoHandling = false;
+    }
+  }
+
+  $: fullIdleMode && roomData && maybeAutoHandle();
   async function handleShopBuy(item) {
     if (!runId) return;
     roomData = await roomAction('0', { id: item.id, cost: item.cost });
@@ -884,38 +923,6 @@
   async function handleShopLeave() {
     if (!runId) return;
     roomData = await roomAction('0', { action: 'leave' });
-    if (roomData?.awaiting_card || roomData?.awaiting_relic || roomData?.awaiting_loot) {
-      return;
-    }
-    const res = await advanceRoom();
-    if (res && typeof res.current_index === 'number') {
-      currentIndex = res.current_index;
-      // Refresh map data when advancing floors
-      if (res.next_room) {
-        currentRoomType = res.next_room;
-      }
-      const mapData = await getMap(runId);
-      if (mapData?.map?.rooms) {
-        mapRooms = mapData.map.rooms;
-        currentRoomType = mapRooms?.[currentIndex]?.room_type || currentRoomType;
-      }
-    }
-    if (res && res.next_room) {
-      nextRoom = res.next_room;
-    }
-    await enterRoom();
-  }
-  async function handleRestPull() {
-    if (!runId) return;
-    roomData = await roomAction("0", {"action": "pull"});
-  }
-  async function handleRestSwap() {
-    if (!runId) return;
-    roomData = await roomAction("0", {"action": "swap"});
-  }
-  async function handleRestLeave() {
-    if (!runId) return;
-    roomData = await roomAction("0", {"action": "leave"});
     if (roomData?.awaiting_card || roomData?.awaiting_relic || roomData?.awaiting_loot) {
       return;
     }
@@ -1302,6 +1309,7 @@
     editorState={editorState}
     battleActive={battleActive}
     backendFlavor={backendFlavor}
+    bind:fullIdleMode
     on:startRun={handleStart}
     on:editorSave={(e) => handleEditorSave(e)}
     on:editorChange={(e) => handleEditorChange(e)}
@@ -1319,9 +1327,6 @@
     on:shopBuy={(e) => handleShopBuy(e.detail)}
     on:shopReroll={handleShopReroll}
     on:shopLeave={handleShopLeave}
-    on:restPull={handleRestPull}
-    on:restSwap={handleRestSwap}
-    on:restLeave={handleRestLeave}
     on:nextRoom={handleNextRoom}
     on:lootAcknowledge={handleLootAcknowledge}
     on:endRun={handleRunEnd}

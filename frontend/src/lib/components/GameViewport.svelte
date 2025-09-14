@@ -40,6 +40,7 @@
   export let battleActive = false;
   export let selected = [];
   export let backendFlavor = '';
+  export let fullIdleMode = false;
 
   let randomBg = '';
   let roster = [];
@@ -60,7 +61,7 @@
       randomBg = getHourlyBackground();
     }
     const init = await loadInitialState();
-      ({ sfxVolume, musicVolume, voiceVolume, framerate, reducedMotion, showActionValues } =
+      ({ sfxVolume, musicVolume, voiceVolume, framerate, reducedMotion, showActionValues, fullIdleMode } =
         init.settings);
     roster = init.roster;
     userState = init.user;
@@ -292,6 +293,7 @@
         {framerate}
         {reducedMotion}
         {showActionValues}
+        {fullIdleMode}
         {selectedParty}
         {battleActive}
         {backendFlavor}
@@ -307,17 +309,14 @@
       on:editorChange={(e) => dispatch('editorChange', e.detail)}
       on:loadRun={(e) => dispatch('loadRun', e.detail)}
       on:startNewRun={() => dispatch('startNewRun')}
-      on:saveSettings={(e) => ({ sfxVolume, musicVolume, voiceVolume, framerate, reducedMotion, showActionValues } = e.detail)}
+      on:saveSettings={(e) => ({ sfxVolume, musicVolume, voiceVolume, framerate, reducedMotion, showActionValues, fullIdleMode } = e.detail)}
       on:endRun={() => dispatch('endRun')}
       on:shopBuy={(e) => dispatch('shopBuy', e.detail)}
       on:shopReroll={() => dispatch('shopReroll')}
-      on:shopLeave={() => dispatch('shopLeave')}
-      on:restPull={() => dispatch('restPull')}
-      on:restSwap={() => dispatch('restSwap')}
-      on:restLeave={() => dispatch('restLeave')}
-      on:snapshot-start={() => (snapshotLoading = true)}
-      on:snapshot-end={() => (snapshotLoading = false)}
-    />
+        on:shopLeave={() => dispatch('shopLeave')}
+        on:snapshot-start={() => (snapshotLoading = true)}
+        on:snapshot-end={() => (snapshotLoading = false)}
+      />
     <div class="user-level-bar">
       <div
         class="fill"

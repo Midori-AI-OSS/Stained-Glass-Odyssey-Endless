@@ -42,6 +42,10 @@ The Options submenu lets players adjust audio levels, system behaviour, and game
   - Toggle that reveals numeric action values in the turn order UI.
   - Tooltip component: `Tooltip` with text `Display numeric action values in the turn order.`
 
+- **Full Idle Mode**
+  - Toggle that automates reward selection and room progression.
+  - Tooltip: `Automate rewards and room progression.`
+
 - **Animation Speed**
   - Slider that scales the global `TURN_PACING` for all actions.
   - Tooltip: `Adjust battle animation pacing.`

@@ -2,6 +2,7 @@
   import { Power } from 'lucide-svelte';
   import Tooltip from './Tooltip.svelte';
   export let showActionValues = false;
+  export let fullIdleMode = false;
   export let scheduleSave;
   export let handleEndRun;
   export let endingRun = false;
@@ -17,6 +18,16 @@
     </div>
     <div class="control-right">
       <input type="checkbox" bind:checked={showActionValues} on:change={scheduleSave} />
+    </div>
+  </div>
+  <div class="control">
+    <div class="control-left">
+      <Tooltip text="Automate rewards and room progression.">
+        <span class="label">Full Idle Mode</span>
+      </Tooltip>
+    </div>
+    <div class="control-right">
+      <input type="checkbox" bind:checked={fullIdleMode} on:change={scheduleSave} />
     </div>
   </div>
   <div class="control">

@@ -1,8 +1,8 @@
 # Gacha Character Recruitment
 
-1. Between runs and at rest nodes, players spend collected upgrade items on gacha pulls for recruitable characters and chatable allies.
-   - Rest-node pulls share the same pity counters and currency as main-menu pulls.
-   - Players may pull as much as they want during a rest and immediately add new characters before leaving.
+1. Between runs, players spend collected upgrade items on gacha pulls for recruitable characters and chatable allies.
+   - Pulls share the same pity counters and currency as main-menu pulls.
+   - Players may pull as much as they want and immediately add new characters before leaving.
    - Each character is classified as Type A (Masculine), Type B (Feminine), or Type C (Androgynous).
    - Seed the pool with existing player plugins such as Ally, Becca, Bubbles, Carly, Ixia, Graygray, Hilander, Kboshi, Lady Darkness, Lady Echo, Lady Fire and Ice, Lady Light, Luna, Mezzy, and Mimic.
 2. Pull options: spend for exactly 1, 5, or 10 pulls; players cannot choose other batch sizes.
@@ -27,4 +27,4 @@
     - Implement a `GachaManager` handling pity counts, roll tables, and reward serialization.
     - Define `UpgradeItem` and `Character` dataclasses to represent inventory pieces and recruitable units.
     - Store upgrade items and character stacks in the encrypted save database for cross-run persistence.
-11. Party picker lets players choose four owned characters plus the player before starting a run, and gacha recruits can join the party immediately during the rest where they were pulled.
+11. Party picker lets players choose four owned characters plus the player before starting a run, and gacha recruits can join the party immediately after they are pulled.
