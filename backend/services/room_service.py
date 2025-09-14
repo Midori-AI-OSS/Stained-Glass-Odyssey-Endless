@@ -20,7 +20,6 @@ from autofighter.party import Party
 from autofighter.rooms import BattleRoom
 from autofighter.rooms import BossRoom
 from autofighter.rooms import ChatRoom
-from autofighter.rooms import RestRoom
 from autofighter.rooms import ShopRoom
 from autofighter.rooms import _build_foes
 from autofighter.rooms import _choose_foe
@@ -251,35 +250,6 @@ async def shop_room(run_id: str, data: dict[str, Any]) -> dict[str, Any]:
     return payload
 
 
-async def rest_room(run_id: str, data: dict[str, Any]) -> dict[str, Any]:
-    state, rooms = await asyncio.to_thread(load_map, run_id)
-    if not rooms or not (0 <= int(state.get("current", 0)) < len(rooms)):
-        raise LookupError("run ended or room out of range")
-    node = rooms[state["current"]]
-    if node.room_type != "rest":
-        raise ValueError("invalid room")
-    room = RestRoom(node)
-    party = await asyncio.to_thread(load_party, run_id)
-    result = await room.resolve(party, data)
-    action = data.get("action", "")
-    next_type = None
-    if action == "leave":
-        state["awaiting_next"] = True
-        next_type = (
-            rooms[state["current"] + 1].room_type
-            if state["current"] + 1 < len(rooms)
-            else None
-        )
-    else:
-        state["awaiting_next"] = False
-    await asyncio.to_thread(save_map, run_id, state)
-    await asyncio.to_thread(save_party, run_id, party)
-    payload = {**result}
-    if next_type is not None:
-        payload["next_room"] = next_type
-    return payload
-
-
 async def chat_room(run_id: str, data: dict[str, Any]) -> dict[str, Any]:
     state, rooms = await asyncio.to_thread(load_map, run_id)
     if not rooms or not (0 <= int(state.get("current", 0)) < len(rooms)):
@@ -430,8 +400,8 @@ async def room_action(run_id: str, room_id: str, action_data: dict[str, Any] | N
         return await boss_room(run_id, request_data)
     if room_type == "shop":
         return await shop_room(run_id, request_data)
-    if room_type == "rest":
-        return await rest_room(run_id, request_data)
     if room_type == "chat":
         return await chat_room(run_id, request_data)
+    if room_type == "rest":
+        raise LookupError("run ended or room out of range")
     raise ValueError(f"Unsupported room type: {room_type}")

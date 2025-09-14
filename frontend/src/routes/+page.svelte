@@ -944,38 +944,6 @@
     }
     await enterRoom();
   }
-  async function handleRestPull() {
-    if (!runId) return;
-    roomData = await roomAction("0", {"action": "pull"});
-  }
-  async function handleRestSwap() {
-    if (!runId) return;
-    roomData = await roomAction("0", {"action": "swap"});
-  }
-  async function handleRestLeave() {
-    if (!runId) return;
-    roomData = await roomAction("0", {"action": "leave"});
-    if (roomData?.awaiting_card || roomData?.awaiting_relic || roomData?.awaiting_loot) {
-      return;
-    }
-    const res = await advanceRoom();
-    if (res && typeof res.current_index === 'number') {
-      currentIndex = res.current_index;
-      // Refresh map data when advancing floors
-      if (res.next_room) {
-        currentRoomType = res.next_room;
-      }
-      const mapData = await getMap(runId);
-      if (mapData?.map?.rooms) {
-        mapRooms = mapData.map.rooms;
-        currentRoomType = mapRooms?.[currentIndex]?.room_type || currentRoomType;
-      }
-    }
-    if (res && res.next_room) {
-      nextRoom = res.next_room;
-    }
-    await enterRoom();
-  }
 
   async function handleNextRoom() {
     if (!runId) return;
@@ -1359,9 +1327,6 @@
     on:shopBuy={(e) => handleShopBuy(e.detail)}
     on:shopReroll={handleShopReroll}
     on:shopLeave={handleShopLeave}
-    on:restPull={handleRestPull}
-    on:restSwap={handleRestSwap}
-    on:restLeave={handleRestLeave}
     on:nextRoom={handleNextRoom}
     on:lootAcknowledge={handleLootAcknowledge}
     on:endRun={handleRunEnd}

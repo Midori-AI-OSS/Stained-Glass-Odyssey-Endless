@@ -108,9 +108,6 @@ async def test_battle_offers_choices_and_applies_effect(app_with_db, monkeypatch
         if room_type == "shop":
             await client.post(f"/rooms/{run_id}/shop")
             await client.post(f"/run/{run_id}/next")
-        elif room_type == "rest":
-            await client.post(f"/rooms/{run_id}/rest")
-            await client.post(f"/run/{run_id}/next")
         else:
             raise AssertionError(f"unexpected room type: {room_type}")
 

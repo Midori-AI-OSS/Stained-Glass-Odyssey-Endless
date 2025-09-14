@@ -70,9 +70,9 @@ describe('Room advancement and floor transitions', () => {
     mockGetMap.mockResolvedValue({
       map: {
         rooms: [
-          { room_id: 4, room_type: 'battle-normal', floor: 1, index: 4 },
-          { room_id: 5, room_type: 'shop', floor: 1, index: 5 },
-          { room_id: 6, room_type: 'rest', floor: 1, index: 6 }
+            { room_id: 4, room_type: 'battle-normal', floor: 1, index: 4 },
+            { room_id: 5, room_type: 'shop', floor: 1, index: 5 },
+            { room_id: 6, room_type: 'battle-weak', floor: 1, index: 6 }
         ],
         current: 5
       },

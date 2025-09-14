@@ -11,10 +11,10 @@ any time via the **Map** button, which fetches the latest floor state and
 renders nodes in `MapDisplay.svelte` with the boss at the top, the current room highlighted at the bottom, and future rooms grayed out. The **Edit** button loads the player's
 configuration and opens `PlayerEditor` so pronouns, damage type, and starting
 stats can be adjusted outside a run. The **Pulls** menu opens a gacha panel that
-shares pity and upgrade-item currency with rest-node pulls. The **Craft** menu
+shares pity and upgrade-item currency with other pull sources. The **Craft** menu
 lists upgrade items, calls `/gacha/craft` to convert materials, and toggles
 auto-crafting. Selecting a room posts `{ "action": "" }` to the matching
-endpoint (`/rooms/{run_id}/battle`, `/shop`, `/rest`, or `/boss`) and the map
+endpoint (`/rooms/{run_id}/battle`, `/shop`, or `/boss`) and the map
 refreshes from the backend to reflect progress. Rooms without dedicated routes
 can call `/rooms/{run_id}/{room_id}/action`, which simply echoes the provided
 `action`. The backend auto-resolves fights
