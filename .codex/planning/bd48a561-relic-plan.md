@@ -36,7 +36,7 @@ Parent: [Web Game Plan](8a7d9c1e-web-game-plan.md)
  - [ ] **Echoing Drum** – The first attack an ally uses each battle repeats at 25% power plus 25% per stack.
 
 ## 4★ Relics
-  - [ ] **Null Lantern** – Shops and rest rooms no longer appear. All foes are buffed by 150% for each fight cleared while holding this relic. Every fight now drops 1 pull plus 1 per stack.
+  - [ ] **Null Lantern** – Shops no longer appear. All foes are buffed by 150% for each fight cleared while holding this relic. Every fight now drops 1 pull plus 1 per stack.
   - [x] **Traveler's Charm** – When an ally is hit, they gain +25% DEF and +10% mitigation for the next turn plus 25% DEF and +10% mitigation per stack.
   - [x] **Timekeeper's Hourglass** – At the start of each turn, there is a 10% chance plus 1% per stack for all allies to take an additional turn.
 

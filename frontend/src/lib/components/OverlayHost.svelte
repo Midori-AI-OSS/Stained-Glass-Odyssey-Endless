@@ -18,9 +18,8 @@
   import SettingsMenu from './SettingsMenu.svelte';
   import Guidebook from './Guidebook.svelte';
   import RunChooser from './RunChooser.svelte';
-  import ShopMenu from './ShopMenu.svelte';
-  import RestRoom from './RestRoom.svelte';
-  import BattleView from './BattleView.svelte';
+    import ShopMenu from './ShopMenu.svelte';
+    import BattleView from './BattleView.svelte';
   import ErrorOverlay from './ErrorOverlay.svelte';
   import BackendNotReady from './BackendNotReady.svelte';
   import FloatingLoot from './FloatingLoot.svelte';
@@ -338,17 +337,6 @@
   </OverlaySurface>
 {/if}
 
-{#if roomData && roomData.result === 'rest'}
-  <OverlaySurface zIndex={1100}>
-    <RestRoom
-      gold={roomData.gold}
-      reducedMotion={reducedMotion}
-      on:pull={() => dispatch('restPull')}
-      on:swap={() => dispatch('restSwap')}
-      on:close={() => dispatch('restLeave')}
-    />
-  </OverlaySurface>
-{/if}
 
 {#if roomData && (roomData.result === 'battle' || roomData.result === 'boss') && (battleActive || rewardOpen || reviewOpen)}
   <div class="overlay-inset">

@@ -311,13 +311,10 @@
       on:endRun={() => dispatch('endRun')}
       on:shopBuy={(e) => dispatch('shopBuy', e.detail)}
       on:shopReroll={() => dispatch('shopReroll')}
-      on:shopLeave={() => dispatch('shopLeave')}
-      on:restPull={() => dispatch('restPull')}
-      on:restSwap={() => dispatch('restSwap')}
-      on:restLeave={() => dispatch('restLeave')}
-      on:snapshot-start={() => (snapshotLoading = true)}
-      on:snapshot-end={() => (snapshotLoading = false)}
-    />
+        on:shopLeave={() => dispatch('shopLeave')}
+        on:snapshot-start={() => (snapshotLoading = true)}
+        on:snapshot-end={() => (snapshotLoading = false)}
+      />
     <div class="user-level-bar">
       <div
         class="fill"

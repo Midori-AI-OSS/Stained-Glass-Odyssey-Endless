@@ -30,7 +30,7 @@ text via the `about` field returned by the backend.
 - 3★ Greed Engine – Party loses 1% HP per turn, gains +50% gold, and raises rare drop rate by 0.5% plus 0.1% per extra stack.
 - 3★ Stellar Compass – Critical hits grant permanent +1.5% ATK and gold rate.
 - 3★ Echoing Drum – First attack each battle repeats at 25% power.
-- 4★ Null Lantern – Removes shops/rests; fights drop additional pulls.
+- 4★ Null Lantern – Removes shops; fights drop additional pulls.
 - 4★ Traveler's Charm – When hit, gain +25% DEF and +10% mitigation next turn per stack.
 - 4★ Timekeeper's Hourglass – Each turn, 10% +1% per stack chance for extra turns.
 - 5★ Paradox Hourglass – 60% chance to sacrifice up to one ally per stack (max 4); survivors gain huge stat multipliers and foes lose defense.

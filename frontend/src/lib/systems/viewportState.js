@@ -55,8 +55,6 @@ export function roomLabel(type) {
       return 'Floor Boss';
     case 'shop':
       return 'Shop';
-    case 'rest':
-      return 'Rest';
     case 'start':
       return 'Start';
     default:

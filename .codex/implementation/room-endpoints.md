@@ -12,9 +12,9 @@ echoed in responses for parity across room types.
   - `name`: display name
   - `owned`: whether the player owns this character
   - `is_player`: true for the player's avatar
-- `POST /run/start` – seeds a `MapGenerator` with the run ID and stores a 45
+- `POST /run/start` – seeds a `MapGenerator` with the run ID and stores a 10
   node map; responses include the full map and a `current` pointer. Each floor
-  guarantees at least one rest room appears after the first shop.
+  guarantees at least one shop.
 - `POST /run/<run_id>/next` – advances to the next room after the frontend
   signals that it finished processing the previous one.
 - `GET /map/<run_id>` – returns the current map state with fields:
@@ -40,10 +40,6 @@ echoed in responses for parity across room types.
   `cards` values. On success the server marks the run as ready to advance and
   includes `next_room` in the response; the pointer advances when the client
   calls `POST /run/<run_id>/next`.
-- `POST /rooms/<run_id>/rest` – validates the next node is a rest room and allows
-  gacha pulls or party swaps. On success the server marks the run as ready to
-  advance and includes `next_room` in the response. The pointer advances when
-  the client calls `POST /run/<run_id>/next`.
 - `POST /rooms/<run_id>/boss` – validates the next node is a `battle-boss-floor`
   room and runs a high-powered battle. The request accepts `{ "action": "" }`
   and responses mirror normal battles but scale foe stats heavily and offer
