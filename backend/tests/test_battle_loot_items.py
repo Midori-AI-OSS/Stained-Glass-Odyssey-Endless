@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-import autofighter.rooms.battle as rooms_module
+import autofighter.rooms.battle.core as rooms_module
 
 
 @pytest.fixture()

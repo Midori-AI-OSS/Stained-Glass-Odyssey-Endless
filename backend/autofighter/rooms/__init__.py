@@ -17,7 +17,7 @@ class Room:
         raise NotImplementedError
 
 
-from .battle import BattleRoom  # noqa: E402
+from .battle.core import BattleRoom  # noqa: E402
 from .boss import BossRoom  # noqa: E402
 from .chat import ChatRoom  # noqa: E402
 from .shop import ShopRoom  # noqa: E402

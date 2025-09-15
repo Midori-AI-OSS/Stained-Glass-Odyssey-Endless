@@ -5,6 +5,7 @@ The battle logging system provides structured, organized logging for battles wit
 - `battle_logging/handlers.py` – custom logging handlers used by the system.
 - `battle_logging/summary.py` – dataclasses representing events and battle summaries.
 - `battle_logging/writers.py` – high level run and battle log writers.
+- `rooms/battle/logging.py` – combat-log queue utilities.
 
 ## Folder Structure
 

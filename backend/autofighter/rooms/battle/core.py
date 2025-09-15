@@ -1,3 +1,5 @@
+"""BattleRoom loop and high-level battle control flow."""
+
 from __future__ import annotations
 
 import asyncio
@@ -6,9 +8,7 @@ from collections.abc import Callable
 import copy
 from dataclasses import dataclass
 import logging
-import queue
 import random
-import threading
 from typing import Any
 
 from battle_logging.writers import end_battle_logging
@@ -38,146 +38,27 @@ from ..stats import Stats
 from ..stats import calc_animation_time
 from ..stats import set_enrage_percent
 from . import Room
+from .logging import queue_log
+from .pacing import _EXTRA_TURNS
+from .pacing import _pace
+from .pacing import set_visual_queue
+from .rewards import _apply_rdr_to_stars
+from .rewards import _calc_gold
+from .rewards import _pick_card_stars
+from .rewards import _pick_item_stars
+from .rewards import _pick_relic_stars
+from .rewards import _roll_relic_drop
 from .utils import _build_foes
 from .utils import _scale_stats
 from .utils import _serialize
 
 log = logging.getLogger(__name__)
 
-_COMBAT_LOG_QUEUE: "queue.Queue[tuple[str, tuple, dict]]" = queue.Queue()
-
-
-def _combat_log_worker() -> None:
-    while True:
-        message, args, kwargs = _COMBAT_LOG_QUEUE.get()
-        if message is None:
-            break
-        log.info(message, *args, **kwargs)
-        _COMBAT_LOG_QUEUE.task_done()
-
-
-_COMBAT_LOG_THREAD = threading.Thread(target=_combat_log_worker, daemon=True)
-_COMBAT_LOG_THREAD.start()
-
-
-def queue_log(message: str, *args, **kwargs) -> None:
-    _COMBAT_LOG_QUEUE.put((message, args, kwargs))
-
 ENRAGE_TURNS_NORMAL = 100
 ENRAGE_TURNS_BOSS = 500
 
-# Explicit pacing between combat actions (seconds)
-TURN_PACING = 0.5
-
-_EXTRA_TURNS: dict[int, int] = {}
-_VISUAL_QUEUE: ActionQueue | None = None
-
-
-def _grant_extra_turn(entity: Stats) -> None:
-    ident = id(entity)
-    _EXTRA_TURNS[ident] = _EXTRA_TURNS.get(ident, 0) + 1
-    try:
-        if _VISUAL_QUEUE is not None:
-            _VISUAL_QUEUE.grant_extra_turn(entity)
-    except Exception:
-        pass
-
-
-def _clear_extra_turns(_entity: Stats) -> None:
-    _EXTRA_TURNS.clear()
-    global _VISUAL_QUEUE
-    _VISUAL_QUEUE = None
-
-
-BUS.subscribe("extra_turn", _grant_extra_turn)
-BUS.subscribe("battle_end", _clear_extra_turns)
 
 ELEMENTS = [e.lower() for e in ALL_DAMAGE_TYPES]
-
-
-def _pick_card_stars(room: Room) -> int:
-    """Determine the star rank for card rewards."""
-    roll = random.random()
-    if isinstance(room, BossRoom):
-        if roll < 0.60:
-            return 3
-        if roll < 0.85:
-            return 4
-        return 5
-    if isinstance(room, BattleRoom) and room.strength > 1.0:
-        if roll < 0.40:
-            return 1
-        if roll < 0.70:
-            return 2
-        if roll < 0.7015:
-            return 3
-        if roll < 0.7025:
-            return 4
-        return 5
-    return 1 if roll < 0.80 else 2
-
-
-def _roll_relic_drop(room: Room, rdr: float) -> bool:
-    """Check whether a relic drops based on room type and RDR."""
-    roll = random.random()
-    base = 0.5 if isinstance(room, BossRoom) else 0.1
-    return roll < min(base * rdr, 1.0)
-
-
-def _pick_item_stars(room: Room) -> int:
-    """Select upgrade item star rank based on room difficulty."""
-    node = room.node
-    if node.room_type == "battle-boss-floor":
-        low, high = 3, 4
-    elif isinstance(room, BossRoom) or getattr(room, "strength", 1.0) > 1.0:
-        low, high = 1, 3
-    else:
-        low, high = 1, 2
-    base = low + (node.floor - 1) // 20 + (node.loop - 1) + node.pressure // 10
-    return min(base, high)
-
-
-def _calc_gold(room: Room, rdr: float) -> int:
-    """Calculate gold reward for the room."""
-    node = room.node
-    if node.room_type == "battle-boss-floor":
-        base = 200
-        mult = random.uniform(2.05, 4.25)
-    elif isinstance(room, BossRoom) or getattr(room, "strength", 1.0) > 1.0:
-        base = 20
-        mult = random.uniform(1.53, 2.25)
-    else:
-        base = 5
-        mult = random.uniform(1.01, 1.25)
-    return int(base * node.loop * mult * rdr)
-
-
-def _pick_relic_stars(room: Room) -> int:
-    roll = random.random()
-    if isinstance(room, BossRoom):
-        if roll < 0.6:
-            return 3
-        if roll < 0.9:
-            return 4
-        return 5
-    if roll < 0.7:
-        return 1
-    if roll < 0.9:
-        return 2
-    return 3
-
-
-def _apply_rdr_to_stars(stars: int, rdr: float) -> int:
-    """Chance to upgrade stars with extreme `rdr` values."""
-    for threshold in (10.0, 10000.0):
-        if stars >= 5 or rdr < threshold:
-            break
-        chance = min(rdr / (threshold * 10.0), 0.99)
-        if random.random() < chance:
-            stars += 1
-        else:
-            break
-    return stars
 
 
 @dataclass
@@ -248,8 +129,7 @@ class BattleRoom(Room):
             _visual_queue = ActionQueue(q_entities)
         except Exception:
             _visual_queue = None
-        global _VISUAL_QUEUE
-        _VISUAL_QUEUE = _visual_queue
+        set_visual_queue(_visual_queue)
 
         # Start battle logging once before emitting any events so participants are captured
         battle_logger = start_battle_logging()
@@ -419,27 +299,6 @@ class BattleRoom(Room):
                 await asyncio.sleep(3)
             except Exception:
                 pass
-        # Helper to pace actions: dynamic pacing based on combatant count
-        async def _pace(start_time: float) -> None:
-            try:
-                elapsed = asyncio.get_event_loop().time() - start_time
-            except Exception:
-                elapsed = 0.0
-
-            # Enforce a half-second delay after each action for pacing
-            base_wait = TURN_PACING
-            wait = base_wait - elapsed
-            if wait > 0:
-                try:
-                    await asyncio.sleep(wait)
-                except Exception:
-                    pass
-            # Always pause an additional half-second between turns
-            try:
-                await asyncio.sleep(TURN_PACING)
-            except Exception:
-                pass
-
         async def _turn_end(actor: Stats) -> None:
             """Advance the queue and emit a post-turn snapshot."""
             try:
