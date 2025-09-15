@@ -6,7 +6,9 @@ from collections.abc import Callable
 import copy
 from dataclasses import dataclass
 import logging
+import queue
 import random
+import threading
 from typing import Any
 
 from battle_logging import end_battle_logging
@@ -41,6 +43,25 @@ from .utils import _scale_stats
 from .utils import _serialize
 
 log = logging.getLogger(__name__)
+
+_COMBAT_LOG_QUEUE: "queue.Queue[tuple[str, tuple, dict]]" = queue.Queue()
+
+
+def _combat_log_worker() -> None:
+    while True:
+        message, args, kwargs = _COMBAT_LOG_QUEUE.get()
+        if message is None:
+            break
+        log.info(message, *args, **kwargs)
+        _COMBAT_LOG_QUEUE.task_done()
+
+
+_COMBAT_LOG_THREAD = threading.Thread(target=_combat_log_worker, daemon=True)
+_COMBAT_LOG_THREAD.start()
+
+
+def queue_log(message: str, *args, **kwargs) -> None:
+    _COMBAT_LOG_QUEUE.put((message, args, kwargs))
 
 ENRAGE_TURNS_NORMAL = 100
 ENRAGE_TURNS_BOSS = 500
@@ -611,9 +632,9 @@ class BattleRoom(Room):
                         break
                     dmg = await tgt_foe.apply_damage(member.atk, attacker=member, action_name="Normal Attack")
                     if dmg <= 0:
-                        log.info("%s's attack was dodged by %s", member.id, tgt_foe.id)
+                        queue_log("%s's attack was dodged by %s", member.id, tgt_foe.id)
                     else:
-                        log.info("%s hits %s for %s", member.id, tgt_foe.id, dmg)
+                        queue_log("%s hits %s for %s", member.id, tgt_foe.id, dmg)
                         damage_type = getattr(member.damage_type, 'id', 'generic') if hasattr(member, 'damage_type') else 'generic'
                         await BUS.emit_async("hit_landed", member, tgt_foe, dmg, "attack", f"{damage_type}_attack")
                         # Trigger hit_landed passives for the attacker
@@ -643,13 +664,13 @@ class BattleRoom(Room):
                             )
                             targets_hit += 1
                             if extra_dmg <= 0:
-                                log.info(
+                                queue_log(
                                     "%s's attack was dodged by %s",
                                     member.id,
                                     extra_foe.id,
                                 )
                             else:
-                                log.info(
+                                queue_log(
                                     "%s hits %s for %s",
                                     member.id,
                                     extra_foe.id,
@@ -899,9 +920,9 @@ class BattleRoom(Room):
                         break
                     dmg = await target.apply_damage(acting_foe.atk, attacker=acting_foe)
                     if dmg <= 0:
-                        log.info("%s's attack was dodged by %s", acting_foe.id, target.id)
+                        queue_log("%s's attack was dodged by %s", acting_foe.id, target.id)
                     else:
-                        log.info("%s hits %s for %s", acting_foe.id, target.id, dmg)
+                        queue_log("%s hits %s for %s", acting_foe.id, target.id, dmg)
                         damage_type = getattr(acting_foe.damage_type, 'id', 'generic') if hasattr(acting_foe, 'damage_type') else 'generic'
                         await BUS.emit_async("hit_landed", acting_foe, target, dmg, "attack", f"foe_{damage_type}_attack")
                     target_effect.maybe_inflict_dot(acting_foe, dmg)
