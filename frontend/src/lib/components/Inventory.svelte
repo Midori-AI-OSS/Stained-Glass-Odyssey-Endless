@@ -231,11 +231,23 @@
     <!-- Left side: Item grid -->
     <div class="item-grid-container">
       {#if activeTab === 'cards'}
-        <CardView cards={sortedCards} select={selectItem} />
+        <CardView
+          cards={sortedCards}
+          select={selectItem}
+          selectedId={selectedItem?.type === 'card' ? selectedItem.id : null}
+        />
       {:else if activeTab === 'relics'}
-        <RelicView relics={sortedRelics} select={selectItem} />
+        <RelicView
+          relics={sortedRelics}
+          select={selectItem}
+          selectedId={selectedItem?.type === 'relic' ? selectedItem.id : null}
+        />
       {:else}
-        <MaterialsPanel materials={materialEntries} select={selectItem} />
+        <MaterialsPanel
+          materials={materialEntries}
+          select={selectItem}
+          selectedId={selectedItem?.type === 'material' ? selectedItem.id : null}
+        />
       {/if}
     </div>
 
