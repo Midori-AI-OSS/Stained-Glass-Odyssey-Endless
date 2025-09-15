@@ -17,6 +17,12 @@ loop. Battle errors and unhandled exceptions call this helper automatically, but
 it can also be imported and awaited manually during debugging to guarantee that
 all log messages reach disk.
 
+## High-Frequency Combat Logs
+
+Combat loops enqueue messages via the `queue_log` helper in `rooms.battle`. A
+background worker thread processes this queue and forwards entries to the
+standard logger, ensuring combat iterations avoid synchronous I/O.
+
 ## Battle Modules
 
 ```python
