@@ -5,6 +5,8 @@ import asyncio
 from autofighter.party import Party
 from autofighter.stats import apply_status_hooks
 
+_user_state_lock = asyncio.Lock()
+
 
 def user_exp_to_level(level: int) -> int:
     base = 100
@@ -43,15 +45,16 @@ def get_user_level() -> int:
 async def gain_user_exp(amount: int) -> dict[str, int]:
     if amount <= 0:
         return get_user_state()
-    state = get_user_state()
-    exp = state["exp"] + amount
-    level = state["level"]
-    next_exp = user_exp_to_level(level)
-    while exp >= next_exp:
-        exp -= next_exp
-        level += 1
+    async with _user_state_lock:
+        state = get_user_state()
+        exp = state["exp"] + amount
+        level = state["level"]
         next_exp = user_exp_to_level(level)
-    await _persist_user_state(level, exp)
+        while exp >= next_exp:
+            exp -= next_exp
+            level += 1
+            next_exp = user_exp_to_level(level)
+        await _persist_user_state(level, exp)
     return {"level": level, "exp": exp, "next_level_exp": next_exp}
 
 
