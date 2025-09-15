@@ -1,9 +1,9 @@
 import pytest
 
+from autofighter.passives import PassiveRegistry
 from autofighter.stats import BUS
 from autofighter.stats import Stats
 from plugins.damage_types.generic import Generic
-from plugins.passives.luna_lunar_reservoir import LunaLunarReservoir
 
 
 class Actor(Stats):
@@ -18,7 +18,9 @@ class Actor(Stats):
 
 @pytest.mark.asyncio
 async def test_generic_ultimate_hits_and_passive_triggers():
-    LunaLunarReservoir._charge_points.clear()
+    registry = PassiveRegistry()
+    llr = registry._registry["luna_lunar_reservoir"]
+    llr._charge_points.clear()
 
     actor = Actor(damage_type=Generic(), passives=["luna_lunar_reservoir"])
     actor.id = "luna"
@@ -47,4 +49,4 @@ async def test_generic_ultimate_hits_and_passive_triggers():
 
     assert result is True
     assert hits["count"] == 64
-    assert LunaLunarReservoir.get_charge(actor) >= 64
+    assert llr.get_charge(actor) >= 64
