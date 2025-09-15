@@ -6,6 +6,7 @@ The battle logging system provides structured, organized logging for battles wit
 - `battle_logging/summary.py` – dataclasses representing events and battle summaries.
 - `battle_logging/writers.py` – high level run and battle log writers.
 - `rooms/battle/logging.py` – combat-log queue utilities.
+- `rooms/battle/setup.py` – prepares parties/foes and starts battle logging once participants are known.
 
 ## Folder Structure
 
@@ -154,6 +155,7 @@ Total Events: 45
 - Logs are organized by run ID and battle index for easy navigation
 - Each battle gets its own logger instance to prevent interference
 - Call `start_battle_logging()` only once per battle after participants are set; additional calls finalize the previous battle as "interrupted"
+- `rooms/battle/setup.py` performs that participant preparation asynchronously before `BattleRoom.resolve` emits any events, ensuring the logger captures the correct party and foe state.
 
 ## Battle Review API
 

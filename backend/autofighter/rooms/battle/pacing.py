@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import asyncio
 
-from ..action_queue import ActionQueue
-from ..stats import BUS
-from ..stats import Stats
+from autofighter.action_queue import ActionQueue
+from autofighter.stats import BUS
+from autofighter.stats import Stats
 
 TURN_PACING = 0.5
 
