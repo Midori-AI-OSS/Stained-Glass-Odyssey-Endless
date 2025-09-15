@@ -1073,7 +1073,7 @@ class BattleRoom(Room):
                     pass
             try:
                 level = get_user_level()
-                gain_user_exp(int(exp_reward / max(1, level)))
+                await gain_user_exp(int(exp_reward / max(1, level)))
                 # Do not reapply global level buffs mid-run; buffs are fixed at run start.
             except Exception:
                 pass
