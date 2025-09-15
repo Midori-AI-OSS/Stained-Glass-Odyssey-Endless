@@ -10,3 +10,7 @@ Quick reference for contributors documenting game lore.
 
 ## Useful Links
 - Full mode guidance: [`STORYTELLER.md`](../modes/STORYTELLER.md)
+ - Current lore references:
+   - [`character-connections.md`](../lore/notes/character-connections.md)
+   - [`setting-focus.md`](../lore/notes/setting-focus.md)
+   - [`guiding-purpose.md`](../lore/planning/guiding-purpose.md)
