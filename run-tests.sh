@@ -66,7 +66,6 @@ yay -S --noconfirm uv bun-bin || true
 
 echo "[docker][install] prepare finished"
 EOF
-  fi
 
   # If fallback requested, prepare local env now
   LOCAL_PYTHON_CMD=""
