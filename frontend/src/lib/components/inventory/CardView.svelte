@@ -5,9 +5,9 @@
 </script>
 
 <div class="card-view">
-  {#each cards as [id, qty]}
-    <div class="card-item" on:click={() => select(id, 'card', qty)}>
-      <CardArt id={id} stars={1} />
+  {#each cards as [entry, qty]}
+    <div class="card-item" on:click={() => select(entry.id, 'card', qty)}>
+      <CardArt {entry} type="card" />
       <span class="qty">{qty}</span>
     </div>
   {/each}
