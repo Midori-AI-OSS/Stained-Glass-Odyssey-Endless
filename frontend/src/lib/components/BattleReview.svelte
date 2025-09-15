@@ -1,6 +1,7 @@
 <script>
   import { onMount, createEventDispatcher } from 'svelte';
   import FighterPortrait from '../battle/FighterPortrait.svelte';
+  import ReviewOverlay from './battle-review/ReviewOverlay.svelte';
   import RewardCard from './RewardCard.svelte';
   import CurioChoice from './CurioChoice.svelte';
   import { getElementColor, getDotImage, getDotElement } from '../systems/assetLoader.js';
@@ -962,8 +963,10 @@
                       <div class="damage-bar-amount">{fmt(damage)}</div>
                     </div>
                   {/each}
-                </div>
-              </div>
+  </div>
+</div>
+
+  <ReviewOverlay {summary} {cards} {relics} />
             {/if}
 
             <!-- Party vs Foe Damage Comparison -->

@@ -12,6 +12,9 @@
   import PlayerPreview from './PlayerPreview.svelte';
   import { Circle } from 'lucide-svelte';
   import Spinner from './Spinner.svelte';
+  import PartyView from './combat-viewer/PartyView.svelte';
+  import FoeView from './combat-viewer/FoeView.svelte';
+  import HpStatus from './combat-viewer/HpStatus.svelte';
 
   export let party = [];
   export let foes = [];
@@ -339,6 +342,8 @@
     </div>
     
     <div class="viewer-content">
+      <PartyView {party} />
+      <FoeView {foes} />
       <!-- Left panel: Use PartyRoster styling (read-only) -->
       <div class="character-roster">
         <div class="roster-section">
@@ -374,10 +379,7 @@
           <div class="stats-grid">
             <div class="stat-section">
               <h4>Health</h4>
-              <div class="stat">
-                <label>HP:</label>
-                <span>{selectedCharacter.hp}/{selectedCharacter.max_hp || selectedCharacter.hp}</span>
-              </div>
+              <HpStatus hp={selectedCharacter.hp} maxHp={selectedCharacter.max_hp || selectedCharacter.hp} />
               {#if selectedCharacter.shields}
                 <div class="stat">
                   <label>Shield:</label>

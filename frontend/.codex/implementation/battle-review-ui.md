@@ -10,3 +10,4 @@ The Battle Review interface uses a vertical icon column and a persistent side pa
 - The stats panel hosts the `entity-stats-grid`, ensuring key metrics stay visible during navigation.
 - Colors should match the UI's stained-glass palette, using vibrant hues such as those returned by `getElementBarColor` in `frontend/src/lib/BattleReview.svelte`.
 - The overview and entity panels surface detailed metrics like kills, DoT kills, ultimates used or failed, resources spent and gained, and healing prevented.
+- Damage graphs, reward lists, and the overlay wrapper are provided by subcomponents in `components/battle-review/` (`DamageGraphs.svelte`, `RewardList.svelte`, `ReviewOverlay.svelte`).
