@@ -18,4 +18,7 @@ describe('battle review subcomponents', () => {
     expect(reviewOverlay).toContain('DamageGraphs');
     expect(reviewOverlay).toContain('RewardList');
   });
+  test('ReviewOverlay aggregates damage by element', () => {
+    expect(reviewOverlay).toContain('aggregateDamageByElement');
+  });
 });
