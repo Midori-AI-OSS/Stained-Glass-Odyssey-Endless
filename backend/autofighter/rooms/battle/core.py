@@ -30,6 +30,7 @@ from autofighter.summons.base import Summon
 from autofighter.summons.manager import SummonManager
 from plugins.damage_types import ALL_DAMAGE_TYPES
 
+from .. import Room
 from ..action_queue import ActionQueue
 from ..party import Party
 from ..passives import PassiveRegistry
@@ -37,7 +38,9 @@ from ..stats import BUS
 from ..stats import Stats
 from ..stats import calc_animation_time
 from ..stats import set_enrage_percent
-from . import Room
+from ..utils import _build_foes
+from ..utils import _scale_stats
+from ..utils import _serialize
 from .logging import queue_log
 from .pacing import _EXTRA_TURNS
 from .pacing import _pace
@@ -48,9 +51,6 @@ from .rewards import _pick_card_stars
 from .rewards import _pick_item_stars
 from .rewards import _pick_relic_stars
 from .rewards import _roll_relic_drop
-from .utils import _build_foes
-from .utils import _scale_stats
-from .utils import _serialize
 
 log = logging.getLogger(__name__)
 
@@ -1166,4 +1166,4 @@ class BattleRoom(Room):
         }
 
 
-from .boss import BossRoom  # noqa: E402  # imported for isinstance checks
+from ..boss import BossRoom  # noqa: E402  # imported for isinstance checks
