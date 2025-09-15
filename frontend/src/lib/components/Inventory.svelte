@@ -79,19 +79,27 @@
   $: relicEntries = count(relics || []);
   $: materialEntries = Object.entries(materials || {}); // [key, qty]
 
-  $: sortedCards = [...cardEntries].sort((a, b) => {
+  $: sortedCardEntries = [...cardEntries].sort((a, b) => {
     const [idA] = a; const [idB] = b;
     const s = cardStars(idB) - cardStars(idA);
     if (s !== 0) return s;
     return cardName(idA).localeCompare(cardName(idB));
   });
+  $: sortedCards = sortedCardEntries.map(([id, qty]) => [
+    { id, name: cardName(id), stars: cardStars(id), about: cardDesc(id) },
+    qty
+  ]);
 
-  $: sortedRelics = [...relicEntries].sort((a, b) => {
+  $: sortedRelicEntries = [...relicEntries].sort((a, b) => {
     const [idA] = a; const [idB] = b;
     const s = relicStars(idB) - relicStars(idA);
     if (s !== 0) return s;
     return relicName(idA).localeCompare(relicName(idB));
   });
+  $: sortedRelics = sortedRelicEntries.map(([id, qty]) => [
+    { id, name: relicName(id), stars: relicStars(id), about: relicDesc(id) },
+    qty
+  ]);
 
   // Get total counts
   $: cardCount = cards?.length || 0;
@@ -151,11 +159,11 @@
   // Set initial selection when data loads
   $: if (metaReady && !selectedItem) {
     if (activeTab === 'cards' && sortedCards.length > 0) {
-      const [id, qty] = sortedCards[0];
-      selectItem(id, 'card', qty);
+      const [entry, qty] = sortedCards[0];
+      selectItem(entry.id, 'card', qty);
     } else if (activeTab === 'relics' && sortedRelics.length > 0) {
-      const [id, qty] = sortedRelics[0];
-      selectItem(id, 'relic', qty);
+      const [entry, qty] = sortedRelics[0];
+      selectItem(entry.id, 'relic', qty);
     } else if (activeTab === 'materials' && materialEntries.length > 0) {
       const [id, qty] = materialEntries[0];
       selectItem(id, 'material', qty);
@@ -168,11 +176,11 @@
     selectedItem = null;
     // Auto-select first item in new tab
     if (tab === 'cards' && sortedCards.length > 0) {
-      const [id, qty] = sortedCards[0];
-      selectItem(id, 'card', qty);
+      const [entry, qty] = sortedCards[0];
+      selectItem(entry.id, 'card', qty);
     } else if (tab === 'relics' && sortedRelics.length > 0) {
-      const [id, qty] = sortedRelics[0];
-      selectItem(id, 'relic', qty);
+      const [entry, qty] = sortedRelics[0];
+      selectItem(entry.id, 'relic', qty);
     } else if (tab === 'materials' && materialEntries.length > 0) {
       const [id, qty] = materialEntries[0];
       selectItem(id, 'material', qty);

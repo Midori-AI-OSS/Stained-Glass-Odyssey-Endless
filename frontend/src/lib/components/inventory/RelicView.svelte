@@ -5,9 +5,9 @@
 </script>
 
 <div class="relic-view">
-  {#each relics as [id, qty]}
-    <div class="relic-item" on:click={() => select(id, 'relic', qty)}>
-      <CurioChoice id={id} />
+  {#each relics as [entry, qty]}
+    <div class="relic-item" on:click={() => select(entry.id, 'relic', qty)}>
+      <CurioChoice entry={entry} />
       <span class="qty">{qty}</span>
     </div>
   {/each}
