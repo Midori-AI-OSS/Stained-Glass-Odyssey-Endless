@@ -1,6 +1,6 @@
 <script>
   import { onMount, onDestroy, createEventDispatcher, tick } from 'svelte';
-  import { scale } from 'svelte/transition';
+  import { scale, fade } from 'svelte/transition';
   import { roomAction } from '$lib';
   import { getRandomBackground, getElementColor } from '../systems/assetLoader.js';
   import FighterUIItem from '../battle/FighterUIItem.svelte';
@@ -315,7 +315,11 @@
   {#if showFoes}
     <div class="foe-row">
       {#each foes as foe (foe.id)}
-        <div class="foe-container">
+        <div
+          class="foe-container"
+          in:fade={{ duration: reducedMotion ? 0 : 300 }}
+          out:fade={{ duration: reducedMotion ? 0 : 600 }}
+        >
           <!-- Buffs at the very top -->
           <div class="foe-buffs">
             {#if foe.passives?.length || foe.dots?.length || foe.hots?.length}
@@ -352,10 +356,64 @@
             <div class="summon-list">
               {#each foe.summons as summon (summon.id)}
                 <div
-                  in:scale={{ duration: reducedMotion ? 0 : 200 }}
                   class="summon-entry"
+                  in:fade={{ duration: reducedMotion ? 0 : 200 }}
+                  out:fade={{ duration: reducedMotion ? 0 : 450 }}
                 >
-                  <!-- Summon HP bar -->
+                  <div in:scale={{ duration: reducedMotion ? 0 : 200 }} class="summon-inner">
+                    <!-- Summon HP bar -->
+                    <div class="summon-hp-bar">
+                      <div class="hp-bar-container" class:reduced={reducedMotion}>
+                        {#if Number(summon?.shields || 0) > 0 && Number(summon?.max_hp || 0) > 0}
+                          <div
+                            class="overheal-fill"
+                            style={`width: calc(${Math.max(0, Math.min(100, (Number(summon.shields || 0) / Math.max(1, Number(summon.max_hp || 0))) * 100))}% + 5px); left: -5px;`}
+                          ></div>
+                        {/if}
+                        <div 
+                          class="hp-bar-fill"
+                          style="width: {Math.max(0, Math.min(100, (summon.hp / summon.max_hp) * 100))}%; 
+                                 background: {(summon.hp / summon.max_hp) <= 0.3 ? 'linear-gradient(90deg, #ff4444, #ff6666)' : 'linear-gradient(90deg, #44ffff, #66dddd)'}"
+                        ></div>
+                        {#if summon.hp < summon.max_hp}
+                          <div class="hp-text" data-position="outline">{summon.hp}</div>
+                        {/if}
+                      </div>
+                    </div>
+                    
+                    <FighterUIItem fighter={summon} position="top" {reducedMotion} size="medium" />
+                  </div>
+                </div>
+              {/each}
+            </div>
+          {/if}
+        </div>
+      {/each}
+    </div>
+  {/if}
+
+  <!-- Party at the bottom -->
+  <div class="party-row">
+    {#each party as member (member.id)}
+      <div
+        class="party-container"
+        in:fade={{ duration: reducedMotion ? 0 : 300 }}
+        out:fade={{ duration: reducedMotion ? 0 : 600 }}
+      >
+        <!-- Summons (show above player portrait for party) -->
+        {#if member.summons?.length}
+          <div class="summon-list">
+            {#each member.summons as summon (summon.id)}
+              <div
+                class="summon-entry"
+                in:fade={{ duration: reducedMotion ? 0 : 200 }}
+                out:fade={{ duration: reducedMotion ? 0 : 450 }}
+              >
+                <div in:scale={{ duration: reducedMotion ? 0 : 200 }} class="summon-inner">
+                  <!-- Summon portrait -->
+                  <FighterUIItem fighter={summon} position="bottom" {reducedMotion} size="medium" />
+
+                  <!-- Summon HP bar under portrait -->
                   <div class="summon-hp-bar">
                     <div class="hp-bar-container" class:reduced={reducedMotion}>
                       {#if Number(summon?.shields || 0) > 0 && Number(summon?.max_hp || 0) > 0}
@@ -374,57 +432,13 @@
                       {/if}
                     </div>
                   </div>
-                  
-                  <FighterUIItem fighter={summon} position="top" {reducedMotion} size="medium" />
-                </div>
-              {/each}
-            </div>
-          {/if}
-        </div>
-      {/each}
-    </div>
-  {/if}
 
-  <!-- Party at the bottom -->
-  <div class="party-row">
-    {#each party as member (member.id)}
-      <div class="party-container">
-        <!-- Summons (show above player portrait for party) -->
-        {#if member.summons?.length}
-          <div class="summon-list">
-            {#each member.summons as summon (summon.id)}
-              <div
-                in:scale={{ duration: reducedMotion ? 0 : 200 }}
-                class="summon-entry"
-              >
-                <!-- Summon portrait -->
-                <FighterUIItem fighter={summon} position="bottom" {reducedMotion} size="medium" />
-
-                <!-- Summon HP bar under portrait -->
-                <div class="summon-hp-bar">
-                  <div class="hp-bar-container" class:reduced={reducedMotion}>
-                    {#if Number(summon?.shields || 0) > 0 && Number(summon?.max_hp || 0) > 0}
-                      <div
-                        class="overheal-fill"
-                        style={`width: calc(${Math.max(0, Math.min(100, (Number(summon.shields || 0) / Math.max(1, Number(summon.max_hp || 0))) * 100))}% + 5px); left: -5px;`}
-                      ></div>
-                    {/if}
-                    <div 
-                      class="hp-bar-fill"
-                      style="width: {Math.max(0, Math.min(100, (summon.hp / summon.max_hp) * 100))}%; 
-                             background: {(summon.hp / summon.max_hp) <= 0.3 ? 'linear-gradient(90deg, #ff4444, #ff6666)' : 'linear-gradient(90deg, #44ffff, #66dddd)'}"
-                    ></div>
-                    {#if summon.hp < summon.max_hp}
-                      <div class="hp-text" data-position="outline">{summon.hp}</div>
+                  <!-- Summon buffs under HP bar -->
+                  <div class="summon-buffs">
+                    {#if summon.passives?.length || summon.dots?.length || summon.hots?.length}
+                      <StatusIcons layout="bar" hots={(summon.hots || []).slice(0, 6)} dots={(summon.dots || []).slice(0, 6)} active_effects={(summon.passives || []).slice(0, 6)} />
                     {/if}
                   </div>
-                </div>
-
-                <!-- Summon buffs under HP bar -->
-                <div class="summon-buffs">
-                  {#if summon.passives?.length || summon.dots?.length || summon.hots?.length}
-                    <StatusIcons layout="bar" hots={(summon.hots || []).slice(0, 6)} dots={(summon.dots || []).slice(0, 6)} active_effects={(summon.passives || []).slice(0, 6)} />
-                  {/if}
                 </div>
               </div>
             {/each}
