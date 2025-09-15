@@ -14,10 +14,10 @@ passive abilities:
 - `summon_defeated` – emitted after a summon is killed and removed, allowing
   passives like **Menagerie Bond** to respond.
 
-Damage type ultimates now consume charge via `use_ultimate()` and are invoked by
-`rooms/battle.py` when `ultimate_ready` is set.  Damage type plugins may add
-additional effects in their `ultimate` methods or respond to the
-`ultimate_used` event.
+Damage type ultimates are invoked directly from `rooms/battle.py` when
+`ultimate_ready` is set. Each damage type plugin is responsible for consuming
+charge through its own `use_ultimate()` call and may add additional effects in
+its `ultimate` method or respond to the `ultimate_used` event.
 
 ## Pacing
 
