@@ -310,17 +310,22 @@ class HealingOverTime:
 class EffectManager:
     """Manage DoT and HoT effects on a Stats object."""
 
-    def __init__(self, stats: Stats) -> None:
+    def __init__(self, stats: Stats, debug: bool = False) -> None:
         self.stats = stats
         self.dots: list[DamageOverTime] = []
         self.hots: list[HealingOverTime] = []
         self.mods: list[StatModifier] = []
         self._console = Console()
+        self._debug = debug
         for eff in getattr(stats, "_pending_mods", []):
             self.mods.append(eff)
             self.stats.mods.append(eff.id)
         if hasattr(stats, "_pending_mods"):
             delattr(stats, "_pending_mods")
+
+    async def _log(self, message: str) -> None:
+        """Write a log message without blocking the main loop."""
+        await asyncio.to_thread(self._console.log, message)
 
     def add_dot(self, effect: DamageOverTime, max_stacks: int | None = None) -> None:
         """Attach a DoT instance to the tracked stats.
@@ -437,18 +442,24 @@ class EffectManager:
             expired: list[object] = []
 
             # Batch logging for performance when many effects are present
-            if len(collection) > 10:
+            if self._debug and len(collection) > 10:
                 effect_type = "HoT" if (collection and isinstance(collection[0], HealingOverTime)) else "DoT"
                 color = "green" if effect_type == "HoT" else "light_red"
-                self._console.log(f"[{color}]{self.stats.id} processing {len(collection)} {effect_type} effects[/]")
+                asyncio.create_task(
+                    self._log(
+                        f"[{color}]{self.stats.id} processing {len(collection)} {effect_type} effects[/]"
+                    )
+                )
 
             # Process effects in parallel for better async performance when many are present
             if len(collection) > 20:
                 # Parallel processing for large collections
                 async def tick_effect(eff):
-                    if len(collection) <= 10:
+                    if self._debug and len(collection) <= 10:
                         color = "green" if isinstance(eff, HealingOverTime) else "light_red"
-                        self._console.log(f"[{color}]{self.stats.id} {eff.name} tick[/]")
+                        asyncio.create_task(
+                            self._log(f"[{color}]{self.stats.id} {eff.name} tick[/]")
+                        )
                     return await eff.tick(self.stats), eff
 
                 # Process in batches to avoid overwhelming the event loop
@@ -466,9 +477,11 @@ class EffectManager:
                 # Sequential processing for smaller collections
                 for eff in collection:
                     # Only log individual effects if there are few of them
-                    if len(collection) <= 10:
+                    if self._debug and len(collection) <= 10:
                         color = "green" if isinstance(eff, HealingOverTime) else "light_red"
-                        self._console.log(f"[{color}]{self.stats.id} {eff.name} tick[/]")
+                        asyncio.create_task(
+                            self._log(f"[{color}]{self.stats.id} {eff.name} tick[/]")
+                        )
                     if not await eff.tick(self.stats):
                         expired.append(eff)
                     # Early termination: if target dies, stop processing remaining effects
@@ -492,15 +505,21 @@ class EffectManager:
         expired_mods: list[StatModifier] = []
 
         # Batch logging for performance when many stat modifiers are present
-        if len(self.mods) > 10:
-            self._console.log(f"[yellow]{self.stats.id} processing {len(self.mods)} stat modifiers[/]")
+        if self._debug and len(self.mods) > 10:
+            asyncio.create_task(
+                self._log(
+                    f"[yellow]{self.stats.id} processing {len(self.mods)} stat modifiers[/]"
+                )
+            )
 
         # Choose processing strategy based on number of modifiers
         if len(self.mods) > 15:
             # Parallel processing for large numbers of stat modifiers
             async def tick_modifier(mod):
-                if len(self.mods) <= 10:
-                    self._console.log(f"[yellow]{self.stats.id} {mod.name} tick[/]")
+                if self._debug and len(self.mods) <= 10:
+                    asyncio.create_task(
+                        self._log(f"[yellow]{self.stats.id} {mod.name} tick[/]")
+                    )
                 return mod.tick(), mod
 
             # Process in batches to avoid overwhelming the event loop
@@ -517,8 +536,10 @@ class EffectManager:
         else:
             # Sequential processing for smaller numbers of modifiers
             for mod in self.mods:
-                if len(self.mods) <= 10:
-                    self._console.log(f"[yellow]{self.stats.id} {mod.name} tick[/]")
+                if self._debug and len(self.mods) <= 10:
+                    asyncio.create_task(
+                        self._log(f"[yellow]{self.stats.id} {mod.name} tick[/]")
+                    )
                 if not mod.tick():
                     expired_mods.append(mod)
                 # Early termination: if character dies, stop processing
@@ -574,16 +595,22 @@ class EffectManager:
             return
 
         # Batch logging for performance when many passives need processing
-        if len(tick_passives) > 10:
-            self._console.log(f"[blue]{self.stats.id} processing {len(tick_passives)} passive abilities[/]")
+        if self._debug and len(tick_passives) > 10:
+            asyncio.create_task(
+                self._log(
+                    f"[blue]{self.stats.id} processing {len(tick_passives)} passive abilities[/]"
+                )
+            )
 
         # Choose processing strategy based on number of passives
         if len(tick_passives) > 15:
             # Parallel processing for large numbers of passives
             async def process_passive(passive_data):
                 pid, cls = passive_data
-                if len(tick_passives) <= 10:
-                    self._console.log(f"[blue]{self.stats.id} {pid} passive tick[/]")
+                if self._debug and len(tick_passives) <= 10:
+                    asyncio.create_task(
+                        self._log(f"[blue]{self.stats.id} {pid} passive tick[/]")
+                    )
 
                 passive_instance = cls()
                 # Try turn end processing first
@@ -613,8 +640,10 @@ class EffectManager:
         else:
             # Sequential processing for smaller numbers of passives
             for pid, cls in tick_passives:
-                if len(tick_passives) <= 10:
-                    self._console.log(f"[blue]{self.stats.id} {pid} passive tick[/]")
+                if self._debug and len(tick_passives) <= 10:
+                    asyncio.create_task(
+                        self._log(f"[blue]{self.stats.id} {pid} passive tick[/]")
+                    )
 
                 passive_instance = cls()
                 # Try turn end processing first
@@ -649,7 +678,10 @@ class EffectManager:
         for eff in list(self.dots) + list(self.hots):
             handler = getattr(eff, "on_action", None)
             if callable(handler):
-                self._console.log(f"{self.stats.id} {eff.name} action")
+                if self._debug:
+                    asyncio.create_task(
+                        self._log(f"{self.stats.id} {eff.name} action")
+                    )
                 result = handler(self.stats)
                 if hasattr(result, "__await"):
                     result = await result
