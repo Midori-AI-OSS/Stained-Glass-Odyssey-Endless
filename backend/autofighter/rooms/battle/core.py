@@ -5,52 +5,41 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Awaitable
 from collections.abc import Callable
-import copy
 from dataclasses import dataclass
 import logging
 import random
 from typing import Any
 
 from battle_logging.writers import end_battle_logging
-
-# Import battle logging
-from battle_logging.writers import start_battle_logging
 from services.user_level_service import gain_user_exp
 from services.user_level_service import get_user_level
 
-from autofighter.cards import apply_cards
 from autofighter.cards import card_choices
 from autofighter.effects import EffectManager
-from autofighter.effects import StatModifier
 from autofighter.effects import create_stat_buff
 from autofighter.mapgen import MapNode
-from autofighter.relics import apply_relics
 from autofighter.relics import relic_choices
 from autofighter.summons.base import Summon
 from autofighter.summons.manager import SummonManager
 from plugins.damage_types import ALL_DAMAGE_TYPES
 
+from ...party import Party
+from ...stats import BUS
+from ...stats import Stats
+from ...stats import calc_animation_time
+from ...stats import set_enrage_percent
 from .. import Room
-from ..action_queue import ActionQueue
-from ..party import Party
-from ..passives import PassiveRegistry
-from ..stats import BUS
-from ..stats import Stats
-from ..stats import calc_animation_time
-from ..stats import set_enrage_percent
-from ..utils import _build_foes
-from ..utils import _scale_stats
 from ..utils import _serialize
 from .logging import queue_log
 from .pacing import _EXTRA_TURNS
 from .pacing import _pace
-from .pacing import set_visual_queue
 from .rewards import _apply_rdr_to_stars
 from .rewards import _calc_gold
 from .rewards import _pick_card_stars
 from .rewards import _pick_item_stars
 from .rewards import _pick_relic_stars
 from .rewards import _roll_relic_drop
+from .setup import setup_battle
 
 log = logging.getLogger(__name__)
 
@@ -79,71 +68,21 @@ class BattleRoom(Room):
         from runs.lifecycle import battle_snapshots
         from runs.lifecycle import battle_tasks
 
-        registry = PassiveRegistry()
-        SummonManager.reset_all()
         start_gold = party.gold
-        if foe is None:
-            foes = _build_foes(self.node, party)
-        else:
-            foes = foe if isinstance(foe, list) else [foe]
-        for f in foes:
-            _scale_stats(f, self.node, self.strength)
+        setup_data = await setup_battle(
+            self.node,
+            party,
+            foe=foe,
+            strength=self.strength,
+        )
+        registry = setup_data.registry
+        combat_party = setup_data.combat_party
+        foes = setup_data.foes
+        foe_effects = setup_data.foe_effects
+        enrage_mods = setup_data.enrage_mods
+        _visual_queue = setup_data.visual_queue
+        battle_logger = setup_data.battle_logger
         foe = foes[0]
-
-        members = list(
-            await asyncio.gather(
-                *(asyncio.to_thread(copy.deepcopy, m) for m in party.members)
-            )
-        )
-        combat_party = Party(
-            members=members,
-            gold=party.gold,
-            relics=party.relics,
-            cards=party.cards,
-            rdr=party.rdr,
-        )
-        await apply_cards(combat_party)
-        await asyncio.to_thread(apply_relics, combat_party)
-        party.rdr = combat_party.rdr
-
-        foe_effects = []
-        for f in foes:
-            mgr = EffectManager(f)
-            f.effect_manager = mgr
-            foe_effects.append(mgr)
-        enrage_mods: list[StatModifier | None] = [None for _ in foes]
-
-        # Mark battle as active to allow damage/heal processing
-        try:
-            from autofighter.stats import set_battle_active
-            set_battle_active(True)
-        except Exception:
-            pass
-        for member in combat_party.members:
-            mgr = EffectManager(member)
-            member.effect_manager = mgr
-
-        # Initialize a visual action queue for UI snapshots (mid-left action bar)
-        try:
-            q_entities = list(combat_party.members) + list(foes)
-            _visual_queue = ActionQueue(q_entities)
-        except Exception:
-            _visual_queue = None
-        set_visual_queue(_visual_queue)
-
-        # Start battle logging once before emitting any events so participants are captured
-        battle_logger = start_battle_logging()
-        try:
-            if battle_logger is not None:
-                battle_logger.summary.party_members = [m.id for m in combat_party.members]
-                battle_logger.summary.foes = [f.id for f in foes]
-                # Snapshot party relics present at battle start (id -> count)
-                relic_counts: dict[str, int] = {}
-                for rid in combat_party.relics:
-                    relic_counts[rid] = relic_counts.get(rid, 0) + 1
-                battle_logger.summary.party_relics = relic_counts
-        except Exception:
-            pass
 
         for f in foes:
             await BUS.emit_async("battle_start", f)
