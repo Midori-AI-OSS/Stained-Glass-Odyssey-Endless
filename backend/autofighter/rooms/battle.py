@@ -587,17 +587,42 @@ class BattleRoom(Room):
                         )
                         proceed = True if res is None else bool(res)
                     if getattr(member, "ultimate_ready", False) and hasattr(dt, "ultimate"):
-                        if hasattr(member, "use_ultimate") and member.use_ultimate():
-                            try:
-                                # Emit ultimate start event
-                                await BUS.emit_async("ultimate_used", member, None, 0, "ultimate", {"ultimate_type": getattr(member.damage_type, 'id', 'generic')})
-                                await dt.ultimate(member, combat_party.members, foes)
-                                # Emit ultimate end event
-                                await BUS.emit_async("ultimate_completed", member, None, 0, "ultimate", {"ultimate_type": getattr(member.damage_type, 'id', 'generic')})
-                            except Exception as e:
-                                # Emit ultimate failed event
-                                await BUS.emit_async("ultimate_failed", member, None, 0, "ultimate", {"ultimate_type": getattr(member.damage_type, 'id', 'generic'), "error": str(e)})
-                                pass
+                        try:
+                            # Emit ultimate start event
+                            await BUS.emit_async(
+                                "ultimate_used",
+                                member,
+                                None,
+                                0,
+                                "ultimate",
+                                {"ultimate_type": getattr(member.damage_type, "id", "generic")},
+                            )
+                            await dt.ultimate(member, combat_party.members, foes)
+                            # Emit ultimate end event
+                            await BUS.emit_async(
+                                "ultimate_completed",
+                                member,
+                                None,
+                                0,
+                                "ultimate",
+                                {"ultimate_type": getattr(member.damage_type, "id", "generic")},
+                            )
+                        except Exception as e:
+                            # Emit ultimate failed event
+                            await BUS.emit_async(
+                                "ultimate_failed",
+                                member,
+                                None,
+                                0,
+                                "ultimate",
+                                {
+                                    "ultimate_type": getattr(
+                                        member.damage_type, "id", "generic"
+                                    ),
+                                    "error": str(e),
+                                },
+                            )
+                            pass
                     if not proceed:
                         await BUS.emit_async("action_used", member, member, 0)
                         await registry.trigger("turn_end", member, party=combat_party.members, foes=foes)
@@ -863,17 +888,53 @@ class BattleRoom(Room):
                         res = await dt.on_action(acting_foe, foes, combat_party.members)
                         proceed = True if res is None else bool(res)
                     if getattr(acting_foe, "ultimate_ready", False) and hasattr(dt, "ultimate"):
-                        if hasattr(acting_foe, "use_ultimate") and acting_foe.use_ultimate():
-                            try:
-                                # Emit ultimate start event for foes
-                                await BUS.emit_async("ultimate_used", acting_foe, None, 0, "ultimate", {"ultimate_type": getattr(acting_foe.damage_type, 'id', 'generic'), "caster_type": "foe"})
-                                await dt.ultimate(acting_foe, foes, combat_party.members)
-                                # Emit ultimate end event for foes
-                                await BUS.emit_async("ultimate_completed", acting_foe, None, 0, "ultimate", {"ultimate_type": getattr(acting_foe.damage_type, 'id', 'generic'), "caster_type": "foe"})
-                            except Exception as e:
-                                # Emit ultimate failed event for foes
-                                await BUS.emit_async("ultimate_failed", acting_foe, None, 0, "ultimate", {"ultimate_type": getattr(acting_foe.damage_type, 'id', 'generic'), "caster_type": "foe", "error": str(e)})
-                                pass
+                        try:
+                            # Emit ultimate start event for foes
+                            await BUS.emit_async(
+                                "ultimate_used",
+                                acting_foe,
+                                None,
+                                0,
+                                "ultimate",
+                                {
+                                    "ultimate_type": getattr(
+                                        acting_foe.damage_type, "id", "generic"
+                                    ),
+                                    "caster_type": "foe",
+                                },
+                            )
+                            await dt.ultimate(acting_foe, foes, combat_party.members)
+                            # Emit ultimate end event for foes
+                            await BUS.emit_async(
+                                "ultimate_completed",
+                                acting_foe,
+                                None,
+                                0,
+                                "ultimate",
+                                {
+                                    "ultimate_type": getattr(
+                                        acting_foe.damage_type, "id", "generic"
+                                    ),
+                                    "caster_type": "foe",
+                                },
+                            )
+                        except Exception as e:
+                            # Emit ultimate failed event for foes
+                            await BUS.emit_async(
+                                "ultimate_failed",
+                                acting_foe,
+                                None,
+                                0,
+                                "ultimate",
+                                {
+                                    "ultimate_type": getattr(
+                                        acting_foe.damage_type, "id", "generic"
+                                    ),
+                                    "caster_type": "foe",
+                                    "error": str(e),
+                                },
+                            )
+                            pass
                     if not proceed:
                         await BUS.emit_async("action_used", acting_foe, acting_foe, 0)
                         acting_foe.add_ultimate_charge(acting_foe.actions_per_turn)
