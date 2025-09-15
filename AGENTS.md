@@ -59,7 +59,6 @@ The repository supports several contributor modes to clarify expectations and be
 
 **All contributors should regularly review and keep their mode cheat sheet in `.codex/notes/` up to date.**
 Refer to your mode's cheat sheet for quick reminders and update it as needed.
-For every task stub, prefix the request with the responsible role (e.g., ‘Task Master, …’, ‘Reviewer, …’, ‘Coder, …’).
 
 - **Task Master Mode** (`.codex/modes/TASKMASTER.md`)
 - **Coder Mode** (`.codex/modes/CODER.md`)
