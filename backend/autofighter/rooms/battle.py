@@ -373,7 +373,7 @@ class BattleRoom(Room):
             ent.action_points = ent.actions_per_turn
             for _ in range(max(0, ent.action_points - 1)):
                 try:
-                    BUS.emit("extra_turn", ent)
+                    await BUS.emit_async("extra_turn", ent)
                 except Exception:
                     pass
         if progress is not None:
@@ -461,7 +461,7 @@ class BattleRoom(Room):
                     member.action_points = member.actions_per_turn
                     for _ in range(max(0, member.action_points - 1)):
                         try:
-                            BUS.emit("extra_turn", member)
+                            await BUS.emit_async("extra_turn", member)
                         except Exception:
                             pass
                 safety = 0
