@@ -8,10 +8,10 @@ const materialsPanel = readFileSync(join(import.meta.dir, '../src/lib/components
 
 describe('inventory subcomponents', () => {
   test('CardView lists cards', () => {
-    expect(cardView).toContain('card-view');
+    expect(cardView).toContain('cards-grid');
   });
   test('RelicView lists relics', () => {
-    expect(relicView).toContain('relic-view');
+    expect(relicView).toContain('relics-grid');
   });
   test('MaterialsPanel shows materials grid', () => {
     expect(materialsPanel).toContain('materials-grid');
