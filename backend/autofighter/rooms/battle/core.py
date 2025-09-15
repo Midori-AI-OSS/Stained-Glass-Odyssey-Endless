@@ -16,7 +16,6 @@ from services.user_level_service import get_user_level
 
 from autofighter.cards import card_choices
 from autofighter.effects import EffectManager
-from autofighter.effects import create_stat_buff
 from autofighter.mapgen import MapNode
 from autofighter.relics import relic_choices
 from autofighter.summons.base import Summon
@@ -40,6 +39,13 @@ from .rewards import _pick_item_stars
 from .rewards import _pick_relic_stars
 from .rewards import _roll_relic_drop
 from .setup import setup_battle
+from .turns import EnrageState
+from .turns import apply_enrage_bleed
+from .turns import build_action_queue_snapshot
+from .turns import collect_summon_snapshots
+from .turns import dispatch_turn_end_snapshot
+from .turns import push_progress_update
+from .turns import update_enrage_state
 
 log = logging.getLogger(__name__)
 
@@ -97,65 +103,12 @@ class BattleRoom(Room):
             await BUS.emit_async("battle_start", member)
             await registry.trigger("battle_start", member, party=combat_party.members, foes=foes)
 
-        enrage_active = False
-        enrage_stacks = 0
-        enrage_bleed_applies = 0
+        threshold = ENRAGE_TURNS_BOSS if isinstance(self, BossRoom) else ENRAGE_TURNS_NORMAL
+        enrage_state = EnrageState(threshold=threshold)
         # Ensure enrage percent starts at 0 for this battle
         set_enrage_percent(0.0)
-        threshold = ENRAGE_TURNS_BOSS if isinstance(self, BossRoom) else ENRAGE_TURNS_NORMAL
         exp_reward = 0
         credited_foe_ids: set[str] = set()
-
-        def _collect_summons(
-            entities: list[Stats],
-        ) -> dict[str, list[dict[str, Any]]]:
-            snapshots: dict[str, list[dict[str, Any]]] = {}
-            for ent in entities:
-                if isinstance(ent, Summon):
-                    continue
-                sid = getattr(ent, "id", str(id(ent)))
-                for summon in SummonManager.get_summons(sid):
-                    snap = _serialize(summon)
-                    snap["owner_id"] = sid
-                    snapshots.setdefault(sid, []).append(snap)
-            return snapshots
-
-        def _queue_snapshot() -> list[dict[str, Any]]:
-            ordered = sorted(
-                combat_party.members + foes,
-                key=lambda c: getattr(c, "action_value", 0.0),
-            )
-            extras: list[dict[str, Any]] = []
-            for ent in ordered:
-                turns = _EXTRA_TURNS.get(id(ent), 0)
-                for _ in range(turns):
-                    extras.append(
-                        {
-                            "id": getattr(ent, "id", ""),
-                            "action_gauge": getattr(ent, "action_gauge", 0),
-                            "action_value": getattr(ent, "action_value", 0.0),
-                            "base_action_value": getattr(ent, "base_action_value", 0.0),
-                            "bonus": True,
-                        }
-                    )
-            return extras + [
-                {
-                    "id": getattr(c, "id", ""),
-                    "action_gauge": getattr(c, "action_gauge", 0),
-                    "action_value": getattr(c, "action_value", 0.0),
-                    "base_action_value": getattr(c, "base_action_value", 0.0),
-                }
-                for c in ordered
-            ]
-
-        def _advance_queue(actor: Stats) -> None:
-            """Advance the visual action queue using the provided actor."""
-            try:
-                if _visual_queue is None:
-                    return
-                _visual_queue.advance_with_actor(actor)
-            except Exception:
-                pass
 
         def _abort(other_id: str) -> None:
             msg = "concurrent battle detected"
@@ -217,60 +170,20 @@ class BattleRoom(Room):
                 except Exception:
                     pass
         if progress is not None:
-            await progress(
-                {
-                    "result": "battle",
-                    "party": [
-                        _serialize(m)
-                        for m in combat_party.members
-                        if not isinstance(m, Summon)
-                    ],
-                    "foes": [_serialize(f) for f in foes],
-                    "party_summons": _collect_summons(combat_party.members),
-                    "foe_summons": _collect_summons(foes),
-                    "enrage": {"active": False, "stacks": 0, "turns": 0},
-                    "rdr": temp_rdr,
-                    "action_queue": _queue_snapshot(),
-                    "active_id": None,
-                }
+            await push_progress_update(
+                progress,
+                combat_party.members,
+                foes,
+                enrage_state,
+                temp_rdr,
+                _EXTRA_TURNS,
+                active_id=None,
+                include_summon_foes=True,
             )
             try:
                 await asyncio.sleep(3)
             except Exception:
                 pass
-        async def _turn_end(actor: Stats) -> None:
-            """Advance the queue and emit a post-turn snapshot."""
-            try:
-                _advance_queue(actor)
-            except Exception:
-                return
-            if progress is not None:
-                await progress(
-                    {
-                        "result": "battle",
-                        "party": [
-                            _serialize(m)
-                            for m in combat_party.members
-                            if not isinstance(m, Summon)
-                        ],
-                        "foes": [
-                            _serialize(f)
-                            for f in foes
-                            if not isinstance(f, Summon)
-                        ],
-                        "party_summons": _collect_summons(combat_party.members),
-                        "foe_summons": _collect_summons(foes),
-                        "enrage": {
-                            "active": enrage_active,
-                            "stacks": enrage_stacks,
-                            "turns": enrage_stacks,
-                        },
-                        "rdr": temp_rdr,
-                        "action_queue": _queue_snapshot(),
-                        "active_id": actor.id,
-                    }
-                )
-
         while any(f.hp > 0 for f in foes) and any(
             m.hp > 0 for m in combat_party.members
         ):
@@ -293,42 +206,14 @@ class BattleRoom(Room):
                         await asyncio.sleep(0.001)
                         break
                     turn += 1
-                    if turn > threshold:
-                        if not enrage_active:
-                            enrage_active = True
-                            for f in foes:
-                                f.passives.append("Enraged")
-                            log.info("Enrage activated")
-                        new_stacks = turn - threshold
-                        # Make enrage much stronger: each stack adds +135% damage taken
-                        # and massive damage dealt bonuses.
-                        set_enrage_percent(1.35 * max(new_stacks, 0))
-                        mult = 1 + 2.0 * new_stacks
-                        for i, (f, mgr) in enumerate(zip(foes, foe_effects, strict=False)):
-                            if enrage_mods[i] is not None:
-                                enrage_mods[i].remove()
-                                try:
-                                    mgr.mods.remove(enrage_mods[i])
-                                    if enrage_mods[i].id in f.mods:
-                                        f.mods.remove(enrage_mods[i].id)
-                                except ValueError:
-                                    pass
-                            mod = create_stat_buff(f, name="enrage_atk", atk_mult=mult, turns=9999)
-                            mgr.add_modifier(mod)
-                            enrage_mods[i] = mod
-                        enrage_stacks = new_stacks
-                        if turn > 1000:
-                            turns_in_enrage = max(enrage_stacks, 0)
-                            extra_damage = 100 * turns_in_enrage
-                            for m in combat_party.members:
-                                if m.hp > 0 and extra_damage > 0:
-                                    await m.apply_damage(extra_damage)
-                            for f in foes:
-                                if f.hp > 0 and extra_damage > 0:
-                                    await f.apply_damage(extra_damage)
-                    else:
-                        # Not enraged yet; ensure percent is zero
-                        set_enrage_percent(0.0)
+                    await update_enrage_state(
+                        turn,
+                        enrage_state,
+                        foes,
+                        foe_effects,
+                        enrage_mods,
+                        combat_party.members,
+                    )
                     await registry.trigger("turn_start", member)
                     if run_id is not None:
                         for other_id, task in list(battle_tasks.items()):
@@ -341,7 +226,13 @@ class BattleRoom(Room):
                                     current_task.cancel()
                                 _abort(other_id)
                     # Also trigger the enhanced turn_start method with battle context
-                    await registry.trigger_turn_start(member, turn=turn, party=combat_party.members, foes=foes, enrage_active=enrage_active)
+                    await registry.trigger_turn_start(
+                        member,
+                        turn=turn,
+                        party=combat_party.members,
+                        foes=foes,
+                        enrage_active=enrage_state.active,
+                    )
                     # Emit BUS event for relics that subscribe to turn_start - async for better performance
                     await BUS.emit_async("turn_start", member)
                     log.debug("%s turn start", member.id)
@@ -428,28 +319,16 @@ class BattleRoom(Room):
                             _EXTRA_TURNS[id(member)] -= 1
                             await _pace(action_start)
                             continue
-                        if progress is not None:
-                            await progress(
-                                {
-                                    "result": "battle",
-                                    "party": [
-                                        _serialize(m)
-                                        for m in combat_party.members
-                                        if not isinstance(m, Summon)
-                                    ],
-                                    "foes": [_serialize(f) for f in foes],
-                                    "party_summons": _collect_summons(combat_party.members),
-                                    "foe_summons": _collect_summons(foes),
-                                    "enrage": {
-                                        "active": enrage_active,
-                                        "stacks": enrage_stacks,
-                                        "turns": enrage_stacks,
-                                    },
-                                    "rdr": temp_rdr,
-                                    "action_queue": _queue_snapshot(),
-                                    "active_id": member.id,
-                                }
-                            )
+                        await push_progress_update(
+                            progress,
+                            combat_party.members,
+                            foes,
+                            enrage_state,
+                            temp_rdr,
+                            _EXTRA_TURNS,
+                            active_id=member.id,
+                            include_summon_foes=True,
+                        )
                         await _pace(action_start)
                         await asyncio.sleep(0.001)
                         break
@@ -543,30 +422,12 @@ class BattleRoom(Room):
                     member.add_ultimate_charge(member.actions_per_turn)
                     for ally in combat_party.members:
                         ally.handle_ally_action(member)
-                    if enrage_active:
-                        turns_since_enrage = max(enrage_stacks, 0)
-                        next_trigger = (enrage_bleed_applies + 1) * 10
-                        if turns_since_enrage >= next_trigger:
-                            stacks_to_add = 1 + enrage_bleed_applies
-                            from autofighter.effects import DamageOverTime
-                            for member in combat_party.members:
-                                mgr = member.effect_manager
-                                for _ in range(stacks_to_add):
-                                    dmg_per_tick = int(max(mgr.stats.max_hp, 1) * 0.10)
-                                    mgr.add_dot(
-                                        DamageOverTime(
-                                            "Enrage Bleed", dmg_per_tick, 10, "enrage_bleed"
-                                        )
-                                    )
-                            for mgr, foe_obj in zip(foe_effects, foes, strict=False):
-                                for _ in range(stacks_to_add):
-                                    dmg_per_tick = int(max(foe_obj.max_hp, 1) * 0.10)
-                                    mgr.add_dot(
-                                        DamageOverTime(
-                                            "Enrage Bleed", dmg_per_tick, 10, "enrage_bleed"
-                                        )
-                                    )
-                            enrage_bleed_applies += 1
+                    await apply_enrage_bleed(
+                        enrage_state,
+                        combat_party.members,
+                        foes,
+                        foe_effects,
+                    )
                     await _credit_if_dead(tgt_foe)
                     _remove_dead_foes()
                     battle_over = not foes
@@ -582,30 +443,26 @@ class BattleRoom(Room):
                         await _pace(action_start)
                         await asyncio.sleep(0.001)
                         continue
-                    if progress is not None:
-                        await progress(
-                            {
-                                "result": "battle",
-                                "party": [
-                                    _serialize(m)
-                                    for m in combat_party.members
-                                    if not isinstance(m, Summon)
-                                ],
-                                "foes": [
-                                    _serialize(f)
-                                    for f in foes
-                                    if not isinstance(f, Summon)
-                                ],
-                                "party_summons": _collect_summons(combat_party.members),
-                                "foe_summons": _collect_summons(foes),
-                                "enrage": {"active": enrage_active, "stacks": enrage_stacks, "turns": enrage_stacks},
-                                "rdr": temp_rdr,
-                                "action_queue": _queue_snapshot(),
-                                "active_id": member.id,
-                            }
-                        )
+                    await push_progress_update(
+                        progress,
+                        combat_party.members,
+                        foes,
+                        enrage_state,
+                        temp_rdr,
+                        _EXTRA_TURNS,
+                        active_id=member.id,
+                    )
                     await _pace(action_start)
-                    await _turn_end(member)
+                    await dispatch_turn_end_snapshot(
+                        _visual_queue,
+                        progress,
+                        combat_party.members,
+                        foes,
+                        enrage_state,
+                        temp_rdr,
+                        _EXTRA_TURNS,
+                        member,
+                    )
                     await asyncio.sleep(2.2)
                     await asyncio.sleep(0.001)
                     if battle_over:
@@ -746,34 +603,26 @@ class BattleRoom(Room):
                             _EXTRA_TURNS[id(acting_foe)] -= 1
                             await _pace(action_start)
                             continue
-                        if progress is not None:
-                            await progress(
-                                {
-                                    "result": "battle",
-                                    "party": [
-                                        _serialize(m)
-                                        for m in combat_party.members
-                                        if not isinstance(m, Summon)
-                                    ],
-                                    "foes": [
-                                        _serialize(f)
-                                        for f in foes
-                                        if not isinstance(f, Summon)
-                                    ],
-                                    "party_summons": _collect_summons(combat_party.members),
-                                    "foe_summons": _collect_summons(foes),
-                                    "enrage": {
-                                        "active": enrage_active,
-                                        "stacks": enrage_stacks,
-                                        "turns": enrage_stacks,
-                                    },
-                                    "rdr": temp_rdr,
-                                    "action_queue": _queue_snapshot(),
-                                    "active_id": acting_foe.id,
-                                }
-                            )
+                        await push_progress_update(
+                            progress,
+                            combat_party.members,
+                            foes,
+                            enrage_state,
+                            temp_rdr,
+                            _EXTRA_TURNS,
+                            active_id=acting_foe.id,
+                        )
                         await _pace(action_start)
-                        await _turn_end(acting_foe)
+                        await dispatch_turn_end_snapshot(
+                            _visual_queue,
+                            progress,
+                            combat_party.members,
+                            foes,
+                            enrage_state,
+                            temp_rdr,
+                            _EXTRA_TURNS,
+                            acting_foe,
+                        )
                         await asyncio.sleep(2.2)
                         await asyncio.sleep(0.001)
                         break
@@ -831,34 +680,26 @@ class BattleRoom(Room):
                         await _pace(action_start)
                         await asyncio.sleep(0.001)
                         continue
-                    if progress is not None:
-                        await progress(
-                            {
-                                "result": "battle",
-                                "party": [
-                                    _serialize(m)
-                                    for m in combat_party.members
-                                    if not isinstance(m, Summon)
-                                ],
-                                "foes": [
-                                    _serialize(f)
-                                    for f in foes
-                                    if not isinstance(f, Summon)
-                                ],
-                                "party_summons": _collect_summons(combat_party.members),
-                                "foe_summons": _collect_summons(foes),
-                                "enrage": {
-                                    "active": enrage_active,
-                                    "stacks": enrage_stacks,
-                                    "turns": enrage_stacks,
-                                },
-                                "rdr": temp_rdr,
-                                "action_queue": _queue_snapshot(),
-                                "active_id": acting_foe.id,
-                            }
-                        )
+                    await push_progress_update(
+                        progress,
+                        combat_party.members,
+                        foes,
+                        enrage_state,
+                        temp_rdr,
+                        _EXTRA_TURNS,
+                        active_id=acting_foe.id,
+                    )
                     await _pace(action_start)
-                    await _turn_end(acting_foe)
+                    await dispatch_turn_end_snapshot(
+                        _visual_queue,
+                        progress,
+                        combat_party.members,
+                        foes,
+                        enrage_state,
+                        temp_rdr,
+                        _EXTRA_TURNS,
+                        acting_foe,
+                    )
                     await asyncio.sleep(2.2)
                     await asyncio.sleep(0.001)
                     if battle_over:
@@ -871,27 +712,15 @@ class BattleRoom(Room):
         # immediately, even before rewards are fully computed.
         if progress is not None:
             try:
-                await progress(
-                    {
-                        "result": "battle",
-                        "party": [
-                            _serialize(m)
-                            for m in combat_party.members
-                            if not isinstance(m, Summon)
-                        ],
-                        "foes": [
-                            _serialize(f)
-                            for f in foes
-                            if not isinstance(f, Summon)
-                        ],
-                        "party_summons": _collect_summons(combat_party.members),
-                        "foe_summons": _collect_summons(foes),
-                        "enrage": {"active": enrage_active, "stacks": enrage_stacks, "turns": enrage_stacks},
-                        "rdr": temp_rdr,
-                        "action_queue": _queue_snapshot(),
-                        "active_id": None,
-                        "ended": True,
-                    }
+                await push_progress_update(
+                    progress,
+                    combat_party.members,
+                    foes,
+                    enrage_state,
+                    temp_rdr,
+                    _EXTRA_TURNS,
+                    active_id=None,
+                    ended=True,
                 )
             except Exception:
                 pass
@@ -957,10 +786,21 @@ class BattleRoom(Room):
                 # Do not reapply global level buffs mid-run; buffs are fixed at run start.
             except Exception:
                 pass
-        party_data = [_serialize(p) for p in party.members]
-        foes_data = [_serialize(f) for f in foes]
-        party_summons = _collect_summons(party.members)
-        foe_summons = _collect_summons(foes)
+        party_data = await asyncio.to_thread(
+            lambda: [_serialize(p) for p in party.members]
+        )
+        foes_data = await asyncio.to_thread(
+            lambda: [_serialize(f) for f in foes]
+        )
+        party_summons, foe_summons = await asyncio.gather(
+            collect_summon_snapshots(party.members),
+            collect_summon_snapshots(foes),
+        )
+        action_queue_snapshot = await build_action_queue_snapshot(
+            party.members,
+            foes,
+            _EXTRA_TURNS,
+        )
         # Ensure summons and related tracking are cleared before exiting the battle
         SummonManager.cleanup()
         if all(m.hp <= 0 for m in combat_party.members):
@@ -984,9 +824,9 @@ class BattleRoom(Room):
                 "foe_summons": foe_summons,
                 "room_number": self.node.index,
                 "exp_reward": exp_reward,
-                "enrage": {"active": enrage_active, "stacks": enrage_stacks, "turns": enrage_stacks},
+                "enrage": enrage_state.as_payload(),
                 "rdr": temp_rdr,
-                "action_queue": _queue_snapshot(),
+                "action_queue": action_queue_snapshot,
                 "ended": True,
             }
         # Pick cards with per-item star rolls; ensure unique choices not already owned
@@ -1098,9 +938,9 @@ class BattleRoom(Room):
             "room_number": self.node.index,
             "battle_index": getattr(battle_logger, "battle_index", 0),
             "exp_reward": exp_reward,
-            "enrage": {"active": enrage_active, "stacks": enrage_stacks, "turns": enrage_stacks},
+            "enrage": enrage_state.as_payload(),
             "rdr": party.rdr,
-            "action_queue": _queue_snapshot(),
+            "action_queue": action_queue_snapshot,
             "ended": True,
         }
 
