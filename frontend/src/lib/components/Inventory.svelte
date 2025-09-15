@@ -3,8 +3,10 @@
   import { CreditCard, Gem, Hammer, Box, RotateCcw } from 'lucide-svelte';
   import { getCardCatalog, getRelicCatalog, getGacha } from '../systems/api.js';
   import { stackItems, formatName } from '../systems/craftingUtils.js';
-  import CardArt from './CardArt.svelte';
-  import CurioChoice from './CurioChoice.svelte';
+  import CardView from './inventory/CardView.svelte';
+  import RelicView from './inventory/RelicView.svelte';
+  import MaterialsPanel from './inventory/MaterialsPanel.svelte';
+  import { getMaterialIcon, onIconError } from '../systems/materialAssetLoader.js';
 
   export let cards = [];
   export let relics = [];
@@ -77,19 +79,27 @@
   $: relicEntries = count(relics || []);
   $: materialEntries = Object.entries(materials || {}); // [key, qty]
 
-  $: sortedCards = [...cardEntries].sort((a, b) => {
+  $: sortedCardEntries = [...cardEntries].sort((a, b) => {
     const [idA] = a; const [idB] = b;
     const s = cardStars(idB) - cardStars(idA);
     if (s !== 0) return s;
     return cardName(idA).localeCompare(cardName(idB));
   });
+  $: sortedCards = sortedCardEntries.map(([id, qty]) => [
+    { id, name: cardName(id), stars: cardStars(id), about: cardDesc(id) },
+    qty
+  ]);
 
-  $: sortedRelics = [...relicEntries].sort((a, b) => {
+  $: sortedRelicEntries = [...relicEntries].sort((a, b) => {
     const [idA] = a; const [idB] = b;
     const s = relicStars(idB) - relicStars(idA);
     if (s !== 0) return s;
     return relicName(idA).localeCompare(relicName(idB));
   });
+  $: sortedRelics = sortedRelicEntries.map(([id, qty]) => [
+    { id, name: relicName(id), stars: relicStars(id), about: relicDesc(id) },
+    qty
+  ]);
 
   // Get total counts
   $: cardCount = cards?.length || 0;
@@ -149,11 +159,11 @@
   // Set initial selection when data loads
   $: if (metaReady && !selectedItem) {
     if (activeTab === 'cards' && sortedCards.length > 0) {
-      const [id, qty] = sortedCards[0];
-      selectItem(id, 'card', qty);
+      const [entry, qty] = sortedCards[0];
+      selectItem(entry.id, 'card', qty);
     } else if (activeTab === 'relics' && sortedRelics.length > 0) {
-      const [id, qty] = sortedRelics[0];
-      selectItem(id, 'relic', qty);
+      const [entry, qty] = sortedRelics[0];
+      selectItem(entry.id, 'relic', qty);
     } else if (activeTab === 'materials' && materialEntries.length > 0) {
       const [id, qty] = materialEntries[0];
       selectItem(id, 'material', qty);
@@ -166,11 +176,11 @@
     selectedItem = null;
     // Auto-select first item in new tab
     if (tab === 'cards' && sortedCards.length > 0) {
-      const [id, qty] = sortedCards[0];
-      selectItem(id, 'card', qty);
+      const [entry, qty] = sortedCards[0];
+      selectItem(entry.id, 'card', qty);
     } else if (tab === 'relics' && sortedRelics.length > 0) {
-      const [id, qty] = sortedRelics[0];
-      selectItem(id, 'relic', qty);
+      const [entry, qty] = sortedRelics[0];
+      selectItem(entry.id, 'relic', qty);
     } else if (tab === 'materials' && materialEntries.length > 0) {
       const [id, qty] = materialEntries[0];
       selectItem(id, 'material', qty);
@@ -178,24 +188,6 @@
   };
 
   // Icons for materials
-  const rawIconModules = import.meta.glob('../assets/items/*/*.png', { eager: true, import: 'default', query: '?url' });
-  const iconModules = Object.fromEntries(Object.entries(rawIconModules).map(([path, src]) => [path, new URL(src, import.meta.url).href]));
-  const fallbackIcon = new URL('../assets/items/generic/generic1.png', import.meta.url).href;
-  function onIconError(event) { event.target.src = fallbackIcon; }
-  function getMaterialIcon(key) {
-    const [rawElement, rawRank] = String(key).split('_');
-    const element = String(rawElement || '').toLowerCase();
-    const rank = String(rawRank || '').replace(/[^0-9]/g, '') || '1';
-    const rankPath = `../assets/items/${element}/${rank}.png`;
-    if (iconModules[rankPath]) return iconModules[rankPath];
-    const elementPrefix = `../assets/items/${element}/`;
-    const elementKeys = Object.keys(iconModules).filter((p) => p.startsWith(elementPrefix));
-    const genericRankPath = `${elementPrefix}generic${rank}.png`;
-    if (iconModules[genericRankPath]) return iconModules[genericRankPath];
-    if (elementKeys.length > 0) return iconModules[elementKeys[0]];
-    const genericPath = `../assets/items/generic/generic${rank}.png`;
-    return iconModules[genericPath] || fallbackIcon;
-  }
 </script>
 
 <div class="star-rail-inventory">
@@ -239,54 +231,23 @@
     <!-- Left side: Item grid -->
     <div class="item-grid-container">
       {#if activeTab === 'cards'}
-        <div class="cards-grid">
-          {#each sortedCards as [id, qty]}
-            <button 
-              class="card-cell" 
-              class:selected={selectedItem?.id === id && selectedItem?.type === 'card'}
-              on:click={() => selectItem(id, 'card', qty)}
-              aria-label={`Select card ${cardName(id)}`}
-            >
-              <CardArt entry={{ id, name: cardName(id), stars: cardStars(id), about: cardDesc(id) }} type="card" />
-              {#if qty > 1}
-                <span class="qty-badge">×{qty}</span>
-              {/if}
-            </button>
-          {/each}
-        </div>
+        <CardView
+          cards={sortedCards}
+          select={selectItem}
+          selectedId={selectedItem?.type === 'card' ? selectedItem.id : null}
+        />
       {:else if activeTab === 'relics'}
-        <div class="relics-grid">
-          {#each sortedRelics as [id, qty]}
-            <div 
-              class="relic-cell" 
-              class:selected={selectedItem?.id === id && selectedItem?.type === 'relic'}
-              role="button"
-              tabindex="0"
-              on:click={() => selectItem(id, 'relic', qty)}
-              on:keydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectItem(id, 'relic', qty); } }}
-              aria-label={`Select relic ${relicName(id)}`}
-            >
-              <CurioChoice entry={{ id, name: relicName(id), stars: relicStars(id), about: relicDesc(id) }} disabled={true} />
-              <span class="relic-qty">×{qty}</span>
-            </div>
-          {/each}
-        </div>
+        <RelicView
+          relics={sortedRelics}
+          select={selectItem}
+          selectedId={selectedItem?.type === 'relic' ? selectedItem.id : null}
+        />
       {:else}
-        <div class="item-grid">
-          {#each materialEntries as [key, qty]}
-            <button 
-              class="grid-item material" 
-              class:selected={selectedItem?.id === key && selectedItem?.type === 'material'}
-              on:click={() => selectItem(key, 'material', qty)}
-              style={`--accent: ${getStarColor(parseInt(String(key).split('_')[1] || '1', 10))}`}
-            >
-              <div class="item-icon material">
-                <img src={getMaterialIcon(key)} alt={key} on:error={onIconError} />
-              </div>
-              <div class="material-qty">×{qty}</div>
-            </button>
-          {/each}
-        </div>
+        <MaterialsPanel
+          materials={materialEntries}
+          select={selectItem}
+          selectedId={selectedItem?.type === 'material' ? selectedItem.id : null}
+        />
       {/if}
     </div>
 

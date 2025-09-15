@@ -1,6 +1,7 @@
 <script>
   import { onMount, createEventDispatcher } from 'svelte';
   import FighterPortrait from '../battle/FighterPortrait.svelte';
+  import ReviewOverlay from './battle-review/ReviewOverlay.svelte';
   import RewardCard from './RewardCard.svelte';
   import CurioChoice from './CurioChoice.svelte';
   import { getElementColor, getDotImage, getDotElement } from '../systems/assetLoader.js';
@@ -426,12 +427,6 @@
     padding: 2px 4px;
   }
   .effects-block { display: flex; flex-direction: column; align-items: stretch; min-width: 8rem; }
-  .rewards {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.5rem;
-  }
   .effects-out { margin-top: 0.35rem; max-width: 320px; }
   .effects-section { margin-top: 0.25rem; }
   .effects-title { font-size: 0.72rem; color: #aaa; margin-bottom: 0.1rem; text-align: center; }
@@ -866,24 +861,6 @@
 
 <div class="layout review">
   
-  <div class="side rewards">
-    {#if cards.length}
-      <div class="reward-grid">
-        {#each cards.slice(0,3) as card, i (card.id)}
-          <RewardCard entry={card} type="card" on:select={handleSelect} />
-        {/each}
-      </div>
-    {/if}
-    {#if relics.length}
-      <div class="reward-grid">
-        {#each relics.slice(0,3) as relic, i (relic.id)}
-          <CurioChoice entry={relic} on:select={handleSelect} />
-        {/each}
-      </div>
-    {/if}
-  </div>
-  
-
   <!-- Top-level summary and raw events toggle -->
   <div class="side" style="grid-column: 1 / -1;">
     <div class="header">
@@ -962,8 +939,10 @@
                       <div class="damage-bar-amount">{fmt(damage)}</div>
                     </div>
                   {/each}
-                </div>
-              </div>
+  </div>
+</div>
+
+  <ReviewOverlay {summary} {cards} {relics} />
             {/if}
 
             <!-- Party vs Foe Damage Comparison -->

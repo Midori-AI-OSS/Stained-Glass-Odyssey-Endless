@@ -8,10 +8,12 @@
   import MenuPanel from './MenuPanel.svelte';
   import { getCatalogData } from '../systems/uiApi.js';
   import { getElementColor, getCharacterImage } from '../systems/assetLoader.js';
-  import PartyRoster from './PartyRoster.svelte';
   import PlayerPreview from './PlayerPreview.svelte';
   import { Circle } from 'lucide-svelte';
   import Spinner from './Spinner.svelte';
+  import PartyView from './combat-viewer/PartyView.svelte';
+  import FoeView from './combat-viewer/FoeView.svelte';
+  import HpStatus from './combat-viewer/HpStatus.svelte';
 
   export let party = [];
   export let foes = [];
@@ -325,10 +327,6 @@
   function handleClose() {
     dispatch('close');
   }
-
-  function selectCharacter(id) {
-    selectedCharacterId = id;
-  }
 </script>
 
 <MenuPanel>
@@ -339,28 +337,15 @@
     </div>
     
     <div class="viewer-content">
-      <!-- Left panel: Use PartyRoster styling (read-only) -->
       <div class="character-roster">
-        <div class="roster-section">
-          <h4 class="roster-title">Party</h4>
-          <PartyRoster
-            roster={viewerRoster.filter(r => r.is_player)}
-            selected={[selectedCharacterId].filter(Boolean)}
-            bind:previewId={selectedCharacterId}
-            reducedMotion={true}
-            on:toggle={() => { /* read-only: suppress */ }}
-          />
-        </div>
-        <div class="roster-section">
-          <h4 class="roster-title">Foes</h4>
-          <PartyRoster
-            roster={viewerRoster.filter(r => !r.is_player)}
-            selected={[selectedCharacterId].filter(Boolean)}
-            bind:previewId={selectedCharacterId}
-            reducedMotion={true}
-            on:toggle={() => { /* read-only: suppress */ }}
-          />
-        </div>
+        <PartyView
+          roster={viewerRoster.filter(r => r.is_player)}
+          bind:selectedId={selectedCharacterId}
+        />
+        <FoeView
+          roster={viewerRoster.filter(r => !r.is_player)}
+          bind:selectedId={selectedCharacterId}
+        />
       </div>
 
       <!-- Center panel: Big portrait (use PlayerPreview from Party menu) -->
@@ -374,10 +359,7 @@
           <div class="stats-grid">
             <div class="stat-section">
               <h4>Health</h4>
-              <div class="stat">
-                <label>HP:</label>
-                <span>{selectedCharacter.hp}/{selectedCharacter.max_hp || selectedCharacter.hp}</span>
-              </div>
+              <HpStatus hp={selectedCharacter.hp} maxHp={selectedCharacter.max_hp || selectedCharacter.hp} />
               {#if selectedCharacter.shields}
                 <div class="stat">
                   <label>Shield:</label>
