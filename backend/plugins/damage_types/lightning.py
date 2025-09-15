@@ -61,15 +61,17 @@ class Lightning(DamageTypeBase):
         actor._lightning_aftertaste_stacks = stacks
 
         if not hasattr(actor, "_lightning_aftertaste_handler"):
-            def _hit(atk, tgt, amount, *_args) -> None:
-                if atk is actor:
-                    from plugins.effects.aftertaste import Aftertaste
+            async def _hit(atk, tgt, amount, *_args) -> None:
+                if atk is not actor:
+                    return
 
-                    asyncio.create_task(
-                        Aftertaste(
-                            hits=getattr(actor, "_lightning_aftertaste_stacks", 0)
-                        ).apply(atk, tgt)
-                    )
+                hits = getattr(actor, "_lightning_aftertaste_stacks", 0)
+                if hits <= 0:
+                    return
+
+                from plugins.effects.aftertaste import Aftertaste
+
+                await Aftertaste(hits=hits).apply(atk, tgt)
 
             def _clear(_):
                 BUS.unsubscribe("hit_landed", _hit)
