@@ -6,9 +6,7 @@ from collections.abc import Callable
 import copy
 from dataclasses import dataclass
 import logging
-import queue
 import random
-import threading
 from typing import Any
 
 from battle_logging.writers import end_battle_logging
@@ -38,146 +36,37 @@ from ..stats import Stats
 from ..stats import calc_animation_time
 from ..stats import set_enrage_percent
 from . import Room
+from .battle_logging_queue import queue_log
+from .enrage_system import ENRAGE_TURNS_BOSS
+from .enrage_system import ENRAGE_TURNS_NORMAL
+from .enrage_system import clear_extra_turns
+from .enrage_system import consume_extra_turn
+from .enrage_system import get_extra_turns
+from .enrage_system import get_visual_queue
+from .enrage_system import grant_extra_turn
+from .enrage_system import set_visual_queue
+from .reward_calculator import apply_rdr_to_stars
+from .reward_calculator import calc_gold
+from .reward_calculator import pick_card_stars
+from .reward_calculator import pick_item_stars
+from .reward_calculator import pick_relic_stars
+from .reward_calculator import roll_relic_drop
 from .utils import _build_foes
 from .utils import _scale_stats
 from .utils import _serialize
 
 log = logging.getLogger(__name__)
 
-_COMBAT_LOG_QUEUE: "queue.Queue[tuple[str, tuple, dict]]" = queue.Queue()
-
-
-def _combat_log_worker() -> None:
-    while True:
-        message, args, kwargs = _COMBAT_LOG_QUEUE.get()
-        if message is None:
-            break
-        log.info(message, *args, **kwargs)
-        _COMBAT_LOG_QUEUE.task_done()
-
-
-_COMBAT_LOG_THREAD = threading.Thread(target=_combat_log_worker, daemon=True)
-_COMBAT_LOG_THREAD.start()
-
-
-def queue_log(message: str, *args, **kwargs) -> None:
-    _COMBAT_LOG_QUEUE.put((message, args, kwargs))
-
-ENRAGE_TURNS_NORMAL = 100
-ENRAGE_TURNS_BOSS = 500
-
 # Explicit pacing between combat actions (seconds)
 TURN_PACING = 0.5
 
-_EXTRA_TURNS: dict[int, int] = {}
-_VISUAL_QUEUE: ActionQueue | None = None
-
-
-def _grant_extra_turn(entity: Stats) -> None:
-    ident = id(entity)
-    _EXTRA_TURNS[ident] = _EXTRA_TURNS.get(ident, 0) + 1
-    try:
-        if _VISUAL_QUEUE is not None:
-            _VISUAL_QUEUE.grant_extra_turn(entity)
-    except Exception:
-        pass
-
-
-def _clear_extra_turns(_entity: Stats) -> None:
-    _EXTRA_TURNS.clear()
-    global _VISUAL_QUEUE
-    _VISUAL_QUEUE = None
-
-
-BUS.subscribe("extra_turn", _grant_extra_turn)
-BUS.subscribe("battle_end", _clear_extra_turns)
+BUS.subscribe("extra_turn", grant_extra_turn)
+BUS.subscribe("battle_end", clear_extra_turns)
 
 ELEMENTS = [e.lower() for e in ALL_DAMAGE_TYPES]
 
 
-def _pick_card_stars(room: Room) -> int:
-    """Determine the star rank for card rewards."""
-    roll = random.random()
-    if isinstance(room, BossRoom):
-        if roll < 0.60:
-            return 3
-        if roll < 0.85:
-            return 4
-        return 5
-    if isinstance(room, BattleRoom) and room.strength > 1.0:
-        if roll < 0.40:
-            return 1
-        if roll < 0.70:
-            return 2
-        if roll < 0.7015:
-            return 3
-        if roll < 0.7025:
-            return 4
-        return 5
-    return 1 if roll < 0.80 else 2
-
-
-def _roll_relic_drop(room: Room, rdr: float) -> bool:
-    """Check whether a relic drops based on room type and RDR."""
-    roll = random.random()
-    base = 0.5 if isinstance(room, BossRoom) else 0.1
-    return roll < min(base * rdr, 1.0)
-
-
-def _pick_item_stars(room: Room) -> int:
-    """Select upgrade item star rank based on room difficulty."""
-    node = room.node
-    if node.room_type == "battle-boss-floor":
-        low, high = 3, 4
-    elif isinstance(room, BossRoom) or getattr(room, "strength", 1.0) > 1.0:
-        low, high = 1, 3
-    else:
-        low, high = 1, 2
-    base = low + (node.floor - 1) // 20 + (node.loop - 1) + node.pressure // 10
-    return min(base, high)
-
-
-def _calc_gold(room: Room, rdr: float) -> int:
-    """Calculate gold reward for the room."""
-    node = room.node
-    if node.room_type == "battle-boss-floor":
-        base = 200
-        mult = random.uniform(2.05, 4.25)
-    elif isinstance(room, BossRoom) or getattr(room, "strength", 1.0) > 1.0:
-        base = 20
-        mult = random.uniform(1.53, 2.25)
-    else:
-        base = 5
-        mult = random.uniform(1.01, 1.25)
-    return int(base * node.loop * mult * rdr)
-
-
-def _pick_relic_stars(room: Room) -> int:
-    roll = random.random()
-    if isinstance(room, BossRoom):
-        if roll < 0.6:
-            return 3
-        if roll < 0.9:
-            return 4
-        return 5
-    if roll < 0.7:
-        return 1
-    if roll < 0.9:
-        return 2
-    return 3
-
-
-def _apply_rdr_to_stars(stars: int, rdr: float) -> int:
-    """Chance to upgrade stars with extreme `rdr` values."""
-    for threshold in (10.0, 10000.0):
-        if stars >= 5 or rdr < threshold:
-            break
-        chance = min(rdr / (threshold * 10.0), 0.99)
-        if random.random() < chance:
-            stars += 1
-        else:
-            break
-    return stars
+ELEMENTS = [e.lower() for e in ALL_DAMAGE_TYPES]
 
 
 @dataclass
@@ -248,8 +137,7 @@ class BattleRoom(Room):
             _visual_queue = ActionQueue(q_entities)
         except Exception:
             _visual_queue = None
-        global _VISUAL_QUEUE
-        _VISUAL_QUEUE = _visual_queue
+        set_visual_queue(_visual_queue)
 
         # Start battle logging once before emitting any events so participants are captured
         battle_logger = start_battle_logging()
@@ -308,7 +196,7 @@ class BattleRoom(Room):
             )
             extras: list[dict[str, Any]] = []
             for ent in ordered:
-                turns = _EXTRA_TURNS.get(id(ent), 0)
+                turns = get_extra_turns(ent)
                 for _ in range(turns):
                     extras.append(
                         {
@@ -332,9 +220,10 @@ class BattleRoom(Room):
         def _advance_queue(actor: Stats) -> None:
             """Advance the visual action queue using the provided actor."""
             try:
-                if _visual_queue is None:
+                visual_queue = get_visual_queue()
+                if visual_queue is None:
                     return
-                _visual_queue.advance_with_actor(actor)
+                visual_queue.advance_with_actor(actor)
             except Exception:
                 pass
 
@@ -626,8 +515,8 @@ class BattleRoom(Room):
                     if not proceed:
                         await BUS.emit_async("action_used", member, member, 0)
                         await registry.trigger("turn_end", member, party=combat_party.members, foes=foes)
-                        if _EXTRA_TURNS.get(id(member), 0) > 0 and member.hp > 0:
-                            _EXTRA_TURNS[id(member)] -= 1
+                        if get_extra_turns(member) > 0 and member.hp > 0:
+                            consume_extra_turn(member)
                             await _pace(action_start)
                             continue
                         if progress is not None:
@@ -776,11 +665,11 @@ class BattleRoom(Room):
                     await registry.trigger_turn_end(member)
                     member.action_points = max(0, member.action_points - 1)
                     if (
-                        _EXTRA_TURNS.get(id(member), 0) > 0
+                        get_extra_turns(member) > 0
                         and member.hp > 0
                         and not battle_over
                     ):
-                        _EXTRA_TURNS[id(member)] -= 1
+                        consume_extra_turn(member)
                         await _pace(action_start)
                         await asyncio.sleep(0.001)
                         continue
@@ -941,11 +830,11 @@ class BattleRoom(Room):
                         battle_over = not any(m.hp > 0 for m in combat_party.members)
                         await registry.trigger("turn_end", acting_foe, party=combat_party.members, foes=foes)
                         if (
-                            _EXTRA_TURNS.get(id(acting_foe), 0) > 0
+                            get_extra_turns(acting_foe) > 0
                             and acting_foe.hp > 0
                             and not battle_over
                         ):
-                            _EXTRA_TURNS[id(acting_foe)] -= 1
+                            consume_extra_turn(acting_foe)
                             await _pace(action_start)
                             continue
                         if progress is not None:
@@ -1025,11 +914,11 @@ class BattleRoom(Room):
                     await registry.trigger_turn_end(acting_foe)
                     acting_foe.action_points = max(0, acting_foe.action_points - 1)
                     if (
-                        _EXTRA_TURNS.get(id(acting_foe), 0) > 0
+                        get_extra_turns(acting_foe) > 0
                         and acting_foe.hp > 0
                         and not battle_over
                     ):
-                        _EXTRA_TURNS[id(acting_foe)] -= 1
+                        consume_extra_turn(acting_foe)
                         await _pace(action_start)
                         await asyncio.sleep(0.001)
                         continue
@@ -1198,8 +1087,8 @@ class BattleRoom(Room):
                  getattr(combat_party, 'cards', []), len(getattr(combat_party, 'cards', [])))
         while len(selected_cards) < 3 and attempts < 30:
             attempts += 1
-            base_stars = _pick_card_stars(self)
-            cstars = _apply_rdr_to_stars(base_stars, temp_rdr)
+            base_stars = pick_card_stars(self)
+            cstars = apply_rdr_to_stars(base_stars, temp_rdr)
             log.debug("Card selection attempt %d: base_stars=%d, rdr_stars=%d", attempts, base_stars, cstars)
             one = card_choices(combat_party, cstars, count=1)
             log.debug("  card_choices returned %d options", len(one))
@@ -1223,13 +1112,13 @@ class BattleRoom(Room):
             for c in selected_cards
         ]
         relic_opts = []
-        if _roll_relic_drop(self, temp_rdr):
+        if roll_relic_drop(self, temp_rdr):
             # Offer relics with per-item star rolls; ensure unique choices
             picked: list = []
             tries = 0
             while len(picked) < 3 and tries < 30:
                 tries += 1
-                rstars = _apply_rdr_to_stars(_pick_relic_stars(self), temp_rdr)
+                rstars = apply_rdr_to_stars(pick_relic_stars(self), temp_rdr)
                 one = relic_choices(combat_party, rstars, count=1)
                 if not one:
                     continue
@@ -1257,7 +1146,7 @@ class BattleRoom(Room):
             }
             for r in relic_opts
         ]
-        gold_reward = _calc_gold(self, temp_rdr)
+        gold_reward = calc_gold(self, temp_rdr)
         party.gold += gold_reward
         BUS.emit_batched("gold_earned", gold_reward)
         item_base = 1 * temp_rdr
@@ -1266,7 +1155,7 @@ class BattleRoom(Room):
         if random.random() < item_base - base_int:
             item_count += 1
         items = [
-            {"id": random.choice(ELEMENTS), "stars": _pick_item_stars(self)}
+            {"id": random.choice(ELEMENTS), "stars": pick_item_stars(self)}
             for _ in range(item_count)
         ]
         ticket_chance = 0.0005 * temp_rdr
