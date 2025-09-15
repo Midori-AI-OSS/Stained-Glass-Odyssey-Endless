@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import asyncio
+
 from autofighter.party import Party
 from autofighter.stats import apply_status_hooks
 
@@ -38,7 +40,7 @@ def get_user_level() -> int:
     return get_user_state()["level"]
 
 
-def gain_user_exp(amount: int) -> dict[str, int]:
+async def gain_user_exp(amount: int) -> dict[str, int]:
     if amount <= 0:
         return get_user_state()
     state = get_user_state()
@@ -49,6 +51,15 @@ def gain_user_exp(amount: int) -> dict[str, int]:
         exp -= next_exp
         level += 1
         next_exp = user_exp_to_level(level)
+    await _persist_user_state(level, exp)
+    return {"level": level, "exp": exp, "next_level_exp": next_exp}
+
+
+async def _persist_user_state(level: int, exp: int) -> None:
+    await asyncio.to_thread(_write_user_state, level, exp)
+
+
+def _write_user_state(level: int, exp: int) -> None:
     from game import get_save_manager
 
     with get_save_manager().connection() as conn:
@@ -60,7 +71,6 @@ def gain_user_exp(amount: int) -> dict[str, int]:
             "INSERT OR REPLACE INTO options (key, value) VALUES (?, ?)",
             ("user_exp", str(exp)),
         )
-    return {"level": level, "exp": exp, "next_level_exp": next_exp}
 
 
 def apply_user_level_to_party(party: Party) -> None:
