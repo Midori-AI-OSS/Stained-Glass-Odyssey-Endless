@@ -188,8 +188,10 @@ class BattleRoom(Room):
             _scale_stats(f, self.node, self.strength)
         foe = foes[0]
 
-        members = await asyncio.gather(
-            *(asyncio.to_thread(copy.deepcopy, m) for m in party.members)
+        members = list(
+            await asyncio.gather(
+                *(asyncio.to_thread(copy.deepcopy, m) for m in party.members)
+            )
         )
         combat_party = Party(
             members=members,
