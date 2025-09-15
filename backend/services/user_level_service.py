@@ -14,7 +14,7 @@ def user_exp_to_level(level: int) -> int:
 
 
 def get_user_state() -> dict[str, int]:
-    from game import get_save_manager
+    from runs.encryption import get_save_manager
 
     with get_save_manager().connection() as conn:
         conn.execute(
@@ -63,7 +63,7 @@ async def _persist_user_state(level: int, exp: int) -> None:
 
 
 def _write_user_state(level: int, exp: int) -> None:
-    from game import get_save_manager
+    from runs.encryption import get_save_manager
 
     with get_save_manager().connection() as conn:
         conn.execute(

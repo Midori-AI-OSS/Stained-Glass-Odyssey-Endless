@@ -1,4 +1,4 @@
-from battle_logging import BattleLogger
+from battle_logging.writers import BattleLogger
 import pytest
 
 from autofighter.stats import BUS

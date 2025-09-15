@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 import tempfile
 
-from battle_logging import RunLogger
+from battle_logging.writers import RunLogger
 import pytest
 
 from autofighter.party import Party

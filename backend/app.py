@@ -5,23 +5,6 @@ import logging
 import os
 import traceback
 
-from game import GachaManager  # noqa: F401  # re-export for tests
-from game import _apply_player_customization  # noqa: F401
-from game import _assign_damage_type  # noqa: F401
-from game import _describe_passives  # noqa: F401
-from game import _load_player_customization  # noqa: F401
-from game import _run_battle  # noqa: F401
-from game import _scale_stats  # noqa: F401
-from game import battle_snapshots  # noqa: F401
-from game import battle_tasks  # noqa: F401
-from game import cleanup_battle_state
-from game import get_fernet  # noqa: F401
-from game import get_save_manager  # noqa: F401
-from game import load_map  # noqa: F401
-from game import load_party  # noqa: F401
-from game import save_map  # noqa: F401
-from game import save_party  # noqa: F401
-
 # Import torch checker early to perform the one-time check
 from llms.torch_checker import is_torch_available
 from logging_config import configure_logging
@@ -38,7 +21,24 @@ from routes.performance import perf_bp as performance_bp
 from routes.players import bp as players_bp
 from routes.rewards import bp as rewards_bp
 from routes.ui import bp as ui_bp
+from runs.encryption import get_fernet  # noqa: F401
+from runs.encryption import get_save_manager  # noqa: F401
+from runs.lifecycle import _run_battle  # noqa: F401
+from runs.lifecycle import battle_snapshots  # noqa: F401
+from runs.lifecycle import battle_tasks  # noqa: F401
+from runs.lifecycle import cleanup_battle_state
+from runs.lifecycle import load_map  # noqa: F401
+from runs.lifecycle import save_map  # noqa: F401
+from runs.party_manager import _apply_player_customization  # noqa: F401
+from runs.party_manager import _assign_damage_type  # noqa: F401
+from runs.party_manager import _describe_passives  # noqa: F401
+from runs.party_manager import _load_player_customization  # noqa: F401
+from runs.party_manager import load_party  # noqa: F401
+from runs.party_manager import save_party  # noqa: F401
 from werkzeug.exceptions import HTTPException
+
+from autofighter.gacha import GachaManager  # noqa: F401  # re-export for tests
+from autofighter.rooms import _scale_stats  # noqa: F401
 
 configure_logging()
 

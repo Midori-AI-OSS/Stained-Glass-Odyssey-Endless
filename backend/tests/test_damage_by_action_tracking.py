@@ -6,8 +6,8 @@ import pytest
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from battle_logging import end_battle_logging
-from battle_logging import start_battle_logging
+from battle_logging.writers import end_battle_logging
+from battle_logging.writers import start_battle_logging
 
 from autofighter.mapgen import MapNode
 from autofighter.party import Party

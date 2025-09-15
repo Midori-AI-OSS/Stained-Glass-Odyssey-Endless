@@ -1,133 +1,20 @@
-"""Battle logging system for structured battle logs.
-
-Creates organized folder structure:
-/backend/logs/runs/{run_id}/battles/{battle_index}/raw/
-/backend/logs/runs/{run_id}/battles/{battle_index}/summary/
-"""
+"""Battle logging writers and helpers."""
 import asyncio
-from dataclasses import dataclass
-from dataclasses import field
 from datetime import datetime
 import json
 import logging
-from logging.handlers import MemoryHandler
 from logging.handlers import QueueHandler
-from logging.handlers import QueueListener
 from pathlib import Path
 import queue
 import threading
-from typing import Any
-from typing import Dict
-from typing import List
 from typing import Optional
 
 from autofighter.stats import BUS
 
-
-class TimedMemoryHandler(MemoryHandler):
-    """Memory handler that flushes to a target on a timed interval."""
-
-    def __init__(self, target: logging.Handler, flush_interval: float = 15.0, capacity: int = 1024):
-        super().__init__(capacity=capacity, target=target)
-        self.flush_interval = flush_interval
-        self._timer = threading.Timer(self.flush_interval, self.flush)
-        self._timer.daemon = True
-        self._timer.start()
-
-    def flush(self):
-        self.acquire()
-        try:
-            super().flush()
-            if not self._closed:
-                self._timer.cancel()
-                self._timer = threading.Timer(self.flush_interval, self.flush)
-                self._timer.daemon = True
-                self._timer.start()
-        finally:
-            self.release()
-
-    def close(self):
-        self._timer.cancel()
-        self.acquire()
-        try:
-            super().flush()
-        finally:
-            self.release()
-        super().close()
-
-
-class AsyncQueueListener(QueueListener):
-    """QueueListener that runs its worker thread as a daemon."""
-
-    def start(self) -> None:  # type: ignore[override]
-        thread = threading.Thread(target=self._monitor, daemon=True)
-        thread.start()
-        self._thread = thread
-
-
-@dataclass
-class BattleEvent:
-    """Represents a single battle event."""
-    timestamp: datetime
-    event_type: str
-    attacker_id: Optional[str]
-    target_id: Optional[str]
-    amount: Optional[int]
-    details: Dict[str, Any] = field(default_factory=dict)
-    source_type: Optional[str] = None  # attack, dot, hot, relic_effect, card_effect, etc.
-    source_name: Optional[str] = None  # specific relic/card/effect name
-    damage_type: Optional[str] = None  # fire, ice, light, etc.
-    effect_details: Dict[str, Any] = field(default_factory=dict)  # additional effect context
-
-
-@dataclass
-class BattleSummary:
-    """Summary statistics for a battle."""
-    battle_id: str
-    start_time: datetime
-    end_time: Optional[datetime]
-    result: str  # "victory", "defeat", "ongoing"
-    party_members: List[str]
-    foes: List[str]
-    total_damage_dealt: Dict[str, int] = field(default_factory=dict)
-    total_damage_taken: Dict[str, int] = field(default_factory=dict)
-    total_healing_done: Dict[str, int] = field(default_factory=dict)
-    total_hits_landed: Dict[str, int] = field(default_factory=dict)
-    events: List[BattleEvent] = field(default_factory=list)
-
-    # Enhanced tracking
-    damage_by_type: Dict[str, Dict[str, int]] = field(default_factory=dict)  # entity -> damage_type -> amount
-    damage_by_source: Dict[str, Dict[str, int]] = field(default_factory=dict)  # source_type -> entity -> amount
-    damage_by_action: Dict[str, Dict[str, int]] = field(default_factory=dict)  # entity -> action_name -> amount
-    healing_by_source: Dict[str, Dict[str, int]] = field(default_factory=dict)  # source_type -> entity -> amount
-    dot_damage: Dict[str, int] = field(default_factory=dict)  # entity -> total DoT damage dealt
-    hot_healing: Dict[str, int] = field(default_factory=dict)  # entity -> total HoT healing done
-    relic_effects: Dict[str, int] = field(default_factory=dict)  # relic_name -> trigger count
-    card_effects: Dict[str, int] = field(default_factory=dict)  # card_name -> trigger count
-    effect_applications: Dict[str, int] = field(default_factory=dict)  # effect_name -> application count
-    # Snapshot of party relics present during this battle (id -> count)
-    party_relics: Dict[str, int] = field(default_factory=dict)
-
-    # Extended healing tracking
-    shield_absorbed: Dict[str, int] = field(default_factory=dict)  # entity -> total shield absorption
-    temporary_hp_granted: Dict[str, int] = field(default_factory=dict)  # entity -> total temp HP granted
-    healing_prevented: Dict[str, int] = field(default_factory=dict)  # entity -> total healing prevented
-
-    # Critical hit tracking
-    critical_hits: Dict[str, int] = field(default_factory=dict)  # entity -> critical hit count
-    critical_damage: Dict[str, int] = field(default_factory=dict)  # entity -> total critical damage
-
-    # Resource tracking
-    resources_spent: Dict[str, Dict[str, int]] = field(default_factory=dict)  # entity -> resource_type -> amount
-    resources_gained: Dict[str, Dict[str, int]] = field(default_factory=dict)  # entity -> resource_type -> amount
-
-    # New tracking fields for enhanced combat logging
-    kills: Dict[str, int] = field(default_factory=dict)  # entity -> kill count
-    dot_kills: Dict[str, int] = field(default_factory=dict)  # entity -> DOT kill count
-    ultimates_used: Dict[str, int] = field(default_factory=dict)  # entity -> ultimate usage count
-    ultimate_failures: Dict[str, int] = field(default_factory=dict)  # entity -> ultimate failure count
-    self_damage: Dict[str, int] = field(default_factory=dict)  # entity -> damage dealt to self
-    friendly_fire: Dict[str, int] = field(default_factory=dict)  # entity -> damage dealt to allies
+from .handlers import AsyncQueueListener
+from .handlers import TimedMemoryHandler
+from .summary import BattleEvent
+from .summary import BattleSummary
 
 
 class BattleLogger:

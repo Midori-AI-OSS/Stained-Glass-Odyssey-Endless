@@ -11,10 +11,10 @@ import random
 import threading
 from typing import Any
 
-from battle_logging import end_battle_logging
+from battle_logging.writers import end_battle_logging
 
 # Import battle logging
-from battle_logging import start_battle_logging
+from battle_logging.writers import start_battle_logging
 from services.user_level_service import gain_user_exp
 from services.user_level_service import get_user_level
 
@@ -195,8 +195,8 @@ class BattleRoom(Room):
         foe: Stats | list[Stats] | None = None,
         run_id: str | None = None,
     ) -> dict[str, Any]:
-        from game import battle_snapshots
-        from game import battle_tasks
+        from runs.lifecycle import battle_snapshots
+        from runs.lifecycle import battle_tasks
 
         registry = PassiveRegistry()
         SummonManager.reset_all()

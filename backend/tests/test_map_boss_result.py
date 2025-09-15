@@ -5,8 +5,8 @@ from pathlib import Path
 import tempfile
 import time
 
-import game
-from game import get_save_manager
+from runs import encryption as enc
+from runs.encryption import get_save_manager
 from services.run_service import get_map
 
 
@@ -16,8 +16,8 @@ def test_get_map_returns_boss_for_awaiting_next_boss_room() -> None:
     try:
         original_db_url = os.environ.get("DATABASE_URL")
         os.environ["DATABASE_URL"] = f"sqlite:///{db_path}"
-        game.SAVE_MANAGER = None
-        game.FERNET = None
+        enc.SAVE_MANAGER = None
+        enc.FERNET = None
         manager = get_save_manager()
 
         run_id = f"test-boss-map-{int(time.time())}"
