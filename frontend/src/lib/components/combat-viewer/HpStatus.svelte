@@ -4,6 +4,9 @@
   export let maxHp = 1;
 </script>
 
-<div class="hp-status">
-  {Math.round(hpPercent(hp, maxHp) * 100)}%
+<div class="stat hp-status">
+  <label>HP:</label>
+  <span>
+    {hp}/{maxHp} ({Math.round(hpPercent(hp, maxHp) * 100)}%)
+  </span>
 </div>
