@@ -8,7 +8,6 @@
   import MenuPanel from './MenuPanel.svelte';
   import { getCatalogData } from '../systems/uiApi.js';
   import { getElementColor, getCharacterImage } from '../systems/assetLoader.js';
-  import PartyRoster from './PartyRoster.svelte';
   import PlayerPreview from './PlayerPreview.svelte';
   import { Circle } from 'lucide-svelte';
   import Spinner from './Spinner.svelte';
@@ -328,10 +327,6 @@
   function handleClose() {
     dispatch('close');
   }
-
-  function selectCharacter(id) {
-    selectedCharacterId = id;
-  }
 </script>
 
 <MenuPanel>
@@ -342,30 +337,15 @@
     </div>
     
     <div class="viewer-content">
-      <PartyView {party} />
-      <FoeView {foes} />
-      <!-- Left panel: Use PartyRoster styling (read-only) -->
       <div class="character-roster">
-        <div class="roster-section">
-          <h4 class="roster-title">Party</h4>
-          <PartyRoster
-            roster={viewerRoster.filter(r => r.is_player)}
-            selected={[selectedCharacterId].filter(Boolean)}
-            bind:previewId={selectedCharacterId}
-            reducedMotion={true}
-            on:toggle={() => { /* read-only: suppress */ }}
-          />
-        </div>
-        <div class="roster-section">
-          <h4 class="roster-title">Foes</h4>
-          <PartyRoster
-            roster={viewerRoster.filter(r => !r.is_player)}
-            selected={[selectedCharacterId].filter(Boolean)}
-            bind:previewId={selectedCharacterId}
-            reducedMotion={true}
-            on:toggle={() => { /* read-only: suppress */ }}
-          />
-        </div>
+        <PartyView
+          roster={viewerRoster.filter(r => r.is_player)}
+          bind:selectedId={selectedCharacterId}
+        />
+        <FoeView
+          roster={viewerRoster.filter(r => !r.is_player)}
+          bind:selectedId={selectedCharacterId}
+        />
       </div>
 
       <!-- Center panel: Big portrait (use PlayerPreview from Party menu) -->
