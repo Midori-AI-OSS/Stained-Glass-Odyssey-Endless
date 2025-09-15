@@ -24,7 +24,7 @@ def _scale_stats(obj: Stats, node: MapNode, strength: float = 1.0) -> None:
     """Scale foe stats based on room metadata.
 
     Foes grow stronger with cumulative room progression across floors, loop count, and user-set pressure.
-    Each floor adds 45 rooms worth of stat progression (rooms_per_floor from MapGenerator).
+    Each floor adds 10 rooms worth of stat progression (rooms_per_floor from MapGenerator).
     Small per-stat variation keeps battles from feeling identical.
     """
     from ..mapgen import MapGenerator
