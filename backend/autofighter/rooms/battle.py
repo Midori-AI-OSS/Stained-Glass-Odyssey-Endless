@@ -780,7 +780,7 @@ class BattleRoom(Room):
                     acting_foe.action_points = acting_foe.actions_per_turn
                     for _ in range(max(0, acting_foe.action_points - 1)):
                         try:
-                            BUS.emit("extra_turn", acting_foe)
+                            await BUS.emit_async("extra_turn", acting_foe)
                         except Exception:
                             pass
                 safety = 0
