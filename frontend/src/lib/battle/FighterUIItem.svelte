@@ -210,12 +210,12 @@
   }
 
   .element-change .fighter-portrait,
-  .element-change .ult-icon {
+  .element-change :global(.ult-icon) {
     animation: element-change 0.4s ease;
   }
 
   .element-wrapper.reduced .fighter-portrait,
-  .element-wrapper.reduced .ult-icon {
+  .element-wrapper.reduced :global(.ult-icon) {
     animation: none;
     transition: none;
   }
@@ -532,6 +532,7 @@
     display: grid;
     place-items: center;
   }
+  /* Keep gauge size consistent; only shrink the icon for summons */
   /* Soft faded-edge backdrop around the ult gauge */
   .ult-gauge::before {
     content: '';
@@ -568,7 +569,8 @@
     0%, 100% { transform: rotate(calc(var(--tilt, 0deg) * -1)); }
     50% { transform: rotate(var(--tilt, 0deg)); }
   }
-  .ult-icon {
+  /* Style the icon rendered by the child SVG component */
+  .ult-gauge :global(.ult-icon) {
     /* Centered by the parent grid; keep relative for stacking */
     position: relative;
     width: 80%;
@@ -585,8 +587,18 @@
     will-change: transform, opacity;
     animation: ult-icon-pulse var(--ult-icon-pulse-dur, 9s) ease-in-out var(--ult-icon-pulse-delay, 0s) infinite alternate;
   }
-  .ult-ready .ult-icon { opacity: 0.8; }
-  .ult-gauge.reduced .ult-icon {
+  /* Normal player portraits (bottom): slightly smaller icon for balance */
+  .modern-fighter-card.bottom .ult-gauge :global(.ult-icon) {
+    width: 60%;
+    height: 60%;
+  }
+  /* Summons render at medium size; shrink ult icon to 25% inside gauge */
+  .modern-fighter-card.medium .ult-gauge :global(.ult-icon) {
+    width: 25%;
+    height: 25%;
+  }
+  .ult-gauge.ult-ready :global(.ult-icon) { opacity: 0.8; }
+  .ult-gauge.reduced :global(.ult-icon) {
     animation: none !important;
   }
   @keyframes ult-icon-pulse {

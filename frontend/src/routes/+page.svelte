@@ -49,6 +49,20 @@
   // Prevent overlapping room fetches
   let enterRoomPending = false;
 
+  // Convert backend-provided party lists into a flat array of player IDs.
+  // Filters out summons and de-duplicates entries.
+  function normalizePartyIds(list) {
+    if (!Array.isArray(list)) return null;
+    const ids = [];
+    for (const item of list) {
+      const isSummon = typeof item === 'object' && (item?.summon_type || item?.type === 'summon' || item?.is_summon);
+      if (isSummon) continue;
+      const id = typeof item === 'string' ? item : (item?.id || item?.name || '');
+      if (id) ids.push(String(id));
+    }
+    return Array.from(new Set(ids));
+  }
+
   // Normalize status fields so downstream components can rely on
   // `passives`, `dots`, and `hots` arrays of objects on each fighter.
   function mapStatuses(snapshot) {
@@ -104,7 +118,7 @@
         
         // Use backend as source of truth for all state
         runId = saved.runId;
-        selectedParty = data.party || selectedParty;
+        selectedParty = normalizePartyIds(data.party) || selectedParty;
         mapRooms = data.map.rooms || [];
         
         // Use the enhanced current_state data from backend
@@ -185,7 +199,7 @@
       try {
         const data = await getMap(runId);
         if (data) {
-          selectedParty = data.party || selectedParty;
+          selectedParty = normalizePartyIds(data.party) || selectedParty;
           mapRooms = data.map.rooms || [];
           
           // Use backend's current_state as source of truth
@@ -344,7 +358,7 @@
       const data = await getMap(rid);
       if (!data) { backOverlay(); return; }
       runId = rid;
-      selectedParty = data.party || selectedParty;
+      selectedParty = normalizePartyIds(data.party) || selectedParty;
       mapRooms = data.map.rooms || [];
       currentIndex = data.map.current || 0;
       currentRoomType = mapRooms[currentIndex]?.room_type || '';
@@ -670,7 +684,7 @@
       }
 
       // Update state from backend (backend is source of truth)
-      selectedParty = data.party || selectedParty;
+      selectedParty = normalizePartyIds(data.party) || selectedParty;
       mapRooms = data.map.rooms || [];
       
       // Use backend's current_state as source of truth
@@ -756,7 +770,7 @@
         return;
       }
       if (data.party) {
-        selectedParty = data.party.map((p) => p.id);
+        selectedParty = normalizePartyIds(data.party) || selectedParty;
       }
       // Keep map-derived indices and current room type in sync when available
       if (typeof data.current_index === 'number') currentIndex = data.current_index;
@@ -1189,7 +1203,7 @@
         runId = uiState.active_run || '';
         if (uiState.game_state) {
           const gameState = uiState.game_state;
-          selectedParty = gameState.party || selectedParty;
+          selectedParty = normalizePartyIds(gameState.party) || selectedParty;
           mapRooms = gameState.map?.rooms || [];
           
           if (gameState.current_state) {

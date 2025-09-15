@@ -103,6 +103,28 @@
     reviewSummary = null;
   }
 
+  // Ensure Battle Review receives only true party members (exclude summons)
+  function filterPartyEntities(list) {
+    if (!Array.isArray(list)) return [];
+    return list.filter((e) => {
+      const obj = (e && typeof e === 'object') ? e : null;
+      return !(obj && (obj.summon_type || obj.type === 'summon' || obj.is_summon));
+    });
+  }
+  $: reviewPartyData = (() => {
+    let src = [];
+    if (battleSnapshot?.party && battleSnapshot.party.length) {
+      src = battleSnapshot.party;
+    } else if (roomData?.party && roomData.party.length) {
+      src = roomData.party;
+    } else if (Array.isArray(selectedParty) && selectedParty.length) {
+      // Fall back to the current selectedParty (ids only) to avoid pulling in
+      // backend summaries that might include summons.
+      src = selectedParty;
+    }
+    return filterPartyEntities(src);
+  })();
+
   // Hint to pause battle snapshot polling globally while rewards are open
   $: {
     try {
@@ -313,7 +335,7 @@
           runId={runId}
           battleIndex={roomData?.battle_index || 0}
           prefetchedSummary={reviewSummary}
-          partyData={(battleSnapshot?.party && battleSnapshot?.party.length) ? battleSnapshot.party : (roomData?.party || [])}
+          partyData={reviewPartyData}
           foeData={(battleSnapshot?.foes && battleSnapshot?.foes.length) ? battleSnapshot.foes : (roomData?.foes || [])}
           cards={[]}
           relics={[]}
