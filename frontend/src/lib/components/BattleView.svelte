@@ -200,8 +200,24 @@
       if (snap.enrage && differs(snap.enrage, enrage)) enrage = snap.enrage;
       
       if (snap.party) {
+        // Build a set of summon IDs owned by party members to avoid duplicating them
+        const partySummonIds = (() => {
+          const set = new Set();
+          try {
+            for (const list of partySummons.values()) {
+              for (const s of list) if (s?.id) set.add(s.id);
+            }
+          } catch {}
+          return set;
+        })();
+
         const prevById = new Map((party || []).map(p => [p.id, p]));
-        const enriched = (snap.party || []).map(m => {
+        const base = (snap.party || []).filter(m => {
+          const id = (typeof m === 'object' ? m?.id : m) || '';
+          const isSummon = typeof m === 'object' && (m?.summon_type || m?.type === 'summon' || m?.is_summon);
+          return id && !isSummon && !partySummonIds.has(id);
+        });
+        const enriched = base.map(m => {
           let elem =
             (Array.isArray(m.damage_types) && m.damage_types[0]) ||
             m.damage_type ||
