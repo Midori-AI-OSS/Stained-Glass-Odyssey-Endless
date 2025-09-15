@@ -3,7 +3,6 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Awaitable
 from collections.abc import Callable
-import copy
 from dataclasses import dataclass
 import logging
 import random
@@ -12,23 +11,18 @@ from typing import Any
 from battle_logging.writers import end_battle_logging
 
 # Import battle logging
-from battle_logging.writers import start_battle_logging
 from services.user_level_service import gain_user_exp
 from services.user_level_service import get_user_level
 
-from autofighter.cards import apply_cards
 from autofighter.cards import card_choices
 from autofighter.effects import EffectManager
-from autofighter.effects import StatModifier
 from autofighter.effects import create_stat_buff
 from autofighter.mapgen import MapNode
-from autofighter.relics import apply_relics
 from autofighter.relics import relic_choices
 from autofighter.summons.base import Summon
 from autofighter.summons.manager import SummonManager
 from plugins.damage_types import ALL_DAMAGE_TYPES
 
-from ..action_queue import ActionQueue
 from ..party import Party
 from ..passives import PassiveRegistry
 from ..stats import BUS
@@ -37,14 +31,20 @@ from ..stats import calc_animation_time
 from ..stats import set_enrage_percent
 from . import Room
 from .battle_logging_queue import queue_log
-from .enrage_system import ENRAGE_TURNS_BOSS
-from .enrage_system import ENRAGE_TURNS_NORMAL
+from .battle_setup import collect_summons
+from .battle_setup import create_queue_snapshot
+from .battle_setup import emit_battle_start_events
+from .battle_setup import setup_battle_logging
+from .battle_setup import setup_battle_state
+from .battle_setup import setup_battle_variables
+from .battle_setup import setup_combat_party
+from .battle_setup import setup_effect_managers
+from .battle_setup import setup_visual_queue
 from .enrage_system import clear_extra_turns
 from .enrage_system import consume_extra_turn
 from .enrage_system import get_extra_turns
 from .enrage_system import get_visual_queue
 from .enrage_system import grant_extra_turn
-from .enrage_system import set_visual_queue
 from .reward_calculator import apply_rdr_to_stars
 from .reward_calculator import calc_gold
 from .reward_calculator import pick_card_stars
@@ -98,124 +98,34 @@ class BattleRoom(Room):
             _scale_stats(f, self.node, self.strength)
         foe = foes[0]
 
-        members = list(
-            await asyncio.gather(
-                *(asyncio.to_thread(copy.deepcopy, m) for m in party.members)
-            )
-        )
-        combat_party = Party(
-            members=members,
-            gold=party.gold,
-            relics=party.relics,
-            cards=party.cards,
-            rdr=party.rdr,
-        )
-        await apply_cards(combat_party)
-        await asyncio.to_thread(apply_relics, combat_party)
+        # Setup combat party and apply cards/relics
+        combat_party = await setup_combat_party(party)
         party.rdr = combat_party.rdr
 
-        foe_effects = []
-        for f in foes:
-            mgr = EffectManager(f)
-            f.effect_manager = mgr
-            foe_effects.append(mgr)
-        enrage_mods: list[StatModifier | None] = [None for _ in foes]
+        # Setup effect managers for all entities
+        foe_effects, enrage_mods = setup_effect_managers(combat_party, foes)
 
-        # Mark battle as active to allow damage/heal processing
-        try:
-            from autofighter.stats import set_battle_active
-            set_battle_active(True)
-        except Exception:
-            pass
-        for member in combat_party.members:
-            mgr = EffectManager(member)
-            member.effect_manager = mgr
+        # Setup battle state
+        setup_battle_state()
+        setup_visual_queue(combat_party, foes)
 
-        # Initialize a visual action queue for UI snapshots (mid-left action bar)
-        try:
-            q_entities = list(combat_party.members) + list(foes)
-            _visual_queue = ActionQueue(q_entities)
-        except Exception:
-            _visual_queue = None
-        set_visual_queue(_visual_queue)
+        # Initialize battle logging
+        battle_logger = setup_battle_logging(combat_party, foes)
 
-        # Start battle logging once before emitting any events so participants are captured
-        battle_logger = start_battle_logging()
-        try:
-            if battle_logger is not None:
-                battle_logger.summary.party_members = [m.id for m in combat_party.members]
-                battle_logger.summary.foes = [f.id for f in foes]
-                # Snapshot party relics present at battle start (id -> count)
-                relic_counts: dict[str, int] = {}
-                for rid in combat_party.relics:
-                    relic_counts[rid] = relic_counts.get(rid, 0) + 1
-                battle_logger.summary.party_relics = relic_counts
-        except Exception:
-            pass
+        # Emit battle start events
+        await emit_battle_start_events(combat_party, foes, registry)
 
-        for f in foes:
-            await BUS.emit_async("battle_start", f)
-            await registry.trigger("battle_start", f, party=combat_party.members, foes=foes)
+        # Setup battle variables
+        (
+            enrage_active,
+            enrage_stacks,
+            enrage_bleed_applies,
+            threshold,
+            exp_reward,
+            credited_foe_ids,
+        ) = setup_battle_variables(self)
 
-        log.info(
-            "Battle start: %s vs %s",
-            [f.id for f in foes],
-            [m.id for m in combat_party.members],
-        )
-        for member in combat_party.members:
-            await BUS.emit_async("battle_start", member)
-            await registry.trigger("battle_start", member, party=combat_party.members, foes=foes)
-
-        enrage_active = False
-        enrage_stacks = 0
-        enrage_bleed_applies = 0
-        # Ensure enrage percent starts at 0 for this battle
-        set_enrage_percent(0.0)
-        threshold = ENRAGE_TURNS_BOSS if isinstance(self, BossRoom) else ENRAGE_TURNS_NORMAL
-        exp_reward = 0
-        credited_foe_ids: set[str] = set()
-
-        def _collect_summons(
-            entities: list[Stats],
-        ) -> dict[str, list[dict[str, Any]]]:
-            snapshots: dict[str, list[dict[str, Any]]] = {}
-            for ent in entities:
-                if isinstance(ent, Summon):
-                    continue
-                sid = getattr(ent, "id", str(id(ent)))
-                for summon in SummonManager.get_summons(sid):
-                    snap = _serialize(summon)
-                    snap["owner_id"] = sid
-                    snapshots.setdefault(sid, []).append(snap)
-            return snapshots
-
-        def _queue_snapshot() -> list[dict[str, Any]]:
-            ordered = sorted(
-                combat_party.members + foes,
-                key=lambda c: getattr(c, "action_value", 0.0),
-            )
-            extras: list[dict[str, Any]] = []
-            for ent in ordered:
-                turns = get_extra_turns(ent)
-                for _ in range(turns):
-                    extras.append(
-                        {
-                            "id": getattr(ent, "id", ""),
-                            "action_gauge": getattr(ent, "action_gauge", 0),
-                            "action_value": getattr(ent, "action_value", 0.0),
-                            "base_action_value": getattr(ent, "base_action_value", 0.0),
-                            "bonus": True,
-                        }
-                    )
-            return extras + [
-                {
-                    "id": getattr(c, "id", ""),
-                    "action_gauge": getattr(c, "action_gauge", 0),
-                    "action_value": getattr(c, "action_value", 0.0),
-                    "base_action_value": getattr(c, "base_action_value", 0.0),
-                }
-                for c in ordered
-            ]
+        temp_rdr = party.rdr
 
         def _advance_queue(actor: Stats) -> None:
             """Advance the visual action queue using the provided actor."""
@@ -296,11 +206,11 @@ class BattleRoom(Room):
                         if not isinstance(m, Summon)
                     ],
                     "foes": [_serialize(f) for f in foes],
-                    "party_summons": _collect_summons(combat_party.members),
-                    "foe_summons": _collect_summons(foes),
+                    "party_summons": collect_summons(combat_party.members),
+                    "foe_summons": collect_summons(foes),
                     "enrage": {"active": False, "stacks": 0, "turns": 0},
                     "rdr": temp_rdr,
-                    "action_queue": _queue_snapshot(),
+                    "action_queue": create_queue_snapshot(combat_party, foes),
                     "active_id": None,
                 }
             )
@@ -349,15 +259,15 @@ class BattleRoom(Room):
                             for f in foes
                             if not isinstance(f, Summon)
                         ],
-                        "party_summons": _collect_summons(combat_party.members),
-                        "foe_summons": _collect_summons(foes),
+                        "party_summons": collect_summons(combat_party.members),
+                        "foe_summons": collect_summons(foes),
                         "enrage": {
                             "active": enrage_active,
                             "stacks": enrage_stacks,
                             "turns": enrage_stacks,
                         },
                         "rdr": temp_rdr,
-                        "action_queue": _queue_snapshot(),
+                        "action_queue": create_queue_snapshot(combat_party, foes),
                         "active_id": actor.id,
                     }
                 )
@@ -529,15 +439,15 @@ class BattleRoom(Room):
                                         if not isinstance(m, Summon)
                                     ],
                                     "foes": [_serialize(f) for f in foes],
-                                    "party_summons": _collect_summons(combat_party.members),
-                                    "foe_summons": _collect_summons(foes),
+                                    "party_summons": collect_summons(combat_party.members),
+                                    "foe_summons": collect_summons(foes),
                                     "enrage": {
                                         "active": enrage_active,
                                         "stacks": enrage_stacks,
                                         "turns": enrage_stacks,
                                     },
                                     "rdr": temp_rdr,
-                                    "action_queue": _queue_snapshot(),
+                                    "action_queue": create_queue_snapshot(combat_party, foes),
                                     "active_id": member.id,
                                 }
                             )
@@ -687,11 +597,11 @@ class BattleRoom(Room):
                                     for f in foes
                                     if not isinstance(f, Summon)
                                 ],
-                                "party_summons": _collect_summons(combat_party.members),
-                                "foe_summons": _collect_summons(foes),
+                                "party_summons": collect_summons(combat_party.members),
+                                "foe_summons": collect_summons(foes),
                                 "enrage": {"active": enrage_active, "stacks": enrage_stacks, "turns": enrage_stacks},
                                 "rdr": temp_rdr,
-                                "action_queue": _queue_snapshot(),
+                                "action_queue": create_queue_snapshot(combat_party, foes),
                                 "active_id": member.id,
                             }
                         )
@@ -851,15 +761,15 @@ class BattleRoom(Room):
                                         for f in foes
                                         if not isinstance(f, Summon)
                                     ],
-                                    "party_summons": _collect_summons(combat_party.members),
-                                    "foe_summons": _collect_summons(foes),
+                                    "party_summons": collect_summons(combat_party.members),
+                                    "foe_summons": collect_summons(foes),
                                     "enrage": {
                                         "active": enrage_active,
                                         "stacks": enrage_stacks,
                                         "turns": enrage_stacks,
                                     },
                                     "rdr": temp_rdr,
-                                    "action_queue": _queue_snapshot(),
+                                    "action_queue": create_queue_snapshot(combat_party, foes),
                                     "active_id": acting_foe.id,
                                 }
                             )
@@ -936,15 +846,15 @@ class BattleRoom(Room):
                                     for f in foes
                                     if not isinstance(f, Summon)
                                 ],
-                                "party_summons": _collect_summons(combat_party.members),
-                                "foe_summons": _collect_summons(foes),
+                                "party_summons": collect_summons(combat_party.members),
+                                "foe_summons": collect_summons(foes),
                                 "enrage": {
                                     "active": enrage_active,
                                     "stacks": enrage_stacks,
                                     "turns": enrage_stacks,
                                 },
                                 "rdr": temp_rdr,
-                                "action_queue": _queue_snapshot(),
+                                "action_queue": create_queue_snapshot(combat_party, foes),
                                 "active_id": acting_foe.id,
                             }
                         )
@@ -975,11 +885,11 @@ class BattleRoom(Room):
                             for f in foes
                             if not isinstance(f, Summon)
                         ],
-                        "party_summons": _collect_summons(combat_party.members),
-                        "foe_summons": _collect_summons(foes),
+                        "party_summons": collect_summons(combat_party.members),
+                        "foe_summons": collect_summons(foes),
                         "enrage": {"active": enrage_active, "stacks": enrage_stacks, "turns": enrage_stacks},
                         "rdr": temp_rdr,
-                        "action_queue": _queue_snapshot(),
+                        "action_queue": create_queue_snapshot(combat_party, foes),
                         "active_id": None,
                         "ended": True,
                     }
@@ -1050,8 +960,8 @@ class BattleRoom(Room):
                 pass
         party_data = [_serialize(p) for p in party.members]
         foes_data = [_serialize(f) for f in foes]
-        party_summons = _collect_summons(party.members)
-        foe_summons = _collect_summons(foes)
+        party_summons = collect_summons(party.members)
+        foe_summons = collect_summons(foes)
         # Ensure summons and related tracking are cleared before exiting the battle
         SummonManager.cleanup()
         if all(m.hp <= 0 for m in combat_party.members):
@@ -1077,7 +987,7 @@ class BattleRoom(Room):
                 "exp_reward": exp_reward,
                 "enrage": {"active": enrage_active, "stacks": enrage_stacks, "turns": enrage_stacks},
                 "rdr": temp_rdr,
-                "action_queue": _queue_snapshot(),
+                "action_queue": create_queue_snapshot(combat_party, foes),
                 "ended": True,
             }
         # Pick cards with per-item star rolls; ensure unique choices not already owned
@@ -1191,9 +1101,8 @@ class BattleRoom(Room):
             "exp_reward": exp_reward,
             "enrage": {"active": enrage_active, "stacks": enrage_stacks, "turns": enrage_stacks},
             "rdr": party.rdr,
-            "action_queue": _queue_snapshot(),
+            "action_queue": create_queue_snapshot(combat_party, foes),
             "ended": True,
         }
 
 
-from .boss import BossRoom  # noqa: E402  # imported for isinstance checks
