@@ -1,6 +1,6 @@
 """Test damage by action tracking for battle review."""
-from battle_logging import end_battle_logging
-from battle_logging import start_battle_logging
+from battle_logging.writers import end_battle_logging
+from battle_logging.writers import start_battle_logging
 import pytest
 
 from autofighter.stats import Stats

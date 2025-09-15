@@ -10,20 +10,20 @@ import pytest
 
 sys.path.append(str(Path(__file__).parent.parent))
 
-import game
-from game import get_save_manager
+from runs import encryption as enc
+from runs.encryption import get_save_manager
 
 
 @pytest.fixture(autouse=True)
 def reset_globals():
     """Reset global state before and after each test."""
-    original_save_manager = game.SAVE_MANAGER
-    original_fernet = game.FERNET
-    game.SAVE_MANAGER = None
-    game.FERNET = None
+    original_save_manager = enc.SAVE_MANAGER
+    original_fernet = enc.FERNET
+    enc.SAVE_MANAGER = None
+    enc.FERNET = None
     yield
-    game.SAVE_MANAGER = original_save_manager
-    game.FERNET = original_fernet
+    enc.SAVE_MANAGER = original_save_manager
+    enc.FERNET = original_fernet
 
 
 def test_run_persistence_across_restart():
@@ -39,8 +39,8 @@ def test_run_persistence_across_restart():
         os.environ['DATABASE_URL'] = f'sqlite:///{db_path}'
 
         # Reset global state to force re-initialization
-        game.SAVE_MANAGER = None
-        game.FERNET = None
+        enc.SAVE_MANAGER = None
+        enc.FERNET = None
 
         # Get save manager (this will create the database)
         manager1 = get_save_manager()
@@ -80,8 +80,8 @@ def test_run_persistence_across_restart():
             assert row[0] == run_id
 
         # Simulate backend restart by resetting global state
-        game.SAVE_MANAGER = None
-        game.FERNET = None
+        enc.SAVE_MANAGER = None
+        enc.FERNET = None
 
         # Get save manager again (simulating new backend instance)
         manager2 = get_save_manager()
@@ -127,8 +127,8 @@ def test_get_map_endpoint_after_restart():
         os.environ['DATABASE_URL'] = f'sqlite:///{db_path}'
 
         # Reset global state to force re-initialization
-        game.SAVE_MANAGER = None
-        game.FERNET = None
+        enc.SAVE_MANAGER = None
+        enc.FERNET = None
 
         # Get save manager (this will create the database)
         manager1 = get_save_manager()
@@ -161,8 +161,8 @@ def test_get_map_endpoint_after_restart():
             )
 
         # Simulate backend restart
-        game.SAVE_MANAGER = None
-        game.FERNET = None
+        enc.SAVE_MANAGER = None
+        enc.FERNET = None
 
         # Test the get_map endpoint
         async def test_endpoint():
@@ -201,8 +201,8 @@ def test_enhanced_map_endpoint_current_state():
         os.environ['DATABASE_URL'] = f'sqlite:///{db_path}'
 
         # Reset global state
-        game.SAVE_MANAGER = None
-        game.FERNET = None
+        enc.SAVE_MANAGER = None
+        enc.FERNET = None
 
         # Get save manager
         manager = get_save_manager()
@@ -292,8 +292,8 @@ def test_enhanced_map_endpoint_with_awaiting_next():
         os.environ['DATABASE_URL'] = f'sqlite:///{db_path}'
 
         # Reset global state
-        game.SAVE_MANAGER = None
-        game.FERNET = None
+        enc.SAVE_MANAGER = None
+        enc.FERNET = None
 
         # Get save manager
         manager = get_save_manager()
@@ -374,8 +374,8 @@ def test_run_not_found():
         os.environ['DATABASE_URL'] = f'sqlite:///{db_path}'
 
         # Reset global state
-        game.SAVE_MANAGER = None
-        game.FERNET = None
+        enc.SAVE_MANAGER = None
+        enc.FERNET = None
 
         # Initialize empty database
         get_save_manager()

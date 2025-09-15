@@ -7,16 +7,16 @@ from pathlib import Path
 import random
 from uuid import uuid4
 
-from battle_logging import start_run_logging
-from game import _assign_damage_type
-from game import _describe_passives
-from game import _load_player_customization
-from game import battle_snapshots
-from game import battle_tasks
-from game import get_fernet
-from game import get_save_manager
-from game import load_map
-from game import save_map
+from battle_logging.writers import start_run_logging
+from runs.encryption import get_fernet
+from runs.encryption import get_save_manager
+from runs.lifecycle import battle_snapshots
+from runs.lifecycle import battle_tasks
+from runs.lifecycle import load_map
+from runs.lifecycle import save_map
+from runs.party_manager import _assign_damage_type
+from runs.party_manager import _describe_passives
+from runs.party_manager import _load_player_customization
 
 from autofighter.mapgen import MapGenerator
 from plugins import players as player_plugins
@@ -145,7 +145,7 @@ async def start_run(
 
 async def get_map(run_id: str) -> dict[str, object]:
     try:
-        from battle_logging import get_current_run_logger  # local import
+        from battle_logging.writers import get_current_run_logger  # local import
         logger = get_current_run_logger()
         if logger is None or getattr(logger, "run_id", None) != run_id:
             start_run_logging(run_id)

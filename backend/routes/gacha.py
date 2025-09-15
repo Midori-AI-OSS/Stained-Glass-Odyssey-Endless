@@ -3,10 +3,10 @@ from __future__ import annotations
 import asyncio
 from dataclasses import asdict
 
-from game import get_save_manager
 from quart import Blueprint
 from quart import jsonify
 from quart import request
+from runs.encryption import get_save_manager
 
 from autofighter.gacha import GachaManager
 

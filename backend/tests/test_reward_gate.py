@@ -23,8 +23,8 @@ def app_with_db(tmp_path, monkeypatch):
 
 @pytest.mark.asyncio
 async def test_advance_room_requires_reward_selection(app_with_db):
-    from game import load_map
-    from game import save_map
+    from runs.lifecycle import load_map
+    from runs.lifecycle import save_map
 
     app = app_with_db
     client = app.test_client()
