@@ -9,7 +9,9 @@ run_test() {
   local cmd="$1"
   local name="$2"
 
-  timeout 15 bash -c "$cmd"
+  # Use bash -lc so the command runs in a login shell and its stdout/stderr
+  # are streamed to the current terminal (pytest -s will disable capture).
+  timeout 15 bash -lc "$cmd"
   local result=$?
 
   if [ $result -eq 124 ]; then
