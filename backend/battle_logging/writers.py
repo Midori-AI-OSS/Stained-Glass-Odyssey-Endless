@@ -34,7 +34,8 @@ class BattleLogger:
 
         # Create folder structure
         if base_logs_path is None:
-            base_logs_path = Path(__file__).resolve().parent / "logs"
+            # Default logs directory to backend/logs to match API readers
+            base_logs_path = Path(__file__).resolve().parents[1] / "logs"
         self.base_path = base_logs_path / "runs" / run_id / "battles" / str(battle_index)
         self.raw_path = self.base_path / "raw"
         self.summary_path = self.base_path / "summary"
@@ -1017,7 +1018,8 @@ class RunLogger:
 
         # Create run folder
         if base_logs_path is None:
-            base_logs_path = Path(__file__).resolve().parent / "logs"
+            # Default logs directory to backend/logs to match API readers
+            base_logs_path = Path(__file__).resolve().parents[1] / "logs"
         self.run_path = base_logs_path / "runs" / run_id
         self.run_path.mkdir(parents=True, exist_ok=True)
         # Determine next battle index by scanning existing battle folders (survive restarts)

@@ -257,16 +257,11 @@ async def advance_room(run_id: str) -> dict[str, object]:
 
 
 async def get_battle_summary(run_id: str, index: int) -> dict[str, object] | None:
-    summary_path = (
-        Path(__file__).resolve().parents[1]
-        / "logs"
-        / "runs"
-        / run_id
-        / "battles"
-        / str(index)
-        / "summary"
-        / "battle_summary.json"
-    )
+    base = Path(__file__).resolve().parents[1]
+    primary = base / "logs" / "runs" / run_id / "battles" / str(index) / "summary" / "battle_summary.json"
+    # Backward-compat: older writers used backend/battle_logging/logs
+    fallback = base / "battle_logging" / "logs" / "runs" / run_id / "battles" / str(index) / "summary" / "battle_summary.json"
+    summary_path = primary if primary.exists() else fallback
     if not summary_path.exists():
         return None
     data = await asyncio.to_thread(summary_path.read_text)
@@ -274,16 +269,11 @@ async def get_battle_summary(run_id: str, index: int) -> dict[str, object] | Non
 
 
 async def get_battle_events(run_id: str, index: int) -> dict[str, object] | None:
-    events_path = (
-        Path(__file__).resolve().parents[1]
-        / "logs"
-        / "runs"
-        / run_id
-        / "battles"
-        / str(index)
-        / "summary"
-        / "events.json"
-    )
+    base = Path(__file__).resolve().parents[1]
+    primary = base / "logs" / "runs" / run_id / "battles" / str(index) / "summary" / "events.json"
+    # Backward-compat: older writers used backend/battle_logging/logs
+    fallback = base / "battle_logging" / "logs" / "runs" / run_id / "battles" / str(index) / "summary" / "events.json"
+    events_path = primary if primary.exists() else fallback
     if not events_path.exists():
         return None
     data = await asyncio.to_thread(events_path.read_text)
