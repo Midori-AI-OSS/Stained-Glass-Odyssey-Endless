@@ -1,6 +1,7 @@
 """Battle setup helpers for :mod:`autofighter.rooms.battle`."""
 from __future__ import annotations
 
+import asyncio
 import copy
 from dataclasses import dataclass
 from typing import Sequence
@@ -40,12 +41,22 @@ class BattleSetupResult:
 async def _clone_members(members: Sequence[Stats]) -> list[Stats]:
     """Create deep copies of party members for combat."""
 
-    return [copy.deepcopy(member) for member in members]
+    def _copy_members() -> list[Stats]:
+        return [copy.deepcopy(member) for member in members]
+
+    return await asyncio.to_thread(_copy_members)
 
 
 async def _apply_relics_async(party: Party) -> None:
     """Asynchronously apply relic effects to a party."""
 
+    # `apply_relics` relies on `safe_async_task` to schedule follow-up coroutine
+    # work on the running event loop. When executed inside ``asyncio.to_thread``
+    # there is no active loop, so the helper falls back to spinning up a
+    # temporary loop via ``asyncio.run``. That temporary loop is torn down as
+    # soon as the coroutine returns, cancelling any batched bus emissions (for
+    # example, healing notifications). Keep the call on the main loop so that
+    # relic effects continue to dispatch their async side effects.
     apply_relics(party)
 
 
