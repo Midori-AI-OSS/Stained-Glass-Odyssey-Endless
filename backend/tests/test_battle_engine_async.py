@@ -6,10 +6,9 @@ import pytest
 from autofighter.mapgen import MapNode
 from autofighter.party import Party
 from autofighter.rooms.battle.core import BattleRoom
+import autofighter.rooms.battle.engine as engine
 from autofighter.stats import Stats
 from plugins.players.player import Player
-
-import autofighter.rooms.battle.engine as engine
 
 
 @pytest.mark.asyncio

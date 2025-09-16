@@ -14,7 +14,6 @@ from .. import Room
 from .engine import run_battle
 from .setup import setup_battle
 
-
 ENRAGE_TURNS_NORMAL = 100
 ENRAGE_TURNS_BOSS = 500
 
