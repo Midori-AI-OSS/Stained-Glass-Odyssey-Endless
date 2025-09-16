@@ -143,6 +143,7 @@
     display: inline-block;
     vertical-align: middle;
     color: rgba(255, 255, 255, 0.9);
+    overflow: visible; /* allow larger mute icon to extend beyond dot */
   }
   .dot-selector button.mute {
     display: inline-flex;
