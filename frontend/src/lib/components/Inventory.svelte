@@ -80,27 +80,41 @@
   $: relicEntries = count(relics || []);
   $: materialEntries = Object.entries(materials || {}); // [key, qty]
 
-  $: sortedCardEntries = [...cardEntries].sort((a, b) => {
-    const [idA] = a; const [idB] = b;
-    const s = cardStars(idB) - cardStars(idA);
-    if (s !== 0) return s;
-    return cardName(idA).localeCompare(cardName(idB));
-  });
-  $: sortedCards = sortedCardEntries.map(([id, qty]) => [
-    { id, name: cardName(id), stars: cardStars(id), about: cardDesc(id) },
-    qty
-  ]);
+  // Recompute when cardMeta changes so descriptions populate once catalog loads
+  $: sortedCardEntries = (() => {
+    const _dep = cardMeta; // dependency anchor
+    return [...cardEntries].sort((a, b) => {
+      const [idA] = a; const [idB] = b;
+      const s = cardStars(idB) - cardStars(idA);
+      if (s !== 0) return s;
+      return cardName(idA).localeCompare(cardName(idB));
+    });
+  })();
+  $: sortedCards = (() => {
+    const _dep = cardMeta; // dependency anchor
+    return sortedCardEntries.map(([id, qty]) => [
+      { id, name: cardName(id), stars: cardStars(id), about: cardDesc(id) },
+      qty
+    ]);
+  })();
 
-  $: sortedRelicEntries = [...relicEntries].sort((a, b) => {
-    const [idA] = a; const [idB] = b;
-    const s = relicStars(idB) - relicStars(idA);
-    if (s !== 0) return s;
-    return relicName(idA).localeCompare(relicName(idB));
-  });
-  $: sortedRelics = sortedRelicEntries.map(([id, qty]) => [
-    { id, name: relicName(id), stars: relicStars(id), about: relicDesc(id) },
-    qty
-  ]);
+  // Recompute when relicMeta changes so descriptions populate once catalog loads
+  $: sortedRelicEntries = (() => {
+    const _dep = relicMeta; // dependency anchor
+    return [...relicEntries].sort((a, b) => {
+      const [idA] = a; const [idB] = b;
+      const s = relicStars(idB) - relicStars(idA);
+      if (s !== 0) return s;
+      return relicName(idA).localeCompare(relicName(idB));
+    });
+  })();
+  $: sortedRelics = (() => {
+    const _dep = relicMeta; // dependency anchor
+    return sortedRelicEntries.map(([id, qty]) => [
+      { id, name: relicName(id), stars: relicStars(id), about: relicDesc(id) },
+      qty
+    ]);
+  })();
 
   // Get total counts
   $: cardCount = cards?.length || 0;
