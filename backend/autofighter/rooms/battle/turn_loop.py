@@ -16,6 +16,8 @@ from autofighter.summons.manager import SummonManager
 from .logging import queue_log
 from .pacing import _EXTRA_TURNS
 from .pacing import _pace
+from .turn_helpers import credit_if_dead
+from .turn_helpers import remove_dead_foes
 from .turns import EnrageState
 from .turns import apply_enrage_bleed
 from .turns import dispatch_turn_end_snapshot
@@ -51,44 +53,12 @@ async def run_turn_loop(
     """Execute the asynchronous turn processing loop."""
 
     credited_foe_ids: set[str] = set()
-
-    async def _credit_if_dead(foe_obj: Any) -> None:
-        nonlocal exp_reward, temp_rdr
-        try:
-            foe_id = getattr(foe_obj, "id", None)
-            if getattr(foe_obj, "hp", 1) <= 0 and foe_id and foe_id not in credited_foe_ids:
-                await BUS.emit_async(
-                    "entity_killed",
-                    foe_obj,
-                    None,
-                    0,
-                    "death",
-                    {"victim_type": "foe", "killer_type": "party"},
-                )
-                exp_reward += foe_obj.level * 12 + 5 * room.node.index
-                temp_rdr += 0.55
-                credited_foe_ids.add(foe_id)
-                try:
-                    label = (
-                        getattr(foe_obj, "name", None)
-                        or getattr(foe_obj, "id", "")
-                    ).lower()
-                    if "slime" in label:
-                        for member in combat_party.members:
-                            member.exp_multiplier += 0.025
-                        for member in party.members:
-                            member.exp_multiplier += 0.025
-                except Exception:
-                    pass
-        except Exception:
-            pass
-
-    def _remove_dead_foes() -> None:
-        for index in range(len(foes) - 1, -1, -1):
-            if getattr(foes[index], "hp", 1) <= 0:
-                foes.pop(index)
-                foe_effects.pop(index)
-                enrage_mods.pop(index)
+    credit_kwargs = {
+        "credited_foe_ids": credited_foe_ids,
+        "combat_party": combat_party,
+        "party": party,
+        "room": room,
+    }
 
     turn = 0
 
@@ -188,8 +158,17 @@ async def run_turn_loop(
                 damage_type = getattr(member, "damage_type", None)
                 await member_effect.tick(target_manager)
                 for foe_obj in foes:
-                    await _credit_if_dead(foe_obj)
-                _remove_dead_foes()
+                    exp_reward, temp_rdr = await credit_if_dead(
+                        foe_obj=foe_obj,
+                        exp_reward=exp_reward,
+                        temp_rdr=temp_rdr,
+                        **credit_kwargs,
+                    )
+                remove_dead_foes(
+                    foes=foes,
+                    foe_effects=foe_effects,
+                    enrage_mods=enrage_mods,
+                )
                 if not foes:
                     break
                 if member.hp <= 0:
@@ -383,8 +362,17 @@ async def run_turn_loop(
                                 foes=foes,
                             )
                         foe_effects[extra_index].maybe_inflict_dot(member, extra_damage)
-                        await _credit_if_dead(extra_foe)
-                        _remove_dead_foes()
+                        exp_reward, temp_rdr = await credit_if_dead(
+                            foe_obj=extra_foe,
+                            exp_reward=exp_reward,
+                            temp_rdr=temp_rdr,
+                            **credit_kwargs,
+                        )
+                        remove_dead_foes(
+                            foes=foes,
+                            foe_effects=foe_effects,
+                            enrage_mods=enrage_mods,
+                        )
                         if not foes:
                             break
                 await BUS.emit_async("action_used", member, target_foe, damage)
@@ -435,8 +423,17 @@ async def run_turn_loop(
                     foes,
                     foe_effects,
                 )
-                await _credit_if_dead(target_foe)
-                _remove_dead_foes()
+                exp_reward, temp_rdr = await credit_if_dead(
+                    foe_obj=target_foe,
+                    exp_reward=exp_reward,
+                    temp_rdr=temp_rdr,
+                    **credit_kwargs,
+                )
+                remove_dead_foes(
+                    foes=foes,
+                    foe_effects=foe_effects,
+                    enrage_mods=enrage_mods,
+                )
                 battle_over = not foes
                 await registry.trigger(
                     "turn_end",
@@ -539,7 +536,12 @@ async def run_turn_loop(
                 damage_type = getattr(acting_foe, "damage_type", None)
                 await foe_manager.tick(target_effect)
                 for foe_obj in foes:
-                    await _credit_if_dead(foe_obj)
+                    exp_reward, temp_rdr = await credit_if_dead(
+                        foe_obj=foe_obj,
+                        exp_reward=exp_reward,
+                        temp_rdr=temp_rdr,
+                        **credit_kwargs,
+                    )
                 if all(foe_obj.hp <= 0 for foe_obj in foes):
                     break
                 if acting_foe.hp <= 0:
@@ -773,7 +775,11 @@ async def run_turn_loop(
                 if battle_over:
                     break
                 break
-        _remove_dead_foes()
+        remove_dead_foes(
+            foes=foes,
+            foe_effects=foe_effects,
+            enrage_mods=enrage_mods,
+        )
         if not foes:
             break
 
