@@ -1,5 +1,5 @@
 <script>
-  import { Power, Timer } from 'lucide-svelte';
+  import { Power, Timer, Bot, ListOrdered } from 'lucide-svelte';
   import DotSelector from './DotSelector.svelte';
   import Tooltip from './Tooltip.svelte';
 
@@ -11,6 +11,7 @@
   export let showActionValues = false;
   export let fullIdleMode = false;
   export let animationSpeed = DEFAULT_ANIMATION_SPEED;
+  export let baseTurnPacing = 0.5;
   export let scheduleSave;
   export let handleEndRun;
   export let endingRun = false;
@@ -68,6 +69,15 @@
     return numeric.toFixed(1);
   })();
 
+  // Show the effective pacing as seconds in the label: (Xs)
+  $: turnSeconds = (() => {
+    const base = Number(baseTurnPacing);
+    const norm = normalizedSpeed(animationSpeed);
+    const b = Number.isFinite(base) && base > 0 ? base : 0.5;
+    const s = b / (norm || 1);
+    return (Math.max(0.01, s)).toFixed(2);
+  })();
+
   function handleSpeedChange() {
     const nextSpeed = dotsToSpeed(dotSpeed);
     if (!Number.isFinite(nextSpeed)) return;
@@ -83,7 +93,7 @@
   <div class="control">
     <div class="control-left">
       <Tooltip text="Display numeric action values in the turn order.">
-        <span class="label">Show Action Values</span>
+        <span class="label"><ListOrdered /> Show Action Values</span>
       </Tooltip>
     </div>
     <div class="control-right">
@@ -93,7 +103,7 @@
   <div class="control">
     <div class="control-left">
       <Tooltip text="Automate rewards and room progression.">
-        <span class="label">Full Idle Mode</span>
+        <span class="label"><Bot /> Full Idle Mode</span>
       </Tooltip>
     </div>
     <div class="control-right">
@@ -103,7 +113,7 @@
   <div class="control">
     <div class="control-left">
       <Tooltip text="Scale battle animation pacing. Higher is faster.">
-        <span class="label"><Timer /> Animation Speed</span>
+        <span class="label"><Timer /> Animation Speed ({turnSeconds}s)</span>
       </Tooltip>
     </div>
     <div class="control-right">
@@ -112,9 +122,9 @@
         on:change={handleSpeedChange}
         zeroAriaLabel={zeroSpeedLabel}
         zeroContent={ZERO_DOT_CONTENT}
+        muteAsIcon={false}
         formatStepAriaLabel={formatSpeedStepLabel}
       />
-      <span class="value" aria-live="polite">{displaySpeed}×</span>
     </div>
   </div>
   <div class="control">

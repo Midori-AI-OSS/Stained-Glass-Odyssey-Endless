@@ -342,6 +342,7 @@
       bind:showActionValues
       bind:fullIdleMode
       bind:animationSpeed
+      baseTurnPacing={resolvedBaseTurnPacing()}
       {scheduleSave}
       {handleEndRun}
       {endingRun}

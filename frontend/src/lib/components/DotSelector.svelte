@@ -1,9 +1,14 @@
 <script>
   import { createEventDispatcher, onMount } from 'svelte';
+  import { VolumeX } from 'lucide-svelte';
   export let value = 50;
   export let includeZero = true;
   export let zeroAriaLabel = 'Mute';
-  export let zeroContent = '✕';
+  // If not provided, we render a mute icon by default
+  export let zeroContent = null;
+  // When true, the zero/mute button is rendered as an icon that replaces the dot.
+  // When false, the zero button is styled like a normal dot.
+  export let muteAsIcon = true;
   const defaultStepAriaLabel = (index) => `${(index + 1) * 10}%`;
   export let formatStepAriaLabel = defaultStepAriaLabel;
   const dispatch = createEventDispatcher();
@@ -57,19 +62,24 @@
 <div class="dot-selector-wrap" bind:this={wrapEl}>
   <div class="dot-arrow" style={`transform: translateX(${arrowX}px) translateX(-50%)`}/>
   <div class="dot-selector">
-    {#if includeZero}
-      <button
-        type="button"
-        class="mute"
-        class:selected={Number(value) <= 0}
-        aria-label={zeroAriaLabel}
-        data-dot="0"
-        on:click={() => select(0)}
-      >
-        {zeroContent}
-      </button>
-    {/if}
     <div class="dot-steps">
+      {#if includeZero}
+        <button
+          type="button"
+          class="mute"
+          class:mute-as-icon={muteAsIcon}
+          class:selected={Number(value) <= 0}
+          aria-label={zeroAriaLabel}
+          data-dot="0"
+          on:click={() => select(0)}
+        >
+          {#if zeroContent !== null}
+            {zeroContent}
+          {:else}
+            <VolumeX />
+          {/if}
+        </button>
+      {/if}
       {#each Array(10) as _, i}
         <button
           type="button"
@@ -104,7 +114,7 @@
   .dot-selector {
     display: flex;
     width: 100%;
-    gap: 0.5rem; /* small gap between mute and steps */
+    gap: 0; /* mute is integrated as the first dot */
     align-items: center;
     min-width: 0;
   }
@@ -138,17 +148,30 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    font-size: 0.55rem; /* show the X */
+    font-size: 0; /* icon provides its own size */
     line-height: 0;
     width: 0.6rem;
     height: 0.6rem;
     border-radius: 50%;
     padding: 0 !important;
-    border-width: 1px;
+  }
+  .dot-selector button.mute.mute-as-icon {
+    border-width: 0; /* remove circle to visually replace the dot */
+    border-color: transparent;
+    background: transparent; /* show only the mute icon */
   }
   .dot-selector button.selected {
     background: #fff;
     color: #000;
     border-color: #fff;
+  }
+  .dot-selector button.mute.mute-as-icon.selected {
+    background: transparent;
+    border-color: transparent;
+    color: rgba(255, 255, 255, 0.9);
+  }
+  .dot-selector button.mute.mute-as-icon svg {
+    width: 1rem; /* noticeably larger than standard dot */
+    height: 1rem;
   }
 </style>

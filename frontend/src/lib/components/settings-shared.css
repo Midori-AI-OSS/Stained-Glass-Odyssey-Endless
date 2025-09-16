@@ -49,6 +49,13 @@
   white-space: nowrap; /* keep label in one line so divider sits after text */
 }
 
+/* Add a subtle divider between leading icon and text labels */
+.settings-panel .label > svg {
+  margin-right: 0.2rem;
+  padding-right: 0.4rem;
+  border-right: 1px solid rgba(255,255,255,0.35);
+}
+
 .settings-panel .value {
   font-size: 0.8rem;
   min-width: 2.6rem;
