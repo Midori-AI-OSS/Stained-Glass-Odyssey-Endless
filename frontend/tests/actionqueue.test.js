@@ -23,4 +23,9 @@ describe('Settings menu toggle', () => {
     expect(content).toContain('Full Idle Mode');
     expect(content).toContain('bind:checked={fullIdleMode}');
   });
+  test('includes Animation Speed slider', () => {
+    expect(content).toContain('Animation Speed');
+    expect(content).toContain('type="range"');
+    expect(content).toContain('value={animationSpeed}');
+  });
 });
