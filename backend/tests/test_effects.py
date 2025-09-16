@@ -3,6 +3,7 @@ import pytest
 import autofighter.effects as effects
 from autofighter.effects import EffectManager
 from autofighter.stats import Stats
+from autofighter.stats import set_battle_active
 from plugins.damage_types.fire import Fire
 from plugins.event_bus import EventBus
 
@@ -88,6 +89,65 @@ async def test_hot_ticks_before_dot():
     bus.unsubscribe("heal_received", _heal)
     assert events == [("heal", 10), ("dmg", 1)]
     assert target.hp == 99
+
+
+@pytest.mark.asyncio
+async def test_hot_minimum_tick_healing():
+    bus = EventBus()
+    heal_amounts = []
+
+    def _hot_tick(_healer, _target, amount, *_):
+        heal_amounts.append(amount)
+
+    bus.subscribe("hot_tick", _hot_tick)
+
+    target = Stats()
+    target.set_base_stat('max_hp', 10)
+    target.hp = 5
+    manager = EffectManager(target)
+    healer = Stats()
+
+    manager.add_hot(effects.HealingOverTime("regen", 0, 1, "hot_min", source=healer))
+
+    set_battle_active(True)
+    try:
+        await manager.tick()
+    finally:
+        set_battle_active(False)
+        bus.unsubscribe("hot_tick", _hot_tick)
+
+    assert heal_amounts == [1]
+    assert target.hp == 6
+
+
+@pytest.mark.asyncio
+async def test_zero_damage_dot_deals_minimum_one_per_stack():
+    bus = EventBus()
+    tick_amounts: list[int] = []
+
+    def _dot_tick(_attacker, _target, amount, *_):
+        tick_amounts.append(amount)
+
+    bus.subscribe("dot_tick", _dot_tick)
+
+    attacker = Stats()
+    target = Stats()
+    target.set_base_stat('max_hp', 10)
+    target.hp = 10
+    manager = EffectManager(target)
+
+    manager.add_dot(effects.DamageOverTime("zero_dot", 0, 1, "zero_dot", source=attacker))
+    manager.add_dot(effects.DamageOverTime("zero_dot", 0, 1, "zero_dot", source=attacker))
+
+    set_battle_active(True)
+    try:
+        await manager.tick()
+    finally:
+        set_battle_active(False)
+        bus.unsubscribe("dot_tick", _dot_tick)
+
+    assert tick_amounts == [1, 1]
+    assert target.hp == 8
 
 
 def test_dot_has_minimum_chance(monkeypatch):
