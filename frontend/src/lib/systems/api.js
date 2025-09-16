@@ -96,6 +96,33 @@ export async function testLrmModel(prompt) {
   return httpPost('/config/lrm/test', { prompt });
 }
 
+async function fetchTurnPacing(url, options = {}, suppressOverlay = false) {
+  try {
+    return await httpRequest(url, options, null, suppressOverlay);
+  } catch (err) {
+    if (err?.status === 404 && url.includes('turn_pacing')) {
+      const fallbackUrl = url.replace('turn_pacing', 'turn-pacing');
+      return httpRequest(fallbackUrl, options, null, false);
+    }
+    throw err;
+  }
+}
+
+export async function getTurnPacing() {
+  return fetchTurnPacing('/config/turn_pacing', { method: 'GET', headers: { 'Accept': 'application/json' } }, true);
+}
+
+export async function setTurnPacing(turnPacing) {
+  return fetchTurnPacing(
+    '/config/turn_pacing',
+    {
+      method: 'POST',
+      body: JSON.stringify({ turn_pacing: turnPacing })
+    },
+    true
+  );
+}
+
 // Catalog: card/relic metadata for inventory and builders
 export async function getCardCatalog() {
   const data = await httpGet('/catalog/cards', { cache: 'no-store' }, true);
