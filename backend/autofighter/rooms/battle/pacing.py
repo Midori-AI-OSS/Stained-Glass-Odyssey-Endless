@@ -9,6 +9,11 @@ from autofighter.stats import BUS
 from autofighter.stats import Stats
 
 TURN_PACING = 0.5
+YIELD_DELAY = TURN_PACING / 500
+DOUBLE_YIELD_DELAY = YIELD_DELAY * 2
+
+YIELD_MULTIPLIER = YIELD_DELAY / TURN_PACING
+DOUBLE_YIELD_MULTIPLIER = DOUBLE_YIELD_DELAY / TURN_PACING
 
 _EXTRA_TURNS: dict[int, int] = {}
 _VISUAL_QUEUE: ActionQueue | None = None
@@ -50,10 +55,33 @@ async def _pace(start_time: float) -> None:
     wait = base_wait - elapsed
     if wait > 0:
         try:
-            await asyncio.sleep(wait)
+            await pace_sleep(wait / TURN_PACING)
         except Exception:
             pass
     try:
-        await asyncio.sleep(TURN_PACING)
+        await pace_sleep()
     except Exception:
         pass
+
+
+async def pace_sleep(multiplier: float = 1.0) -> None:
+    """Sleep for a scaled pacing interval with cooperative fallbacks."""
+
+    try:
+        scaled = max(multiplier, 0.0) * TURN_PACING
+    except Exception:
+        scaled = TURN_PACING
+
+    delay = max(scaled, YIELD_DELAY)
+
+    try:
+        await asyncio.sleep(delay)
+        return
+    except Exception:
+        pass
+
+    if delay > YIELD_DELAY:
+        try:
+            await asyncio.sleep(YIELD_DELAY)
+        except Exception:
+            pass

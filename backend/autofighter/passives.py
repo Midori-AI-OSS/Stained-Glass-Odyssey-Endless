@@ -1,13 +1,17 @@
 from __future__ import annotations
 
-import asyncio
 from collections import Counter
 import logging
 from pathlib import Path
 from typing import Any
+from typing import Awaitable
+from typing import Callable
 from typing import Optional
 
 from plugins import PluginLoader
+
+_PASSIVE_PACE: Callable[[float], Awaitable[None]] | None = None
+_PASSIVE_MULTIPLIER: float | None = None
 
 log = logging.getLogger(__name__)
 
@@ -41,6 +45,22 @@ class PassiveRegistry:
     def __init__(self) -> None:
         self._registry = discover()
 
+    async def _yield_control(self) -> None:
+        global _PASSIVE_PACE
+        global _PASSIVE_MULTIPLIER
+
+        if _PASSIVE_PACE is None or _PASSIVE_MULTIPLIER is None:
+            from autofighter.rooms.battle.pacing import DOUBLE_YIELD_MULTIPLIER
+            from autofighter.rooms.battle.pacing import pace_sleep as _pace_sleep
+
+            _PASSIVE_PACE = _pace_sleep
+            _PASSIVE_MULTIPLIER = DOUBLE_YIELD_MULTIPLIER
+
+        assert _PASSIVE_PACE is not None
+        assert _PASSIVE_MULTIPLIER is not None
+
+        await _PASSIVE_PACE(_PASSIVE_MULTIPLIER)
+
     async def trigger(self, event: str, owner, **kwargs) -> None:
         """Trigger passives for a given event with optional context.
 
@@ -69,7 +89,7 @@ class PassiveRegistry:
                         await passive_instance.apply(owner, stack_index=stack_idx)
                     except TypeError:
                         await passive_instance.apply(owner)
-                await asyncio.sleep(0.002)
+                await self._yield_control()
 
                 # If this passive provides an event-specific handler, call it too.
                 # This enables richer behaviors (e.g., on_action_taken) while
@@ -79,7 +99,7 @@ class PassiveRegistry:
                         await passive_instance.on_action_taken(owner, **kwargs)
                     except TypeError:
                         await passive_instance.on_action_taken(owner)
-                    await asyncio.sleep(0.002)
+                    await self._yield_control()
 
     async def trigger_damage_taken(self, target, attacker: Optional[Any] = None, damage: int = 0) -> None:
         """Trigger passives specifically for damage taken events."""
@@ -96,7 +116,7 @@ class PassiveRegistry:
                 stacks = min(count, getattr(cls, "max_stacks", count))
                 for _ in range(stacks):
                     await passive_instance.on_damage_taken(target, attacker, damage)
-                    await asyncio.sleep(0.002)
+                    await self._yield_control()
 
             # Also trigger passives with explicit damage_taken trigger
             if _supports_event(cls, "damage_taken"):
@@ -109,7 +129,7 @@ class PassiveRegistry:
                             await passive_instance.apply(target, attacker=attacker, damage=damage)
                         except TypeError:
                             await passive_instance.apply(target)
-                    await asyncio.sleep(0.002)
+                    await self._yield_control()
 
     async def trigger_turn_end(self, target) -> None:
         """Trigger turn end events for passives that need end-of-turn processing."""
@@ -125,7 +145,7 @@ class PassiveRegistry:
                 stacks = min(count, getattr(cls, "max_stacks", count))
                 for _ in range(stacks):
                     await passive_instance.on_turn_end(target)
-                    await asyncio.sleep(0.002)
+                    await self._yield_control()
 
     async def trigger_defeat(self, target) -> None:
         """Trigger defeat events for passives that need cleanup on defeat."""
@@ -141,7 +161,7 @@ class PassiveRegistry:
                 stacks = min(count, getattr(cls, "max_stacks", count))
                 for _ in range(stacks):
                     await passive_instance.on_defeat(target)
-                    await asyncio.sleep(0.002)
+                    await self._yield_control()
 
     async def trigger_summon_defeat(self, target, **kwargs) -> None:
         """Trigger summon defeat events for relevant passives."""
@@ -158,7 +178,7 @@ class PassiveRegistry:
                         await passive_instance.on_summon_defeat(target, **kwargs)
                     except TypeError:
                         await passive_instance.on_summon_defeat(target)
-                    await asyncio.sleep(0.002)
+                    await self._yield_control()
 
     async def trigger_hit_landed(self, attacker, target, damage: int = 0, action_type: str = "attack", **kwargs) -> None:
         """Trigger passives when a hit successfully lands."""
@@ -175,7 +195,7 @@ class PassiveRegistry:
                 stacks = min(count, getattr(cls, "max_stacks", count))
                 for _ in range(stacks):
                     await passive_instance.on_hit_landed(attacker, target, damage, action_type, **kwargs)
-                    await asyncio.sleep(0.002)
+                    await self._yield_control()
 
             # Regular passive application with enhanced context
             stacks = min(count, getattr(cls, "max_stacks", count))
@@ -188,7 +208,7 @@ class PassiveRegistry:
                     except TypeError:
                         # Fall back to simple apply for existing passives
                         await passive_instance.apply(attacker)
-                await asyncio.sleep(0.002)
+                await self._yield_control()
 
     async def trigger_turn_start(self, target, **kwargs) -> None:
         """Trigger turn start events for passives that need turn initialization."""
@@ -209,7 +229,7 @@ class PassiveRegistry:
                 stacks = min(count, getattr(cls, "max_stacks", count))
                 for _ in range(stacks):
                     await passive_instance.on_turn_start(target, **kwargs)
-                    await asyncio.sleep(0.002)
+                    await self._yield_control()
 
             # Regular passive application only for turn_start passives; be lenient with kwargs
             if supports_turn_start:
@@ -222,7 +242,7 @@ class PassiveRegistry:
                             await passive_instance.apply(target, **kwargs)
                         except TypeError:
                             await passive_instance.apply(target)
-                    await asyncio.sleep(0.002)
+                    await self._yield_control()
 
     async def trigger_level_up(self, target, **kwargs) -> None:
         """Trigger level up events for passives that respond to leveling."""
@@ -239,7 +259,7 @@ class PassiveRegistry:
                 stacks = min(count, getattr(cls, "max_stacks", count))
                 for _ in range(stacks):
                     await passive_instance.on_level_up(target, **kwargs)
-                    await asyncio.sleep(0.002)
+                    await self._yield_control()
 
             # Regular passive application
             stacks = min(count, getattr(cls, "max_stacks", count))
@@ -256,7 +276,7 @@ class PassiveRegistry:
                             log.warning(
                                 "Passive %s incompatible with level_up kwargs", pid
                             )
-                await asyncio.sleep(0.002)
+                await self._yield_control()
 
     def describe(self, target) -> list[dict[str, Any]]:
         """Return structured information for a target's passives."""

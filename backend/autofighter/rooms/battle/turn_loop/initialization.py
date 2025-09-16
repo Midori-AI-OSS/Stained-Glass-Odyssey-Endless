@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import asyncio
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 from typing import Any
@@ -10,6 +9,8 @@ from typing import Callable
 from autofighter.stats import BUS
 
 from ..pacing import _EXTRA_TURNS
+from ..pacing import TURN_PACING
+from ..pacing import pace_sleep
 from ..turns import push_progress_update
 
 if TYPE_CHECKING:
@@ -127,7 +128,4 @@ async def _send_initial_progress(context: TurnLoopContext) -> None:
         active_id=None,
         include_summon_foes=True,
     )
-    try:
-        await asyncio.sleep(3)
-    except Exception:
-        pass
+    await pace_sleep(3 / TURN_PACING)

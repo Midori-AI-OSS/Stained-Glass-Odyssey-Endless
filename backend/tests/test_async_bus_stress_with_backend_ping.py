@@ -10,6 +10,8 @@ import time
 
 import pytest
 
+from autofighter.rooms.battle.pacing import YIELD_MULTIPLIER
+from autofighter.rooms.battle.pacing import pace_sleep
 from autofighter.stats import BUS
 from autofighter.stats import Stats
 from plugins.damage_types.dark import Dark
@@ -62,7 +64,7 @@ async def test_dark_ultimate_async_performance_with_backend_ping():
                 # async with aiohttp.ClientSession() as session:
                 #     async with session.get('http://localhost:59002/performance/health') as resp:
                 #         await resp.json()
-                await asyncio.sleep(0.001)  # Simulate network latency
+                await pace_sleep(YIELD_MULTIPLIER)  # Simulate network latency
                 ping_time = (time.perf_counter() - start) * 1000
                 ping_times.append(ping_time)
 
