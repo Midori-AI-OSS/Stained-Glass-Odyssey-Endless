@@ -1,0 +1,133 @@
+from __future__ import annotations
+
+import asyncio
+from dataclasses import dataclass
+from typing import TYPE_CHECKING
+from typing import Any
+from typing import Awaitable
+from typing import Callable
+
+from autofighter.stats import BUS
+
+from ..pacing import _EXTRA_TURNS
+from ..turns import push_progress_update
+
+if TYPE_CHECKING:
+    from asyncio import Task
+
+    from autofighter.effects import EffectManager
+
+    from ...party import Party
+    from ..core import BattleRoom
+    from ..turns import EnrageState
+
+
+@dataclass
+class TurnLoopContext:
+    """Shared data structure used while processing the battle turn loop."""
+
+    room: BattleRoom
+    party: Party
+    combat_party: Party
+    registry: Any
+    foes: list[Any]
+    foe_effects: list[EffectManager]
+    enrage_mods: list[Any]
+    enrage_state: EnrageState
+    progress: Callable[[dict[str, Any]], Awaitable[None]] | None
+    visual_queue: Any
+    temp_rdr: float
+    exp_reward: int
+    run_id: str | None
+    battle_tasks: dict[str, Task[Any]]
+    abort: Callable[[str], None]
+    credited_foe_ids: set[str]
+    turn: int
+
+    @property
+    def credit_kwargs(self) -> dict[str, Any]:
+        return {
+            "credited_foe_ids": self.credited_foe_ids,
+            "combat_party": self.combat_party,
+            "party": self.party,
+            "room": self.room,
+        }
+
+
+async def initialize_turn_loop(
+    *,
+    room: BattleRoom,
+    party: Party,
+    combat_party: Party,
+    registry: Any,
+    foes: list[Any],
+    foe_effects: list[EffectManager],
+    enrage_mods: list[Any],
+    enrage_state: EnrageState,
+    progress: Callable[[dict[str, Any]], Awaitable[None]] | None,
+    visual_queue: Any,
+    temp_rdr: float,
+    exp_reward: int,
+    run_id: str | None,
+    battle_tasks: dict[str, Task[Any]],
+    abort: Callable[[str], None],
+) -> TurnLoopContext:
+    """Prepare the turn loop context and emit the initial progress update."""
+
+    context = TurnLoopContext(
+        room=room,
+        party=party,
+        combat_party=combat_party,
+        registry=registry,
+        foes=foes,
+        foe_effects=foe_effects,
+        enrage_mods=enrage_mods,
+        enrage_state=enrage_state,
+        progress=progress,
+        visual_queue=visual_queue,
+        temp_rdr=temp_rdr,
+        exp_reward=exp_reward,
+        run_id=run_id,
+        battle_tasks=battle_tasks,
+        abort=abort,
+        credited_foe_ids=set(),
+        turn=0,
+    )
+
+    await _prepare_entities(context)
+    await _send_initial_progress(context)
+    return context
+
+
+async def _prepare_entities(context: TurnLoopContext) -> None:
+    """Set action point counts and emit extra turn events for all entities."""
+
+    for entity in list(context.combat_party.members) + list(context.foes):
+        entity.action_points = entity.actions_per_turn
+        for _ in range(max(0, entity.action_points - 1)):
+            try:
+                await BUS.emit_async("extra_turn", entity)
+            except Exception:
+                pass
+
+
+async def _send_initial_progress(context: TurnLoopContext) -> None:
+    """Emit the initial progress update if a progress callback is provided."""
+
+    if context.progress is None:
+        return
+
+    await push_progress_update(
+        context.progress,
+        context.combat_party.members,
+        context.foes,
+        context.enrage_state,
+        context.temp_rdr,
+        _EXTRA_TURNS,
+        active_id=None,
+        include_summon_foes=True,
+    )
+    try:
+        await asyncio.sleep(3)
+    except Exception:
+        pass
