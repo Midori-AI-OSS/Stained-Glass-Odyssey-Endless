@@ -56,6 +56,27 @@ The system is automatically integrated into the battle flow:
 
 The battle logging system subscribes to the global event bus and automatically captures relevant events. It integrates seamlessly with existing game mechanics without requiring code changes to emit events manually.
 
+#### Status Phase Timing Events
+
+`EffectManager.tick` emits two pacing events for every status phase so the frontend and log writers can highlight when HoTs and DoTs resolve within the turn beat:
+
+- `status_phase_start`
+- `status_phase_end`
+
+Both events provide the same argument signature as other battle bus events:
+
+1. `phase` – the string label (`"hot"` or `"dot"`).
+2. `Stats` – the combatant whose effects are ticking.
+3. `payload` – structured metadata with:
+   - `phase`: mirrors the phase label.
+   - `order`: `0` for HoTs, `1` for DoTs to preserve sequencing.
+   - `effect_count`: active effect total at the start/end of the phase.
+   - `expired_count`: number of effects that ended during the phase (zero on start events).
+   - `has_effects`: convenience boolean indicating whether any effects remain.
+   - `target_id`: the combatant identifier (if available).
+
+Phases always fire in HoT → DoT order even when a combatant has no active statuses, and the manager yields via `pace_sleep(YIELD_MULTIPLIER)` between phases to create a short, predictable beat for UI animations and log snapshots.
+
 ### File Formats
 
 #### battle_summary.json
