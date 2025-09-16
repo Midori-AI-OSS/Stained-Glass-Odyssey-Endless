@@ -24,7 +24,7 @@
       <span class="label">Test Model</span>
     </div>
     <div class="control-right">
-      <button on:click={handleTestModel}>Test</button>
+      <button class="icon-btn" on:click={handleTestModel}>Test</button>
     </div>
   </div>
   {#if testReply}

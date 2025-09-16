@@ -30,7 +30,7 @@
       {#if healthPing !== null}
         <span class="ping">{Math.round(healthPing)}ms</span>
       {/if}
-      <button on:click={() => refreshHealth(true)}>Refresh</button>
+      <button class="icon-btn" on:click={() => refreshHealth(true)}>Refresh</button>
     </div>
   </div>
   <div class="control" title="Limit server polling frequency.">
@@ -58,7 +58,7 @@
       <span class="label"><Trash2 /> Wipe Save Data</span>
     </div>
     <div class="control-right">
-      <button on:click={handleWipe}>Wipe</button>
+      <button class="icon-btn" on:click={handleWipe}>Wipe</button>
     </div>
   </div>
   {#if wipeStatus}
@@ -69,7 +69,7 @@
       <span class="label"><Download /> Backup Save Data</span>
     </div>
     <div class="control-right">
-      <button on:click={handleBackup}>Backup</button>
+      <button class="icon-btn" on:click={handleBackup}>Backup</button>
     </div>
   </div>
   <div class="control" title="Import an encrypted save backup.">
