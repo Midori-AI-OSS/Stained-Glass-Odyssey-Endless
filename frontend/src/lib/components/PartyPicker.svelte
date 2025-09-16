@@ -50,6 +50,15 @@
       }
       const oldPreview = previewId;
       const oldSelected = [...selected];
+      function isNonPlayable(entry) {
+        const gr = Number(entry?.stats?.gacha_rarity);
+        if (!Number.isNaN(gr)) {
+          return gr === 0;
+        }
+        // Fallback: explicitly hide known non-playables if rarity not provided
+        return entry.id === 'mimic';
+      }
+
       roster = data.players
         .map((p) => ({
           id: p.id,
@@ -62,7 +71,7 @@
           stats: p.stats ?? { hp: 0, atk: 0, defense: 0, level: 1 }
         }))
         // Only show characters the user can actually use
-        .filter((p) => (p.owned || p.is_player) && p.id !== 'mimic')
+        .filter((p) => (p.owned || p.is_player) && !isNonPlayable(p))
         .sort((a, b) => (a.is_player ? -1 : b.is_player ? 1 : 0));
       // Restore selection and preview where possible
       selected = oldSelected.filter((id) => roster.some((c) => c.id === id));
