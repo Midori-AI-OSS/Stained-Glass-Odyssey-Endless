@@ -23,6 +23,8 @@ from autofighter.summons.manager import SummonManager
 from plugins.damage_types import ALL_DAMAGE_TYPES
 
 from ...party import Party
+from .events import handle_battle_end
+from .events import handle_battle_start
 from .pacing import _EXTRA_TURNS
 from .rewards import _apply_rdr_to_stars
 from .rewards import _calc_gold
@@ -74,29 +76,12 @@ async def run_battle(
     if battle_tasks is None:
         battle_tasks = {}
 
-    for foe_obj in foes:
-        await BUS.emit_async("battle_start", foe_obj)
-        await registry.trigger(
-            "battle_start",
-            foe_obj,
-            party=combat_party.members,
-            foes=foes,
-        )
-
+    await handle_battle_start(foes, combat_party.members, registry)
     log.info(
         "Battle start: %s vs %s",
         [f.id for f in foes],
         [m.id for m in combat_party.members],
     )
-
-    for member in combat_party.members:
-        await BUS.emit_async("battle_start", member)
-        await registry.trigger(
-            "battle_start",
-            member,
-            party=combat_party.members,
-            foes=foes,
-        )
 
     enrage_state = EnrageState(threshold=enrage_threshold)
     set_enrage_percent(0.0)
@@ -155,21 +140,7 @@ async def run_battle(
         except Exception:
             pass
 
-    try:
-        for foe_obj in foes:
-            if getattr(foe_obj, "hp", 1) <= 0:
-                await BUS.emit_async("entity_defeat", foe_obj)
-        for member in combat_party.members:
-            if getattr(member, "hp", 1) <= 0:
-                await BUS.emit_async("entity_defeat", member)
-    except Exception:
-        pass
-
-    try:
-        for foe_obj in foes:
-            await BUS.emit_async("battle_end", foe_obj)
-    except Exception:
-        pass
+    await handle_battle_end(foes, combat_party.members)
 
     battle_result = (
         "defeat"
