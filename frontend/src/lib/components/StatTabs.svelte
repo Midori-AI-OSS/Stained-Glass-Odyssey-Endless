@@ -350,9 +350,13 @@
   {/if}
   {#if previewId}
     <div class="stats-confirm">
-      <button class="confirm" on:click={toggleMember}>
-        {selected.includes(previewId) ? 'Remove from party' : 'Add to party'}
-      </button>
+      {#if selected.includes(previewId) && isPlayer}
+        <button class="confirm" disabled title="The player must stay in the party">Player is required</button>
+      {:else}
+        <button class="confirm" on:click={toggleMember}>
+          {selected.includes(previewId) ? 'Remove from party' : 'Add to party'}
+        </button>
+      {/if}
     </div>
   {/if}
   {#if previewId}
