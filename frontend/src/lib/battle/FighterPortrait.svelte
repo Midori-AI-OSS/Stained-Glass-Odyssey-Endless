@@ -99,7 +99,7 @@
     style={`--el-color: ${elColor}`}
   >
     <img
-      src={getCharacterImage(fighter.summon_type || fighter.id)}
+      src={getCharacterImage((fighter?.summon_type === 'phantom' && fighter?.summoner_id) ? fighter.summoner_id : (fighter?.summon_type || fighter?.id))}
       alt=""
       class="portrait"
       style={`border-color: ${elColor}`}

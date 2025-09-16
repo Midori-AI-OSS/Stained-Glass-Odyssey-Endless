@@ -12,8 +12,12 @@
   let prevElement = fighter.element;
   let elementChanged = false;
 
-  // Image prioritization: summon_type first, then id as fallback
-  $: imageId = fighter?.summon_type || fighter?.id || '';
+  // Image prioritization: for phantom summons, use the original summoner's id
+  // so their portrait is shown. Otherwise use summon_type (e.g., jellyfish_*),
+  // falling back to the entity id.
+  $: imageId = (fighter?.summon_type === 'phantom' && fighter?.summoner_id)
+      ? fighter.summoner_id
+      : (fighter?.summon_type || fighter?.id || '');
   $: elColor = getElementColor(fighter.element);
   $: elIcon = getElementIcon(fighter.element);
   // Make party (bottom) portraits larger for readability

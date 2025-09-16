@@ -44,7 +44,7 @@
           animate:flip={{ duration: reducedMotion ? 0 : 220 }}
         >
           <div class="inner">
-            <img src={getCharacterImage(fighter.summon_type || fighter.id)} alt="" class="portrait" />
+            <img src={getCharacterImage((fighter?.summon_type === 'phantom' && fighter?.summoner_id) ? fighter.summoner_id : (fighter?.summon_type || fighter?.id))} alt="" class="portrait" />
             {#if showActionValues}
               <div class="av">{Math.round(entry.action_value)}</div>
             {/if}
