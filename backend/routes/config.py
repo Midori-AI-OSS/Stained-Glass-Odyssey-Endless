@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import math
+
 from llms.loader import ModelName
 from options import OptionKey
 from options import get_option
@@ -67,6 +69,9 @@ async def update_turn_pacing() -> tuple[str, int, dict[str, float]]:
         requested = float(data["turn_pacing"])
     except (TypeError, ValueError):
         return jsonify({"error": "turn_pacing must be numeric"}), 400
+
+    if not math.isfinite(requested):
+        return jsonify({"error": "turn_pacing must be finite"}), 400
 
     if requested <= 0:
         return jsonify({"error": "turn_pacing must be positive"}), 400
