@@ -297,13 +297,13 @@ async def apply_enrage_bleed(
     for member in party_members:
         mgr = member.effect_manager
         for _ in range(stacks_to_add):
-            dmg_per_tick = int(max(getattr(mgr.stats, "max_hp", 1), 1) * 0.10)
+            dmg_per_tick = int(max(getattr(mgr.stats, "max_hp", 1), 1) * 0.5)
             mgr.add_dot(
                 DamageOverTime("Enrage Bleed", dmg_per_tick, 10, "enrage_bleed")
             )
     for mgr, foe_obj in zip(foe_effects, foes, strict=False):
         for _ in range(stacks_to_add):
-            dmg_per_tick = int(max(getattr(foe_obj, "max_hp", 1), 1) * 0.10)
+            dmg_per_tick = int(max(getattr(foe_obj, "max_hp", 1), 1) * 0.25)
             mgr.add_dot(
                 DamageOverTime("Enrage Bleed", dmg_per_tick, 10, "enrage_bleed")
             )
