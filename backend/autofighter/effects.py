@@ -249,8 +249,10 @@ class DamageOverTime:
         if source_type is not dtype:
             dmg = source_type.on_party_dot_damage_taken(dmg, attacker, target)
 
+        dmg = max(1, int(dmg))
+
         # Emit DoT tick event before applying damage - async for better performance
-        await BUS.emit_async("dot_tick", attacker, target, int(dmg), self.name, {
+        await BUS.emit_async("dot_tick", attacker, target, dmg, self.name, {
             "dot_id": self.id,
             "remaining_turns": self.turns - 1,
             "original_damage": self.damage
@@ -258,14 +260,14 @@ class DamageOverTime:
 
         # Check if this DOT will kill the target
         target_hp_before = target.hp
-        await target.apply_damage(int(dmg), attacker=attacker)
+        await target.apply_damage(dmg, attacker=attacker)
 
         # If target died from this DOT, emit a DOT kill event - async for better performance
         if target_hp_before > 0 and target.hp <= 0:
-            await BUS.emit_async("dot_kill", attacker, target, int(dmg), self.name, {
+            await BUS.emit_async("dot_kill", attacker, target, dmg, self.name, {
                 "dot_id": self.id,
                 "dot_name": self.name,
-                "final_damage": int(dmg)
+                "final_damage": dmg
             })
 
         self.turns -= 1
@@ -295,14 +297,16 @@ class HealingOverTime:
         if source_type is not dtype:
             heal = source_type.on_party_hot_heal_received(heal, healer, target)
 
+        heal = max(1, int(heal))
+
         # Emit HoT tick event before applying healing - async for better performance
-        await BUS.emit_async("hot_tick", healer, target, int(heal), self.name, {
+        await BUS.emit_async("hot_tick", healer, target, heal, self.name, {
             "hot_id": self.id,
             "remaining_turns": self.turns - 1,
             "original_healing": self.healing
         })
 
-        await target.apply_healing(int(heal), healer=healer)
+        await target.apply_healing(heal, healer=healer)
         self.turns -= 1
         return self.turns > 0
 
