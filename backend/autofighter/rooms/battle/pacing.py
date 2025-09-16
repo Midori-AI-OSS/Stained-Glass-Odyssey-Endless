@@ -56,10 +56,14 @@ async def _pace(start_time: float) -> None:
     if wait > 0:
         try:
             await pace_sleep(wait / TURN_PACING)
+        except asyncio.CancelledError:
+            raise
         except Exception:
             pass
     try:
         await pace_sleep()
+    except asyncio.CancelledError:
+        raise
     except Exception:
         pass
 
@@ -77,11 +81,15 @@ async def pace_sleep(multiplier: float = 1.0) -> None:
     try:
         await asyncio.sleep(delay)
         return
+    except asyncio.CancelledError:
+        raise
     except Exception:
         pass
 
     if delay > YIELD_DELAY:
         try:
             await asyncio.sleep(YIELD_DELAY)
+        except asyncio.CancelledError:
+            raise
         except Exception:
             pass
