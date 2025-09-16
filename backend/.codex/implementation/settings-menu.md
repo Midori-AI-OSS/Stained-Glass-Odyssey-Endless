@@ -7,10 +7,10 @@
 - `refresh_turn_pacing()` rereads the option from storage so other services can rehydrate the runtime pacing value without restarting the backend.
 
 ## API Endpoints
-- `GET /config/turn-pacing`
+- `GET /config/turn_pacing`
   - Returns the current pacing (`turn_pacing`) and the default of `0.5` seconds.
   - Refreshes the in-memory pacing constant so the backend reflects any out-of-band changes to the option.
-- `POST /config/turn-pacing`
+- `POST /config/turn_pacing`
   - Accepts a JSON body with a positive `turn_pacing` value (seconds between actions).
   - Persists the sanitized value via `options.set_option` and calls `pacing.set_turn_pacing` so the running battle loop immediately adopts the new cadence.
   - Responds with the applied pacing and the default for UI slider calibration.

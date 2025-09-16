@@ -53,13 +53,13 @@ async def test_lrm_model() -> tuple[str, int, dict[str, str]]:
     return jsonify({"response": reply})
 
 
-@bp.get("/turn-pacing")
+@bp.get("/turn_pacing")
 async def get_turn_pacing() -> tuple[str, int, dict[str, float]]:
     value = refresh_turn_pacing()
     return jsonify({"turn_pacing": value, "default": _TURN_PACING_DEFAULT})
 
 
-@bp.post("/turn-pacing")
+@bp.post("/turn_pacing")
 async def update_turn_pacing() -> tuple[str, int, dict[str, float]]:
     data = await request.get_json()
     if not isinstance(data, dict) or "turn_pacing" not in data:
