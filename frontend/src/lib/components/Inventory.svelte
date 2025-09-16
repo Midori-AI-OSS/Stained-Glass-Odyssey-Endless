@@ -6,6 +6,7 @@
   import CardView from './inventory/CardView.svelte';
   import RelicView from './inventory/RelicView.svelte';
   import MaterialsPanel from './inventory/MaterialsPanel.svelte';
+  import CardArt from './CardArt.svelte';
   import { getMaterialIcon, onIconError } from '../systems/materialAssetLoader.js';
 
   export let cards = [];
