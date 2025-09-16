@@ -65,30 +65,30 @@ async def test_turn_pacing_endpoints(app_with_db):
     app = app_with_db
     client = app.test_client()
 
-    resp = await client.get("/config/turn-pacing")
+    resp = await client.get("/config/turn_pacing")
     data = await resp.get_json()
     assert data["turn_pacing"] == pytest.approx(0.5)
     assert data["default"] == pytest.approx(0.5)
 
-    resp = await client.post("/config/turn-pacing", json={"turn_pacing": 0.8})
+    resp = await client.post("/config/turn_pacing", json={"turn_pacing": 0.8})
     data = await resp.get_json()
     assert data["turn_pacing"] == pytest.approx(0.8)
     assert data["default"] == pytest.approx(0.5)
     assert pacing_module.TURN_PACING == pytest.approx(0.8)
 
-    resp = await client.get("/config/turn-pacing")
+    resp = await client.get("/config/turn_pacing")
     data = await resp.get_json()
     assert data["turn_pacing"] == pytest.approx(0.8)
 
-    resp = await client.post("/config/turn-pacing", json={"turn_pacing": "NaN"})
+    resp = await client.post("/config/turn_pacing", json={"turn_pacing": "NaN"})
     assert resp.status_code == 400
     assert pacing_module.TURN_PACING == pytest.approx(0.8)
 
-    resp = await client.post("/config/turn-pacing", json={"turn_pacing": "Infinity"})
+    resp = await client.post("/config/turn_pacing", json={"turn_pacing": "Infinity"})
     assert resp.status_code == 400
     assert pacing_module.TURN_PACING == pytest.approx(0.8)
 
-    resp = await client.post("/config/turn-pacing", json={"turn_pacing": -1})
+    resp = await client.post("/config/turn_pacing", json={"turn_pacing": -1})
     assert resp.status_code == 400
 
     set_option(OptionKey.TURN_PACING, "NaN")
