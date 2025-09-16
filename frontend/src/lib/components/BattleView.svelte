@@ -45,6 +45,7 @@
   }
   let timer;
   let logs = [];
+  let hoveredId = null;
   
   const logAnimations = {
     damage: 'HitEffect',
@@ -309,6 +310,7 @@
     {combatants}
     {reducedMotion}
     showActionValues={displayActionValues}
+    on:hover={(e) => hoveredId = e.detail?.id || null}
   />
 
   <!-- Foes at the top -->
@@ -349,7 +351,7 @@
           </div>
           
           <!-- Character photo/portrait -->
-          <FighterUIItem fighter={foe} position="top" {reducedMotion} sizePx={getFoeSizePx(foeCount)} />
+          <FighterUIItem fighter={foe} position="top" {reducedMotion} sizePx={getFoeSizePx(foeCount)} highlight={hoveredId === foe.id} />
           
           <!-- Summons -->
           {#if foe.summons?.length}
@@ -381,7 +383,13 @@
                       </div>
                     </div>
                     
-                    <FighterUIItem fighter={summon} position="top" {reducedMotion} size="medium" />
+                    <FighterUIItem 
+                      fighter={summon} 
+                      position="top" 
+                      {reducedMotion} 
+                      size="medium" 
+                      highlight={hoveredId === summon.id || (hoveredId && summon?.summoner_id && summon?.summon_type && hoveredId === `${summon.summoner_id}_${summon.summon_type}_summon`)} 
+                    />
                   </div>
                 </div>
               {/each}
@@ -411,7 +419,13 @@
               >
                 <div in:scale={{ duration: reducedMotion ? 0 : 200 }} class="summon-inner">
                   <!-- Summon portrait -->
-                  <FighterUIItem fighter={summon} position="bottom" {reducedMotion} size="medium" />
+                  <FighterUIItem 
+                    fighter={summon} 
+                    position="bottom" 
+                    {reducedMotion} 
+                    size="medium" 
+                    highlight={hoveredId === summon.id || (hoveredId && summon?.summoner_id && summon?.summon_type && hoveredId === `${summon.summoner_id}_${summon.summon_type}_summon`)} 
+                  />
 
                   <!-- Summon HP bar under portrait -->
                   <div class="summon-hp-bar">
@@ -447,7 +461,7 @@
 
         <div class="party-main">
           <!-- Character photo as base (ult & pips overlay handled inside) -->
-          <FighterUIItem fighter={member} position="bottom" {reducedMotion} />
+          <FighterUIItem fighter={member} position="bottom" {reducedMotion} highlight={hoveredId === member.id} />
         </div>
         
         <!-- HP bar under the photo -->

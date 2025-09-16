@@ -8,6 +8,7 @@
   export let reducedMotion = false;
   export let size = 'normal'; // 'normal' or 'small'
   export let sizePx = 0; // optional explicit pixel size override
+  export let highlight = false; // glow when referenced (e.g., hovered in action queue)
 
   let prevElement = fighter.element;
   let elementChanged = false;
@@ -117,11 +118,12 @@
   }
 </script>
 
-<div
-  class="modern-fighter-card {position} {size}"
-  class:dead={isDead}
-  style="--portrait-size: {portraitSize}; --element-color: {elColor}; --element-glow-color: {elementGlow.color}"
->
+  <div
+    class="modern-fighter-card {position} {size}"
+    class:dead={isDead}
+    class:highlight={highlight && !isDead}
+    style="--portrait-size: {portraitSize}; --element-color: {elColor}; --element-glow-color: {elementGlow.color}"
+  >
   <div
     class="element-wrapper"
     class:element-change={elementChanged}
@@ -240,6 +242,12 @@
     border: 2px solid var(--element-color, rgba(255, 255, 255, 0.3));
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
     transition: border-color 0.3s ease;
+  }
+
+  /* External highlight (e.g., hovering the action queue) */
+  .modern-fighter-card.highlight .fighter-portrait {
+    border-color: color-mix(in oklab, var(--element-color) 75%, white);
+    box-shadow: 0 0 12px 4px color-mix(in oklab, var(--element-color) 65%, black);
   }
 
   .portrait-image {
