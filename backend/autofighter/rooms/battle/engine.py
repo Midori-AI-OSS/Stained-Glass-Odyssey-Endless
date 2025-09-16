@@ -76,8 +76,10 @@ async def run_battle(
     visual_queue = setup_data.visual_queue
     battle_logger = setup_data.battle_logger
 
-    battle_snapshots = battle_snapshots or {}
-    battle_tasks = battle_tasks or {}
+    if battle_snapshots is None:
+        battle_snapshots = {}
+    if battle_tasks is None:
+        battle_tasks = {}
 
     for foe_obj in foes:
         await BUS.emit_async("battle_start", foe_obj)
