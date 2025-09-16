@@ -4,11 +4,17 @@ from __future__ import annotations
 
 import asyncio
 
+from options import OptionKey
+from options import get_option
+
 from autofighter.action_queue import ActionQueue
 from autofighter.stats import BUS
 from autofighter.stats import Stats
 
-TURN_PACING = 0.5
+DEFAULT_TURN_PACING = 0.5
+_MIN_TURN_PACING = 0.05
+
+TURN_PACING = DEFAULT_TURN_PACING
 YIELD_DELAY = TURN_PACING / 500
 DOUBLE_YIELD_DELAY = YIELD_DELAY * 2
 
@@ -17,6 +23,54 @@ DOUBLE_YIELD_MULTIPLIER = DOUBLE_YIELD_DELAY / TURN_PACING
 
 _EXTRA_TURNS: dict[int, int] = {}
 _VISUAL_QUEUE: ActionQueue | None = None
+
+
+def _coerce_turn_pacing(raw: object) -> float:
+    try:
+        value = float(raw)
+    except (TypeError, ValueError):
+        return DEFAULT_TURN_PACING
+    if value <= 0:
+        return _MIN_TURN_PACING
+    return value
+
+
+def _apply_turn_pacing(value: float) -> float:
+    global DOUBLE_YIELD_DELAY
+    global DOUBLE_YIELD_MULTIPLIER
+    global TURN_PACING
+    global YIELD_DELAY
+    global YIELD_MULTIPLIER
+
+    TURN_PACING = max(value, _MIN_TURN_PACING)
+    YIELD_DELAY = TURN_PACING / 500
+    DOUBLE_YIELD_DELAY = YIELD_DELAY * 2
+
+    YIELD_MULTIPLIER = YIELD_DELAY / TURN_PACING
+    DOUBLE_YIELD_MULTIPLIER = DOUBLE_YIELD_DELAY / TURN_PACING
+    return TURN_PACING
+
+
+def refresh_turn_pacing() -> float:
+    """Reload TURN_PACING from the options table."""
+
+    try:
+        raw = get_option(OptionKey.TURN_PACING, DEFAULT_TURN_PACING)
+    except Exception:
+        return _apply_turn_pacing(DEFAULT_TURN_PACING)
+    return _apply_turn_pacing(_coerce_turn_pacing(raw))
+
+
+def set_turn_pacing(value: float | str) -> float:
+    """Update TURN_PACING and dependent pacing constants."""
+
+    return _apply_turn_pacing(_coerce_turn_pacing(value))
+
+
+try:
+    refresh_turn_pacing()
+except Exception:
+    pass
 
 
 def _grant_extra_turn(entity: Stats) -> None:
