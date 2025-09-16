@@ -6,7 +6,6 @@ import asyncio
 from collections.abc import Awaitable
 from collections.abc import Callable
 import logging
-import random
 from typing import TYPE_CHECKING
 from typing import Any
 
@@ -14,24 +13,15 @@ from battle_logging.writers import end_battle_logging
 from services.user_level_service import gain_user_exp
 from services.user_level_service import get_user_level
 
-from autofighter.cards import card_choices
-from autofighter.relics import relic_choices
-from autofighter.stats import BUS
 from autofighter.stats import set_enrage_percent
 from autofighter.summons.base import Summon
 from autofighter.summons.manager import SummonManager
-from plugins.damage_types import ALL_DAMAGE_TYPES
 
 from ...party import Party
 from .events import handle_battle_end
 from .events import handle_battle_start
 from .pacing import _EXTRA_TURNS
-from .rewards import _apply_rdr_to_stars
-from .rewards import _calc_gold
-from .rewards import _pick_card_stars
-from .rewards import _pick_item_stars
-from .rewards import _pick_relic_stars
-from .rewards import _roll_relic_drop
+from .resolution import resolve_rewards
 from .setup import BattleSetupResult
 from .turn_loop import run_turn_loop
 from .turns import EnrageState
@@ -44,9 +34,6 @@ if TYPE_CHECKING:
 
 
 log = logging.getLogger(__name__)
-
-
-ELEMENTS = [e.lower() for e in ALL_DAMAGE_TYPES]
 
 
 async def run_battle(
@@ -217,6 +204,13 @@ async def run_battle(
     )
     SummonManager.cleanup()
 
+    enrage_payload = enrage_state.as_payload()
+    if enrage_payload.get("active"):
+        stacks_display = max(turn - enrage_threshold, 0)
+        enrage_payload["stacks"] = stacks_display
+        enrage_payload["turns"] = stacks_display
+    _apply_display_overrides(enrage_payload)
+
     if all(member.hp <= 0 for member in combat_party.members):
         loot = {
             "gold": 0,
@@ -224,13 +218,6 @@ async def run_battle(
             "relic_choices": [],
             "items": [],
         }
-        enrage_payload = enrage_state.as_payload()
-        if enrage_payload.get("active"):
-            stacks_display = max(turn - enrage_threshold, 0)
-            enrage_payload["stacks"] = stacks_display
-            enrage_payload["turns"] = stacks_display
-        _apply_display_overrides(enrage_payload)
-
         return {
             "result": "defeat",
             "party": party_data,
@@ -255,160 +242,22 @@ async def run_battle(
             "ended": True,
         }
 
-    selected_cards: list[Any] = []
-    attempts = 0
-    log.info(
-        "Starting card selection for run %s, party has %d cards",
-        getattr(combat_party, "cards", []),
-        len(getattr(combat_party, "cards", [])),
+    return await resolve_rewards(
+        room=room,
+        party=party,
+        combat_party=combat_party,
+        foes=foes,
+        foes_data=foes_data,
+        enrage_payload=enrage_payload,
+        start_gold=start_gold,
+        temp_rdr=temp_rdr,
+        party_data=party_data,
+        party_summons=party_summons,
+        foe_summons=foe_summons,
+        action_queue_snapshot=action_queue_snapshot,
+        battle_logger=battle_logger,
+        exp_reward=exp_reward,
     )
-    while len(selected_cards) < 3 and attempts < 30:
-        attempts += 1
-        base_stars = _pick_card_stars(room)
-        card_stars = _apply_rdr_to_stars(base_stars, temp_rdr)
-        log.debug(
-            "Card selection attempt %d: base_stars=%d, rdr_stars=%d",
-            attempts,
-            base_stars,
-            card_stars,
-        )
-        choices = card_choices(combat_party, card_stars, count=1)
-        log.debug("  card_choices returned %d options", len(choices))
-        if not choices:
-            log.debug("  No cards available for star level %d", card_stars)
-            continue
-        candidate = choices[0]
-        log.debug(
-            "  Candidate card: %s (%s) - %d stars",
-            candidate.id,
-            candidate.name,
-            candidate.stars,
-        )
-        if any(card.id == candidate.id for card in selected_cards):
-            log.debug("  Card %s already selected, skipping", candidate.id)
-            continue
-        selected_cards.append(candidate)
-        log.debug("  Added card: %s", candidate.id)
-    log.info(
-        "Card selection complete: %d cards selected after %d attempts",
-        len(selected_cards),
-        attempts,
-    )
-    if selected_cards:
-        log.info("Selected cards: %s", [card.id for card in selected_cards])
-    else:
-        log.warning("No cards were selected!")
-    card_choice_data = [
-        {
-            "id": card.id,
-            "name": card.name,
-            "stars": card.stars,
-            "about": card.about,
-        }
-        for card in selected_cards
-    ]
-
-    relic_options: list[Any] = []
-    if _roll_relic_drop(room, temp_rdr):
-        picked: list[Any] = []
-        tries = 0
-        while len(picked) < 3 and tries < 30:
-            tries += 1
-            relic_stars = _apply_rdr_to_stars(
-                _pick_relic_stars(room),
-                temp_rdr,
-            )
-            choices = relic_choices(combat_party, relic_stars, count=1)
-            if not choices:
-                continue
-            relic = choices[0]
-            if any(existing.id == relic.id for existing in picked):
-                continue
-            picked.append(relic)
-        relic_options = picked
-
-    if not selected_cards:
-        from plugins.relics.fallback_essence import FallbackEssence
-
-        fallback_relic = FallbackEssence()
-        if not relic_options:
-            relic_options = [fallback_relic]
-        else:
-            relic_options.append(fallback_relic)
-
-    relic_choice_data = [
-        {
-            "id": relic.id,
-            "name": relic.name,
-            "stars": relic.stars,
-            "about": relic.describe(party.relics.count(relic.id) + 1),
-            "stacks": party.relics.count(relic.id),
-        }
-        for relic in relic_options
-    ]
-
-    gold_reward = _calc_gold(room, temp_rdr)
-    party.gold += gold_reward
-    await BUS.emit_async("gold_earned", gold_reward)
-
-    item_base = 1 * temp_rdr
-    base_int = int(item_base)
-    item_count = max(1, base_int)
-    if random.random() < item_base - base_int:
-        item_count += 1
-    items = [
-        {"id": random.choice(ELEMENTS), "stars": _pick_item_stars(room)}
-        for _ in range(item_count)
-    ]
-    ticket_chance = 0.0005 * temp_rdr
-    if random.random() < ticket_chance:
-        items.append({"id": "ticket", "stars": 0})
-
-    loot = {
-        "gold": party.gold - start_gold,
-        "card_choices": card_choice_data,
-        "relic_choices": relic_choice_data,
-        "items": items,
-    }
-    log.info(
-        "Battle rewards: gold=%s cards=%s relics=%s items=%s",
-        loot["gold"],
-        [choice["id"] for choice in card_choice_data],
-        [choice["id"] for choice in relic_choice_data],
-        items,
-    )
-
-    enrage_payload = enrage_state.as_payload()
-    if enrage_payload.get("active"):
-        stacks_display = max(turn - enrage_threshold, 0)
-        enrage_payload["stacks"] = stacks_display
-        enrage_payload["turns"] = stacks_display
-    _apply_display_overrides(enrage_payload)
-
-    return {
-        "result": "boss" if room.strength > 1.0 else "battle",
-        "party": party_data,
-        "party_summons": party_summons,
-        "gold": party.gold,
-        "relics": party.relics,
-        "cards": party.cards,
-        "card_choices": card_choice_data,
-        "relic_choices": relic_choice_data,
-        "loot": loot,
-        "foes": [
-            foe_info
-            for foe_obj, foe_info in zip(foes, foes_data, strict=False)
-            if not isinstance(foe_obj, Summon)
-        ],
-        "foe_summons": foe_summons,
-        "room_number": room.node.index,
-        "battle_index": getattr(battle_logger, "battle_index", 0) if battle_logger else 0,
-        "exp_reward": exp_reward,
-        "enrage": enrage_payload,
-        "rdr": party.rdr,
-        "action_queue": action_queue_snapshot,
-        "ended": True,
-    }
 
 
 from ..utils import _serialize  # noqa: E402  # imported late to avoid cycles
