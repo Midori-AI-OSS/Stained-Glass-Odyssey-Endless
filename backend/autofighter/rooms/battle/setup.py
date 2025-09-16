@@ -1,6 +1,7 @@
 """Battle setup helpers for :mod:`autofighter.rooms.battle`."""
 from __future__ import annotations
 
+import asyncio
 import copy
 from dataclasses import dataclass
 from typing import Sequence
@@ -40,13 +41,16 @@ class BattleSetupResult:
 async def _clone_members(members: Sequence[Stats]) -> list[Stats]:
     """Create deep copies of party members for combat."""
 
-    return [copy.deepcopy(member) for member in members]
+    def _copy_members() -> list[Stats]:
+        return [copy.deepcopy(member) for member in members]
+
+    return await asyncio.to_thread(_copy_members)
 
 
 async def _apply_relics_async(party: Party) -> None:
     """Asynchronously apply relic effects to a party."""
 
-    apply_relics(party)
+    await asyncio.to_thread(apply_relics, party)
 
 
 async def setup_battle(
