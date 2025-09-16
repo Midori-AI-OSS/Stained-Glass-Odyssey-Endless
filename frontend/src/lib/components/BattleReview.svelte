@@ -942,7 +942,9 @@
   </div>
 </div>
 
-  <ReviewOverlay {summary} {cards} {relics} />
+  <!-- Hide duplicate per-element damage list from ReviewOverlay here,
+       since this view already shows the element bars above. -->
+  <ReviewOverlay {summary} {cards} {relics} showDamageGraphs={false} />
             {/if}
 
             <!-- Party vs Foe Damage Comparison -->

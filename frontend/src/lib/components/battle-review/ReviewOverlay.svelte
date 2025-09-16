@@ -4,6 +4,9 @@
   export let summary = {};
   export let cards = [];
   export let relics = [];
+  // Optional: allow parent views that already render element damage
+  // summaries to hide the duplicate graph here.
+  export let showDamageGraphs = true;
 
   // Aggregate damage totals across all entities so graphs display per-element numbers
   function aggregateDamageByElement(byType = {}) {
@@ -20,6 +23,9 @@
 </script>
 
 <div class="review-overlay">
-  <DamageGraphs damage={damageTotals} />
+  {#if showDamageGraphs}
+    <DamageGraphs damage={damageTotals} />
+  {/if}
   <RewardList {cards} {relics} />
+  
 </div>
