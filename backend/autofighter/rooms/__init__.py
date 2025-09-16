@@ -17,9 +17,9 @@ class Room:
         raise NotImplementedError
 
 
-from .battle.core import ENRAGE_TURNS_BOSS  # noqa: E402
-from .battle.core import ENRAGE_TURNS_NORMAL  # noqa: E402
 from .battle.core import BattleRoom  # noqa: E402
+from .battle.enrage import ENRAGE_TURNS_BOSS  # noqa: E402
+from .battle.enrage import ENRAGE_TURNS_NORMAL  # noqa: E402
 from .boss import BossRoom  # noqa: E402
 from .chat import ChatRoom  # noqa: E402
 from .shop import ShopRoom  # noqa: E402

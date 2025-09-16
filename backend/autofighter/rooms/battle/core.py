@@ -12,10 +12,10 @@ from autofighter.mapgen import MapNode
 from ...party import Party
 from .. import Room
 from .engine import run_battle
+from .enrage import ENRAGE_TURNS_BOSS
+from .enrage import ENRAGE_TURNS_NORMAL
+from .enrage import compute_enrage_threshold
 from .setup import setup_battle
-
-ENRAGE_TURNS_NORMAL = 100
-ENRAGE_TURNS_BOSS = 500
 
 
 @dataclass
@@ -45,18 +45,7 @@ class BattleRoom(Room):
             foe=foe,
             strength=self.strength,
         )
-        try:
-            from autofighter import rooms as rooms_module
-        except Exception:
-            rooms_module = None
-
-        base_normal = ENRAGE_TURNS_NORMAL
-        base_boss = ENRAGE_TURNS_BOSS
-        if rooms_module is not None:
-            base_normal = getattr(rooms_module, "ENRAGE_TURNS_NORMAL", base_normal)
-            base_boss = getattr(rooms_module, "ENRAGE_TURNS_BOSS", base_boss)
-
-        threshold = base_boss if isinstance(self, BossRoom) else base_normal
+        threshold = await compute_enrage_threshold(self)
 
         return await run_battle(
             self,
@@ -72,7 +61,6 @@ class BattleRoom(Room):
 
 
 from ...stats import Stats  # noqa: E402  # imported for type annotations
-from ..boss import BossRoom  # noqa: E402  # imported for isinstance checks
 
 __all__ = [
     "BattleRoom",
