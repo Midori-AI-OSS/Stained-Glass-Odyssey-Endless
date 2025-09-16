@@ -12,7 +12,9 @@ from autofighter.summons.manager import SummonManager
 
 from ..logging import queue_log
 from ..pacing import _EXTRA_TURNS
+from ..pacing import YIELD_MULTIPLIER
 from ..pacing import _pace
+from ..pacing import pace_sleep
 from ..turn_helpers import credit_if_dead
 from ..turn_helpers import remove_dead_foes
 from ..turns import apply_enrage_bleed
@@ -43,7 +45,7 @@ async def execute_player_phase(context: TurnLoopContext) -> bool:
                 break
             action_start = asyncio.get_event_loop().time()
             if member.hp <= 0:
-                await asyncio.sleep(0.001)
+                await pace_sleep(YIELD_MULTIPLIER)
                 break
             context.turn += 1
             await update_enrage_state(
@@ -101,7 +103,7 @@ async def execute_player_phase(context: TurnLoopContext) -> bool:
                     party=context.combat_party.members,
                     foes=context.foes,
                 )
-                await asyncio.sleep(0.001)
+                await pace_sleep(YIELD_MULTIPLIER)
                 break
             proceed = await member_effect.on_action()
             if proceed is None:
@@ -140,7 +142,7 @@ async def execute_player_phase(context: TurnLoopContext) -> bool:
                     include_summon_foes=True,
                 )
                 await _pace(action_start)
-                await asyncio.sleep(0.001)
+                await pace_sleep(YIELD_MULTIPLIER)
                 break
             damage = await target_foe.apply_damage(
                 member.atk,
@@ -265,7 +267,7 @@ async def execute_player_phase(context: TurnLoopContext) -> bool:
             ):
                 _EXTRA_TURNS[id(member)] -= 1
                 await _pace(action_start)
-                await asyncio.sleep(0.001)
+                await pace_sleep(YIELD_MULTIPLIER)
                 continue
             await finish_turn(context, member, action_start)
             if battle_over:
@@ -365,7 +367,7 @@ async def _handle_wind_spread(
     additional_hits = 0
     for extra_index, extra_foe in enumerate(context.foes):
         if extra_index == target_index or extra_foe.hp <= 0:
-            await asyncio.sleep(0.001)
+            await pace_sleep(YIELD_MULTIPLIER)
             continue
         extra_damage = await extra_foe.apply_damage(
             scaled_atk,

@@ -3,6 +3,8 @@ import importlib.util
 import logging
 from pathlib import Path
 
+from autofighter.rooms.battle.pacing import YIELD_DELAY
+
 spec = importlib.util.spec_from_file_location(
     "event_bus", Path(__file__).resolve().parents[1] / "plugins" / "event_bus.py"
 )
@@ -67,7 +69,7 @@ def test_dynamic_batch_interval_thresholds():
     assert interval_51 == max(0.005, 0.016 * 0.5)
 
     interval_101 = asyncio.run(run_scenario(100))
-    assert interval_101 == 0.001
+    assert interval_101 == YIELD_DELAY
 
 
 def test_emit_batched_without_loop_logs_debug(caplog):

@@ -49,6 +49,13 @@
   white-space: nowrap; /* keep label in one line so divider sits after text */
 }
 
+.settings-panel .value {
+  font-size: 0.8rem;
+  min-width: 2.6rem;
+  text-align: right;
+  opacity: 0.85;
+}
+
 /* Ensure left and right wrappers map to columns */
 .settings-panel .control-left { grid-column: 1; min-width: 0; display: flex; align-items: center; }
 .settings-panel .control-right { grid-column: 2; }

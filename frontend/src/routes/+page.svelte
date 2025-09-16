@@ -44,6 +44,7 @@
   // When true, suppress backend syncing/polling (e.g., during defeat popup)
   let haltSync = false;
   let fullIdleMode = false;
+  let animationSpeed = 1;
   // Preserve the last live battle snapshot (with statuses) for review UI
   let lastBattleSnapshot = null;
   // Prevent overlapping room fetches
@@ -1323,6 +1324,7 @@
     editorState={editorState}
     battleActive={battleActive}
     backendFlavor={backendFlavor}
+    bind:animationSpeed
     bind:fullIdleMode
     on:startRun={handleStart}
     on:editorSave={(e) => handleEditorSave(e)}

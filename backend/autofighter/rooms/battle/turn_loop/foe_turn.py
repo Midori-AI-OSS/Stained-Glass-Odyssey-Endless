@@ -12,7 +12,9 @@ from autofighter.summons.manager import SummonManager
 
 from ..logging import queue_log
 from ..pacing import _EXTRA_TURNS
+from ..pacing import YIELD_MULTIPLIER
 from ..pacing import _pace
+from ..pacing import pace_sleep
 from ..turn_helpers import credit_if_dead
 from .initialization import TurnLoopContext
 from .turn_end import finish_turn
@@ -38,7 +40,7 @@ async def execute_foe_phase(context: TurnLoopContext) -> bool:
                 break
             action_start = asyncio.get_event_loop().time()
             if acting_foe.hp <= 0:
-                await asyncio.sleep(0.001)
+                await pace_sleep(YIELD_MULTIPLIER)
                 break
             alive_targets = [
                 (index, target)
@@ -74,7 +76,7 @@ async def execute_foe_phase(context: TurnLoopContext) -> bool:
                     party=context.combat_party.members,
                     foes=context.foes,
                 )
-                await asyncio.sleep(0.001)
+                await pace_sleep(YIELD_MULTIPLIER)
                 break
             proceed = await foe_manager.on_action()
             if proceed is None:
@@ -187,7 +189,7 @@ async def execute_foe_phase(context: TurnLoopContext) -> bool:
             ):
                 _EXTRA_TURNS[id(acting_foe)] -= 1
                 await _pace(action_start)
-                await asyncio.sleep(0.001)
+                await pace_sleep(YIELD_MULTIPLIER)
                 continue
             await finish_turn(context, acting_foe, action_start)
             if battle_over:

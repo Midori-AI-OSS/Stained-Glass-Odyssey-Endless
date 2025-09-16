@@ -3,15 +3,79 @@
 from __future__ import annotations
 
 import asyncio
+import math
+
+from options import OptionKey
+from options import get_option
 
 from autofighter.action_queue import ActionQueue
 from autofighter.stats import BUS
 from autofighter.stats import Stats
 
-TURN_PACING = 0.5
+DEFAULT_TURN_PACING = 0.5
+_MIN_TURN_PACING = 0.05
+
+TURN_PACING = DEFAULT_TURN_PACING
+YIELD_DELAY = TURN_PACING / 500
+DOUBLE_YIELD_DELAY = YIELD_DELAY * 2
+
+YIELD_MULTIPLIER = YIELD_DELAY / TURN_PACING
+DOUBLE_YIELD_MULTIPLIER = DOUBLE_YIELD_DELAY / TURN_PACING
 
 _EXTRA_TURNS: dict[int, int] = {}
 _VISUAL_QUEUE: ActionQueue | None = None
+
+
+def _coerce_turn_pacing(raw: object) -> float:
+    try:
+        value = float(raw)
+    except (TypeError, ValueError):
+        return DEFAULT_TURN_PACING
+
+    if not math.isfinite(value):
+        return DEFAULT_TURN_PACING
+
+    if value <= 0:
+        return _MIN_TURN_PACING
+    return value
+
+
+def _apply_turn_pacing(value: float) -> float:
+    global DOUBLE_YIELD_DELAY
+    global DOUBLE_YIELD_MULTIPLIER
+    global TURN_PACING
+    global YIELD_DELAY
+    global YIELD_MULTIPLIER
+
+    TURN_PACING = max(value, _MIN_TURN_PACING)
+    YIELD_DELAY = TURN_PACING / 500
+    DOUBLE_YIELD_DELAY = YIELD_DELAY * 2
+
+    YIELD_MULTIPLIER = YIELD_DELAY / TURN_PACING
+    DOUBLE_YIELD_MULTIPLIER = DOUBLE_YIELD_DELAY / TURN_PACING
+    return TURN_PACING
+
+
+def refresh_turn_pacing() -> float:
+    """Reload TURN_PACING from the options table."""
+
+    try:
+        raw = get_option(OptionKey.TURN_PACING, DEFAULT_TURN_PACING)
+    except Exception:
+        return _apply_turn_pacing(DEFAULT_TURN_PACING)
+    return _apply_turn_pacing(_coerce_turn_pacing(raw))
+
+
+def set_turn_pacing(value: float | str) -> float:
+    """Update TURN_PACING and dependent pacing constants."""
+
+    return _apply_turn_pacing(_coerce_turn_pacing(value))
+
+
+try:
+    refresh_turn_pacing()
+except Exception:
+    pass
 
 
 def _grant_extra_turn(entity: Stats) -> None:
@@ -50,10 +114,41 @@ async def _pace(start_time: float) -> None:
     wait = base_wait - elapsed
     if wait > 0:
         try:
-            await asyncio.sleep(wait)
+            await pace_sleep(wait / TURN_PACING)
+        except asyncio.CancelledError:
+            raise
         except Exception:
             pass
     try:
-        await asyncio.sleep(TURN_PACING)
+        await pace_sleep()
+    except asyncio.CancelledError:
+        raise
     except Exception:
         pass
+
+
+async def pace_sleep(multiplier: float = 1.0) -> None:
+    """Sleep for a scaled pacing interval with cooperative fallbacks."""
+
+    try:
+        scaled = max(multiplier, 0.0) * TURN_PACING
+    except Exception:
+        scaled = TURN_PACING
+
+    delay = max(scaled, YIELD_DELAY)
+
+    try:
+        await asyncio.sleep(delay)
+        return
+    except asyncio.CancelledError:
+        raise
+    except Exception:
+        pass
+
+    if delay > YIELD_DELAY:
+        try:
+            await asyncio.sleep(YIELD_DELAY)
+        except asyncio.CancelledError:
+            raise
+        except Exception:
+            pass

@@ -1,10 +1,12 @@
 from __future__ import annotations
 
-import asyncio
 from typing import Any
 
 from ..pacing import _EXTRA_TURNS
+from ..pacing import TURN_PACING
+from ..pacing import YIELD_MULTIPLIER
 from ..pacing import _pace
+from ..pacing import pace_sleep
 from ..turns import dispatch_turn_end_snapshot
 from ..turns import push_progress_update
 from .initialization import TurnLoopContext
@@ -40,5 +42,5 @@ async def finish_turn(
         _EXTRA_TURNS,
         actor,
     )
-    await asyncio.sleep(2.2)
-    await asyncio.sleep(0.001)
+    await pace_sleep(2.2 / TURN_PACING)
+    await pace_sleep(YIELD_MULTIPLIER)

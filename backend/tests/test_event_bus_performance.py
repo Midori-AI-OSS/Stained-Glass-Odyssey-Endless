@@ -2,11 +2,14 @@
 Performance tests for the event bus system to identify blocking behaviors.
 Tests with 100+ subscribers to simulate heavy effect load scenarios.
 """
-import asyncio
 import time
 
 import pytest
 
+from autofighter.rooms.battle.pacing import DOUBLE_YIELD_DELAY
+from autofighter.rooms.battle.pacing import YIELD_DELAY
+from autofighter.rooms.battle.pacing import YIELD_MULTIPLIER
+from autofighter.rooms.battle.pacing import pace_sleep
 from autofighter.stats import BUS
 from autofighter.stats import Stats
 
@@ -28,7 +31,7 @@ class TestEventBusPerformance:
             for _ in range(event_count):
                 await BUS.emit_async("yield_test", "data")
             elapsed = time.perf_counter() - start
-            assert elapsed >= event_count * 0.002
+            assert elapsed >= event_count * DOUBLE_YIELD_DELAY
         finally:
             BUS.unsubscribe("yield_test", handler)
 
@@ -43,7 +46,7 @@ class TestEventBusPerformance:
             def handler(*args):
                 start = time.perf_counter()
                 # Simulate 1ms of processing time per subscriber (realistic for complex effects)
-                time.sleep(0.001)
+                time.sleep(YIELD_DELAY)
                 end = time.perf_counter()
                 processing_times.append((index, end - start))
             return handler
@@ -153,10 +156,10 @@ class TestEventBusPerformance:
         async_times = []
 
         def sync_handler(*args):
-            time.sleep(0.001)  # 1ms processing
+            time.sleep(YIELD_DELAY)  # 1ms processing
 
         async def async_handler(*args):
-            await asyncio.sleep(0.001)  # 1ms async processing
+            await pace_sleep(YIELD_MULTIPLIER)  # 1ms async processing
 
         # Test synchronous emission
         for i in range(subscriber_count):

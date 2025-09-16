@@ -39,6 +39,7 @@
   export let reducedMotion = false;
   export let showActionValues = false;
   export let fullIdleMode = false;
+  export let animationSpeed = 1;
   export let selectedParty = [];
   export let battleActive = false;
   export let backendFlavor = '';
@@ -284,6 +285,7 @@
       {reducedMotion}
       {showActionValues}
       {fullIdleMode}
+      bind:animationSpeed
       {runId}
       {backendFlavor}
       on:save={(e) => dispatch('saveSettings', e.detail)}
