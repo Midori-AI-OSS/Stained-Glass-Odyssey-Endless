@@ -41,6 +41,7 @@
   export let selected = [];
   export let backendFlavor = '';
   export let fullIdleMode = false;
+  export let animationSpeed = 1;
 
   let randomBg = '';
   let roster = [];
@@ -61,7 +62,7 @@
       randomBg = getHourlyBackground();
     }
     const init = await loadInitialState();
-      ({ sfxVolume, musicVolume, voiceVolume, framerate, reducedMotion, showActionValues, fullIdleMode } =
+      ({ sfxVolume, musicVolume, voiceVolume, framerate, reducedMotion, showActionValues, fullIdleMode, animationSpeed } =
         init.settings);
     roster = init.roster;
     userState = init.user;
@@ -294,6 +295,7 @@
         {reducedMotion}
         {showActionValues}
         {fullIdleMode}
+        bind:animationSpeed
         {selectedParty}
         {battleActive}
         {backendFlavor}
@@ -309,7 +311,7 @@
       on:editorChange={(e) => dispatch('editorChange', e.detail)}
       on:loadRun={(e) => dispatch('loadRun', e.detail)}
       on:startNewRun={() => dispatch('startNewRun')}
-      on:saveSettings={(e) => ({ sfxVolume, musicVolume, voiceVolume, framerate, reducedMotion, showActionValues, fullIdleMode } = e.detail)}
+      on:saveSettings={(e) => ({ sfxVolume, musicVolume, voiceVolume, framerate, reducedMotion, showActionValues, fullIdleMode, animationSpeed } = e.detail)}
       on:endRun={() => dispatch('endRun')}
       on:shopBuy={(e) => dispatch('shopBuy', e.detail)}
       on:shopReroll={() => dispatch('shopReroll')}

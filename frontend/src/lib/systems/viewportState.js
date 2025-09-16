@@ -21,6 +21,12 @@ export async function loadInitialState() {
     reducedMotion: saved.reducedMotion ?? false,
     showActionValues: saved.showActionValues ?? false,
     fullIdleMode: saved.fullIdleMode ?? false,
+    animationSpeed: (() => {
+      const raw = Number(saved.animationSpeed);
+      if (!Number.isFinite(raw) || raw <= 0) return 1;
+      const clamped = Math.min(2, Math.max(0.1, raw));
+      return Math.round(clamped * 10) / 10;
+    })(),
   };
   let roster = [];
   let user = { level: 1, exp: 0, next_level_exp: 100 };
