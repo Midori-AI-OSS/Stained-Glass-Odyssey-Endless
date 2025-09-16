@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import math
 
 from options import OptionKey
 from options import get_option
@@ -30,6 +31,10 @@ def _coerce_turn_pacing(raw: object) -> float:
         value = float(raw)
     except (TypeError, ValueError):
         return DEFAULT_TURN_PACING
+
+    if not math.isfinite(value):
+        return DEFAULT_TURN_PACING
+
     if value <= 0:
         return _MIN_TURN_PACING
     return value
