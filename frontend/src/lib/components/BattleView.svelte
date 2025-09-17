@@ -603,7 +603,7 @@
     z-index: 1; /* draw above overheal/shields */
   }
 
-  /* Overheal/shields visual overlay (similar to legacy FighterPortrait) */
+  /* Overheal/shields visual overlay (similar to LegacyFighterPortrait) */
   .overheal-fill {
     position: absolute;
     left: 0;

@@ -1,6 +1,6 @@
 <script>
   import { onMount, createEventDispatcher } from 'svelte';
-  import FighterPortrait from '../battle/FighterPortrait.svelte';
+  import LegacyFighterPortrait from '../battle/LegacyFighterPortrait.svelte';
   import ReviewOverlay from './battle-review/ReviewOverlay.svelte';
   import RewardCard from './RewardCard.svelte';
   import CurioChoice from './CurioChoice.svelte';
@@ -100,7 +100,7 @@
   // to the ids present in the fetched summary to ensure graphs are shown.
   let partyDisplay = [];
   let foesDisplay = [];
-  // Prefer full objects from room snapshot so DoTs/HoTs/buffs render in FighterPortrait
+  // Prefer full objects from room snapshot so DoTs/HoTs/buffs render in LegacyFighterPortrait
   $: partyDisplay = (partyData && partyData.length
     ? partyData
     : (party && party.length
@@ -912,7 +912,7 @@
             {:else if tab.entity}
               {@const _tabFighter = toDisplayFighter(tab.entity)}
               <div style="--portrait-size: 4rem;">
-                <FighterPortrait fighter={_tabFighter} {reducedMotion} />
+                <LegacyFighterPortrait fighter={_tabFighter} {reducedMotion} />
               </div>
             {:else}
               <User size={20} />
@@ -1313,7 +1313,7 @@
               {#if currentTab.entity}
                 {@const _fighter = toDisplayFighter(currentTab.entity)}
                 <div style="--portrait-size: 7rem;">
-                  <FighterPortrait fighter={_fighter} {reducedMotion} />
+                  <LegacyFighterPortrait fighter={_fighter} {reducedMotion} />
                 </div>
               {/if}
               <h3>{currentTab.label} Breakdown</h3>
