@@ -425,7 +425,61 @@ class EffectManager:
                 chance = min(effective, 1.0)
 
             attempted = True
-            if random.random() >= chance:
+            roll = random.random()
+            if roll >= chance:
+                from autofighter.stats import BUS
+
+                dtype = getattr(attacker, "damage_type", None)
+                effect_name: str | None = None
+                effect_id: str | None = None
+                predicted_damage: int | None = None
+                predicted_turns: int | None = None
+                preview = None
+                try:
+                    if dtype is None:
+                        preview = None
+                    elif isinstance(dtype, str):
+                        from plugins import damage_effects
+
+                        preview = damage_effects.create_dot(dtype, damage, attacker)
+                    else:
+                        preview = dtype.create_dot(damage, attacker)
+                except Exception:
+                    preview = None
+
+                if preview is not None:
+                    effect_name = getattr(preview, "name", None)
+                    effect_id = getattr(preview, "id", None)
+                    predicted_damage = getattr(preview, "damage", None)
+                    predicted_turns = getattr(preview, "turns", None)
+
+                if effect_name is None:
+                    effect_name = getattr(dtype, "id", None) or "dot"
+
+                details = {
+                    "effect_type": "dot",
+                    "target_id": getattr(self.stats, "id", None),
+                    "source_id": getattr(attacker, "id", None),
+                    "damage_type": getattr(dtype, "id", dtype),
+                    "chance": chance,
+                    "roll": roll,
+                    "resistance": resistance,
+                    "remaining_hit_rate": remaining,
+                }
+                if effect_id:
+                    details["effect_id"] = effect_id
+                if predicted_damage is not None:
+                    details["predicted_damage"] = predicted_damage
+                if predicted_turns is not None:
+                    details["predicted_turns"] = predicted_turns
+
+                BUS.emit(
+                    "effect_resisted",
+                    effect_name,
+                    self.stats,
+                    attacker,
+                    details,
+                )
                 break
 
             dot = attacker.damage_type.create_dot(damage, attacker)

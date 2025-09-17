@@ -16,28 +16,46 @@ class CalmBeads(CardBase):
     async def apply(self, party) -> None:  # type: ignore[override]
         await super().apply(party)
 
-        def _on_effect_resisted(target, effect_name, source):
-            # Check if target is one of our party members and effect is a debuff
-            if target in party.members:
-                # Check if the resisted effect was a DoT or debuff by looking at effect_manager
-                effect_manager = getattr(target, 'effect_manager', None)
-                if effect_manager:
-                    # Check if the effect name suggests it's a debuff/DoT
-                    effect_lower = effect_name.lower()
-                    is_debuff = any(keyword in effect_lower for keyword in
-                                   ['bleed', 'poison', 'burn', 'freeze', 'stun', 'silence', 'slow',
-                                    'weakness', 'curse', 'dot', 'debuff'])
+        def _on_effect_resisted(effect_name, target, source, details=None):
+            if target not in party.members:
+                return
 
-                    if is_debuff:
-                        # Grant +1 ultimate charge
-                        target.add_ultimate_charge(1)
-                        import logging
-                        log = logging.getLogger(__name__)
-                        log.debug("Calm Beads ultimate charge refund: +1 charge to %s", target.id)
-                        BUS.emit("card_effect", self.id, target, "resist_charge_gain", 1, {
-                            "charge_gained": 1,
-                            "resisted_effect": effect_name,
-                            "trigger_event": "effect_resisted"
-                        })
+            metadata = details or {}
+            effect_lower = (effect_name or "").lower()
+            effect_type = metadata.get("effect_type")
+            is_debuff = effect_type in {"dot", "debuff"}
+            if not is_debuff:
+                is_debuff = any(
+                    keyword in effect_lower
+                    for keyword in [
+                        'bleed',
+                        'poison',
+                        'burn',
+                        'freeze',
+                        'stun',
+                        'silence',
+                        'slow',
+                        'weakness',
+                        'curse',
+                        'dot',
+                        'debuff',
+                    ]
+                )
+
+            if not is_debuff:
+                return
+
+            target.add_ultimate_charge(1)
+            import logging
+            log = logging.getLogger(__name__)
+            log.debug("Calm Beads ultimate charge refund: +1 charge to %s", target.id)
+            payload = {
+                "charge_gained": 1,
+                "resisted_effect": effect_name,
+                "trigger_event": "effect_resisted",
+            }
+            if metadata:
+                payload["metadata"] = metadata
+            BUS.emit("card_effect", self.id, target, "resist_charge_gain", 1, payload)
 
         BUS.subscribe("effect_resisted", _on_effect_resisted)
