@@ -6,10 +6,10 @@
 - Light damage type users grant all allies a stack of Radiant Regeneration
   (5 HP over 2 turns) on each action and will directly heal allies under 25%
   HP instead of attacking.
-- Dark damage type users apply a stack of Shadow Siphon to every party member
-  each action. The DoT has no turn limit and drains 5% of max HP per stack each
-  tick. For every 1% of max HP drained, the Dark user gains matching attack and
-  defense. All Shadow Siphon stacks are cleared when the battle ends.
+- Dark damage type users siphon 10% of each living ally's current HP whenever
+  they act, never reducing anyone below 1 HP. The health drained contributes to
+  a temporary damage multiplier on their next strike (roughly 0.0001× per HP
+  siphoned with slight randomness), after which the bonus is cleared.
 - Wind damage type users strike all remaining foes after their first hit,
   repeating the damage and rolling their Gale Erosion DoT on each target.
 - When a Wind user fires their ultimate, all existing enemy DoTs are pulled
