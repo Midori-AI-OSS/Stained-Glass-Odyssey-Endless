@@ -48,6 +48,9 @@ class BulwarkTotem(CardBase):
             if share_ratio <= 0:
                 return
 
+            current_hp = max(0, int(getattr(target, "hp", 0)))
+            effective_post_hit_hp = max(post_hit_hp, current_hp)
+
             redirect_amount = max(1, int(damage * share_ratio))
 
             # Identify a healthy ally that can donate HP.
@@ -72,15 +75,15 @@ class BulwarkTotem(CardBase):
             if max_transfer <= 0:
                 return
 
-            heal_cap = max_hp - post_hit_hp if max_hp else redirect_amount
+            heal_cap = max_hp - effective_post_hit_hp if max_hp else redirect_amount
             transfer_amount = min(redirect_amount, max_transfer, heal_cap)
             if transfer_amount <= 0:
                 return
 
             target.hp = (
-                post_hit_hp + transfer_amount
+                effective_post_hit_hp + transfer_amount
                 if not max_hp
-                else min(post_hit_hp + transfer_amount, max_hp)
+                else min(effective_post_hit_hp + transfer_amount, max_hp)
             )
             card_holder.hp = max(1, holder_hp - transfer_amount)
 
