@@ -9,6 +9,7 @@
   import BattleEffects from '../effects/BattleEffects.svelte';
   import StatusIcons from '../battle/StatusIcons.svelte';
   import ActionQueue from '../battle/ActionQueue.svelte';
+  import BattleEventFloaters from './BattleEventFloaters.svelte';
 
   export let runId = '';
   export let framerate = 60;
@@ -46,6 +47,22 @@
   let timer;
   let logs = [];
   let hoveredId = null;
+  let floaterFeed = [];
+  let recentEventCounts = new Map();
+  let floaterDuration = 1200;
+  const relevantRecentEventTypes = new Set(['damage_taken', 'heal_received', 'dot_tick', 'hot_tick']);
+  let lastRunId = runId;
+
+  $: floaterDuration = Math.max(900, pollDelay * 3);
+  $: if (runId !== lastRunId) {
+    recentEventCounts = new Map();
+    floaterFeed = [];
+    lastRunId = runId;
+  }
+  $: if (!active) {
+    floaterFeed = [];
+    recentEventCounts = new Map();
+  }
   
   const logAnimations = {
     damage: 'HitEffect',
@@ -101,6 +118,94 @@
       out.push({ kind: 'hot', label: h.id, count: Number(h.turns || 1), title });
     }
     return out;
+  }
+
+  function extractEffectLabel(metadata) {
+    if (!metadata || typeof metadata !== 'object') return '';
+    const list = Array.isArray(metadata.effects) ? metadata.effects : [];
+    for (const entry of list) {
+      if (!entry || typeof entry !== 'object') continue;
+      if (entry.name) return String(entry.name);
+      if (entry.id) return String(entry.id);
+    }
+    return '';
+  }
+
+  function normalizeRecentEvent(evt) {
+    if (!evt || typeof evt !== 'object') return null;
+    const metadata = (evt.metadata && typeof evt.metadata === 'object') ? evt.metadata : {};
+    let damageTypeId = metadata.damage_type_id;
+    if (!damageTypeId) {
+      const effects = Array.isArray(metadata.effects) ? metadata.effects : [];
+      for (const effect of effects) {
+        if (!effect || typeof effect !== 'object') continue;
+        damageTypeId =
+          effect.damage_type_id ||
+          effect.element ||
+          effect.damage_type ||
+          effect.type;
+        if (damageTypeId) break;
+      }
+    }
+    const amount = Number(evt.amount ?? 0);
+    return {
+      ...evt,
+      amount,
+      damageTypeId,
+      metadata,
+      effectLabel: extractEffectLabel(metadata),
+    };
+  }
+
+  function eventToken(evt) {
+    if (!evt) return '';
+    const metadata = evt.metadata || {};
+    const effectIds = Array.isArray(metadata.effect_ids) ? metadata.effect_ids.join('|') : '';
+    const effectDetails = Array.isArray(metadata.effects)
+      ? metadata.effects
+          .map(e =>
+            [e?.type, e?.id, e?.name, e?.remaining_turns, e?.original_amount, e?.original_healing]
+              .map(v => (v === undefined || v === null ? '' : String(v)))
+              .join('~'),
+          )
+          .join('|')
+      : '';
+    return [
+      evt.type || '',
+      evt.target_id || '',
+      evt.source_id || '',
+      evt.amount ?? '',
+      metadata.damage_type_id || '',
+      effectIds,
+      effectDetails,
+    ].join('::');
+  }
+
+  function processRecentEvents(events) {
+    if (!Array.isArray(events)) {
+      recentEventCounts = new Map();
+      return [];
+    }
+    const filtered = [];
+    for (const raw of events) {
+      if (!raw || typeof raw !== 'object') continue;
+      if (!relevantRecentEventTypes.has(raw.type)) continue;
+      const normalized = normalizeRecentEvent(raw);
+      if (normalized) filtered.push(normalized);
+    }
+    const nextCounts = new Map();
+    const newOnes = [];
+    for (const entry of filtered) {
+      const token = eventToken(entry);
+      const prevCount = recentEventCounts.get(token) || 0;
+      const nextCount = (nextCounts.get(token) || 0) + 1;
+      nextCounts.set(token, nextCount);
+      if (prevCount < nextCount) {
+        newOnes.push(entry);
+      }
+    }
+    recentEventCounts = nextCounts;
+    return newOnes;
   }
 
   $: if (logs.length) {
@@ -423,6 +528,13 @@
 
       if (Array.isArray(snap.log)) logs = snap.log;
       else if (Array.isArray(snap.logs)) logs = snap.logs;
+
+      if (Array.isArray(snap.recent_events)) {
+        floaterFeed = processRecentEvents(snap.recent_events);
+      } else {
+        floaterFeed = [];
+        recentEventCounts = new Map();
+      }
     } catch (e) {
       // Silently ignore errors to avoid spam during rapid polling
     } finally {
@@ -464,6 +576,7 @@
 >
   <EnrageIndicator active={Boolean(enrage?.active)} {reducedMotion} enrageData={enrage} />
   <BattleEffects cue={effectCue} />
+  <BattleEventFloaters events={floaterFeed} {reducedMotion} paceMs={floaterDuration} />
   <ActionQueue
     {queue}
     {combatants}
