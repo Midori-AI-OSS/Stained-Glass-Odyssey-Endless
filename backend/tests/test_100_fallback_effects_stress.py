@@ -14,7 +14,8 @@ from autofighter.stats import Stats
 class TestEventBusStressWithFallbackEffects:
     """Stress test simulating 100 fallback effects during combat."""
 
-    def test_100_fallback_effects_sync_performance(self):
+    @pytest.mark.asyncio
+    async def test_100_fallback_effects_sync_performance(self):
         """Test current sync performance with 100 fallback effects subscribed to damage events."""
         # Simulate 100 entities with fallback effects (like Aftertaste)
         fallback_count = 100
@@ -175,7 +176,8 @@ class TestEventBusStressWithFallbackEffects:
             for handler in async_handlers:
                 BUS.unsubscribe("damage_dealt", handler)
 
-    def test_event_bus_batching_performance(self):
+    @pytest.mark.asyncio
+    async def test_event_bus_batching_performance(self):
         """Test the new batching functionality for high-frequency events."""
         fallback_count = 50  # Smaller number for batching test
         batched_events = []
@@ -219,7 +221,8 @@ class TestEventBusStressWithFallbackEffects:
             for handler in handlers:
                 BUS.unsubscribe("damage_dealt", handler)
 
-    def test_performance_metrics_collection(self):
+    @pytest.mark.asyncio
+    async def test_performance_metrics_collection(self):
         """Test that performance metrics are being collected properly."""
         print("\n=== Performance Metrics Test ===")
 

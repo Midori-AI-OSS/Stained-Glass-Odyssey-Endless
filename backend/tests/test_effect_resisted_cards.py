@@ -5,6 +5,7 @@ from unittest.mock import patch
 from autofighter.effects import EffectManager
 from autofighter.stats import BUS
 from autofighter.stats import Stats
+import plugins.event_bus as event_bus_module
 from plugins.cards.calm_beads import CalmBeads
 from plugins.cards.polished_shield import PolishedShield
 from plugins.damage_types.fire import Fire
@@ -13,6 +14,7 @@ from plugins.damage_types.fire import Fire
 def _setup_ally_with_card(card_cls: type) -> tuple[asyncio.AbstractEventLoop, Stats]:
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
+    BUS.set_loop(loop)
 
     ally = Stats()
     ally.id = "ally"
@@ -63,11 +65,10 @@ def test_calm_beads_grants_charge_on_resist():
 
         BUS.subscribe("effect_resisted", _recorder)
         try:
-            BUS.set_async_preference(False)
             _trigger_resist(ally, attacker)
-            loop.run_until_complete(asyncio.sleep(0.01))
+            loop.run_until_complete(asyncio.sleep(0.05))
+            loop.run_until_complete(event_bus_module.bus._process_batches_internal())
         finally:
-            BUS.set_async_preference(True)
             BUS.unsubscribe("effect_resisted", _recorder)
 
         assert not ally.effect_manager.dots
@@ -99,11 +100,10 @@ def test_polished_shield_grants_defense_on_resist():
 
         BUS.subscribe("effect_resisted", _recorder)
         try:
-            BUS.set_async_preference(False)
             _trigger_resist(ally, attacker)
-            loop.run_until_complete(asyncio.sleep(0.01))
+            loop.run_until_complete(asyncio.sleep(0.05))
+            loop.run_until_complete(event_bus_module.bus._process_batches_internal())
         finally:
-            BUS.set_async_preference(True)
             BUS.unsubscribe("effect_resisted", _recorder)
 
         assert not ally.effect_manager.dots
