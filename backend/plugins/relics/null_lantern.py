@@ -83,7 +83,12 @@ class NullLantern(RelicBase):
                         "disabled_rests": True
                     })
 
-            def _cleanup(*_args) -> None:
+            def _cleanup(entity) -> None:
+                from plugins.foes._base import FoeBase
+
+                if not isinstance(entity, FoeBase):
+                    return
+
                 BUS.unsubscribe("battle_start", state["battle_start_handler"])
                 BUS.unsubscribe("battle_end", state["battle_end_handler"])
                 BUS.unsubscribe("battle_end", state["cleanup_handler"])
