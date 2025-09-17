@@ -785,7 +785,7 @@
           .filter(Boolean);
         recentEvents = normalizedEvents;
         floaterFeed = processRecentEvents(snap.recent_events);
-      } else if ('recent_events' in snap) {
+      } else {
         recentEvents = [];
         floaterFeed = [];
         recentEventCounts = new Map();
