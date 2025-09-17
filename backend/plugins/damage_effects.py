@@ -11,7 +11,6 @@ from plugins.dots.celestial_atrophy import CelestialAtrophy
 from plugins.dots.charged_decay import ChargedDecay
 from plugins.dots.frozen_wound import FrozenWound
 from plugins.dots.gale_erosion import GaleErosion
-from plugins.dots.shadow_siphon import ShadowSiphon
 from plugins.hots.radiant_regeneration import RadiantRegeneration
 
 log = logging.getLogger(__name__)
@@ -35,14 +34,6 @@ DOT_FACTORIES: dict[str, Callable[[float, object], DamageOverTime]] = {
 HOT_FACTORIES: dict[str, Callable[[object], HealingOverTime]] = {
     "Light": lambda src: _set_source(RadiantRegeneration(), src),
 }
-
-
-SHADOW_SIPHON_ID = ShadowSiphon.id
-
-
-def create_shadow_siphon(damage: int, source) -> DamageOverTime:
-    log.info("Creating Shadow Siphon with %s damage", damage)
-    return _set_source(ShadowSiphon(damage), source)
 
 
 def create_dot(damage_type: str, damage: float, source) -> DamageOverTime | None:
