@@ -33,7 +33,7 @@ detail pane.
 - Precision Sights – +4% Crit Damage; After scoring a crit, gain +2% crit damage for 2 turns (small stacking)
 - Inspiring Banner – +2% ATK & +2% DEF; At battle start, grant a random ally +2% ATK for 2 turns
 - Tactical Kit – +2% ATK & +2% HP; Once per battle, convert 1% HP to +2% ATK for one action
-- Bulwark Totem – +2% DEF & +2% HP; When an ally would die, redirect a small percentage of the fatal damage to this unit (tiny soak)
+- Bulwark Totem – +2% DEF & +2% HP; When lethal damage would drop an ally to 0 HP, siphon 5% of that hit from a healthy teammate to restore the victim (tiny soak)
 - Farsight Scope – +3% Crit Rate; Attacks against enemies under 50% HP gain +6% crit rate
 - Steady Grip – +3% ATK & +3% Dodge Odds; On applying a control effect (stun/silence), gain +2% ATK for next action
 - Coated Armor – +3% Mitigation & +3% DEF; When mitigation reduces incoming damage, heal 1% HP

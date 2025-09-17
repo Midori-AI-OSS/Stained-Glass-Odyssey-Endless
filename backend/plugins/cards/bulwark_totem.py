@@ -1,8 +1,11 @@
 from dataclasses import dataclass
 from dataclasses import field
+import logging
 
 from autofighter.stats import BUS
 from plugins.cards._base import CardBase
+
+log = logging.getLogger(__name__)
 
 
 @dataclass
@@ -12,40 +15,86 @@ class BulwarkTotem(CardBase):
     stars: int = 1
     effects: dict[str, float] = field(default_factory=lambda: {"defense": 0.02, "max_hp": 0.02})
     about: str = "+2% DEF & +2% HP; When an ally would die, redirect a small percentage of the fatal damage to this unit (tiny soak)"
+    damage_share: float = 0.05
+    ally_min_health_ratio: float = 0.25
 
     async def apply(self, party) -> None:  # type: ignore[override]
         await super().apply(party)
 
         def _on_damage_taken(target, attacker, damage):
-            # Check if target is one of our party members and damage is potentially fatal
-            if target in party.members:
-                current_hp = getattr(target, 'hp', 0)
-                # If target is very low on HP (below 20%), try to soak some damage
-                if current_hp <= getattr(target, 'max_hp', 1000) * 0.20:
-                    # Find the card holder (member with this card equipped)
-                    card_holder = None
-                    for member in party.members:
-                        if member != target and getattr(member, 'hp', 0) > 10:  # Must have reasonable HP
-                            card_holder = member
-                            break
+            if target not in party.members:
+                return
 
-                    if card_holder:
-                        # Redirect 5% of damage to the card holder (tiny soak)
-                        redirect_amount = max(1, int(damage * 0.05))
-                        # Give some HP back to target, take it from card holder
-                        hp_to_restore = min(redirect_amount, target.hp)
-                        if hp_to_restore > 0:
-                            target.hp += hp_to_restore
-                            card_holder.hp = max(1, card_holder.hp - redirect_amount)
+            # Determine the HP values before and after the hit.
+            post_hit_hp = max(0, int(getattr(target, "hp", 0)))
+            max_hp = max(0, int(getattr(target, "max_hp", 0)))
+            pre_hit_hp = post_hit_hp + max(0, int(damage))
+            if pre_hit_hp <= 0:
+                return
 
-                            import logging
-                            log = logging.getLogger(__name__)
-                            log.debug("Bulwark Totem damage soak: %d damage soaked by %s for %s", redirect_amount, card_holder.id, target.id)
-                            BUS.emit("card_effect", self.id, target, "damage_soak", redirect_amount, {
-                                "soak_amount": redirect_amount,
-                                "soaker": getattr(card_holder, 'id', 'unknown'),
-                                "protected": getattr(target, 'id', 'unknown'),
-                                "trigger_event": "damage_soak"
-                            })
+            # Only trigger on lethal blows where the victim would hit zero HP.
+            if post_hit_hp > 0:
+                return
+
+            share_ratio = max(0.0, float(self.damage_share))
+            if share_ratio <= 0:
+                return
+
+            redirect_amount = max(1, int(damage * share_ratio))
+
+            # Identify a healthy ally that can donate HP.
+            healthy_allies = []
+            for member in party.members:
+                if member is target:
+                    continue
+                member_hp = max(0, int(getattr(member, "hp", 0)))
+                if member_hp <= 0:
+                    continue
+                member_max_hp = max(1, int(getattr(member, "max_hp", 1)))
+                if member_hp / member_max_hp < self.ally_min_health_ratio:
+                    continue
+                healthy_allies.append(member)
+
+            if not healthy_allies:
+                return
+
+            card_holder = max(healthy_allies, key=lambda member: getattr(member, "hp", 0))
+            holder_hp = max(0, int(getattr(card_holder, "hp", 0)))
+            max_transfer = max(0, holder_hp - 1)
+            if max_transfer <= 0:
+                return
+
+            heal_cap = max_hp - post_hit_hp if max_hp else redirect_amount
+            transfer_amount = min(redirect_amount, max_transfer, heal_cap)
+            if transfer_amount <= 0:
+                return
+
+            target.hp = (
+                post_hit_hp + transfer_amount
+                if not max_hp
+                else min(post_hit_hp + transfer_amount, max_hp)
+            )
+            card_holder.hp = max(1, holder_hp - transfer_amount)
+
+            log.debug(
+                "Bulwark Totem damage soak: %d damage soaked by %s for %s",
+                transfer_amount,
+                getattr(card_holder, "id", "unknown"),
+                getattr(target, "id", "unknown"),
+            )
+            BUS.emit(
+                "card_effect",
+                self.id,
+                target,
+                "damage_soak",
+                transfer_amount,
+                {
+                    "soak_amount": transfer_amount,
+                    "soaker": getattr(card_holder, "id", "unknown"),
+                    "protected": getattr(target, "id", "unknown"),
+                    "pre_hit_hp": pre_hit_hp,
+                    "post_hit_hp": post_hit_hp,
+                },
+            )
 
         BUS.subscribe("damage_taken", _on_damage_taken)
