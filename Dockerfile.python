@@ -45,6 +45,7 @@ RUN sudo chown -R $(whoami):$(whoami) /.venv
 RUN sudo chmod -R 755 /.venv
 
 # Do not copy source; it will be bind-mounted at runtime
+RUN uv venv --python python3.13
 
 # Entrypoint will install deps and run the server from the mounted /app
 CMD ["bash", "-lc", "bash /app/docker-entrypoint.sh"]

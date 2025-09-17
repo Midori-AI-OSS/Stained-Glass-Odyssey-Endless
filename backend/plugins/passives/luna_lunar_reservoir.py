@@ -14,23 +14,32 @@ class LunaLunarReservoir:
     plugin_type = "passive"
     id = "luna_lunar_reservoir"
     name = "Lunar Reservoir"
-    trigger = "action_taken"  # Triggers when Luna takes any action
+    trigger = ["action_taken", "ultimate_used"]  # Respond to actions and ultimates
     max_stacks = 200  # Show charge level 0-200
     stack_display = "number"
 
     # Class-level tracking of charge points for each entity
     _charge_points: ClassVar[dict[int, int]] = {}
 
-    async def apply(self, target: "Stats") -> None:
-        """Apply charge mechanics for Luna."""
+    async def apply(self, target: "Stats", event: str = "action_taken", **_: object) -> None:
+        """Apply charge mechanics for Luna.
+
+        Args:
+            target: Entity gaining charge.
+            event: Triggering event name.
+        """
         entity_id = id(target)
 
         # Initialize charge if not present
         if entity_id not in self._charge_points:
             self._charge_points[entity_id] = 0
 
-        # Grant 1 charge point per action
-        self._charge_points[entity_id] += 1
+        # Grant charge based on event type
+        if event == "ultimate_used":
+            self._charge_points[entity_id] += 64
+        else:
+            self._charge_points[entity_id] += 1
+
         current_charge = self._charge_points[entity_id]
 
         # Determine attack count based on charge level

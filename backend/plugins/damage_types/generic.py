@@ -23,9 +23,7 @@ class Generic(DamageTypeBase):
         if not getattr(actor, "use_ultimate", lambda: False)():
             return False
 
-
         from autofighter.stats import BUS  # Import here to avoid circular imports
-        from plugins.passives.luna_lunar_reservoir import LunaLunarReservoir as _LLR_old
 
         registry = PassiveRegistry()
         target_pool = (
@@ -36,6 +34,8 @@ class Generic(DamageTypeBase):
         if not target_pool:
             return True
         target = target_pool[0]
+
+        await registry.trigger("ultimate_used", actor, party=allies, foes=enemies)
 
         base = actor.atk // 64
         remainder = actor.atk % 64
