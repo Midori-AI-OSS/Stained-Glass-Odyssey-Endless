@@ -126,32 +126,28 @@ async def test_summon_battle_lifecycle(monkeypatch):
     monkeypatch.setattr(torch_checker, "is_torch_available", lambda: False)
 
     SummonManager.cleanup()
-    BUS.set_async_preference(False)
 
-    try:
-        summoner = Ally()
-        summoner.id = "test_summoner"
-        summoner.ensure_permanent_summon_slots(1)
+    summoner = Ally()
+    summoner.id = "test_summoner"
+    summoner.ensure_permanent_summon_slots(1)
 
-        # Create temporary summon
-        summon = SummonManager.create_summon(
-            summoner=summoner,
-            summon_type="temporary",
-            source="test_source",
-            turns_remaining=1
-        )
-        assert summon is not None
+    # Create temporary summon
+    summon = SummonManager.create_summon(
+        summoner=summoner,
+        summon_type="temporary",
+        source="test_source",
+        turns_remaining=1
+    )
+    assert summon is not None
 
-        # Should be tracked
-        assert len(SummonManager.get_summons("test_summoner")) == 1
+    # Should be tracked
+    assert len(SummonManager.get_summons("test_summoner")) == 1
 
-        # Emit battle end - temporary summons should be cleaned up
-        await BUS.emit_async("battle_end", FoeBase())
+    # Emit battle end - temporary summons should be cleaned up
+    await BUS.emit_async("battle_end", FoeBase())
 
-        # Should be removed
-        assert len(SummonManager.get_summons("test_summoner")) == 0
-    finally:
-        BUS.set_async_preference(True)
+    # Should be removed
+    assert len(SummonManager.get_summons("test_summoner")) == 0
 
 
 @pytest.mark.asyncio
@@ -160,33 +156,29 @@ async def test_summon_turn_expiration(monkeypatch):
     monkeypatch.setattr(torch_checker, "is_torch_available", lambda: False)
 
     SummonManager.cleanup()
-    BUS.set_async_preference(False)
 
-    try:
-        summoner = Ally()
-        summoner.id = "test_summoner"
-        summoner.ensure_permanent_summon_slots(1)
+    summoner = Ally()
+    summoner.id = "test_summoner"
+    summoner.ensure_permanent_summon_slots(1)
 
-        # Create summon with 2 turn duration
-        summon = SummonManager.create_summon(
-            summoner=summoner,
-            summon_type="timed",
-            source="test_source",
-            turns_remaining=2
-        )
+    # Create summon with 2 turn duration
+    summon = SummonManager.create_summon(
+        summoner=summoner,
+        summon_type="timed",
+        source="test_source",
+        turns_remaining=2
+    )
 
-        assert len(SummonManager.get_summons("test_summoner")) == 1
+    assert len(SummonManager.get_summons("test_summoner")) == 1
 
-        # First turn
-        await BUS.emit_async("turn_start", summoner)
-        assert len(SummonManager.get_summons("test_summoner")) == 1
-        assert summon.turns_remaining == 1
+    # First turn
+    await BUS.emit_async("turn_start", summoner)
+    assert len(SummonManager.get_summons("test_summoner")) == 1
+    assert summon.turns_remaining == 1
 
-        # Second turn - should expire
-        await BUS.emit_async("turn_start", summoner)
-        assert len(SummonManager.get_summons("test_summoner")) == 0
-    finally:
-        BUS.set_async_preference(True)
+    # Second turn - should expire
+    await BUS.emit_async("turn_start", summoner)
+    assert len(SummonManager.get_summons("test_summoner")) == 0
 
 
 @pytest.mark.asyncio
