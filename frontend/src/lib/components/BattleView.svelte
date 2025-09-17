@@ -18,9 +18,11 @@
   export let enrage = { active: false, stacks: 0, turns: 0 };
   export let reducedMotion = false;
   export let active = true;
-  export let showHud = true;
+  export let showHud = false;
   export let showFoes = true;
   export let showActionValues = false;
+  // Hide status chips (DoTs/HoTs timeline) by default
+  export let showStatusTimeline = false;
 
   let foes = [];
   let queue = [];
@@ -856,7 +858,7 @@
     events={recentEvents}
     {reducedMotion}
   />
-  {#if statusTimeline.length}
+  {#if showStatusTimeline && statusTimeline.length}
     <div class:reduced={reducedMotion} class="status-timeline overlay-layer" aria-live="polite">
       {#each statusTimeline as chip (chip.key)}
         <div class="timeline-chip" data-state={chip.state} style={`--chip-color:${chip.color};`}>

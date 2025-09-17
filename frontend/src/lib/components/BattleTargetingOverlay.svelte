@@ -123,7 +123,8 @@
   <div class:reduced={reducedMotion} class="targeting-overlay" style={`--arrow-color:${arrowColor};`}>
     <svg viewBox="0 0 1000 1000" preserveAspectRatio="none">
       <defs>
-        <marker id={markerId} viewBox="0 0 12 12" refX="10" refY="6" markerWidth="12" markerHeight="12" orient="auto">
+        <!-- Smaller arrowhead -->
+        <marker id={markerId} viewBox="0 0 12 12" refX="7" refY="6" markerWidth="8" markerHeight="8" orient="auto">
           <path d="M0,0 L12,6 L0,12 z" fill="var(--arrow-color)" />
         </marker>
       </defs>
@@ -137,13 +138,8 @@
           marker-end={`url(#${markerId})`}
         />
       {/if}
-      {#if showAttackerPulse}
-        <circle class="node attacker" cx={attackerCanvas?.x ?? 0} cy={attackerCanvas?.y ?? 0} r="26" />
-      {/if}
-      {#if showTargetPulse}
-        <circle class="node target outer" cx={targetCanvas?.x ?? 0} cy={targetCanvas?.y ?? 0} r="24" />
-        <circle class="node target inner" cx={targetCanvas?.x ?? 0} cy={targetCanvas?.y ?? 0} r="12" />
-      {/if}
+      <!-- Attacker pulse removed per UX feedback -->
+      <!-- Target pulse removed per UX feedback -->
     </svg>
   </div>
 {/if}
@@ -164,7 +160,7 @@
 
   .arrow-line {
     stroke: var(--arrow-color, #f6d365);
-    stroke-width: 5;
+    stroke-width: 3; /* thinner arrow */
     stroke-linecap: round;
     filter: drop-shadow(0 0 10px rgba(0, 0, 0, 0.35));
   }
