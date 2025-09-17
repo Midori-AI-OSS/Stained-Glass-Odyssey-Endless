@@ -49,6 +49,7 @@
   let hoveredId = null;
   let floaterFeed = [];
   let recentEventCounts = new Map();
+  let lastRecentEventTokens = [];
   let floaterDuration = 1200;
   const relevantRecentEventTypes = new Set(['damage_taken', 'heal_received', 'dot_tick', 'hot_tick']);
   let lastRunId = runId;
@@ -56,12 +57,14 @@
   $: floaterDuration = Math.max(900, pollDelay * 3);
   $: if (runId !== lastRunId) {
     recentEventCounts = new Map();
+    lastRecentEventTokens = [];
     floaterFeed = [];
     lastRunId = runId;
   }
   $: if (!active) {
     floaterFeed = [];
     recentEventCounts = new Map();
+    lastRecentEventTokens = [];
   }
   
   const logAnimations = {
@@ -184,6 +187,7 @@
   function processRecentEvents(events) {
     if (!Array.isArray(events)) {
       recentEventCounts = new Map();
+      lastRecentEventTokens = [];
       return [];
     }
     const filtered = [];
@@ -193,10 +197,12 @@
       const normalized = normalizeRecentEvent(raw);
       if (normalized) filtered.push(normalized);
     }
+    const tokens = filtered.map(eventToken);
     const nextCounts = new Map();
     const newOnes = [];
-    for (const entry of filtered) {
-      const token = eventToken(entry);
+    for (let i = 0; i < filtered.length; i += 1) {
+      const entry = filtered[i];
+      const token = tokens[i];
       const prevCount = recentEventCounts.get(token) || 0;
       const nextCount = (nextCounts.get(token) || 0) + 1;
       nextCounts.set(token, nextCount);
@@ -204,7 +210,17 @@
         newOnes.push(entry);
       }
     }
+    if (!newOnes.length && filtered.length === 1) {
+      const [token] = tokens;
+      const isIdenticalToLast =
+        lastRecentEventTokens.length === 1 &&
+        lastRecentEventTokens[0] === token;
+      if (isIdenticalToLast) {
+        newOnes.push(filtered[0]);
+      }
+    }
     recentEventCounts = nextCounts;
+    lastRecentEventTokens = tokens;
     return newOnes;
   }
 
@@ -534,6 +550,7 @@
       } else {
         floaterFeed = [];
         recentEventCounts = new Map();
+        lastRecentEventTokens = [];
       }
     } catch (e) {
       // Silently ignore errors to avoid spam during rapid polling
