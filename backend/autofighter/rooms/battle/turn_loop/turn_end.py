@@ -29,6 +29,7 @@ async def finish_turn(
         context.enrage_state,
         context.temp_rdr,
         _EXTRA_TURNS,
+        run_id=context.run_id,
         active_id=getattr(actor, "id", None),
         active_target_id=active_target_id,
         include_summon_foes=include_summon_foes,
@@ -43,6 +44,7 @@ async def finish_turn(
         context.temp_rdr,
         _EXTRA_TURNS,
         actor,
+        context.run_id,
     )
     await pace_sleep(2.2 / TURN_PACING)
     await pace_sleep(YIELD_MULTIPLIER)

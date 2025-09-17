@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+from collections import deque
 from dataclasses import dataclass
 import logging
 from typing import TYPE_CHECKING
@@ -10,8 +11,10 @@ from typing import Callable
 from typing import Iterable
 from typing import MutableMapping
 from typing import Sequence
+import weakref
 
 from autofighter.effects import create_stat_buff
+from autofighter.stats import BUS
 from autofighter.summons.base import Summon
 from autofighter.summons.manager import SummonManager
 
@@ -23,6 +26,244 @@ if TYPE_CHECKING:
     from autofighter.effects import EffectManager
 
 log = logging.getLogger(__name__)
+
+_MISSING = object()
+_RECENT_EVENT_LIMIT = 6
+
+_entity_run_ids: dict[int, str] = {}
+_entity_refs: dict[int, weakref.ref[Stats]] = {}
+_recent_events: dict[str, deque[dict[str, Any]]] = {}
+_status_phases: dict[str, dict[str, Any] | None] = {}
+
+def _resolve_run_id(*entities: Any) -> str | None:
+    for entity in entities:
+        if isinstance(entity, Stats):
+            run_id = _entity_run_ids.get(id(entity))
+            if run_id:
+                return run_id
+    return None
+
+
+def register_snapshot_entities(run_id: str | None, entities: Iterable[Any]) -> None:
+    """Associate combatants with a run for incremental snapshot updates."""
+
+    if not run_id:
+        return
+    for entity in entities:
+        if isinstance(entity, Stats):
+            ident = id(entity)
+
+            def _cleanup(_ref: weakref.ref[Stats], *, key: int = ident) -> None:
+                _entity_run_ids.pop(key, None)
+                _entity_refs.pop(key, None)
+
+            _entity_run_ids[ident] = run_id
+            _entity_refs[ident] = weakref.ref(entity, _cleanup)
+
+
+def prepare_snapshot_overlay(run_id: str | None, entities: Iterable[Any]) -> None:
+    """Reset incremental snapshot state and register the supplied combatants."""
+
+    if not run_id:
+        return
+    register_snapshot_entities(run_id, entities)
+    queue = _recent_events.get(run_id)
+    if queue is None:
+        queue = deque(maxlen=_RECENT_EVENT_LIMIT)
+        _recent_events[run_id] = queue
+    else:
+        queue.clear()
+    _status_phases.pop(run_id, None)
+    snapshot = _get_snapshot(run_id)
+    snapshot.setdefault("recent_events", [])
+    snapshot.pop("status_phase", None)
+
+
+def _ensure_event_queue(run_id: str) -> deque[dict[str, Any]]:
+    queue = _recent_events.get(run_id)
+    if queue is None:
+        queue = deque(maxlen=_RECENT_EVENT_LIMIT)
+        _recent_events[run_id] = queue
+    return queue
+
+
+def _get_snapshot(run_id: str) -> dict[str, Any]:
+    from runs.lifecycle import battle_snapshots
+
+    snap = battle_snapshots.get(run_id)
+    if snap is None:
+        snap = {"result": "battle"}
+        battle_snapshots[run_id] = snap
+    return snap
+
+
+def mutate_snapshot_overlay(
+    run_id: str | None,
+    *,
+    active_id: str | None | object = _MISSING,
+    active_target_id: str | None | object = _MISSING,
+    status_phase: dict[str, Any] | None | object = _MISSING,
+    event: dict[str, Any] | None = None,
+) -> None:
+    """Mutate the stored battle snapshot for incremental UI feedback."""
+
+    if not run_id:
+        return
+    snapshot = _get_snapshot(run_id)
+    if active_id is not _MISSING:
+        snapshot["active_id"] = active_id
+    if active_target_id is not _MISSING:
+        snapshot["active_target_id"] = active_target_id
+    if status_phase is not _MISSING:
+        _status_phases[run_id] = status_phase
+        snapshot["status_phase"] = status_phase
+    elif run_id in _status_phases:
+        snapshot["status_phase"] = _status_phases[run_id]
+    if event is not None:
+        queue = _ensure_event_queue(run_id)
+        queue.append(event)
+    queue = _recent_events.get(run_id)
+    if queue is not None:
+        snapshot["recent_events"] = list(queue)
+
+
+def _status_payload(
+    phase: str,
+    stats: Stats,
+    payload: dict[str, Any],
+    state: str,
+) -> dict[str, Any]:
+    data = dict(payload)
+    data["phase"] = phase
+    data["state"] = state
+    data.setdefault("target_id", getattr(stats, "id", None))
+    return data
+
+
+def _record_event(
+    run_id: str,
+    *,
+    event_type: str,
+    source: Stats | None,
+    target: Stats | None,
+    amount: int | None,
+    metadata: dict[str, Any] | None = None,
+) -> None:
+    event_payload: dict[str, Any] = {
+        "type": event_type,
+        "source_id": getattr(source, "id", None),
+        "target_id": getattr(target, "id", None),
+    }
+    if amount is not None:
+        event_payload["amount"] = int(amount)
+    if metadata:
+        event_payload.update(metadata)
+    mutate_snapshot_overlay(run_id, event=event_payload)
+
+
+def _on_status_phase_start(phase: str, stats: Stats, payload: dict[str, Any]) -> None:
+    run_id = _resolve_run_id(stats)
+    if not run_id:
+        return
+    mutate_snapshot_overlay(
+        run_id,
+        status_phase=_status_payload(phase, stats, payload, state="start"),
+    )
+
+
+def _on_status_phase_end(phase: str, stats: Stats, payload: dict[str, Any]) -> None:
+    run_id = _resolve_run_id(stats)
+    if not run_id:
+        return
+    mutate_snapshot_overlay(
+        run_id,
+        status_phase=_status_payload(phase, stats, payload, state="end"),
+    )
+
+
+def _on_hit_landed(
+    attacker: Stats | None,
+    target: Stats | None,
+    amount: int | None = None,
+    event_kind: str | None = None,
+    identifier: str | None = None,
+    *_: Any,
+) -> None:
+    run_id = _resolve_run_id(attacker, target)
+    if not run_id:
+        return
+    metadata = {"event_kind": event_kind, "identifier": identifier}
+    _record_event(
+        run_id,
+        event_type="hit_landed",
+        source=attacker,
+        target=target,
+        amount=amount,
+        metadata={k: v for k, v in metadata.items() if v is not None},
+    )
+    if attacker is not None or target is not None:
+        mutate_snapshot_overlay(
+            run_id,
+            active_id=getattr(attacker, "id", None) if attacker else _MISSING,
+            active_target_id=getattr(target, "id", None) if target else _MISSING,
+        )
+
+
+def _on_damage_taken(
+    target: Stats | None,
+    attacker: Stats | None = None,
+    amount: int | None = None,
+    *_: Any,
+) -> None:
+    run_id = _resolve_run_id(target, attacker)
+    if not run_id:
+        return
+    _record_event(
+        run_id,
+        event_type="damage_taken",
+        source=attacker,
+        target=target,
+        amount=amount,
+    )
+    kwargs: dict[str, Any] = {}
+    if attacker is not None:
+        kwargs["active_id"] = getattr(attacker, "id", None)
+    if target is not None:
+        kwargs["active_target_id"] = getattr(target, "id", None)
+    if kwargs:
+        mutate_snapshot_overlay(run_id, **kwargs)
+
+
+def _on_heal_received(
+    target: Stats | None,
+    healer: Stats | None = None,
+    amount: int | None = None,
+    *_: Any,
+) -> None:
+    run_id = _resolve_run_id(target, healer)
+    if not run_id:
+        return
+    _record_event(
+        run_id,
+        event_type="heal_received",
+        source=healer,
+        target=target,
+        amount=amount,
+    )
+    kwargs: dict[str, Any] = {}
+    if healer is not None:
+        kwargs["active_id"] = getattr(healer, "id", None)
+    if target is not None:
+        kwargs["active_target_id"] = getattr(target, "id", None)
+    if kwargs:
+        mutate_snapshot_overlay(run_id, **kwargs)
+
+
+BUS.subscribe("status_phase_start", _on_status_phase_start)
+BUS.subscribe("status_phase_end", _on_status_phase_end)
+BUS.subscribe("hit_landed", _on_hit_landed)
+BUS.subscribe("damage_taken", _on_damage_taken)
+BUS.subscribe("heal_received", _on_heal_received)
 
 
 @dataclass(slots=True)
@@ -110,6 +351,7 @@ async def build_battle_progress_payload(
     rdr: float,
     extra_turns: MutableMapping[int, int],
     *,
+    run_id: str | None,
     active_id: str | None,
     active_target_id: str | None,
     include_summon_foes: bool = False,
@@ -155,6 +397,11 @@ async def build_battle_progress_payload(
         "active_id": active_id,
         "active_target_id": active_target_id,
     }
+    if run_id:
+        if run_id in _recent_events:
+            payload["recent_events"] = list(_recent_events[run_id])
+        if run_id in _status_phases:
+            payload["status_phase"] = _status_phases[run_id]
     if ended is not None:
         payload["ended"] = ended
     return payload
@@ -168,6 +415,7 @@ async def push_progress_update(
     rdr: float,
     extra_turns: MutableMapping[int, int],
     *,
+    run_id: str | None,
     active_id: str | None,
     active_target_id: str | None = None,
     include_summon_foes: bool = False,
@@ -183,6 +431,7 @@ async def push_progress_update(
         enrage_state,
         rdr,
         extra_turns,
+        run_id=run_id,
         active_id=active_id,
         active_target_id=active_target_id,
         include_summon_foes=include_summon_foes,
@@ -212,6 +461,7 @@ async def dispatch_turn_end_snapshot(
     rdr: float,
     extra_turns: MutableMapping[int, int],
     actor: Stats,
+    run_id: str | None,
 ) -> None:
     """Advance the visual queue and emit an updated snapshot."""
 
@@ -223,6 +473,7 @@ async def dispatch_turn_end_snapshot(
         enrage_state,
         rdr,
         extra_turns,
+        run_id=run_id,
         active_id=getattr(actor, "id", None),
         active_target_id=None,
     )

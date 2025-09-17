@@ -16,6 +16,8 @@ from ..pacing import YIELD_MULTIPLIER
 from ..pacing import _pace
 from ..pacing import pace_sleep
 from ..turn_helpers import credit_if_dead
+from ..turns import mutate_snapshot_overlay
+from ..turns import register_snapshot_entities
 from .initialization import TurnLoopContext
 from .turn_end import finish_turn
 
@@ -51,6 +53,11 @@ async def execute_foe_phase(context: TurnLoopContext) -> bool:
                 break
             _, target = _select_target(alive_targets)
             await BUS.emit_async("target_acquired", acting_foe, target)
+            mutate_snapshot_overlay(
+                context.run_id,
+                active_id=getattr(acting_foe, "id", None),
+                active_target_id=getattr(target, "id", None),
+            )
             await pace_sleep(YIELD_MULTIPLIER)
             target_effect = target.effect_manager
             foe_manager = context.foe_effects[foe_index]
@@ -166,6 +173,10 @@ async def execute_foe_phase(context: TurnLoopContext) -> bool:
             await context.registry.trigger("action_taken", acting_foe)
             try:
                 SummonManager.add_summons_to_party(context.combat_party)
+                register_snapshot_entities(
+                    context.run_id,
+                    context.combat_party.members,
+                )
                 for owner in list(context.foes):
                     owner_id = getattr(owner, "id", str(id(owner)))
                     for summon in SummonManager.get_summons(owner_id):
@@ -175,6 +186,7 @@ async def execute_foe_phase(context: TurnLoopContext) -> bool:
                             summon.effect_manager = manager
                             context.foe_effects.append(manager)
                             context.enrage_mods.append(None)
+                            register_snapshot_entities(context.run_id, [summon])
             except Exception:
                 pass
             acting_foe.add_ultimate_charge(acting_foe.actions_per_turn)

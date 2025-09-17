@@ -1,12 +1,22 @@
+from pathlib import Path
 import sys
 from types import ModuleType
 
 import pytest
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from runs.lifecycle import battle_snapshots
+
 from autofighter.effects import DamageOverTime
 from autofighter.effects import EffectManager
 from autofighter.effects import HealingOverTime
+from autofighter.rooms.battle.turns import mutate_snapshot_overlay
+from autofighter.rooms.battle.turns import prepare_snapshot_overlay
+from autofighter.rooms.battle.turns import register_snapshot_entities
 from autofighter.stats import Stats
+from autofighter.stats import set_battle_active
+from plugins.event_bus import bus
 
 
 @pytest.mark.asyncio
@@ -85,3 +95,66 @@ async def test_status_phase_events_emit_with_pacing(monkeypatch):
 
     assert manager.hots == []
     assert manager.dots == []
+
+
+def test_target_acquired_mutates_snapshot_state():
+    run_id = "snapshot-target"
+    battle_snapshots.clear()
+
+    attacker = Stats()
+    attacker.id = "attacker"
+    target = Stats()
+    target.id = "target"
+
+    prepare_snapshot_overlay(run_id, [attacker, target])
+    mutate_snapshot_overlay(
+        run_id,
+        active_id=attacker.id,
+        active_target_id=target.id,
+    )
+
+    snapshot = battle_snapshots[run_id]
+    assert snapshot["active_id"] == "attacker"
+    assert snapshot["active_target_id"] == "target"
+    assert snapshot.get("recent_events") == []
+
+
+@pytest.mark.asyncio
+async def test_status_phase_events_update_snapshot_queue():
+    run_id = "snapshot-status"
+    battle_snapshots.clear()
+
+    target = Stats(hp=1000)
+    target.id = "phase_target"
+    target.set_base_stat("max_hp", 1000)
+    target.set_base_stat("defense", 1)
+    target.set_base_stat("mitigation", 1)
+    target.set_base_stat("vitality", 1)
+
+    prepare_snapshot_overlay(run_id, [target])
+    register_snapshot_entities(run_id, [target])
+
+    manager = EffectManager(target)
+    hot = HealingOverTime("regen", healing=10, turns=1, id="hot_1", source=target)
+    dot = DamageOverTime("burn", damage=10, turns=1, id="dot_1", source=target)
+
+    manager.add_hot(hot)
+    manager.add_dot(dot)
+
+    set_battle_active(True)
+    try:
+        await manager.tick()
+        await bus._process_batches_internal()
+    finally:
+        set_battle_active(False)
+
+    snapshot = battle_snapshots[run_id]
+    events = snapshot.get("recent_events", [])
+    event_types = [evt["type"] for evt in events]
+    assert "heal_received" in event_types
+    assert "damage_taken" in event_types
+
+    status_phase = snapshot.get("status_phase")
+    assert status_phase is not None
+    assert status_phase.get("phase") == "dot"
+    assert status_phase.get("state") == "end"
