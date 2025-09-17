@@ -134,7 +134,9 @@
       </Tooltip>
     </div>
     <div class="control-right">
-      <button on:click={handleEndRun} disabled={endingRun}>{endingRun ? 'Ending…' : 'End'}</button>
+      <button class="icon-btn" on:click={handleEndRun} disabled={endingRun}>
+        {endingRun ? 'Ending…' : 'End'}
+      </button>
     </div>
   </div>
   {#if endRunStatus}
