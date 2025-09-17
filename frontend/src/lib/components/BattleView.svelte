@@ -48,13 +48,17 @@
   let logs = [];
   let hoveredId = null;
   let floaterFeed = [];
+  // Anchor positions for floating damage/heal numbers: id -> { x, y } in [0..1] relative to root field
+  let anchors = {};
+  let rootEl;
   let recentEventCounts = new Map();
   let lastRecentEventTokens = [];
   let floaterDuration = 1200;
   const relevantRecentEventTypes = new Set(['damage_taken', 'heal_received', 'dot_tick', 'hot_tick']);
   let lastRunId = runId;
 
-  $: floaterDuration = Math.max(900, pollDelay * 3);
+  // Slow down floater animation a bit for readability
+  $: floaterDuration = Math.max(1400, pollDelay * 5);
   $: if (runId !== lastRunId) {
     recentEventCounts = new Map();
     lastRecentEventTokens = [];
@@ -65,6 +69,65 @@
     floaterFeed = [];
     recentEventCounts = new Map();
     lastRecentEventTokens = [];
+  }
+
+  // Svelte action: register a DOM node as an anchor for a given id
+  function registerAnchor(node, params) {
+    const extractId = (p) => {
+      if (p && typeof p === 'object' && 'id' in p) return String(p.id);
+      if (p === 0 || p) return String(p);
+      return '';
+    };
+    let id = extractId(params);
+    if (!id || !node) return { update: () => {}, destroy: () => {} };
+    const compute = () => {
+      try {
+        if (!rootEl) return;
+        const root = rootEl.getBoundingClientRect();
+        const rect = node.getBoundingClientRect();
+        if (!root.width || !root.height) return;
+        // Anchor around the visual center of the node
+        const cx = rect.left + rect.width / 2 - root.left;
+        const cy = rect.top + rect.height * 0.5 - root.top;
+        const x = Math.max(0, Math.min(1, cx / root.width));
+        const y = Math.max(0, Math.min(1, cy / root.height));
+        const prev = anchors[id];
+        const dx = prev ? Math.abs(prev.x - x) : Infinity;
+        const dy = prev ? Math.abs(prev.y - y) : Infinity;
+        // Only update if position meaningfully changed to avoid update loops
+        if (dx > 0.002 || dy > 0.002 || !prev) {
+          anchors = { ...anchors, [id]: { x, y } };
+        }
+      } catch {}
+    };
+    compute();
+    const ro = new ResizeObserver(() => compute());
+    ro.observe(node);
+    const onWinResize = () => compute();
+    window.addEventListener('resize', onWinResize);
+    return {
+      update(next) {
+        const nextId = extractId(next);
+        if (nextId !== id) {
+          if (id && anchors[id]) {
+            const copy = { ...anchors };
+            delete copy[id];
+            anchors = copy;
+          }
+          id = nextId;
+        }
+        compute();
+      },
+      destroy() {
+        try { ro.disconnect(); } catch {}
+        window.removeEventListener('resize', onWinResize);
+        if (id && anchors[id]) {
+          const copy = { ...anchors };
+          delete copy[id];
+          anchors = copy;
+        }
+      }
+    };
   }
   
   const logAnimations = {
@@ -184,6 +247,7 @@
     ].join('::');
   }
 
+  // Group/dedupe recent events: show only newly increased instances per unique token
   function processRecentEvents(events) {
     if (!Array.isArray(events)) {
       recentEventCounts = new Map();
@@ -210,14 +274,11 @@
         newOnes.push(entry);
       }
     }
+    // If a single identical event repeats (token unchanged), still surface it
     if (!newOnes.length && filtered.length === 1) {
       const [token] = tokens;
-      const isIdenticalToLast =
-        lastRecentEventTokens.length === 1 &&
-        lastRecentEventTokens[0] === token;
-      if (isIdenticalToLast) {
-        newOnes.push(filtered[0]);
-      }
+      const isIdenticalToLast = lastRecentEventTokens.length === 1 && lastRecentEventTokens[0] === token;
+      if (isIdenticalToLast) newOnes.push(filtered[0]);
     }
     recentEventCounts = nextCounts;
     lastRecentEventTokens = tokens;
@@ -590,10 +651,19 @@
   class="modern-battle-field"
   style={`background-image: url("${bg}")`}
   data-testid="modern-battle-view"
+  bind:this={rootEl}
 >
   <EnrageIndicator active={Boolean(enrage?.active)} {reducedMotion} enrageData={enrage} />
   <BattleEffects cue={effectCue} />
-  <BattleEventFloaters events={floaterFeed} {reducedMotion} paceMs={floaterDuration} />
+  <BattleEventFloaters
+    events={floaterFeed}
+    {reducedMotion}
+    paceMs={floaterDuration}
+    anchors={anchors}
+    baseOffsetX={16}
+    baseOffsetY={8}
+    staggerMs={220}
+  />
   <ActionQueue
     {queue}
     {combatants}
@@ -658,7 +728,9 @@
           </div>
           
           <!-- Character photo/portrait -->
-          <BattleFighterCard fighter={foe} position="top" {reducedMotion} sizePx={getFoeSizePx(foeCount)} highlight={hoveredId === foe.id} />
+          <div class="fighter-anchor" use:registerAnchor={foe.id}>
+            <BattleFighterCard fighter={foe} position="top" {reducedMotion} sizePx={getFoeSizePx(foeCount)} highlight={hoveredId === foe.id} />
+          </div>
           
           <!-- Summons -->
           {#if foe.summons?.length}
@@ -710,13 +782,15 @@
                       </div>
                     {/if}
                     
-                    <BattleFighterCard 
-                      fighter={summon} 
-                      position="top" 
-                      {reducedMotion} 
-                      size="medium" 
-                      highlight={hoveredId === summon.id || (hoveredId && summon?.summoner_id && summon?.summon_type && hoveredId === `${summon.summoner_id}_${summon.summon_type}_summon`)} 
-                    />
+                    <div class="fighter-anchor" use:registerAnchor={summon.id}>
+                      <BattleFighterCard 
+                        fighter={summon} 
+                        position="top" 
+                        {reducedMotion} 
+                        size="medium" 
+                        highlight={hoveredId === summon.id || (hoveredId && summon?.summoner_id && summon?.summon_type && hoveredId === `${summon.summoner_id}_${summon.summon_type}_summon`)} 
+                      />
+                    </div>
                   </div>
                 </div>
               {/each}
@@ -746,13 +820,15 @@
               >
                 <div in:scale={{ duration: reducedMotion ? 0 : 200 }} class="summon-inner">
                   <!-- Summon portrait -->
-                  <BattleFighterCard 
-                    fighter={summon} 
-                    position="bottom" 
-                    {reducedMotion} 
-                    size="medium" 
-                    highlight={hoveredId === summon.id || (hoveredId && summon?.summoner_id && summon?.summon_type && hoveredId === `${summon.summoner_id}_${summon.summon_type}_summon`)} 
-                  />
+                  <div class="fighter-anchor" use:registerAnchor={summon.id}>
+                    <BattleFighterCard 
+                      fighter={summon} 
+                      position="bottom" 
+                      {reducedMotion} 
+                      size="medium" 
+                      highlight={hoveredId === summon.id || (hoveredId && summon?.summoner_id && summon?.summon_type && hoveredId === `${summon.summoner_id}_${summon.summon_type}_summon`)} 
+                    />
+                  </div>
 
                   <!-- Summon HP bar under portrait -->
                   {#if true}
@@ -806,7 +882,7 @@
           </div>
         {/if}
 
-        <div class="party-main">
+        <div class="party-main fighter-anchor" use:registerAnchor={member.id}>
           <!-- Character photo as base (ult & pips overlay handled inside) -->
           <BattleFighterCard fighter={member} position="bottom" {reducedMotion} highlight={hoveredId === member.id} />
         </div>

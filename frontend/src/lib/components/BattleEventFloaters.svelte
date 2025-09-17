@@ -8,10 +8,18 @@
   export let events = [];
   export let reducedMotion = false;
   export let paceMs = 1200;
+  // Constant offsets (px) applied in addition to random X offset per floater
+  export let baseOffsetX = 0;
+  export let baseOffsetY = -10;
+  // Stagger additions within a batch so items show one-by-one
+  export let staggerMs = 140;
+  // Map of entity id -> { x: fraction(0..1), y: fraction(0..1) } relative to the battle field
+  export let anchors = {};
 
   let floaters = [];
   let counter = 0;
   const timeouts = new Map();
+  const addTimers = new Set();
 
   function resolveVariant(type) {
     const t = String(type || '').toLowerCase();
@@ -49,31 +57,43 @@
   function pushEvents(list) {
     if (!Array.isArray(list) || list.length === 0) return;
     const duration = Math.max(BASE_DURATION, Number(paceMs) || BASE_DURATION);
-    const next = [...floaters];
-    for (const raw of list) {
-      if (!raw || typeof raw !== 'object') continue;
-      const amount = Math.abs(Number(raw.amount ?? 0));
-      if (!Number.isFinite(amount) || amount <= 0) continue;
-      const variant = resolveVariant(raw.type);
-      const damageType = raw.damageTypeId || raw.metadata?.damage_type_id || '';
-      const { icon: Icon, color } = getDamageTypeVisual(damageType, { variant });
-      const label = raw.effectLabel || resolveLabel(raw.metadata);
-      const id = `${Date.now()}-${counter++}`;
-      const offset = Math.random() * RANDOM_OFFSETS - RANDOM_OFFSETS / 2;
-      next.push({
-        id,
-        Icon,
-        color,
-        amount,
-        variant,
-        label,
-        offset,
-        tone: variant === 'heal' || variant === 'hot' ? 'heal' : 'damage',
-        type: raw.type,
-      });
-      scheduleRemoval(id, duration);
-    }
-    floaters = next;
+    const step = Math.max(0, Math.min(Number(staggerMs) || 0, 2000));
+    list.forEach((raw, i) => {
+      if (!raw || typeof raw !== 'object') return;
+      const handle = setTimeout(() => {
+        addTimers.delete(handle);
+        const amount = Math.abs(Number(raw.amount ?? 0));
+        if (!Number.isFinite(amount) || amount <= 0) return;
+        const variant = resolveVariant(raw.type);
+        const damageType = raw.damageTypeId || raw.metadata?.damage_type_id || '';
+        const { icon: Icon, color } = getDamageTypeVisual(damageType, { variant });
+        const label = raw.effectLabel || resolveLabel(raw.metadata);
+        const id = `${Date.now()}-${counter++}`;
+        const offset = Math.random() * RANDOM_OFFSETS - RANDOM_OFFSETS / 2;
+        const target = String(raw.target_id || '');
+        const anchor = (anchors && target && anchors[target]) ? anchors[target] : null;
+        const x = anchor && Number.isFinite(anchor.x) ? anchor.x : 0.5;
+        const y = anchor && Number.isFinite(anchor.y) ? anchor.y : 0.52;
+        floaters = [
+          ...floaters,
+          {
+            id,
+            Icon,
+            color,
+            amount,
+            variant,
+            label,
+            offset,
+            x,
+            y,
+            tone: variant === 'heal' || variant === 'hot' ? 'heal' : 'damage',
+            type: raw.type,
+          }
+        ];
+        scheduleRemoval(id, duration);
+      }, i * step);
+      addTimers.add(handle);
+    });
   }
 
   $: if (events && events.length) {
@@ -91,6 +111,8 @@
       clearTimeout(handle);
     }
     timeouts.clear();
+    for (const t of addTimers) clearTimeout(t);
+    addTimers.clear();
   });
 </script>
 
@@ -98,7 +120,7 @@
   {#each floaters as entry (entry.id)}
     <div
       class={`floater ${entry.tone} ${entry.variant}`}
-      style={`--accent: ${entry.color}; --offset: ${entry.offset}px; --floater-duration: ${Math.max(BASE_DURATION, Number(paceMs) || BASE_DURATION)}ms;`}
+      style={`--accent: ${entry.color}; --offset: ${entry.offset}px; --x: ${entry.x}; --y: ${entry.y}; --floater-duration: ${Math.max(BASE_DURATION, Number(paceMs) || BASE_DURATION)}ms; --x-offset: ${Number(baseOffsetX) || 0}px; --y-offset: ${Number(baseOffsetY) || 0}px;`}
       on:animationend={() => handleAnimationEnd(entry)}
     >
       <div class="badge">
@@ -130,8 +152,8 @@
 
   .floater {
     position: absolute;
-    left: calc(50% + var(--offset, 0px));
-    top: 52%;
+    left: calc(var(--x, 0.5) * 100% + var(--offset, 0px) + var(--x-offset, 0px));
+    top: calc(var(--y, 0.52) * 100% + var(--y-offset, 0px));
     transform: translate(-50%, 0);
     animation: float-up var(--floater-duration, 1200ms) cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
   }
