@@ -3,7 +3,7 @@
   import { scale, fade } from 'svelte/transition';
   import { roomAction } from '$lib';
   import { getRandomBackground, getElementColor } from '../systems/assetLoader.js';
-  import FighterUIItem from '../battle/FighterUIItem.svelte';
+  import BattleFighterCard from '../battle/BattleFighterCard.svelte';
   import EnrageIndicator from '../battle/EnrageIndicator.svelte';
   import BattleLog from '../battle/BattleLog.svelte';
   import BattleEffects from '../effects/BattleEffects.svelte';
@@ -351,7 +351,7 @@
           </div>
           
           <!-- Character photo/portrait -->
-          <FighterUIItem fighter={foe} position="top" {reducedMotion} sizePx={getFoeSizePx(foeCount)} highlight={hoveredId === foe.id} />
+          <BattleFighterCard fighter={foe} position="top" {reducedMotion} sizePx={getFoeSizePx(foeCount)} highlight={hoveredId === foe.id} />
           
           <!-- Summons -->
           {#if foe.summons?.length}
@@ -383,7 +383,7 @@
                       </div>
                     </div>
                     
-                    <FighterUIItem 
+                    <BattleFighterCard 
                       fighter={summon} 
                       position="top" 
                       {reducedMotion} 
@@ -419,7 +419,7 @@
               >
                 <div in:scale={{ duration: reducedMotion ? 0 : 200 }} class="summon-inner">
                   <!-- Summon portrait -->
-                  <FighterUIItem 
+                  <BattleFighterCard 
                     fighter={summon} 
                     position="bottom" 
                     {reducedMotion} 
@@ -461,7 +461,7 @@
 
         <div class="party-main">
           <!-- Character photo as base (ult & pips overlay handled inside) -->
-          <FighterUIItem fighter={member} position="bottom" {reducedMotion} highlight={hoveredId === member.id} />
+          <BattleFighterCard fighter={member} position="bottom" {reducedMotion} highlight={hoveredId === member.id} />
         </div>
         
         <!-- HP bar under the photo -->

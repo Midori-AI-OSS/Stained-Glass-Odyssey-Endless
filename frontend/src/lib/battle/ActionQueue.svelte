@@ -168,7 +168,7 @@
     color: var(--element-color);
   }
 
-  /* Hover-only name chip, similar to FighterUIItem */
+  /* Hover-only name chip, similar to BattleFighterCard */
   .name-chip {
     position: absolute;
     left: 6px;
@@ -187,7 +187,7 @@
     z-index: 2;
   }
   .entry:hover .name-chip { opacity: 1; transform: translateY(0); }
-  /* Soft faded-edge backdrop behind the name chip (mirrors FighterUIItem) */
+  /* Soft faded-edge backdrop behind the name chip (mirrors BattleFighterCard) */
   .name-chip::before {
     content: '';
     position: absolute;
