@@ -14,6 +14,7 @@ from ..logging import queue_log
 from ..pacing import _EXTRA_TURNS
 from ..pacing import YIELD_MULTIPLIER
 from ..pacing import _pace
+from ..pacing import impact_pause
 from ..pacing import pace_sleep
 from ..turn_helpers import credit_if_dead
 from ..turns import mutate_snapshot_overlay
@@ -170,6 +171,7 @@ async def execute_foe_phase(context: TurnLoopContext) -> bool:
                         targets_hit,
                         duration,
                     )
+            await impact_pause(acting_foe, targets_hit, duration=duration)
             await context.registry.trigger("action_taken", acting_foe)
             try:
                 SummonManager.add_summons_to_party(context.combat_party)

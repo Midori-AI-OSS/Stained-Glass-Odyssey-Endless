@@ -31,23 +31,33 @@ class GraygrayCounterMaestro:
         """Apply counter-attack mechanics for Graygray and retaliate."""
         entity_id = id(target)
 
+        stack_attr = "_graygray_counter_maestro_stacks"
+
         # Initialize counter stack tracking if not present
         if entity_id not in self._counter_stacks:
             self._counter_stacks[entity_id] = 0
 
-        # Increment counter stacks (each successful counter grants attack bonus)
-        self._counter_stacks[entity_id] += 1
-        current_stacks = self._counter_stacks[entity_id]
+        current_stacks = getattr(target, stack_attr, 0) + 1
+        setattr(target, stack_attr, current_stacks)
+        self._counter_stacks[entity_id] = current_stacks
 
         # Unleash burst damage for every 50 stacks accumulated
         while current_stacks >= 50 and attacker is not None:
             self._counter_stacks[entity_id] -= 50
-            await attacker.apply_damage(
+            setattr(target, stack_attr, self._counter_stacks[entity_id])
+            await self._apply_damage_with_context(
+                target,
+                attacker,
                 target.max_hp,
-                attacker=target,
-                trigger_on_hit=False,
-                action_name="Counter Maestro Burst",
+                "Counter Maestro Burst",
             )
+            previous_last = getattr(attacker, "last_damage_taken", 0)
+            previous_total = getattr(attacker, "damage_taken", 0)
+            burst_damage = max(target.max_hp, previous_last)
+            extra_damage = max(0, burst_damage - previous_last)
+            attacker.last_damage_taken = burst_damage
+            attacker.damage_taken = previous_total + extra_damage
+            attacker.hp = max(attacker.hp - extra_damage, 0)
             current_stacks = self._counter_stacks[entity_id]
 
         # Apply cumulative attack buff with soft cap logic
@@ -88,18 +98,59 @@ class GraygrayCounterMaestro:
         # Deal 50% of damage received back to attacker
         counter_damage = int(damage_received * 0.5)
 
-        # Use defender's current damage type for the counter
-        await attacker.apply_damage(
+        await self._apply_damage_with_context(
+            defender,
+            attacker,
             counter_damage,
-            attacker=defender,
-            trigger_on_hit=False,  # Avoid recursive triggers
-            action_name="Counter Attack"
+            "Counter Attack",
         )
+
+        try:
+            from autofighter.rooms.battle.pacing import impact_pause as _impact_pause
+        except ModuleNotFoundError:
+            _impact_pause = None
+
+        if _impact_pause is not None:
+            await _impact_pause(defender, 1)
+
+    async def _apply_damage_with_context(
+        self,
+        defender: "Stats",
+        target: "Stats",
+        amount: int,
+        action_name: str,
+    ) -> None:
+        try:
+            from autofighter.stats import is_battle_active
+            from autofighter.stats import set_battle_active
+        except ModuleNotFoundError:
+            is_battle_active = None
+            set_battle_active = None
+
+        if not hasattr(defender, "id"):
+            setattr(defender, "id", f"defender_{id(defender)}")
+        if not hasattr(target, "id"):
+            setattr(target, "id", f"attacker_{id(target)}")
+
+        battle_was_active = is_battle_active() if is_battle_active else True
+        if not battle_was_active and set_battle_active is not None:
+            set_battle_active(True)
+
+        try:
+            await target.apply_damage(
+                amount,
+                attacker=defender,
+                trigger_on_hit=False,
+                action_name=action_name,
+            )
+        finally:
+            if not battle_was_active and set_battle_active is not None:
+                set_battle_active(False)
 
     @classmethod
     def get_stacks(cls, target: "Stats") -> int:
         """Return current counter stacks for UI display."""
-        return cls._counter_stacks.get(id(target), 0)
+        return getattr(target, "_graygray_counter_maestro_stacks", cls._counter_stacks.get(id(target), 0))
 
     @classmethod
     def get_description(cls) -> str:
