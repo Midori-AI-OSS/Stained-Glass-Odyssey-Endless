@@ -14,6 +14,7 @@ from ..logging import queue_log
 from ..pacing import _EXTRA_TURNS
 from ..pacing import YIELD_MULTIPLIER
 from ..pacing import _pace
+from ..pacing import impact_pause
 from ..pacing import pace_sleep
 from ..turn_helpers import credit_if_dead
 from ..turn_helpers import remove_dead_foes
@@ -221,6 +222,7 @@ async def execute_player_phase(context: TurnLoopContext) -> bool:
                         targets_hit,
                         duration,
                     )
+            await impact_pause(member, targets_hit, duration=duration)
             await context.registry.trigger(
                 "action_taken",
                 member,

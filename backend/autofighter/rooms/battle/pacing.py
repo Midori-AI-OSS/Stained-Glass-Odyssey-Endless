@@ -11,6 +11,7 @@ from options import get_option
 from autofighter.action_queue import ActionQueue
 from autofighter.stats import BUS
 from autofighter.stats import Stats
+from autofighter.stats import calc_animation_time
 
 DEFAULT_TURN_PACING = 0.5
 _MIN_TURN_PACING = 0.05
@@ -152,3 +153,29 @@ async def pace_sleep(multiplier: float = 1.0) -> None:
             raise
         except Exception:
             pass
+
+
+async def impact_pause(
+    actor: Stats | None,
+    targets_hit: int,
+    *,
+    duration: float | None = None,
+) -> None:
+    """Ensure instant actions respect pacing by yielding when no animation runs."""
+
+    try:
+        total = float(duration) if duration is not None else float(
+            calc_animation_time(actor, max(1, int(targets_hit)))
+        )
+    except Exception:
+        total = 0.0
+
+    if total > 0:
+        return
+
+    try:
+        await pace_sleep(YIELD_MULTIPLIER)
+    except asyncio.CancelledError:
+        raise
+    except Exception:
+        pass

@@ -56,6 +56,14 @@ class LadyOfFireInfernalMomentum:
         )
         attacker.add_effect(burn_effect)
 
+        try:
+            from autofighter.rooms.battle.pacing import impact_pause as _impact_pause
+        except ModuleNotFoundError:
+            _impact_pause = None
+
+        if _impact_pause is not None:
+            await _impact_pause(target, 1)
+
     async def on_self_damage(self, target: "Stats", self_damage: int) -> None:
         """Grant HoT when taking self-damage from Fire drain."""
         # Apply HoT equal to half the self-damage for two turns
