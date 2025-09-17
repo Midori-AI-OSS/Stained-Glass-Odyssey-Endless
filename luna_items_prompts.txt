@@ -25,13 +25,9 @@ Iron Resolve: Luna planted on a wind-lashed cliff, cloak whipping around her as 
 
 Iron Resurgence: Luna rising from a battered position as embers, metal shards, and soldered fragments coalesce into new protective plating about her; the scene captures a fierce rebirth of armored strength.
 
-Mystic Aegis: Luna tracing glowing sigils in the air as a translucent, glyph-studded aegis forms above and around her, the protective dome pulsing with a soft, otherworldly luminescence that hums with quiet reassurance.
+Mystic Aegis: 
 
-Overclock: Luna surrounded by a whirl of clockwork cogs and neon runes, her limbs moving with uncanny rapidity as time-feel distorts; small sparks of energy leap between gears, hinting at an artificially accelerated precision.
-
-Swift Footwork: Luna performing a rapid, balletic sequence of footwork across gritty terrain, each step a studied motion blurred into graceful arcs; dust and displaced pebbles trace the path of her speed and nimble control.
-
-Vital Surge: Luna clutching a pulsing, heart-shaped relic that emits warm, crimson light; the lifeblood glow flows through her and ripples outward, invigorating the surrounding flora with renewed vitality.
+Overclock: 
 
 === Missing Cards Art ===
 None detected — card art glyphs present for plugin cards.
