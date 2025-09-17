@@ -96,3 +96,39 @@ def test_async_callback_without_loop_avoids_runtime_error(caplog):
     messages = [record.getMessage() for record in caplog.records]
     assert any("called from sync context with no event loop" in msg for msg in messages)
     assert all("RuntimeError" not in msg for msg in messages)
+
+
+def test_emit_async_triggers_nested_batched_event_on_loop():
+    bus = EventBus()
+    internal = event_bus_module.bus
+    # Restore the batch processing coroutine in case other tests monkeypatched it.
+    internal._process_batches_with_interval = event_bus_module._Bus._process_batches_with_interval.__get__(internal, event_bus_module._Bus)
+    internal._process_batches = event_bus_module._Bus._process_batches.__get__(internal, event_bus_module._Bus)
+    internal._process_batches_internal = event_bus_module._Bus._process_batches_internal.__get__(internal, event_bus_module._Bus)
+    internal._batched_events.clear()
+    internal._batch_timer = None
+
+    async def runner() -> None:
+        loop = asyncio.get_running_loop()
+        outer_complete = asyncio.Event()
+        inner_seen = asyncio.Event()
+
+        async def inner_handler(value):
+            inner_seen.set()
+
+        def outer_handler(value):
+            bus.emit_batched("inner", value + 1)
+            loop.call_soon_threadsafe(outer_complete.set)
+
+        bus.subscribe("inner", inner_handler)
+        bus.subscribe("outer", outer_handler)
+
+        await bus.emit_async("outer", 1)
+
+        await asyncio.wait_for(outer_complete.wait(), timeout=1)
+        await asyncio.wait_for(inner_seen.wait(), timeout=1)
+
+        bus.unsubscribe("inner", inner_handler)
+        bus.unsubscribe("outer", outer_handler)
+
+    asyncio.run(runner())

@@ -275,6 +275,45 @@ class EventBus:
     def __init__(self):
         self._prefer_async = True  # Prefer async emission when possible
         self._performance_monitoring = True
+        self._loop: asyncio.AbstractEventLoop | None = None
+
+    def set_loop(self, loop: asyncio.AbstractEventLoop | None) -> None:
+        """Explicitly set the event loop used for cross-thread scheduling."""
+
+        if loop is None or loop.is_closed():
+            self._loop = None
+            return
+
+        self._loop = loop
+
+    def _capture_current_loop(self) -> asyncio.AbstractEventLoop | None:
+        """Capture the currently running loop if available."""
+
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            loop = None
+
+        if loop is not None and not loop.is_closed():
+            self._loop = loop
+
+        return loop
+
+    def _dispatch_to_loop(self, callback: Callable[..., Any], *args: Any) -> bool:
+        """Dispatch *callback* to the stored loop if one is available."""
+
+        loop = self._loop
+        if loop is None or loop.is_closed():
+            return False
+
+        try:
+            loop.call_soon_threadsafe(callback, *args)
+        except RuntimeError:
+            # Loop is likely closed; clear stored reference and fall back to sync.
+            self._loop = None
+            return False
+
+        return True
 
     def subscribe(self, event: str, callback: Callable[..., Any]) -> None:
         def _prepare_args(args: Any) -> list[Any]:
@@ -328,24 +367,36 @@ class EventBus:
     def emit(self, event: str, *args: Any) -> None:
         """Emit event. Prefers async emission when enabled for better performance."""
         if self._prefer_async:
-            try:
-                # Check if we're in an async context
-                asyncio.get_running_loop()
+            loop = self._capture_current_loop()
+            if loop is not None:
                 # When async is preferred and event loop is available, use batching for better performance
                 bus.send_batched(event, args)
-            except RuntimeError:
-                # No event loop, fall back to sync emission
-                bus.send(event, args)
+                return
+
+            if self._dispatch_to_loop(bus.send_batched, event, args):
+                return
+
+            # No captured loop available; fall back to sync emission
+            bus.send(event, args)
         else:
             # Traditional sync emission
             bus.send(event, args)
 
     async def emit_async(self, event: str, *args: Any) -> None:
         """Async version of emit that executes callbacks concurrently"""
+        self._capture_current_loop()
         await bus.send_async(event, args)
 
     def emit_batched(self, event: str, *args: Any) -> None:
         """Emit high-frequency events in batches to reduce blocking."""
+        loop = self._capture_current_loop()
+        if loop is not None:
+            bus.send_batched(event, args)
+            return
+
+        if self._dispatch_to_loop(bus.send_batched, event, args):
+            return
+
         bus.send_batched(event, args)
 
     def get_performance_metrics(self) -> dict:
