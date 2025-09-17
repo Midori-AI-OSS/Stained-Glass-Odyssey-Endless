@@ -682,42 +682,44 @@
         </div>
         
         <!-- HP bar under the photo -->
-        <div class="party-hp-bar">
-          <div class="hp-bar-container" class:reduced={reducedMotion}>
-            {#if Number(member?.shields || 0) > 0 && Number(member?.max_hp || 0) > 0}
+        {#if true}
+          {@const hpState = getHpState(member.hpKey)}
+          {@const hpFraction = hpState ? hpState.currentFraction : safeFraction(member.hp, member.max_hp)}
+          {@const prevFraction = hpState ? hpState.prevFraction : hpFraction}
+          {@const hpPercent = percentFromFraction(hpFraction)}
+          {@const damageWidth = percentFromFraction(hpState?.damage)}
+          {@const healWidth = percentFromFraction(hpState?.heal)}
+          {@const damageLeft = percentFromFraction(hpFraction)}
+          {@const healLeft = percentFromFraction(prevFraction)}
+          {@const damageOpacity = damageWidth > 0 ? 0.9 : 0}
+          {@const healOpacity = healWidth > 0 ? 0.9 : 0}
+          <div class="party-hp-bar">
+            <div class="hp-bar-container" class:reduced={reducedMotion}>
+              {#if Number(member?.shields || 0) > 0 && Number(member?.max_hp || 0) > 0}
+                <div
+                  class="overheal-fill"
+                  style={`width: calc(${Math.max(0, Math.min(100, (Number(member.shields || 0) / Math.max(1, Number(member.max_hp || 0))) * 100))}% + 5px); left: -5px;`}
+                ></div>
+              {/if}
               <div
-                class="overheal-fill"
-                style={`width: calc(${Math.max(0, Math.min(100, (Number(member.shields || 0) / Math.max(1, Number(member.max_hp || 0))) * 100))}% + 5px); left: -5px;`}
+                class="hp-bar-fill"
+                style="width: {hpPercent}%;
+                       background: {hpFraction <= 0.3 ? 'linear-gradient(90deg, #ff4444, #ff6666)' : 'linear-gradient(90deg, #44ffff, #66dddd)'}"
               ></div>
-            {/if}
-            {@const hpState = getHpState(member.hpKey)}
-            {@const hpFraction = hpState ? hpState.currentFraction : safeFraction(member.hp, member.max_hp)}
-            {@const prevFraction = hpState ? hpState.prevFraction : hpFraction}
-            {@const hpPercent = percentFromFraction(hpFraction)}
-            {@const damageWidth = percentFromFraction(hpState?.damage)}
-            {@const healWidth = percentFromFraction(hpState?.heal)}
-            {@const damageLeft = percentFromFraction(hpFraction)}
-            {@const healLeft = percentFromFraction(prevFraction)}
-            {@const damageOpacity = damageWidth > 0 ? 0.9 : 0}
-            {@const healOpacity = healWidth > 0 ? 0.9 : 0}
-            <div
-              class="hp-bar-fill"
-              style="width: {hpPercent}%;
-                     background: {hpFraction <= 0.3 ? 'linear-gradient(90deg, #ff4444, #ff6666)' : 'linear-gradient(90deg, #44ffff, #66dddd)'}"
-            ></div>
-            <div
-              class="hp-bar-overlay damage"
-              style={`left: ${damageLeft}%; width: ${damageWidth}%; opacity: ${damageOpacity}; --pending-duration: ${reducedMotion ? 0 : pendingEaseMs}ms; --pending-ease: ${pendingEaseCurve};`}
-            ></div>
-            <div
-              class="hp-bar-overlay heal"
-              style={`left: ${healLeft}%; width: ${healWidth}%; opacity: ${healOpacity}; --pending-duration: ${reducedMotion ? 0 : pendingEaseMs}ms; --pending-ease: ${pendingEaseCurve};`}
-            ></div>
-            {#if member.hp < member.max_hp}
-              <div class="hp-text" data-position="outline">{member.hp}</div>
-            {/if}
+              <div
+                class="hp-bar-overlay damage"
+                style={`left: ${damageLeft}%; width: ${damageWidth}%; opacity: ${damageOpacity}; --pending-duration: ${reducedMotion ? 0 : pendingEaseMs}ms; --pending-ease: ${pendingEaseCurve};`}
+              ></div>
+              <div
+                class="hp-bar-overlay heal"
+                style={`left: ${healLeft}%; width: ${healWidth}%; opacity: ${healOpacity}; --pending-duration: ${reducedMotion ? 0 : pendingEaseMs}ms; --pending-ease: ${pendingEaseCurve};`}
+              ></div>
+              {#if member.hp < member.max_hp}
+                <div class="hp-text" data-position="outline">{member.hp}</div>
+              {/if}
+            </div>
           </div>
-        </div>
+        {/if}
         
         <!-- Buffs under HP bar -->
         <div class="party-buffs">
