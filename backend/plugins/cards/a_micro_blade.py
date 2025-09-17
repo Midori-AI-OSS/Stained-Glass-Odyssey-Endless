@@ -1,9 +1,13 @@
 from dataclasses import dataclass
 from dataclasses import field
+import logging
 import random
 
 from autofighter.stats import BUS
 from plugins.cards._base import CardBase
+from plugins.cards._base import safe_async_task
+
+log = logging.getLogger(__name__)
 
 
 @dataclass
@@ -24,20 +28,28 @@ class MicroBlade(CardBase):
                 if random.random() < 0.06:
                     bonus_damage = int(damage * 0.08)
                     if bonus_damage > 0:
-                        # Apply bonus damage immediately (physical damage type)
-                        import asyncio
-                        import logging
-                        log = logging.getLogger(__name__)
-                        try:
-                            # Schedule the bonus damage asynchronously
-                            asyncio.create_task(target.apply_damage(bonus_damage, attacker, source_type="physical", action_name="micro_blade_bonus"))
-                            log.debug("Micro Blade bonus damage: +%d physical damage", bonus_damage)
-                            BUS.emit("card_effect", self.id, attacker, "bonus_damage", bonus_damage, {
+                        safe_async_task(
+                            target.apply_damage(
+                                bonus_damage,
+                                attacker,
+                                trigger_on_hit=False,
+                                action_name="micro_blade_bonus",
+                            )
+                        )
+                        log.debug(
+                            "Micro Blade bonus damage: +%d physical damage", bonus_damage
+                        )
+                        BUS.emit(
+                            "card_effect",
+                            self.id,
+                            attacker,
+                            "bonus_damage",
+                            bonus_damage,
+                            {
                                 "bonus_damage": bonus_damage,
                                 "trigger_chance": 0.06,
-                                "damage_type": "physical"
-                            })
-                        except Exception as e:
-                            log.warning("Error applying Micro Blade bonus damage: %s", e)
+                                "damage_type": "physical",
+                            },
+                        )
 
         BUS.subscribe("damage_dealt", _on_damage_dealt)
