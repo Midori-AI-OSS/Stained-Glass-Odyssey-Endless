@@ -64,6 +64,10 @@
   }
 
   let knownSummons = new Set();
+  const pendingEaseCurve = 'cubic-bezier(0.25, 0.9, 0.3, 1)';
+  let hpHistory = new Map();
+  let pendingLayers = new Map();
+  $: pendingEaseMs = Math.max(240, pollDelay * 1.5);
   const dispatch = createEventDispatcher();
   // Poll battle snapshots at (framerate / 10) times per second.
   // Example: 30fps -> 3/s, 60fps -> 6/s, 120fps -> 12/s
@@ -145,6 +149,84 @@
     knownSummons = all;
   }
 
+  function combatantKey(kind, id, ownerId = '') {
+    const parts = [kind];
+    if (ownerId !== undefined && ownerId !== null && ownerId !== '') {
+      parts.push(ownerId);
+    }
+    if (id === undefined || id === null || id === '') {
+      return '';
+    }
+    parts.push(id);
+    return parts.map(String).join(':');
+  }
+
+  function safeFraction(value, max) {
+    const maxValue = Number(max) || 0;
+    if (maxValue <= 0) return 0;
+    const current = Number(value) || 0;
+    return Math.max(0, Math.min(1, current / maxValue));
+  }
+
+  function percentFromFraction(fraction) {
+    return Math.max(0, Math.min(100, Number(fraction || 0) * 100));
+  }
+
+  function recordHpSnapshot(key, hpValue, maxValue) {
+    if (!key) return { drains: [], state: null };
+    const max = Math.max(1, Number(maxValue || 0));
+    const current = Math.max(0, Math.min(max, Number(hpValue || 0)));
+    const prev = hpHistory.has(key) ? hpHistory.get(key) : current;
+    const prevClamped = Math.max(0, Math.min(max, Number(prev || 0)));
+    const currentFraction = current / max;
+    const prevFraction = prevClamped / max;
+    let pendingDamage = 0;
+    let pendingHeal = 0;
+    if (current < prevClamped) {
+      pendingDamage = prevFraction - currentFraction;
+    } else if (current > prevClamped) {
+      pendingHeal = currentFraction - prevFraction;
+    }
+
+    const existing = pendingLayers.get(key) || {
+      damageKey: 0,
+      healKey: 0,
+      damage: 0,
+      heal: 0,
+      prevFraction,
+      currentFraction,
+    };
+
+    const next = {
+      prevFraction,
+      currentFraction,
+      damage: pendingDamage > 0 ? pendingDamage : 0,
+      heal: pendingHeal > 0 ? pendingHeal : 0,
+      damageKey: existing.damageKey || 0,
+      healKey: existing.healKey || 0,
+    };
+
+    const drains = [];
+    if (next.damage > 0) {
+      next.damageKey += 1;
+      drains.push({ key, kind: 'damage', version: next.damageKey });
+    }
+    if (next.heal > 0) {
+      next.healKey += 1;
+      drains.push({ key, kind: 'heal', version: next.healKey });
+    }
+
+    pendingLayers.set(key, next);
+    hpHistory.set(key, current);
+
+    return { drains, state: next };
+  }
+
+  function getHpState(key) {
+    if (!key) return null;
+    return pendingLayers.get(key) || null;
+  }
+
   async function fetchSnapshot() {
     if (!active || !runId) return;
     const start = performance.now();
@@ -165,6 +247,37 @@
         }
       }
 
+      const seenHpKeys = new Set();
+      const pendingDrains = [];
+      const summonCounters = new Map();
+
+      function trackHp(key, hpValue, maxValue) {
+        if (!key) return;
+        seenHpKeys.add(key);
+        const { drains } = recordHpSnapshot(key, hpValue, maxValue);
+        if (drains?.length) {
+          pendingDrains.push(...drains);
+        }
+      }
+
+      function prepareSummon(summon, ownerId, side) {
+        if (!summon) return null;
+        let baseId = summon?.id;
+        if (!baseId) {
+          const typeLabel = summon?.summon_type || summon?.type || 'summon';
+          const ownerLabel = summon?.summoner_id || ownerId || 'owner';
+          const counterKey = `${side}:${ownerLabel}:${typeLabel}`;
+          const count = summonCounters.get(counterKey) || 0;
+          summonCounters.set(counterKey, count + 1);
+          baseId = `${typeLabel}_${ownerLabel}_${count}`;
+        }
+        const key = combatantKey(`${side}-summon`, baseId, ownerId);
+        if (key) {
+          trackHp(key, summon.hp, summon.max_hp);
+        }
+        return { ...summon, hpKey: key };
+      }
+
       // Map summons to their owners
       const partySummons = new Map();
       if (snap && snap.party_summons) {
@@ -176,8 +289,9 @@
         for (const s of arr) {
           const owner = s?.owner_id;
           if (!owner) continue;
+          const processed = prepareSummon(s, owner, 'party');
           if (!partySummons.has(owner)) partySummons.set(owner, []);
-          partySummons.get(owner).push(s);
+          if (processed) partySummons.get(owner).push(processed);
         }
       }
 
@@ -191,8 +305,9 @@
         for (const s of arr) {
           const owner = s?.owner_id;
           if (!owner) continue;
+          const processed = prepareSummon(s, owner, 'foe');
           if (!foeSummons.has(owner)) foeSummons.set(owner, []);
-          foeSummons.get(owner).push(s);
+          if (processed) foeSummons.get(owner).push(processed);
         }
       }
 
@@ -219,6 +334,8 @@
           return id && !isSummon && !partySummonIds.has(id);
         });
         const enriched = base.map(m => {
+          const hpKey = combatantKey('party', m?.id);
+          trackHp(hpKey, m?.hp, m?.max_hp);
           let elem =
             (Array.isArray(m.damage_types) && m.damage_types[0]) ||
             m.damage_type ||
@@ -233,7 +350,8 @@
             }
           }
           const resolved = typeof elem === 'string' ? elem : (elem?.id || elem?.name || 'Generic');
-          return { ...m, element: resolved, summons: partySummons.get(m.id) || [] };
+          const summons = (partySummons.get(m.id) || []).map(s => ({ ...s }));
+          return { ...m, element: resolved, summons, hpKey };
         });
         if (differs(enriched, party)) party = enriched;
       }
@@ -241,6 +359,8 @@
       if (snap.foes) {
         const prevById = new Map((foes || []).map(f => [f.id, f]));
         const enrichedFoes = (snap.foes || []).map(f => {
+          const hpKey = combatantKey('foe', f?.id);
+          trackHp(hpKey, f?.hp, f?.max_hp);
           let elem =
             (Array.isArray(f.damage_types) && f.damage_types[0]) ||
             f.damage_type ||
@@ -250,9 +370,48 @@
             const prev = prevById.get(f.id);
             resolved = prev?.element || prev?.damage_type || '';
           }
-          return { ...f, element: resolved, summons: foeSummons.get(f.id) || [] };
+          const summons = (foeSummons.get(f.id) || []).map(s => ({ ...s }));
+          return { ...f, element: resolved, summons, hpKey };
         });
         if (differs(enrichedFoes, foes)) foes = enrichedFoes;
+      }
+
+      let removedKeys = false;
+      for (const key of Array.from(pendingLayers.keys())) {
+        if (!seenHpKeys.has(key)) {
+          pendingLayers.delete(key);
+          removedKeys = true;
+        }
+      }
+      for (const key of Array.from(hpHistory.keys())) {
+        if (!seenHpKeys.has(key)) {
+          hpHistory.delete(key);
+        }
+      }
+
+      if (removedKeys || seenHpKeys.size || pendingDrains.length) {
+        pendingLayers = new Map(pendingLayers);
+      }
+
+      if (pendingDrains.length) {
+        if (!reducedMotion) {
+          await tick();
+        }
+        let drained = false;
+        for (const entry of pendingDrains) {
+          const state = pendingLayers.get(entry.key);
+          if (!state) continue;
+          if (entry.kind === 'damage' && state.damageKey === entry.version && state.damage > 0) {
+            pendingLayers.set(entry.key, { ...state, damage: 0 });
+            drained = true;
+          } else if (entry.kind === 'heal' && state.healKey === entry.version && state.heal > 0) {
+            pendingLayers.set(entry.key, { ...state, heal: 0 });
+            drained = true;
+          }
+        }
+        if (drained) {
+          pendingLayers = new Map(pendingLayers);
+        }
       }
 
       if (Array.isArray(snap.queue || snap.action_queue)) {
@@ -339,10 +498,28 @@
                   style={`width: calc(${Math.max(0, Math.min(100, (Number(foe.shields || 0) / Math.max(1, Number(foe.max_hp || 0))) * 100))}% + 5px); left: -5px;`}
                 ></div>
               {/if}
-              <div 
+              {@const hpState = getHpState(foe.hpKey)}
+              {@const hpFraction = hpState ? hpState.currentFraction : safeFraction(foe.hp, foe.max_hp)}
+              {@const prevFraction = hpState ? hpState.prevFraction : hpFraction}
+              {@const hpPercent = percentFromFraction(hpFraction)}
+              {@const damageWidth = percentFromFraction(hpState?.damage)}
+              {@const healWidth = percentFromFraction(hpState?.heal)}
+              {@const damageLeft = percentFromFraction(hpFraction)}
+              {@const healLeft = percentFromFraction(prevFraction)}
+              {@const damageOpacity = damageWidth > 0 ? 0.9 : 0}
+              {@const healOpacity = healWidth > 0 ? 0.9 : 0}
+              <div
                 class="hp-bar-fill"
-                style="width: {Math.max(0, Math.min(100, (foe.hp / foe.max_hp) * 100))}%; 
-                       background: {(foe.hp / foe.max_hp) <= 0.3 ? 'linear-gradient(90deg, #ff4444, #ff6666)' : 'linear-gradient(90deg, #44ffff, #66dddd)'}"
+                style="width: {hpPercent}%;
+                       background: {hpFraction <= 0.3 ? 'linear-gradient(90deg, #ff4444, #ff6666)' : 'linear-gradient(90deg, #44ffff, #66dddd)'}"
+              ></div>
+              <div
+                class="hp-bar-overlay damage"
+                style={`left: ${damageLeft}%; width: ${damageWidth}%; opacity: ${damageOpacity}; --pending-duration: ${reducedMotion ? 0 : pendingEaseMs}ms; --pending-ease: ${pendingEaseCurve};`}
+              ></div>
+              <div
+                class="hp-bar-overlay heal"
+                style={`left: ${healLeft}%; width: ${healWidth}%; opacity: ${healOpacity}; --pending-duration: ${reducedMotion ? 0 : pendingEaseMs}ms; --pending-ease: ${pendingEaseCurve};`}
               ></div>
               {#if foe.hp < foe.max_hp}
                 <div class="hp-text" data-position="outline">{foe.hp}</div>
@@ -372,10 +549,28 @@
                             style={`width: calc(${Math.max(0, Math.min(100, (Number(summon.shields || 0) / Math.max(1, Number(summon.max_hp || 0))) * 100))}% + 5px); left: -5px;`}
                           ></div>
                         {/if}
-                        <div 
+                        {@const hpState = getHpState(summon.hpKey)}
+                        {@const hpFraction = hpState ? hpState.currentFraction : safeFraction(summon.hp, summon.max_hp)}
+                        {@const prevFraction = hpState ? hpState.prevFraction : hpFraction}
+                        {@const hpPercent = percentFromFraction(hpFraction)}
+                        {@const damageWidth = percentFromFraction(hpState?.damage)}
+                        {@const healWidth = percentFromFraction(hpState?.heal)}
+                        {@const damageLeft = percentFromFraction(hpFraction)}
+                        {@const healLeft = percentFromFraction(prevFraction)}
+                        {@const damageOpacity = damageWidth > 0 ? 0.9 : 0}
+                        {@const healOpacity = healWidth > 0 ? 0.9 : 0}
+                        <div
                           class="hp-bar-fill"
-                          style="width: {Math.max(0, Math.min(100, (summon.hp / summon.max_hp) * 100))}%; 
-                                 background: {(summon.hp / summon.max_hp) <= 0.3 ? 'linear-gradient(90deg, #ff4444, #ff6666)' : 'linear-gradient(90deg, #44ffff, #66dddd)'}"
+                          style="width: {hpPercent}%;
+                                 background: {hpFraction <= 0.3 ? 'linear-gradient(90deg, #ff4444, #ff6666)' : 'linear-gradient(90deg, #44ffff, #66dddd)'}"
+                        ></div>
+                        <div
+                          class="hp-bar-overlay damage"
+                          style={`left: ${damageLeft}%; width: ${damageWidth}%; opacity: ${damageOpacity}; --pending-duration: ${reducedMotion ? 0 : pendingEaseMs}ms; --pending-ease: ${pendingEaseCurve};`}
+                        ></div>
+                        <div
+                          class="hp-bar-overlay heal"
+                          style={`left: ${healLeft}%; width: ${healWidth}%; opacity: ${healOpacity}; --pending-duration: ${reducedMotion ? 0 : pendingEaseMs}ms; --pending-ease: ${pendingEaseCurve};`}
                         ></div>
                         {#if summon.hp < summon.max_hp}
                           <div class="hp-text" data-position="outline">{summon.hp}</div>
@@ -436,10 +631,28 @@
                           style={`width: calc(${Math.max(0, Math.min(100, (Number(summon.shields || 0) / Math.max(1, Number(summon.max_hp || 0))) * 100))}% + 5px); left: -5px;`}
                         ></div>
                       {/if}
-                      <div 
+                      {@const hpState = getHpState(summon.hpKey)}
+                      {@const hpFraction = hpState ? hpState.currentFraction : safeFraction(summon.hp, summon.max_hp)}
+                      {@const prevFraction = hpState ? hpState.prevFraction : hpFraction}
+                      {@const hpPercent = percentFromFraction(hpFraction)}
+                      {@const damageWidth = percentFromFraction(hpState?.damage)}
+                      {@const healWidth = percentFromFraction(hpState?.heal)}
+                      {@const damageLeft = percentFromFraction(hpFraction)}
+                      {@const healLeft = percentFromFraction(prevFraction)}
+                      {@const damageOpacity = damageWidth > 0 ? 0.9 : 0}
+                      {@const healOpacity = healWidth > 0 ? 0.9 : 0}
+                      <div
                         class="hp-bar-fill"
-                        style="width: {Math.max(0, Math.min(100, (summon.hp / summon.max_hp) * 100))}%; 
-                               background: {(summon.hp / summon.max_hp) <= 0.3 ? 'linear-gradient(90deg, #ff4444, #ff6666)' : 'linear-gradient(90deg, #44ffff, #66dddd)'}"
+                        style="width: {hpPercent}%;
+                               background: {hpFraction <= 0.3 ? 'linear-gradient(90deg, #ff4444, #ff6666)' : 'linear-gradient(90deg, #44ffff, #66dddd)'}"
+                      ></div>
+                      <div
+                        class="hp-bar-overlay damage"
+                        style={`left: ${damageLeft}%; width: ${damageWidth}%; opacity: ${damageOpacity}; --pending-duration: ${reducedMotion ? 0 : pendingEaseMs}ms; --pending-ease: ${pendingEaseCurve};`}
+                      ></div>
+                      <div
+                        class="hp-bar-overlay heal"
+                        style={`left: ${healLeft}%; width: ${healWidth}%; opacity: ${healOpacity}; --pending-duration: ${reducedMotion ? 0 : pendingEaseMs}ms; --pending-ease: ${pendingEaseCurve};`}
                       ></div>
                       {#if summon.hp < summon.max_hp}
                         <div class="hp-text" data-position="outline">{summon.hp}</div>
@@ -473,10 +686,28 @@
                 style={`width: calc(${Math.max(0, Math.min(100, (Number(member.shields || 0) / Math.max(1, Number(member.max_hp || 0))) * 100))}% + 5px); left: -5px;`}
               ></div>
             {/if}
-            <div 
+            {@const hpState = getHpState(member.hpKey)}
+            {@const hpFraction = hpState ? hpState.currentFraction : safeFraction(member.hp, member.max_hp)}
+            {@const prevFraction = hpState ? hpState.prevFraction : hpFraction}
+            {@const hpPercent = percentFromFraction(hpFraction)}
+            {@const damageWidth = percentFromFraction(hpState?.damage)}
+            {@const healWidth = percentFromFraction(hpState?.heal)}
+            {@const damageLeft = percentFromFraction(hpFraction)}
+            {@const healLeft = percentFromFraction(prevFraction)}
+            {@const damageOpacity = damageWidth > 0 ? 0.9 : 0}
+            {@const healOpacity = healWidth > 0 ? 0.9 : 0}
+            <div
               class="hp-bar-fill"
-              style="width: {Math.max(0, Math.min(100, (member.hp / member.max_hp) * 100))}%; 
-                     background: {(member.hp / member.max_hp) <= 0.3 ? 'linear-gradient(90deg, #ff4444, #ff6666)' : 'linear-gradient(90deg, #44ffff, #66dddd)'}"
+              style="width: {hpPercent}%;
+                     background: {hpFraction <= 0.3 ? 'linear-gradient(90deg, #ff4444, #ff6666)' : 'linear-gradient(90deg, #44ffff, #66dddd)'}"
+            ></div>
+            <div
+              class="hp-bar-overlay damage"
+              style={`left: ${damageLeft}%; width: ${damageWidth}%; opacity: ${damageOpacity}; --pending-duration: ${reducedMotion ? 0 : pendingEaseMs}ms; --pending-ease: ${pendingEaseCurve};`}
+            ></div>
+            <div
+              class="hp-bar-overlay heal"
+              style={`left: ${healLeft}%; width: ${healWidth}%; opacity: ${healOpacity}; --pending-duration: ${reducedMotion ? 0 : pendingEaseMs}ms; --pending-ease: ${pendingEaseCurve};`}
             ></div>
             {#if member.hp < member.max_hp}
               <div class="hp-text" data-position="outline">{member.hp}</div>
@@ -599,7 +830,9 @@
   .hp-bar-fill {
     height: 100%;
     transition: width 0.3s ease, background 0.3s ease;
-    position: relative; /* ensure z-index applies */
+    position: absolute;
+    left: 0;
+    top: 0;
     z-index: 1; /* draw above overheal/shields */
   }
 
@@ -615,11 +848,35 @@
     z-index: 0; /* below main HP fill */
   }
 
+  .hp-bar-overlay {
+    position: absolute;
+    top: 0;
+    height: 100%;
+    pointer-events: none;
+    z-index: 2;
+    transition-property: width, opacity;
+    transition-duration: var(--pending-duration, 360ms);
+    transition-timing-function: var(--pending-ease, cubic-bezier(0.25, 0.9, 0.3, 1));
+    opacity: 0;
+  }
+
+  .hp-bar-overlay.damage {
+    background: linear-gradient(90deg, rgba(255, 72, 72, 0.85), rgba(255, 24, 24, 0.65));
+  }
+
+  .hp-bar-overlay.heal {
+    background: linear-gradient(90deg, rgba(80, 255, 180, 0.85), rgba(32, 192, 120, 0.65));
+  }
+
   .hp-bar-container.reduced .hp-bar-fill {
     transition: none;
   }
 
   .hp-bar-container.reduced .overheal-fill {
+    transition: none;
+  }
+
+  .hp-bar-container.reduced .hp-bar-overlay {
     transition: none;
   }
 
@@ -636,7 +893,7 @@
     line-height: 1.1;
     border-radius: 6px; /* shape for backdrop */
     pointer-events: none;
-    z-index: 2;
+    z-index: 3;
   }
 
   /* Soft faded-edge backdrop behind the HP number */
