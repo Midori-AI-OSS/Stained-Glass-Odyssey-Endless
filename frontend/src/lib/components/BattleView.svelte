@@ -476,6 +476,16 @@
   {#if showFoes}
     <div class="foe-row">
       {#each foes as foe (foe.id)}
+        {@const hpState = getHpState(foe.hpKey)}
+        {@const hpFraction = hpState ? hpState.currentFraction : safeFraction(foe.hp, foe.max_hp)}
+        {@const prevFraction = hpState ? hpState.prevFraction : hpFraction}
+        {@const hpPercent = percentFromFraction(hpFraction)}
+        {@const damageWidth = percentFromFraction(hpState?.damage)}
+        {@const healWidth = percentFromFraction(hpState?.heal)}
+        {@const damageLeft = percentFromFraction(hpFraction)}
+        {@const healLeft = percentFromFraction(prevFraction)}
+        {@const damageOpacity = damageWidth > 0 ? 0.9 : 0}
+        {@const healOpacity = healWidth > 0 ? 0.9 : 0}
         <div
           class="foe-container"
           in:fade={{ duration: reducedMotion ? 0 : 300 }}
@@ -498,16 +508,6 @@
                   style={`width: calc(${Math.max(0, Math.min(100, (Number(foe.shields || 0) / Math.max(1, Number(foe.max_hp || 0))) * 100))}% + 5px); left: -5px;`}
                 ></div>
               {/if}
-              {@const hpState = getHpState(foe.hpKey)}
-              {@const hpFraction = hpState ? hpState.currentFraction : safeFraction(foe.hp, foe.max_hp)}
-              {@const prevFraction = hpState ? hpState.prevFraction : hpFraction}
-              {@const hpPercent = percentFromFraction(hpFraction)}
-              {@const damageWidth = percentFromFraction(hpState?.damage)}
-              {@const healWidth = percentFromFraction(hpState?.heal)}
-              {@const damageLeft = percentFromFraction(hpFraction)}
-              {@const healLeft = percentFromFraction(prevFraction)}
-              {@const damageOpacity = damageWidth > 0 ? 0.9 : 0}
-              {@const healOpacity = healWidth > 0 ? 0.9 : 0}
               <div
                 class="hp-bar-fill"
                 style="width: {hpPercent}%;
