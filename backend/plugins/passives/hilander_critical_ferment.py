@@ -1,8 +1,7 @@
 from dataclasses import dataclass
 import random
 from typing import TYPE_CHECKING
-from typing import ClassVar
-from weakref import WeakKeyDictionary
+from typing import Optional
 from weakref import ref
 
 from autofighter.stat_effect import StatEffect
@@ -22,16 +21,23 @@ class HilanderCriticalFerment:
     name = "Critical Ferment"
     trigger = "hit_landed"  # Triggers when Hilander lands a hit
     stack_display = "pips"  # Unlimited stacks with numeric fallback past five
-    _subscribed: ClassVar[WeakKeyDictionary["Stats", bool]] = WeakKeyDictionary()
-
-    async def apply(self, target: "Stats") -> None:
+    async def apply(
+        self,
+        attacker: "Stats",
+        hit_target: Optional["Stats"] = None,
+        damage: Optional[int] = None,
+        action_type: Optional[str] = None,
+        event: Optional[str] = None,
+        stack_index: Optional[int] = None,
+        **_kwargs,
+    ) -> None:
         """Apply crit building mechanics for Hilander."""
         # Build 5% crit rate and 10% crit damage each hit
 
         # Count existing ferment stacks
         ferment_stacks = sum(
             1
-            for effect in target._active_effects
+            for effect in attacker._active_effects
             if effect.name.startswith(f"{self.id}_crit_stack") and effect.name.endswith("_rate")
         )
 
@@ -48,7 +54,7 @@ class HilanderCriticalFerment:
             duration=-1,  # Permanent until consumed
             source=self.id,
         )
-        target.add_effect(crit_rate_bonus)
+        attacker.add_effect(crit_rate_bonus)
 
         crit_damage_bonus = StatEffect(
             name=f"{self.id}_crit_stack_{stack_id}_damage",
@@ -56,22 +62,23 @@ class HilanderCriticalFerment:
             duration=-1,  # Permanent until consumed
             source=self.id,
         )
-        target.add_effect(crit_damage_bonus)
+        attacker.add_effect(crit_damage_bonus)
 
-        if not self._subscribed.get(target):
-            target_ref = ref(target)
+        if getattr(attacker, "_hilander_crit_cb", None) is None:
+            attacker_ref = ref(attacker)
 
-            def _crit(attacker, crit_target, damage, *_args) -> None:
-                tgt = target_ref()
+            def _crit(crit_attacker, crit_target, crit_damage, *_args, **_kwargs) -> None:
+                tgt = attacker_ref()
                 if tgt is None:
                     BUS.unsubscribe("critical_hit", _crit)
                     return
-                if attacker is tgt:
-                    self.on_critical_hit(tgt, crit_target, damage)
+                if crit_attacker is tgt:
+                    self.on_critical_hit(tgt, crit_target, crit_damage)
 
             BUS.subscribe("critical_hit", _crit)
-            target._hilander_crit_cb = _crit
-            self._subscribed[target] = True
+            attacker._hilander_crit_cb = _crit
+        return None
+
     @classmethod
     def on_critical_hit(cls, attacker: "Stats", target: "Stats", damage: int) -> None:
         """Handle critical hit - unleash Aftertaste and consume one stack."""
@@ -113,7 +120,6 @@ class HilanderCriticalFerment:
             if cb:
                 BUS.unsubscribe("critical_hit", cb)
                 delattr(attacker, "_hilander_crit_cb")
-            cls._subscribed.pop(attacker, None)
 
     @classmethod
     def get_stacks(cls, target: "Stats") -> int:
