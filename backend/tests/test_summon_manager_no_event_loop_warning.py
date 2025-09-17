@@ -19,6 +19,7 @@ async def test_on_entity_killed_no_event_loop_warning(monkeypatch, caplog):
 
     summoner = Stats()
     summoner.id = "test_summoner"
+    summoner.ensure_permanent_summon_slots(1)
     SummonManager.create_summon(summoner, summon_type="test")
     summon = SummonManager.get_summons("test_summoner")[0]
 

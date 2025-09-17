@@ -35,6 +35,11 @@ class BeccaMenagerieBond:
         """Apply Becca's Menagerie Bond mechanics."""
         entity_id = id(target)
 
+        if hasattr(target, "ensure_permanent_summon_slots"):
+            target.ensure_permanent_summon_slots(1)
+
+        setattr(target, "_becca_menagerie_passive", self)
+
         # Initialize tracking if not present
         if entity_id not in self._summon_cooldown:
             self._summon_cooldown[entity_id] = 0
@@ -142,6 +147,11 @@ class BeccaMenagerieBond:
             self._summon_cooldown[entity_id] = 0
             self._spirit_stacks[entity_id] = 0
 
+        if hasattr(target, "ensure_permanent_summon_slots"):
+            target.ensure_permanent_summon_slots(1)
+        if not hasattr(target, "_becca_menagerie_passive"):
+            setattr(target, "_becca_menagerie_passive", self)
+
         # Check cooldown
         if self._summon_cooldown[entity_id] > 0:
             return False
@@ -191,7 +201,6 @@ class BeccaMenagerieBond:
             stat_multiplier=0.5,  # 50% of Becca's stats as specified
             turns_remaining=-1,  # Permanent until replaced or defeated
             override_damage_type=damage_type,
-            max_summons=1,  # Only one jellyfish at a time
         )
 
         if summon:
