@@ -21,23 +21,23 @@ class OmegaCore(RelicBase):
         "Multiplies all stats for the entire fight before draining ally health."
     )
 
-    def apply(self, party) -> None:
+    async def apply(self, party) -> None:
         """Burst of power followed by increasing HP drain."""
-        super().apply(party)
+        await super().apply(party)
 
         stacks = party.relics.count(self.id)
         delay = 10 + 2 * (stacks - 1)
         mult = 6.0 + (stacks - 1)
         state = {"mods": {}, "turn": 0}
 
-        def _battle_start(entity) -> None:
+        async def _battle_start(entity) -> None:
             from plugins.foes._base import FoeBase
 
             if isinstance(entity, FoeBase) or state["mods"]:
                 return
             for member in party.members:
                 # Emit relic effect event for massive stat boost
-                BUS.emit("relic_effect", "omega_core", member, "stat_amplification", mult, {
+                await BUS.emit_async("relic_effect", "omega_core", member, "stat_amplification", mult, {
                     "multiplier": mult,
                     "duration": "entire_fight",
                     "drain_delay": delay,
@@ -64,7 +64,7 @@ class OmegaCore(RelicBase):
                 state["mods"][id(member)] = mod
             state["turn"] = 0
 
-        def _turn_start() -> None:
+        async def _turn_start() -> None:
             if not state["mods"]:
                 return
             state["turn"] += 1
@@ -75,7 +75,7 @@ class OmegaCore(RelicBase):
                 dmg = int(member.max_hp * drain)
 
                 # Emit relic effect event for HP drain
-                BUS.emit("relic_effect", "omega_core", member, "hp_drain", dmg, {
+                await BUS.emit_async("relic_effect", "omega_core", member, "hp_drain", dmg, {
                     "drain_percentage": drain * 100,
                     "turn": state["turn"],
                     "turns_past_delay": state["turn"] - delay,

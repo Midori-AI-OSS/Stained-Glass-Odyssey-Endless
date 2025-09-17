@@ -17,7 +17,7 @@ async def test_battle_summary_endpoint(app_with_db):
     target = Stats()
     target.id = 'foe'
 
-    BUS.emit('damage_dealt', attacker, target, 42, damage_type='Fire')
+    await BUS.emit_async('damage_dealt', attacker, target, 42, damage_type='Fire')
     logger.finalize_battle('victory')
 
     client = app.test_client()

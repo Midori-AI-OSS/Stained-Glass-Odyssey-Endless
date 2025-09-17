@@ -18,7 +18,7 @@ class SharpeningStone(CardBase):
     async def apply(self, party) -> None:  # type: ignore[override]
         await super().apply(party)
 
-        def _on_critical_hit(attacker, target, damage, action_name):
+        async def _on_critical_hit(attacker, target, damage, action_name):
             # Check if attacker is one of our party members
             if attacker in party.members:
                 # Grant +2% crit damage for 2 turns
@@ -39,7 +39,7 @@ class SharpeningStone(CardBase):
                 import logging
                 log = logging.getLogger(__name__)
                 log.debug("Sharpening Stone crit damage boost: +2% crit damage for 2 turns to %s", attacker.id)
-                BUS.emit("card_effect", self.id, attacker, "crit_damage_boost", 2, {
+                await BUS.emit_async("card_effect", self.id, attacker, "crit_damage_boost", 2, {
                     "crit_damage_boost": 2,
                     "duration": 2,
                     "trigger_event": "critical_hit"

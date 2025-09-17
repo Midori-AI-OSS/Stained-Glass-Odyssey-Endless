@@ -21,14 +21,14 @@ class ParadoxHourglass(RelicBase):
         "At battle start may sacrifice allies to supercharge survivors and shred foe defense."
     )
 
-    def apply(self, party) -> None:
+    async def apply(self, party) -> None:
         """On battle start possibly sacrifices allies for massive buffs."""
-        super().apply(party)
+        await super().apply(party)
 
         stacks = party.relics.count(self.id)
         state: dict[str, dict] = {"buffs": {}, "foe": {}}
 
-        def _battle_start(entity) -> None:
+        async def _battle_start(entity) -> None:
             from plugins.foes._base import FoeBase
 
             if isinstance(entity, FoeBase):
@@ -45,7 +45,7 @@ class ParadoxHourglass(RelicBase):
                 state["foe"][id(entity)] = mod
 
                 # Track foe defense reduction
-                BUS.emit("relic_effect", "paradox_hourglass", entity, "defense_shredded", base_def - new_def, {
+                await BUS.emit_async("relic_effect", "paradox_hourglass", entity, "defense_shredded", base_def - new_def, {
                     "original_defense": base_def,
                     "new_defense": new_def,
                     "division_factor": div,
@@ -63,7 +63,7 @@ class ParadoxHourglass(RelicBase):
             chance = 0.6 * (len(alive) - 1) / len(alive)
 
             # Track activation attempt
-            BUS.emit("relic_effect", "paradox_hourglass", party, "activation_attempt", int(chance * 100), {
+            await BUS.emit_async("relic_effect", "paradox_hourglass", party, "activation_attempt", int(chance * 100), {
                 "alive_count": len(alive),
                 "activation_chance": chance,
                 "max_sacrifices": min(stacks, 4, len(alive) - 1)
@@ -77,7 +77,7 @@ class ParadoxHourglass(RelicBase):
 
             # Track sacrifices
             for m in to_kill:
-                BUS.emit("relic_effect", "paradox_hourglass", m, "ally_sacrificed", m.hp, {
+                await BUS.emit_async("relic_effect", "paradox_hourglass", m, "ally_sacrificed", m.hp, {
                     "sacrifice_count": kill_count,
                     "ally_name": getattr(m, 'id', str(m))
                 })
@@ -107,7 +107,7 @@ class ParadoxHourglass(RelicBase):
                 state["buffs"][id(m)] = mod
 
                 # Track survivor supercharging
-                BUS.emit("relic_effect", "paradox_hourglass", m, "survivor_supercharged", mult, {
+                await BUS.emit_async("relic_effect", "paradox_hourglass", m, "survivor_supercharged", mult, {
                     "multiplier": mult,
                     "sacrifices_made": kill_count,
                     "full_heal": True,

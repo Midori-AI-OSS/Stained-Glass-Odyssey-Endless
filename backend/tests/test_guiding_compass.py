@@ -35,20 +35,20 @@ async def test_guiding_compass_first_battle_xp_only_once() -> None:
 
     events: list[tuple[str, str, int]] = []
 
-    def _on_card_effect(card_id, member, effect, amount, extra):
+    async def _on_card_effect(card_id, member, effect, amount, extra):
         if effect == "first_battle_xp":
             events.append((card_id, member.id, amount))
 
     BUS.subscribe("card_effect", _on_card_effect)
 
-    BUS.emit("battle_start", member1)
+    await BUS.emit_async("battle_start", member1)
     await asyncio.sleep(0.05)
 
     assert member1.exp == base_exp + 10
     assert member2.exp == base_exp + 10
     assert len(events) == 2
 
-    BUS.emit("battle_start", member1)
+    await BUS.emit_async("battle_start", member1)
     await asyncio.sleep(0.05)
 
     assert member1.exp == base_exp + 10

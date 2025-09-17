@@ -17,7 +17,7 @@ class LuckyCoin(CardBase):
     async def apply(self, party) -> None:  # type: ignore[override]
         await super().apply(party)
 
-        def _on_critical_hit(attacker, target, damage, action_name):
+        async def _on_critical_hit(attacker, target, damage, action_name):
             # Check if attacker is one of our party members
             if attacker in party.members:
                 # 20% chance to refund tiny ultimate charge
@@ -28,7 +28,7 @@ class LuckyCoin(CardBase):
                     import logging
                     log = logging.getLogger(__name__)
                     log.debug("Lucky Coin ultimate charge refund: +%d charge to %s", charge_refund, attacker.id)
-                    BUS.emit("card_effect", self.id, attacker, "charge_refund", charge_refund, {
+                    await BUS.emit_async("card_effect", self.id, attacker, "charge_refund", charge_refund, {
                         "charge_refund": charge_refund,
                         "trigger_chance": 0.20,
                         "trigger_event": "critical_hit"

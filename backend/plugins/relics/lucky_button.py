@@ -17,23 +17,23 @@ class LuckyButton(RelicBase):
     effects: dict[str, float] = field(default_factory=lambda: {"crit_rate": 0.03})
     about: str = "+3% Crit Rate; missed crits grant Critical Boost next turn."
 
-    def apply(self, party) -> None:
-        super().apply(party)
+    async def apply(self, party) -> None:
+        await super().apply(party)
 
         pending: dict[int, int] = {}
         active: dict[int, tuple[PlayerBase, CriticalBoost]] = {}
 
-        def _crit_missed(attacker, target) -> None:
+        async def _crit_missed(attacker, target) -> None:
             pid = id(attacker)
             pending[pid] = pending.get(pid, 0) + 1
 
             # Emit relic effect event for crit miss tracking
-            BUS.emit("relic_effect", "lucky_button", attacker, "crit_missed_tracked", 1, {
+            await BUS.emit_async("relic_effect", "lucky_button", attacker, "crit_missed_tracked", 1, {
                 "target": getattr(target, 'id', str(target)),
                 "pending_stacks": pending[pid]
             })
 
-        def _turn_start() -> None:
+        async def _turn_start() -> None:
             for pid, stacks in list(pending.items()):
                 member = next((m for m in party.members if id(m) == pid), None)
                 if member is None:
@@ -43,21 +43,21 @@ class LuckyButton(RelicBase):
                     effect = CriticalBoost()
                     active[pid] = (member, effect)
                 for _ in range(stacks):
-                    effect.apply(member)
+                    await effect.apply(member)
 
                 # Emit relic effect event for critical boost application
-                BUS.emit("relic_effect", "lucky_button", member, "critical_boost_applied", stacks, {
+                await BUS.emit_async("relic_effect", "lucky_button", member, "critical_boost_applied", stacks, {
                     "boost_stacks": stacks,
                     "from_missed_crits": True
                 })
             pending.clear()
 
-        def _turn_end() -> None:
+        async def _turn_end() -> None:
             for pid, (member, effect) in list(active.items()):
-                effect._on_damage_taken(member)
+                await effect._on_damage_taken(member)
                 del active[pid]
 
-        def _battle_end(_entity) -> None:
+        async def _battle_end(_entity, *_args) -> None:
             BUS.unsubscribe("crit_missed", _crit_missed)
             BUS.unsubscribe("turn_start", _turn_start)
             BUS.unsubscribe("turn_end", _turn_end)

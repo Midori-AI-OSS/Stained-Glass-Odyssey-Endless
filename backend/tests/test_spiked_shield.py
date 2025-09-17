@@ -31,7 +31,7 @@ def test_spiked_shield_retaliates_damage(monkeypatch):
 
     monkeypatch.setattr(Stats, "apply_damage", fake_apply_damage, raising=False)
 
-    BUS.emit("mitigation_triggered", defender, 100, 50, attacker)
+    await BUS.emit_async("mitigation_triggered", defender, 100, 50, attacker)
     loop.run_until_complete(asyncio.sleep(0))
 
     assert attacker.hp == 1000 - int(defender.atk * 0.03)

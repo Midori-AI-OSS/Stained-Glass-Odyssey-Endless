@@ -39,7 +39,8 @@ def test_battle_logger_creates_folder_structure(temp_logs_dir):
     logger.finalize_battle("test")
 
 
-def test_battle_logger_tracks_events(temp_logs_dir):
+@pytest.mark.asyncio
+async def test_battle_logger_tracks_events(temp_logs_dir):
     """Test that BattleLogger properly tracks battle events."""
     run_id = "test_run_456"
     battle_index = 1
@@ -53,10 +54,10 @@ def test_battle_logger_tracks_events(temp_logs_dir):
     target.id = "test_target"
 
     # Simulate battle events
-    BUS.emit("battle_start", attacker)
-    BUS.emit("battle_start", target)
-    BUS.emit("damage_dealt", attacker, target, 50)
-    BUS.emit("hit_landed", attacker, target, 50)
+    await BUS.emit_async("battle_start", attacker)
+    await BUS.emit_async("battle_start", target)
+    await BUS.emit_async("damage_dealt", attacker, target, 50)
+    await BUS.emit_async("hit_landed", attacker, target, 50)
 
     # Finalize to write summary
     logger.finalize_battle("victory")
@@ -108,7 +109,8 @@ def test_run_logging_management(temp_logs_dir):
     assert run_path.exists()
 
 
-def test_human_readable_summary(temp_logs_dir):
+@pytest.mark.asyncio
+async def test_human_readable_summary(temp_logs_dir):
     """Test that human-readable summary is generated correctly."""
     run_id = "test_run_readable"
     battle_index = 1
@@ -121,12 +123,12 @@ def test_human_readable_summary(temp_logs_dir):
     target = Stats()
     target.id = "monster"
 
-    BUS.emit("battle_start", attacker)
-    BUS.emit("battle_start", target)
-    BUS.emit("damage_dealt", attacker, target, 100)
-    BUS.emit("damage_taken", target, attacker, 100)
-    BUS.emit("hit_landed", attacker, target, 100)
-    BUS.emit("heal", attacker, attacker, 25)
+    await BUS.emit_async("battle_start", attacker)
+    await BUS.emit_async("battle_start", target)
+    await BUS.emit_async("damage_dealt", attacker, target, 100)
+    await BUS.emit_async("damage_taken", target, attacker, 100)
+    await BUS.emit_async("hit_landed", attacker, target, 100)
+    await BUS.emit_async("heal", attacker, attacker, 25)
 
     logger.finalize_battle("victory")
 
@@ -144,7 +146,8 @@ def test_human_readable_summary(temp_logs_dir):
     assert "Total Events:" in content
 
 
-def test_damage_dealt_defaults_to_normal_attack(temp_logs_dir):
+@pytest.mark.asyncio
+async def test_damage_dealt_defaults_to_normal_attack(temp_logs_dir):
     run_id = "test_run_normal_attack"
     battle_index = 1
     logger = BattleLogger(run_id, battle_index, temp_logs_dir)
@@ -154,9 +157,9 @@ def test_damage_dealt_defaults_to_normal_attack(temp_logs_dir):
     target = Stats()
     target.id = "monster"
 
-    BUS.emit("battle_start", attacker)
-    BUS.emit("battle_start", target)
-    BUS.emit("damage_dealt", attacker, target, 42)
+    await BUS.emit_async("battle_start", attacker)
+    await BUS.emit_async("battle_start", target)
+    await BUS.emit_async("damage_dealt", attacker, target, 42)
 
     logger.finalize_battle("victory")
 

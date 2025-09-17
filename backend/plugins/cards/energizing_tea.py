@@ -18,7 +18,7 @@ class EnergizingTea(CardBase):
 
         battle_started = False
 
-        def _on_battle_start(target):
+        async def _on_battle_start(target):
             nonlocal battle_started
             # Only trigger once per battle and only for party members
             if not battle_started and target in party.members:
@@ -29,7 +29,7 @@ class EnergizingTea(CardBase):
                     import logging
                     log = logging.getLogger(__name__)
                     log.debug("Energizing Tea bonus ultimate charge: +1 charge to %s", member.id)
-                    BUS.emit(
+                    await BUS.emit_async(
                         "card_effect",
                         self.id,
                         member,
@@ -50,4 +50,3 @@ class EnergizingTea(CardBase):
 
         BUS.subscribe("battle_start", _on_battle_start)
         BUS.subscribe("battle_end", _on_battle_end)
-

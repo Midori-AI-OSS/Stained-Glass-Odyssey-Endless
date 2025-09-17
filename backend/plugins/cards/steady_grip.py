@@ -18,7 +18,7 @@ class SteadyGrip(CardBase):
     async def apply(self, party) -> None:  # type: ignore[override]
         await super().apply(party)
 
-        def _on_effect_applied(target, effect_name, duration, source):
+        async def _on_effect_applied(target, effect_name, duration, source):
             # Check if source is one of our party members and effect is a control effect
             if source in party.members:
                 effect_lower = effect_name.lower()
@@ -43,7 +43,7 @@ class SteadyGrip(CardBase):
                     import logging
                     log = logging.getLogger(__name__)
                     log.debug("Steady Grip control bonus: +2%% ATK for next action to %s", source.id)
-                    BUS.emit("card_effect", self.id, source, "control_atk_bonus", 2, {
+                    await BUS.emit_async("card_effect", self.id, source, "control_atk_bonus", 2, {
                         "atk_bonus": 2,
                         "duration": 1,
                         "control_effect": effect_name,

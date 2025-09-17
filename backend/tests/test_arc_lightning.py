@@ -20,11 +20,11 @@ async def test_arc_lightning_chains_damage() -> None:
     party = Party([attacker])
     card = ArcLightning()
     await card.apply(party)
-    BUS.emit("battle_start", foe1)
-    BUS.emit("battle_start", foe2)
-    BUS.emit("battle_start", attacker)
+    await BUS.emit_async("battle_start", foe1)
+    await BUS.emit_async("battle_start", foe2)
+    await BUS.emit_async("battle_start", attacker)
     initial = foe2.hp
     with patch("plugins.cards.arc_lightning.random.choice", return_value=foe2):
-        BUS.emit("hit_landed", attacker, foe1, 100, "attack")
+        await BUS.emit_async("hit_landed", attacker, foe1, 100, "attack")
         await asyncio.sleep(0)
     assert foe2.hp < initial

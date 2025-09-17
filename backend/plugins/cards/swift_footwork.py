@@ -23,7 +23,7 @@ class SwiftFootwork(CardBase):
         def _battle_start(entity) -> None:
             used.clear()
 
-        def _action_used(actor, *_args) -> None:
+        async def _action_used(actor, *_args) -> None:
             if actor not in party.members:
                 return
 
@@ -32,9 +32,9 @@ class SwiftFootwork(CardBase):
                 return
 
             actor.action_points += 1
-            BUS.emit("extra_turn", actor)
+            await BUS.emit_async("extra_turn", actor)
             used.add(pid)
-            BUS.emit("card_effect", self.id, actor, "free_action", 0, {})
+            await BUS.emit_async("card_effect", self.id, actor, "free_action", 0, {})
 
         BUS.subscribe("battle_start", _battle_start)
         BUS.subscribe("action_used", _action_used)

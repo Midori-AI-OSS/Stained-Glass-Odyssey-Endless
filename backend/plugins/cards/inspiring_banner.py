@@ -21,7 +21,7 @@ class InspiringBanner(CardBase):
 
         battle_started = False
 
-        def _on_battle_start(target):
+        async def _on_battle_start(target):
             nonlocal battle_started
             # Only trigger once per battle and only when one of our party members starts
             if not battle_started and target in party.members:
@@ -47,7 +47,7 @@ class InspiringBanner(CardBase):
                     import logging
                     log = logging.getLogger(__name__)
                     log.debug("Inspiring Banner battle start: +2% ATK for 2 turns to %s", random_ally.id)
-                    BUS.emit("card_effect", self.id, random_ally, "battle_start_atk", 2, {
+                    await BUS.emit_async("card_effect", self.id, random_ally, "battle_start_atk", 2, {
                         "atk_bonus": 2,
                         "duration": 2,
                         "trigger_event": "battle_start"

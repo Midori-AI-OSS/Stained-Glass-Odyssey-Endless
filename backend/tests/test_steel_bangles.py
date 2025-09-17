@@ -30,7 +30,7 @@ async def test_steel_bangles_applies_attack_debuff(monkeypatch) -> None:
 
     # Force damage reduction to trigger (100% chance)
     monkeypatch.setattr(steel_bangles_module.random, "random", lambda: 0.0)
-    BUS.emit("damage_dealt", defender, attacker, 100, "attack", None, None, "attack")
+    await BUS.emit_async("damage_dealt", defender, attacker, 100, "attack", None, None, "attack")
     await asyncio.sleep(0.1)
 
     # Check that attacker now has reduced attack
@@ -47,4 +47,3 @@ async def test_steel_bangles_applies_attack_debuff(monkeypatch) -> None:
     modifier = attacker.effect_manager.mods[0]
     assert modifier.turns == 1
     assert modifier.name == "steel_bangles_attack_debuff"
-

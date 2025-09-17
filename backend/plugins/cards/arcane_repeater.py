@@ -22,13 +22,13 @@ class ArcaneRepeater(CardBase):
     async def apply(self, party) -> None:  # type: ignore[override]
         await super().apply(party)
 
-        def _attack(attacker, target, amount) -> None:
+        async def _attack(attacker, target, amount) -> None:
             if attacker not in party.members:
                 return
             if random.random() >= 0.30:
                 return
             dmg = int(amount * 0.5)
-            BUS.emit(
+            await BUS.emit_async(
                 "card_effect",
                 self.id,
                 attacker,

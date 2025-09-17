@@ -16,8 +16,8 @@ class ArcaneFlask(RelicBase):
     effects: dict[str, float] = field(default_factory=dict)
     about: str = "After an Ultimate, grant a shield equal to 20% Max HP."
 
-    def apply(self, party) -> None:
-        super().apply(party)
+    async def apply(self, party) -> None:
+        await super().apply(party)
 
         stacks = party.relics.count(self.id)
         state = getattr(party, "_arcane_flask_state", None)
@@ -25,7 +25,7 @@ class ArcaneFlask(RelicBase):
         if state is None:
             state = {"stacks": stacks}
 
-            def _ultimate(user) -> None:
+            async def _ultimate(user) -> None:
                 current_stacks = state.get("stacks", 0)
                 if current_stacks <= 0:
                     return
@@ -34,7 +34,7 @@ class ArcaneFlask(RelicBase):
                 shield = int(user.max_hp * 0.2 * current_stacks)
 
                 # Track the shield generation
-                BUS.emit("relic_effect", "arcane_flask", user, "shield_granted", shield, {
+                await BUS.emit_async("relic_effect", "arcane_flask", user, "shield_granted", shield, {
                     "shield_percentage": 20 * current_stacks,
                     "max_hp": user.max_hp,
                     "trigger": "ultimate_used",

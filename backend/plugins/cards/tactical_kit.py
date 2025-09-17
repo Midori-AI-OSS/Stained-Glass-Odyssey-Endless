@@ -21,7 +21,7 @@ class TacticalKit(CardBase):
         # Track which members have used their tactical conversion
         conversion_used = set()
 
-        def _on_action_about_to_start(actor):
+        async def _on_action_about_to_start(actor):
             # Check if actor is one of our party members and hasn't used conversion yet
             if actor in party.members:
                 actor_id = id(actor)
@@ -56,7 +56,7 @@ class TacticalKit(CardBase):
                         import logging
                         log = logging.getLogger(__name__)
                         log.debug("Tactical Kit conversion: -%d HP for +2%% ATK to %s", hp_to_convert, actor.id)
-                        BUS.emit("card_effect", self.id, actor, "hp_to_atk_conversion", 2, {
+                        await BUS.emit_async("card_effect", self.id, actor, "hp_to_atk_conversion", 2, {
                             "hp_converted": hp_to_convert,
                             "atk_bonus": 2,
                             "duration": 1,

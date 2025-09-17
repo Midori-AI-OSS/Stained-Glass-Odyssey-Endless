@@ -19,7 +19,7 @@ class FortifiedPlating(CardBase):
         # Track which members have used their first hit reduction this turn
         first_hit_used = set()
 
-        def _on_damage_taken(target, attacker, damage):
+        async def _on_damage_taken(target, attacker, damage):
             # Check if target is one of our party members
             if target in party.members:
                 target_id = id(target)
@@ -33,7 +33,7 @@ class FortifiedPlating(CardBase):
                         import logging
                         log = logging.getLogger(__name__)
                         log.debug("Fortified Plating first hit reduction: +%d HP restored to %s", damage_reduction, target.id)
-                        BUS.emit("card_effect", self.id, target, "first_hit_reduction", damage_reduction, {
+                        await BUS.emit_async("card_effect", self.id, target, "first_hit_reduction", damage_reduction, {
                             "damage_reduction": damage_reduction,
                             "reduction_percentage": 6,
                             "trigger_event": "first_hit_per_turn"

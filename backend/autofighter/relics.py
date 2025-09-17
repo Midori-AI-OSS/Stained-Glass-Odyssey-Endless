@@ -42,9 +42,9 @@ def relic_choices(party: Party, stars: int, count: int = 3) -> list[RelicBase]:
     k = min(count, len(available))
     return random.sample(available, k=k)
 
-def apply_relics(party: Party) -> None:
+async def apply_relics(party: Party) -> None:
     registry = _registry()
     for rid in party.relics:
         relic_cls = registry.get(rid)
         if relic_cls:
-            relic_cls().apply(party)
+            await relic_cls().apply(party)

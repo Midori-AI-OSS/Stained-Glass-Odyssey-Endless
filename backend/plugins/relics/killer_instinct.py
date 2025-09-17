@@ -17,8 +17,8 @@ class KillerInstinct(RelicBase):
     effects: dict[str, float] = field(default_factory=dict)
     about: str = "Ultimates grant +75% ATK for the turn; kills grant another turn."
 
-    def apply(self, party) -> None:
-        super().apply(party)
+    async def apply(self, party) -> None:
+        await super().apply(party)
 
         stacks = party.relics.count(self.id)
         state = getattr(party, "_killer_instinct_state", None)
@@ -35,7 +35,7 @@ class KillerInstinct(RelicBase):
                         member.mods.remove(mod.id)
                 buffs.clear()
 
-            def _ultimate(user) -> None:
+            async def _ultimate(user) -> None:
                 current_stacks = state.get("stacks", 0)
                 if current_stacks <= 0:
                     return
@@ -43,7 +43,7 @@ class KillerInstinct(RelicBase):
                 atk_mult = 1 + (0.75 * current_stacks)
 
                 # Emit relic effect event for ultimate ATK boost
-                BUS.emit("relic_effect", "killer_instinct", user, "ultimate_atk_boost", atk_pct, {
+                await BUS.emit_async("relic_effect", "killer_instinct", user, "ultimate_atk_boost", atk_pct, {
                     "atk_percentage": atk_pct,
                     "trigger": "ultimate_used",
                     "duration": "1_turn",
@@ -54,18 +54,18 @@ class KillerInstinct(RelicBase):
                 user.effect_manager.add_modifier(mod)
                 buffs[id(user)] = (user, mod)
 
-            def _damage(target, attacker, amount) -> None:
+            async def _damage(target, attacker, amount) -> None:
                 if attacker is None:
                     return
                 if target.hp <= 0 and id(attacker) in buffs:
                     # Emit relic effect event for extra turn
-                    BUS.emit("relic_effect", "killer_instinct", attacker, "extra_turn_grant", 1, {
+                    await BUS.emit_async("relic_effect", "killer_instinct", attacker, "extra_turn_grant", 1, {
                         "trigger": "kill",
                         "victim": getattr(target, 'id', str(target)),
                         "killer_damage": amount
                     })
 
-                    BUS.emit("extra_turn", attacker)
+                    await BUS.emit_async("extra_turn", attacker)
 
             def _turn_end(*_args) -> None:
                 _clear_buffs()

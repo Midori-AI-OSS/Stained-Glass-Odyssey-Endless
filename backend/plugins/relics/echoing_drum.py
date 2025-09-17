@@ -16,8 +16,8 @@ class EchoingDrum(RelicBase):
     effects: dict[str, float] = field(default_factory=dict)
     about: str = "First attack each battle repeats at 25% power per stack."
 
-    def apply(self, party) -> None:
-        super().apply(party)
+    async def apply(self, party) -> None:
+        await super().apply(party)
 
         state = getattr(party, "_echoing_drum_state", None)
         stacks = party.relics.count(self.id)
@@ -28,7 +28,7 @@ class EchoingDrum(RelicBase):
             def _battle_start(*_args) -> None:
                 used.clear()
 
-            def _attack(attacker, target, amount) -> None:
+            async def _attack(attacker, target, amount) -> None:
                 pid = id(attacker)
                 if pid in used:
                     return
@@ -39,7 +39,7 @@ class EchoingDrum(RelicBase):
                 dmg = int(amount * 0.25 * current_stacks)
 
                 # Emit relic effect event for echo attack
-                BUS.emit("relic_effect", "echoing_drum", attacker, "echo_attack", dmg, {
+                await BUS.emit_async("relic_effect", "echoing_drum", attacker, "echo_attack", dmg, {
                     "original_amount": amount,
                     "echo_percentage": 25 * current_stacks,
                     "target": getattr(target, 'id', str(target)),

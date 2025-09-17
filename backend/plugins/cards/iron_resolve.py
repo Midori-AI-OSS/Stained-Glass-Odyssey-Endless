@@ -25,7 +25,7 @@ class IronResolve(CardBase):
 
         cooldowns: dict[int, int] = {id(m): 0 for m in party.members}
 
-        def _damage_taken(target, attacker, amount) -> None:
+        async def _damage_taken(target, attacker, amount) -> None:
             pid = id(target)
             if target not in party.members:
                 return
@@ -34,7 +34,7 @@ class IronResolve(CardBase):
             revive_hp = int(target.max_hp * 0.30)
             target.hp = revive_hp
             cooldowns[pid] = 3
-            BUS.emit(
+            await BUS.emit_async(
                 "card_effect",
                 self.id,
                 target,

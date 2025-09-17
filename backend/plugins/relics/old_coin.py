@@ -15,8 +15,8 @@ class OldCoin(RelicBase):
     effects: dict[str, float] = field(default_factory=dict)
     about: str = "+3% gold earned; first shop purchase refunded 3% of cost."
 
-    def apply(self, party) -> None:
-        super().apply(party)
+    async def apply(self, party) -> None:
+        await super().apply(party)
 
         stacks = party.relics.count(self.id)
         state = getattr(party, "_old_coin_state", None)
@@ -24,7 +24,7 @@ class OldCoin(RelicBase):
         if state is None:
             first_purchase_done = getattr(party, "_old_coin_first_purchase", False)
 
-            def _gold(amount: int) -> None:
+            async def _gold(amount: int) -> None:
                 current_stacks = state.get("stacks", 0)
                 if current_stacks <= 0:
                     return
@@ -32,13 +32,13 @@ class OldCoin(RelicBase):
                 party.gold += bonus
 
                 # Emit relic effect event for gold bonus
-                BUS.emit("relic_effect", "old_coin", party, "gold_bonus", bonus, {
+                await BUS.emit_async("relic_effect", "old_coin", party, "gold_bonus", bonus, {
                     "original_amount": amount,
                     "bonus_percentage": 3 * current_stacks,
                     "stacks": current_stacks
                 })
 
-            def _purchase(cost: int) -> None:
+            async def _purchase(cost: int) -> None:
                 if state.get("first_purchase_done", False):
                     return
                 current_stacks = state.get("stacks", 0)
@@ -50,7 +50,7 @@ class OldCoin(RelicBase):
                 party._old_coin_first_purchase = True
 
                 # Emit relic effect event for purchase refund
-                BUS.emit("relic_effect", "old_coin", party, "purchase_refund", refund, {
+                await BUS.emit_async("relic_effect", "old_coin", party, "purchase_refund", refund, {
                     "original_cost": cost,
                     "refund_percentage": 3 * current_stacks,
                     "stacks": current_stacks,

@@ -26,7 +26,7 @@ class EnduringWill(CardBase):
             if target in party.members:
                 battle_deaths += 1
 
-        def _on_battle_end():
+        async def _on_battle_end():
             nonlocal mitigation_bonus_pending
             # If no allies died, prepare mitigation bonus for next battle
             if battle_deaths == 0:
@@ -34,13 +34,13 @@ class EnduringWill(CardBase):
                 import logging
                 log = logging.getLogger(__name__)
                 log.debug("Enduring Will mitigation bonus pending for next battle")
-                BUS.emit("card_effect", self.id, None, "mitigation_bonus_pending", 1, {
+                await BUS.emit_async("card_effect", self.id, None, "mitigation_bonus_pending", 1, {
                     "mitigation_bonus": 1,
                     "trigger_condition": "no_deaths",
                     "trigger_event": "battle_end"
                 })
 
-        def _on_battle_start(target):
+        async def _on_battle_start(target):
             nonlocal battle_deaths, mitigation_bonus_pending
             if target in party.members:
                 # Reset death counter for new battle
@@ -68,7 +68,7 @@ class EnduringWill(CardBase):
                         import logging
                         log = logging.getLogger(__name__)
                         log.debug("Enduring Will mitigation bonus: +0.002 mitigation to %s", member.id)
-                        BUS.emit("card_effect", self.id, member, "mitigation_bonus", 0.002, {
+                        await BUS.emit_async("card_effect", self.id, member, "mitigation_bonus", 0.002, {
                             "mitigation_bonus": 0.002,
                             "trigger_event": "battle_start"
                         })

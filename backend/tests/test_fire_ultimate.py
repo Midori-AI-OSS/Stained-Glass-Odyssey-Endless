@@ -28,7 +28,7 @@ async def test_fire_ultimate_stack_accumulation_and_drain():
     await actor.use_ultimate()
     assert actor.damage_type._drain_stacks == 1
 
-    BUS.emit("turn_start", actor)
+    await BUS.emit_async("turn_start", actor)
     await asyncio.sleep(0)
     expected = actor.max_hp - int(actor.max_hp * 0.05)
     assert actor.hp == expected
@@ -38,12 +38,12 @@ async def test_fire_ultimate_stack_accumulation_and_drain():
     await actor.use_ultimate()
     assert actor.damage_type._drain_stacks == 2
 
-    BUS.emit("turn_start", actor)
+    await BUS.emit_async("turn_start", actor)
     await asyncio.sleep(0)
     expected -= int(actor.max_hp * 0.10)
     assert actor.hp == expected
 
-    BUS.emit("battle_end", actor)
+    await BUS.emit_async("battle_end", actor)
 
 
 @pytest.mark.asyncio
@@ -56,11 +56,11 @@ async def test_fire_ultimate_resets_on_battle_end():
     await actor.use_ultimate()
     assert actor.damage_type._drain_stacks == 1
 
-    BUS.emit("battle_end", actor)
+    await BUS.emit_async("battle_end", actor)
     assert actor.damage_type._drain_stacks == 0
 
     actor.hp = actor.max_hp
-    BUS.emit("turn_start", actor)
+    await BUS.emit_async("turn_start", actor)
     await asyncio.sleep(0)
     assert actor.hp == actor.max_hp
 
@@ -85,4 +85,4 @@ async def test_fire_ultimate_damage_multiplier():
     boosted = await target2.apply_damage(100, attacker)
     assert boosted == base * 5
 
-    BUS.emit("battle_end", attacker)
+    await BUS.emit_async("battle_end", attacker)

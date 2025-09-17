@@ -20,9 +20,9 @@ class RustyBuckle(RelicBase):
         "All allies bleed for 5% Max HP per stack at the start of each turn and unleash Aftertaste as the party suffers."
     )
 
-    def apply(self, party) -> None:
+    async def apply(self, party) -> None:
         """Bleed all allies and ping foes as party HP drops."""
-        super().apply(party)
+        await super().apply(party)
 
         stacks = party.relics.count(self.id)
         state = getattr(party, "_rusty_buckle_state", None)
@@ -37,7 +37,7 @@ class RustyBuckle(RelicBase):
                 "prev_hp": {id(ally): ally.hp for ally in party.members},
             }
 
-            def _turn_start(entity) -> None:
+            async def _turn_start(entity) -> None:
                 from plugins.foes._base import FoeBase
 
                 if isinstance(entity, FoeBase):
@@ -52,7 +52,7 @@ class RustyBuckle(RelicBase):
                     bleed = int(entity.max_hp * 0.05 * current_stacks)
                     dmg = min(bleed, max(entity.hp - 1, 0))
 
-                    BUS.emit(
+                    await BUS.emit_async(
                         "relic_effect",
                         "rusty_buckle",
                         entity,
@@ -67,7 +67,7 @@ class RustyBuckle(RelicBase):
 
                     safe_async_task(entity.apply_cost_damage(dmg))
 
-            def _damage(target, attacker, _original) -> None:
+            async def _damage(target, attacker, _original) -> None:
                 if target not in party.members:
                     return
                 current_stacks = state.get("stacks", 0)
@@ -88,7 +88,7 @@ class RustyBuckle(RelicBase):
                     dmg = int(party_max_hp * lost_pct * 0.005)
                     hits = 5 + 3 * (current_stacks - 1)
 
-                    BUS.emit(
+                    await BUS.emit_async(
                         "relic_effect",
                         "rusty_buckle",
                         target,

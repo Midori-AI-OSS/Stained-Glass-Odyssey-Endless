@@ -51,7 +51,7 @@ class SpikedShield(CardBase):
                             target.id,
                             getattr(attacker, "id", "unknown"),
                         )
-                        BUS.emit(
+                        await BUS.emit_async(
                             "card_effect",
                             self.id,
                             target,

@@ -16,9 +16,9 @@ class NullLantern(RelicBase):
     effects: dict[str, float] = field(default_factory=dict)
     about: str = "Shops and rest rooms vanish; each fight grants extra pulls."
 
-    def apply(self, party) -> None:
+    async def apply(self, party) -> None:
         """Disable shops/rests, buff foes, and award pull tokens."""
-        super().apply(party)
+        await super().apply(party)
 
         party.no_shops = True
         party.no_rests = True
@@ -35,7 +35,7 @@ class NullLantern(RelicBase):
             if not hasattr(party, "pull_tokens"):
                 party.pull_tokens = 0
 
-            def _battle_start(entity) -> None:
+            async def _battle_start(entity) -> None:
                 from plugins.foes._base import FoeBase
 
                 if isinstance(entity, FoeBase):
@@ -55,14 +55,14 @@ class NullLantern(RelicBase):
                     entity.effect_manager.add_modifier(mod)
 
                     # Track foe buffing
-                    BUS.emit("relic_effect", "null_lantern", entity, "foe_buffed", int((mult - 1) * 100), {
+                    await BUS.emit_async("relic_effect", "null_lantern", entity, "foe_buffed", int((mult - 1) * 100), {
                         "battle_number": state["cleared"] + 1,
                         "multiplier": mult,
                         "escalation_percentage": 150 * current_stacks,
                         "stacks": current_stacks
                     })
 
-            def _battle_end(entity) -> None:
+            async def _battle_end(entity) -> None:
                 from plugins.foes._base import FoeBase
 
                 if isinstance(entity, FoeBase):
@@ -75,7 +75,7 @@ class NullLantern(RelicBase):
                     party.pull_tokens += pull_reward
 
                     # Track pull token generation
-                    BUS.emit("relic_effect", "null_lantern", entity, "pull_tokens_awarded", pull_reward, {
+                    await BUS.emit_async("relic_effect", "null_lantern", entity, "pull_tokens_awarded", pull_reward, {
                         "battles_cleared": state["cleared"],
                         "base_tokens": 1,
                         "stack_bonus": current_stacks - 1,

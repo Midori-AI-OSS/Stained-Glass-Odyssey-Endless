@@ -16,7 +16,8 @@ def setup_event_loop():
     return loop
 
 
-def test_guardian_shard_applies_bonus_after_no_deaths():
+@pytest.mark.asyncio
+async def test_guardian_shard_applies_bonus_after_no_deaths():
     loop = setup_event_loop()
     party = Party()
     ally1 = PlayerBase()
@@ -25,24 +26,25 @@ def test_guardian_shard_applies_bonus_after_no_deaths():
     award_card(party, "guardian_shard")
     loop.run_until_complete(apply_cards(party))
 
-    BUS.emit("battle_start", ally1)
-    BUS.emit("battle_start", ally2)
+    await BUS.emit_async("battle_start", ally1)
+    await BUS.emit_async("battle_start", ally2)
     loop.run_until_complete(asyncio.sleep(0))
-    BUS.emit("battle_end", FoeBase())
+    await BUS.emit_async("battle_end", FoeBase())
     loop.run_until_complete(asyncio.sleep(0))
 
     pre = ally1.mitigation
-    BUS.emit("battle_start", ally1)
-    BUS.emit("battle_start", ally2)
+    await BUS.emit_async("battle_start", ally1)
+    await BUS.emit_async("battle_start", ally2)
     loop.run_until_complete(asyncio.sleep(0))
     assert ally1.mitigation == pytest.approx(pre + 1)
 
-    BUS.emit("battle_end", FoeBase())
+    await BUS.emit_async("battle_end", FoeBase())
     loop.run_until_complete(asyncio.sleep(0))
     assert ally1.mitigation == pytest.approx(pre)
 
 
-def test_guardian_shard_no_bonus_after_death():
+@pytest.mark.asyncio
+async def test_guardian_shard_no_bonus_after_death():
     loop = setup_event_loop()
     party = Party()
     ally1 = PlayerBase()
@@ -51,15 +53,15 @@ def test_guardian_shard_no_bonus_after_death():
     award_card(party, "guardian_shard")
     loop.run_until_complete(apply_cards(party))
 
-    BUS.emit("battle_start", ally1)
-    BUS.emit("battle_start", ally2)
-    BUS.emit("death", ally1)
+    await BUS.emit_async("battle_start", ally1)
+    await BUS.emit_async("battle_start", ally2)
+    await BUS.emit_async("death", ally1)
     loop.run_until_complete(asyncio.sleep(0))
-    BUS.emit("battle_end", FoeBase())
+    await BUS.emit_async("battle_end", FoeBase())
     loop.run_until_complete(asyncio.sleep(0))
 
     pre = ally1.mitigation
-    BUS.emit("battle_start", ally1)
-    BUS.emit("battle_start", ally2)
+    await BUS.emit_async("battle_start", ally1)
+    await BUS.emit_async("battle_start", ally2)
     loop.run_until_complete(asyncio.sleep(0))
     assert ally1.mitigation == pytest.approx(pre)

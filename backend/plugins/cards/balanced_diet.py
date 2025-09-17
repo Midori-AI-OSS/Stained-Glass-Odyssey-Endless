@@ -18,7 +18,7 @@ class BalancedDiet(CardBase):
     async def apply(self, party) -> None:  # type: ignore[override]
         await super().apply(party)
 
-        def _on_heal_received(target, healer, heal_amount):
+        async def _on_heal_received(target, healer, heal_amount):
             # Check if target is one of our party members
             if target in party.members:
                 # Grant +2% DEF for 1 turn
@@ -39,7 +39,7 @@ class BalancedDiet(CardBase):
                 import logging
                 log = logging.getLogger(__name__)
                 log.debug("Balanced Diet heal bonus: +2% DEF for 1 turn to %s", target.id)
-                BUS.emit("card_effect", self.id, target, "heal_def_bonus", 2, {
+                await BUS.emit_async("card_effect", self.id, target, "heal_def_bonus", 2, {
                     "def_bonus": 2,
                     "duration": 1,
                     "trigger_event": "heal_received",

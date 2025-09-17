@@ -76,7 +76,7 @@ class SturdyVest(CardBase):
                         member.id,
                         hot_amount,
                     )
-                    BUS.emit(
+                    await BUS.emit_async(
                         "card_effect",
                         self.id,
                         member,

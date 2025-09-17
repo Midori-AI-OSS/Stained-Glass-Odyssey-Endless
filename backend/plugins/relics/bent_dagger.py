@@ -16,17 +16,17 @@ class BentDagger(RelicBase):
     effects: dict[str, float] = field(default_factory=lambda: {"atk": 0.03})
     about: str = "+3% ATK; killing a foe grants +1% ATK for the rest of combat."
 
-    def apply(self, party) -> None:
-        super().apply(party)
+    async def apply(self, party) -> None:
+        await super().apply(party)
 
         stacks = party.relics.count(self.id)
 
-        def _on_death(target, attacker, amount) -> None:
+        async def _on_death(target, attacker, amount) -> None:
             if target in party.members or target.hp > 0:
                 return
 
             # Track the kill trigger
-            BUS.emit("relic_effect", "bent_dagger", attacker, "foe_killed", amount, {
+            await BUS.emit_async("relic_effect", "bent_dagger", attacker, "foe_killed", amount, {
                 "target": getattr(target, 'id', str(target)),
                 "permanent_atk_boost": 1,
                 "stacks": stacks,
@@ -38,7 +38,7 @@ class BentDagger(RelicBase):
                 member.effect_manager.add_modifier(mod)
 
                 # Track the ATK buff application
-                BUS.emit("relic_effect", "bent_dagger", member, "atk_boost_applied", 1, {
+                await BUS.emit_async("relic_effect", "bent_dagger", member, "atk_boost_applied", 1, {
                     "boost_percentage": 1,
                     "permanent": True,
                     "triggered_by_kill": True

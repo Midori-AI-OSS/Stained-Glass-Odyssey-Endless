@@ -146,7 +146,7 @@ async def test_summon_battle_lifecycle(monkeypatch):
         assert len(SummonManager.get_summons("test_summoner")) == 1
 
         # Emit battle end - temporary summons should be cleaned up
-        BUS.emit("battle_end", FoeBase())
+        await BUS.emit_async("battle_end", FoeBase())
 
         # Should be removed
         assert len(SummonManager.get_summons("test_summoner")) == 0
@@ -178,12 +178,12 @@ async def test_summon_turn_expiration(monkeypatch):
         assert len(SummonManager.get_summons("test_summoner")) == 1
 
         # First turn
-        BUS.emit("turn_start", summoner)
+        await BUS.emit_async("turn_start", summoner)
         assert len(SummonManager.get_summons("test_summoner")) == 1
         assert summon.turns_remaining == 1
 
         # Second turn - should expire
-        BUS.emit("turn_start", summoner)
+        await BUS.emit_async("turn_start", summoner)
         assert len(SummonManager.get_summons("test_summoner")) == 0
     finally:
         BUS.set_async_preference(True)

@@ -16,15 +16,15 @@ class StellarCompass(RelicBase):
     effects: dict[str, float] = field(default_factory=dict)
     about: str = "Critical hits grant permanent +1.5% ATK and gold rate."
 
-    def apply(self, party) -> None:
-        super().apply(party)
+    async def apply(self, party) -> None:
+        await super().apply(party)
 
         state = getattr(party, "_stellar_compass_state", None)
         if state is None:
             state = {"gold": 0.0, "crits": {}}
             party._stellar_compass_state = state
 
-            def _crit(attacker, target, damage, *_):
+            async def _crit(attacker, target, damage, *_):
                 if attacker not in party.members:
                     return
                 copies = party.relics.count(self.id)
@@ -45,7 +45,7 @@ class StellarCompass(RelicBase):
                 state["gold"] += 0.015 * copies
 
                 # Track critical hit buff application
-                BUS.emit(
+                await BUS.emit_async(
                     "relic_effect",
                     "stellar_compass",
                     attacker,
@@ -63,13 +63,13 @@ class StellarCompass(RelicBase):
                     },
                 )
 
-            def _gold(amount: int) -> None:
+            async def _gold(amount: int) -> None:
                 if state["gold"] > 0:
                     bonus_gold = int(amount * state["gold"])
                     party.gold += bonus_gold
 
                     # Track bonus gold generation
-                    BUS.emit(
+                    await BUS.emit_async(
                         "relic_effect",
                         "stellar_compass",
                         party,
