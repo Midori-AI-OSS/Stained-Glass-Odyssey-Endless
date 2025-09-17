@@ -11,7 +11,9 @@ from autofighter.stats import BUS
 from ..pacing import _EXTRA_TURNS
 from ..pacing import TURN_PACING
 from ..pacing import pace_sleep
+from ..turns import prepare_snapshot_overlay
 from ..turns import push_progress_update
+from ..turns import register_snapshot_entities
 
 if TYPE_CHECKING:
     from asyncio import Task
@@ -95,6 +97,10 @@ async def initialize_turn_loop(
         turn=0,
     )
 
+    prepare_snapshot_overlay(
+        context.run_id,
+        list(context.combat_party.members) + list(context.foes),
+    )
     await _prepare_entities(context)
     await _send_initial_progress(context)
     return context
@@ -105,6 +111,7 @@ async def _prepare_entities(context: TurnLoopContext) -> None:
 
     for entity in list(context.combat_party.members) + list(context.foes):
         entity.action_points = entity.actions_per_turn
+        register_snapshot_entities(context.run_id, [entity])
         for _ in range(max(0, entity.action_points - 1)):
             try:
                 await BUS.emit_async("extra_turn", entity)
@@ -125,6 +132,7 @@ async def _send_initial_progress(context: TurnLoopContext) -> None:
         context.enrage_state,
         context.temp_rdr,
         _EXTRA_TURNS,
+        run_id=context.run_id,
         active_id=None,
         active_target_id=None,
         include_summon_foes=True,

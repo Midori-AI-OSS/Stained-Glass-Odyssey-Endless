@@ -18,7 +18,9 @@ from ..pacing import pace_sleep
 from ..turn_helpers import credit_if_dead
 from ..turn_helpers import remove_dead_foes
 from ..turns import apply_enrage_bleed
+from ..turns import mutate_snapshot_overlay
 from ..turns import push_progress_update
+from ..turns import register_snapshot_entities
 from ..turns import update_enrage_state
 from .initialization import TurnLoopContext
 from .turn_end import finish_turn
@@ -80,6 +82,11 @@ async def execute_player_phase(context: TurnLoopContext) -> bool:
                 break
             target_index, target_foe = _select_target(alive_targets)
             await BUS.emit_async("target_acquired", member, target_foe)
+            mutate_snapshot_overlay(
+                context.run_id,
+                active_id=getattr(member, "id", None),
+                active_target_id=getattr(target_foe, "id", None),
+            )
             await pace_sleep(YIELD_MULTIPLIER)
             target_manager = context.foe_effects[target_index]
             damage_type = getattr(member, "damage_type", None)
@@ -140,6 +147,7 @@ async def execute_player_phase(context: TurnLoopContext) -> bool:
                     context.enrage_state,
                     context.temp_rdr,
                     _EXTRA_TURNS,
+                    run_id=context.run_id,
                     active_id=member.id,
                     active_target_id=getattr(target_foe, "id", None),
                     include_summon_foes=True,
@@ -223,6 +231,10 @@ async def execute_player_phase(context: TurnLoopContext) -> bool:
             )
             try:
                 SummonManager.add_summons_to_party(context.combat_party)
+                register_snapshot_entities(
+                    context.run_id,
+                    context.combat_party.members,
+                )
                 for owner in list(context.foes):
                     owner_id = getattr(owner, "id", str(id(owner)))
                     for summon in SummonManager.get_summons(owner_id):
@@ -232,6 +244,7 @@ async def execute_player_phase(context: TurnLoopContext) -> bool:
                             summon.effect_manager = manager
                             context.foe_effects.append(manager)
                             context.enrage_mods.append(None)
+                            register_snapshot_entities(context.run_id, [summon])
             except Exception:
                 pass
             member.add_ultimate_charge(member.actions_per_turn)
