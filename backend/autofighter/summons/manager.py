@@ -23,7 +23,6 @@ class SummonManager:
     """Track and control active summons."""
 
     _active_summons: ClassVar[Dict[str, List[Summon]]] = {}
-    _summon_limits: ClassVar[Dict[str, int]] = {}
     _summoner_refs: ClassVar[Dict[str, Stats]] = {}
     _initialized: ClassVar[bool] = False
 
@@ -49,7 +48,7 @@ class SummonManager:
         stat_multiplier: float = 0.5,
         turns_remaining: int = -1,
         override_damage_type: Optional[DamageTypeBase] = None,
-        max_summons: int = 1,
+        max_summons: Optional[int] = None,
         force_create: bool = False,
         min_health_threshold: float = 0.25,
     ) -> Optional[Summon]:
@@ -63,31 +62,43 @@ class SummonManager:
             return None
 
         summoner_id = getattr(summoner, "id", str(id(summoner)))
-        if summoner_id not in cls._active_summons:
-            cls._active_summons[summoner_id] = []
-            cls._summon_limits[summoner_id] = max_summons
+        active_list = cls._active_summons.setdefault(summoner_id, [])
         cls._summoner_refs[summoner_id] = summoner
 
-        if len(cls._active_summons[summoner_id]) >= max_summons:
-            log.debug("Summon limit (%s) reached for %s", max_summons, summoner_id)
+        slot_capacity = getattr(summoner, "summon_slot_capacity", 0)
+        if max_summons is not None:
+            log.debug(
+                "max_summons argument is deprecated; %s currently has slot capacity %s",
+                summoner_id,
+                slot_capacity,
+            )
+
+        if slot_capacity <= 0:
+            log.debug("No summon slots available for %s", summoner_id)
+            if not force_create:
+                return None
+            slot_capacity = 1
+
+        if len(active_list) >= slot_capacity:
+            log.debug("Summon limit (%s) reached for %s", slot_capacity, summoner_id)
             if not force_create:
                 decision = cls.should_resummon(summoner_id, min_health_threshold)
                 if not decision["should_resummon"]:
                     log.info("Skipping summon creation for %s: %s", summoner_id, decision["reason"])
                     return None
-                existing_summons = cls.get_summons(summoner_id)
-                if existing_summons:
+                if active_list:
                     worst = min(
-                        existing_summons,
+                        active_list,
                         key=lambda s: s.hp / s.max_hp if s.max_hp > 0 else 0,
                     )
                     cls.remove_summon(worst, "replaced_by_healthier_summon")
             else:
-                existing = cls._active_summons[summoner_id]
-                if existing:
-                    cls.remove_summon(existing[0], "forced_replacement")
+                if active_list:
+                    cls.remove_summon(active_list[0], "forced_replacement")
                 else:
                     return None
+
+        active_list = cls._active_summons.setdefault(summoner_id, [])
 
         summon = Summon.create_from_summoner(
             summoner,
@@ -198,7 +209,6 @@ class SummonManager:
             BUS.emit_batched("summon_removed", summon, reason)
             if not cls._active_summons[sid]:
                 del cls._active_summons[sid]
-                cls._summon_limits.pop(sid, None)
                 cls._summoner_refs.pop(sid, None)
             log.debug("Removed summon %s due to %s", summon.id, reason)
             return True
@@ -258,12 +268,18 @@ class SummonManager:
             cls.remove_summon(victim, "defeated")
             if summoner is not None:
                 await BUS.emit_async("summon_defeated", summoner, victim)
-                if "becca_menagerie_bond" in getattr(summoner, "passives", []):
+                if getattr(victim, "summon_source", "") == "becca_menagerie_bond":
+                    passive = getattr(summoner, "_becca_menagerie_passive", None)
                     try:
-                        from plugins.passives.becca_menagerie_bond import (
-                            BeccaMenagerieBond,
-                        )
-                        await BeccaMenagerieBond().on_summon_defeat(summoner)
+                        if passive is None:
+                            from plugins.passives.becca_menagerie_bond import (
+                                BeccaMenagerieBond,
+                            )
+
+                            passive = BeccaMenagerieBond()
+                            setattr(summoner, "_becca_menagerie_passive", passive)
+
+                        await passive.on_summon_defeat(summoner)
                     except Exception as e:  # pragma: no cover - defensive
                         log.warning("Error triggering summon_defeat passives: %s", e)
 
@@ -284,7 +300,6 @@ class SummonManager:
     @classmethod
     def cleanup(cls) -> None:
         cls._active_summons.clear()
-        cls._summon_limits.clear()
         cls._summoner_refs.clear()
         log.debug("SummonManager cleaned up")
 
@@ -298,7 +313,6 @@ class SummonManager:
         empty = [sid for sid, summons in cls._active_summons.items() if not summons]
         for sid in empty:
             del cls._active_summons[sid]
-            cls._summon_limits.pop(sid, None)
             cls._summoner_refs.pop(sid, None)
         if empty:
             log.debug("Cleaned up %s empty summon entries", len(empty))

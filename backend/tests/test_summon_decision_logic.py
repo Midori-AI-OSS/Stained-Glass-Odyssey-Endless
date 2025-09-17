@@ -21,6 +21,7 @@ async def test_summon_viability_evaluation(monkeypatch):
     summoner._base_atk = 100
     summoner._base_max_hp = 200
     summoner._base_defense = 50
+    summoner.ensure_permanent_summon_slots(1)
 
     summon = Summon.create_from_summoner(
         summoner=summoner,
@@ -70,6 +71,7 @@ async def test_resummon_decision_logic(monkeypatch):
     summoner._base_atk = 100
     summoner._base_max_hp = 200
     summoner._base_defense = 50
+    summoner.ensure_permanent_summon_slots(1)
 
     # Test no existing summons - should resummon
     decision = SummonManager.should_resummon("test_summoner")
@@ -114,13 +116,13 @@ async def test_smart_summon_creation(monkeypatch):
     summoner._base_atk = 100
     summoner._base_max_hp = 200
     summoner._base_defense = 50
+    summoner.ensure_permanent_summon_slots(1)
 
     # Create first summon (should succeed)
     summon1 = SummonManager.create_summon(
         summoner=summoner,
         summon_type="test1",
         source="test_source",
-        max_summons=1
     )
     assert summon1 is not None
     summon1.hp = summon1.max_hp  # Ensure healthy
@@ -130,7 +132,6 @@ async def test_smart_summon_creation(monkeypatch):
         summoner=summoner,
         summon_type="test2",
         source="test_source",
-        max_summons=1
     )
     assert summon2 is None  # Should be blocked by smart logic
 
@@ -142,7 +143,6 @@ async def test_smart_summon_creation(monkeypatch):
         summoner=summoner,
         summon_type="test3",
         source="test_source",
-        max_summons=1
     )
     assert summon3 is not None  # Should succeed because first summon is low health
 
@@ -164,13 +164,13 @@ async def test_force_create_bypasses_logic(monkeypatch):
     summoner._base_atk = 100
     summoner._base_max_hp = 200
     summoner._base_defense = 50
+    summoner.ensure_permanent_summon_slots(1)
 
     # Create first summon
     summon1 = SummonManager.create_summon(
         summoner=summoner,
         summon_type="test1",
         source="test_source",
-        max_summons=1
     )
     assert summon1 is not None
     summon1.hp = summon1.max_hp  # Ensure healthy
@@ -180,7 +180,6 @@ async def test_force_create_bypasses_logic(monkeypatch):
         summoner=summoner,
         summon_type="test2",
         source="test_source",
-        max_summons=1,
         force_create=True
     )
     assert summon2 is not None  # Should succeed due to force_create
@@ -203,6 +202,7 @@ async def test_health_threshold_customization(monkeypatch):
     summoner._base_atk = 100
     summoner._base_max_hp = 200
     summoner._base_defense = 50
+    summoner.ensure_permanent_summon_slots(1)
 
     # Create summon with 40% health
     summon = SummonManager.create_summon(

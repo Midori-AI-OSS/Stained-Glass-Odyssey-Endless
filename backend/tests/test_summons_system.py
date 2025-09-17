@@ -33,6 +33,7 @@ async def test_summon_creation_basic(monkeypatch):
     # Create summoner
     summoner = Ally()
     summoner.id = "test_summoner"
+    summoner.ensure_permanent_summon_slots(1)
     # Set base stats directly
     summoner._base_atk = 100
     summoner._base_max_hp = 200
@@ -66,6 +67,9 @@ async def test_summon_manager_creation_and_tracking(monkeypatch):
 
     summoner = Ally()
     summoner.id = "test_summoner"
+    summoner.ensure_permanent_summon_slots(1)
+    summoner.ensure_permanent_summon_slots(1)
+    summoner.ensure_permanent_summon_slots(1)
 
     # Create summon via manager
     summon = SummonManager.create_summon(
@@ -92,13 +96,14 @@ async def test_summon_manager_limits(monkeypatch):
 
     summoner = Ally()
     summoner.id = "test_summoner"
+    summoner.ensure_permanent_summon_slots(1)
+    summoner.ensure_permanent_summon_slots(1)
 
     # Create first summon (should succeed)
     summon1 = SummonManager.create_summon(
         summoner=summoner,
         summon_type="test1",
         source="test_source",
-        max_summons=1
     )
     assert summon1 is not None
 
@@ -107,7 +112,6 @@ async def test_summon_manager_limits(monkeypatch):
         summoner=summoner,
         summon_type="test2",
         source="test_source",
-        max_summons=1
     )
     assert summon2 is None
 
@@ -122,27 +126,32 @@ async def test_summon_battle_lifecycle(monkeypatch):
     monkeypatch.setattr(torch_checker, "is_torch_available", lambda: False)
 
     SummonManager.cleanup()
+    BUS.set_async_preference(False)
 
-    summoner = Ally()
-    summoner.id = "test_summoner"
+    try:
+        summoner = Ally()
+        summoner.id = "test_summoner"
+        summoner.ensure_permanent_summon_slots(1)
 
-    # Create temporary summon
-    summon = SummonManager.create_summon(
-        summoner=summoner,
-        summon_type="temporary",
-        source="test_source",
-        turns_remaining=1
-    )
-    assert summon is not None
+        # Create temporary summon
+        summon = SummonManager.create_summon(
+            summoner=summoner,
+            summon_type="temporary",
+            source="test_source",
+            turns_remaining=1
+        )
+        assert summon is not None
 
-    # Should be tracked
-    assert len(SummonManager.get_summons("test_summoner")) == 1
+        # Should be tracked
+        assert len(SummonManager.get_summons("test_summoner")) == 1
 
-    # Emit battle end - temporary summons should be cleaned up
-    BUS.emit("battle_end", FoeBase())
+        # Emit battle end - temporary summons should be cleaned up
+        BUS.emit("battle_end", FoeBase())
 
-    # Should be removed
-    assert len(SummonManager.get_summons("test_summoner")) == 0
+        # Should be removed
+        assert len(SummonManager.get_summons("test_summoner")) == 0
+    finally:
+        BUS.set_async_preference(True)
 
 
 @pytest.mark.asyncio
@@ -151,28 +160,33 @@ async def test_summon_turn_expiration(monkeypatch):
     monkeypatch.setattr(torch_checker, "is_torch_available", lambda: False)
 
     SummonManager.cleanup()
+    BUS.set_async_preference(False)
 
-    summoner = Ally()
-    summoner.id = "test_summoner"
+    try:
+        summoner = Ally()
+        summoner.id = "test_summoner"
+        summoner.ensure_permanent_summon_slots(1)
 
-    # Create summon with 2 turn duration
-    summon = SummonManager.create_summon(
-        summoner=summoner,
-        summon_type="timed",
-        source="test_source",
-        turns_remaining=2
-    )
+        # Create summon with 2 turn duration
+        summon = SummonManager.create_summon(
+            summoner=summoner,
+            summon_type="timed",
+            source="test_source",
+            turns_remaining=2
+        )
 
-    assert len(SummonManager.get_summons("test_summoner")) == 1
+        assert len(SummonManager.get_summons("test_summoner")) == 1
 
-    # First turn
-    BUS.emit("turn_start", summoner)
-    assert len(SummonManager.get_summons("test_summoner")) == 1
-    assert summon.turns_remaining == 1
+        # First turn
+        BUS.emit("turn_start", summoner)
+        assert len(SummonManager.get_summons("test_summoner")) == 1
+        assert summon.turns_remaining == 1
 
-    # Second turn - should expire
-    BUS.emit("turn_start", summoner)
-    assert len(SummonManager.get_summons("test_summoner")) == 0
+        # Second turn - should expire
+        BUS.emit("turn_start", summoner)
+        assert len(SummonManager.get_summons("test_summoner")) == 0
+    finally:
+        BUS.set_async_preference(True)
 
 
 @pytest.mark.asyncio
@@ -185,6 +199,7 @@ async def test_phantom_ally_new_system(monkeypatch):
     # Create party
     ally = Ally()
     ally.id = "ally"
+    ally.ensure_permanent_summon_slots(1)
     becca = Becca()
     becca.id = "becca"
     party = Party(members=[ally, becca])
@@ -205,6 +220,38 @@ async def test_phantom_ally_new_system(monkeypatch):
     assert phantom is not None
     assert phantom.summon_source == "phantom_ally"
     assert phantom.turns_remaining == -1  # Should last the entire battle
+
+
+@pytest.mark.asyncio
+async def test_becca_jellyfish_after_phantom(monkeypatch):
+    """Becca can still summon a jellyfish after Phantom Ally adds a copy."""
+
+    monkeypatch.setattr(torch_checker, "is_torch_available", lambda: False)
+
+    SummonManager.cleanup()
+
+    becca = Becca()
+    becca.id = "becca"
+    becca.hp = 100
+    becca._base_max_hp = 100
+
+    party = Party(members=[becca])
+
+    passive = BeccaMenagerieBond()
+    await passive.apply(becca)
+
+    await PhantomAlly().apply(party)
+
+    phantom_present = any(
+        getattr(member, "summon_source", "") == "phantom_ally" for member in party.members
+    )
+    assert phantom_present
+
+    success = await passive.summon_jellyfish(becca, party=party)
+    assert success is True
+
+    summons = SummonManager.get_summons("becca")
+    assert any(s.summon_source == passive.id for s in summons)
 
 
 @pytest.mark.asyncio
@@ -381,6 +428,7 @@ async def test_summon_party_integration(monkeypatch):
     # Create party
     ally = Ally()
     ally.id = "ally"
+    ally.ensure_permanent_summon_slots(1)
     party = Party(members=[ally])
 
     # Create summon
@@ -407,6 +455,7 @@ async def test_summon_defeat_cleanup(monkeypatch):
 
     summoner = Ally()
     summoner.id = "test_summoner"
+    summoner.ensure_permanent_summon_slots(1)
     summoner.hp = 1
 
     # Create summon

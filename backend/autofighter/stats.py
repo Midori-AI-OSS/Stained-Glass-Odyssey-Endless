@@ -6,6 +6,7 @@ import logging
 import random
 from typing import Optional
 from typing import Union
+from weakref import WeakValueDictionary
 
 from autofighter.stat_effect import StatEffect
 from plugins.damage_types._base import DamageTypeBase
@@ -21,6 +22,9 @@ _BATTLE_ACTIVE: bool = False
 
 # Starting value for action gauges.
 GAUGE_START: int = 10_000
+
+
+_ACTIVE_STATS: WeakValueDictionary[int, "Stats"] = WeakValueDictionary()
 
 
 class _PassiveList(list):
@@ -150,6 +154,10 @@ class Stats:
     base_aggro: float = 0.1
     aggro_modifier: float = 0.0
 
+    # Summoning capacity
+    summon_slots_permanent: int = 0
+    summon_slots_temporary: int = 0
+
     # Action queue
     action_gauge: int = GAUGE_START
     action_value: float = 0.0
@@ -198,6 +206,7 @@ class Stats:
             self._base_crit_rate = 0.05
         if not hasattr(self, '_base_crit_damage'):
             self._base_crit_damage = 2.0
+        _ACTIVE_STATS[id(self)] = self
         if not hasattr(self, '_base_effect_hit_rate'):
             self._base_effect_hit_rate = 1.0
         if not hasattr(self, '_base_mitigation'):
@@ -228,6 +237,49 @@ class Stats:
         if not isinstance(self.passives, _PassiveList):
             object.__setattr__(self, "passives", _PassiveList(self, self.passives))
         self._recalculate_passive_aggro()
+
+    @property
+    def summon_slot_capacity(self) -> int:
+        """Total summon slots available, combining permanent and temporary values."""
+
+        return max(0, int(self.summon_slots_permanent + self.summon_slots_temporary))
+
+    def ensure_permanent_summon_slots(self, minimum: int) -> None:
+        """Guarantee at least ``minimum`` permanent summon slots."""
+
+        if minimum <= 0:
+            return
+        if self.summon_slots_permanent < minimum:
+            self.summon_slots_permanent = minimum
+
+    def add_permanent_summon_slots(self, amount: int = 1) -> None:
+        """Increase permanent summon slots by ``amount``."""
+
+        if amount > 0:
+            self.summon_slots_permanent += amount
+
+    def remove_permanent_summon_slots(self, amount: int = 1) -> None:
+        """Reduce permanent summon slots by ``amount`` without going below zero."""
+
+        if amount > 0:
+            self.summon_slots_permanent = max(0, self.summon_slots_permanent - amount)
+
+    def add_temporary_summon_slots(self, amount: int = 1) -> None:
+        """Increase temporary summon slots by ``amount`` for the current battle."""
+
+        if amount > 0:
+            self.summon_slots_temporary += amount
+
+    def remove_temporary_summon_slots(self, amount: int = 1) -> None:
+        """Reduce temporary summon slots by ``amount`` without going below zero."""
+
+        if amount > 0:
+            self.summon_slots_temporary = max(0, self.summon_slots_temporary - amount)
+
+    def reset_temporary_summon_slots(self) -> None:
+        """Clear all temporary summon slots (typically at battle end)."""
+
+        self.summon_slots_temporary = 0
 
     def __setattr__(self, name, value):
         if name == "passives" and not isinstance(value, _PassiveList):
@@ -784,6 +836,16 @@ def calc_animation_time(actor: "Stats", targets: int) -> float:
 StatusHook = Callable[["Stats"], None]
 STATUS_HOOKS: list[StatusHook] = []
 BUS = EventBus()
+
+
+def _reset_temporary_slots_on_battle_end(*_args, **__):
+    """Clear temporary summon slots for all tracked stats instances."""
+
+    for stats in list(_ACTIVE_STATS.values()):
+        stats.reset_temporary_summon_slots()
+
+
+BUS.subscribe("battle_end", _reset_temporary_slots_on_battle_end)
 
 def _log_damage_taken(
     target: "Stats", attacker: Optional["Stats"], amount: int

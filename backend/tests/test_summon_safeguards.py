@@ -26,6 +26,7 @@ async def test_summons_cannot_create_more_summons(monkeypatch):
     # Create original summoner
     original_summoner = Ally()
     original_summoner.id = "original_summoner"
+    original_summoner.ensure_permanent_summon_slots(1)
 
     # Create a summon from the original summoner
     first_summon = SummonManager.create_summon(
@@ -64,9 +65,11 @@ async def test_regular_entities_can_still_create_summons(monkeypatch):
     # Create regular entities
     player1 = Ally()
     player1.id = "player1"
+    player1.ensure_permanent_summon_slots(1)
 
     player2 = Ally()
     player2.id = "player2"
+    player2.ensure_permanent_summon_slots(1)
 
     # Both should be able to create summons
     summon1 = SummonManager.create_summon(
@@ -102,6 +105,7 @@ async def test_summon_identification_works(monkeypatch):
     # Create regular entity and summon
     player = Ally()
     player.id = "player"
+    player.ensure_permanent_summon_slots(1)
 
     summon = SummonManager.create_summon(
         summoner=player,
@@ -137,6 +141,7 @@ async def test_summon_safeguard_logging(monkeypatch, caplog):
     # Create original summoner and first summon
     player = Ally()
     player.id = "test_player"
+    player.ensure_permanent_summon_slots(1)
 
     first_summon = SummonManager.create_summon(
         summoner=player,
