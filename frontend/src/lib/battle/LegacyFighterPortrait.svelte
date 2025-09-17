@@ -87,7 +87,7 @@
   })();
 
   // NOTE: Do not add ult icon pulse/size logic here.
-  // The Fighter UI overlays and ult gauge behavior live in FighterUIItem.svelte.
+  // The Fighter UI overlays and ult gauge behavior live in BattleFighterCard.svelte.
   // This portrait component is used in multiple contexts; keep it minimal.
 </script>
 
