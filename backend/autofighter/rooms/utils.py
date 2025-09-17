@@ -122,7 +122,13 @@ def _scale_stats(obj: Stats, node: MapNode, strength: float = 1.0) -> None:
         if isinstance(obj, FoeBase):
             d = getattr(obj, "defense", None)
             if isinstance(d, (int, float)):
-                new_def = max(2 + cumulative_rooms, int(d))
+                override = getattr(obj, "min_defense_override", None)
+                if isinstance(override, (int, float)):
+                    min_def = max(int(override), 0)
+                else:
+                    min_def = 2 + cumulative_rooms
+
+                new_def = max(min_def, int(d))
                 # For foes, 'defense' is a dataclass field; set the field directly
                 try:
                     setattr(obj, "defense", type(d)(new_def))
