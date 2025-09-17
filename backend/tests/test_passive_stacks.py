@@ -1,6 +1,7 @@
 import pytest
 
 from autofighter.passives import PassiveRegistry
+from autofighter.stats import BUS
 from autofighter.stats import Stats
 from plugins.damage_types.generic import Generic
 
@@ -11,7 +12,16 @@ async def test_passive_stack_display():
     registry = PassiveRegistry()
 
     # Test Luna Lunar Reservoir - should show charge points
-    luna = Stats(hp=1000, damage_type=Generic())
+    class LunaActor(Stats):
+        async def use_ultimate(self) -> bool:  # pragma: no cover - simple helper
+            if not self.ultimate_ready:
+                return False
+            self.ultimate_charge = 0
+            self.ultimate_ready = False
+            await BUS.emit_async("ultimate_used", self)
+            return True
+
+    luna = LunaActor(hp=1000, damage_type=Generic())
     luna.passives = ["luna_lunar_reservoir"]
 
     # Initially 0 charge
@@ -28,6 +38,37 @@ async def test_passive_stack_display():
     description = registry.describe(luna)
     luna_passive = next((p for p in description if p["id"] == "luna_lunar_reservoir"), None)
     assert luna_passive["stacks"] == 10
+
+
+@pytest.mark.asyncio
+async def test_luna_ultimate_grants_expected_charge():
+    """Ultimate should only add the intended Luna Lunar Reservoir charge."""
+    registry = PassiveRegistry()
+    luna_cls = registry._registry["luna_lunar_reservoir"]
+    luna_cls._charge_points.clear()
+
+    class LunaActor(Stats):
+        async def use_ultimate(self) -> bool:  # pragma: no cover - simple helper
+            if not self.ultimate_ready:
+                return False
+            self.ultimate_charge = 0
+            self.ultimate_ready = False
+            await BUS.emit_async("ultimate_used", self)
+            return True
+
+    luna = LunaActor(hp=1000, damage_type=Generic())
+    luna.passives = ["luna_lunar_reservoir"]
+    luna._base_atk = 64
+    luna.ultimate_charge = 15
+    luna.ultimate_ready = True
+
+    target = Stats(hp=1000, damage_type=Generic())
+    target.set_base_stat("dodge_odds", 0)
+
+    result = await luna.damage_type.ultimate(luna, [luna], [target])
+
+    assert result is True
+    assert luna_cls.get_charge(luna) == 64
 
 
 @pytest.mark.asyncio
