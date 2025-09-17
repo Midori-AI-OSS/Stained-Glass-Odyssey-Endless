@@ -157,8 +157,20 @@ async def resolve_rewards(
         {"id": random.choice(ELEMENTS), "stars": _pick_item_stars(room)}
         for _ in range(item_count)
     ]
-    ticket_chance = 0.0005 * temp_rdr
-    if random.random() < ticket_chance:
+    node = getattr(room, "node", None)
+    is_floor_boss = getattr(node, "room_type", "") == "battle-boss-floor"
+    is_boss_strength = getattr(room, "strength", 1.0) > 1.0
+    ticket_drop = False
+    if is_floor_boss:
+        ticket_drop = True
+    else:
+        ticket_chance = 0.0005 * temp_rdr
+        if is_boss_strength:
+            boosted = min(0.05 * temp_rdr, 1.0)
+            ticket_chance = max(ticket_chance, boosted)
+        if random.random() < ticket_chance:
+            ticket_drop = True
+    if ticket_drop:
         items.append({"id": "ticket", "stars": 0})
 
     loot = {
