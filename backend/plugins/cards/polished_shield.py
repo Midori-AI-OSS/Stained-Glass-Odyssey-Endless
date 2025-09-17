@@ -18,37 +18,47 @@ class PolishedShield(CardBase):
     async def apply(self, party) -> None:  # type: ignore[override]
         await super().apply(party)
 
-        def _on_effect_resisted(target, effect_name, source):
-            # Check if target is one of our party members and effect is DoT/debuff
-            if target in party.members:
-                effect_lower = effect_name.lower()
-                is_dot_or_debuff = any(keyword in effect_lower for keyword in
-                                     ['bleed', 'poison', 'burn', 'freeze', 'stun', 'silence', 'slow', 'weakness'])
+        def _on_effect_resisted(effect_name, target, source, details=None):
+            if target not in party.members:
+                return
 
-                if is_dot_or_debuff:
-                    # Grant +3 DEF for 1 turn
-                    effect_manager = getattr(target, 'effect_manager', None)
-                    if effect_manager is None:
-                        effect_manager = EffectManager(target)
-                        target.effect_manager = effect_manager
+            metadata = details or {}
+            effect_lower = (effect_name or "").lower()
+            effect_type = metadata.get("effect_type")
+            is_dot_or_debuff = effect_type in {"dot", "debuff"}
+            if not is_dot_or_debuff:
+                is_dot_or_debuff = any(
+                    keyword in effect_lower
+                    for keyword in ['bleed', 'poison', 'burn', 'freeze', 'stun', 'silence', 'slow', 'weakness', 'curse']
+                )
 
-                    # Create temporary DEF buff
-                    def_mod = create_stat_buff(
-                        target,
-                        name=f"{self.id}_resist_def",
-                        turns=1,
-                        defense_add=3  # +3 flat DEF
-                    )
-                    effect_manager.add_modifier(def_mod)
+            if not is_dot_or_debuff:
+                return
 
-                    import logging
-                    log = logging.getLogger(__name__)
-                    log.debug("Polished Shield resist bonus: +3 DEF for 1 turn to %s", target.id)
-                    BUS.emit("card_effect", self.id, target, "resist_def_bonus", 3, {
-                        "def_bonus": 3,
-                        "duration": 1,
-                        "trigger_event": "effect_resisted",
-                        "resisted_effect": effect_name
-                    })
+            effect_manager = getattr(target, 'effect_manager', None)
+            if effect_manager is None:
+                effect_manager = EffectManager(target)
+                target.effect_manager = effect_manager
+
+            def_mod = create_stat_buff(
+                target,
+                name=f"{self.id}_resist_def",
+                turns=1,
+                defense=3
+            )
+            effect_manager.add_modifier(def_mod)
+
+            import logging
+            log = logging.getLogger(__name__)
+            log.debug("Polished Shield resist bonus: +3 DEF for 1 turn to %s", target.id)
+            payload = {
+                "def_bonus": 3,
+                "duration": 1,
+                "trigger_event": "effect_resisted",
+                "resisted_effect": effect_name,
+            }
+            if metadata:
+                payload["metadata"] = metadata
+            BUS.emit("card_effect", self.id, target, "resist_def_bonus", 3, payload)
 
         BUS.subscribe("effect_resisted", _on_effect_resisted)
