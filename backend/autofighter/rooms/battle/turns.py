@@ -140,6 +140,37 @@ def _status_payload(
     return data
 
 
+def _resolve_damage_type_id(entity: Stats | None) -> str | None:
+    damage_type = getattr(entity, "damage_type", None)
+    ident = getattr(damage_type, "id", None)
+    if ident is None:
+        return None
+    try:
+        return str(ident)
+    except Exception:
+        return None
+
+
+def _normalize_metadata(metadata: dict[str, Any]) -> dict[str, Any]:
+    def _convert(value: Any) -> Any:
+        if value is None:
+            return None
+        if isinstance(value, dict):
+            converted = {
+                key: _convert(sub_value) for key, sub_value in value.items()
+            }
+            return {key: val for key, val in converted.items() if val is not None}
+        if isinstance(value, (list, tuple, set)):
+            converted_list = [
+                item for item in (_convert(member) for member in value) if item is not None
+            ]
+            return converted_list or None
+        return value
+
+    normalized = {key: _convert(val) for key, val in (metadata or {}).items()}
+    return {key: val for key, val in normalized.items() if val is not None}
+
+
 def _record_event(
     run_id: str,
     *,
@@ -157,7 +188,9 @@ def _record_event(
     if amount is not None:
         event_payload["amount"] = int(amount)
     if metadata:
-        event_payload.update(metadata)
+        normalized = _normalize_metadata(metadata)
+        if normalized:
+            event_payload["metadata"] = normalized
     mutate_snapshot_overlay(run_id, event=event_payload)
 
 
@@ -218,12 +251,17 @@ def _on_damage_taken(
     run_id = _resolve_run_id(target, attacker)
     if not run_id:
         return
+    metadata: dict[str, Any] | None = None
+    damage_type_id = _resolve_damage_type_id(attacker)
+    if damage_type_id:
+        metadata = {"damage_type_id": damage_type_id}
     _record_event(
         run_id,
         event_type="damage_taken",
         source=attacker,
         target=target,
         amount=amount,
+        metadata=metadata,
     )
     kwargs: dict[str, Any] = {}
     if attacker is not None:
@@ -243,12 +281,17 @@ def _on_heal_received(
     run_id = _resolve_run_id(target, healer)
     if not run_id:
         return
+    metadata: dict[str, Any] | None = None
+    damage_type_id = _resolve_damage_type_id(healer)
+    if damage_type_id:
+        metadata = {"damage_type_id": damage_type_id}
     _record_event(
         run_id,
         event_type="heal_received",
         source=healer,
         target=target,
         amount=amount,
+        metadata=metadata,
     )
     kwargs: dict[str, Any] = {}
     if healer is not None:
@@ -259,11 +302,120 @@ def _on_heal_received(
         mutate_snapshot_overlay(run_id, **kwargs)
 
 
+async def _on_target_acquired(
+    attacker: Stats | None,
+    target: Stats | None,
+    *_: Any,
+) -> None:
+    run_id = _resolve_run_id(attacker, target)
+    if not run_id:
+        return
+    metadata: dict[str, Any] | None = None
+    damage_type_id = _resolve_damage_type_id(attacker)
+    if damage_type_id:
+        metadata = {"damage_type_id": damage_type_id}
+    _record_event(
+        run_id,
+        event_type="target_acquired",
+        source=attacker,
+        target=target,
+        amount=None,
+        metadata=metadata,
+    )
+
+
+async def _on_dot_tick(
+    attacker: Stats | None,
+    target: Stats | None,
+    amount: int | None = None,
+    effect_name: str | None = None,
+    effect_details: dict[str, Any] | None = None,
+    *_: Any,
+) -> None:
+    run_id = _resolve_run_id(attacker, target)
+    if not run_id:
+        return
+    effect_id = None
+    remaining_turns = None
+    original_amount = None
+    if isinstance(effect_details, dict):
+        effect_id = effect_details.get("dot_id") or effect_details.get("id")
+        remaining_turns = effect_details.get("remaining_turns")
+        original_amount = effect_details.get("original_damage")
+    metadata: dict[str, Any] = {
+        "damage_type_id": _resolve_damage_type_id(attacker),
+        "effect_ids": [effect_id] if effect_id else None,
+        "remaining_turns": remaining_turns,
+        "effects": [
+            {
+                "id": effect_id,
+                "name": effect_name,
+                "remaining_turns": remaining_turns,
+                "original_amount": original_amount,
+                "type": "dot",
+            }
+        ],
+    }
+    _record_event(
+        run_id,
+        event_type="dot_tick",
+        source=attacker,
+        target=target,
+        amount=amount,
+        metadata=metadata,
+    )
+
+
+async def _on_hot_tick(
+    healer: Stats | None,
+    target: Stats | None,
+    amount: int | None = None,
+    effect_name: str | None = None,
+    effect_details: dict[str, Any] | None = None,
+    *_: Any,
+) -> None:
+    run_id = _resolve_run_id(target, healer)
+    if not run_id:
+        return
+    effect_id = None
+    remaining_turns = None
+    original_amount = None
+    if isinstance(effect_details, dict):
+        effect_id = effect_details.get("hot_id") or effect_details.get("id")
+        remaining_turns = effect_details.get("remaining_turns")
+        original_amount = effect_details.get("original_healing")
+    metadata: dict[str, Any] = {
+        "damage_type_id": _resolve_damage_type_id(healer),
+        "effect_ids": [effect_id] if effect_id else None,
+        "remaining_turns": remaining_turns,
+        "effects": [
+            {
+                "id": effect_id,
+                "name": effect_name,
+                "remaining_turns": remaining_turns,
+                "original_amount": original_amount,
+                "type": "hot",
+            }
+        ],
+    }
+    _record_event(
+        run_id,
+        event_type="hot_tick",
+        source=healer,
+        target=target,
+        amount=amount,
+        metadata=metadata,
+    )
+
+
 BUS.subscribe("status_phase_start", _on_status_phase_start)
 BUS.subscribe("status_phase_end", _on_status_phase_end)
 BUS.subscribe("hit_landed", _on_hit_landed)
 BUS.subscribe("damage_taken", _on_damage_taken)
 BUS.subscribe("heal_received", _on_heal_received)
+BUS.subscribe("target_acquired", _on_target_acquired)
+BUS.subscribe("dot_tick", _on_dot_tick)
+BUS.subscribe("hot_tick", _on_hot_tick)
 
 
 @dataclass(slots=True)
