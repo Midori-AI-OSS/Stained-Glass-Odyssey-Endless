@@ -25,86 +25,116 @@ class RustyBuckle(RelicBase):
         super().apply(party)
 
         stacks = party.relics.count(self.id)
-        state: dict[str, object] = {
-            "foes": [],
-            "party_max_hp": sum(ally.max_hp for ally in party.members),
-            "hp_lost": 0,
-            "triggers": 0,
-            "prev_hp": {id(ally): ally.hp for ally in party.members},
-        }
+        state = getattr(party, "_rusty_buckle_state", None)
 
-        def _turn_start(entity) -> None:
-            from plugins.foes._base import FoeBase
+        if state is None:
+            state = {
+                "stacks": stacks,
+                "foes": [],
+                "party_max_hp": sum(ally.max_hp for ally in party.members),
+                "hp_lost": 0,
+                "triggers": 0,
+                "prev_hp": {id(ally): ally.hp for ally in party.members},
+            }
 
-            if isinstance(entity, FoeBase):
-                if entity not in state["foes"]:
-                    state["foes"].append(entity)
-                return
+            def _turn_start(entity) -> None:
+                from plugins.foes._base import FoeBase
 
-            if entity in party.members:
-                bleed = int(entity.max_hp * 0.05 * stacks)
-                dmg = min(bleed, max(entity.hp - 1, 0))
+                if isinstance(entity, FoeBase):
+                    if entity not in state["foes"]:
+                        state["foes"].append(entity)
+                    return
 
-                BUS.emit(
-                    "relic_effect",
-                    "rusty_buckle",
-                    entity,
-                    "turn_bleed",
-                    dmg,
-                    {
-                        "target_selection": "each_turn",
-                        "bleed_percentage": 5 * stacks,
-                        "stacks": stacks,
-                    },
-                )
+                if entity in party.members:
+                    current_stacks = state.get("stacks", 0)
+                    if current_stacks <= 0:
+                        return
+                    bleed = int(entity.max_hp * 0.05 * current_stacks)
+                    dmg = min(bleed, max(entity.hp - 1, 0))
 
-                safe_async_task(entity.apply_cost_damage(dmg))
+                    BUS.emit(
+                        "relic_effect",
+                        "rusty_buckle",
+                        entity,
+                        "turn_bleed",
+                        dmg,
+                        {
+                            "target_selection": "each_turn",
+                            "bleed_percentage": 5 * current_stacks,
+                            "stacks": current_stacks,
+                        },
+                    )
 
-        def _damage(target, attacker, _original) -> None:
-            if target not in party.members:
-                return
-            target_id = id(target)
-            prev = state["prev_hp"].get(target_id, target.hp)
-            lost = max(prev - target.hp, 0)
-            state["prev_hp"][target_id] = target.hp
-            state["hp_lost"] += lost
-            party_max_hp = state["party_max_hp"]
-            triggers = state["triggers"]
-            threshold = party_max_hp * (1 + 0.5 * (stacks - 1))
-            while state["hp_lost"] >= threshold * (triggers + 1):
-                triggers += 1
-                state["triggers"] = triggers
-                lost_pct = state["hp_lost"] / party_max_hp
-                dmg = int(party_max_hp * lost_pct * 0.005)
-                hits = 5 + 3 * (stacks - 1)
+                    safe_async_task(entity.apply_cost_damage(dmg))
 
-                BUS.emit(
-                    "relic_effect",
-                    "rusty_buckle",
-                    target,
-                    "aftertaste_trigger",
-                    dmg,
-                    {
-                        "trigger_count": triggers,
-                        "hp_lost_percentage": lost_pct * 100,
-                        "aftertaste_hits": hits,
-                        "damage_per_hit": dmg,
-                    },
-                )
+            def _damage(target, attacker, _original) -> None:
+                if target not in party.members:
+                    return
+                current_stacks = state.get("stacks", 0)
+                if current_stacks <= 0:
+                    return
+                target_id = id(target)
+                prev = state["prev_hp"].get(target_id, target.hp)
+                lost = max(prev - target.hp, 0)
+                state["prev_hp"][target_id] = target.hp
+                state["hp_lost"] += lost
+                party_max_hp = state["party_max_hp"]
+                triggers = state["triggers"]
+                threshold = party_max_hp * (1 + 0.5 * (current_stacks - 1))
+                while party_max_hp and state["hp_lost"] >= threshold * (triggers + 1):
+                    triggers += 1
+                    state["triggers"] = triggers
+                    lost_pct = state["hp_lost"] / party_max_hp
+                    dmg = int(party_max_hp * lost_pct * 0.005)
+                    hits = 5 + 3 * (current_stacks - 1)
 
-                for _ in range(hits):
-                    if state["foes"]:
-                        foe = random.choice(state["foes"])
-                        safe_async_task(Aftertaste(base_pot=dmg).apply(target, foe))
+                    BUS.emit(
+                        "relic_effect",
+                        "rusty_buckle",
+                        target,
+                        "aftertaste_trigger",
+                        dmg,
+                        {
+                            "trigger_count": triggers,
+                            "hp_lost_percentage": lost_pct * 100,
+                            "aftertaste_hits": hits,
+                            "damage_per_hit": dmg,
+                        },
+                    )
 
-        BUS.subscribe("turn_start", _turn_start)
-        BUS.subscribe("damage_taken", _damage)
+                    for _ in range(hits):
+                        if state["foes"]:
+                            foe = random.choice(state["foes"])
+                            safe_async_task(Aftertaste(base_pot=dmg).apply(target, foe))
 
-        def _heal(target, healer, _amount) -> None:
-            if target in party.members:
-                state["prev_hp"][id(target)] = target.hp
+            def _heal(target, healer, _amount) -> None:
+                if target in party.members:
+                    state["prev_hp"][id(target)] = target.hp
 
-        BUS.subscribe("heal_received", _heal)
+            def _cleanup(*_args) -> None:
+                BUS.unsubscribe("turn_start", state["turn_start_handler"])
+                BUS.unsubscribe("damage_taken", state["damage_handler"])
+                BUS.unsubscribe("heal_received", state["heal_handler"])
+                BUS.unsubscribe("battle_end", state["cleanup_handler"])
+                state["foes"].clear()
+                if getattr(party, "_rusty_buckle_state", None) is state:
+                    delattr(party, "_rusty_buckle_state")
+
+            state["turn_start_handler"] = _turn_start
+            state["damage_handler"] = _damage
+            state["heal_handler"] = _heal
+            state["cleanup_handler"] = _cleanup
+            party._rusty_buckle_state = state
+
+            BUS.subscribe("turn_start", _turn_start)
+            BUS.subscribe("damage_taken", _damage)
+            BUS.subscribe("heal_received", _heal)
+            BUS.subscribe("battle_end", _cleanup)
+        else:
+            state["stacks"] = stacks
+            state["party_max_hp"] = sum(ally.max_hp for ally in party.members)
+            for ally in party.members:
+                state["prev_hp"][id(ally)] = ally.hp
 
     def describe(self, stacks: int) -> str:
         bleed = 5 * stacks

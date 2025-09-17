@@ -21,47 +21,81 @@ class KillerInstinct(RelicBase):
         super().apply(party)
 
         stacks = party.relics.count(self.id)
-        buffs: dict[int, tuple[PlayerBase, object]] = {}
+        state = getattr(party, "_killer_instinct_state", None)
 
-        def _ultimate(user) -> None:
-            atk_pct = 75 * stacks
-            atk_mult = 1 + (0.75 * stacks)
+        if state is None:
+            buffs: dict[int, tuple[PlayerBase, object]] = {}
 
-            # Emit relic effect event for ultimate ATK boost
-            BUS.emit("relic_effect", "killer_instinct", user, "ultimate_atk_boost", atk_pct, {
-                "atk_percentage": atk_pct,
-                "trigger": "ultimate_used",
-                "duration": "1_turn",
-                "stacks": stacks
-            })
+            def _clear_buffs() -> None:
+                for _, (member, mod) in list(buffs.items()):
+                    mod.remove()
+                    if mod in member.effect_manager.mods:
+                        member.effect_manager.mods.remove(mod)
+                    if mod.id in member.mods:
+                        member.mods.remove(mod.id)
+                buffs.clear()
 
-            mod = create_stat_buff(user, name=f"{self.id}_atk", atk_mult=atk_mult, turns=1)
-            user.effect_manager.add_modifier(mod)
-            buffs[id(user)] = (user, mod)
+            def _ultimate(user) -> None:
+                current_stacks = state.get("stacks", 0)
+                if current_stacks <= 0:
+                    return
+                atk_pct = 75 * current_stacks
+                atk_mult = 1 + (0.75 * current_stacks)
 
-        def _damage(target, attacker, amount) -> None:
-            if target.hp <= 0 and id(attacker) in buffs:
-                # Emit relic effect event for extra turn
-                BUS.emit("relic_effect", "killer_instinct", attacker, "extra_turn_grant", 1, {
-                    "trigger": "kill",
-                    "victim": getattr(target, 'id', str(target)),
-                    "killer_damage": amount
+                # Emit relic effect event for ultimate ATK boost
+                BUS.emit("relic_effect", "killer_instinct", user, "ultimate_atk_boost", atk_pct, {
+                    "atk_percentage": atk_pct,
+                    "trigger": "ultimate_used",
+                    "duration": "1_turn",
+                    "stacks": current_stacks
                 })
 
-                BUS.emit("extra_turn", attacker)
+                mod = create_stat_buff(user, name=f"{self.id}_atk", atk_mult=atk_mult, turns=1)
+                user.effect_manager.add_modifier(mod)
+                buffs[id(user)] = (user, mod)
 
-        def _turn_end() -> None:
-            for _, (member, mod) in list(buffs.items()):
-                mod.remove()
-                if mod in member.effect_manager.mods:
-                    member.effect_manager.mods.remove(mod)
-                if mod.id in member.mods:
-                    member.mods.remove(mod.id)
-            buffs.clear()
+            def _damage(target, attacker, amount) -> None:
+                if attacker is None:
+                    return
+                if target.hp <= 0 and id(attacker) in buffs:
+                    # Emit relic effect event for extra turn
+                    BUS.emit("relic_effect", "killer_instinct", attacker, "extra_turn_grant", 1, {
+                        "trigger": "kill",
+                        "victim": getattr(target, 'id', str(target)),
+                        "killer_damage": amount
+                    })
 
-        BUS.subscribe("ultimate_used", _ultimate)
-        BUS.subscribe("damage_taken", _damage)
-        BUS.subscribe("turn_end", lambda *_: _turn_end())
+                    BUS.emit("extra_turn", attacker)
+
+            def _turn_end(*_args) -> None:
+                _clear_buffs()
+
+            def _cleanup(*_args) -> None:
+                BUS.unsubscribe("ultimate_used", state["ultimate_handler"])
+                BUS.unsubscribe("damage_taken", state["damage_handler"])
+                BUS.unsubscribe("turn_end", state["turn_end_handler"])
+                BUS.unsubscribe("battle_end", state["cleanup_handler"])
+                _clear_buffs()
+                if getattr(party, "_killer_instinct_state", None) is state:
+                    delattr(party, "_killer_instinct_state")
+
+            state = {
+                "stacks": stacks,
+                "buffs": buffs,
+                "ultimate_handler": _ultimate,
+                "damage_handler": _damage,
+                "turn_end_handler": _turn_end,
+                "cleanup_handler": _cleanup,
+                "clear_buffs": _clear_buffs,
+            }
+            party._killer_instinct_state = state
+
+            BUS.subscribe("ultimate_used", _ultimate)
+            BUS.subscribe("damage_taken", _damage)
+            BUS.subscribe("turn_end", _turn_end)
+            BUS.subscribe("battle_end", _cleanup)
+        else:
+            state["stacks"] = stacks
 
     def describe(self, stacks: int) -> str:
         pct = 75 * stacks

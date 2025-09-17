@@ -19,30 +19,52 @@ class VengefulPendant(RelicBase):
     def apply(self, party) -> None:
         super().apply(party)
 
-        def _reflect(target, attacker, amount) -> None:
-            if attacker is None or target not in party.members:
-                return
-            stacks = party.relics.count(self.id)
-            dmg = int(amount * 0.15 * stacks)
+        stacks = party.relics.count(self.id)
+        state = getattr(party, "_vengeful_pendant_state", None)
 
-            # Emit relic effect event for damage reflection
-            BUS.emit(
-                "relic_effect",
-                "vengeful_pendant",
-                target,
-                "damage_reflection",
-                dmg,
-                {
-                    "original_damage": amount,
-                    "reflection_percentage": 15 * stacks,
-                    "reflected_to": getattr(attacker, "id", str(attacker)),
-                    "stacks": stacks,
-                },
-            )
+        if state is None:
+            def _reflect(target, attacker, amount) -> None:
+                if attacker is None or target not in party.members:
+                    return
+                current_stacks = state.get("stacks", 0)
+                if current_stacks <= 0:
+                    return
+                dmg = int(amount * 0.15 * current_stacks)
 
-            safe_async_task(attacker.apply_damage(dmg, attacker=target))
+                # Emit relic effect event for damage reflection
+                BUS.emit(
+                    "relic_effect",
+                    "vengeful_pendant",
+                    target,
+                    "damage_reflection",
+                    dmg,
+                    {
+                        "original_damage": amount,
+                        "reflection_percentage": 15 * current_stacks,
+                        "reflected_to": getattr(attacker, "id", str(attacker)),
+                        "stacks": current_stacks,
+                    },
+                )
 
-        BUS.subscribe("damage_taken", _reflect)
+                safe_async_task(attacker.apply_damage(dmg, attacker=target))
+
+            def _cleanup(*_args) -> None:
+                BUS.unsubscribe("damage_taken", state["damage_handler"])
+                BUS.unsubscribe("battle_end", state["cleanup_handler"])
+                if getattr(party, "_vengeful_pendant_state", None) is state:
+                    delattr(party, "_vengeful_pendant_state")
+
+            state = {
+                "stacks": stacks,
+                "damage_handler": _reflect,
+                "cleanup_handler": _cleanup,
+            }
+            party._vengeful_pendant_state = state
+
+            BUS.subscribe("damage_taken", _reflect)
+            BUS.subscribe("battle_end", _cleanup)
+        else:
+            state["stacks"] = stacks
 
     def describe(self, stacks: int) -> str:
         pct = 15 * stacks

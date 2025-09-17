@@ -23,54 +23,83 @@ class NullLantern(RelicBase):
         party.no_shops = True
         party.no_rests = True
         stacks = party.relics.count(self.id)
-        state = {"cleared": 0}
+        state = getattr(party, "_null_lantern_state", None)
+        cleared = getattr(party, "_null_lantern_cleared", 0)
 
-        if not hasattr(party, "pull_tokens"):
-            party.pull_tokens = 0
+        if state is None:
+            state = {
+                "cleared": cleared,
+                "stacks": stacks,
+            }
 
-        def _battle_start(entity) -> None:
-            from plugins.foes._base import FoeBase
+            if not hasattr(party, "pull_tokens"):
+                party.pull_tokens = 0
 
-            if isinstance(entity, FoeBase):
-                mult = 1 + 1.5 * state["cleared"]
-                mod = create_stat_buff(
-                    entity,
-                    name=f"{self.id}_foe_{state['cleared']}",
-                    turns=9999,
-                    atk_mult=mult,
-                    defense_mult=mult,
-                    max_hp_mult=mult,
-                    hp_mult=mult,
-                )
-                entity.effect_manager.add_modifier(mod)
+            def _battle_start(entity) -> None:
+                from plugins.foes._base import FoeBase
 
-                # Track foe buffing
-                BUS.emit("relic_effect", "null_lantern", entity, "foe_buffed", int((mult - 1) * 100), {
-                    "battle_number": state["cleared"] + 1,
-                    "multiplier": mult,
-                    "escalation_percentage": 150,
-                    "stacks": stacks
-                })
+                if isinstance(entity, FoeBase):
+                    current_stacks = state.get("stacks", 0)
+                    if current_stacks <= 0:
+                        return
+                    mult = 1 + 1.5 * state["cleared"] * current_stacks
+                    mod = create_stat_buff(
+                        entity,
+                        name=f"{self.id}_foe_{state['cleared']}",
+                        turns=9999,
+                        atk_mult=mult,
+                        defense_mult=mult,
+                        max_hp_mult=mult,
+                        hp_mult=mult,
+                    )
+                    entity.effect_manager.add_modifier(mod)
 
-        def _battle_end(entity) -> None:
-            from plugins.foes._base import FoeBase
+                    # Track foe buffing
+                    BUS.emit("relic_effect", "null_lantern", entity, "foe_buffed", int((mult - 1) * 100), {
+                        "battle_number": state["cleared"] + 1,
+                        "multiplier": mult,
+                        "escalation_percentage": 150 * current_stacks,
+                        "stacks": current_stacks
+                    })
 
-            if isinstance(entity, FoeBase):
-                state["cleared"] += 1
-                pull_reward = 1 + (stacks - 1)
-                party.pull_tokens += pull_reward
+            def _battle_end(entity) -> None:
+                from plugins.foes._base import FoeBase
 
-                # Track pull token generation
-                BUS.emit("relic_effect", "null_lantern", entity, "pull_tokens_awarded", pull_reward, {
-                    "battles_cleared": state["cleared"],
-                    "base_tokens": 1,
-                    "stack_bonus": stacks - 1,
-                    "disabled_shops": True,
-                    "disabled_rests": True
-                })
+                if isinstance(entity, FoeBase):
+                    current_stacks = state.get("stacks", 0)
+                    if current_stacks <= 0:
+                        return
+                    state["cleared"] += 1
+                    party._null_lantern_cleared = state["cleared"]
+                    pull_reward = 1 + (current_stacks - 1)
+                    party.pull_tokens += pull_reward
 
-        BUS.subscribe("battle_start", _battle_start)
-        BUS.subscribe("battle_end", _battle_end)
+                    # Track pull token generation
+                    BUS.emit("relic_effect", "null_lantern", entity, "pull_tokens_awarded", pull_reward, {
+                        "battles_cleared": state["cleared"],
+                        "base_tokens": 1,
+                        "stack_bonus": current_stacks - 1,
+                        "disabled_shops": True,
+                        "disabled_rests": True
+                    })
+
+            def _cleanup(*_args) -> None:
+                BUS.unsubscribe("battle_start", state["battle_start_handler"])
+                BUS.unsubscribe("battle_end", state["battle_end_handler"])
+                BUS.unsubscribe("battle_end", state["cleanup_handler"])
+                if getattr(party, "_null_lantern_state", None) is state:
+                    delattr(party, "_null_lantern_state")
+
+            state["battle_start_handler"] = _battle_start
+            state["battle_end_handler"] = _battle_end
+            state["cleanup_handler"] = _cleanup
+            party._null_lantern_state = state
+
+            BUS.subscribe("battle_start", _battle_start)
+            BUS.subscribe("battle_end", _battle_end)
+            BUS.subscribe("battle_end", _cleanup)
+        else:
+            state["stacks"] = stacks
 
     def describe(self, stacks: int) -> str:
         pulls = 1 + (stacks - 1)
