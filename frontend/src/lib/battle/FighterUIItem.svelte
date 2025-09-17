@@ -164,7 +164,7 @@
         class:reduced={reducedMotion}
         class:phantom={isPhantom && !isDead}
         class:fading={fading}
-        style="background-image: url({currentImageUrl})"
+        style={`background-image: url("${currentImageUrl}")`}
       >
       {#if !reducedMotion && !isDead && fighter?.ultimate_ready}
         <div class="element-effect {elementGlow.effect}"></div>

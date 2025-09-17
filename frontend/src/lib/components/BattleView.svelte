@@ -300,7 +300,7 @@
 
 <div
   class="modern-battle-field"
-  style={`background-image: url(${bg})`}
+  style={`background-image: url("${bg}")`}
   data-testid="modern-battle-view"
 >
   <EnrageIndicator active={Boolean(enrage?.active)} {reducedMotion} enrageData={enrage} />
