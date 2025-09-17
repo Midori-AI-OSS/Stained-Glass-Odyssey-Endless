@@ -1,4 +1,5 @@
 === Cards ===
+
 Adamantine Band: Luna carefully sliding an adamantine band onto her finger, the dark steel ring etched with ancient sigils; it gleams with a cold, mineral sheen that speaks of unyielding protection and slow, immovable strength.
 
 Balanced Diet: Luna seated at a sunlit wooden table, savoring a balanced plate piled with colorful vegetables, whole grains, and ripe fruits; each bite glows faintly with nourishing light, suggesting restored vigor and quiet contentment.
@@ -13,21 +14,9 @@ Arcane Repeater: Luna adjusting the brass and crystal mechanism of an arcane rep
 
 Critical Focus: Luna closing one eye and aligning her sight through a faint crystalline overlay, the scene narrowing into a single, perfect mark; the air around that point shivers as she channels every ounce of precision and intent.
 
-Critical Overdrive: Luna erupting into a violent overdrive, her weapons and aura flaring with crimson and amber energy as motion blurs streak outward; the moment feels like a condensed surge of raw power and unstoppable momentum.
+Critical Overdrive: 
 
-Critical Transfer: Luna placing both hands on an ethereal conduit as a pulse of charged intent flows from one blade to another, the energy forming a visible ribbon that transfers ferocity and finesse between weapons.
-
-Elemental Spark: Luna cupping a tiny radiant orb in her palms that flickers with miniature elements—a flame that warms, a shard of frost, and a breath of wind—each element spinning and combining into a delicate, luminous whole.
-
-Iron Guard: Luna standing resolute behind a heavy iron shield scarred from past fights; the shield's rivets and dents tell stories while her posture and steady eyes radiate a calm, immovable defense.
-
-Iron Resolve: Luna planted on a wind-lashed cliff, cloak whipping around her as she surveys the horizon with unshakable determination; the light catches the edges of her armor like tempered steel, reflecting an inner fortitude.
-
-Iron Resurgence: Luna rising from a battered position as embers, metal shards, and soldered fragments coalesce into new protective plating about her; the scene captures a fierce rebirth of armored strength.
-
-Mystic Aegis: 
-
-Overclock: 
+Critical Transfer: 
 
 === Missing Cards Art ===
 None detected — card art glyphs present for plugin cards.

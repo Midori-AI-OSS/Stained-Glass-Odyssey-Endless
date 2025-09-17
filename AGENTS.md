@@ -22,9 +22,8 @@ This document summarizes common development practices for all services in this r
 - Split large modules into smaller ones when practical and keep documentation in `*/.codex/implementation` in sync with code.
 - If a build retry occurs, the workflow may produce a commit titled `"Applying previous commit."` when reapplying a patch.
   This is normal and does not replace the need for your own clear `[TYPE]` commit messages.
-- Run available tests (e.g., `pytest`) before committing.
-- Any test running longer than 15 seconds is automatically aborted in local development (using `run-tests.sh`). GitHub Actions CI has no timeout limits.
-- **Linting is mandatory**: Run `ruff check . --fix` before every commit on Python code. All pull requests must pass linting checks in CI. See `.codex/implementation/linting-standards.md` for comprehensive guidelines.
+- If coding in Python, ensure code is asynchronous-friendly: avoid blocking the event loop, use async/await for I/O and long-running tasks, and keep work off the main loop (e.g., use background tasks or thread/executor for CPU-bound work).
+- Any test running longer than 15 seconds is automatically aborted (or force them please...) in local development (using `run-tests.sh`). GitHub Actions CI has no timeout limits.
 - For Python style:
    - Place each import on its own line.
    - Sort imports within each group (standard library, third-party, project modules) from shortest to longest.
