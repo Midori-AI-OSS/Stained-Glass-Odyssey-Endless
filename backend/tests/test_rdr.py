@@ -3,6 +3,8 @@ import pytest
 from autofighter.mapgen import MapNode
 from autofighter.party import Party
 import autofighter.rooms.battle.core as rooms_module
+import autofighter.rooms.battle.resolution as resolution_module
+from autofighter.rooms import BossRoom
 from autofighter.stats import Stats
 from plugins.damage_types import ALL_DAMAGE_TYPES
 
@@ -40,7 +42,7 @@ async def test_rdr_scales_items_and_tickets(monkeypatch):
     monkeypatch.setattr(rooms_module, "relic_choices", lambda *a, **k: [])
     monkeypatch.setattr(rooms_module.random, "choice", lambda seq: seq[0])
     monkeypatch.setattr(rooms_module.random, "random", lambda: 0.00075)
-    # low roll so only high RDR triggers the 0.05% × rdr ticket chance
+    # low roll so only high RDR triggers the 0.05% × rdr ticket chance in normal fights
     result_low = await room.resolve(low, {})
     result_high = await room.resolve(high, {})
     low_upgrades = [i for i in result_low["loot"]["items"] if i["id"] != "ticket"]
@@ -99,7 +101,7 @@ async def test_rdr_buffs_relic_star_odds(monkeypatch):
 @pytest.mark.asyncio
 async def test_rdr_buffs_card_star_odds(monkeypatch):
     node = MapNode(room_id=1, room_type="battle-boss-floor", floor=1, index=1, loop=1, pressure=0)
-    room = rooms_module.BossRoom(node)
+    room = BossRoom(node)
     member = Stats()
     member.id = "p1"
     low = Party(members=[member], rdr=1.0)
@@ -139,3 +141,36 @@ async def test_rdr_scales_floor_boss_items_same_star(monkeypatch):
     high_upgrades = [i for i in result_high["loot"]["items"] if i["id"] != "ticket"]
     assert len(high_upgrades) > len(low_upgrades)
     assert {i["stars"] for i in low_upgrades} == {i["stars"] for i in high_upgrades} == {3}
+
+
+@pytest.mark.asyncio
+async def test_floor_boss_guarantees_ticket_drop(monkeypatch):
+    node = MapNode(room_id=1, room_type="battle-boss-floor", floor=1, index=1, loop=1, pressure=0)
+    room = BossRoom(node)
+    party = Party()
+    combat_party = Party()
+    monkeypatch.setattr(resolution_module, "card_choices", lambda *args, **kwargs: [])
+    monkeypatch.setattr(resolution_module, "relic_choices", lambda *args, **kwargs: [])
+    monkeypatch.setattr(resolution_module, "_roll_relic_drop", lambda *args, **kwargs: False)
+    monkeypatch.setattr(resolution_module, "_pick_card_stars", lambda *_: 1)
+    monkeypatch.setattr(resolution_module, "_pick_item_stars", lambda *_: 4)
+    monkeypatch.setattr(resolution_module.random, "choice", lambda seq: seq[0])
+    monkeypatch.setattr(resolution_module.random, "random", lambda: 0.99)
+    result = await resolution_module.resolve_rewards(
+        room=room,
+        party=party,
+        combat_party=combat_party,
+        foes=[],
+        foes_data=[],
+        enrage_payload={"active": False, "stacks": 0},
+        start_gold=party.gold,
+        temp_rdr=1.0,
+        party_data=[],
+        party_summons={},
+        foe_summons={},
+        action_queue_snapshot={},
+        battle_logger=None,
+        exp_reward=0,
+    )
+    tickets = [item for item in result["loot"]["items"] if item["id"] == "ticket"]
+    assert tickets and tickets[0]["stars"] == 0

@@ -15,7 +15,7 @@ async def test_battle_returns_loot_summary(monkeypatch):
     member.id = "p1"
     party = Party(members=[member])
     monkeypatch.setattr(rooms_module.random, "random", lambda: 0.999)
-    # high roll to avoid rare ticket drop (0.05% × rdr)
+    # high roll to avoid rare ticket drop from normal fights (0.05% × rdr)
     monkeypatch.setattr(rooms_module.random, "choice", lambda seq: seq[0])
     monkeypatch.setattr(rooms_module, "card_choices", lambda *a, **k: [])
     result = await room.resolve(party, {})
@@ -39,7 +39,7 @@ async def test_floor_boss_high_star_items(monkeypatch):
     member.id = "p1"
     party = Party(members=[member])
     monkeypatch.setattr(rooms_module.random, "random", lambda: 0.999)
-    # high roll to avoid rare ticket drop (0.05% × rdr)
+    # high roll to avoid rare ticket drop from normal fights (0.05% × rdr)
     monkeypatch.setattr(rooms_module.random, "choice", lambda seq: seq[0])
     monkeypatch.setattr(rooms_module, "card_choices", lambda *a, **k: [])
     result = await room.resolve(party, {})

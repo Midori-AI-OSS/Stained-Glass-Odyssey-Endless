@@ -37,8 +37,11 @@ to 4★, and sets of ten 4★ items convert into a gacha ticket. `rdr` only affe
 how many items appear—it never upgrades their star level.
 
 ## Pull Tickets
-Each battle rolls a `10% × rdr` chance to drop a pull ticket in addition to
-other rewards.
+- **Normal battles:** `0.05% × rdr` chance
+- **Boss-strength battles:** `min(5% × rdr, 100%)` chance (applies when strength > 1.0)
+- **Floor bosses:** Guaranteed pull ticket drop
+
+These tickets drop alongside the other rewards listed above.
 
 ## RDR Effects
 `rdr` multiplies gold rewards, upgrade item counts, relic drop odds, and pull

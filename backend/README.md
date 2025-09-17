@@ -97,16 +97,17 @@ Battle resolution awards experience to all party members. Characters below
 level 1000 receive a 10× boost to earned experience, and level-ups are synced
 back to the run along with updated stats.
 
-Victories grant gold, relic choices, upgrade items, and a small chance at pull
+Victories grant gold, relic choices, upgrade items, and a chance at pull
 tickets. Gold equals a base value (5 for normal battles, 20 for bosses, 200 for
 floor bosses) multiplied by the loop, a random range, and the party's rare drop
 rate (`rdr`). Relic drops roll `10% × rdr` in normal fights or `50% × rdr` in
 boss and floor-boss rooms. Upgrade items use the foe's element at random, cap at
 4★, and their quantity scales with `rdr` with fractional amounts having a
-matching chance to yield an extra item. Each fight also rolls a `0.05% × rdr`
-chance to award a pull ticket. `rdr` boosts drop quantity and odds and, at
-extreme values, can roll to upgrade relic and card star ranks (3★→4★ at 1000%
-`rdr`, 4★→5★ at 1,000,000%) though success is never guaranteed.
+matching chance to yield an extra item. Normal encounters roll a `0.05% × rdr`
+ticket chance, boss-strength battles boost that to `min(5% × rdr, 100%)`, and
+floor bosses guarantee a ticket drop. `rdr` boosts drop quantity and odds and,
+at extreme values, can roll to upgrade relic and card star ranks (3★→4★ at
+1000% `rdr`, 4★→5★ at 1,000,000%) though success is never guaranteed.
 Each defeated foe grants a temporary +55% `rdr` boost for that battle,
 increasing the gold reward and number of damage-type items.
 
