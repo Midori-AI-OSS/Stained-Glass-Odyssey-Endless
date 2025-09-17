@@ -24,9 +24,42 @@ class PhantomAlly(CardBase):
 
         # Choose a random ally to create a phantom of
         original = random.choice(party.members)
+        summoner_id = getattr(original, "id", str(id(original)))
 
+        # Prevent multiple concurrent phantoms - replace only when existing ones are failing
+        active_summons = SummonManager.get_summons(summoner_id)
+        active_phantoms = [
+            summon
+            for summon in active_summons
+            if getattr(summon, "summon_source", "") == self.id
+        ]
+        if active_phantoms:
+            phantom_viable = any(
+                SummonManager.evaluate_summon_viability(phantom)["viable"]
+                for phantom in active_phantoms
+            )
+            if phantom_viable:
+                return
+            for phantom in active_phantoms:
+                SummonManager.remove_summon(phantom, "phantom_ally_replaced")
+                if phantom in party.members:
+                    party.members.remove(phantom)
+
+        phantom_slot_tracker = "_phantom_ally_temp_slots"
+        existing_slot_allocation = max(
+            0, int(getattr(original, phantom_slot_tracker, 0))
+        )
+        slots_added_this_cast = 0
         if hasattr(original, "add_temporary_summon_slots"):
-            original.add_temporary_summon_slots(1)
+            additional_needed = max(0, 1 - existing_slot_allocation)
+            if additional_needed > 0:
+                original.add_temporary_summon_slots(additional_needed)
+                slots_added_this_cast = additional_needed
+                setattr(
+                    original,
+                    phantom_slot_tracker,
+                    existing_slot_allocation + additional_needed,
+                )
 
         # Create phantom using the new summons system
         # Phantoms are full-strength copies (multiplier=1.0) that last the entire battle
@@ -39,8 +72,12 @@ class PhantomAlly(CardBase):
         )
 
         if not summon:
-            if hasattr(original, "remove_temporary_summon_slots"):
-                original.remove_temporary_summon_slots(1)
+            if (
+                slots_added_this_cast > 0
+                and hasattr(original, "remove_temporary_summon_slots")
+            ):
+                original.remove_temporary_summon_slots(slots_added_this_cast)
+                setattr(original, phantom_slot_tracker, existing_slot_allocation)
             return
 
         # Add the summon to the party for this battle
@@ -80,8 +117,28 @@ class PhantomAlly(CardBase):
                     "reason": "battle_end",
                     "original_ally": getattr(original, 'id', str(original))
                 })
-            if hasattr(original, "remove_temporary_summon_slots"):
-                original.remove_temporary_summon_slots(1)
+            if slots_added_this_cast > 0 and hasattr(
+                original, "remove_temporary_summon_slots"
+            ):
+                original.remove_temporary_summon_slots(slots_added_this_cast)
+                setattr(
+                    original,
+                    phantom_slot_tracker,
+                    max(
+                        0,
+                        int(getattr(original, phantom_slot_tracker, 0))
+                        - slots_added_this_cast,
+                    ),
+                )
+            else:
+                remaining_phantoms = any(
+                    getattr(other, "summon_source", "") == self.id
+                    for other in SummonManager.get_summons(summoner_id)
+                    if other is not summon
+                )
+                if not remaining_phantoms:
+                    setattr(original, phantom_slot_tracker, 0)
+            SummonManager.remove_summon(summon, "phantom_ally_cleanup")
             BUS.unsubscribe("battle_end", _cleanup)
 
         BUS.subscribe("battle_end", _cleanup)
