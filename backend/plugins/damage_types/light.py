@@ -1,4 +1,3 @@
-import asyncio
 from dataclasses import dataclass
 
 from autofighter.effects import DamageOverTime
@@ -20,30 +19,36 @@ class Light(DamageTypeBase):
         return damage_effects.create_dot(self.id, damage, source)
 
     async def on_action(self, actor, allies, enemies):
+        from autofighter.rooms.battle.pacing import YIELD_MULTIPLIER
+        from autofighter.rooms.battle.pacing import pace_sleep
+
         for ally in allies:
             mgr = getattr(ally, "effect_manager", None)
             if mgr is not None:
                 hot = damage_effects.create_hot(self.id, actor)
                 if hot is not None:
                     mgr.add_hot(hot)
-            await asyncio.sleep(0.002)
+            await pace_sleep(YIELD_MULTIPLIER)
 
         for ally in allies:
             if ally.hp > 0 and ally.hp / ally.max_hp < 0.25:
                 await ally.apply_healing(actor.atk, healer=actor)
-                await asyncio.sleep(0.002)
+                await pace_sleep(YIELD_MULTIPLIER)
                 return False
-            await asyncio.sleep(0.002)
+            await pace_sleep(YIELD_MULTIPLIER)
 
         return True
 
     async def ultimate(self, actor, allies, enemies):
         """Fully heal allies, cleanse their DoTs, and weaken enemies."""
+        from autofighter.rooms.battle.pacing import YIELD_MULTIPLIER
+        from autofighter.rooms.battle.pacing import pace_sleep
+
         if not getattr(actor, "use_ultimate", lambda: False)():
             return False
         for ally in allies:
             if ally.hp <= 0:
-                await asyncio.sleep(0.002)
+                await pace_sleep(YIELD_MULTIPLIER)
                 continue
             mgr = getattr(ally, "effect_manager", None)
             if mgr is None:
@@ -71,11 +76,11 @@ class Light(DamageTypeBase):
             missing = ally.max_hp - ally.hp
             if missing > 0:
                 await ally.apply_healing(missing, healer=actor, source_type="ultimate", source_name="Light Ultimate")
-            await asyncio.sleep(0.002)
+            await pace_sleep(YIELD_MULTIPLIER)
 
         for enemy in enemies:
             if enemy.hp <= 0:
-                await asyncio.sleep(0.002)
+                await pace_sleep(YIELD_MULTIPLIER)
                 continue
             mgr = getattr(enemy, "effect_manager", None)
             if mgr is None:
@@ -88,7 +93,7 @@ class Light(DamageTypeBase):
                 defense_mult=0.75,
             )
             mgr.add_modifier(mod)
-            await asyncio.sleep(0.002)
+            await pace_sleep(YIELD_MULTIPLIER)
 
         BUS.emit("light_ultimate", actor)
         return True
@@ -97,5 +102,6 @@ class Light(DamageTypeBase):
     def get_ultimate_description(cls) -> str:
         return (
             "Removes all DoTs from allies—including Shadow Siphon—then heals them to full. "
-            "Enemies receive a 25% defense debuff for 10 turns and a 'light_ultimate' event is emitted."
+            "Enemies receive a 25% defense debuff for 10 turns and a 'light_ultimate' event is emitted. "
+            "Healing and debuff application steps respect TURN_PACING via the pacing helper."
         )

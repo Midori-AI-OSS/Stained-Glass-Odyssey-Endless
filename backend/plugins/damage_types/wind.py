@@ -1,4 +1,3 @@
-import asyncio
 from dataclasses import dataclass
 from typing import ClassVar
 
@@ -40,6 +39,9 @@ class Wind(DamageTypeBase):
 
     async def ultimate(self, actor, allies, enemies):
         """Distribute attack across rapid hits on all foes."""
+        from autofighter.rooms.battle.pacing import YIELD_MULTIPLIER
+        from autofighter.rooms.battle.pacing import pace_sleep
+
         # Consume ultimate; bail if not ready
         if not getattr(actor, "use_ultimate", lambda: False)():
             return False
@@ -100,6 +102,8 @@ class Wind(DamageTypeBase):
                 # Ensure a minimum of 1 damage per hit going into the resolver
                 per_hit = max(1, int(per_hit))
                 dmg = await foe.apply_damage(per_hit, attacker=actor, action_name="Wind Ultimate")
+                # Yield using the pacing helper so TURN_PACING adjustments propagate
+                await pace_sleep(YIELD_MULTIPLIER)
                 # Emit hit event for logging/passives, mirroring battle loop behavior
                 try:
                     await BUS.emit_async("hit_landed", actor, foe, dmg, "attack", "wind_ultimate")
@@ -110,8 +114,6 @@ class Wind(DamageTypeBase):
                     f_mgr.maybe_inflict_dot(actor, dmg)
                 except Exception:
                     pass
-                # Yield briefly each hit to keep the event loop responsive
-                await asyncio.sleep(0.002)
 
         # Clean up the temporary buff immediately after the sequence
         try:
@@ -126,7 +128,8 @@ class Wind(DamageTypeBase):
             "Temporarily boosts the user's effect hit rate, then splits their attack "
             "into repeated strikes distributed across all living enemies. The number "
             "of hits derives from `wind_ultimate_hits` or `ultimate_hits` allowing "
-            "relics and cards to modify it."
+            "relics and cards to modify it. Each hit respects TURN_PACING via the "
+            "battle pacing helper."
         )
 
     @classmethod

@@ -33,6 +33,9 @@ class Lightning(DamageTypeBase):
 
     async def ultimate(self, actor, allies, enemies) -> bool:
         """Zap all foes, seed random DoTs, and build Aftertaste stacks."""
+        from autofighter.rooms.battle.pacing import YIELD_MULTIPLIER
+        from autofighter.rooms.battle.pacing import pace_sleep
+
         if not getattr(actor, "use_ultimate", lambda: False)():
             return False
 
@@ -43,7 +46,7 @@ class Lightning(DamageTypeBase):
         for enemy in enemies:
             if base_damage > 0:
                 await enemy.apply_damage(base_damage, attacker=actor, action_name="Lightning Ultimate")
-                await asyncio.sleep(0.002)
+                await pace_sleep(YIELD_MULTIPLIER)
 
             # Apply random DoTs to each enemy
             mgr = getattr(enemy, "effect_manager", None)
@@ -54,7 +57,7 @@ class Lightning(DamageTypeBase):
                     effect = damage_effects.create_dot(random.choice(types), dmg, actor)
                     if effect is not None:
                         mgr.add_dot(effect)
-                    await asyncio.sleep(0.002)
+                    await pace_sleep(YIELD_MULTIPLIER)
 
         # Set up aftertaste stacks
         stacks = getattr(actor, "_lightning_aftertaste_stacks", 0) + 1
@@ -91,5 +94,6 @@ class Lightning(DamageTypeBase):
         return (
             "Deals the user's attack as damage to every enemy, then applies ten random "
             "DoT effects from all elements to each target. Each use grants an Aftertaste "
-            "stack that later echoes extra hits based on the accumulated stacks."
+            "stack that later echoes extra hits based on the accumulated stacks. Damage "
+            "and DoT rolls respect TURN_PACING adjustments."
         )
