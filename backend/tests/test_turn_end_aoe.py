@@ -46,5 +46,7 @@ async def test_aoe_turn_end_advances_queue(monkeypatch):
     action_snaps = [s for s in snapshots if s.get("active_id") == "p1"]
     assert len(action_snaps) == 2
     first, second = action_snaps
+    assert first.get("active_target_id") in {"f1", "f2"}
+    assert second.get("active_target_id") is None
     assert first["action_queue"][0]["id"] == "p1"
     assert ended_snap.get("ended") is True

@@ -122,6 +122,7 @@ async def run_battle(
                 temp_rdr,
                 _EXTRA_TURNS,
                 active_id=None,
+                active_target_id=None,
                 ended=True,
             )
         except Exception:

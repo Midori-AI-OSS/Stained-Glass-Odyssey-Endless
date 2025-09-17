@@ -18,6 +18,7 @@ async def finish_turn(
     action_start: float,
     *,
     include_summon_foes: bool = False,
+    active_target_id: str | None = None,
 ) -> None:
     """Finalize a combatant's turn and emit post-action updates."""
 
@@ -29,6 +30,7 @@ async def finish_turn(
         context.temp_rdr,
         _EXTRA_TURNS,
         active_id=getattr(actor, "id", None),
+        active_target_id=active_target_id,
         include_summon_foes=include_summon_foes,
     )
     await _pace(action_start)
