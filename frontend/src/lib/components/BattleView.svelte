@@ -701,29 +701,31 @@
           
           <!-- HP bar on top -->
           <div class="foe-hp-bar" style={`width: ${getFoeSizePx(foeCount)}px`}>
-            <div class="hp-bar-container" class:reduced={reducedMotion}>
+            <div class="hp-bar-wrapper">
               {#if Number(foe?.shields || 0) > 0 && Number(foe?.max_hp || 0) > 0}
                 <div
                   class="overheal-fill"
                   style={`width: calc(${Math.max(0, Math.min(100, (Number(foe.shields || 0) / Math.max(1, Number(foe.max_hp || 0))) * 100))}% + 5px); left: -5px;`}
                 ></div>
               {/if}
-              <div
-                class="hp-bar-fill"
-                style="width: {hpPercent}%;
-                       background: {hpFraction <= 0.3 ? 'linear-gradient(90deg, #ff4444, #ff6666)' : 'linear-gradient(90deg, #44ffff, #66dddd)'}"
-              ></div>
-              <div
-                class="hp-bar-overlay damage"
-                style={`left: ${damageLeft}%; width: ${damageWidth}%; opacity: ${damageOpacity}; --pending-duration: ${reducedMotion ? 0 : pendingEaseMs}ms; --pending-ease: ${pendingEaseCurve};`}
-              ></div>
-              <div
-                class="hp-bar-overlay heal"
-                style={`left: ${healLeft}%; width: ${healWidth}%; opacity: ${healOpacity}; --pending-duration: ${reducedMotion ? 0 : pendingEaseMs}ms; --pending-ease: ${pendingEaseCurve};`}
-              ></div>
-              {#if foe.hp < foe.max_hp}
-                <div class="hp-text" data-position="outline">{foe.hp}</div>
-              {/if}
+              <div class="hp-bar-container" class:reduced={reducedMotion}>
+                <div
+                  class="hp-bar-fill"
+                  style="width: {hpPercent}%;
+                         background: {hpFraction <= 0.3 ? 'linear-gradient(90deg, #ff4444, #ff6666)' : 'linear-gradient(90deg, #44ffff, #66dddd)'}"
+                ></div>
+                <div
+                  class="hp-bar-overlay damage"
+                  style={`left: ${damageLeft}%; width: ${damageWidth}%; opacity: ${damageOpacity}; --pending-duration: ${reducedMotion ? 0 : pendingEaseMs}ms; --pending-ease: ${pendingEaseCurve};`}
+                ></div>
+                <div
+                  class="hp-bar-overlay heal"
+                  style={`left: ${healLeft}%; width: ${healWidth}%; opacity: ${healOpacity}; --pending-duration: ${reducedMotion ? 0 : pendingEaseMs}ms; --pending-ease: ${pendingEaseCurve};`}
+                ></div>
+                {#if foe.hp < foe.max_hp}
+                  <div class="hp-text" data-position="outline">{foe.hp}</div>
+                {/if}
+              </div>
             </div>
           </div>
           
@@ -755,29 +757,31 @@
                       {@const damageOpacity = damageWidth > 0 ? 0.9 : 0}
                       {@const healOpacity = healWidth > 0 ? 0.9 : 0}
                       <div class="summon-hp-bar">
-                        <div class="hp-bar-container" class:reduced={reducedMotion}>
+                        <div class="hp-bar-wrapper">
                           {#if Number(summon?.shields || 0) > 0 && Number(summon?.max_hp || 0) > 0}
                             <div
                               class="overheal-fill"
                               style={`width: calc(${Math.max(0, Math.min(100, (Number(summon.shields || 0) / Math.max(1, Number(summon.max_hp || 0))) * 100))}% + 5px); left: -5px;`}
                             ></div>
                           {/if}
-                          <div
-                            class="hp-bar-fill"
-                            style="width: {hpPercent}%;
-                                   background: {hpFraction <= 0.3 ? 'linear-gradient(90deg, #ff4444, #ff6666)' : 'linear-gradient(90deg, #44ffff, #66dddd)'}"
-                          ></div>
-                          <div
-                            class="hp-bar-overlay damage"
-                            style={`left: ${damageLeft}%; width: ${damageWidth}%; opacity: ${damageOpacity}; --pending-duration: ${reducedMotion ? 0 : pendingEaseMs}ms; --pending-ease: ${pendingEaseCurve};`}
-                          ></div>
-                          <div
-                            class="hp-bar-overlay heal"
-                            style={`left: ${healLeft}%; width: ${healWidth}%; opacity: ${healOpacity}; --pending-duration: ${reducedMotion ? 0 : pendingEaseMs}ms; --pending-ease: ${pendingEaseCurve};`}
-                          ></div>
-                          {#if summon.hp < summon.max_hp}
-                            <div class="hp-text" data-position="outline">{summon.hp}</div>
-                          {/if}
+                          <div class="hp-bar-container" class:reduced={reducedMotion}>
+                            <div
+                              class="hp-bar-fill"
+                              style="width: {hpPercent}%;
+                                     background: {hpFraction <= 0.3 ? 'linear-gradient(90deg, #ff4444, #ff6666)' : 'linear-gradient(90deg, #44ffff, #66dddd)'}"
+                            ></div>
+                            <div
+                              class="hp-bar-overlay damage"
+                              style={`left: ${damageLeft}%; width: ${damageWidth}%; opacity: ${damageOpacity}; --pending-duration: ${reducedMotion ? 0 : pendingEaseMs}ms; --pending-ease: ${pendingEaseCurve};`}
+                            ></div>
+                            <div
+                              class="hp-bar-overlay heal"
+                              style={`left: ${healLeft}%; width: ${healWidth}%; opacity: ${healOpacity}; --pending-duration: ${reducedMotion ? 0 : pendingEaseMs}ms; --pending-ease: ${pendingEaseCurve};`}
+                            ></div>
+                            {#if summon.hp < summon.max_hp}
+                              <div class="hp-text" data-position="outline">{summon.hp}</div>
+                            {/if}
+                          </div>
                         </div>
                       </div>
                     {/if}
@@ -843,29 +847,31 @@
                     {@const damageOpacity = damageWidth > 0 ? 0.9 : 0}
                     {@const healOpacity = healWidth > 0 ? 0.9 : 0}
                     <div class="summon-hp-bar">
-                      <div class="hp-bar-container" class:reduced={reducedMotion}>
+                      <div class="hp-bar-wrapper">
                         {#if Number(summon?.shields || 0) > 0 && Number(summon?.max_hp || 0) > 0}
                           <div
                             class="overheal-fill"
                             style={`width: calc(${Math.max(0, Math.min(100, (Number(summon.shields || 0) / Math.max(1, Number(summon.max_hp || 0))) * 100))}% + 5px); left: -5px;`}
                           ></div>
                         {/if}
-                        <div
-                          class="hp-bar-fill"
-                          style="width: {hpPercent}%;
-                                 background: {hpFraction <= 0.3 ? 'linear-gradient(90deg, #ff4444, #ff6666)' : 'linear-gradient(90deg, #44ffff, #66dddd)'}"
-                        ></div>
-                        <div
-                          class="hp-bar-overlay damage"
-                          style={`left: ${damageLeft}%; width: ${damageWidth}%; opacity: ${damageOpacity}; --pending-duration: ${reducedMotion ? 0 : pendingEaseMs}ms; --pending-ease: ${pendingEaseCurve};`}
-                        ></div>
-                        <div
-                          class="hp-bar-overlay heal"
-                          style={`left: ${healLeft}%; width: ${healWidth}%; opacity: ${healOpacity}; --pending-duration: ${reducedMotion ? 0 : pendingEaseMs}ms; --pending-ease: ${pendingEaseCurve};`}
-                        ></div>
-                        {#if summon.hp < summon.max_hp}
-                          <div class="hp-text" data-position="outline">{summon.hp}</div>
-                        {/if}
+                        <div class="hp-bar-container" class:reduced={reducedMotion}>
+                          <div
+                            class="hp-bar-fill"
+                            style="width: {hpPercent}%;
+                                   background: {hpFraction <= 0.3 ? 'linear-gradient(90deg, #ff4444, #ff6666)' : 'linear-gradient(90deg, #44ffff, #66dddd)'}"
+                          ></div>
+                          <div
+                            class="hp-bar-overlay damage"
+                            style={`left: ${damageLeft}%; width: ${damageWidth}%; opacity: ${damageOpacity}; --pending-duration: ${reducedMotion ? 0 : pendingEaseMs}ms; --pending-ease: ${pendingEaseCurve};`}
+                          ></div>
+                          <div
+                            class="hp-bar-overlay heal"
+                            style={`left: ${healLeft}%; width: ${healWidth}%; opacity: ${healOpacity}; --pending-duration: ${reducedMotion ? 0 : pendingEaseMs}ms; --pending-ease: ${pendingEaseCurve};`}
+                          ></div>
+                          {#if summon.hp < summon.max_hp}
+                            <div class="hp-text" data-position="outline">{summon.hp}</div>
+                          {/if}
+                        </div>
                       </div>
                     </div>
                   {/if}
@@ -900,29 +906,31 @@
           {@const damageOpacity = damageWidth > 0 ? 0.9 : 0}
           {@const healOpacity = healWidth > 0 ? 0.9 : 0}
           <div class="party-hp-bar">
-            <div class="hp-bar-container" class:reduced={reducedMotion}>
+            <div class="hp-bar-wrapper">
               {#if Number(member?.shields || 0) > 0 && Number(member?.max_hp || 0) > 0}
                 <div
                   class="overheal-fill"
                   style={`width: calc(${Math.max(0, Math.min(100, (Number(member.shields || 0) / Math.max(1, Number(member.max_hp || 0))) * 100))}% + 5px); left: -5px;`}
                 ></div>
               {/if}
-              <div
-                class="hp-bar-fill"
-                style="width: {hpPercent}%;
-                       background: {hpFraction <= 0.3 ? 'linear-gradient(90deg, #ff4444, #ff6666)' : 'linear-gradient(90deg, #44ffff, #66dddd)'}"
-              ></div>
-              <div
-                class="hp-bar-overlay damage"
-                style={`left: ${damageLeft}%; width: ${damageWidth}%; opacity: ${damageOpacity}; --pending-duration: ${reducedMotion ? 0 : pendingEaseMs}ms; --pending-ease: ${pendingEaseCurve};`}
-              ></div>
-              <div
-                class="hp-bar-overlay heal"
-                style={`left: ${healLeft}%; width: ${healWidth}%; opacity: ${healOpacity}; --pending-duration: ${reducedMotion ? 0 : pendingEaseMs}ms; --pending-ease: ${pendingEaseCurve};`}
-              ></div>
-              {#if member.hp < member.max_hp}
-                <div class="hp-text" data-position="outline">{member.hp}</div>
-              {/if}
+              <div class="hp-bar-container" class:reduced={reducedMotion}>
+                <div
+                  class="hp-bar-fill"
+                  style="width: {hpPercent}%;
+                         background: {hpFraction <= 0.3 ? 'linear-gradient(90deg, #ff4444, #ff6666)' : 'linear-gradient(90deg, #44ffff, #66dddd)'}"
+                ></div>
+                <div
+                  class="hp-bar-overlay damage"
+                  style={`left: ${damageLeft}%; width: ${damageWidth}%; opacity: ${damageOpacity}; --pending-duration: ${reducedMotion ? 0 : pendingEaseMs}ms; --pending-ease: ${pendingEaseCurve};`}
+                ></div>
+                <div
+                  class="hp-bar-overlay heal"
+                  style={`left: ${healLeft}%; width: ${healWidth}%; opacity: ${healOpacity}; --pending-duration: ${reducedMotion ? 0 : pendingEaseMs}ms; --pending-ease: ${pendingEaseCurve};`}
+                ></div>
+                {#if member.hp < member.max_hp}
+                  <div class="hp-text" data-position="outline">{member.hp}</div>
+                {/if}
+              </div>
             </div>
           </div>
         {/if}
@@ -1030,6 +1038,12 @@
   }
 
   /* HP bars */
+  .hp-bar-wrapper {
+    position: relative;
+    width: 100%;
+    height: 10px; /* match container height for proper anchoring */
+  }
+
   .hp-bar-container {
     position: relative;
     width: 100%;
@@ -1052,8 +1066,8 @@
   .overheal-fill {
     position: absolute;
     left: 0;
-    top: -1px; /* slight upward offset */
-    height: calc(100% + 2px);
+    top: -1px; /* nudged up by 1px for alignment */
+    height: calc(100% + 4px);
     background: rgba(255, 255, 255, 0.92);
     transition: width 0.3s linear;
     pointer-events: none;
