@@ -91,6 +91,62 @@ const ELEMENT_COLORS = {
   generic: '#cccccc'
 };
 
+const DAMAGE_TYPE_ALIASES = {
+  none: 'generic',
+  neutral: 'generic',
+  holy: 'light',
+  shadow: 'dark',
+  lightning: 'lightning',
+  electric: 'lightning',
+  thunder: 'lightning',
+  frost: 'ice',
+  ice: 'ice',
+  water: 'ice',
+  flame: 'fire',
+  fire: 'fire',
+  wind: 'wind',
+  air: 'wind',
+};
+
+function normalizeDamageTypeId(typeId) {
+  if (!typeId) return 'generic';
+  const lowered = String(typeId).trim().toLowerCase();
+  if (!lowered) return 'generic';
+  return DAMAGE_TYPE_ALIASES[lowered] || lowered;
+}
+
+function clampByte(value) {
+  return Math.min(255, Math.max(0, Math.round(value)));
+}
+
+function mixChannel(channel, target, ratio) {
+  return clampByte(channel + (target - channel) * ratio);
+}
+
+function shiftColor(hex, ratio) {
+  if (typeof hex !== 'string') return '#cccccc';
+  const normalized = hex.replace('#', '');
+  if (!/^[0-9a-fA-F]{6}$/.test(normalized)) {
+    return '#cccccc';
+  }
+  const value = parseInt(normalized, 16);
+  let r = (value >> 16) & 0xff;
+  let g = (value >> 8) & 0xff;
+  let b = value & 0xff;
+  if (ratio > 0) {
+    r = mixChannel(r, 255, ratio);
+    g = mixChannel(g, 255, ratio);
+    b = mixChannel(b, 255, ratio);
+  } else if (ratio < 0) {
+    const amount = Math.abs(ratio);
+    r = mixChannel(r, 0, amount);
+    g = mixChannel(g, 0, amount);
+    b = mixChannel(b, 0, amount);
+  }
+  const combined = (r << 16) | (g << 8) | b;
+  return `#${combined.toString(16).padStart(6, '0')}`;
+}
+
 // Parse character assets into organized structure
 const characterAssets = {};
 const fallbackAssets = Object.values(fallbackModules);
@@ -254,6 +310,31 @@ export function getElementIcon(element) {
 
 export function getElementColor(element) {
   return ELEMENT_COLORS[(element || '').toLowerCase()] || '#aaa';
+}
+
+export function getDamageTypeIcon(typeId) {
+  const key = normalizeDamageTypeId(typeId);
+  return ELEMENT_ICONS[key] || Circle;
+}
+
+export function getDamageTypeColor(typeId, options = {}) {
+  const key = normalizeDamageTypeId(typeId);
+  const base = ELEMENT_COLORS[key] || '#cccccc';
+  const variant = (options.variant || '').toLowerCase();
+  if (variant === 'heal' || variant === 'hot') {
+    return shiftColor(base, 0.4);
+  }
+  if (variant === 'dot') {
+    return shiftColor(base, -0.25);
+  }
+  return base;
+}
+
+export function getDamageTypeVisual(typeId, options = {}) {
+  return {
+    icon: getDamageTypeIcon(typeId),
+    color: getDamageTypeColor(typeId, options)
+  };
 }
 
 // Build DoT assets map: { fire: [urls...], ice: [...], ... }

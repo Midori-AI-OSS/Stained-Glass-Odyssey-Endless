@@ -66,3 +66,10 @@ watches incoming battle log lines, maps keywords like `damage`, `burn`,
 component so the matching animation plays. `vite.config.js` copies the
 `effekseer.wasm` runtime and marks `.efkefc` files as static assets so the
 player can fetch them at runtime.
+
+`BattleEventFloaters.svelte` listens to the incremental `recent_events`
+stream from battle snapshots. It filters damage and healing payloads,
+derives damage-type visuals through `assetLoader.js`, and spawns floating
+badges that drift upward over the polling cadence. The overlay removes each
+badge after its animation (or a timer when Reduced Motion is enabled) so
+the DOM stays bounded.
