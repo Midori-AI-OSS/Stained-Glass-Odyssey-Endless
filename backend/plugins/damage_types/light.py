@@ -55,23 +55,13 @@ class Light(DamageTypeBase):
                 mgr = EffectManager(ally)
                 ally.effect_manager = mgr
 
-            # Remove all DoTs including Shadow Siphon
+            # Remove all DoTs from the ally and their effect manager
             for dot in list(mgr.dots):
                 try:
                     mgr.dots.remove(dot)
                     ally.dots.remove(dot.id)
                 except ValueError:
                     pass
-
-            # Ensure Shadow Siphon is completely removed
-            from plugins.damage_effects import SHADOW_SIPHON_ID
-            try:
-                if SHADOW_SIPHON_ID in ally.dots:
-                    ally.dots.remove(SHADOW_SIPHON_ID)
-                # Also remove from effect manager dots by id
-                mgr.dots = [d for d in mgr.dots if getattr(d, "id", "") != SHADOW_SIPHON_ID]
-            except (AttributeError, ValueError):
-                pass
 
             missing = ally.max_hp - ally.hp
             if missing > 0:
@@ -101,7 +91,7 @@ class Light(DamageTypeBase):
     @classmethod
     def get_ultimate_description(cls) -> str:
         return (
-            "Removes all DoTs from allies—including Shadow Siphon—then heals them to full. "
-            "Enemies receive a 25% defense debuff for 10 turns and a 'light_ultimate' event is emitted. "
-            "Healing and debuff application steps respect TURN_PACING via the pacing helper."
+            "Removes all DoTs from allies, then heals them to full. Enemies receive a 25% defense "
+            "debuff for 10 turns and a 'light_ultimate' event is emitted. Healing and debuff "
+            "application steps respect TURN_PACING via the pacing helper."
         )
