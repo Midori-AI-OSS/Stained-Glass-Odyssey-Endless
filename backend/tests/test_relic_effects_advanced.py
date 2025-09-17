@@ -14,12 +14,12 @@ from plugins.players._base import PlayerBase
 
 
 class DummyPlayer(Stats):
-    def use_ultimate(self) -> bool:
+    async def use_ultimate(self) -> bool:
         if not self.ultimate_ready:
             return False
         self.ultimate_charge = 0
         self.ultimate_ready = False
-        BUS.emit("ultimate_used", self)
+        await BUS.emit_async("ultimate_used", self)
         return True
 
 
@@ -76,7 +76,8 @@ async def test_frost_sigil_stacks(monkeypatch):
     assert b.hp == 100 - int(100 * 0.05) * 2
 
 
-def test_killer_instinct_grants_extra_turn():
+@pytest.mark.asyncio
+async def test_killer_instinct_grants_extra_turn():
     event_bus_module.bus._subs.clear()
     party = Party()
     a = DummyPlayer()
@@ -87,7 +88,7 @@ def test_killer_instinct_grants_extra_turn():
     apply_relics(party)
     base = a.atk
     a.add_ultimate_charge(15)
-    a.use_ultimate()
+    await a.use_ultimate()
     assert a.atk > base
     turns: list[PlayerBase] = []
     BUS.subscribe("extra_turn", lambda m: turns.append(m))

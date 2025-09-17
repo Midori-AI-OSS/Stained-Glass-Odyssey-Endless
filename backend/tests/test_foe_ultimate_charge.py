@@ -1,4 +1,6 @@
 
+import pytest
+
 from autofighter.stats import BUS
 from autofighter.stats import Stats
 from plugins.damage_types.generic import Generic
@@ -6,7 +8,8 @@ from plugins.foes._base import FoeBase
 from plugins.players._base import PlayerBase
 
 
-def test_foe_ultimate_charge_consumption():
+@pytest.mark.asyncio
+async def test_foe_ultimate_charge_consumption():
     """Test that foes can properly gain and consume ultimate charge."""
     # Use Stats with plugin_type to avoid import issues
     foe = Stats(damage_type=Generic())
@@ -31,13 +34,14 @@ def test_foe_ultimate_charge_consumption():
     assert foe.ultimate_ready is True
 
     # Use ultimate and verify charge is consumed
-    result = foe.use_ultimate()
+    result = await foe.use_ultimate()
     assert result is True
     assert foe.ultimate_charge == 0
     assert foe.ultimate_ready is False
 
 
-def test_foe_ultimate_ready_behavior():
+@pytest.mark.asyncio
+async def test_foe_ultimate_ready_behavior():
     """Test that foe ultimate behaves the same as player ultimate."""
     # Create foe and player using Stats
     foe = Stats(damage_type=Generic())
@@ -60,15 +64,16 @@ def test_foe_ultimate_ready_behavior():
     assert foe.ultimate_charge == player.ultimate_charge == 15
 
     # Use ultimates for both
-    foe_result = foe.use_ultimate()
-    player_result = player.use_ultimate()
+    foe_result = await foe.use_ultimate()
+    player_result = await player.use_ultimate()
 
     assert foe_result == player_result is True
     assert foe.ultimate_charge == player.ultimate_charge == 0
     assert foe.ultimate_ready == player.ultimate_ready is False
 
 
-def test_foe_ultimate_events():
+@pytest.mark.asyncio
+async def test_foe_ultimate_events():
     """Test that foe ultimate emits the correct events."""
     foe = Stats(damage_type=Generic())
     foe.plugin_type = "foe"
@@ -84,7 +89,7 @@ def test_foe_ultimate_events():
 
     try:
         # Use ultimate and check event was emitted
-        result = foe.use_ultimate()
+        result = await foe.use_ultimate()
         assert result is True
         assert len(events) == 1
         assert events[0] is foe
@@ -92,21 +97,22 @@ def test_foe_ultimate_events():
         BUS.unsubscribe("ultimate_used", track_event)
 
 
-def test_foe_cannot_use_ultimate_when_not_ready():
+@pytest.mark.asyncio
+async def test_foe_cannot_use_ultimate_when_not_ready():
     """Test that foe cannot use ultimate when not ready."""
     foe = Stats(damage_type=Generic())
     foe.plugin_type = "foe"
     foe.use_ultimate = FoeBase.use_ultimate.__get__(foe, Stats)
 
     # Try to use ultimate without enough charge
-    result = foe.use_ultimate()
+    result = await foe.use_ultimate()
     assert result is False
     assert foe.ultimate_charge == 0
     assert foe.ultimate_ready is False
 
     # Add partial charge and try again
     foe.add_ultimate_charge(10)
-    result = foe.use_ultimate()
+    result = await foe.use_ultimate()
     assert result is False
     assert foe.ultimate_charge == 10  # Should not change
     assert foe.ultimate_ready is False

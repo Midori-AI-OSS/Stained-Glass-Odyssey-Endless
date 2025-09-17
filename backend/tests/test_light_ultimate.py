@@ -8,12 +8,12 @@ from plugins.dots.bleed import Bleed
 
 
 class DummyPlayer(Stats):
-    def use_ultimate(self) -> bool:  # pragma: no cover
+    async def use_ultimate(self) -> bool:  # pragma: no cover
         if not self.ultimate_ready:
             return False
         self.ultimate_charge = 0
         self.ultimate_ready = False
-        BUS.emit("ultimate_used", self)
+        await BUS.emit_async("ultimate_used", self)
         return True
 
 

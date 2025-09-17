@@ -20,12 +20,13 @@ class Generic(DamageTypeBase):
         from autofighter.rooms.battle.pacing import YIELD_MULTIPLIER
         from autofighter.rooms.battle.pacing import pace_sleep
 
-        if not getattr(actor, "use_ultimate", lambda: False)():
+        if not await self.consume_ultimate(actor):
             return False
 
         from autofighter.stats import BUS  # Import here to avoid circular imports
 
         registry = PassiveRegistry()
+        old_luna_cls = registry._registry.get("luna_lunar_reservoir")
         target_pool = (
             [a for a in allies if a.hp > 0]
             if getattr(actor, "plugin_type", "") == "foe"
@@ -64,8 +65,11 @@ class Generic(DamageTypeBase):
             )
         from plugins.passives.luna_lunar_reservoir import LunaLunarReservoir
 
-        if LunaLunarReservoir is not _LLR_old:
-            _LLR_old.add_charge(actor, amount=64)
+        if old_luna_cls and old_luna_cls is not LunaLunarReservoir:
+            try:
+                old_luna_cls.add_charge(actor, amount=64)
+            except Exception:
+                pass
         LunaLunarReservoir.add_charge(actor, amount=64)
         return True
 

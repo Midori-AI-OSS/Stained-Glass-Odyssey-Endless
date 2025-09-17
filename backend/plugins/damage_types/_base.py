@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import inspect
 import logging
 from typing import TYPE_CHECKING
 
@@ -204,7 +205,20 @@ class DamageTypeBase:
         it with ``super().ultimate(...)`` to handle charge consumption.
         """
 
-        return getattr(actor, "use_ultimate", lambda: False)()
+        return await self.consume_ultimate(actor)
+
+    @staticmethod
+    async def consume_ultimate(actor: "Stats") -> bool:
+        """Consume the actor's ultimate charge if available."""
+
+        use_ultimate = getattr(actor, "use_ultimate", None)
+        if use_ultimate is None:
+            return False
+
+        result = use_ultimate()
+        if inspect.isawaitable(result):
+            return await result
+        return bool(result)
 
     def create_dot(self, damage: float, source: Stats) -> DamageOverTime | None:
         """Return a DoT effect based on ``damage`` or ``None`` to skip."""

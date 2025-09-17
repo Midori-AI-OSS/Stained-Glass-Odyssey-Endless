@@ -14,12 +14,12 @@ from plugins.players._base import PlayerBase
 
 
 class DummyPlayer(Stats):
-    def use_ultimate(self) -> bool:
+    async def use_ultimate(self) -> bool:
         if not self.ultimate_ready:
             return False
         self.ultimate_charge = 0
         self.ultimate_ready = False
-        BUS.emit("ultimate_used", self)
+        await BUS.emit_async("ultimate_used", self)
         return True
 
 
@@ -362,7 +362,7 @@ def test_arcane_flask_shields():
 
     async def fire():
         a.add_ultimate_charge(15)
-        a.use_ultimate()
+        await a.use_ultimate()
         await asyncio.sleep(0)
 
     loop.run_until_complete(fire())

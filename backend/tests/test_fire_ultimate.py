@@ -8,12 +8,12 @@ from plugins.damage_types.fire import Fire
 
 
 class Actor(Stats):
-    def use_ultimate(self) -> bool:
+    async def use_ultimate(self) -> bool:
         if not self.ultimate_ready:
             return False
         self.ultimate_charge = 0
         self.ultimate_ready = False
-        BUS.emit("ultimate_used", self)
+        await BUS.emit_async("ultimate_used", self)
         return True
 
 
@@ -25,7 +25,7 @@ async def test_fire_ultimate_stack_accumulation_and_drain():
     actor.hp = actor.max_hp
     actor.ultimate_charge = 15
     actor.ultimate_ready = True
-    actor.use_ultimate()
+    await actor.use_ultimate()
     assert actor.damage_type._drain_stacks == 1
 
     BUS.emit("turn_start", actor)
@@ -35,7 +35,7 @@ async def test_fire_ultimate_stack_accumulation_and_drain():
 
     actor.ultimate_charge = 15
     actor.ultimate_ready = True
-    actor.use_ultimate()
+    await actor.use_ultimate()
     assert actor.damage_type._drain_stacks == 2
 
     BUS.emit("turn_start", actor)
@@ -53,7 +53,7 @@ async def test_fire_ultimate_resets_on_battle_end():
     actor.id = "actor"
     actor.ultimate_charge = 15
     actor.ultimate_ready = True
-    actor.use_ultimate()
+    await actor.use_ultimate()
     assert actor.damage_type._drain_stacks == 1
 
     BUS.emit("battle_end", actor)
@@ -77,7 +77,7 @@ async def test_fire_ultimate_damage_multiplier():
 
     attacker.ultimate_charge = 15
     attacker.ultimate_ready = True
-    attacker.use_ultimate()
+    await attacker.use_ultimate()
 
     target2 = Stats()
     target2._base_defense = 0

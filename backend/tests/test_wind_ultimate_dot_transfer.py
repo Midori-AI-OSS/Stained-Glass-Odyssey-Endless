@@ -9,12 +9,12 @@ from plugins.damage_types.wind import Wind
 from plugins.dots.blazing_torment import BlazingTorment
 
 
-def _use_ultimate(self):
+async def _use_ultimate(self):
     if not getattr(self, "ultimate_ready", False):
         return False
     self.ultimate_charge = 0
     self.ultimate_ready = False
-    BUS.emit("ultimate_used", self)
+    await BUS.emit_async("ultimate_used", self)
     return True
 
 
@@ -53,7 +53,7 @@ async def test_wind_ultimate_transfers_from_foes():
     BUS.emit("battle_start", foe2)
 
     player.add_ultimate_charge(15)
-    assert player.use_ultimate()
+    assert await player.use_ultimate()
 
     BUS.emit("hit_landed", player, foe1, 0, "attack")
     await asyncio.sleep(0.01)
@@ -102,7 +102,7 @@ async def test_wind_foe_ultimate_transfers_from_allies():
     BUS.emit("battle_start", p2)
 
     foe.add_ultimate_charge(15)
-    assert foe.use_ultimate()
+    assert await foe.use_ultimate()
 
     BUS.emit("hit_landed", foe, p1, 0, "attack")
     await asyncio.sleep(0.01)

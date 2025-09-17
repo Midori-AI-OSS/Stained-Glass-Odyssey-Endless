@@ -175,7 +175,7 @@ async def test_critical_transfer_moves_stacks():
     setattr(b, "_critical_boost", cb_b)
     base_atk = a.atk
     a.add_ultimate_charge(15)
-    a.use_ultimate()
+    await a.use_ultimate()
     await asyncio.sleep(0)
     assert getattr(a, "_critical_boost").stacks == 3
     assert a.atk == int(base_atk * 1.12)

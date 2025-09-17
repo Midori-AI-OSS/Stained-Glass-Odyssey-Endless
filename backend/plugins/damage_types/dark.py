@@ -99,7 +99,7 @@ class Dark(DamageTypeBase):
         from autofighter.rooms.battle.pacing import YIELD_MULTIPLIER
         from autofighter.rooms.battle.pacing import pace_sleep
 
-        if not getattr(actor, "use_ultimate", lambda: False)():
+        if not await self.consume_ultimate(actor):
             return False
         if not enemies:
             return False

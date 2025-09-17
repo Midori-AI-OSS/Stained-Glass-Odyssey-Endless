@@ -21,7 +21,7 @@ class Ice(DamageTypeBase):
         from autofighter.rooms.battle.pacing import YIELD_MULTIPLIER
         from autofighter.rooms.battle.pacing import pace_sleep
 
-        if not getattr(user, "use_ultimate", lambda: False)():
+        if not await self.consume_ultimate(user):
             return False
         base = user.atk
         for _ in range(6):
