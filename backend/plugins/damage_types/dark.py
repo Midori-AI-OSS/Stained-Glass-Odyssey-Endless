@@ -40,9 +40,9 @@ class Dark(DamageTypeBase):
             variance = random.uniform(0.99, 1.01)
             bonus = 1.0 + (total_drained * 0.0001 * variance)
             setattr(actor, "_pending_dark_bonus", bonus)
+            self._schedule_bonus_cleanup(actor)
         else:
-            if hasattr(actor, "_pending_dark_bonus"):
-                delattr(actor, "_pending_dark_bonus")
+            self._clear_pending_bonus(actor)
 
         return True
 
@@ -50,11 +50,38 @@ class Dark(DamageTypeBase):
         bonus = getattr(attacker, "_pending_dark_bonus", None)
         if isinstance(bonus, (int, float)) and bonus > 0:
             damage *= bonus
+        return damage
+
+    def _clear_pending_bonus(self, actor) -> None:
+        self._remove_bonus_cleanup_listeners(actor)
+        if hasattr(actor, "_pending_dark_bonus"):
             try:
-                delattr(attacker, "_pending_dark_bonus")
+                delattr(actor, "_pending_dark_bonus")
             except AttributeError:
                 pass
-        return damage
+
+    def _remove_bonus_cleanup_listeners(self, actor) -> None:
+        listeners = getattr(actor, "_pending_dark_cleanup", None)
+        if listeners:
+            for event, callback in listeners:
+                try:
+                    BUS.unsubscribe(event, callback)
+                except Exception:
+                    pass
+            delattr(actor, "_pending_dark_cleanup")
+
+    def _schedule_bonus_cleanup(self, actor) -> None:
+        self._remove_bonus_cleanup_listeners(actor)
+
+        def _cleanup(event_actor, *_args):
+            if event_actor is actor:
+                self._clear_pending_bonus(actor)
+
+        listeners = []
+        for event in ("action_used", "ultimate_completed", "ultimate_failed"):
+            BUS.subscribe(event, _cleanup)
+            listeners.append((event, _cleanup))
+        setattr(actor, "_pending_dark_cleanup", listeners)
 
     # Per-stack damage multiplier for Darkness ultimate.
     # Previously 1.75, which caused extreme exponential scaling.
