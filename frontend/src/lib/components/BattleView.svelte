@@ -10,6 +10,7 @@
   import StatusIcons from '../battle/StatusIcons.svelte';
   import ActionQueue from '../battle/ActionQueue.svelte';
   import BattleEventFloaters from './BattleEventFloaters.svelte';
+  import BattleTargetingOverlay from './BattleTargetingOverlay.svelte';
 
   export let runId = '';
   export let framerate = 60;
@@ -25,12 +26,26 @@
   let queue = [];
   let serverShowActionValues = false;
   let combatants = [];
+  let activeId = null;
+  let activeTargetId = null;
+  let statusPhase = null;
+  let statusTimeline = [];
+  let recentEvents = [];
+  let statusChipLifetime = 1800;
+  const statusEntryMap = new Map();
+  const statusRemovalTimers = new Map();
+  let combatantById = new Map();
   $: combatants = [
     ...(party || []),
     ...((party || []).flatMap(p => p?.summons || [])),
     ...(foes || []),
     ...((foes || []).flatMap(f => f?.summons || [])),
   ];
+  $: combatantById = new Map(
+    (combatants || [])
+      .filter(entry => entry && entry.id !== undefined && entry.id !== null)
+      .map(entry => [String(entry.id), entry])
+  );
   $: foeCount = (foes || []).length;
   $: displayActionValues = Boolean(showActionValues || serverShowActionValues);
   function getFoeSizePx(count) {
@@ -63,12 +78,22 @@
     recentEventCounts = new Map();
     lastRecentEventTokens = [];
     floaterFeed = [];
+    recentEvents = [];
+    activeId = null;
+    activeTargetId = null;
+    statusPhase = null;
+    clearStatusTimeline();
     lastRunId = runId;
   }
   $: if (!active) {
     floaterFeed = [];
     recentEventCounts = new Map();
     lastRecentEventTokens = [];
+    recentEvents = [];
+    activeId = null;
+    activeTargetId = null;
+    statusPhase = null;
+    clearStatusTimeline();
   }
 
   // Svelte action: register a DOM node as an anchor for a given id
@@ -156,6 +181,7 @@
   // Example: 30fps -> 3/s, 60fps -> 6/s, 120fps -> 12/s
   let pollDelay = 10000 / framerate;
   $: pollDelay = 10000 / framerate;
+  $: statusChipLifetime = reducedMotion ? Math.max(900, pollDelay * 6) : Math.max(1600, pollDelay * 10);
   let bg = getRandomBackground();
 
   function logToEvent(line) {
@@ -352,6 +378,144 @@
 
   function percentFromFraction(fraction) {
     return Math.max(0, Math.min(100, Number(fraction || 0) * 100));
+  }
+
+  function normalizeId(value) {
+    if (value === undefined || value === null) return '';
+    try {
+      return String(value);
+    } catch {
+      return '';
+    }
+  }
+
+  function resolveCombatantNameById(id) {
+    const key = normalizeId(id);
+    if (!key) return '';
+    const fighter = combatantById.get(key);
+    if (!fighter) return '';
+    const raw = fighter.name || fighter.id || '';
+    return typeof raw === 'string' ? raw.replace(/[_-]+/g, ' ') : String(raw);
+  }
+
+  function resolveStatusLabel(phase) {
+    const key = String(phase || '').toLowerCase();
+    if (!key) return '';
+    if (key === 'hot') return 'HoTs';
+    if (key === 'dot') return 'DoTs';
+    return key.charAt(0).toUpperCase() + key.slice(1);
+  }
+
+  function resolveStatusColor(phase) {
+    const key = String(phase || '').toLowerCase();
+    if (key === 'hot') return 'rgba(66, 214, 163, 0.95)';
+    if (key === 'dot') return 'rgba(255, 107, 107, 0.95)';
+    return 'rgba(180, 180, 196, 0.9)';
+  }
+
+  function clearStatusTimeline() {
+    for (const timer of statusRemovalTimers.values()) {
+      clearTimeout(timer);
+    }
+    statusRemovalTimers.clear();
+    statusEntryMap.clear();
+    statusTimeline = [];
+  }
+
+  function scheduleStatusRemoval(key) {
+    if (!key) return;
+    if (statusRemovalTimers.has(key)) {
+      clearTimeout(statusRemovalTimers.get(key));
+      statusRemovalTimers.delete(key);
+    }
+    const delay = Math.max(0, Number(statusChipLifetime) || 0);
+    if (!delay) {
+      statusEntryMap.delete(key);
+      statusTimeline = Array.from(statusEntryMap.values()).sort((a, b) => a.createdAt - b.createdAt);
+      return;
+    }
+    const handle = setTimeout(() => {
+      statusRemovalTimers.delete(key);
+      statusEntryMap.delete(key);
+      statusTimeline = Array.from(statusEntryMap.values()).sort((a, b) => a.createdAt - b.createdAt);
+    }, delay);
+    statusRemovalTimers.set(key, handle);
+  }
+
+  function updateStatusTimeline(phase) {
+    if (!phase || typeof phase !== 'object') return;
+    const normalizedPhase = String(phase.phase || '').toLowerCase();
+    const label = resolveStatusLabel(normalizedPhase);
+    const orderValue = Number.isFinite(Number(phase.order)) ? Number(phase.order) : 0;
+    const targetKey = normalizeId(phase.target_id);
+    const entryKey = `${targetKey}::${normalizedPhase}::${orderValue}`;
+    if (!entryKey.trim()) return;
+
+    const state = String(phase.state || 'start').toLowerCase();
+
+    if (statusRemovalTimers.has(entryKey) && state !== 'end') {
+      clearTimeout(statusRemovalTimers.get(entryKey));
+      statusRemovalTimers.delete(entryKey);
+    }
+
+    const existing = statusEntryMap.get(entryKey);
+    const entry = existing || { key: entryKey, createdAt: Date.now() };
+
+    entry.phase = normalizedPhase;
+    entry.label = label || (normalizedPhase ? normalizedPhase.toUpperCase() : '');
+    entry.state = state;
+    entry.effectCount = Number.isFinite(Number(phase.effect_count)) ? Number(phase.effect_count) : 0;
+    entry.expiredCount = Number.isFinite(Number(phase.expired_count)) ? Number(phase.expired_count) : 0;
+    entry.hasEffects = Boolean(phase.has_effects);
+    entry.targetId = targetKey || null;
+    entry.targetName = resolveCombatantNameById(targetKey);
+    entry.order = orderValue;
+    entry.color = resolveStatusColor(normalizedPhase);
+    entry.updatedAt = Date.now();
+
+    statusEntryMap.set(entryKey, entry);
+
+    let entries = Array.from(statusEntryMap.values()).sort((a, b) => {
+      if (a.createdAt === b.createdAt) return a.order - b.order;
+      return a.createdAt - b.createdAt;
+    });
+
+    const maxEntries = 4;
+    if (entries.length > maxEntries) {
+      const trimmed = entries.slice(0, entries.length - maxEntries);
+      for (const item of trimmed) {
+        statusEntryMap.delete(item.key);
+        if (statusRemovalTimers.has(item.key)) {
+          clearTimeout(statusRemovalTimers.get(item.key));
+          statusRemovalTimers.delete(item.key);
+        }
+      }
+      entries = Array.from(statusEntryMap.values()).sort((a, b) => {
+        if (a.createdAt === b.createdAt) return a.order - b.order;
+        return a.createdAt - b.createdAt;
+      });
+    }
+
+    statusTimeline = entries;
+
+    if (entry.state === 'end') {
+      scheduleStatusRemoval(entryKey);
+    }
+  }
+
+  function describeStatusChip(entry) {
+    if (!entry) return '';
+    if (entry.state === 'start') {
+      if (entry.effectCount > 0) return `${entry.effectCount} active`;
+      return entry.hasEffects ? 'Processing' : 'No effects';
+    }
+    if (entry.expiredCount > 0) {
+      return `${entry.expiredCount} expired`;
+    }
+    if (entry.effectCount > 0) {
+      return `${entry.effectCount} remain`;
+    }
+    return 'Complete';
   }
 
   function recordHpSnapshot(key, hpValue, maxValue) {
@@ -603,16 +767,33 @@
         serverShowActionValues = Boolean(snap.show_action_values);
       }
 
-      if (Array.isArray(snap.log)) logs = snap.log;
-      else if (Array.isArray(snap.logs)) logs = snap.logs;
+      if ('active_id' in snap) {
+        activeId = snap.active_id ?? null;
+      }
+      if ('active_target_id' in snap) {
+        activeTargetId = snap.active_target_id ?? null;
+      }
+      if ('status_phase' in snap) {
+        const nextPhase = snap.status_phase && typeof snap.status_phase === 'object' ? { ...snap.status_phase } : null;
+        statusPhase = nextPhase;
+        if (nextPhase) updateStatusTimeline(nextPhase);
+      }
 
       if (Array.isArray(snap.recent_events)) {
+        const normalizedEvents = snap.recent_events
+          .map(event => normalizeRecentEvent(event))
+          .filter(Boolean);
+        recentEvents = normalizedEvents;
         floaterFeed = processRecentEvents(snap.recent_events);
-      } else {
+      } else if ('recent_events' in snap) {
+        recentEvents = [];
         floaterFeed = [];
         recentEventCounts = new Map();
         lastRecentEventTokens = [];
       }
+
+      if (Array.isArray(snap.log)) logs = snap.log;
+      else if (Array.isArray(snap.logs)) logs = snap.logs;
     } catch (e) {
       // Silently ignore errors to avoid spam during rapid polling
     } finally {
@@ -636,6 +817,7 @@
       clearTimeout(timer);
       timer = null;
     }
+    clearStatusTimeline();
   });
 
   // Watch active state changes
@@ -656,6 +838,7 @@
   <EnrageIndicator active={Boolean(enrage?.active)} {reducedMotion} enrageData={enrage} />
   <BattleEffects cue={effectCue} />
   <BattleEventFloaters
+    class="overlay-layer"
     events={floaterFeed}
     {reducedMotion}
     paceMs={floaterDuration}
@@ -664,6 +847,28 @@
     baseOffsetY={8}
     staggerMs={220}
   />
+  <BattleTargetingOverlay
+    class="overlay-layer"
+    {activeId}
+    {activeTargetId}
+    anchors={anchors}
+    {combatants}
+    events={recentEvents}
+    {reducedMotion}
+  />
+  {#if statusTimeline.length}
+    <div class:reduced={reducedMotion} class="status-timeline overlay-layer" aria-live="polite">
+      {#each statusTimeline as chip (chip.key)}
+        <div class="timeline-chip" data-state={chip.state} style={`--chip-color:${chip.color};`}>
+          <span class="chip-phase">{chip.label}</span>
+          {#if chip.targetName}
+            <span class="chip-target">→ {chip.targetName}</span>
+          {/if}
+          <span class="chip-meta">{describeStatusChip(chip)}</span>
+        </div>
+      {/each}
+    </div>
+  {/if}
   <ActionQueue
     {queue}
     {combatants}
@@ -966,7 +1171,7 @@
     gap: 1rem;
   }
 
-  .modern-battle-field > *:not(.action-queue) {
+  .modern-battle-field > *:not(.action-queue):not(.overlay-layer) {
     position: relative;
     z-index: 1;
   }
@@ -1202,6 +1407,90 @@
     align-items: center;
     justify-content: center;
     line-height: 1;
+  }
+
+  .status-timeline {
+    position: absolute;
+    top: clamp(0.75rem, 4vh, 2.5rem);
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 0.65rem;
+    align-items: center;
+    pointer-events: none;
+    z-index: 4;
+  }
+
+  .status-timeline .timeline-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 0.85rem;
+    border-radius: 999px;
+    background: rgba(18, 18, 26, 0.78);
+    border: 1px solid var(--chip-color, rgba(255, 255, 255, 0.35));
+    color: #f4f4f6;
+    font-weight: 600;
+    font-size: 0.85rem;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+
+  .status-timeline .timeline-chip .chip-phase {
+    color: var(--chip-color, #9fc5ff);
+    letter-spacing: 0.08em;
+  }
+
+  .status-timeline .timeline-chip .chip-target {
+    font-size: 0.78rem;
+    opacity: 0.85;
+    text-transform: none;
+  }
+
+  .status-timeline .timeline-chip .chip-meta {
+    font-size: 0.75rem;
+    opacity: 0.8;
+    text-transform: none;
+  }
+
+  .status-timeline:not(.reduced) .timeline-chip {
+    animation: timeline-enter 0.28s ease-out;
+  }
+
+  .status-timeline.reduced .timeline-chip {
+    animation: none;
+  }
+
+  .status-timeline .timeline-chip[data-state='end'] {
+    background: rgba(18, 18, 26, 0.64);
+    border-color: var(--chip-color, #9fc5ff);
+    border-color: color-mix(in srgb, var(--chip-color, #9fc5ff) 65%, #ffffff 35%);
+  }
+
+  @keyframes timeline-enter {
+    from {
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @media (max-width: 900px) {
+    .status-timeline {
+      top: clamp(0.5rem, 3vh, 1.4rem);
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+
+    .status-timeline .timeline-chip {
+      font-size: 0.78rem;
+      padding: 0.35rem 0.75rem;
+    }
   }
 
   /* Summons */
