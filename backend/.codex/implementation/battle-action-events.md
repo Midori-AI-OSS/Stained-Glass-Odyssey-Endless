@@ -13,6 +13,9 @@ passive abilities:
 - `summon_removed` – emitted when a summon leaves play for any reason.
 - `summon_defeated` – emitted after a summon is killed and removed, allowing
   passives like **Menagerie Bond** to respond.
+- `target_acquired` – dispatched immediately after a combatant selects a
+  target. The acting entity and chosen target are provided so clients can
+  highlight the intended victim before damage resolves.
 
 Damage type ultimates are invoked directly from `rooms/battle/core.py` when
 `ultimate_ready` is set. Each damage type plugin is responsible for consuming

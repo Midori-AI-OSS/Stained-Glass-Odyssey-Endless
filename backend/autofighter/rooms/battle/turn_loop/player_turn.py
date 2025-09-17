@@ -79,6 +79,8 @@ async def execute_player_phase(context: TurnLoopContext) -> bool:
             if not alive_targets:
                 break
             target_index, target_foe = _select_target(alive_targets)
+            await BUS.emit_async("target_acquired", member, target_foe)
+            await pace_sleep(YIELD_MULTIPLIER)
             target_manager = context.foe_effects[target_index]
             damage_type = getattr(member, "damage_type", None)
             await member_effect.tick(target_manager)
@@ -139,6 +141,7 @@ async def execute_player_phase(context: TurnLoopContext) -> bool:
                     context.temp_rdr,
                     _EXTRA_TURNS,
                     active_id=member.id,
+                    active_target_id=getattr(target_foe, "id", None),
                     include_summon_foes=True,
                 )
                 await _pace(action_start)
@@ -269,7 +272,12 @@ async def execute_player_phase(context: TurnLoopContext) -> bool:
                 await _pace(action_start)
                 await pace_sleep(YIELD_MULTIPLIER)
                 continue
-            await finish_turn(context, member, action_start)
+            await finish_turn(
+                context,
+                member,
+                action_start,
+                active_target_id=getattr(target_foe, "id", None),
+            )
             if battle_over:
                 break
             break

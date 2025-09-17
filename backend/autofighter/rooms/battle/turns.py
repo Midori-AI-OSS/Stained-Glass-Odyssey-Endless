@@ -111,6 +111,7 @@ async def build_battle_progress_payload(
     extra_turns: MutableMapping[int, int],
     *,
     active_id: str | None,
+    active_target_id: str | None,
     include_summon_foes: bool = False,
     ended: bool | None = None,
 ) -> dict[str, Any]:
@@ -152,6 +153,7 @@ async def build_battle_progress_payload(
         "rdr": rdr,
         "action_queue": action_queue,
         "active_id": active_id,
+        "active_target_id": active_target_id,
     }
     if ended is not None:
         payload["ended"] = ended
@@ -167,6 +169,7 @@ async def push_progress_update(
     extra_turns: MutableMapping[int, int],
     *,
     active_id: str | None,
+    active_target_id: str | None = None,
     include_summon_foes: bool = False,
     ended: bool | None = None,
 ) -> None:
@@ -181,6 +184,7 @@ async def push_progress_update(
         rdr,
         extra_turns,
         active_id=active_id,
+        active_target_id=active_target_id,
         include_summon_foes=include_summon_foes,
         ended=ended,
     )
@@ -220,6 +224,7 @@ async def dispatch_turn_end_snapshot(
         rdr,
         extra_turns,
         active_id=getattr(actor, "id", None),
+        active_target_id=None,
     )
 
 

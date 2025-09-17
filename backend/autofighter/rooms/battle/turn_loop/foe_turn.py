@@ -50,6 +50,8 @@ async def execute_foe_phase(context: TurnLoopContext) -> bool:
             if not alive_targets:
                 break
             _, target = _select_target(alive_targets)
+            await BUS.emit_async("target_acquired", acting_foe, target)
+            await pace_sleep(YIELD_MULTIPLIER)
             target_effect = target.effect_manager
             foe_manager = context.foe_effects[foe_index]
             await context.registry.trigger("turn_start", acting_foe)
@@ -107,7 +109,12 @@ async def execute_foe_phase(context: TurnLoopContext) -> bool:
                     _EXTRA_TURNS[id(acting_foe)] -= 1
                     await _pace(action_start)
                     continue
-                await finish_turn(context, acting_foe, action_start)
+                await finish_turn(
+                    context,
+                    acting_foe,
+                    action_start,
+                    active_target_id=getattr(target, "id", None),
+                )
                 break
             damage = await target.apply_damage(acting_foe.atk, attacker=acting_foe)
             if damage <= 0:
@@ -191,7 +198,12 @@ async def execute_foe_phase(context: TurnLoopContext) -> bool:
                 await _pace(action_start)
                 await pace_sleep(YIELD_MULTIPLIER)
                 continue
-            await finish_turn(context, acting_foe, action_start)
+            await finish_turn(
+                context,
+                acting_foe,
+                action_start,
+                active_target_id=getattr(target, "id", None),
+            )
             if battle_over:
                 break
             break

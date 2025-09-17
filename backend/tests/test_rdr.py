@@ -2,9 +2,9 @@ import pytest
 
 from autofighter.mapgen import MapNode
 from autofighter.party import Party
+from autofighter.rooms import BossRoom
 import autofighter.rooms.battle.core as rooms_module
 import autofighter.rooms.battle.resolution as resolution_module
-from autofighter.rooms import BossRoom
 from autofighter.stats import Stats
 from plugins.damage_types import ALL_DAMAGE_TYPES
 
