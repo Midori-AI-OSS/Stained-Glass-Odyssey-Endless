@@ -23,3 +23,5 @@ Audio volume controls use the `DotSelector` component to render ten selectable l
 `SettingsMenu.svelte` handles tab selection, LRM configuration, and dispatches `save` and `endRun` events. `SettingsMenu.svelte` receives `backendFlavor` from the page and checks it for `"llm"` to decide whether the LLM tab should appear. When the flavor string omits `"llm"`, the component skips `getLrmConfig()` and hides the model selector and test button.
 
 The Gameplay tab's **End Run** button now attempts to end the current run by ID and falls back to clearing all runs when the ID is missing or the targeted request fails.
+
+The Gameplay tab also exposes an **Animation Speed** slider (0.1–2.0×). Adjusting it writes the selected multiplier to settings storage and posts the derived turn pacing (`base_turn_pacing / animationSpeed`) to `/config/turn_pacing` so backend battle pacing matches the UI setting.

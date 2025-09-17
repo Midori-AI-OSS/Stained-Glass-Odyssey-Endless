@@ -15,8 +15,12 @@
       on:click={() => select(entry.id, 'relic', qty)}
       aria-label={entry.name}
     >
-      <CurioChoice entry={entry} />
-      <span class="relic-qty">{qty}</span>
+      <div class="relic-wrap">
+        <CurioChoice entry={entry} />
+        {#if Number(qty) > 1}
+          <span class="qty-badge">×{qty}</span>
+        {/if}
+      </div>
     </button>
   {/each}
 </div>
@@ -46,8 +50,17 @@
     outline-offset: 4px;
   }
 
-  .relic-qty {
-    font-size: 0.85rem;
-    opacity: 0.9;
+  .relic-wrap { position: relative; }
+  .qty-badge {
+    position: absolute;
+    top: 6px;
+    right: 10px;
+    background: rgba(0, 0, 0, 0.7);
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    padding: 0 0.35rem;
+    font-size: 0.8rem;
+    line-height: 1.1rem;
+    border-radius: 6px;
   }
 </style>

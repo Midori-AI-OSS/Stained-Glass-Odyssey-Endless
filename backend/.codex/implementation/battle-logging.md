@@ -5,6 +5,8 @@ The battle logging system provides structured, organized logging for battles wit
 - `battle_logging/handlers.py` – custom logging handlers used by the system.
 - `battle_logging/summary.py` – dataclasses representing events and battle summaries.
 - `battle_logging/writers.py` – high level run and battle log writers.
+- `rooms/battle/logging.py` – combat-log queue utilities.
+- `rooms/battle/setup.py` – prepares parties/foes and starts battle logging once participants are known.
 
 ## Folder Structure
 
@@ -53,6 +55,27 @@ The system is automatically integrated into the battle flow:
 ### Event Bus Integration
 
 The battle logging system subscribes to the global event bus and automatically captures relevant events. It integrates seamlessly with existing game mechanics without requiring code changes to emit events manually.
+
+#### Status Phase Timing Events
+
+`EffectManager.tick` emits two pacing events for every status phase so the frontend and log writers can highlight when HoTs and DoTs resolve within the turn beat:
+
+- `status_phase_start`
+- `status_phase_end`
+
+Both events provide the same argument signature as other battle bus events:
+
+1. `phase` – the string label (`"hot"` or `"dot"`).
+2. `Stats` – the combatant whose effects are ticking.
+3. `payload` – structured metadata with:
+   - `phase`: mirrors the phase label.
+   - `order`: `0` for HoTs, `1` for DoTs to preserve sequencing.
+   - `effect_count`: active effect total at the start/end of the phase.
+   - `expired_count`: number of effects that ended during the phase (zero on start events).
+   - `has_effects`: convenience boolean indicating whether any effects remain.
+   - `target_id`: the combatant identifier (if available).
+
+Phases always fire in HoT → DoT order even when a combatant has no active statuses, and the manager yields via `pace_sleep(YIELD_MULTIPLIER)` between phases to create a short, predictable beat for UI animations and log snapshots.
 
 ### File Formats
 
@@ -153,6 +176,7 @@ Total Events: 45
 - Logs are organized by run ID and battle index for easy navigation
 - Each battle gets its own logger instance to prevent interference
 - Call `start_battle_logging()` only once per battle after participants are set; additional calls finalize the previous battle as "interrupted"
+- `rooms/battle/setup.py` performs that participant preparation asynchronously before `BattleRoom.resolve` emits any events, ensuring the logger captures the correct party and foe state.
 
 ## Battle Review API
 

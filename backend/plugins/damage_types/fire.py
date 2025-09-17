@@ -42,6 +42,9 @@ class Fire(DamageTypeBase):
 
     async def ultimate(self, actor: Stats, allies: list[Stats], enemies: list[Stats]) -> bool:
         """Blast all foes for the caster's attack and try to ignite them."""
+        from autofighter.rooms.battle.pacing import YIELD_MULTIPLIER
+        from autofighter.rooms.battle.pacing import pace_sleep
+
         await super().ultimate(actor, allies, enemies)
         base = getattr(actor, "atk", 0)
         living = [foe for foe in enemies if getattr(foe, "hp", 0) > 0]
@@ -49,6 +52,7 @@ class Fire(DamageTypeBase):
             return True
         for foe in living:
             dealt = await foe.apply_damage(base, attacker=actor, action_name="Fire Ultimate")
+            await pace_sleep(YIELD_MULTIPLIER)
             mgr = getattr(foe, "effect_manager", None)
             if mgr is None:
                 mgr = EffectManager(foe)
@@ -57,7 +61,6 @@ class Fire(DamageTypeBase):
                 mgr.maybe_inflict_dot(actor, dealt)
             except Exception:
                 pass
-            await asyncio.sleep(0.002)
         return True
 
     def _on_ultimate_used(self, user: Stats) -> None:
@@ -86,5 +89,6 @@ class Fire(DamageTypeBase):
         return (
             "Deals the user's attack as damage to every living enemy and rolls "
             "Blazing Torment on each. Every use adds a drain stack that burns "
-            "the caster for 5% of max HP per stack at the start of their turns."
+            "the caster for 5% of max HP per stack at the start of their turns. "
+            "Ultimate hits use the pacing helper so TURN_PACING tweaks apply."
         )

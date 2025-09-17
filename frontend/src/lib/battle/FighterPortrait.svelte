@@ -99,9 +99,9 @@
     style={`--el-color: ${elColor}`}
   >
     <img
-      src={getCharacterImage(fighter.summon_type || fighter.id)}
+      src={getCharacterImage((fighter?.summon_type === 'phantom' && fighter?.summoner_id) ? fighter.summoner_id : (fighter?.summon_type || fighter?.id))}
       alt=""
-      class="portrait"
+      class="portrait {fighter?.summon_type === 'phantom' ? 'phantom' : ''}"
       style={`border-color: ${elColor}`}
     />
     <div class="element-chip" class:low-contrast={lowContrast}>
@@ -206,6 +206,7 @@
     border-radius: 4px;
     display: block;
   }
+  .portrait.phantom { filter: grayscale(60%) brightness(0.92); }
   .portrait-frame.ultimate-ready { box-shadow: 0 0 8px var(--el-color); }
   .element-chip {
     position: absolute;

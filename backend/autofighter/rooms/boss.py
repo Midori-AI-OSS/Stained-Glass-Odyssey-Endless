@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from .battle import BattleRoom
+from .battle.core import BattleRoom
 
 
 @dataclass

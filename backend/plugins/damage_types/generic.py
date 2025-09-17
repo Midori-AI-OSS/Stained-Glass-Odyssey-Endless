@@ -1,4 +1,3 @@
-import asyncio
 from dataclasses import dataclass
 
 from autofighter.passives import PassiveRegistry
@@ -18,6 +17,9 @@ class Generic(DamageTypeBase):
 
     async def ultimate(self, actor, allies, enemies):
         """Split the user's attack into 64 rapid strikes on one target."""
+        from autofighter.rooms.battle.pacing import YIELD_MULTIPLIER
+        from autofighter.rooms.battle.pacing import pace_sleep
+
         if not getattr(actor, "use_ultimate", lambda: False)():
             return False
 
@@ -40,6 +42,7 @@ class Generic(DamageTypeBase):
         for i in range(64):
             dmg = base + (1 if i < remainder else 0)
             await target.apply_damage(dmg, attacker=actor, action_name="Generic Ultimate")
+            await pace_sleep(YIELD_MULTIPLIER)
             await BUS.emit_async(
                 "hit_landed", actor, target, dmg, "attack", "generic_ultimate"
             )
@@ -59,12 +62,17 @@ class Generic(DamageTypeBase):
                 party=allies,
                 foes=enemies,
             )
-            await asyncio.sleep(0.002)
+        from plugins.passives.luna_lunar_reservoir import LunaLunarReservoir
+
+        if LunaLunarReservoir is not _LLR_old:
+            _LLR_old.add_charge(actor, amount=64)
+        LunaLunarReservoir.add_charge(actor, amount=64)
         return True
 
     @classmethod
     def get_ultimate_description(cls) -> str:
         return (
             "Splits the user's attack into 64 rapid strikes on a single target, "
-            "counting each hit as a separate action."
+            "counting each hit as a separate action. The strike cadence follows "
+            "TURN_PACING via the battle pacing helper."
         )

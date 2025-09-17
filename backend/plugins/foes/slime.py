@@ -18,12 +18,44 @@ class Slime(FoeBase):
     min_defense_override: int = 0
 
     def __post_init__(self) -> None:
-        for f in fields(FoeBase):
-            value = getattr(self, f.name)
-            if isinstance(value, (int, float)):
-                setattr(self, f.name, type(value)(value * 0.1))
-        # Make Slime much squishier: apply an extra 10x reduction to defense
-        try:
-            self.defense = int(self.defense * 0.1)
-        except Exception:
-            pass
+        super().__post_init__()
+
+        scale = 0.1
+        base_stats = {
+            "max_hp",
+            "atk",
+            "defense",
+            "crit_rate",
+            "crit_damage",
+            "effect_hit_rate",
+            "mitigation",
+            "regain",
+            "dodge_odds",
+            "effect_resistance",
+            "vitality",
+        }
+
+        for dataclass_field in fields(FoeBase):
+            name = dataclass_field.name
+            if name.startswith("_base_"):
+                continue
+
+            value = getattr(self, name)
+            if not isinstance(value, (int, float)):
+                continue
+
+            scaled_value = type(value)(value * scale)
+
+            if name in base_stats:
+                self.set_base_stat(name, scaled_value)
+
+            setattr(self, name, scaled_value)
+
+        if isinstance(getattr(self, "max_hp", None), (int, float)):
+            self.hp = type(self.hp)(getattr(self, "max_hp"))
+
+        defense_base = self.get_base_stat("defense")
+        if isinstance(defense_base, (int, float)):
+            reduced_defense = int(defense_base * scale)
+            self.set_base_stat("defense", reduced_defense)
+            setattr(self, "defense", reduced_defense)

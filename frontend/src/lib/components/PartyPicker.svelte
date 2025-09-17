@@ -50,6 +50,15 @@
       }
       const oldPreview = previewId;
       const oldSelected = [...selected];
+      function isNonPlayable(entry) {
+        const gr = Number(entry?.stats?.gacha_rarity);
+        if (!Number.isNaN(gr)) {
+          return gr === 0;
+        }
+        // Fallback: explicitly hide known non-playables if rarity not provided
+        return entry.id === 'mimic';
+      }
+
       roster = data.players
         .map((p) => ({
           id: p.id,
@@ -61,11 +70,23 @@
           element: resolveElement(p),
           stats: p.stats ?? { hp: 0, atk: 0, defense: 0, level: 1 }
         }))
-        .filter((p) => p.owned || p.is_player)
+        // Only show characters the user can actually use
+        .filter((p) => (p.owned || p.is_player) && !isNonPlayable(p))
         .sort((a, b) => (a.is_player ? -1 : b.is_player ? 1 : 0));
       // Restore selection and preview where possible
       selected = oldSelected.filter((id) => roster.some((c) => c.id === id));
       const player = roster.find((p) => p.is_player);
+      // Ensure the player is always in party; if party is full, replace the last non-player
+      if (player && !selected.includes(player.id)) {
+        if (selected.length >= 5) {
+          // Remove the last non-player entry to make room
+          const withoutPlayer = selected.filter((id) => id !== player.id);
+          withoutPlayer.pop();
+          selected = [...withoutPlayer, player.id];
+        } else {
+          selected = [...selected, player.id];
+        }
+      }
       const defaultPreview = player ? player.id : (roster[0]?.id || null);
       previewId = oldPreview ?? selected[0] ?? defaultPreview;
     } catch (e) {
@@ -78,6 +99,9 @@
 
   function toggleMember(id) {
     if (!id) return;
+    // The player cannot be removed from the party
+    const player = roster.find((p) => p.is_player);
+    if (player && id === player.id) return;
     if (selected.includes(id)) {
       selected = selected.filter((c) => c !== id);
     } else if (selected.length < 5) {

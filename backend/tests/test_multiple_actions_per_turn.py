@@ -4,7 +4,7 @@ from autofighter.cards import apply_cards
 from autofighter.cards import award_card
 from autofighter.mapgen import MapNode
 from autofighter.party import Party
-from autofighter.rooms.battle import BattleRoom
+from autofighter.rooms.battle.core import BattleRoom
 from autofighter.stats import BUS
 from plugins.foes._base import FoeBase
 from plugins.players import player as player_mod

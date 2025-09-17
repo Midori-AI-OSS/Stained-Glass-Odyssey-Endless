@@ -1,4 +1,3 @@
-import asyncio
 from dataclasses import dataclass
 from dataclasses import field
 import random
@@ -28,7 +27,10 @@ class Aftertaste:
     @classmethod
     def get_description(cls) -> str:
         """Get the description of this effect for display purposes."""
-        return "Deals a hit with random damage type (10% to 150% damage)"
+        return (
+            "Deals a hit with random damage type (10% to 150% damage) while respecting "
+            "TURN_PACING between echoes."
+        )
 
     def _get_random_damage_type(self, attacker: Stats = None):
         """Get a random damage type, optionally weighted toward attacker's type."""
@@ -63,6 +65,9 @@ class Aftertaste:
         return [int(self.base_pot * self.rng.uniform(0.1, 1.5)) for _ in range(self.hits)]
 
     async def apply(self, attacker: Stats, target: Stats) -> list[int]:
+        from autofighter.rooms.battle.pacing import YIELD_MULTIPLIER
+        from autofighter.rooms.battle.pacing import pace_sleep
+
         results: list[int] = []
         for amount in self.rolls():
             # Create a temporary attacker with random damage type for this hit
@@ -95,5 +100,5 @@ class Aftertaste:
 
             dmg = await target.apply_damage(amount, temp_attacker, action_name="Aftertaste")
             results.append(dmg)
-            await asyncio.sleep(0.002)
+            await pace_sleep(YIELD_MULTIPLIER)
         return results

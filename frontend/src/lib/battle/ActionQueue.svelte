@@ -1,5 +1,6 @@
 <script>
   import { getCharacterImage, getElementColor } from '../systems/assetLoader.js';
+  import { createEventDispatcher } from 'svelte';
   import { flip } from 'svelte/animate';
 
   export let queue = [];
@@ -7,14 +8,17 @@
   export let reducedMotion = false;
   export let showActionValues = false;
 
+    const dispatch = createEventDispatcher();
+
     function findCombatant(id) {
-      return combatants.find((c) => c.id === id) || { id };
+      return combatants.find((c) => c.id === id) || null;
     }
 
     $: displayQueue = queue.filter((e) => {
       const fighter = findCombatant(e.id);
-      // Include if unknown (so summons still render) or alive
-      return fighter?.hp == null ? true : Number(fighter.hp) >= 1;
+      // Only include entries for combatants that still exist and are alive
+      if (!fighter) return false; // removed/despawned
+      return Number(fighter.hp ?? 0) >= 1;
     });
     $: displayItems = (() => {
       const counts = new Map();
@@ -42,12 +46,21 @@
           class:bonus={entry.bonus}
           style="--element-color: {elColor}"
           animate:flip={{ duration: reducedMotion ? 0 : 220 }}
+          on:mouseenter={() => dispatch('hover', { id: fighter.id })}
+          on:mouseleave={() => dispatch('hover', { id: null })}
         >
           <div class="inner">
-            <img src={getCharacterImage(fighter.summon_type || fighter.id)} alt="" class="portrait" />
+            <img 
+              src={getCharacterImage((fighter?.summon_type === 'phantom' && fighter?.summoner_id) ? fighter.summoner_id : (fighter?.summon_type || fighter?.id))} 
+              alt="" 
+              class="portrait {fighter?.summon_type === 'phantom' ? 'phantom' : ''}" 
+              title={(fighter?.name || fighter?.id || '').toString().replace(/[_-]+/g, ' ')}
+            />
             {#if showActionValues}
               <div class="av">{Math.round(entry.action_value)}</div>
             {/if}
+            <!-- Hover-only name chip -->
+            <div class="name-chip">{(fighter?.name || fighter?.id || '').toString().replace(/[_-]+/g, ' ')}</div>
           </div>
         </div>
       {/each}
@@ -118,6 +131,9 @@
     border-width: 4px;
     box-shadow: 0 0 8px 2px color-mix(in oklab, var(--element-color) 80%, white);
   }
+  .entry:hover .inner {
+    box-shadow: 0 0 10px 3px color-mix(in oklab, var(--element-color) 70%, white);
+  }
   .entry.active .inner::before {
     content: '';
     position: absolute;
@@ -139,6 +155,7 @@
     display: block;
     object-fit: cover;
   }
+  .portrait.phantom { filter: grayscale(60%) brightness(0.92); }
   .av {
     position: absolute;
     bottom: 4px;
@@ -149,5 +166,43 @@
     border-radius: 6px;
     padding: 0 6px;
     color: var(--element-color);
+  }
+
+  /* Hover-only name chip, similar to FighterUIItem */
+  .name-chip {
+    position: absolute;
+    left: 6px;
+    bottom: 6px;
+    color: #fff;
+    font-weight: 800;
+    font-size: 0.78rem;
+    line-height: 1.05;
+    padding: 2px 8px;
+    border-radius: 6px;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.9);
+    pointer-events: none;
+    opacity: 0;
+    transform: translateY(2px);
+    transition: opacity 120ms ease, transform 120ms ease;
+    z-index: 2;
+  }
+  .entry:hover .name-chip { opacity: 1; transform: translateY(0); }
+  /* Soft faded-edge backdrop behind the name chip (mirrors FighterUIItem) */
+  .name-chip::before {
+    content: '';
+    position: absolute;
+    inset: -10px;
+    border-radius: 12px;
+    background: radial-gradient(
+      ellipse at center,
+      rgba(0, 0, 0, 0.55) 0%,
+      rgba(0, 0, 0, 0.50) 40%,
+      rgba(0, 0, 0, 0.30) 70%,
+      rgba(0, 0, 0, 0.00) 100%
+    );
+    filter: blur(4px);
+    box-shadow: 0 0 16px rgba(0,0,0,0.3);
+    z-index: -1;
+    pointer-events: none;
   }
 </style>

@@ -20,7 +20,7 @@ from plugins.players.carly import Carly
 async def test_party_damage_by_action_tracking():
     """Test that party members have damage_by_action data with different action types."""
     # Import here to avoid circular import issues
-    from autofighter.rooms.battle import BattleRoom
+    from autofighter.rooms.battle.core import BattleRoom
 
     node = MapNode(
         room_id=0,
@@ -72,7 +72,7 @@ async def test_party_damage_by_action_tracking():
 async def test_foe_damage_by_action_tracking():
     """Test that foes have damage_by_action data."""
     # Import here to avoid circular import issues
-    from autofighter.rooms.battle import BattleRoom
+    from autofighter.rooms.battle.core import BattleRoom
 
     node = MapNode(
         room_id=0,

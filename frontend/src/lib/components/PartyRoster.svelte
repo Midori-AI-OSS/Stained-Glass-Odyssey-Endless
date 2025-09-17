@@ -165,8 +165,8 @@
         class:reduced={reducedMotion}
         animate:flip={{ duration: reducedMotion ? 0 : 300 }}
         on:click={(e) => select(char.id, e)}
-        on:dblclick={() => toggle(char.id)}
-        on:pointerdown={(e) => onPointerDown(char.id, e)}
+        on:dblclick={() => !char.is_player && toggle(char.id)}
+        on:pointerdown={(e) => !char.is_player && onPointerDown(char.id, e)}
         on:pointerup={onPointerUp}
         on:pointerleave={onPointerUp}
         on:introstart={(e) => onIntroStart(char.id, e)}
@@ -199,8 +199,8 @@
       class:reduced={reducedMotion}
       animate:flip={{ duration: reducedMotion ? 0 : 300 }}
       on:click={(e) => select(char.id, e)}
-      on:dblclick={() => toggle(char.id)}
-      on:pointerdown={(e) => onPointerDown(char.id, e)}
+      on:dblclick={() => !char.is_player && toggle(char.id)}
+      on:pointerdown={(e) => !char.is_player && onPointerDown(char.id, e)}
       on:pointerup={onPointerUp}
       on:pointerleave={onPointerUp}
       on:introstart={(e) => onIntroStart(char.id, e)}
@@ -242,6 +242,8 @@
   gap: 0.25rem;
   align-items: center;
 }
+
+/* No explicit "Required" chip; the remove button conveys it. */
 
 .sort-dir {
   background: transparent;

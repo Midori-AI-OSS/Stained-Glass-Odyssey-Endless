@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-import autofighter.rooms.battle as rooms_module
+import autofighter.rooms.battle.core as rooms_module
 
 
 @pytest.fixture()
@@ -38,7 +38,7 @@ async def test_battle_loot_items_update_inventory(app_with_db, monkeypatch):
             "card_choices": [],
             "relic_choices": [],
             "items": [
-                # include a ticket despite the 0.05% × rdr base drop rate for determinism
+                # include a ticket despite the 0.05% × rdr normal-battle drop rate for determinism
                 {"id": "fire", "stars": 1},
                 {"id": "ticket", "stars": 0},
             ],

@@ -17,7 +17,9 @@ class Room:
         raise NotImplementedError
 
 
-from .battle import BattleRoom  # noqa: E402
+from .battle.core import BattleRoom  # noqa: E402
+from .battle.enrage import ENRAGE_TURNS_BOSS  # noqa: E402
+from .battle.enrage import ENRAGE_TURNS_NORMAL  # noqa: E402
 from .boss import BossRoom  # noqa: E402
 from .chat import ChatRoom  # noqa: E402
 from .shop import ShopRoom  # noqa: E402
@@ -28,6 +30,8 @@ from .utils import _serialize  # noqa: E402
 
 __all__ = [
     'BattleRoom',
+    'ENRAGE_TURNS_NORMAL',
+    'ENRAGE_TURNS_BOSS',
     'BossRoom',
     'ChatRoom',
     'Room',

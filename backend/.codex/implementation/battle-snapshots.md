@@ -23,7 +23,9 @@ poll for results:
   serialized alongside party and foe combatants.
 - Progress snapshots now include `active_id`, the id of the combatant whose
   action produced the snapshot, so user interfaces can highlight the active
-  fighter for both party and foe turns.
+  fighter for both party and foe turns. They also expose `active_target_id`,
+  the id of the primary target selected for the action, enabling pre-damage
+  highlighting during the short pause before effects resolve.
 - The action queue advances **after** progress snapshots are dispatched so the
   active combatant remains at the head of the queue until user interfaces
   receive and render the update.

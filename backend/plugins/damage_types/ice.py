@@ -1,4 +1,3 @@
-import asyncio
 from dataclasses import dataclass
 
 from autofighter.effects import DamageOverTime
@@ -19,6 +18,9 @@ class Ice(DamageTypeBase):
 
     async def ultimate(self, user: Stats, foes: list[Stats]) -> bool:
         """Strike all foes six times, ramping damage by 30% per target."""
+        from autofighter.rooms.battle.pacing import YIELD_MULTIPLIER
+        from autofighter.rooms.battle.pacing import pace_sleep
+
         if not getattr(user, "use_ultimate", lambda: False)():
             return False
         base = user.atk
@@ -27,14 +29,15 @@ class Ice(DamageTypeBase):
             for foe in foes:
                 dmg = int(base * bonus)
                 await foe.apply_damage(dmg, attacker=user, action_name="Ice Ultimate")
-                await asyncio.sleep(0.002)
+                await pace_sleep(YIELD_MULTIPLIER)
                 bonus += 0.3
-            await asyncio.sleep(0.002)
+            await pace_sleep(YIELD_MULTIPLIER)
         return True
 
     @classmethod
     def get_ultimate_description(cls) -> str:
         return (
             "Strikes all foes six times in succession. Each hit within a wave "
-            "deals 30% more damage than the previous target."
+            "deals 30% more damage than the previous target. Hits are paced via "
+            "the TURN_PACING-aware helper."
         )

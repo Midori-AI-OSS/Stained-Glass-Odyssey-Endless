@@ -4,7 +4,7 @@ import pytest
 
 from autofighter.mapgen import MapNode
 from autofighter.party import Party
-from autofighter.rooms.battle import BattleRoom
+from autofighter.rooms.battle.core import BattleRoom
 from plugins.damage_types._base import DamageTypeBase
 from plugins.foes._base import FoeBase
 from plugins.foes.slime import Slime

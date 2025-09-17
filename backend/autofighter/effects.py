@@ -249,8 +249,10 @@ class DamageOverTime:
         if source_type is not dtype:
             dmg = source_type.on_party_dot_damage_taken(dmg, attacker, target)
 
+        dmg = max(1, int(dmg))
+
         # Emit DoT tick event before applying damage - async for better performance
-        await BUS.emit_async("dot_tick", attacker, target, int(dmg), self.name, {
+        await BUS.emit_async("dot_tick", attacker, target, dmg, self.name, {
             "dot_id": self.id,
             "remaining_turns": self.turns - 1,
             "original_damage": self.damage
@@ -258,14 +260,14 @@ class DamageOverTime:
 
         # Check if this DOT will kill the target
         target_hp_before = target.hp
-        await target.apply_damage(int(dmg), attacker=attacker)
+        await target.apply_damage(dmg, attacker=attacker)
 
         # If target died from this DOT, emit a DOT kill event - async for better performance
         if target_hp_before > 0 and target.hp <= 0:
-            await BUS.emit_async("dot_kill", attacker, target, int(dmg), self.name, {
+            await BUS.emit_async("dot_kill", attacker, target, dmg, self.name, {
                 "dot_id": self.id,
                 "dot_name": self.name,
-                "final_damage": int(dmg)
+                "final_damage": dmg
             })
 
         self.turns -= 1
@@ -295,14 +297,16 @@ class HealingOverTime:
         if source_type is not dtype:
             heal = source_type.on_party_hot_heal_received(heal, healer, target)
 
+        heal = max(1, int(heal))
+
         # Emit HoT tick event before applying healing - async for better performance
-        await BUS.emit_async("hot_tick", healer, target, int(heal), self.name, {
+        await BUS.emit_async("hot_tick", healer, target, heal, self.name, {
             "hot_id": self.id,
             "remaining_turns": self.turns - 1,
             "original_healing": self.healing
         })
 
-        await target.apply_healing(int(heal), healer=healer)
+        await target.apply_healing(heal, healer=healer)
         self.turns -= 1
         return self.turns > 0
 
@@ -435,28 +439,57 @@ class EffectManager:
             remaining -= 1.0
 
     async def tick(self, others: Optional["EffectManager"] = None) -> None:
-        for collection, names in (
-            (self.hots, self.stats.hots),
-            (self.dots, self.stats.dots),
+        try:
+            from autofighter.rooms.battle.pacing import YIELD_MULTIPLIER
+            from autofighter.rooms.battle.pacing import pace_sleep
+        except (ImportError, ModuleNotFoundError):
+            YIELD_MULTIPLIER = 0.0
+
+            async def pace_sleep(_multiplier: float = 1.0) -> None:
+                await asyncio.sleep(0)
+
+        from autofighter.stats import BUS
+
+        for order, (phase_name, collection, names) in enumerate(
+            (
+                ("hot", self.hots, self.stats.hots),
+                ("dot", self.dots, self.stats.dots),
+            )
         ):
             expired: list[object] = []
+            effect_count = len(collection)
+            phase_label = "HoT" if phase_name == "hot" else "DoT"
+            color = "green" if phase_name == "hot" else "light_red"
+            phase_payload = {
+                "phase": phase_name,
+                "effect_count": effect_count,
+                "expired_count": 0,
+                "has_effects": effect_count > 0,
+                "order": order,
+                "target_id": getattr(self.stats, "id", None),
+            }
+
+            # Announce phase start so the frontend can render pacing beats
+            await BUS.emit_async(
+                "status_phase_start",
+                phase_name,
+                self.stats,
+                phase_payload.copy(),
+            )
 
             # Batch logging for performance when many effects are present
-            if self._debug and len(collection) > 10:
-                effect_type = "HoT" if (collection and isinstance(collection[0], HealingOverTime)) else "DoT"
-                color = "green" if effect_type == "HoT" else "light_red"
+            if self._debug and effect_count > 10:
                 asyncio.create_task(
                     self._log(
-                        f"[{color}]{self.stats.id} processing {len(collection)} {effect_type} effects[/]"
+                        f"[{color}]{self.stats.id} processing {effect_count} {phase_label} effects[/]"
                     )
                 )
 
             # Process effects in parallel for better async performance when many are present
-            if len(collection) > 20:
+            if effect_count > 20:
                 # Parallel processing for large collections
                 async def tick_effect(eff):
-                    if self._debug and len(collection) <= 10:
-                        color = "green" if isinstance(eff, HealingOverTime) else "light_red"
+                    if self._debug and effect_count <= 10:
                         asyncio.create_task(
                             self._log(f"[{color}]{self.stats.id} {eff.name} tick[/]")
                         )
@@ -464,7 +497,7 @@ class EffectManager:
 
                 # Process in batches to avoid overwhelming the event loop
                 batch_size = 50
-                for i in range(0, len(collection), batch_size):
+                for i in range(0, effect_count, batch_size):
                     batch = collection[i:i + batch_size]
                     results = await asyncio.gather(*[tick_effect(eff) for eff in batch])
                     for still_active, eff in results:
@@ -477,8 +510,7 @@ class EffectManager:
                 # Sequential processing for smaller collections
                 for eff in collection:
                     # Only log individual effects if there are few of them
-                    if self._debug and len(collection) <= 10:
-                        color = "green" if isinstance(eff, HealingOverTime) else "light_red"
+                    if self._debug and effect_count <= 10:
                         asyncio.create_task(
                             self._log(f"[{color}]{self.stats.id} {eff.name} tick[/]")
                         )
@@ -490,16 +522,37 @@ class EffectManager:
 
             for eff in expired:
                 # Emit effect expired event - async for better performance
-                from autofighter.stats import BUS
-                await BUS.emit_async("effect_expired", eff.name, self.stats, {
-                    "effect_type": "hot" if isinstance(eff, HealingOverTime) else "dot",
-                    "effect_id": eff.id,
-                    "expired_naturally": True
-                })
+                await BUS.emit_async(
+                    "effect_expired",
+                    eff.name,
+                    self.stats,
+                    {
+                        "effect_type": "hot" if isinstance(eff, HealingOverTime) else "dot",
+                        "effect_id": eff.id,
+                        "expired_naturally": True,
+                    },
+                )
 
                 collection.remove(eff)
                 if eff.id in names:
                     names.remove(eff.id)
+
+            phase_payload.update(
+                {
+                    "effect_count": len(collection),
+                    "expired_count": len(expired),
+                    "has_effects": len(collection) > 0,
+                }
+            )
+
+            await BUS.emit_async(
+                "status_phase_end",
+                phase_name,
+                self.stats,
+                phase_payload,
+            )
+
+            await pace_sleep(YIELD_MULTIPLIER)
 
         # Enhanced stat modifier processing with parallelization
         expired_mods: list[StatModifier] = []
@@ -549,7 +602,6 @@ class EffectManager:
         # Clean up expired modifiers
         for mod in expired_mods:
             # Emit effect expired event for stat modifiers - async for better performance
-            from autofighter.stats import BUS
             await BUS.emit_async("effect_expired", mod.name, self.stats, {
                 "effect_type": "stat_modifier",
                 "effect_id": mod.id,

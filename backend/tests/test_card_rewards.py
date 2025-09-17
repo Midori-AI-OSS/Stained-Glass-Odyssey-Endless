@@ -12,7 +12,7 @@ from autofighter.cards import award_card
 from autofighter.party import Party
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
-import autofighter.rooms.battle as rooms_module
+import autofighter.rooms.battle.core as rooms_module
 from autofighter.stats import BUS
 from autofighter.stats import Stats
 from plugins.effects.critical_boost import CriticalBoost

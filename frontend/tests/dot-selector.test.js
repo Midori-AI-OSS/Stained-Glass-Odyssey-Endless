@@ -8,7 +8,8 @@ describe('DotSelector component', () => {
       join(import.meta.dir, '../src/lib/components/DotSelector.svelte'),
       'utf8'
     );
-    expect(content).toMatch(/aria-label="Mute"/);
+    expect(content).toMatch(/zeroAriaLabel = 'Mute'/);
+    expect(content).toMatch(/aria-label=\{zeroAriaLabel\}/);
     expect(content).toMatch(/select\(0\)/);
   });
 });

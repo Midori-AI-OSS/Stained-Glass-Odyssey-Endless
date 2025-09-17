@@ -1,13 +1,29 @@
 <script>
   import { createEventDispatcher, onMount } from 'svelte';
   import { Volume2, Cog, Brain, Gamepad } from 'lucide-svelte';
-  import { endRun, endAllRuns, wipeData, exportSave, importSave, getLrmConfig, setLrmModel, testLrmModel, getBackendHealth } from '../systems/api.js';
+  import {
+    endRun,
+    endAllRuns,
+    wipeData,
+    exportSave,
+    importSave,
+    getLrmConfig,
+    setLrmModel,
+    testLrmModel,
+    getBackendHealth,
+    getTurnPacing,
+    setTurnPacing
+  } from '../systems/api.js';
   import AudioSettings from './AudioSettings.svelte';
   import SystemSettings from './SystemSettings.svelte';
   import LLMSettings from './LLMSettings.svelte';
   import GameplaySettings from './GameplaySettings.svelte';
   import { getActiveRuns } from '../systems/uiApi.js';
   import { saveSettings, clearSettings, clearAllClientData } from '../systems/settingsStorage.js';
+
+  const MIN_ANIMATION_SPEED = 0.1;
+  const MAX_ANIMATION_SPEED = 2;
+  const DEFAULT_TURN_PACING = 0.5;
 
   const dispatch = createEventDispatcher();
   export let sfxVolume = 5;
@@ -17,6 +33,7 @@
   export let reducedMotion = false;
   export let showActionValues = false;
   export let fullIdleMode = false;
+  export let animationSpeed = 1;
   export let lrmModel = '';
   export let runId = '';
   export let backendFlavor = typeof window !== 'undefined' ? window.backendFlavor || '' : '';
@@ -30,12 +47,79 @@
   let lrmOptions = [];
   let testReply = '';
   let activeTab = 'audio';
+  let baseTurnPacing = DEFAULT_TURN_PACING;
+  let lastServerTurnPacing = null;
+  let lastSavedAnimationSpeed = (() => {
+    const numeric = Number(animationSpeed);
+    if (!Number.isFinite(numeric)) return 1;
+    return Math.min(MAX_ANIMATION_SPEED, Math.max(MIN_ANIMATION_SPEED, numeric));
+  })();
 
   let endingRun = false;
   let endRunStatus = '';
   let healthStatus = 'unknown'; // 'healthy' | 'degraded' | 'error' | 'unknown'
   let healthPing = null;
   let lastHealthFetch = 0;
+
+  function sanitizeSpeed(value) {
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric) || numeric <= 0) return 1;
+    const clamped = Math.min(MAX_ANIMATION_SPEED, Math.max(MIN_ANIMATION_SPEED, numeric));
+    return Math.round(clamped * 10) / 10;
+  }
+
+  function resolvedBaseTurnPacing() {
+    return baseTurnPacing > 0 ? baseTurnPacing : DEFAULT_TURN_PACING;
+  }
+
+  async function loadTurnPacing() {
+    try {
+      const data = await getTurnPacing();
+      const defaultVal = Number(data?.default);
+      if (Number.isFinite(defaultVal) && defaultVal > 0) {
+        baseTurnPacing = defaultVal;
+      }
+      const serverValue = Number(data?.turn_pacing);
+      if (Number.isFinite(serverValue) && serverValue > 0) {
+        lastServerTurnPacing = serverValue;
+        const derived = sanitizeSpeed(resolvedBaseTurnPacing() / serverValue);
+        if (Math.abs(derived - Number(animationSpeed)) > 0.001) {
+          animationSpeed = derived;
+        }
+        lastSavedAnimationSpeed = derived;
+        saveSettings({ animationSpeed: derived });
+      }
+    } catch (err) {
+      console.warn('Failed to load turn pacing', err);
+    }
+  }
+
+  async function pushTurnPacing(speed) {
+    const sanitized = sanitizeSpeed(speed);
+    const base = resolvedBaseTurnPacing();
+    const target = base / sanitized;
+    if (lastServerTurnPacing !== null && Math.abs(lastServerTurnPacing - target) < 0.0001) {
+      return true;
+    }
+    try {
+      const data = await setTurnPacing(target);
+      const defaultVal = Number(data?.default);
+      if (Number.isFinite(defaultVal) && defaultVal > 0) {
+        baseTurnPacing = defaultVal;
+      }
+      const confirmed = Number(data?.turn_pacing);
+      if (Number.isFinite(confirmed) && confirmed > 0) {
+        lastServerTurnPacing = confirmed;
+      } else {
+        lastServerTurnPacing = target;
+      }
+      return true;
+    } catch (err) {
+      console.error('Failed to update turn pacing', err);
+      return false;
+    }
+  }
+
   async function refreshHealth(force = false) {
     const now = Date.now();
     if (!force && now - lastHealthFetch < 1500) return; // throttle within tab
@@ -62,30 +146,34 @@
         /* ignore */
       }
     }
+    await loadTurnPacing();
     // Preload health once so System tab has data quickly
     refreshHealth(true);
   });
   $: (activeTab === 'system') && refreshHealth(false);
 
-  function save() {
-    saveSettings({
+  async function save() {
+    const sanitizedSpeed = sanitizeSpeed(animationSpeed);
+    animationSpeed = sanitizedSpeed;
+    const numericFramerate = Number(framerate);
+    const payload = {
       sfxVolume,
       musicVolume,
       voiceVolume,
-      framerate: Number(framerate),
+      framerate: numericFramerate,
       reducedMotion,
       showActionValues,
-      fullIdleMode
-    });
-    dispatch('save', {
-      sfxVolume,
-      musicVolume,
-      voiceVolume,
-      framerate: Number(framerate),
-      reducedMotion,
-      showActionValues,
-      fullIdleMode
-    });
+      fullIdleMode,
+      animationSpeed: sanitizedSpeed
+    };
+    saveSettings(payload);
+    dispatch('save', payload);
+    if (Math.abs(sanitizedSpeed - lastSavedAnimationSpeed) > 0.001) {
+      const updated = await pushTurnPacing(sanitizedSpeed);
+      if (updated) {
+        lastSavedAnimationSpeed = sanitizedSpeed;
+      }
+    }
     saveStatus = 'Saved';
     clearTimeout(resetTimeout);
     resetTimeout = setTimeout(() => {
@@ -253,6 +341,8 @@
     <GameplaySettings
       bind:showActionValues
       bind:fullIdleMode
+      bind:animationSpeed
+      baseTurnPacing={resolvedBaseTurnPacing()}
       {scheduleSave}
       {handleEndRun}
       {endingRun}
