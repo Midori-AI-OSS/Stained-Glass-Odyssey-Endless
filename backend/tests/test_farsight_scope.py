@@ -15,7 +15,8 @@ def setup_event_loop():
     return loop
 
 
-def test_farsight_scope_crit_bonus_applied_and_removed():
+@pytest.mark.asyncio
+async def test_farsight_scope_crit_bonus_applied_and_removed():
     loop = setup_event_loop()
     party = Party()
     ally = Stats()
@@ -30,9 +31,8 @@ def test_farsight_scope_crit_bonus_applied_and_removed():
     base_crit = ally.crit_rate
 
     enemy.hp = 400  # Below 50%
-    BUS.emit("before_attack", ally, enemy)
+    await BUS.emit_async("before_attack", ally, enemy)
     assert ally.crit_rate == pytest.approx(base_crit + 0.06, abs=1e-6)
 
-    BUS.emit("action_used", ally, enemy, ally.atk)
+    await BUS.emit_async("action_used", ally, enemy, ally.atk)
     assert ally.crit_rate == pytest.approx(base_crit, abs=1e-6)
-

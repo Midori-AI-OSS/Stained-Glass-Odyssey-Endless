@@ -35,7 +35,7 @@ class ArcLightning(CardBase):
                 BUS.unsubscribe("battle_start", _battle_start)
                 BUS.unsubscribe("battle_end", _battle_end)
 
-        def _hit(attacker, target, amount, source, *_):
+        async def _hit(attacker, target, amount, source, *_):
             if attacker not in party.members or source != "attack":
                 return
             valid = [f for f in foes if f.hp > 0 and f is not target]
@@ -44,7 +44,7 @@ class ArcLightning(CardBase):
             extra = random.choice(valid)
             extra_dmg = int(amount * 0.5)
             safe_async_task(extra.apply_damage(extra_dmg, attacker, trigger_on_hit=False))
-            BUS.emit(
+            await BUS.emit_async(
                 "card_effect",
                 self.id,
                 attacker,

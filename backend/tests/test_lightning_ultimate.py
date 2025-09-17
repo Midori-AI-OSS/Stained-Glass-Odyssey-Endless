@@ -17,12 +17,12 @@ from plugins.effects.aftertaste import Aftertaste
 
 
 class Actor(Stats):
-    def use_ultimate(self) -> bool:
+    async def use_ultimate(self) -> bool:
         if not getattr(self, "ultimate_ready", False):
             return False
         self.ultimate_charge = 0
         self.ultimate_ready = False
-        BUS.emit("ultimate_used", self)
+        await BUS.emit_async("ultimate_used", self)
         return True
 
 
@@ -32,6 +32,7 @@ async def test_lightning_ultimate_applies_random_dots(monkeypatch):
     attacker = Actor()
     attacker._base_atk = 100
     attacker.damage_type = lightning
+    attacker.ultimate_charge = 15
     attacker.ultimate_ready = True
     target = Stats()
     target.effect_manager = EffectManager(target)
@@ -60,6 +61,7 @@ async def test_lightning_ultimate_aftertaste_stacks(monkeypatch):
     attacker = Actor()
     attacker._base_atk = 100
     attacker.damage_type = lightning
+    attacker.ultimate_charge = 15
     attacker.ultimate_ready = True
     target = Stats()
     target.effect_manager = EffectManager(target)
@@ -79,11 +81,11 @@ async def test_lightning_ultimate_aftertaste_stacks(monkeypatch):
 
     # Test BUS directly
     simple_calls = []
-    def simple_handler(*args):
+    async def simple_handler(*args):
         simple_calls.append(args)
 
     BUS.subscribe("hit_landed", simple_handler)
-    BUS.emit("hit_landed", attacker, target, 10, "attack")
+    await BUS.emit_async("hit_landed", attacker, target, 10, "attack")
     await asyncio.sleep(0)
     print(f"Simple handler calls: {simple_calls}")
     assert len(simple_calls) > 0  # Verify BUS works
@@ -95,6 +97,6 @@ async def test_lightning_ultimate_aftertaste_stacks(monkeypatch):
     print(f"Has handler attribute: {hasattr(attacker, '_lightning_aftertaste_handler')}")
     print(f"Stacks: {getattr(attacker, '_lightning_aftertaste_stacks', 'None')}")
 
-    BUS.emit("hit_landed", attacker, target, 10, "attack")
+    await BUS.emit_async("hit_landed", attacker, target, 10, "attack")
     await asyncio.sleep(0)
     assert hits == [1]

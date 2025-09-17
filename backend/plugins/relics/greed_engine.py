@@ -16,8 +16,8 @@ class GreedEngine(RelicBase):
     effects: dict[str, float] = field(default_factory=dict)
     about: str = "Lose HP each turn but gain extra gold and rare drops."
 
-    def apply(self, party) -> None:
-        super().apply(party)
+    async def apply(self, party) -> None:
+        await super().apply(party)
 
         stacks = party.relics.count(self.id)
         gold_bonus = 0.5 + 0.25 * (stacks - 1)
@@ -30,23 +30,23 @@ class GreedEngine(RelicBase):
             party._greed_engine_state = state
             party.rdr += state["rdr"]
 
-            def _gold(amount: int) -> None:
+            async def _gold(amount: int) -> None:
                 bonus_gold = int(amount * state["gold"])
                 party.gold += bonus_gold
 
                 # Emit relic effect event for gold bonus
-                BUS.emit("relic_effect", "greed_engine", party, "gold_bonus", bonus_gold, {
+                await BUS.emit_async("relic_effect", "greed_engine", party, "gold_bonus", bonus_gold, {
                     "original_gold": amount,
                     "bonus_percentage": state["gold"] * 100,
                     "total_gold_gained": amount + bonus_gold
                 })
 
-            def _drain() -> None:
+            async def _drain() -> None:
                 for member in party.members:
                     dmg = int(member.max_hp * state["loss"])
 
                     # Emit relic effect event for HP drain
-                    BUS.emit("relic_effect", "greed_engine", member, "hp_drain", dmg, {
+                    await BUS.emit_async("relic_effect", "greed_engine", member, "hp_drain", dmg, {
                         "drain_percentage": state["loss"] * 100,
                         "max_hp": member.max_hp
                     })

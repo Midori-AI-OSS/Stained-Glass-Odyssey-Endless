@@ -16,19 +16,19 @@ class TimekeepersHourglass(RelicBase):
     effects: dict[str, float] = field(default_factory=dict)
     about: str = "Each turn, 10% +1% per stack chance for allies to gain an extra turn."
 
-    def apply(self, party) -> None:
+    async def apply(self, party) -> None:
         if getattr(party, "_t_hourglass_applied", False):
             return
         party._t_hourglass_applied = True
-        super().apply(party)
+        await super().apply(party)
 
         stacks = party.relics.count(self.id)
         chance = 0.10 + 0.01 * (stacks - 1)
 
-        def _turn_start() -> None:
+        async def _turn_start() -> None:
             if random.random() < chance:
                 for member in party.members:
-                    BUS.emit("extra_turn", member)
+                    await BUS.emit_async("extra_turn", member)
 
         def _battle_end(_entity) -> None:
             BUS.unsubscribe("turn_start", _turn_start)

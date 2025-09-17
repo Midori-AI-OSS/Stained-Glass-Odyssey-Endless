@@ -51,7 +51,7 @@ async def test_complete_integration():
             import asyncio
             original_create_task = asyncio.get_event_loop().create_task
 
-            def mock_create_task(coro):
+            async def mock_create_task(coro):
                 nonlocal aftertaste_count
                 # Check if this is an aftertaste coroutine
                 if hasattr(coro, '__name__') or (hasattr(coro, 'cr_code') and coro.cr_code):
@@ -65,23 +65,23 @@ async def test_complete_integration():
             asyncio.get_event_loop().create_task = mock_create_task
 
             # Simulate battle events
-            BUS.emit("battle_start", player)
-            BUS.emit("battle_start", enemy)
+            await BUS.emit_async("battle_start", player)
+            await BUS.emit_async("battle_start", enemy)
 
             # Simulate 15 hits to trigger aftertaste (should trigger on 10th hit)
             for i in range(15):
                 damage = 25 + i  # Varying damage
-                BUS.emit("damage_dealt", player, enemy, damage)
-                BUS.emit("hit_landed", player, enemy, damage)
+                await BUS.emit_async("damage_dealt", player, enemy, damage)
+                await BUS.emit_async("hit_landed", player, enemy, damage)
 
             # Some healing
-            BUS.emit("heal", player, player, 50)
+            await BUS.emit_async("heal", player, player, 50)
 
             # Enemy attacks back a few times
             for i in range(3):
                 damage = 15 + i
-                BUS.emit("damage_dealt", enemy, player, damage)
-                BUS.emit("hit_landed", enemy, player, damage)
+                await BUS.emit_async("damage_dealt", enemy, player, damage)
+                await BUS.emit_async("hit_landed", enemy, player, damage)
 
             # End battle
             battle_logger.finalize_battle("victory")

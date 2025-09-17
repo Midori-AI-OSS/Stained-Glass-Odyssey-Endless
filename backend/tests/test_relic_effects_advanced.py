@@ -14,12 +14,12 @@ from plugins.players._base import PlayerBase
 
 
 class DummyPlayer(Stats):
-    def use_ultimate(self) -> bool:
+    async def use_ultimate(self) -> bool:
         if not self.ultimate_ready:
             return False
         self.ultimate_charge = 0
         self.ultimate_ready = False
-        BUS.emit("ultimate_used", self)
+        await BUS.emit_async("ultimate_used", self)
         return True
 
 
@@ -33,7 +33,7 @@ async def test_frost_sigil_applies_chill(monkeypatch):
     a.set_base_stat('atk', 100)
     party.members.append(a)
     award_relic(party, "frost_sigil")
-    apply_relics(party)
+    await apply_relics(party)
 
     monkeypatch.setattr(Aftertaste, "rolls", lambda self: [self.base_pot] * self.hits)
 
@@ -43,7 +43,7 @@ async def test_frost_sigil_applies_chill(monkeypatch):
 
     monkeypatch.setattr(Stats, "apply_damage", fake_apply_damage, raising=False)
 
-    BUS.emit("hit_landed", a, b, 10)
+    await BUS.emit_async("hit_landed", a, b, 10)
     await asyncio.sleep(0)
 
     assert b.hp == 100 - int(100 * 0.05)
@@ -60,7 +60,7 @@ async def test_frost_sigil_stacks(monkeypatch):
     party.members.append(a)
     award_relic(party, "frost_sigil")
     award_relic(party, "frost_sigil")
-    apply_relics(party)
+    await apply_relics(party)
 
     monkeypatch.setattr(Aftertaste, "rolls", lambda self: [self.base_pot] * self.hits)
 
@@ -70,13 +70,14 @@ async def test_frost_sigil_stacks(monkeypatch):
 
     monkeypatch.setattr(Stats, "apply_damage", fake_apply_damage, raising=False)
 
-    BUS.emit("hit_landed", a, b, 10)
+    await BUS.emit_async("hit_landed", a, b, 10)
     await asyncio.sleep(0)
 
     assert b.hp == 100 - int(100 * 0.05) * 2
 
 
-def test_killer_instinct_grants_extra_turn():
+@pytest.mark.asyncio
+async def test_killer_instinct_grants_extra_turn():
     event_bus_module.bus._subs.clear()
     party = Party()
     a = DummyPlayer()
@@ -84,21 +85,22 @@ def test_killer_instinct_grants_extra_turn():
     b.hp = 10
     party.members.append(a)
     award_relic(party, "killer_instinct")
-    apply_relics(party)
+    await apply_relics(party)
     base = a.atk
     a.add_ultimate_charge(15)
-    a.use_ultimate()
+    await a.use_ultimate()
     assert a.atk > base
     turns: list[PlayerBase] = []
     BUS.subscribe("extra_turn", lambda m: turns.append(m))
     b.hp = 0
-    BUS.emit("damage_taken", b, a, 10)
-    BUS.emit("turn_end")
+    await BUS.emit_async("damage_taken", b, a, 10)
+    await BUS.emit_async("turn_end")
     assert turns == [a]
     assert a.atk == base
 
 
-def test_travelers_charm_buff():
+@pytest.mark.asyncio
+async def test_travelers_charm_buff():
     event_bus_module.bus._subs.clear()
     party = Party()
     a = PlayerBase()
@@ -107,47 +109,50 @@ def test_travelers_charm_buff():
     a.set_base_stat('mitigation', 100)
     party.members.append(a)
     award_relic(party, "travelers_charm")
-    apply_relics(party)
-    BUS.emit("damage_taken", a, attacker, 10)
-    BUS.emit("turn_start")
+    await apply_relics(party)
+    await BUS.emit_async("damage_taken", a, attacker, 10)
+    await BUS.emit_async("turn_start")
     assert a.defense == 100 + int(100 * 0.25)
     assert a.mitigation == 110
-    BUS.emit("turn_end")
+    await BUS.emit_async("turn_end")
     assert a.defense == 100
     assert a.mitigation == 100
 
 
-def test_timekeepers_hourglass_extra_turn():
+@pytest.mark.asyncio
+async def test_timekeepers_hourglass_extra_turn():
     event_bus_module.bus._subs.clear()
     party = Party()
     a = PlayerBase()
     party.members.append(a)
     award_relic(party, "timekeepers_hourglass")
-    apply_relics(party)
+    await apply_relics(party)
     turns: list[PlayerBase] = []
     BUS.subscribe("extra_turn", lambda m: turns.append(m))
     orig = random.random
     random.random = lambda: 0.0
-    BUS.emit("turn_start")
+    await BUS.emit_async("turn_start")
     random.random = orig
     assert turns == [a]
 
 
-def test_greed_engine_drains_and_rewards():
+@pytest.mark.asyncio
+async def test_greed_engine_drains_and_rewards():
     event_bus_module.bus._subs.clear()
     party = Party()
     a = PlayerBase()
     a.hp = a.set_base_stat('max_hp', 200)
     party.members.append(a)
     award_relic(party, "greed_engine")
-    apply_relics(party)
-    BUS.emit("turn_start")
+    await apply_relics(party)
+    await BUS.emit_async("turn_start")
     assert a.hp == 200 - int(200 * 0.01)
-    BUS.emit("gold_earned", 100)
+    await BUS.emit_async("gold_earned", 100)
     assert party.gold == int(100 * 0.5)
 
 
-def test_greed_engine_stacks():
+@pytest.mark.asyncio
+async def test_greed_engine_stacks():
     event_bus_module.bus._subs.clear()
     party = Party()
     a = PlayerBase()
@@ -155,28 +160,30 @@ def test_greed_engine_stacks():
     party.members.append(a)
     award_relic(party, "greed_engine")
     award_relic(party, "greed_engine")
-    apply_relics(party)
-    BUS.emit("turn_start")
+    await apply_relics(party)
+    await BUS.emit_async("turn_start")
     assert a.hp == 200 - int(200 * (0.01 + 0.005))
-    BUS.emit("gold_earned", 100)
+    await BUS.emit_async("gold_earned", 100)
     assert party.gold == int(100 * (0.5 + 0.25))
 
 
-def test_stellar_compass_crit_bonus():
+@pytest.mark.asyncio
+async def test_stellar_compass_crit_bonus():
     event_bus_module.bus._subs.clear()
     party = Party()
     a = PlayerBase()
     a.set_base_stat('atk', 100)
     party.members.append(a)
     award_relic(party, "stellar_compass")
-    apply_relics(party)
-    BUS.emit("critical_hit", a, None, 0, "attack")
+    await apply_relics(party)
+    await BUS.emit_async("critical_hit", a, None, 0, "attack")
     assert a.atk == int(100 * (1 + 0.015))
-    BUS.emit("gold_earned", 100)
+    await BUS.emit_async("gold_earned", 100)
     assert party.gold == int(100 * 0.015)
 
 
-def test_stellar_compass_stacks():
+@pytest.mark.asyncio
+async def test_stellar_compass_stacks():
     event_bus_module.bus._subs.clear()
     party = Party()
     a = PlayerBase()
@@ -184,34 +191,36 @@ def test_stellar_compass_stacks():
     party.members.append(a)
     award_relic(party, "stellar_compass")
     award_relic(party, "stellar_compass")
-    apply_relics(party)
-    BUS.emit("critical_hit", a, None, 0, "attack")
+    await apply_relics(party)
+    await BUS.emit_async("critical_hit", a, None, 0, "attack")
     assert a.atk == int(100 * (1 + 0.015 * 2))
-    BUS.emit("gold_earned", 100)
+    await BUS.emit_async("gold_earned", 100)
     assert party.gold == int(100 * 0.03)
 
 
-def test_stellar_compass_multiple_crits():
+@pytest.mark.asyncio
+async def test_stellar_compass_multiple_crits():
     event_bus_module.bus._subs.clear()
     party = Party()
     a = PlayerBase()
     a.set_base_stat('atk', 100)
     party.members.append(a)
     award_relic(party, "stellar_compass")
-    apply_relics(party)
+    await apply_relics(party)
 
-    BUS.emit("critical_hit", a, None, 0, "attack")
-    BUS.emit("gold_earned", 100)
+    await BUS.emit_async("critical_hit", a, None, 0, "attack")
+    await BUS.emit_async("gold_earned", 100)
     assert a.atk == int(100 * (1 + 0.015))
     assert party.gold == int(100 * 0.015)
 
-    BUS.emit("critical_hit", a, None, 0, "attack")
-    BUS.emit("gold_earned", 100)
+    await BUS.emit_async("critical_hit", a, None, 0, "attack")
+    await BUS.emit_async("gold_earned", 100)
     assert a.atk == int(100 * (1 + 0.015 * 2))
     assert party.gold == int(100 * 0.015) + int(100 * 0.03)
 
 
-def test_echoing_drum_repeats_attack():
+@pytest.mark.asyncio
+async def test_echoing_drum_repeats_attack():
     event_bus_module.bus._subs.clear()
     party = Party()
     a = PlayerBase()
@@ -219,17 +228,18 @@ def test_echoing_drum_repeats_attack():
     b.hp = 100
     party.members.append(a)
     award_relic(party, "echoing_drum")
-    apply_relics(party)
-    BUS.emit("battle_start")
+    await apply_relics(party)
+    await BUS.emit_async("battle_start")
     b.hp -= 20
-    BUS.emit("attack_used", a, b, 20)
+    await BUS.emit_async("attack_used", a, b, 20)
     assert b.hp == 100 - 20 - int(20 * 0.25)
     b.hp -= 20
-    BUS.emit("attack_used", a, b, 20)
+    await BUS.emit_async("attack_used", a, b, 20)
     assert b.hp == 100 - 20 - int(20 * 0.25) - 20
 
 
-def test_echoing_drum_stacks():
+@pytest.mark.asyncio
+async def test_echoing_drum_stacks():
     event_bus_module.bus._subs.clear()
     party = Party()
     a = PlayerBase()
@@ -238,8 +248,8 @@ def test_echoing_drum_stacks():
     party.members.append(a)
     award_relic(party, "echoing_drum")
     award_relic(party, "echoing_drum")
-    apply_relics(party)
-    BUS.emit("battle_start")
+    await apply_relics(party)
+    await BUS.emit_async("battle_start")
     b.hp -= 20
-    BUS.emit("attack_used", a, b, 20)
+    await BUS.emit_async("attack_used", a, b, 20)
     assert b.hp == 100 - 20 - int(20 * 0.25) * 2

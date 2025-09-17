@@ -19,7 +19,7 @@ class FarsightScope(CardBase):
     async def apply(self, party) -> None:  # type: ignore[override]
         await super().apply(party)
 
-        def _before_attack(attacker, target):
+        async def _before_attack(attacker, target, *_extra):
             if attacker in party.members:
                 target_hp = getattr(target, "hp", 0)
                 target_max_hp = getattr(target, "max_hp", 1)
@@ -44,7 +44,7 @@ class FarsightScope(CardBase):
                         getattr(attacker, "id", "attacker"),
                         getattr(target, "id", "target"),
                     )
-                    BUS.emit(
+                    await BUS.emit_async(
                         "card_effect",
                         self.id,
                         attacker,

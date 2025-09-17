@@ -44,7 +44,7 @@ class Light(DamageTypeBase):
         from autofighter.rooms.battle.pacing import YIELD_MULTIPLIER
         from autofighter.rooms.battle.pacing import pace_sleep
 
-        if not getattr(actor, "use_ultimate", lambda: False)():
+        if not await self.consume_ultimate(actor):
             return False
         for ally in allies:
             if ally.hp <= 0:
@@ -85,7 +85,7 @@ class Light(DamageTypeBase):
             mgr.add_modifier(mod)
             await pace_sleep(YIELD_MULTIPLIER)
 
-        BUS.emit("light_ultimate", actor)
+        await BUS.emit_async("light_ultimate", actor)
         return True
 
     @classmethod

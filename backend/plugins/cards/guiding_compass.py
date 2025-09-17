@@ -18,7 +18,7 @@ class GuidingCompass(CardBase):
 
         first_battle_bonus_used = False
 
-        def _on_battle_start(target):
+        async def _on_battle_start(target, *_args):
             nonlocal first_battle_bonus_used
             # Only trigger once for the first battle of the run
             if not first_battle_bonus_used and target in party.members:
@@ -35,7 +35,7 @@ class GuidingCompass(CardBase):
                         member.id,
                     )
                     member.exp += extra_xp
-                    BUS.emit(
+                    await BUS.emit_async(
                         "card_effect",
                         self.id,
                         member,

@@ -27,6 +27,8 @@ def test_charge_from_multiple_ally_actions():
 async def test_ice_ultimate_damage_scaling():
     user = PlayerBase(damage_type=Ice())
     user._base_atk = 10
+    user.ultimate_charge = 15
+    user.ultimate_ready = True
     foe_a = Stats()
     foe_b = Stats()
     for idx, foe in enumerate([foe_a, foe_b], start=1):
@@ -39,7 +41,8 @@ async def test_ice_ultimate_damage_scaling():
     assert foe_b.hp == 2000 - 169 * 6
 
 
-def test_use_ultimate_emits_event():
+@pytest.mark.asyncio
+async def test_use_ultimate_emits_event():
     player = PlayerBase(damage_type=Generic())
     player.ultimate_charge = 15
     player.ultimate_ready = True
@@ -50,7 +53,7 @@ def test_use_ultimate_emits_event():
 
     BUS.subscribe("ultimate_used", _handler)
     try:
-        assert player.use_ultimate() is True
+        assert await player.use_ultimate() is True
         assert player.ultimate_charge == 0
         assert player.ultimate_ready is False
         assert seen == [player]

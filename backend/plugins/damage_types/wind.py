@@ -43,7 +43,7 @@ class Wind(DamageTypeBase):
         from autofighter.rooms.battle.pacing import pace_sleep
 
         # Consume ultimate; bail if not ready
-        if not getattr(actor, "use_ultimate", lambda: False)():
+        if not await self.consume_ultimate(actor):
             return False
 
         actor_type = getattr(actor, "plugin_type", None)

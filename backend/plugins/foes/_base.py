@@ -160,13 +160,13 @@ class FoeBase(Stats):
             setattr(result, name, copy.deepcopy(val, memo))
         return result
 
-    def use_ultimate(self) -> bool:
+    async def use_ultimate(self) -> bool:
         """Consume charge and emit an event when firing the ultimate."""
         if not getattr(self, "ultimate_ready", False):
             return False
         self.ultimate_charge = 0
         self.ultimate_ready = False
-        BUS.emit("ultimate_used", self)
+        await BUS.emit_async("ultimate_used", self)
         return True
 
 

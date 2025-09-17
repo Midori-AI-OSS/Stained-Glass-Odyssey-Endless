@@ -151,10 +151,10 @@ async def test_critical_focus_grants_boost():
     await asyncio.sleep(0)
     base_rate = member.crit_rate
     base_dmg = member.crit_damage
-    BUS.emit("turn_start")
+    await BUS.emit_async("turn_start")
     assert member.crit_rate == pytest.approx(base_rate + 0.005)
     assert member.crit_damage == pytest.approx(base_dmg + 0.05)
-    BUS.emit("damage_taken", member, None, 10)
+    await BUS.emit_async("damage_taken", member, None, 10)
     assert member.crit_rate == pytest.approx(base_rate)
 
 
@@ -167,15 +167,15 @@ async def test_critical_transfer_moves_stacks():
     await cards_module.apply_cards(party)
     await asyncio.sleep(0)
     cb_a = CriticalBoost()
-    cb_a.apply(a)
-    cb_a.apply(a)
+    await cb_a.apply(a)
+    await cb_a.apply(a)
     setattr(a, "_critical_boost", cb_a)
     cb_b = CriticalBoost()
-    cb_b.apply(b)
+    await cb_b.apply(b)
     setattr(b, "_critical_boost", cb_b)
     base_atk = a.atk
     a.add_ultimate_charge(15)
-    a.use_ultimate()
+    await a.use_ultimate()
     await asyncio.sleep(0)
     assert getattr(a, "_critical_boost").stacks == 3
     assert a.atk == int(base_atk * 1.12)
@@ -191,7 +191,7 @@ async def test_iron_guard_defense_buff():
     await asyncio.sleep(0)
     base_a = a.defense
     base_b = b.defense
-    BUS.emit("damage_taken", a, b, 10)
+    await BUS.emit_async("damage_taken", a, b, 10)
     assert a.defense == base_a + 20
     assert b.defense == base_b + 20
 
@@ -207,18 +207,18 @@ async def test_swift_footwork_first_action(monkeypatch):
     assert member.actions_per_turn == 2
     events: list[str] = []
 
-    def _listener(card_id, *_args):
+    async def _listener(card_id, *_args):
         if card_id == "swift_footwork":
             events.append(_args[1])
 
     BUS.subscribe("card_effect", _listener)
-    BUS.emit("battle_start")
+    await BUS.emit_async("battle_start")
     member.action_points -= 1
-    BUS.emit("action_used", member, None, 10)
+    await BUS.emit_async("action_used", member, None, 10)
     await asyncio.sleep(0.05)
     assert member.action_points == 1
     member.action_points -= 1
-    BUS.emit("action_used", member, None, 10)
+    await BUS.emit_async("action_used", member, None, 10)
     await asyncio.sleep(0.05)
     BUS.unsubscribe("card_effect", _listener)
     assert member.action_points == 0
@@ -233,7 +233,7 @@ async def test_mystic_aegis_heals_on_resist():
     award_card(party, "mystic_aegis")
     await cards_module.apply_cards(party)
     await asyncio.sleep(0)
-    BUS.emit("debuff_resisted", member)
+    await BUS.emit_async("debuff_resisted", member)
     await asyncio.sleep(0)
     assert member.hp == 800 + int(member.max_hp * 0.05)
 
@@ -247,10 +247,10 @@ async def test_vital_surge_low_hp_bonus():
     await asyncio.sleep(0)
     assert member.max_hp == int(1000 * 1.55)
     member.hp = int(member.max_hp * 0.4)
-    BUS.emit("turn_start")
+    await BUS.emit_async("turn_start")
     assert member.atk == int(200 * 1.55)
     member.hp = member.max_hp
-    BUS.emit("heal_received", member, member, 100)
+    await BUS.emit_async("heal_received", member, member, 100)
     assert member.atk == 200
 
 
@@ -266,8 +266,8 @@ async def test_elemental_spark_selects_ally(monkeypatch):
     import random
 
     monkeypatch.setattr(random, "choice", lambda seq: seq[0])
-    BUS.emit("battle_start")
+    await BUS.emit_async("battle_start")
     assert member.effect_hit_rate == pytest.approx(base + 0.05)
-    BUS.emit("battle_end")
+    await BUS.emit_async("battle_end")
     await asyncio.sleep(0)
     assert member.effect_hit_rate == pytest.approx(base)

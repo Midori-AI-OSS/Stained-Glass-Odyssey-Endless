@@ -20,12 +20,19 @@ class Generic(DamageTypeBase):
         from autofighter.rooms.battle.pacing import YIELD_MULTIPLIER
         from autofighter.rooms.battle.pacing import pace_sleep
 
-        if not getattr(actor, "use_ultimate", lambda: False)():
+        if not await self.consume_ultimate(actor):
             return False
 
         from autofighter.stats import BUS  # Import here to avoid circular imports
 
         registry = PassiveRegistry()
+        old_luna_cls = registry._registry.get("luna_lunar_reservoir")
+        from plugins.passives.luna_lunar_reservoir import LunaLunarReservoir
+
+        actor_passives = getattr(actor, "passives", None)
+        has_luna_reservoir = bool(
+            actor_passives and "luna_lunar_reservoir" in actor_passives
+        )
         target_pool = (
             [a for a in allies if a.hp > 0]
             if getattr(actor, "plugin_type", "") == "foe"
@@ -35,7 +42,20 @@ class Generic(DamageTypeBase):
             return True
         target = target_pool[0]
 
-        await registry.trigger("ultimate_used", actor, party=allies, foes=enemies)
+        if has_luna_reservoir and old_luna_cls is LunaLunarReservoir:
+            original_passives = actor_passives
+            filtered_passives = [
+                pid for pid in actor_passives if pid != "luna_lunar_reservoir"
+            ]
+            try:
+                actor.passives = filtered_passives
+                await registry.trigger(
+                    "ultimate_used", actor, party=allies, foes=enemies
+                )
+            finally:
+                actor.passives = original_passives
+        else:
+            await registry.trigger("ultimate_used", actor, party=allies, foes=enemies)
 
         base = actor.atk // 64
         remainder = actor.atk % 64
@@ -62,11 +82,11 @@ class Generic(DamageTypeBase):
                 party=allies,
                 foes=enemies,
             )
-        from plugins.passives.luna_lunar_reservoir import LunaLunarReservoir
-
-        if LunaLunarReservoir is not _LLR_old:
-            _LLR_old.add_charge(actor, amount=64)
-        LunaLunarReservoir.add_charge(actor, amount=64)
+        if old_luna_cls and old_luna_cls is not LunaLunarReservoir:
+            try:
+                old_luna_cls.add_charge(actor, amount=64)
+            except Exception:
+                pass
         return True
 
     @classmethod

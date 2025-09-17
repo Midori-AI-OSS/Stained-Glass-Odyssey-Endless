@@ -181,7 +181,7 @@ async def test_hilander_aftertaste_and_soft_cap(monkeypatch):
     monkeypatch.setattr(Aftertaste, "rolls", lambda self: [self.base_pot])
     damage_before = target.damage_taken
     set_battle_active(True)
-    BUS.emit("critical_hit", hilander, target, 100, "attack")
+    await BUS.emit_async("critical_hit", hilander, target, 100, "attack")
     await asyncio.sleep(0)
     set_battle_active(False)
 

@@ -22,7 +22,7 @@ class HonedPoint(CardBase):
 
         marked_enemies: dict[int, set[int]] = {}
 
-        def _on_damage_dealt(attacker, target, damage, _damage_type, source, source_action, action_name):
+        async def _on_damage_dealt(attacker, target, damage, _damage_type, source, source_action, action_name):
             if attacker in party.members and action_name == "attack":
                 attacker_id = id(attacker)
                 target_id = id(target)
@@ -45,7 +45,7 @@ class HonedPoint(CardBase):
                         log.debug(
                             "Honed Point bonus damage: +%d vs unmarked enemy", bonus_damage
                         )
-                        BUS.emit(
+                        await BUS.emit_async(
                             "card_effect",
                             self.id,
                             attacker,
@@ -63,4 +63,3 @@ class HonedPoint(CardBase):
 
         BUS.subscribe("damage_dealt", _on_damage_dealt)
         BUS.subscribe("battle_start", _on_battle_start)
-

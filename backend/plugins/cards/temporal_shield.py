@@ -23,7 +23,7 @@ class TemporalShield(CardBase):
     async def apply(self, party):
         await super().apply(party)
 
-        def _turn_start() -> None:
+        async def _turn_start(*_args) -> None:
             for member in party.members:
                 if random.random() < 0.5:
                     mgr = getattr(member, "effect_manager", None)
@@ -37,7 +37,7 @@ class TemporalShield(CardBase):
                         mitigation_mult=100.0,
                     )
                     mgr.add_modifier(mod)
-                    BUS.emit(
+                    await BUS.emit_async(
                         "card_effect",
                         self.id,
                         member,
@@ -46,4 +46,4 @@ class TemporalShield(CardBase):
                         {"reduction_percent": 99},
                     )
 
-        BUS.subscribe("turn_start", lambda *_: _turn_start())
+        BUS.subscribe("turn_start", _turn_start)

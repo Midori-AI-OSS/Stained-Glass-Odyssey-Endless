@@ -43,7 +43,7 @@ class TestEventBusPerformance:
 
         def slow_subscriber(index):
             """Simulate a subscriber that takes time to process (like complex relic effects)."""
-            def handler(*args):
+            async def handler(*args):
                 start = time.perf_counter()
                 # Simulate 1ms of processing time per subscriber (realistic for complex effects)
                 time.sleep(YIELD_DELAY)
@@ -68,7 +68,7 @@ class TestEventBusPerformance:
             target = Stats()
             target.id = "test_target"
 
-            BUS.emit("damage_dealt", attacker, target, 100, "attack", None, None, "Normal Attack")
+            await BUS.emit_async("damage_dealt", attacker, target, 100, "attack", None, None, "Normal Attack")
 
             end_time = time.perf_counter()
             total_time = end_time - start_time
@@ -104,7 +104,7 @@ class TestEventBusPerformance:
         # Track event emissions
         emission_times = []
 
-        def track_emission(*args):
+        async def track_emission(*args):
             emission_times.append(time.perf_counter())
 
         BUS.subscribe("damage_dealt", track_emission)
@@ -122,7 +122,7 @@ class TestEventBusPerformance:
             # Simulate initial attack triggering multiple Aftertaste effects
             for i in range(aftertaste_count):
                 # Each Aftertaste effect emits a relic_effect event
-                BUS.emit("relic_effect", "aftertaste", attacker, "damage", 25, {
+                await BUS.emit_async("relic_effect", "aftertaste", attacker, "damage", 25, {
                     "effect_type": "aftertaste",
                     "base_damage": 25,
                     "random_damage_type": "Fire",
@@ -130,7 +130,7 @@ class TestEventBusPerformance:
                 })
 
                 # Then emits damage_dealt when damage is applied
-                BUS.emit("damage_dealt", attacker, target, 25, "effect", "aftertaste", "Fire", "Aftertaste (Fire)")
+                await BUS.emit_async("damage_dealt", attacker, target, 25, "effect", "aftertaste", "Fire", "Aftertaste (Fire)")
 
             end_time = time.perf_counter()
             total_time = end_time - start_time
@@ -167,7 +167,7 @@ class TestEventBusPerformance:
 
         try:
             start = time.perf_counter()
-            BUS.emit("test_sync", "data")
+            await BUS.emit_async("test_sync", "data")
             sync_time = time.perf_counter() - start
             sync_times.append(sync_time)
         finally:
@@ -201,7 +201,7 @@ class TestEventBusPerformance:
 
         event_times = []
 
-        def timing_handler(*args):
+        async def timing_handler(*args):
             event_times.append(time.perf_counter())
 
         BUS.subscribe("burst_test", timing_handler)
@@ -211,7 +211,7 @@ class TestEventBusPerformance:
 
             # Rapid fire events (simulates intense combat with many effects)
             for i in range(burst_size):
-                BUS.emit("burst_test", f"event_{i}")
+                await BUS.emit_async("burst_test", f"event_{i}")
 
             end_time = time.perf_counter()
             total_time = end_time - start_time

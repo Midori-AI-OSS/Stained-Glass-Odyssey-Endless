@@ -22,7 +22,7 @@ class CriticalOverdrive(CardBase):
         await super().apply(party)
         state: dict[int, object] = {}
 
-        def _change(target, stacks) -> None:
+        async def _change(target, stacks) -> None:
             if target not in party.members:
                 return
             pid = id(target)
@@ -45,7 +45,7 @@ class CriticalOverdrive(CardBase):
                 )
                 target.effect_manager.add_modifier(new_mod)
                 state[pid] = new_mod
-                BUS.emit(
+                await BUS.emit_async(
                     "card_effect",
                     self.id,
                     target,

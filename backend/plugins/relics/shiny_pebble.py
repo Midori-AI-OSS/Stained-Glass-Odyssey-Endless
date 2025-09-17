@@ -18,15 +18,15 @@ class ShinyPebble(RelicBase):
         "Boosts DEF and grants extra mitigation the first time an ally is hit."
     )
 
-    def apply(self, party) -> None:
-        super().apply(party)
+    async def apply(self, party) -> None:
+        await super().apply(party)
 
         state = getattr(party, "_shiny_pebble_state", None)
         if state is None:
             state = {"active": {}, "triggered": set()}
             party._shiny_pebble_state = state
 
-            def _first_hit(target, attacker, amount) -> None:
+            async def _first_hit(target, attacker, amount) -> None:
                 if target not in party.members or id(target) in state["triggered"]:
                     return
                 state["triggered"].add(id(target))
@@ -42,7 +42,7 @@ class ShinyPebble(RelicBase):
                 state["active"][id(target)] = (target, mod)
 
                 # Track mitigation burst application
-                BUS.emit(
+                await BUS.emit_async(
                     "relic_effect",
                     "shiny_pebble",
                     target,

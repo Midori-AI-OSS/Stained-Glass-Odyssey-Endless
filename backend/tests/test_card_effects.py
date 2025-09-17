@@ -1,3 +1,4 @@
+import pytest
 import asyncio
 from unittest.mock import patch
 
@@ -18,7 +19,8 @@ def setup_event_loop():
     return loop
 
 
-def test_overclock_extra_turn_queue():
+@pytest.mark.asyncio
+async def test_overclock_extra_turn_queue():
     loop = setup_event_loop()
     party = Party()
     ally = PlayerBase()
@@ -32,8 +34,8 @@ def test_overclock_extra_turn_queue():
     loop.run_until_complete(apply_cards(party))
     battle_module._VISUAL_QUEUE = ActionQueue([ally, foe])
     battle_module._EXTRA_TURNS.clear()
-    BUS.emit("battle_start", foe)
-    BUS.emit("battle_start", ally)
+    await BUS.emit_async("battle_start", foe)
+    await BUS.emit_async("battle_start", ally)
     loop.run_until_complete(asyncio.sleep(0))
     ordered = [ally, foe]
     def _snapshot() -> list[dict[str, str | bool]]:
@@ -63,7 +65,8 @@ def test_overclock_extra_turn_queue():
     assert actions == ["ally", "ally", "foe"]
 
 
-def test_iron_resolve_revives_and_cooldown():
+@pytest.mark.asyncio
+async def test_iron_resolve_revives_and_cooldown():
     party = Party()
     ally = PlayerBase()
     enemy = PlayerBase()
@@ -74,22 +77,23 @@ def test_iron_resolve_revives_and_cooldown():
     loop.run_until_complete(apply_cards(party))
 
     ally.hp = 0
-    BUS.emit("damage_taken", ally, enemy, 200)
+    await BUS.emit_async("damage_taken", ally, enemy, 200)
     assert ally.hp == int(ally.max_hp * 0.30)
 
     ally.hp = 0
-    BUS.emit("damage_taken", ally, enemy, 200)
+    await BUS.emit_async("damage_taken", ally, enemy, 200)
     assert ally.hp == 0
 
     for _ in range(3):
-        BUS.emit("turn_end")
+        await BUS.emit_async("turn_end")
 
     ally.hp = 0
-    BUS.emit("damage_taken", ally, enemy, 200)
+    await BUS.emit_async("damage_taken", ally, enemy, 200)
     assert ally.hp == int(ally.max_hp * 0.30)
 
 
-def test_arcane_repeater_repeats_attack():
+@pytest.mark.asyncio
+async def test_arcane_repeater_repeats_attack():
     loop = setup_event_loop()
     party = Party()
     ally = PlayerBase()
@@ -102,13 +106,14 @@ def test_arcane_repeater_repeats_attack():
 
     dmg = loop.run_until_complete(foe.apply_damage(ally.atk, attacker=ally))
     with patch("random.random", return_value=0.1):
-        BUS.emit("attack_used", ally, foe, dmg)
+        await BUS.emit_async("attack_used", ally, foe, dmg)
         loop.run_until_complete(asyncio.sleep(0))
     expected = dmg + int(dmg * 0.5)
     assert foe.hp == 1000 - expected
 
 
-def test_mindful_tassel_boosts_first_debuff():
+@pytest.mark.asyncio
+async def test_mindful_tassel_boosts_first_debuff():
     loop = setup_event_loop()
     party = Party()
     ally = PlayerBase()
@@ -117,8 +122,8 @@ def test_mindful_tassel_boosts_first_debuff():
     award_card(party, "mindful_tassel")
     loop.run_until_complete(apply_cards(party))
 
-    BUS.emit("battle_start", ally)
-    BUS.emit("battle_start", foe)
+    await BUS.emit_async("battle_start", ally)
+    await BUS.emit_async("battle_start", foe)
     loop.run_until_complete(asyncio.sleep(0))
 
     mgr = EffectManager(foe)

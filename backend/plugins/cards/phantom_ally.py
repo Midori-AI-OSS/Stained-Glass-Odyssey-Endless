@@ -84,7 +84,7 @@ class PhantomAlly(CardBase):
         party.members.append(summon)
 
         # Track phantom ally summoning
-        BUS.emit("card_effect", "phantom_ally", original, "phantom_summoned", 1, {
+        await BUS.emit_async("card_effect", "phantom_ally", original, "phantom_summoned", 1, {
             "original_ally": getattr(original, 'id', str(original)),
             "phantom_id": summon.id,
             "phantom_stats": {
@@ -109,11 +109,11 @@ class PhantomAlly(CardBase):
         })
 
         # Register cleanup handler to remove from party when battle ends
-        def _cleanup(_entity):
+        async def _cleanup(_entity):
             if summon in party.members:
                 party.members.remove(summon)
                 # Track phantom cleanup
-                BUS.emit("card_effect", "phantom_ally", summon, "phantom_dismissed", 1, {
+                await BUS.emit_async("card_effect", "phantom_ally", summon, "phantom_dismissed", 1, {
                     "reason": "battle_end",
                     "original_ally": getattr(original, 'id', str(original))
                 })

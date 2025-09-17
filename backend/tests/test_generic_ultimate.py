@@ -7,12 +7,12 @@ from plugins.damage_types.generic import Generic
 
 
 class Actor(Stats):
-    def use_ultimate(self) -> bool:  # pragma: no cover - simple helper
+    async def use_ultimate(self) -> bool:  # pragma: no cover - simple helper
         if not self.ultimate_ready:
             return False
         self.ultimate_charge = 0
         self.ultimate_ready = False
-        BUS.emit("ultimate_used", self)
+        await BUS.emit_async("ultimate_used", self)
         return True
 
 
@@ -49,4 +49,4 @@ async def test_generic_ultimate_hits_and_passive_triggers():
 
     assert result is True
     assert hits["count"] == 64
-    assert llr.get_charge(actor) >= 64
+    assert llr.get_charge(actor) == 64

@@ -28,8 +28,8 @@ class Overclock(CardBase):
 
         async def _double_act(ally: Stats) -> None:
             for _ in range(2):
-                BUS.emit("extra_turn", ally)
-                BUS.emit(
+                await BUS.emit_async("extra_turn", ally)
+                await BUS.emit_async(
                     "card_effect",
                     self.id,
                     ally,

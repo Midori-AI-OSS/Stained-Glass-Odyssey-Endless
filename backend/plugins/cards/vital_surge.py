@@ -19,7 +19,7 @@ class VitalSurge(CardBase):
         await super().apply(party)
         active: dict[int, object] = {}
 
-        def _check(member) -> None:
+        async def _check(member) -> None:
             pid = id(member)
             mgr = getattr(member, "effect_manager", None)
             if mgr is None:
@@ -36,7 +36,7 @@ class VitalSurge(CardBase):
                 )
                 active[pid] = mod
                 mgr.add_modifier(mod)
-                BUS.emit(
+                await BUS.emit_async(
                     "card_effect",
                     self.id,
                     member,

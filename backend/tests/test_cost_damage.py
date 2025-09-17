@@ -8,7 +8,6 @@ from plugins.event_bus import EventBus
 @pytest.fixture
 def bus(monkeypatch):
     bus = EventBus()
-    bus._prefer_async = False
     monkeypatch.setattr(stats, "BUS", bus)
     return bus
 

@@ -49,7 +49,7 @@ async def test_pocket_manual_triggers_aftertaste():
     import asyncio
     original_create_task = asyncio.get_event_loop().create_task
 
-    def mock_create_task(coro):
+    async def mock_create_task(coro):
         tasks_created.append(coro)
         # Return a mock task that doesn't actually run
         task = AsyncMock()
@@ -66,18 +66,18 @@ async def test_pocket_manual_triggers_aftertaste():
 
         # Simulate 9 hits (should not trigger aftertaste)
         for i in range(9):
-            BUS.emit("hit_landed", attacker, target, 100)
+            await BUS.emit_async("hit_landed", attacker, target, 100)
 
         assert len(tasks_created) == 0
 
         # 10th hit should trigger aftertaste
-        BUS.emit("hit_landed", attacker, target, 100)
+        await BUS.emit_async("hit_landed", attacker, target, 100)
 
         assert len(tasks_created) >= 1  # At least one aftertaste task should be created
 
         # 20th hit should trigger aftertaste again
         for i in range(10):
-            BUS.emit("hit_landed", attacker, target, 100)
+            await BUS.emit_async("hit_landed", attacker, target, 100)
 
         assert len(tasks_created) >= 2  # At least two aftertaste tasks should be created
 

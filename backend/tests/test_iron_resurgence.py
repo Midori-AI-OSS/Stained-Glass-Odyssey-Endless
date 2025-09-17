@@ -25,7 +25,7 @@ async def test_iron_resurgence_revives_and_cools_down() -> None:
     await asyncio.sleep(0)
     assert member.hp == 0
     for _ in range(4):
-        BUS.emit("turn_start")
+        await BUS.emit_async("turn_start")
     await member.apply_healing(member.max_hp)
     await member.apply_damage(member.max_hp)
     await asyncio.sleep(0)

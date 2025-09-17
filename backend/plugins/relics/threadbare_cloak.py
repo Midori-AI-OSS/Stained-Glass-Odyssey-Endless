@@ -16,8 +16,8 @@ class ThreadbareCloak(RelicBase):
     effects: dict[str, float] = field(default_factory=dict)
     about: str = "Start battle with a small shield equal to 3% Max HP per stack."
 
-    def apply(self, party) -> None:
-        super().apply(party)
+    async def apply(self, party) -> None:
+        await super().apply(party)
 
         applied = getattr(party, "_threadbare_cloak_stacks", 0)
         stacks = party.relics.count(self.id)

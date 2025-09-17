@@ -17,7 +17,7 @@ class ReinforcedCloak(CardBase):
     async def apply(self, party) -> None:  # type: ignore[override]
         await super().apply(party)
 
-        def _on_effect_applied(target, effect_name, duration, source):
+        async def _on_effect_applied(target, effect_name, duration, source):
             # Check if target is one of our party members and effect is a long debuff
             if target in party.members and duration >= 3:  # Long debuff (3+ turns)
                 effect_lower = effect_name.lower()
@@ -36,7 +36,7 @@ class ReinforcedCloak(CardBase):
                                     import logging
                                     log = logging.getLogger(__name__)
                                     log.debug("Reinforced Cloak reduced long debuff duration by 1 for %s (%s)", target.id, effect_name)
-                                    BUS.emit("card_effect", self.id, target, "debuff_duration_reduction", 1, {
+                                    await BUS.emit_async("card_effect", self.id, target, "debuff_duration_reduction", 1, {
                                         "effect_reduced": effect_name,
                                         "turns_reduced": 1,
                                         "trigger_chance": 0.30,
