@@ -53,7 +53,7 @@
             <img 
               src={getCharacterImage((fighter?.summon_type === 'phantom' && fighter?.summoner_id) ? fighter.summoner_id : (fighter?.summon_type || fighter?.id))} 
               alt="" 
-              class="portrait" 
+              class="portrait {fighter?.summon_type === 'phantom' ? 'phantom' : ''}" 
               title={(fighter?.name || fighter?.id || '').toString().replace(/[_-]+/g, ' ')}
             />
             {#if showActionValues}
@@ -155,6 +155,7 @@
     display: block;
     object-fit: cover;
   }
+  .portrait.phantom { filter: grayscale(60%) brightness(0.92); }
   .av {
     position: absolute;
     bottom: 4px;

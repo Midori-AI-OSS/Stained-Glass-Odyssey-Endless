@@ -1,7 +1,7 @@
 <script>
   import { Circle as PipCircle } from 'lucide-svelte';
   import TripleRingSpinner from '../components/TripleRingSpinner.svelte';
-  import { getCharacterImage, getElementColor, getElementIcon } from '../systems/assetLoader.js';
+  import { getCharacterImage, getElementColor, getElementIcon, hasCharacterGallery, advanceCharacterImage } from '../systems/assetLoader.js';
 
   export let fighter = {};
   export let position = 'bottom'; // 'top' for foes, 'bottom' for party
@@ -106,6 +106,8 @@
   }
 
   $: isDead = (fighter?.hp || 0) <= 0;
+  $: isPhantom = fighter?.summon_type === 'phantom';
+  $: canCycle = hasCharacterGallery(imageId);
   
   // Display name for hover label
   $: displayName = (() => {
@@ -115,6 +117,31 @@
 
   function resetElementChange() {
     elementChanged = false;
+  }
+
+  // Local image state to enable cross-fade when cycling gallery images
+  let imageVersion = 0;
+  $: currentImageUrl = (imageVersion, getCharacterImage(imageId));
+  let fading = false;
+
+  function cyclePortraitIfAvailable() {
+    try {
+      const id = imageId;
+      if (!id) return;
+      if (!hasCharacterGallery(id)) return;
+      // Begin fade-out
+      fading = true;
+      const dur = 160;
+      setTimeout(() => {
+        // Advance to next image and re-compute
+        advanceCharacterImage(id);
+        imageVersion++;
+        // Allow the DOM to apply the new background, then fade-in
+        requestAnimationFrame(() => {
+          setTimeout(() => { fading = false; }, 10);
+        });
+      }, dur);
+    } catch {}
   }
 </script>
 
@@ -130,12 +157,14 @@
     class:reduced={reducedMotion}
     on:animationend={resetElementChange}
   >
-    <div class="fighter-portrait">
+    <div class="fighter-portrait" class:can-cycle={canCycle} on:click={cyclePortraitIfAvailable}>
       <div
         class="portrait-image"
         class:element-glow={!isDead && Boolean(fighter?.ultimate_ready)}
         class:reduced={reducedMotion}
-        style="background-image: url({getCharacterImage(imageId)})"
+        class:phantom={isPhantom && !isDead}
+        class:fading={fading}
+        style="background-image: url({currentImageUrl})"
       >
       {#if !reducedMotion && !isDead && fighter?.ultimate_ready}
         <div class="element-effect {elementGlow.effect}"></div>
@@ -243,6 +272,7 @@
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
     transition: border-color 0.3s ease;
   }
+  .fighter-portrait.can-cycle { cursor: pointer; }
 
   /* External highlight (e.g., hovering the action queue) */
   .modern-fighter-card.highlight .fighter-portrait {
@@ -256,8 +286,10 @@
     background-size: cover;
     background-position: center;
     position: relative;
-    transition: all 0.3s ease;
+    transition: opacity 180ms ease, filter 0.3s ease;
+    opacity: 1;
   }
+  .portrait-image.fading { opacity: 0; }
 
   .portrait-image.element-glow {
     filter: drop-shadow(0 0 6px var(--element-glow-color));
@@ -682,6 +714,11 @@
     filter: grayscale(100%);
     /* Keep outline element-colored even when dead for consistency */
     border-color: var(--element-color, rgba(255, 255, 255, 0.3));
+  }
+
+  /* Phantom ally: subtly tinted to indicate it's a clone */
+  .portrait-image.phantom {
+    filter: grayscale(60%) brightness(0.92);
   }
 
   .dead .element-effect {

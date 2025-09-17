@@ -139,14 +139,19 @@ const CHARACTER_ASSET_ALIASES = {
   lady_echo: 'echo'
 };
 
+// Helper: resolve asset key for a given character id (handles aliases/patterns)
+function resolveCharacterKey(characterId) {
+  let key = CHARACTER_ASSET_ALIASES[characterId] || characterId;
+  if (typeof key === 'string' && key.startsWith('jellyfish_')) key = 'jellyfish';
+  return key;
+}
+
 // Get image from character folder or fallback
 export function getCharacterImage(characterId, _isPlayer = false) {
   if (!characterId) return defaultFallback;
 
   // Resolve folder alias when id differs from asset folder
-  let key = CHARACTER_ASSET_ALIASES[characterId] || characterId;
-  // Ensure key is a string before calling startsWith
-  if (typeof key === 'string' && key.startsWith('jellyfish_')) key = 'jellyfish';
+  let key = resolveCharacterKey(characterId);
 
   // If this is the Mimic, always mirror the Player's chosen image for this session
   if (characterId === 'mimic') {
@@ -429,4 +434,31 @@ function stringHashIndex(str, modulo) {
 
 export function clearCharacterImageCache() {
   characterImageCache.clear();
+}
+
+// Public: whether a character has a gallery (more than one image) available
+export function hasCharacterGallery(characterId) {
+  if (!characterId) return false;
+  const key = resolveCharacterKey(characterId);
+  const list = characterAssets[key];
+  return Array.isArray(list) && list.length > 1;
+}
+
+// Public: advance cached character image to the next one in its gallery
+// Returns the chosen image url (or current one if no change)
+export function advanceCharacterImage(characterId) {
+  if (!characterId) return defaultFallback;
+  const key = resolveCharacterKey(characterId);
+  const list = characterAssets[key];
+  if (!Array.isArray(list) || list.length === 0) {
+    return characterImageCache.get(characterId) || getCharacterImage(characterId);
+  }
+  // Determine current index by cache or selection rule
+  const current = characterImageCache.get(characterId) || getCharacterImage(characterId);
+  let idx = list.indexOf(current);
+  if (idx < 0) idx = 0;
+  const nextIdx = (idx + 1) % list.length;
+  const next = list[nextIdx];
+  characterImageCache.set(characterId, next);
+  return next;
 }
