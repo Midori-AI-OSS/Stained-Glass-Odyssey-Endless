@@ -14,7 +14,8 @@ from autofighter.stats import Stats
 class TestEventBusStressWithFallbackEffects:
     """Stress test simulating 100 fallback effects during combat."""
 
-    def test_100_fallback_effects_sync_performance(self):
+    @pytest.mark.asyncio
+    async def test_100_fallback_effects_sync_performance(self):
         """Test current sync performance with 100 fallback effects subscribed to damage events."""
         # Simulate 100 entities with fallback effects (like Aftertaste)
         fallback_count = 100
@@ -23,7 +24,7 @@ class TestEventBusStressWithFallbackEffects:
 
         def fallback_effect_handler(effect_id):
             """Simulate a fallback effect that processes damage events."""
-            def handler(attacker, target, amount, *args):
+            async def handler(attacker, target, amount, *args):
                 nonlocal damage_events_handled
                 start = time.perf_counter()
 
@@ -55,7 +56,7 @@ class TestEventBusStressWithFallbackEffects:
 
             # Test single damage event processing time
             start_time = time.perf_counter()
-            BUS.emit("damage_dealt", attacker, target, 100, "attack", None, None, "Normal Attack")
+            await BUS.emit_async("damage_dealt", attacker, target, 100, "attack", None, None, "Normal Attack")
             single_event_time = time.perf_counter() - start_time
 
             print(f"Single damage event processing time: {single_event_time*1000:.1f}ms")
@@ -71,7 +72,7 @@ class TestEventBusStressWithFallbackEffects:
             start_time = time.perf_counter()
 
             for i in range(burst_size):
-                BUS.emit("damage_dealt", attacker, target, 25 + i, "attack", None, None, f"Attack_{i}")
+                await BUS.emit_async("damage_dealt", attacker, target, 25 + i, "attack", None, None, f"Attack_{i}")
 
             burst_time = time.perf_counter() - start_time
 
@@ -175,7 +176,8 @@ class TestEventBusStressWithFallbackEffects:
             for handler in async_handlers:
                 BUS.unsubscribe("damage_dealt", handler)
 
-    def test_event_bus_batching_performance(self):
+    @pytest.mark.asyncio
+    async def test_event_bus_batching_performance(self):
         """Test the new batching functionality for high-frequency events."""
         fallback_count = 50  # Smaller number for batching test
         batched_events = []
@@ -219,7 +221,8 @@ class TestEventBusStressWithFallbackEffects:
             for handler in handlers:
                 BUS.unsubscribe("damage_dealt", handler)
 
-    def test_performance_metrics_collection(self):
+    @pytest.mark.asyncio
+    async def test_performance_metrics_collection(self):
         """Test that performance metrics are being collected properly."""
         print("\n=== Performance Metrics Test ===")
 
@@ -230,7 +233,7 @@ class TestEventBusStressWithFallbackEffects:
         def slow_handler(*args):
             time.sleep(0.02)  # 20ms - intentionally slow
 
-        def fast_handler(*args):
+        async def fast_handler(*args):
             time.sleep(0.001)  # 1ms - normal speed
 
         BUS.subscribe("test_slow", slow_handler)
@@ -238,9 +241,9 @@ class TestEventBusStressWithFallbackEffects:
 
         try:
             # Emit events
-            BUS.emit("test_slow", "data")
-            BUS.emit("test_fast", "data")
-            BUS.emit("test_fast", "data")  # Emit twice
+            await BUS.emit_async("test_slow", "data")
+            await BUS.emit_async("test_fast", "data")
+            await BUS.emit_async("test_fast", "data")  # Emit twice
 
             # Check metrics
             metrics = BUS.get_performance_metrics()

@@ -5,6 +5,8 @@ Test to verify async optimization improvements for DOT effects.
 
 import pytest
 
+import autofighter.stats as stats
+
 from autofighter.effects import DamageOverTime
 from autofighter.effects import EffectManager
 from autofighter.effects import HealingOverTime
@@ -171,3 +173,10 @@ async def test_living_characters_can_still_receive_effects():
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
+
+
+@pytest.fixture(autouse=True)
+def battle_active():
+    stats.set_battle_active(True)
+    yield
+    stats.set_battle_active(False)

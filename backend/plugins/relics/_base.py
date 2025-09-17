@@ -35,7 +35,7 @@ class RelicBase:
     effects: dict[str, float] = field(default_factory=dict)
     about: str = ""
 
-    def apply(self, party: Party) -> None:
+    async def apply(self, party: Party) -> None:
         from autofighter.stats import BUS  # Import here to avoid circular imports
 
         log.info("Applying relic %s to party", self.id)
@@ -59,7 +59,7 @@ class RelicBase:
 
             # Emit relic effect tracking for stat modifications
             for attr, pct in self.effects.items():
-                BUS.emit("relic_effect", self.id, member, f"stat_buff_{attr}", int(pct * 100), {
+                await BUS.emit_async("relic_effect", self.id, member, f"stat_buff_{attr}", int(pct * 100), {
                     "stat_affected": attr,
                     "percentage_change": pct * 100,
                     "stacks": stacks,

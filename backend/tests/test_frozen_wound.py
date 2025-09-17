@@ -16,6 +16,7 @@ from plugins.dots.frozen_wound import FrozenWound
         (100, 0.99, True),
     ],
 )
+@pytest.mark.asyncio
 async def test_frozen_wound_miss_chance(stacks, roll, expect_miss, monkeypatch):
     actor = Stats()
     actor.set_base_stat('atk', 10)

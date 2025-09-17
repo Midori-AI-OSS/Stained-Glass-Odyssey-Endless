@@ -21,13 +21,13 @@ class IronResurgence(CardBase):
         await super().apply(party)
         state = {"cooldown": 0}
 
-        def _damage(victim, *_):
+        async def _damage(victim, *_):
             if victim not in party.members or victim.hp > 0 or state["cooldown"] > 0:
                 return
             heal = max(int(victim.max_hp * 0.1), 1)
             safe_async_task(victim.apply_healing(heal))
             state["cooldown"] = 4
-            BUS.emit(
+            await BUS.emit_async(
                 "card_effect",
                 self.id,
                 victim,

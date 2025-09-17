@@ -18,7 +18,7 @@ class CriticalFocus(CardBase):
         await super().apply(party)
         boosts: dict[int, CriticalBoost] = {}
 
-        def _turn_start() -> None:
+        async def _turn_start() -> None:
             for member in party.members:
                 pid = id(member)
                 effect = boosts.get(pid)
@@ -26,8 +26,8 @@ class CriticalFocus(CardBase):
                     effect = CriticalBoost()
                     boosts[pid] = effect
                     setattr(member, "_critical_boost", effect)
-                effect.apply(member)
-                BUS.emit(
+                await effect.apply(member)
+                await BUS.emit_async(
                     "card_effect",
                     self.id,
                     member,

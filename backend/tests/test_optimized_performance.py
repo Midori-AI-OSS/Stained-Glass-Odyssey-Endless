@@ -1,3 +1,4 @@
+import pytest
 #!/usr/bin/env python3
 """
 Test script to measure performance improvements with async optimizations.
@@ -11,6 +12,7 @@ from autofighter.effects import EffectManager
 from autofighter.stats import Stats
 
 
+@pytest.mark.asyncio
 async def test_optimized_performance():
     """Test performance with optimized DOT processing."""
 

@@ -17,13 +17,13 @@ class PocketManual(RelicBase):
     effects: dict[str, float] = field(default_factory=lambda: {"atk": 0.03})
     about: str = "+3% damage; every 10th hit triggers an additional Aftertaste hit dealing +3% of the original damage."
 
-    def apply(self, party) -> None:
-        super().apply(party)
+    async def apply(self, party) -> None:
+        await super().apply(party)
 
         counts: dict[int, int] = {}
         stacks = party.relics.count(self.id)
 
-        def _hit(attacker, target, amount, source_type="attack", source_name=None) -> None:
+        async def _hit(attacker, target, amount, source_type="attack", source_name=None) -> None:
             # Only trigger if the attacker is a party member
             if attacker not in party.members:
                 return
@@ -34,7 +34,7 @@ class PocketManual(RelicBase):
                 base = int(amount * 0.03 * stacks)
                 if base > 0:
                     # Emit relic effect event
-                    BUS.emit("relic_effect", "pocket_manual", attacker, "trigger_aftertaste", base, {
+                    await BUS.emit_async("relic_effect", "pocket_manual", attacker, "trigger_aftertaste", base, {
                         "hit_count": counts[pid],
                         "original_damage": amount,
                         "aftertaste_damage": base

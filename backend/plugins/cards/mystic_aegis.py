@@ -17,11 +17,11 @@ class MysticAegis(CardBase):
     async def apply(self, party) -> None:  # type: ignore[override]
         await super().apply(party)
 
-        def _resisted(member) -> None:
+        async def _resisted(member) -> None:
             if member not in party.members:
                 return
             heal = int(member.max_hp * 0.05)
-            BUS.emit(
+            await BUS.emit_async(
                 "card_effect",
                 self.id,
                 member,

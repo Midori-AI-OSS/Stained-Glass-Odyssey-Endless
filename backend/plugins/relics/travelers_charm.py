@@ -17,13 +17,13 @@ class TravelersCharm(RelicBase):
     effects: dict[str, float] = field(default_factory=dict)
     about: str = "When hit, gain +25% DEF and +10% mitigation next turn per stack."
 
-    def apply(self, party) -> None:
-        super().apply(party)
+    async def apply(self, party) -> None:
+        await super().apply(party)
 
         pending: dict[int, tuple[float, float]] = {}
         active: dict[int, tuple[PlayerBase, object]] = {}
 
-        def _hit(target, attacker, amount) -> None:
+        async def _hit(target, attacker, amount) -> None:
             if target not in party.members:
                 return
             pid = id(target)
@@ -34,7 +34,7 @@ class TravelersCharm(RelicBase):
             pending[pid] = (pd + d_pct, pm + m_pct)
 
             # Track hit reaction
-            BUS.emit(
+            await BUS.emit_async(
                 "relic_effect",
                 "travelers_charm",
                 target,
@@ -50,7 +50,7 @@ class TravelersCharm(RelicBase):
                 },
             )
 
-        def _turn_start() -> None:
+        async def _turn_start() -> None:
             applied_count = 0
             for pid, (d_pct, m_pct) in list(pending.items()):
                 member = next((m for m in party.members if id(m) == pid), None)
@@ -68,7 +68,7 @@ class TravelersCharm(RelicBase):
                 applied_count += 1
 
                 # Track buff application
-                BUS.emit(
+                await BUS.emit_async(
                     "relic_effect",
                     "travelers_charm",
                     member,

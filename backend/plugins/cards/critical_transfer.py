@@ -21,13 +21,13 @@ class CriticalTransfer(CardBase):
     async def apply(self, party) -> None:  # type: ignore[override]
         await super().apply(party)
 
-        def _ultimate_used(user) -> None:
+        async def _ultimate_used(user) -> None:
             total = 0
             for member in party.members:
                 boost = getattr(member, "_critical_boost", None)
                 if isinstance(boost, CriticalBoost):
                     total += boost.stacks
-                    boost._on_damage_taken(member)
+                    await boost._on_damage_taken(member)
             if total == 0:
                 return
             effect = getattr(user, "_critical_boost", None)
@@ -35,7 +35,7 @@ class CriticalTransfer(CardBase):
                 effect = CriticalBoost()
                 setattr(user, "_critical_boost", effect)
             for _ in range(total):
-                effect.apply(user)
+                await effect.apply(user)
             mgr = getattr(user, "effect_manager", None)
             if mgr is None:
                 mgr = EffectManager(user)
@@ -47,7 +47,7 @@ class CriticalTransfer(CardBase):
                 atk_mult=1 + 0.04 * total,
             )
             mgr.add_modifier(mod)
-            BUS.emit(
+            await BUS.emit_async(
                 "card_effect",
                 self.id,
                 user,

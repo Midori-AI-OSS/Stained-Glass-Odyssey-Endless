@@ -17,7 +17,7 @@ class ThickSkin(CardBase):
     async def apply(self, party) -> None:  # type: ignore[override]
         await super().apply(party)
 
-        def _on_effect_applied(target, effect_name, duration, source):
+        async def _on_effect_applied(target, effect_name, duration, source):
             # Check if target is one of our party members and effect is bleed
             if target in party.members and "bleed" in effect_name.lower():
                 # 50% chance to reduce bleed duration by 1
@@ -32,7 +32,7 @@ class ThickSkin(CardBase):
                                     import logging
                                     log = logging.getLogger(__name__)
                                     log.debug("Thick Skin reduced bleed duration by 1 turn for %s", target.id)
-                                    BUS.emit("card_effect", self.id, target, "duration_reduction", 1, {
+                                    await BUS.emit_async("card_effect", self.id, target, "duration_reduction", 1, {
                                         "effect_reduced": effect_name,
                                         "turns_reduced": 1,
                                         "trigger_chance": 0.50
@@ -46,4 +46,3 @@ class ThickSkin(CardBase):
             BUS.unsubscribe("battle_end", _on_battle_end)
 
         BUS.subscribe("battle_end", _on_battle_end)
-

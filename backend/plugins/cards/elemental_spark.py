@@ -24,7 +24,7 @@ class ElementalSpark(CardBase):
         await super().apply(party)
         chosen = {"member": None, "mod": None}
 
-        def _battle_start(entity) -> None:
+        async def _battle_start(entity) -> None:
             if not party.members:
                 return
             member = random.choice(party.members)
@@ -41,7 +41,7 @@ class ElementalSpark(CardBase):
             )
             mgr.add_modifier(mod)
             chosen["mod"] = (mgr, mod)
-            BUS.emit(
+            await BUS.emit_async(
                 "card_effect",
                 self.id,
                 member,

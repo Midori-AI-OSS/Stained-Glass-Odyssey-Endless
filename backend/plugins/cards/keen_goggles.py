@@ -21,7 +21,7 @@ class KeenGoggles(CardBase):
         # Track stacks per party member
         crit_stacks = {}
 
-        def _on_effect_applied(target, effect_name, duration, source):
+        async def _on_effect_applied(target, effect_name, duration, source):
             # Check if source is one of our party members and effect is a debuff
             if source in party.members:
                 effect_lower = effect_name.lower()
@@ -55,7 +55,7 @@ class KeenGoggles(CardBase):
                         import logging
                         log = logging.getLogger(__name__)
                         log.debug("Keen Goggles crit stack: %d stacks (+%d%% crit rate) for %s", new_stacks, new_stacks, source.id)
-                        BUS.emit("card_effect", self.id, source, "crit_stack", new_stacks, {
+                        await BUS.emit_async("card_effect", self.id, source, "crit_stack", new_stacks, {
                             "stack_count": new_stacks,
                             "crit_rate_bonus": new_stacks,
                             "max_stacks": 3,

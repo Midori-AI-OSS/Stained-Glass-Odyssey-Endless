@@ -20,7 +20,7 @@ class MindfulTassel(CardBase):
 
         bonus_used = False
 
-        def _on_effect_applied(effect_name, entity, details=None):
+        async def _on_effect_applied(effect_name, entity, details=None):
             nonlocal bonus_used
 
             if bonus_used or not details:
@@ -69,7 +69,7 @@ class MindfulTassel(CardBase):
                 "Mindful Tassel first debuff potency: +5% potency to %s",
                 effect_name,
             )
-            BUS.emit(
+            await BUS.emit_async(
                 "card_effect",
                 self.id,
                 source,

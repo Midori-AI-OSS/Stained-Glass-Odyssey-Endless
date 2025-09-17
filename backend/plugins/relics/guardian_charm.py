@@ -15,10 +15,10 @@ class GuardianCharm(RelicBase):
     effects: dict[str, float] = field(default_factory=dict)
     about: str = "At battle start, grants +20% DEF to the lowest-HP ally per stack."
 
-    def apply(self, party) -> None:
+    async def apply(self, party) -> None:
         from autofighter.stats import BUS  # Import here to avoid circular imports
 
-        super().apply(party)
+        await super().apply(party)
         if not party.members:
             return
         member = min(party.members, key=lambda m: m.hp)
@@ -26,7 +26,7 @@ class GuardianCharm(RelicBase):
         defense_pct = 20 * stacks
 
         # Emit relic effect event for defense boost
-        BUS.emit(
+        await BUS.emit_async(
             "relic_effect",
             "guardian_charm",
             member,

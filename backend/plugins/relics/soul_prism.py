@@ -17,16 +17,16 @@ class SoulPrism(RelicBase):
     effects: dict[str, float] = field(default_factory=lambda: {"defense": 0.05, "mitigation": 0.05})
     about: str = "Revives fallen allies at 1% HP with heavy Max HP penalty and small buffs."
 
-    def apply(self, party) -> None:
+    async def apply(self, party) -> None:
         """Revive fallen allies after battles with reduced Max HP."""
-        super().apply(party)
+        await super().apply(party)
 
         stacks = party.relics.count(self.id)
         penalty = 0.75 - 0.05 * (stacks - 1)
         multiplier = 1 - penalty
         buff = 0.05 + 0.02 * (stacks - 1)
 
-        def _battle_end(entity) -> None:
+        async def _battle_end(entity) -> None:
             from plugins.foes._base import FoeBase
 
             if not isinstance(entity, FoeBase):
@@ -61,7 +61,7 @@ class SoulPrism(RelicBase):
                 heal = max(1, int(member.max_hp * 0.01))
 
                 # Track the revival
-                BUS.emit("relic_effect", "soul_prism", member, "ally_revived", heal, {
+                await BUS.emit_async("relic_effect", "soul_prism", member, "ally_revived", heal, {
                     "ally": getattr(member, 'id', str(member)),
                     "max_hp_penalty": penalty * 100,
                     "defense_buff": buff * 100,
@@ -75,7 +75,7 @@ class SoulPrism(RelicBase):
 
             # Track revival summary if any allies were revived
             if revived_count > 0:
-                BUS.emit("relic_effect", "soul_prism", party, "battle_revival_summary", revived_count, {
+                await BUS.emit_async("relic_effect", "soul_prism", party, "battle_revival_summary", revived_count, {
                     "allies_revived": revived_count,
                     "max_hp_penalty": penalty * 100,
                     "buffs_applied": ["defense", "mitigation"],

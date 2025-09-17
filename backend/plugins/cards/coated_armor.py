@@ -16,7 +16,7 @@ class CoatedArmor(CardBase):
     async def apply(self, party) -> None:  # type: ignore[override]
         await super().apply(party)
 
-        def _on_mitigation_triggered(target, original_damage, mitigated_damage):
+        async def _on_mitigation_triggered(target, original_damage, mitigated_damage):
             # Check if target is one of our party members and mitigation actually reduced damage
             if target in party.members and mitigated_damage < original_damage:
                 # Heal 1% HP
@@ -40,7 +40,7 @@ class CoatedArmor(CardBase):
                             heal_amount,
                             target.id,
                         )
-                        BUS.emit(
+                        await BUS.emit_async(
                             "card_effect",
                             self.id,
                             target,

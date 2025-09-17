@@ -16,7 +16,7 @@ class CalmBeads(CardBase):
     async def apply(self, party) -> None:  # type: ignore[override]
         await super().apply(party)
 
-        def _on_effect_resisted(effect_name, target, source, details=None):
+        async def _on_effect_resisted(effect_name, target, source, details=None):
             if target not in party.members:
                 return
 
@@ -56,6 +56,6 @@ class CalmBeads(CardBase):
             }
             if metadata:
                 payload["metadata"] = metadata
-            BUS.emit("card_effect", self.id, target, "resist_charge_gain", 1, payload)
+            await BUS.emit_async("card_effect", self.id, target, "resist_charge_gain", 1, payload)
 
         BUS.subscribe("effect_resisted", _on_effect_resisted)

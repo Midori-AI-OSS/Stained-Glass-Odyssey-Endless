@@ -111,7 +111,7 @@ async def get_backend_health():
 
         # Quick performance check
         start = time.perf_counter()
-        BUS.emit('health_check_ping')  # Emit a test event
+        await BUS.emit_async('health_check_ping')  # Emit a test event
         ping_time = (time.perf_counter() - start) * 1000  # Convert to ms
 
         health['ping_ms'] = ping_time

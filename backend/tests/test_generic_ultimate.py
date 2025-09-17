@@ -49,4 +49,4 @@ async def test_generic_ultimate_hits_and_passive_triggers():
 
     assert result is True
     assert hits["count"] == 64
-    assert llr.get_charge(actor) >= 64
+    assert llr.get_charge(actor) == 64

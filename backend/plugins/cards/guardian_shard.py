@@ -28,7 +28,7 @@ class GuardianShard(CardBase):
             if target in party.members:
                 battle_deaths += 1
 
-        def _on_battle_end(target):
+        async def _on_battle_end(target):
             nonlocal mitigation_bonus_pending, active_members
 
             if target is None:
@@ -51,7 +51,7 @@ class GuardianShard(CardBase):
                 import logging
                 log = logging.getLogger(__name__)
                 log.debug("Guardian Shard mitigation bonus pending for next battle")
-                BUS.emit(
+                await BUS.emit_async(
                     "card_effect",
                     self.id,
                     None,
@@ -64,7 +64,7 @@ class GuardianShard(CardBase):
                     },
                 )
 
-        def _on_battle_start(target):
+        async def _on_battle_start(target):
             nonlocal battle_deaths, mitigation_bonus_pending, active_members
             if target in party.members:
                 # Reset death counter for new battle
@@ -89,7 +89,7 @@ class GuardianShard(CardBase):
                             "Guardian Shard mitigation bonus: +1 mitigation to %s",
                             member.id,
                         )
-                        BUS.emit(
+                        await BUS.emit_async(
                             "card_effect",
                             self.id,
                             member,

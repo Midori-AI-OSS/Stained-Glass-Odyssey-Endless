@@ -16,12 +16,12 @@ class HerbalCharm(RelicBase):
     effects: dict[str, float] = field(default_factory=dict)
     about: str = "Heals all allies for 0.5% Max HP at the start of each turn per stack."
 
-    def apply(self, party) -> None:
+    async def apply(self, party) -> None:
         state = getattr(party, "_herbal_charm_state", None)
         stacks = party.relics.count(self.id)
 
         if state is None:
-            def _heal(*_) -> None:
+            async def _heal(*_) -> None:
                 current_stacks = state.get("stacks", 0)
                 if current_stacks <= 0:
                     return
@@ -29,7 +29,7 @@ class HerbalCharm(RelicBase):
                     heal = int(member.max_hp * 0.005 * current_stacks)
 
                     # Emit relic effect event for healing
-                    BUS.emit("relic_effect", "herbal_charm", member, "turn_start_healing", heal, {
+                    await BUS.emit_async("relic_effect", "herbal_charm", member, "turn_start_healing", heal, {
                         "healing_percentage": 0.5 * current_stacks,
                         "max_hp": member.max_hp,
                         "stacks": current_stacks

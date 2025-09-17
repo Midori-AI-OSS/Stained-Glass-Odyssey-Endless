@@ -48,23 +48,23 @@ async def test_wind_ultimate_transfers_from_foes():
 
     player.use_ultimate = _use_ultimate.__get__(player, Stats)
 
-    BUS.emit("battle_start", player)
-    BUS.emit("battle_start", foe1)
-    BUS.emit("battle_start", foe2)
+    await BUS.emit_async("battle_start", player)
+    await BUS.emit_async("battle_start", foe1)
+    await BUS.emit_async("battle_start", foe2)
 
     player.add_ultimate_charge(15)
     assert await player.use_ultimate()
 
-    BUS.emit("hit_landed", player, foe1, 0, "attack")
+    await BUS.emit_async("hit_landed", player, foe1, 0, "attack")
     await asyncio.sleep(0.01)
 
     assert foe2.effect_manager.dots == []
     assert foe2.dots == []
     assert foe1.hp == 99
 
-    BUS.emit("battle_end", player)
-    BUS.emit("battle_end", foe1)
-    BUS.emit("battle_end", foe2)
+    await BUS.emit_async("battle_end", player)
+    await BUS.emit_async("battle_end", foe1)
+    await BUS.emit_async("battle_end", foe2)
 
 
 @pytest.mark.asyncio
@@ -97,20 +97,20 @@ async def test_wind_foe_ultimate_transfers_from_allies():
 
     foe.use_ultimate = _use_ultimate.__get__(foe, Stats)
 
-    BUS.emit("battle_start", foe)
-    BUS.emit("battle_start", p1)
-    BUS.emit("battle_start", p2)
+    await BUS.emit_async("battle_start", foe)
+    await BUS.emit_async("battle_start", p1)
+    await BUS.emit_async("battle_start", p2)
 
     foe.add_ultimate_charge(15)
     assert await foe.use_ultimate()
 
-    BUS.emit("hit_landed", foe, p1, 0, "attack")
+    await BUS.emit_async("hit_landed", foe, p1, 0, "attack")
     await asyncio.sleep(0.01)
 
     assert p2.effect_manager.dots == []
     assert p2.dots == []
     assert p1.hp == 99
 
-    BUS.emit("battle_end", foe)
-    BUS.emit("battle_end", p1)
-    BUS.emit("battle_end", p2)
+    await BUS.emit_async("battle_end", foe)
+    await BUS.emit_async("battle_end", p1)
+    await BUS.emit_async("battle_end", p2)

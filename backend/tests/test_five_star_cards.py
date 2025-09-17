@@ -37,7 +37,7 @@ async def test_phantom_ally_summon_lifecycle(monkeypatch):
     assert phantom_found
 
     # Test cleanup - emit battle end to trigger summon removal
-    BUS.emit("battle_end", FoeBase())
+    await BUS.emit_async("battle_end", FoeBase())
     assert len(party.members) == 2
 
 
@@ -50,11 +50,11 @@ async def test_temporal_shield_damage_reduction(monkeypatch):
     await TemporalShield().apply(party)
     base_mit = member.mitigation
     monkeypatch.setattr(random, "random", lambda: 0.4)
-    BUS.emit("turn_start")
+    await BUS.emit_async("turn_start")
     assert member.mitigation >= base_mit * 50
     await member.effect_manager.cleanup(member)
     monkeypatch.setattr(random, "random", lambda: 0.6)
-    BUS.emit("turn_start")
+    await BUS.emit_async("turn_start")
     assert member.mitigation == base_mit
 
 
@@ -71,12 +71,12 @@ async def test_reality_split_afterimage(monkeypatch):
     f1.id = "f1"
     f2 = FoeBase()
     f2.id = "f2"
-    BUS.emit("battle_start", f1)
-    BUS.emit("battle_start", f2)
+    await BUS.emit_async("battle_start", f1)
+    await BUS.emit_async("battle_start", f2)
     monkeypatch.setattr(random, "choice", lambda seq: a1)
     monkeypatch.setattr(random, "random", lambda: 1.0)
-    BUS.emit("turn_start")
-    BUS.emit("hit_landed", a1, f1, 100, "attack", "test")
+    await BUS.emit_async("turn_start")
+    await BUS.emit_async("hit_landed", a1, f1, 100, "attack", "test")
     await asyncio.sleep(0)
     loss1 = f1.max_hp - f1.hp
     loss2 = f2.max_hp - f2.hp

@@ -1,5 +1,7 @@
 import asyncio
 
+import asyncio
+
 import pytest
 
 from autofighter.party import Party
@@ -18,11 +20,11 @@ async def test_critical_overdrive_boosts_and_converts() -> None:
     await card.apply(party)
     boost = CriticalBoost()
     for _ in range(200):
-        boost.apply(member)
+        await boost.apply(member)
     assert member.atk == int(100 * 3.55)
     assert member.crit_rate == pytest.approx(1.15)
     assert member.crit_damage == pytest.approx(12.3)
-    boost._on_damage_taken(member)
+    await boost._on_damage_taken(member)
     await asyncio.sleep(0)
     assert member.crit_rate == pytest.approx(0.05)
     assert member.crit_damage == pytest.approx(2.0)

@@ -16,12 +16,12 @@ class EmberStone(RelicBase):
     effects: dict[str, float] = field(default_factory=dict)
     about: str = "Below 25% HP, burn the attacker for 50% ATK per stack."
 
-    def apply(self, party) -> None:
+    async def apply(self, party) -> None:
         state = getattr(party, "_ember_stone_state", None)
         stacks = party.relics.count(self.id)
 
         if state is None:
-            def _burn(target, attacker, amount) -> None:
+            async def _burn(target, attacker, amount) -> None:
                 if attacker is None or target not in party.members:
                     return
                 current_stacks = state.get("stacks", 0)
@@ -31,7 +31,7 @@ class EmberStone(RelicBase):
                     dmg = int(target.atk * 0.5 * current_stacks)
 
                     # Emit relic effect event for burn counter-attack
-                    BUS.emit("relic_effect", "ember_stone", target, "burn_counter", dmg, {
+                    await BUS.emit_async("relic_effect", "ember_stone", target, "burn_counter", dmg, {
                         "trigger_condition": "below_25_percent_hp",
                         "current_hp_percentage": (target.hp / target.max_hp) * 100,
                         "burn_damage": dmg,

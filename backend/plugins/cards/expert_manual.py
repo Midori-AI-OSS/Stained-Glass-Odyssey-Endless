@@ -19,7 +19,7 @@ class ExpertManual(CardBase):
 
         extra_xp_used = set()
 
-        def _on_kill(target, killer, damage, death_type, details):
+        async def _on_kill(target, killer, damage, death_type, details):
             # Check if killer is one of our party members
             if killer in party.members:
                 killer_id = id(killer)
@@ -32,7 +32,7 @@ class ExpertManual(CardBase):
                     import logging
                     log = logging.getLogger(__name__)
                     log.debug("Expert Manual bonus XP: +%d XP to %s", extra_xp, killer.id)
-                    BUS.emit("card_effect", self.id, killer, "bonus_xp", extra_xp, {
+                    await BUS.emit_async("card_effect", self.id, killer, "bonus_xp", extra_xp, {
                         "bonus_xp": extra_xp,
                         "trigger_chance": 0.05,
                         "trigger_event": "kill"

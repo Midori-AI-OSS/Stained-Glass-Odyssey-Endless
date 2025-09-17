@@ -51,7 +51,7 @@ class RealitySplit(CardBase):
             )
             mgr.add_modifier(mod)
 
-        def _hit_landed(attacker, _target, amount, *_args) -> None:
+        async def _hit_landed(attacker, _target, amount, *_args) -> None:
             if attacker is not state["active"]:
                 return
             foes = state["foes"]
@@ -62,7 +62,7 @@ class RealitySplit(CardBase):
                 if foe.hp <= 0:
                     continue
                 safe_async_task(foe.apply_damage(echo, attacker=attacker))
-                BUS.emit(
+                await BUS.emit_async(
                     "card_effect",
                     self.id,
                     attacker,

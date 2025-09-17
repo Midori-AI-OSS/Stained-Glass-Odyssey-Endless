@@ -50,14 +50,10 @@ async def _clone_members(members: Sequence[Stats]) -> list[Stats]:
 async def _apply_relics_async(party: Party) -> None:
     """Asynchronously apply relic effects to a party."""
 
-    # `apply_relics` relies on `safe_async_task` to schedule follow-up coroutine
-    # work on the running event loop. When executed inside ``asyncio.to_thread``
-    # there is no active loop, so the helper falls back to spinning up a
-    # temporary loop via ``asyncio.run``. That temporary loop is torn down as
-    # soon as the coroutine returns, cancelling any batched bus emissions (for
-    # example, healing notifications). Keep the call on the main loop so that
-    # relic effects continue to dispatch their async side effects.
-    apply_relics(party)
+    # `apply_relics` now awaits each relic's async setup directly. Running it on
+    # the main loop ensures follow-up emissions (e.g. healing notifications)
+    # execute without being cancelled by temporary event loops.
+    await apply_relics(party)
 
 
 async def setup_battle(

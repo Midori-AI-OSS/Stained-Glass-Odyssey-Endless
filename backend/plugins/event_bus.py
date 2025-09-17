@@ -273,8 +273,6 @@ if not log.handlers:
 
 class EventBus:
     def __init__(self):
-        self._prefer_async = True  # Prefer async emission when possible
-        self._performance_monitoring = True
         self._loop: asyncio.AbstractEventLoop | None = None
 
     def set_loop(self, loop: asyncio.AbstractEventLoop | None) -> None:
@@ -364,24 +362,6 @@ class EventBus:
     def unsubscribe(self, event: str, callback: Callable[..., Any]) -> None:
         bus.ignore(event, callback)
 
-    def emit(self, event: str, *args: Any) -> None:
-        """Emit event. Prefers async emission when enabled for better performance."""
-        if self._prefer_async:
-            loop = self._capture_current_loop()
-            if loop is not None:
-                # When async is preferred and event loop is available, use batching for better performance
-                bus.send_batched(event, args)
-                return
-
-            if self._dispatch_to_loop(bus.send_batched, event, args):
-                return
-
-            # No captured loop available; fall back to sync emission
-            bus.send(event, args)
-        else:
-            # Traditional sync emission
-            bus.send(event, args)
-
     async def emit_async(self, event: str, *args: Any) -> None:
         """Async version of emit that executes callbacks concurrently"""
         self._capture_current_loop()
@@ -406,10 +386,6 @@ class EventBus:
     def clear_metrics(self) -> None:
         """Clear performance metrics."""
         bus.clear_metrics()
-
-    def set_async_preference(self, prefer_async: bool) -> None:
-        """Set whether to prefer async emission when possible."""
-        self._prefer_async = prefer_async
 
     def set_dynamic_batching(self, enabled: bool) -> None:
         """Enable or disable dynamic batching based on load."""

@@ -1,9 +1,11 @@
+import pytest
 import asyncio
 
 from runs.lifecycle import cleanup_battle_state
 from runs.lifecycle import get_battle_state_sizes
 
 
+@pytest.mark.asyncio
 async def test_get_battle_state_sizes():
     sizes = get_battle_state_sizes()
     assert set(sizes.keys()) == {"tasks", "snapshots", "locks"}

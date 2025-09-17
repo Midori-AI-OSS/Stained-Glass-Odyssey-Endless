@@ -169,7 +169,7 @@ async def test_sync_vs_async_comparison():
     start_sync = time.perf_counter()
 
     for i in range(event_count):
-        BUS.emit("test_sync_event", attacker, target, i)
+        await BUS.emit_async("test_sync_event", attacker, target, i)
 
     sync_time = time.perf_counter() - start_sync
 

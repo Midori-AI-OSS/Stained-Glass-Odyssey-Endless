@@ -24,7 +24,7 @@ class EnduringCharm(CardBase):
 
         active_boosts = set()
 
-        def _check_low_hp() -> None:
+        async def _check_low_hp() -> None:
             for member in party.members:
                 member_id = id(member)
                 current_hp = getattr(member, "hp", 0)
@@ -51,7 +51,7 @@ class EnduringCharm(CardBase):
                         "Enduring Charm activated vitality boost for %s: +3% vitality for 2 turns",
                         member.id,
                     )
-                    BUS.emit(
+                    await BUS.emit_async(
                         "card_effect",
                         self.id,
                         member,

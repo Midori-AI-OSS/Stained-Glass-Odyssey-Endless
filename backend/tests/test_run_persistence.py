@@ -165,6 +165,7 @@ def test_get_map_endpoint_after_restart():
         enc.FERNET = None
 
         # Test the get_map endpoint
+        @pytest.mark.asyncio
         async def test_endpoint():
             response_json = await get_map(run_id)
             assert "map" in response_json
@@ -240,6 +241,7 @@ def test_enhanced_map_endpoint_current_state():
             )
 
         # Test the enhanced endpoint
+        @pytest.mark.asyncio
         async def test_enhanced_endpoint():
             response_json = await get_map(run_id)
 
@@ -330,6 +332,7 @@ def test_enhanced_map_endpoint_with_awaiting_next():
             )
 
         # Test the enhanced endpoint with awaiting_next
+        @pytest.mark.asyncio
         async def test_awaiting_next():
             response_json = await get_map(run_id)
             current_state = response_json["current_state"]
@@ -381,6 +384,7 @@ def test_run_not_found():
         get_save_manager()
 
         # Test with non-existent run
+        @pytest.mark.asyncio
         async def test_endpoint():
             with pytest.raises(ValueError):
                 await get_map('nonexistent-run')

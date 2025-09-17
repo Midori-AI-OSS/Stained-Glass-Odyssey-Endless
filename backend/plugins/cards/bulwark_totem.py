@@ -21,7 +21,7 @@ class BulwarkTotem(CardBase):
     async def apply(self, party) -> None:  # type: ignore[override]
         await super().apply(party)
 
-        def _on_damage_taken(target, attacker, damage, pre_damage_hp=None, post_damage_hp=None):
+        async def _on_damage_taken(target, attacker, damage, pre_damage_hp=None, post_damage_hp=None):
             if target not in party.members:
                 return
 
@@ -93,7 +93,7 @@ class BulwarkTotem(CardBase):
                 getattr(card_holder, "id", "unknown"),
                 getattr(target, "id", "unknown"),
             )
-            BUS.emit(
+            await BUS.emit_async(
                 "card_effect",
                 self.id,
                 target,

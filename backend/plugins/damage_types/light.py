@@ -85,7 +85,7 @@ class Light(DamageTypeBase):
             mgr.add_modifier(mod)
             await pace_sleep(YIELD_MULTIPLIER)
 
-        BUS.emit("light_ultimate", actor)
+        await BUS.emit_async("light_ultimate", actor)
         return True
 
     @classmethod

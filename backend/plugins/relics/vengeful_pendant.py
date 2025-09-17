@@ -16,14 +16,14 @@ class VengefulPendant(RelicBase):
     effects: dict[str, float] = field(default_factory=dict)
     about: str = "Reflects 15% of damage taken back to the attacker."
 
-    def apply(self, party) -> None:
-        super().apply(party)
+    async def apply(self, party) -> None:
+        await super().apply(party)
 
         stacks = party.relics.count(self.id)
         state = getattr(party, "_vengeful_pendant_state", None)
 
         if state is None:
-            def _reflect(target, attacker, amount) -> None:
+            async def _reflect(target, attacker, amount) -> None:
                 if attacker is None or target not in party.members:
                     return
                 current_stacks = state.get("stacks", 0)
@@ -32,7 +32,7 @@ class VengefulPendant(RelicBase):
                 dmg = int(amount * 0.15 * current_stacks)
 
                 # Emit relic effect event for damage reflection
-                BUS.emit(
+                await BUS.emit_async(
                     "relic_effect",
                     "vengeful_pendant",
                     target,

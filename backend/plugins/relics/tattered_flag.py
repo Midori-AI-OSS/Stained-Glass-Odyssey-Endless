@@ -16,10 +16,10 @@ class TatteredFlag(RelicBase):
     effects: dict[str, float] = field(default_factory=lambda: {"max_hp": 0.03})
     about: str = "+3% party Max HP; ally deaths grant survivors +3% ATK."
 
-    def apply(self, party) -> None:
-        super().apply(party)
+    async def apply(self, party) -> None:
+        await super().apply(party)
 
-        def _fallen(target, attacker, amount) -> None:
+        async def _fallen(target, attacker, amount) -> None:
             if target not in party.members or target.hp > 0:
                 return
             survivors = [member for member in party.members if member is not target and member.hp > 0]
@@ -29,7 +29,7 @@ class TatteredFlag(RelicBase):
             stacks = party.relics.count(self.id)
 
             # Emit relic effect event for ally death buff
-            BUS.emit("relic_effect", "tattered_flag", target, "ally_death_buff", 3 * stacks, {
+            await BUS.emit_async("relic_effect", "tattered_flag", target, "ally_death_buff", 3 * stacks, {
                 "fallen_ally": getattr(target, 'id', str(target)),
                 "survivors": [getattr(m, 'id', str(m)) for m in survivors],
                 "atk_bonus_percentage": 3 * stacks,

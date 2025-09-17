@@ -20,11 +20,11 @@ class IronGuard(CardBase):
         await super().apply(party)
         seq = count()
 
-        def _damage_taken(victim, *_args) -> None:
+        async def _damage_taken(victim, *_args) -> None:
             if victim not in party.members:
                 return
             # Emit a single card effect event per trigger, regardless of how many party members get the buff
-            BUS.emit(
+            await BUS.emit_async(
                 "card_effect",
                 self.id,
                 victim,  # Use victim as the event source since they triggered the effect

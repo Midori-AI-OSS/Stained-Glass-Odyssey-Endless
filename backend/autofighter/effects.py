@@ -473,7 +473,7 @@ class EffectManager:
                 if predicted_turns is not None:
                     details["predicted_turns"] = predicted_turns
 
-                BUS.emit(
+                BUS.emit_batched(
                     "effect_resisted",
                     effect_name,
                     self.stats,

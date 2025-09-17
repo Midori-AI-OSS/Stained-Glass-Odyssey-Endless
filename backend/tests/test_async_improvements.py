@@ -1,3 +1,4 @@
+import pytest
 #!/usr/bin/env python3
 """
 Simple test to verify async database operations work correctly.
@@ -19,6 +20,7 @@ sys.path.insert(0, '/home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighte
 from autofighter.save_manager import SaveManager
 
 
+@pytest.mark.asyncio
 async def test_sync_vs_async_db():
     """Test to show the difference between sync and async database operations."""
 
