@@ -8,6 +8,7 @@ from autofighter.stats import BUS
 from autofighter.stats import Stats
 from plugins import damage_effects
 from plugins.damage_types._base import DamageTypeBase
+from plugins.event_bus import bus as _event_bus
 
 
 @dataclass
@@ -76,7 +77,13 @@ class Fire(DamageTypeBase):
         dmg = actor.max_hp * 0.05 * self._drain_stacks
         if dmg > 0:
             pre = math.sqrt(dmg)
-            asyncio.create_task(actor.apply_damage(pre))
+            try:
+                loop = asyncio.get_running_loop()
+            except RuntimeError:
+                asyncio.run(actor.apply_damage(pre))
+                _event_bus._process_batches_sync()
+            else:
+                loop.create_task(actor.apply_damage(pre))
 
     def _on_battle_end(self, *_: object) -> None:
         self._drain_stacks = 0
