@@ -21,14 +21,22 @@ class BulwarkTotem(CardBase):
     async def apply(self, party) -> None:  # type: ignore[override]
         await super().apply(party)
 
-        def _on_damage_taken(target, attacker, damage):
+        def _on_damage_taken(target, attacker, damage, pre_damage_hp=None, post_damage_hp=None):
             if target not in party.members:
                 return
 
+            damage = max(0, int(damage))
+
             # Determine the HP values before and after the hit.
-            post_hit_hp = max(0, int(getattr(target, "hp", 0)))
+            if pre_damage_hp is None or post_damage_hp is None:
+                post_hit_hp = max(0, int(getattr(target, "hp", 0)))
+                pre_hit_hp = post_hit_hp + damage
+            else:
+                pre_hit_hp = max(0, int(pre_damage_hp))
+                post_hit_hp = max(0, int(post_damage_hp))
+
             max_hp = max(0, int(getattr(target, "max_hp", 0)))
-            pre_hit_hp = post_hit_hp + max(0, int(damage))
+
             if pre_hit_hp <= 0:
                 return
 
