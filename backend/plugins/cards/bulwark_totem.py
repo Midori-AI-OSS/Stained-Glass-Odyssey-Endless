@@ -21,14 +21,22 @@ class BulwarkTotem(CardBase):
     async def apply(self, party) -> None:  # type: ignore[override]
         await super().apply(party)
 
-        def _on_damage_taken(target, attacker, damage):
+        def _on_damage_taken(target, attacker, damage, pre_damage_hp=None, post_damage_hp=None):
             if target not in party.members:
                 return
 
+            damage = max(0, int(damage))
+
             # Determine the HP values before and after the hit.
-            post_hit_hp = max(0, int(getattr(target, "hp", 0)))
+            if pre_damage_hp is None or post_damage_hp is None:
+                post_hit_hp = max(0, int(getattr(target, "hp", 0)))
+                pre_hit_hp = post_hit_hp + damage
+            else:
+                pre_hit_hp = max(0, int(pre_damage_hp))
+                post_hit_hp = max(0, int(post_damage_hp))
+
             max_hp = max(0, int(getattr(target, "max_hp", 0)))
-            pre_hit_hp = post_hit_hp + max(0, int(damage))
+
             if pre_hit_hp <= 0:
                 return
 
@@ -39,6 +47,9 @@ class BulwarkTotem(CardBase):
             share_ratio = max(0.0, float(self.damage_share))
             if share_ratio <= 0:
                 return
+
+            current_hp = max(0, int(getattr(target, "hp", 0)))
+            effective_post_hit_hp = max(post_hit_hp, current_hp)
 
             redirect_amount = max(1, int(damage * share_ratio))
 
@@ -64,15 +75,15 @@ class BulwarkTotem(CardBase):
             if max_transfer <= 0:
                 return
 
-            heal_cap = max_hp - post_hit_hp if max_hp else redirect_amount
+            heal_cap = max_hp - effective_post_hit_hp if max_hp else redirect_amount
             transfer_amount = min(redirect_amount, max_transfer, heal_cap)
             if transfer_amount <= 0:
                 return
 
             target.hp = (
-                post_hit_hp + transfer_amount
+                effective_post_hit_hp + transfer_amount
                 if not max_hp
-                else min(post_hit_hp + transfer_amount, max_hp)
+                else min(effective_post_hit_hp + transfer_amount, max_hp)
             )
             card_holder.hp = max(1, holder_hp - transfer_amount)
 

@@ -699,6 +699,8 @@ class Stats:
         if amount > 0:
             self.hp = max(self.hp - amount, 0)
 
+        post_hit_hp = self.hp
+
         # Emit defeat/kill events if this damage reduced HP to zero
         if old_hp > 0 and self.hp <= 0:
             if attacker is not None:
@@ -723,7 +725,14 @@ class Stats:
                 log.warning("Error triggering damage_taken passives: %s", e)
 
         # Use async emission for high-frequency damage events to reduce blocking
-        BUS.emit_batched("damage_taken", self, attacker, original_amount)
+        BUS.emit_batched(
+            "damage_taken",
+            self,
+            attacker,
+            original_amount,
+            old_hp,
+            post_hit_hp,
+        )
         if attacker is not None:
             attacker.damage_dealt += original_amount
             BUS.emit_batched("damage_dealt", attacker, self, original_amount, "attack", None, None, action_name)
@@ -740,6 +749,7 @@ class Stats:
         amount = max(int(amount), 0)
         self.last_damage_taken = amount
         self.damage_taken += amount
+        old_hp = self.hp
         if amount > 0:
             self.hp = max(self.hp - amount, 1)
             try:
@@ -749,7 +759,8 @@ class Stats:
                 await registry.trigger_damage_taken(self, None, amount)
             except Exception as e:  # pragma: no cover - defensive
                 log.warning("Error triggering damage_taken passives: %s", e)
-        BUS.emit_batched("damage_taken", self, None, amount)
+        post_hit_hp = self.hp
+        BUS.emit_batched("damage_taken", self, None, amount, old_hp, post_hit_hp)
         return amount
 
     async def apply_healing(self, amount: int, healer: Optional["Stats"] = None, source_type: str = "heal", source_name: Optional[str] = None) -> int:
