@@ -1,18 +1,6 @@
 === Cards ===
 
-Adamantine Band: Luna carefully sliding an adamantine band onto her finger, the dark steel ring etched with ancient sigils; it gleams with a cold, mineral sheen that speaks of unyielding protection and slow, immovable strength.
-
 Balanced Diet: Luna seated at a sunlit wooden table, savoring a balanced plate piled with colorful vegetables, whole grains, and ripe fruits; each bite glows faintly with nourishing light, suggesting restored vigor and quiet contentment.
-
-Battle Meditation: Luna settled cross-legged on a mossy stone, entering a deep battle meditation as a soft, swirling aura circles her; her hands cradle a carved wooden focus while her face shows serene concentration amid imagined chaos.
-
-Bulwark Totem: Luna driving a stout bulwark totem into the ground, the rough-hewn pillar studded with iron nails and rune-carvings; tendrils of earthen energy root it in place, radiating a steady protective presence.
-
-Arc Lightning: Luna raising a palm to call forth an arc of electric blue lightning that forks and dances across the air between her fingers; the light casts sharp highlights on her features and throws shadows that crackle with raw energy.
-
-Arcane Repeater: Luna adjusting the brass and crystal mechanism of an arcane repeater, watching as runic chambers hum and spool tiny bolts of magical energy outward in rapid succession; sparks scatter from its barrel like controlled starlight.
-
-Critical Focus: Luna closing one eye and aligning her sight through a faint crystalline overlay, the scene narrowing into a single, perfect mark; the air around that point shivers as she channels every ounce of precision and intent.
 
 
 === Missing Cards Art ===
@@ -20,6 +8,4 @@ None detected — card art glyphs present for plugin cards.
 
 === Missing Relics Art ===
 None detected — relic art glyphs present for plugin relics.
-
-
 
