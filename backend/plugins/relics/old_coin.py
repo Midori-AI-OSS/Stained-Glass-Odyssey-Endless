@@ -18,38 +18,66 @@ class OldCoin(RelicBase):
     def apply(self, party) -> None:
         super().apply(party)
 
-        first_purchase = {"done": False}
+        stacks = party.relics.count(self.id)
+        state = getattr(party, "_old_coin_state", None)
 
-        def _gold(amount: int) -> None:
-            stacks = party.relics.count(self.id)
-            bonus = int(amount * 0.03 * stacks)
-            party.gold += bonus
+        if state is None:
+            first_purchase_done = getattr(party, "_old_coin_first_purchase", False)
 
-            # Emit relic effect event for gold bonus
-            BUS.emit("relic_effect", "old_coin", party, "gold_bonus", bonus, {
-                "original_amount": amount,
-                "bonus_percentage": 3 * stacks,
-                "stacks": stacks
-            })
+            def _gold(amount: int) -> None:
+                current_stacks = state.get("stacks", 0)
+                if current_stacks <= 0:
+                    return
+                bonus = int(amount * 0.03 * current_stacks)
+                party.gold += bonus
 
-        def _purchase(cost: int) -> None:
-            if first_purchase["done"]:
-                return
-            stacks = party.relics.count(self.id)
-            refund = int(cost * 0.03 * stacks)
-            party.gold += refund
-            first_purchase["done"] = True
+                # Emit relic effect event for gold bonus
+                BUS.emit("relic_effect", "old_coin", party, "gold_bonus", bonus, {
+                    "original_amount": amount,
+                    "bonus_percentage": 3 * current_stacks,
+                    "stacks": current_stacks
+                })
 
-            # Emit relic effect event for purchase refund
-            BUS.emit("relic_effect", "old_coin", party, "purchase_refund", refund, {
-                "original_cost": cost,
-                "refund_percentage": 3 * stacks,
+            def _purchase(cost: int) -> None:
+                if state.get("first_purchase_done", False):
+                    return
+                current_stacks = state.get("stacks", 0)
+                if current_stacks <= 0:
+                    return
+                refund = int(cost * 0.03 * current_stacks)
+                party.gold += refund
+                state["first_purchase_done"] = True
+                party._old_coin_first_purchase = True
+
+                # Emit relic effect event for purchase refund
+                BUS.emit("relic_effect", "old_coin", party, "purchase_refund", refund, {
+                    "original_cost": cost,
+                    "refund_percentage": 3 * current_stacks,
+                    "stacks": current_stacks,
+                    "first_purchase": True
+                })
+
+            def _cleanup(*_args) -> None:
+                BUS.unsubscribe("gold_earned", state["gold_handler"])
+                BUS.unsubscribe("shop_purchase", state["purchase_handler"])
+                BUS.unsubscribe("battle_end", state["cleanup_handler"])
+                if getattr(party, "_old_coin_state", None) is state:
+                    delattr(party, "_old_coin_state")
+
+            state = {
                 "stacks": stacks,
-                "first_purchase": True
-            })
+                "first_purchase_done": first_purchase_done,
+                "gold_handler": _gold,
+                "purchase_handler": _purchase,
+                "cleanup_handler": _cleanup,
+            }
+            party._old_coin_state = state
 
-        BUS.subscribe("gold_earned", _gold)
-        BUS.subscribe("shop_purchase", _purchase)
+            BUS.subscribe("gold_earned", _gold)
+            BUS.subscribe("shop_purchase", _purchase)
+            BUS.subscribe("battle_end", _cleanup)
+        else:
+            state["stacks"] = stacks
 
     def describe(self, stacks: int) -> str:
         rate = 3 * stacks

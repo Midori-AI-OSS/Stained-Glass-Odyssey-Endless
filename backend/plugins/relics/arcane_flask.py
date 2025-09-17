@@ -20,28 +20,43 @@ class ArcaneFlask(RelicBase):
         super().apply(party)
 
         stacks = party.relics.count(self.id)
+        state = getattr(party, "_arcane_flask_state", None)
 
-        def _ultimate(user) -> None:
-            user.enable_overheal()  # Enable shields for the user
-            shield = int(user.max_hp * 0.2 * stacks)
+        if state is None:
+            state = {"stacks": stacks}
 
-            # Track the shield generation
-            BUS.emit("relic_effect", "arcane_flask", user, "shield_granted", shield, {
-                "shield_percentage": 20 * stacks,
-                "max_hp": user.max_hp,
-                "trigger": "ultimate_used",
-                "stacks": stacks
-            })
+            def _ultimate(user) -> None:
+                current_stacks = state.get("stacks", 0)
+                if current_stacks <= 0:
+                    return
 
-            safe_async_task(user.apply_healing(shield))
+                user.enable_overheal()  # Enable shields for the user
+                shield = int(user.max_hp * 0.2 * current_stacks)
 
-        BUS.subscribe("ultimate_used", _ultimate)
+                # Track the shield generation
+                BUS.emit("relic_effect", "arcane_flask", user, "shield_granted", shield, {
+                    "shield_percentage": 20 * current_stacks,
+                    "max_hp": user.max_hp,
+                    "trigger": "ultimate_used",
+                    "stacks": current_stacks
+                })
 
-        def _cleanup(*_: object) -> None:
-            BUS.unsubscribe("ultimate_used", _ultimate)
-            BUS.unsubscribe("battle_end", _cleanup)
+                safe_async_task(user.apply_healing(shield))
 
-        BUS.subscribe("battle_end", _cleanup)
+            def _cleanup(*_: object) -> None:
+                BUS.unsubscribe("ultimate_used", state["ultimate_handler"])
+                BUS.unsubscribe("battle_end", state["cleanup_handler"])
+                if getattr(party, "_arcane_flask_state", None) is state:
+                    delattr(party, "_arcane_flask_state")
+
+            state["ultimate_handler"] = _ultimate
+            state["cleanup_handler"] = _cleanup
+            party._arcane_flask_state = state
+
+            BUS.subscribe("ultimate_used", _ultimate)
+            BUS.subscribe("battle_end", _cleanup)
+        else:
+            state["stacks"] = stacks
 
     def describe(self, stacks: int) -> str:
         pct = 20 * stacks

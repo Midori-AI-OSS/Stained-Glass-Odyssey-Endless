@@ -17,24 +17,47 @@ class EmberStone(RelicBase):
     about: str = "Below 25% HP, burn the attacker for 50% ATK per stack."
 
     def apply(self, party) -> None:
-        def _burn(target, attacker, amount) -> None:
-            if attacker is None or target not in party.members:
-                return
-            if target.hp <= target.max_hp * 0.25:
-                stacks = party.relics.count(self.id)
-                dmg = int(target.atk * 0.5 * stacks)
+        state = getattr(party, "_ember_stone_state", None)
+        stacks = party.relics.count(self.id)
 
-                # Emit relic effect event for burn counter-attack
-                BUS.emit("relic_effect", "ember_stone", target, "burn_counter", dmg, {
-                    "trigger_condition": "below_25_percent_hp",
-                    "current_hp_percentage": (target.hp / target.max_hp) * 100,
-                    "burn_damage": dmg,
-                    "attacker": getattr(attacker, 'id', str(attacker)),
-                    "stacks": stacks
-                })
+        if state is None:
+            def _burn(target, attacker, amount) -> None:
+                if attacker is None or target not in party.members:
+                    return
+                current_stacks = state.get("stacks", 0)
+                if current_stacks <= 0:
+                    return
+                if target.hp <= target.max_hp * 0.25:
+                    dmg = int(target.atk * 0.5 * current_stacks)
 
-                safe_async_task(attacker.apply_damage(dmg, attacker=target))
-        BUS.subscribe("damage_taken", _burn)
+                    # Emit relic effect event for burn counter-attack
+                    BUS.emit("relic_effect", "ember_stone", target, "burn_counter", dmg, {
+                        "trigger_condition": "below_25_percent_hp",
+                        "current_hp_percentage": (target.hp / target.max_hp) * 100,
+                        "burn_damage": dmg,
+                        "attacker": getattr(attacker, 'id', str(attacker)),
+                        "stacks": current_stacks
+                    })
+
+                    safe_async_task(attacker.apply_damage(dmg, attacker=target))
+
+            def _cleanup(*_args) -> None:
+                BUS.unsubscribe("damage_taken", state["damage_handler"])
+                BUS.unsubscribe("battle_end", state["cleanup_handler"])
+                if getattr(party, "_ember_stone_state", None) is state:
+                    delattr(party, "_ember_stone_state")
+
+            state = {
+                "stacks": stacks,
+                "damage_handler": _burn,
+                "cleanup_handler": _cleanup,
+            }
+            party._ember_stone_state = state
+
+            BUS.subscribe("damage_taken", _burn)
+            BUS.subscribe("battle_end", _cleanup)
+        else:
+            state["stacks"] = stacks
 
     def describe(self, stacks: int) -> str:
         pct = 50 * stacks
