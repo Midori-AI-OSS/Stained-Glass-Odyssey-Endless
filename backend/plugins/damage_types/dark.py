@@ -1,4 +1,3 @@
-import asyncio
 from dataclasses import dataclass
 
 from autofighter.effects import DamageOverTime
@@ -103,6 +102,9 @@ class Dark(DamageTypeBase):
     ) -> bool:
         """Strike a foe six times, scaling with allied DoT stacks."""
 
+        from autofighter.rooms.battle.pacing import YIELD_MULTIPLIER
+        from autofighter.rooms.battle.pacing import pace_sleep
+
         if not getattr(actor, "use_ultimate", lambda: False)():
             return False
         if not enemies:
@@ -121,7 +123,7 @@ class Dark(DamageTypeBase):
         target = enemies[0]
         for _ in range(6):
             dealt = await target.apply_damage(dmg, attacker=actor, action_name="Dark Ultimate")
-            await asyncio.sleep(0.002)
+            await pace_sleep(YIELD_MULTIPLIER)
             await BUS.emit_async("damage", actor, target, dealt)
         return True
 
@@ -133,5 +135,5 @@ class Dark(DamageTypeBase):
         return (
             "Multiplies the user's attack by `ULT_PER_STACK` for each DoT stack on allied "
             "targets, then deals that damage to one enemy six times, emitting a 'damage' "
-            "event after each hit."
+            "event after each hit. Each strike yields via TURN_PACING-aware pacing."
         )
