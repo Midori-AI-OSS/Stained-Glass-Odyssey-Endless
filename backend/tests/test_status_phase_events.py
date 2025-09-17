@@ -1,3 +1,4 @@
+import asyncio
 from pathlib import Path
 import sys
 from types import ModuleType
@@ -11,9 +12,16 @@ from runs.lifecycle import battle_snapshots
 from autofighter.effects import DamageOverTime
 from autofighter.effects import EffectManager
 from autofighter.effects import HealingOverTime
+from autofighter.rooms.battle.turns import EnrageState
+from autofighter.rooms.battle.turns import _on_damage_taken as record_damage_taken_event
+from autofighter.rooms.battle.turns import (
+    _on_heal_received as record_heal_received_event,
+)
+from autofighter.rooms.battle.turns import build_battle_progress_payload
 from autofighter.rooms.battle.turns import mutate_snapshot_overlay
 from autofighter.rooms.battle.turns import prepare_snapshot_overlay
 from autofighter.rooms.battle.turns import register_snapshot_entities
+from autofighter.stats import BUS
 from autofighter.stats import Stats
 from autofighter.stats import set_battle_active
 from plugins.event_bus import bus
@@ -120,6 +128,33 @@ def test_target_acquired_mutates_snapshot_state():
 
 
 @pytest.mark.asyncio
+async def test_target_acquired_event_records_recent_events():
+    run_id = "snapshot-target-event"
+    battle_snapshots.clear()
+
+    attacker = Stats()
+    attacker.id = "attacker"
+    target = Stats()
+    target.id = "target"
+
+    prepare_snapshot_overlay(run_id, [attacker, target])
+    register_snapshot_entities(run_id, [attacker, target])
+
+    await BUS.emit_async("target_acquired", attacker, target)
+    await bus._process_batches_internal()
+
+    snapshot = battle_snapshots[run_id]
+    events = snapshot.get("recent_events", [])
+    assert any(evt.get("type") == "target_acquired" for evt in events)
+    acquired_event = next(evt for evt in events if evt.get("type") == "target_acquired")
+    assert acquired_event.get("source_id") == "attacker"
+    assert acquired_event.get("target_id") == "target"
+    metadata = acquired_event.get("metadata")
+    assert metadata is not None
+    assert metadata.get("damage_type_id") == "Generic"
+
+
+@pytest.mark.asyncio
 async def test_status_phase_events_update_snapshot_queue():
     run_id = "snapshot-status"
     battle_snapshots.clear()
@@ -130,6 +165,8 @@ async def test_status_phase_events_update_snapshot_queue():
     target.set_base_stat("defense", 1)
     target.set_base_stat("mitigation", 1)
     target.set_base_stat("vitality", 1)
+    target.set_base_stat("dodge_odds", 0)
+    target.hp = 900
 
     prepare_snapshot_overlay(run_id, [target])
     register_snapshot_entities(run_id, [target])
@@ -145,16 +182,67 @@ async def test_status_phase_events_update_snapshot_queue():
     try:
         await manager.tick()
         await bus._process_batches_internal()
+        await asyncio.sleep(0)
+        await bus._process_batches_internal()
     finally:
         set_battle_active(False)
 
     snapshot = battle_snapshots[run_id]
     events = snapshot.get("recent_events", [])
-    event_types = [evt["type"] for evt in events]
-    assert "heal_received" in event_types
-    assert "damage_taken" in event_types
+    events_by_type: dict[str, list[dict[str, object]]] = {}
+    for evt in events:
+        events_by_type.setdefault(evt["type"], []).append(evt)
+
+    assert "hot_tick" in events_by_type
+    assert "dot_tick" in events_by_type
+
+    hot_event = events_by_type["hot_tick"][0]
+    hot_metadata = hot_event.get("metadata", {})
+    assert hot_metadata.get("effect_ids") == ["hot_1"]
+    assert hot_metadata.get("remaining_turns") == 0
+    effects = hot_metadata.get("effects") or []
+    assert effects and effects[0].get("id") == "hot_1"
+    assert effects[0].get("type") == "hot"
+
+    dot_event = events_by_type["dot_tick"][0]
+    dot_metadata = dot_event.get("metadata", {})
+    assert dot_metadata.get("effect_ids") == ["dot_1"]
+    assert dot_metadata.get("remaining_turns") == 0
+    dot_effects = dot_metadata.get("effects") or []
+    assert dot_effects and dot_effects[0].get("id") == "dot_1"
+    assert dot_effects[0].get("type") == "dot"
+
+    record_damage_taken_event(target, target, 77)
+    record_heal_received_event(target, target, 33)
+
+    events = battle_snapshots[run_id]["recent_events"]
+    events_by_type = {}
+    for evt in events:
+        events_by_type.setdefault(evt["type"], []).append(evt)
+
+    assert "heal_received" in events_by_type
+    assert "damage_taken" in events_by_type
+
+    heal_event = events_by_type["heal_received"][-1]
+    assert heal_event.get("metadata", {}).get("damage_type_id") == "Generic"
+
+    damage_event = events_by_type["damage_taken"][-1]
+    assert damage_event.get("metadata", {}).get("damage_type_id") == "Generic"
 
     status_phase = snapshot.get("status_phase")
     assert status_phase is not None
     assert status_phase.get("phase") == "dot"
     assert status_phase.get("state") == "end"
+
+    payload = await build_battle_progress_payload(
+        [target],
+        [],
+        EnrageState(threshold=1),
+        rdr=0.0,
+        extra_turns={},
+        run_id=run_id,
+        active_id=None,
+        active_target_id=None,
+    )
+    assert payload.get("recent_events") == events
+    assert payload.get("status_phase") == status_phase
