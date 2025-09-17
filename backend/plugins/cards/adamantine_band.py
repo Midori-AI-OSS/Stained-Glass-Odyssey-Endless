@@ -1,5 +1,7 @@
 from dataclasses import dataclass
 from dataclasses import field
+import logging
+import math
 
 from autofighter.stats import BUS
 from plugins.cards._base import CardBase
@@ -16,24 +18,35 @@ class AdamantineBand(CardBase):
     async def apply(self, party) -> None:  # type: ignore[override]
         await super().apply(party)
 
-        def _on_damage_taken(target, attacker, damage):
+        async def _on_damage_taken(target, attacker, damage):
             # Check if target is one of our party members
             if target in party.members:
-                current_hp = getattr(target, 'hp', 0)
+                current_hp = getattr(target, "hp", 0)
+                pre_hp = current_hp + damage
                 # Check if this damage would be lethal (reduce to 0 HP or below)
-                if current_hp <= damage and current_hp > 0:
-                    # Reduce damage by 10% - we'll modify target's HP to simulate the reduction
-                    damage_reduction = int(damage * 0.10)
-                    # Add back the damage reduction to HP to simulate reduced damage
-                    if damage_reduction > 0:
-                        target.hp = min(target.hp + damage_reduction, getattr(target, 'max_hp', 1000))
-                        import logging
-                        log = logging.getLogger(__name__)
-                        log.debug("Adamantine Band lethal protection: +%d HP restored to %s", damage_reduction, target.id)
-                        BUS.emit("card_effect", self.id, target, "lethal_protection", damage_reduction, {
+                if pre_hp > 0 and damage >= pre_hp:
+                    damage_reduction = math.ceil(damage * 0.10)
+                    max_hp = getattr(target, "max_hp", pre_hp)
+                    restored_hp = current_hp + damage_reduction
+                    target.hp = min(max(1, restored_hp), max_hp)
+                    log = logging.getLogger(__name__)
+                    log.debug(
+                        "Adamantine Band lethal protection: +%d HP restored to %s",
+                        target.hp - current_hp,
+                        target.id,
+                    )
+                    await BUS.emit_async(
+                        "card_effect",
+                        self.id,
+                        target,
+                        "lethal_protection",
+                        target.hp - current_hp,
+                        {
                             "damage_reduction": damage_reduction,
                             "original_damage": damage,
-                            "trigger_event": "lethal_damage"
-                        })
+                            "trigger_event": "lethal_damage",
+                            "pre_damage_hp": pre_hp,
+                        },
+                    )
 
         BUS.subscribe("damage_taken", _on_damage_taken)
