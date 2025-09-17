@@ -8,6 +8,7 @@ from autofighter.stats import BUS
 from autofighter.stats import Stats
 from plugins import damage_effects
 from plugins.damage_types._base import DamageTypeBase
+from plugins.event_bus import bus as _event_bus
 
 
 @dataclass
@@ -80,6 +81,7 @@ class Fire(DamageTypeBase):
                 loop = asyncio.get_running_loop()
             except RuntimeError:
                 asyncio.run(actor.apply_damage(pre))
+                _event_bus._process_batches_sync()
             else:
                 loop.create_task(actor.apply_damage(pre))
 
