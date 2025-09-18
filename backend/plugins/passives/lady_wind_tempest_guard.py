@@ -127,17 +127,27 @@ class LadyWindTempestGuard:
             # Healing is best-effort—if the battle context rejects it, continue.
             pass
 
-        self._gust_stacks[entity_id] = max(0, stacks - 1)
+        remaining = max(0, stacks - 1)
+        self._gust_stacks[entity_id] = remaining
+
+        gust_effect_name = f"{self.id}_turn_gust"
+        if remaining > 0:
+            self._apply_turn_gust(target, remaining)
+        else:
+            target.remove_effect_by_name(gust_effect_name)
 
     def _apply_turn_gust(self, target: "Stats", stacks: int) -> None:
         """Apply the turn-based gust bonus derived from accumulated stacks."""
+        gust_effect_name = f"{self.id}_turn_gust"
+        target.remove_effect_by_name(gust_effect_name)
+
         dodge_bonus = 0.03 + (stacks * 0.01)
         mitigation_bonus = 0.04 + (stacks * 0.015)
         speed_bonus = stacks * 6
         attack_bonus = max(1, int(target.atk * 0.01 * stacks))
 
         gust_effect = StatEffect(
-            name=f"{self.id}_turn_gust",
+            name=gust_effect_name,
             stat_modifiers={
                 "dodge_odds": dodge_bonus,
                 "mitigation": mitigation_bonus,
