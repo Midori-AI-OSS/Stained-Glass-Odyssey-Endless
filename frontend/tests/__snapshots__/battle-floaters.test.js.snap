@@ -1,0 +1,49 @@
+// Bun Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`Battle event floaters staggered floater scheduling uses index-based offsets: floater-stagger-block 1`] = `
+"list.forEach((raw, i) => {
+      if (!raw || typeof raw !== 'object') return;
+      const handle = setTimeout(() => {
+        addTimers.delete(handle);
+        const metadata = raw && typeof raw.metadata === 'object' ? raw.metadata : {};
+        const amountValue = Number(raw.amount ?? metadata?.amount);
+        const hasAmount = Number.isFinite(amountValue);
+        const amount = hasAmount ? Math.abs(amountValue) : 0;
+        const label = (raw.effectLabel || resolveLabel(metadata) || '').trim();
+        const variant = resolveVariant(raw.type, metadata, amountValue);
+        const damageType = raw.damageTypeId || metadata?.damage_type_id || '';
+        const { icon: Icon, color } = getDamageTypeVisual(damageType, { variant });
+        const showAmount = hasAmount && amount > 0;
+        if (!showAmount && !label) return;
+        const id = \`\${Date.now()}-\${counter++}\`;
+        const offset = Math.random() * RANDOM_OFFSETS - RANDOM_OFFSETS / 2;
+        const target = String(raw.target_id || '');
+        const anchor = (anchors && target && anchors[target]) ? anchors[target] : null;
+        const x = anchor && Number.isFinite(anchor.x) ? anchor.x : 0.5;
+        const y = anchor && Number.isFinite(anchor.y) ? anchor.y : 0.52;
+        const critical = Boolean(raw.isCritical || metadata?.is_critical);
+        const prefix =
+          variant === 'damage' || variant === 'dot' || variant === 'drain' ? '-' : '+';
+        floaters = [
+          ...floaters,
+          {
+            id,
+            Icon,
+            color,
+            amount,
+            variant,
+            label,
+            offset,
+            x,
+            y,
+            tone: resolveTone(variant),
+            type: raw.type,
+            critical,
+            showAmount,
+            prefix,
+          }
+        ];
+        scheduleRemoval(id, duration);
+      }, i * step);
+      addTimers.add(handle);"
+`;

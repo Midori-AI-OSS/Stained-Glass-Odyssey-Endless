@@ -76,7 +76,14 @@
   let recentEventCounts = new Map();
   let lastRecentEventTokens = [];
   let floaterDuration = 1200;
-  const relevantRecentEventTypes = new Set(['damage_taken', 'heal_received', 'dot_tick', 'hot_tick']);
+  const relevantRecentEventTypes = new Set([
+    'damage_taken',
+    'heal_received',
+    'dot_tick',
+    'hot_tick',
+    'card_effect',
+    'relic_effect',
+  ]);
   let lastRunId = runId;
 
   // Slow down floater animation a bit for readability
@@ -247,12 +254,19 @@
     }
     const fallbackKeys = [
       'effect_name',
+      'effect',
+      'effect_type',
+      'effectType',
       'action_name',
       'actionName',
       'source_name',
       'sourceName',
       'source_type',
       'sourceType',
+      'card_name',
+      'cardName',
+      'relic_name',
+      'relicName',
     ];
     for (const key of fallbackKeys) {
       const value = metadata[key];
@@ -260,12 +274,33 @@
         return String(value);
       }
     }
+    const details = metadata.details;
+    if (details && typeof details === 'object') {
+      const detailKeys = [
+        'label',
+        'name',
+        'effect_name',
+        'effect',
+        'effect_type',
+        'effectType',
+        'action_name',
+        'actionName',
+        'source_name',
+        'sourceName',
+      ];
+      for (const key of detailKeys) {
+        const value = details[key];
+        if (value !== undefined && value !== null && String(value).trim() !== '') {
+          return String(value);
+        }
+      }
+    }
     return '';
   }
 
   function normalizeRecentEvent(evt) {
     if (!evt || typeof evt !== 'object') return null;
-    const metadata = (evt.metadata && typeof evt.metadata === 'object') ? evt.metadata : {};
+    const metadata = (evt.metadata && typeof evt.metadata === 'object') ? { ...evt.metadata } : {};
     let damageTypeId = metadata.damage_type_id;
     if (!damageTypeId) {
       const effects = Array.isArray(metadata.effects) ? metadata.effects : [];
@@ -279,17 +314,49 @@
         if (damageTypeId) break;
       }
     }
+    if (!damageTypeId) {
+      const fallbacks = [
+        metadata.effect,
+        metadata.effect_type,
+        metadata.effectType,
+        metadata.element,
+      ];
+      for (const candidate of fallbacks) {
+        if (candidate !== undefined && candidate !== null && String(candidate).trim() !== '') {
+          damageTypeId = candidate;
+          break;
+        }
+      }
+    }
     const amount = Number(evt.amount ?? 0);
     const isCritical = Boolean(
       metadata?.is_critical ?? metadata?.isCritical ?? metadata?.critical ?? evt.isCritical
     );
+    let effectLabel = extractEffectLabel(metadata);
+    if (!effectLabel) {
+      const fallbackCandidates = [
+        metadata.card_name,
+        metadata.cardName,
+        metadata.relic_name,
+        metadata.relicName,
+        metadata.effect,
+        metadata.effect_type,
+        metadata.effectType,
+      ];
+      for (const candidate of fallbackCandidates) {
+        if (candidate !== undefined && candidate !== null && String(candidate).trim() !== '') {
+          effectLabel = String(candidate);
+          break;
+        }
+      }
+    }
     return {
       ...evt,
       amount,
       damageTypeId,
       metadata,
       isCritical,
-      effectLabel: extractEffectLabel(metadata),
+      effectLabel,
     };
   }
 
@@ -297,6 +364,23 @@
     if (!evt) return '';
     const metadata = evt.metadata || {};
     const effectIds = Array.isArray(metadata.effect_ids) ? metadata.effect_ids.join('|') : '';
+    const cardIdentifiers = [
+      metadata.card_id,
+      metadata.cardId,
+      metadata.card_name,
+      metadata.cardName,
+    ]
+      .map(value => (value === undefined || value === null ? '' : String(value)))
+      .join('~');
+    const relicIdentifiers = [
+      metadata.relic_id,
+      metadata.relicId,
+      metadata.relic_name,
+      metadata.relicName,
+    ]
+      .map(value => (value === undefined || value === null ? '' : String(value)))
+      .join('~');
+    const label = evt.effectLabel === undefined || evt.effectLabel === null ? '' : String(evt.effectLabel);
     const effectDetails = Array.isArray(metadata.effects)
       ? metadata.effects
           .map(e =>
@@ -314,6 +398,9 @@
       metadata.damage_type_id || '',
       metadata.is_critical ? 'crit' : '',
       effectIds,
+      label,
+      cardIdentifiers,
+      relicIdentifiers,
       effectDetails,
     ].join('::');
   }

@@ -21,37 +21,163 @@
   const timeouts = new Map();
   const addTimers = new Set();
 
-  function resolveVariant(type) {
-    const t = String(type || '').toLowerCase();
-    if (t === 'heal_received' || t === 'hot_tick') return 'heal';
-    if (t === 'dot_tick') return 'dot';
-    return 'damage';
-  }
+  const LABEL_FALLBACK_KEYS = [
+    'effect_label',
+    'effectLabel',
+    'effect_name',
+    'effect',
+    'effect_type',
+    'effectType',
+    'action_name',
+    'actionName',
+    'source_name',
+    'sourceName',
+    'source_type',
+    'sourceType',
+    'card_name',
+    'cardName',
+    'relic_name',
+    'relicName',
+    'label',
+    'name',
+    'display_name',
+    'displayName',
+  ];
 
-  function resolveLabel(metadata) {
-    if (!metadata || typeof metadata !== 'object') return '';
-    const list = Array.isArray(metadata.effects) ? metadata.effects : [];
+  const DETAIL_LABEL_KEYS = [
+    'label',
+    'name',
+    'display_name',
+    'displayName',
+    'effect_name',
+    'effect',
+    'effect_type',
+    'effectType',
+    'action_name',
+    'actionName',
+    'source_name',
+    'sourceName',
+  ];
+
+  const POSITIVE_HINTS = [
+    'heal',
+    'bonus',
+    'boost',
+    'buff',
+    'shield',
+    'refund',
+    'grant',
+    'revive',
+    'revived',
+    'revival',
+    'extra_turn',
+    'gain',
+    'award',
+    'summoned',
+    'mitigation',
+    'resist',
+    'reduction',
+    'charge',
+  ];
+
+  const NEGATIVE_HINTS = [
+    'drain',
+    'damage',
+    'harm',
+    'steal',
+    'lose',
+    'loss',
+    'penalty',
+    'tax',
+    'sacrifice',
+    'sacrificed',
+    'shred',
+    'debuff',
+  ];
+
+  function readLabelFromObject(candidate, fallbackKeys = LABEL_FALLBACK_KEYS) {
+    if (!candidate || typeof candidate !== 'object') return '';
+    const list = Array.isArray(candidate.effects) ? candidate.effects : [];
     for (const entry of list) {
       if (!entry || typeof entry !== 'object') continue;
       if (entry.name) return String(entry.name);
       if (entry.id) return String(entry.id);
     }
-    const fallbackKeys = [
-      'effect_name',
-      'action_name',
-      'actionName',
-      'source_name',
-      'sourceName',
-      'source_type',
-      'sourceType',
-    ];
     for (const key of fallbackKeys) {
-      const value = metadata[key];
+      const value = candidate[key];
       if (value !== undefined && value !== null && String(value).trim() !== '') {
         return String(value);
       }
     }
     return '';
+  }
+
+  function resolveLabel(metadata) {
+    const label = readLabelFromObject(metadata);
+    if (label) return label;
+    const details = metadata && typeof metadata === 'object' ? metadata.details : null;
+    if (details && typeof details === 'object') {
+      return readLabelFromObject(details, DETAIL_LABEL_KEYS);
+    }
+    return '';
+  }
+
+  function resolveVariant(type, metadata, amount) {
+    const t = String(type || '').toLowerCase();
+    if (t === 'heal_received' || t === 'hot_tick') return 'heal';
+    if (t === 'dot_tick') return 'dot';
+    if (t === 'card_effect' || t === 'relic_effect') {
+      const meta = metadata && typeof metadata === 'object' ? metadata : {};
+      let searchSpace = (resolveLabel(meta) || '').toLowerCase();
+      const fallbackValues = [
+        meta.effect,
+        meta.effect_type,
+        meta.effectType,
+        meta.card_name,
+        meta.cardName,
+        meta.relic_name,
+        meta.relicName,
+      ];
+      if (meta.details && typeof meta.details === 'object') {
+        const details = meta.details;
+        fallbackValues.push(
+          details.effect,
+          details.effect_type,
+          details.effectType,
+          details.outcome,
+          details.result,
+          details.reason,
+          details.description,
+          details.label,
+          details.name,
+        );
+      }
+      for (const value of fallbackValues) {
+        if (value !== undefined && value !== null) {
+          const text = String(value).trim();
+          if (text) searchSpace += ` ${text.toLowerCase()}`;
+        }
+      }
+      const numericAmount = Number(amount ?? meta.amount);
+      if (searchSpace.trim()) {
+        if (NEGATIVE_HINTS.some((hint) => searchSpace.includes(hint))) return 'drain';
+        if (POSITIVE_HINTS.some((hint) => searchSpace.includes(hint))) return 'buff';
+      }
+      if (Number.isFinite(numericAmount)) {
+        if (numericAmount < 0) return 'drain';
+        if (numericAmount > 0) return 'buff';
+      }
+      return 'buff';
+    }
+    return 'damage';
+  }
+
+  function resolveTone(variant) {
+    const normalized = String(variant || '').toLowerCase();
+    if (normalized === 'heal' || normalized === 'hot' || normalized === 'buff') {
+      return 'heal';
+    }
+    return 'damage';
   }
 
   function scheduleRemoval(id, duration) {
@@ -77,19 +203,25 @@
       if (!raw || typeof raw !== 'object') return;
       const handle = setTimeout(() => {
         addTimers.delete(handle);
-        const amount = Math.abs(Number(raw.amount ?? 0));
-        if (!Number.isFinite(amount) || amount <= 0) return;
-        const variant = resolveVariant(raw.type);
-        const damageType = raw.damageTypeId || raw.metadata?.damage_type_id || '';
+        const metadata = raw && typeof raw.metadata === 'object' ? raw.metadata : {};
+        const amountValue = Number(raw.amount ?? metadata?.amount);
+        const hasAmount = Number.isFinite(amountValue);
+        const amount = hasAmount ? Math.abs(amountValue) : 0;
+        const label = (raw.effectLabel || resolveLabel(metadata) || '').trim();
+        const variant = resolveVariant(raw.type, metadata, amountValue);
+        const damageType = raw.damageTypeId || metadata?.damage_type_id || '';
         const { icon: Icon, color } = getDamageTypeVisual(damageType, { variant });
-        const label = raw.effectLabel || resolveLabel(raw.metadata);
+        const showAmount = hasAmount && amount > 0;
+        if (!showAmount && !label) return;
         const id = `${Date.now()}-${counter++}`;
         const offset = Math.random() * RANDOM_OFFSETS - RANDOM_OFFSETS / 2;
         const target = String(raw.target_id || '');
         const anchor = (anchors && target && anchors[target]) ? anchors[target] : null;
         const x = anchor && Number.isFinite(anchor.x) ? anchor.x : 0.5;
         const y = anchor && Number.isFinite(anchor.y) ? anchor.y : 0.52;
-        const critical = Boolean(raw.isCritical || raw.metadata?.is_critical);
+        const critical = Boolean(raw.isCritical || metadata?.is_critical);
+        const prefix =
+          variant === 'damage' || variant === 'dot' || variant === 'drain' ? '-' : '+';
         floaters = [
           ...floaters,
           {
@@ -102,9 +234,11 @@
             offset,
             x,
             y,
-            tone: variant === 'heal' || variant === 'hot' ? 'heal' : 'damage',
+            tone: resolveTone(variant),
             type: raw.type,
             critical,
+            showAmount,
+            prefix,
           }
         ];
         scheduleRemoval(id, duration);
@@ -141,15 +275,17 @@
       on:animationend={() => handleAnimationEnd(entry)}
     >
       <div class="badge">
-        <span class="icon" style={`background:${entry.color}`}> 
+        <span class="icon" style={`background:${entry.color}`}>
           {#if entry.Icon}
             <svelte:component this={entry.Icon} size={14} stroke-width={2} />
           {/if}
         </span>
-        <span class="amount" data-variant={entry.variant}>
-          {entry.variant === 'heal' || entry.variant === 'hot' ? '+' : '-'}{Math.round(entry.amount)}
-          {entry.critical && entry.variant === 'damage' ? '!' : ''}
-        </span>
+        {#if entry.showAmount}
+          <span class="amount" data-variant={entry.variant}>
+            {entry.prefix}{Math.round(entry.amount)}
+            {entry.critical && (entry.variant === 'damage' || entry.variant === 'drain') ? '!' : ''}
+          </span>
+        {/if}
         {#if entry.label}
           <span class="label">{entry.label}</span>
         {/if}
@@ -195,7 +331,8 @@
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
   }
 
-  .floater.heal .badge {
+  .floater.heal .badge,
+  .floater.buff .badge {
     background: rgba(30, 40, 30, 0.75);
   }
 
