@@ -163,7 +163,14 @@ class LadyStormSupercell:
 
         self._storm_phase[entity_id] = "wind"
 
-    async def on_hit_target(self, attacker: "Stats", target_hit: "Stats") -> None:
+    async def on_hit_landed(
+        self,
+        attacker: "Stats",
+        target_hit: "Stats",
+        damage: int = 0,
+        action_type: str = "attack",
+        **_: object,
+    ) -> None:
         """Detonate stored lightning charges when Lady Storm connects a strike."""
 
         attacker_id = id(attacker)
