@@ -111,24 +111,32 @@ async def test_status_phase_events_emit_with_pacing(monkeypatch):
     assert start_hot_args[2]["effect_count"] == 1
     assert start_hot_args[2]["order"] == 0
     assert start_hot_args[2]["has_effects"] is True
+    assert start_hot_args[2]["effect_ids"] == [hot.id]
+    assert start_hot_args[2]["effect_names"] == [hot.name]
 
     end_hot_name, end_hot_args = status_events[1]
     assert end_hot_args[2]["phase"] == "hot"
     assert end_hot_args[2]["effect_count"] == 0
     assert end_hot_args[2]["expired_count"] == 1
     assert end_hot_args[2]["order"] == 0
+    assert end_hot_args[2]["effect_ids"] == []
+    assert end_hot_args[2]["effect_names"] == []
 
     start_dot_name, start_dot_args = status_events[2]
     assert start_dot_args[0] == "dot"
     assert start_dot_args[2]["phase"] == "dot"
     assert start_dot_args[2]["effect_count"] == 1
     assert start_dot_args[2]["order"] == 1
+    assert start_dot_args[2]["effect_ids"] == [dot.id]
+    assert start_dot_args[2]["effect_names"] == [dot.name]
 
     end_dot_name, end_dot_args = status_events[3]
     assert end_dot_args[2]["phase"] == "dot"
     assert end_dot_args[2]["effect_count"] == 0
     assert end_dot_args[2]["expired_count"] == 1
     assert end_dot_args[2]["order"] == 1
+    assert end_dot_args[2]["effect_ids"] == []
+    assert end_dot_args[2]["effect_names"] == []
 
     start_mod_name, start_mod_args = status_events[4]
     assert start_mod_name == "status_phase_start"

@@ -491,6 +491,15 @@
     const existing = statusEntryMap.get(entryKey);
     const entry = existing || { key: entryKey, createdAt: Date.now() };
 
+    const rawIds = Array.isArray(phase.effect_ids) ? phase.effect_ids : [];
+    const rawNames = Array.isArray(phase.effect_names) ? phase.effect_names : [];
+    const effectIds = rawIds
+      .map((value) => String(value ?? '').trim())
+      .filter((value) => value.length > 0);
+    const effectNames = rawNames
+      .map((value) => String(value ?? '').trim())
+      .filter((value) => value.length > 0);
+
     entry.phase = normalizedPhase;
     entry.label = label || (normalizedPhase ? normalizedPhase.toUpperCase() : '');
     entry.state = state;
@@ -502,6 +511,11 @@
     entry.order = orderValue;
     entry.color = resolveStatusColor(normalizedPhase);
     entry.updatedAt = Date.now();
+    entry.effectIds = effectIds;
+    entry.effectNames = effectNames;
+    entry.effectSummary = effectNames.length
+      ? effectNames.join(', ')
+      : effectIds.join(', ');
 
     statusEntryMap.set(entryKey, entry);
 
@@ -898,6 +912,14 @@
           <span class="chip-phase">{chip.label}</span>
           {#if chip.targetName}
             <span class="chip-target">→ {chip.targetName}</span>
+          {/if}
+          {#if chip.effectIds?.length}
+            <span
+              class="chip-effects"
+              title={chip.effectSummary || chip.effectIds.join(', ')}
+            >
+              IDs: {chip.effectIds.join(', ')}
+            </span>
           {/if}
           <span class="chip-meta">{describeStatusChip(chip)}</span>
         </div>
@@ -1482,6 +1504,15 @@
     font-size: 0.78rem;
     opacity: 0.85;
     text-transform: none;
+  }
+
+  .status-timeline .timeline-chip .chip-effects {
+    font-size: 0.72rem;
+    opacity: 0.85;
+    text-transform: none;
+    font-family: 'JetBrains Mono', 'Fira Mono', monospace;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
   }
 
   .status-timeline .timeline-chip .chip-meta {
