@@ -52,6 +52,7 @@ Passives generally shouldn't be capped unless a designer explicitly specifies a 
 - **Lady Fire and Ice** (B, Fire or Ice) – baseline fighter themed around fire and ice. Duality Engine alternates elements to build Flux and reduces foe mitigation when repeating an element.
 - **Lady Light** (B, Light) – baseline fighter themed around light.
 - **Lady of Fire** (B, Fire) – baseline fighter themed around fire.
+- **Persona Light and Dark** (B, Light or Dark) – 6★ dual-persona duelist. `persona_light_and_dark_duality` flips her element after every action, bathing allies in Light-form mitigation pulses and heals before pivoting into Dark-form crit bursts that strip foe defenses.
 - **Luna** (B, Generic) – applies `luna_passive`.
 - **Mezzy** (B, random) – raises Max HP, takes less damage, and siphons stats from healthy allies each turn.
 - **Player** (C, chosen) – avatar representing the user and may select any non-Generic damage type.
