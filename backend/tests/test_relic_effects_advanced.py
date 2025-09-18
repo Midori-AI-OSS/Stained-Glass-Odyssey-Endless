@@ -1,16 +1,28 @@
+# ruff: noqa: E402
+"""Advanced relic effect regression tests."""
+
 import asyncio
+from pathlib import Path
 import random
+import sys
+from types import SimpleNamespace
 
 import pytest
+
+_PROJECT_ROOT = str(Path(__file__).resolve().parents[1])
+if _PROJECT_ROOT not in sys.path:
+    sys.path.append(_PROJECT_ROOT)
 
 from autofighter.party import Party
 from autofighter.relics import apply_relics
 from autofighter.relics import award_relic
+from autofighter.rooms.battle.turn_loop import player_turn
 from autofighter.stats import BUS
 from autofighter.stats import Stats
 from plugins.effects.aftertaste import Aftertaste
 import plugins.event_bus as event_bus_module
 from plugins.players._base import PlayerBase
+import plugins.relics.timekeepers_hourglass as hourglass_module
 
 
 class DummyPlayer(Stats):
@@ -134,6 +146,97 @@ async def test_timekeepers_hourglass_extra_turn():
     await BUS.emit_async("turn_start")
     random.random = orig
     assert turns == [a]
+
+
+@pytest.mark.asyncio
+async def test_timekeepers_hourglass_many_stacks_no_stall(monkeypatch: pytest.MonkeyPatch) -> None:
+    from autofighter.rooms.battle import pacing as battle_pacing
+    from autofighter.rooms.battle.turns import EnrageState
+
+    event_bus_module.bus._subs.clear()
+    battle_pacing._EXTRA_TURNS.clear()
+
+    party = Party()
+    ko_member = PlayerBase()
+    ko_member.id = "hourglass-ko"
+    ko_member.hp = ko_member.set_base_stat("max_hp", 100)
+    alive_member = PlayerBase()
+    alive_member.id = "hourglass-alive"
+    alive_member.hp = alive_member.set_base_stat("max_hp", 100)
+    party.members.extend([ko_member, alive_member])
+
+    for _ in range(120):
+        award_relic(party, "timekeepers_hourglass")
+    await apply_relics(party)
+
+    ko_member.hp = 0
+    alive_member.hp = alive_member.max_hp
+
+    monkeypatch.setattr(hourglass_module.random, "random", lambda: 0.0)
+
+    combat_party = Party(members=list(party.members))
+
+    class DummyRegistry:
+        async def trigger(self, *_: object, **__: object) -> None:
+            return None
+
+        async def trigger_turn_start(self, *_: object, **__: object) -> None:
+            return None
+
+        async def trigger_turn_end(self, *_: object, **__: object) -> None:
+            return None
+
+        async def trigger_hit_landed(self, *_: object, **__: object) -> None:
+            return None
+
+    async def _noop_async(*_: object, **__: object) -> None:
+        return None
+
+    monkeypatch.setattr(player_turn, "push_progress_update", _noop_async)
+    monkeypatch.setattr(player_turn, "pace_sleep", _noop_async)
+    monkeypatch.setattr(player_turn, "impact_pause", _noop_async)
+    monkeypatch.setattr(player_turn, "_pace", _noop_async)
+    monkeypatch.setattr(player_turn, "queue_log", lambda *_, **__: None)
+    monkeypatch.setattr(player_turn, "_handle_ultimate", _noop_async)
+    monkeypatch.setattr(player_turn, "apply_enrage_bleed", _noop_async)
+    monkeypatch.setattr(player_turn, "credit_if_dead", lambda **kwargs: (kwargs["exp_reward"], kwargs["temp_rdr"]))
+    monkeypatch.setattr(player_turn, "remove_dead_foes", lambda **__: None)
+    monkeypatch.setattr(
+        player_turn,
+        "SummonManager",
+        SimpleNamespace(add_summons_to_party=lambda *_: 0, get_summons=lambda *_: []),
+    )
+    monkeypatch.setattr(player_turn, "register_snapshot_entities", lambda *_, **__: None)
+    monkeypatch.setattr(player_turn, "mutate_snapshot_overlay", lambda *_, **__: None)
+    monkeypatch.setattr(player_turn, "calc_animation_time", lambda *_, **__: 0)
+    monkeypatch.setattr(player_turn, "_abort_other_runs", _noop_async)
+
+    context = player_turn.TurnLoopContext(
+        room=SimpleNamespace(),
+        party=party,
+        combat_party=combat_party,
+        registry=DummyRegistry(),
+        foes=[],
+        foe_effects=[],
+        enrage_mods=[],
+        enrage_state=EnrageState(threshold=999),
+        progress=None,
+        visual_queue=None,
+        temp_rdr=0.0,
+        exp_reward=0,
+        run_id="hourglass-test",
+        battle_tasks={},
+        abort=lambda *_: None,
+        credited_foe_ids=set(),
+        turn=0,
+    )
+
+    await asyncio.wait_for(player_turn.execute_player_phase(context), timeout=1.0)
+
+    assert battle_pacing._EXTRA_TURNS.get(id(ko_member), 0) == 0
+
+    battle_pacing._EXTRA_TURNS.clear()
+    await BUS.emit_async("battle_end", None)
 
 
 @pytest.mark.asyncio
