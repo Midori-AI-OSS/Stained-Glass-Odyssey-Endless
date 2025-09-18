@@ -254,7 +254,10 @@
         </p>
         <ul class="warp-info-list">
           <li>Single pulls cost 1 ticket, while ×5 and ×10 options spend 5 or 10 at once.</li>
-          <li>Pity carries across banners of the same type and resets only after a 6★ reward.</li>
+          <li>
+            Pity carries across all banners and resets after any 5★ or 6★ reward, whichever comes
+            first.
+          </li>
           <li>Duplicate characters grant upgrade materials instead of extra copies.</li>
         </ul>
         <p class="warp-info-note">
