@@ -270,7 +270,7 @@
 <div class:reduced={reducedMotion} class="floater-host" aria-hidden="true">
   {#each floaters as entry (entry.id)}
     <div
-      class={`floater ${entry.tone} ${entry.variant}`}
+      class={`floater ${entry.tone} ${entry.variant} ${entry.critical ? 'critical' : ''}`}
       style={`--accent: ${entry.color}; --offset: ${entry.offset}px; --x: ${entry.x}; --y: ${entry.y}; --floater-duration: ${Math.max(BASE_DURATION, Number(paceMs) || BASE_DURATION)}ms; --x-offset: ${Number(baseOffsetX) || 0}px; --y-offset: ${Number(baseOffsetY) || 0}px;`}
       on:animationend={() => handleAnimationEnd(entry)}
     >
@@ -280,10 +280,12 @@
             <svelte:component this={entry.Icon} size={14} stroke-width={2} />
           {/if}
         </span>
+        {#if entry.critical && (entry.variant === 'damage' || entry.variant === 'drain')}
+          <span class="crit-prefix">CRIT:&nbsp;</span>
+        {/if}
         {#if entry.showAmount}
           <span class="amount" data-variant={entry.variant}>
             {entry.prefix}{Math.round(entry.amount)}
-            {entry.critical && (entry.variant === 'damage' || entry.variant === 'drain') ? '!' : ''}
           </span>
         {/if}
         {#if entry.label}
@@ -329,6 +331,14 @@
     font-size: 0.95rem;
     letter-spacing: 0.01em;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+  }
+
+  .floater.critical .badge {
+    font-weight: 800;
+  }
+
+  .crit-prefix {
+    letter-spacing: 0.02em;
   }
 
   .floater.heal .badge,
