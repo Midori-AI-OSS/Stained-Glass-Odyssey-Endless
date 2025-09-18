@@ -48,6 +48,9 @@
       .filter(entry => entry && entry.id !== undefined && entry.id !== null)
       .map(entry => [String(entry.id), entry])
   );
+  // If a combatant disappears, clear stale targeting ids
+  $: if (activeId && !combatantById.has(String(activeId))) activeId = null;
+  $: if (activeTargetId && !combatantById.has(String(activeTargetId))) activeTargetId = null;
   $: foeCount = (foes || []).length;
   $: displayActionValues = Boolean(showActionValues || serverShowActionValues);
   function getFoeSizePx(count) {
@@ -67,6 +70,8 @@
   let floaterFeed = [];
   // Anchor positions for floating damage/heal numbers: id -> { x, y } in [0..1] relative to root field
   let anchors = {};
+  // Track live DOM nodes for anchors to allow global recompute when layout shifts (e.g., removals)
+  let anchorNodes = new Map(); // id -> node
   let rootEl;
   let recentEventCounts = new Map();
   let lastRecentEventTokens = [];
@@ -98,6 +103,32 @@
     clearStatusTimeline();
   }
 
+  // Compute and update anchor for a given id/node
+  function computeAnchorFor(id, node) {
+    if (!id || !node || !rootEl) return;
+    try {
+      const root = rootEl.getBoundingClientRect();
+      const rect = node.getBoundingClientRect();
+      if (!root.width || !root.height) return;
+      const cx = rect.left + rect.width / 2 - root.left;
+      const cy = rect.top + rect.height * 0.5 - root.top;
+      const x = Math.max(0, Math.min(1, cx / root.width));
+      const y = Math.max(0, Math.min(1, cy / root.height));
+      const prev = anchors[id];
+      const dx = prev ? Math.abs(prev.x - x) : Infinity;
+      const dy = prev ? Math.abs(prev.y - y) : Infinity;
+      if (dx > 0.002 || dy > 0.002 || !prev) {
+        anchors = { ...anchors, [id]: { x, y } };
+      }
+    } catch {}
+  }
+
+  function recomputeAllAnchors() {
+    for (const [id, node] of anchorNodes.entries()) {
+      computeAnchorFor(id, node);
+    }
+  }
+
   // Svelte action: register a DOM node as an anchor for a given id
   function registerAnchor(node, params) {
     const extractId = (p) => {
@@ -107,26 +138,9 @@
     };
     let id = extractId(params);
     if (!id || !node) return { update: () => {}, destroy: () => {} };
-    const compute = () => {
-      try {
-        if (!rootEl) return;
-        const root = rootEl.getBoundingClientRect();
-        const rect = node.getBoundingClientRect();
-        if (!root.width || !root.height) return;
-        // Anchor around the visual center of the node
-        const cx = rect.left + rect.width / 2 - root.left;
-        const cy = rect.top + rect.height * 0.5 - root.top;
-        const x = Math.max(0, Math.min(1, cx / root.width));
-        const y = Math.max(0, Math.min(1, cy / root.height));
-        const prev = anchors[id];
-        const dx = prev ? Math.abs(prev.x - x) : Infinity;
-        const dy = prev ? Math.abs(prev.y - y) : Infinity;
-        // Only update if position meaningfully changed to avoid update loops
-        if (dx > 0.002 || dy > 0.002 || !prev) {
-          anchors = { ...anchors, [id]: { x, y } };
-        }
-      } catch {}
-    };
+    const compute = () => computeAnchorFor(id, node);
+    // Track this node for global recomputes
+    if (id) anchorNodes.set(id, node);
     compute();
     const ro = new ResizeObserver(() => compute());
     ro.observe(node);
@@ -141,7 +155,13 @@
             delete copy[id];
             anchors = copy;
           }
+          if (id) {
+            anchorNodes.delete(id);
+          }
           id = nextId;
+          if (id) {
+            anchorNodes.set(id, node);
+          }
         }
         compute();
       },
@@ -152,6 +172,9 @@
           const copy = { ...anchors };
           delete copy[id];
           anchors = copy;
+        }
+        if (id) {
+          anchorNodes.delete(id);
         }
       }
     };
@@ -796,6 +819,11 @@
 
       if (Array.isArray(snap.log)) logs = snap.log;
       else if (Array.isArray(snap.logs)) logs = snap.logs;
+
+      // After applying snapshot updates, re-measure anchors because layout may have shifted
+      // (e.g., foes/party removed) which doesn’t trigger node ResizeObserver.
+      await tick();
+      recomputeAllAnchors();
     } catch (e) {
       // Silently ignore errors to avoid spam during rapid polling
     } finally {

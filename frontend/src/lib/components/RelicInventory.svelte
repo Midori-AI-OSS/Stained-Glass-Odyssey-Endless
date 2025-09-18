@@ -1,5 +1,6 @@
 <script>
   import MenuPanel from './MenuPanel.svelte';
+  import Tooltip from './Tooltip.svelte';
   export let relics = [];
 </script>
 
@@ -10,7 +11,11 @@
   {:else}
     <ul class="relics">
       {#each relics as relic}
-        <li class="relic" title={relic.about}>{relic.name} x{relic.stacks}</li>
+        <li class="relic">
+          <Tooltip text={relic.about || ''}>
+            <span>{relic.name} x{relic.stacks}</span>
+          </Tooltip>
+        </li>
       {/each}
     </ul>
   {/if}

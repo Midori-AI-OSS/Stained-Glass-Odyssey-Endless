@@ -1,5 +1,6 @@
 <script>
   import CardArt from './CardArt.svelte';
+  import Tooltip from './Tooltip.svelte';
   import { createEventDispatcher } from 'svelte';
   export let entry = {};
   export let size = 'normal';
@@ -21,14 +22,17 @@
   };
 </script>
 
-<button class="curio tooltip-trigger" aria-label={`Select relic ${entry.name || entry.id}`} {tabIndex} aria-disabled={ariaDisabled} on:click={handleClick} on:keydown={onKey}>
-  <CardArt {entry} type="relic" roundIcon={true} {size} {quiet} {compact} />
-  {#if !compact && (entry.tooltip || entry.about)}
-    <div class="tooltip">
-      {entry.tooltip || entry.about}
-    </div>
-  {/if}
-</button>
+{#if !compact && (entry.tooltip || entry.about)}
+  <Tooltip text={entry.tooltip || entry.about}>
+    <button class="curio" aria-label={`Select relic ${entry.name || entry.id}`} {tabIndex} aria-disabled={ariaDisabled} on:click={handleClick} on:keydown={onKey}>
+      <CardArt {entry} type="relic" roundIcon={true} {size} {quiet} {compact} />
+    </button>
+  </Tooltip>
+{:else}
+  <button class="curio" aria-label={`Select relic ${entry.name || entry.id}`} {tabIndex} aria-disabled={ariaDisabled} on:click={handleClick} on:keydown={onKey}>
+    <CardArt {entry} type="relic" roundIcon={true} {size} {quiet} {compact} />
+  </button>
+{/if}
 
 <style>
   .curio {
@@ -46,41 +50,7 @@
     filter: drop-shadow(0 6px 14px rgba(0,0,0,0.45));
     outline: none;
   }
-  .curio:hover .tooltip {
-    opacity: 1;
-    visibility: visible;
-  }
-  
-  .tooltip {
-    position: absolute;
-    bottom: 120%;
-    left: 50%;
-    transform: translateX(-50%);
-    background: rgba(0,0,0,0.9);
-    color: #fff;
-    padding: 0.75rem;
-    border-radius: 6px;
-    font-size: 0.8rem;
-    white-space: normal;
-    opacity: 0;
-    visibility: hidden;
-    transition: opacity 0.2s ease;
-    z-index: 1000;
-    border: 1px solid rgba(255,255,255,0.2);
-    max-width: 320px;
-    text-align: center;
-    line-height: 1.3;
-  }
-
-  .tooltip::after {
-    content: '';
-    position: absolute;
-    top: 100%;
-    left: 50%;
-    transform: translateX(-50%);
-    border: 6px solid transparent;
-    border-top-color: rgba(0,0,0,0.9);
-  }
+  /* Tooltip visuals are provided by Tooltip.svelte + settings-shared.css */
   .select-bar {
     position: absolute;
     left: 0;
