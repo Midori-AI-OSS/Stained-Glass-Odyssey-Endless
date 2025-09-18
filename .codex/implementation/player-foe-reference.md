@@ -52,6 +52,7 @@ Passives generally shouldn't be capped unless a designer explicitly specifies a 
 - **Lady Fire and Ice** (B, Fire or Ice) – baseline fighter themed around fire and ice. Duality Engine alternates elements to build Flux and reduces foe mitigation when repeating an element.
 - **Lady Light** (B, Light) – baseline fighter themed around light.
 - **Lady of Fire** (B, Fire) – baseline fighter themed around fire.
+- **Lady Storm** (B, Wind or Lightning, 6★) – rotates between slipstreaming allies and overcharging lightning. Supercell Convergence grants permanent tailwinds, alternating action buffs that haste the party or stack charges, and detonates charged hits for bonus damage and mitigation shred.
 - **Luna** (B, Generic) – applies `luna_passive`.
 - **Mezzy** (B, random) – raises Max HP, takes less damage, and siphons stats from healthy allies each turn.
 - **Player** (C, chosen) – avatar representing the user and may select any non-Generic damage type.

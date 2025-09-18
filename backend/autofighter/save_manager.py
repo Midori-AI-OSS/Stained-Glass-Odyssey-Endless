@@ -43,15 +43,23 @@ class SaveManager:
     @contextmanager
     def connection(self) -> Iterator[sqlcipher3.Connection]:
         conn = sqlcipher3.connect(self.db_path)
-        if self.key and hasattr(conn, 'set_key'):
-            conn.set_key(self.key)
-        elif self.key and sys.platform == 'win32':
-            # For pysqlcipher3, use execute to set key
+        if self.key:
             try:
-                conn.execute(f"PRAGMA key = '{self.key}'")
+                if hasattr(conn, "set_key"):
+                    conn.set_key(self.key)
+                else:
+                    conn.execute("PRAGMA key = ?", (self.key,))
             except Exception:
-                # If encryption fails, continue without it
-                pass
+                # Some drivers (notably Windows builds) do not support parameter
+                # substitution for the PRAGMA statement. Fall back to a sanitized
+                # string interpolation before giving up so encrypted saves remain
+                # accessible across platforms.
+                try:
+                    escaped = self.key.replace("'", "''")
+                    conn.execute(f"PRAGMA key = '{escaped}'")
+                except Exception:
+                    conn.close()
+                    raise
         try:
             yield conn
             conn.commit()
