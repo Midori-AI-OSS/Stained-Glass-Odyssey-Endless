@@ -20,6 +20,7 @@ from runs.party_manager import _load_player_customization
 
 from autofighter.mapgen import MapGenerator
 from plugins import players as player_plugins
+from services.login_reward_service import record_room_completion
 from services.user_level_service import get_user_level
 
 
@@ -253,6 +254,10 @@ async def advance_room(run_id: str) -> dict[str, object]:
         )
 
     await asyncio.to_thread(save_map, run_id, state)
+    try:
+        await record_room_completion()
+    except Exception:
+        pass
     return {"next_room": next_type, "current_index": state["current"]}
 
 

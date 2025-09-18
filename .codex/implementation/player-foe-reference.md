@@ -53,8 +53,10 @@ Passives generally shouldn't be capped unless a designer explicitly specifies a 
 - **Lady Light** (B, Light) – baseline fighter themed around light.
 - **Lady of Fire** (B, Fire) – baseline fighter themed around fire.
 - **Lady Storm** (B, Wind or Lightning, 6★) – rotates between slipstreaming allies and overcharging lightning. Supercell Convergence grants permanent tailwinds, alternating action buffs that haste the party or stack charges, and detonates charged hits for bonus damage and mitigation shred.
+- **Lady Wind** (B, Wind) – 5★ aeromancer and twin of Lady Lightning whose manic, wind-lashed experiments leave her workspace in constant disarray. Tempest Guard wraps her in a permanent slipstream of dodge and mitigation, bleeds off stacks at the start of her turn, then adds one for every foe she critically strikes to fuel gust boosts and siphon a slice of incoming damage into healing.
 - **Luna** (B, Generic) – applies `luna_passive`.
 - **Mezzy** (B, random) – raises Max HP, takes less damage, and siphons stats from healthy allies each turn.
+- **PersonaIce** (A, Ice) – 5★ cryo tank who shields his sisters with Cryo Cycle, layering mitigation and thawing the stored frost into end-of-turn healing barriers for the party.
 - **Player** (C, chosen) – avatar representing the user and may select any non-Generic damage type.
 
 Characters marked as "random" roll one of the six elements when first loaded

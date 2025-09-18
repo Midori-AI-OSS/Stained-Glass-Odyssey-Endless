@@ -8,3 +8,5 @@ Coder, document the daily login reward system and main menu panel.
 
 ## Notes
 - Keep documentation under 300 lines per file and follow existing style guidelines.
+
+task ready for review

@@ -2,6 +2,12 @@
 
 A web-based auto-battler game featuring strategic party management, elemental combat, and character progression.
 
+## Daily Login Rewards
+
+Log in each day, clear at least three rooms, and claim a streak-based bundle of
+damage-type upgrade items. Rewards reset at 2:00 AM Pacific Time and scale up
+every seven and one hundred consecutive days.
+
 ## Quick Start with Docker Compose (Recommended)
 
 The easiest way to run Midori AI AutoFighter is with Docker Compose. Choose one of the four variants below:
