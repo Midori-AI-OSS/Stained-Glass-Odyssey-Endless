@@ -6,6 +6,7 @@ import hashlib
 import os
 from pathlib import Path
 import sys
+import re
 
 # Handle platform-specific SQLite encryption imports
 if sys.platform == 'win32':
@@ -43,15 +44,21 @@ class SaveManager:
     @contextmanager
     def connection(self) -> Iterator[sqlcipher3.Connection]:
         conn = sqlcipher3.connect(self.db_path)
-        if self.key and hasattr(conn, 'set_key'):
-            conn.set_key(self.key)
-        elif self.key and sys.platform == 'win32':
-            # For pysqlcipher3, use execute to set key
+        if self.key:
             try:
-                conn.execute(f"PRAGMA key = '{self.key}'")
+                if hasattr(conn, "set_key"):
+                    conn.set_key(self.key)
+                else:
+                    conn.execute("PRAGMA key = ?", (self.key,))
             except Exception:
-                # If encryption fails, continue without it
-                pass
+                # Some drivers (notably Windows builds) do not support parameter
+                # substitution for the PRAGMA statement. For maximal security, do not attempt string interpolation.
+                conn.close()
+                raise RuntimeError(
+                    "Your SQLCipher driver does not support parameter substitution for PRAGMA key. "
+                    "For security reasons, direct string substitution is not allowed. "
+                    "Please use a supported driver/version or platform."
+                )
         try:
             yield conn
             conn.commit()

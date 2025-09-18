@@ -21,8 +21,13 @@ def get_save_manager() -> SaveManager:
     global SAVE_MANAGER
     global FERNET
 
-    if SAVE_MANAGER is None:
-        manager = SaveManager.from_env()
+    desired = SaveManager.from_env()
+    if (
+        SAVE_MANAGER is None
+        or SAVE_MANAGER.db_path != desired.db_path
+        or SAVE_MANAGER.key != desired.key
+    ):
+        manager = desired
         manager.migrate(Path(__file__).resolve().parent.parent / "migrations")
         with manager.connection() as conn:
             conn.execute(
