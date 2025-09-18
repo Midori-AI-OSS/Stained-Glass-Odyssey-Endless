@@ -121,6 +121,32 @@ async def test_hot_minimum_tick_healing():
 
 
 @pytest.mark.asyncio
+async def test_hot_effects_removed_when_target_is_dead():
+    target = Stats()
+    target.set_base_stat('max_hp', 10)
+    target.set_base_stat('defense', 0)
+    target.hp = 10
+    manager = EffectManager(target)
+    healer = Stats()
+
+    hot = effects.HealingOverTime("regen", healing=5, turns=3, id="dead_hot", source=healer)
+    manager.add_hot(hot)
+    assert manager.hots
+
+    set_battle_active(True)
+    try:
+        await target.apply_damage(10)
+        assert target.hp == 0
+        await manager.tick()
+    finally:
+        set_battle_active(False)
+
+    assert target.hp == 0
+    assert not manager.hots
+    assert not target.hots
+
+
+@pytest.mark.asyncio
 async def test_zero_damage_dot_deals_minimum_one_per_stack():
     bus = EventBus()
     tick_amounts: list[int] = []
