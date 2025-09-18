@@ -60,7 +60,9 @@ class SaveManager:
                     if not re.fullmatch(r"[A-Za-z0-9@#%+=_\-]{1,64}", self.key):
                         conn.close()
                         raise ValueError("Unsafe database key: must be alphanumeric or limited special characters")
-                    conn.execute(f"PRAGMA key = '{self.key}'")
+                    # Escape single quotes in self.key to prevent SQL injection, though regex should forbid them.
+                    safe_key = self.key.replace("'", "''")
+                    conn.execute(f"PRAGMA key = '{safe_key}'")
                 except Exception:
                     conn.close()
                     raise
