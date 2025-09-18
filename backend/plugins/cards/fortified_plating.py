@@ -19,7 +19,7 @@ class FortifiedPlating(CardBase):
         # Track which members have used their first hit reduction this turn
         first_hit_used = set()
 
-        async def _on_damage_taken(target, attacker, damage):
+        async def _on_damage_taken(target, attacker, damage, *_: object):
             # Check if target is one of our party members
             if target in party.members:
                 target_id = id(target)

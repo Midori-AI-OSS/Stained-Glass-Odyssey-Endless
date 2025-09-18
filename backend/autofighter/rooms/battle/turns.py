@@ -258,6 +258,9 @@ def _on_damage_taken(
     target: Stats | None,
     attacker: Stats | None = None,
     amount: int | None = None,
+    pre_damage_hp: int | None = None,
+    post_damage_hp: int | None = None,
+    is_critical: bool | None = None,
     *_: Any,
 ) -> None:
     run_id = _resolve_run_id(target, attacker)
@@ -267,6 +270,11 @@ def _on_damage_taken(
     damage_type_id = _resolve_damage_type_id(attacker)
     if damage_type_id:
         metadata = {"damage_type_id": damage_type_id}
+    if is_critical is not None:
+        if metadata is None:
+            metadata = {"is_critical": bool(is_critical)}
+        else:
+            metadata = {**metadata, "is_critical": bool(is_critical)}
     _record_event(
         run_id,
         event_type="damage_taken",

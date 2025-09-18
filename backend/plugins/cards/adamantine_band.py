@@ -18,7 +18,7 @@ class AdamantineBand(CardBase):
     async def apply(self, party) -> None:  # type: ignore[override]
         await super().apply(party)
 
-        async def _on_damage_taken(target, attacker, damage):
+        async def _on_damage_taken(target, attacker, damage, *_: object):
             # Check if target is one of our party members
             if target in party.members:
                 current_hp = getattr(target, "hp", 0)

@@ -67,7 +67,7 @@ class VitalCore(CardBase):
 
                     loop.call_soon_threadsafe(lambda: loop.call_later(20, _remove_boost))
 
-        def _on_damage_taken(target, attacker, damage):
+        def _on_damage_taken(target, attacker, damage, *_: object):
             _check_low_hp()
 
         def _cleanup(*_: object) -> None:

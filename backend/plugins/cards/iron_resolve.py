@@ -25,7 +25,7 @@ class IronResolve(CardBase):
 
         cooldowns: dict[int, int] = {id(m): 0 for m in party.members}
 
-        async def _damage_taken(target, attacker, amount) -> None:
+        async def _damage_taken(target, attacker, amount, *_: object) -> None:
             pid = id(target)
             if target not in party.members:
                 return

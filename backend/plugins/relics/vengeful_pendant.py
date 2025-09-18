@@ -23,7 +23,7 @@ class VengefulPendant(RelicBase):
         state = getattr(party, "_vengeful_pendant_state", None)
 
         if state is None:
-            async def _reflect(target, attacker, amount) -> None:
+            async def _reflect(target, attacker, amount, *_: object) -> None:
                 if attacker is None or target not in party.members:
                     return
                 current_stacks = state.get("stacks", 0)

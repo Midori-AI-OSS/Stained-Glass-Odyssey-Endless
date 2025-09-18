@@ -344,7 +344,9 @@ async def test_status_phase_events_update_snapshot_queue(monkeypatch):
     assert heal_event.get("metadata", {}).get("damage_type_id") == "Generic"
 
     damage_event = events_by_type["damage_taken"][-1]
-    assert damage_event.get("metadata", {}).get("damage_type_id") == "Generic"
+    damage_metadata = damage_event.get("metadata", {})
+    assert damage_metadata.get("damage_type_id") == "Generic"
+    assert damage_metadata.get("is_critical") is True
 
     status_phase = snapshot.get("status_phase")
     assert status_phase is not None
