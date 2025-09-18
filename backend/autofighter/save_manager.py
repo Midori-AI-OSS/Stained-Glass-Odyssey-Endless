@@ -52,20 +52,13 @@ class SaveManager:
                     conn.execute("PRAGMA key = ?", (self.key,))
             except Exception:
                 # Some drivers (notably Windows builds) do not support parameter
-                # substitution for the PRAGMA statement. Fall back to a sanitized
-                # string interpolation before giving up so encrypted saves remain
-                # accessible across platforms.
-                try:
-                    # Accept only keys that match safe characters (customize to match key requirements)
-                    if not re.fullmatch(r"[A-Za-z0-9@#%+=_\-]{1,64}", self.key):
-                        conn.close()
-                        raise ValueError("Unsafe database key: must be alphanumeric or limited special characters")
-                    # Escape single quotes in self.key to prevent SQL injection, though regex should forbid them.
-                    safe_key = self.key.replace("'", "''")
-                    conn.execute(f"PRAGMA key = '{safe_key}'")
-                except Exception:
-                    conn.close()
-                    raise
+                # substitution for the PRAGMA statement. For maximal security, do not attempt string interpolation.
+                conn.close()
+                raise RuntimeError(
+                    "Your SQLCipher driver does not support parameter substitution for PRAGMA key. "
+                    "For security reasons, direct string substitution is not allowed. "
+                    "Please use a supported driver/version or platform."
+                )
         try:
             yield conn
             conn.commit()
