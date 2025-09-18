@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from dataclasses import field
+import inspect
 import random
 
 from autofighter.stats import BUS
@@ -24,10 +25,35 @@ class TimekeepersHourglass(RelicBase):
 
         stacks = party.relics.count(self.id)
         chance = 0.10 + 0.01 * (stacks - 1)
+        chance = min(1.0, max(0.0, chance))
+
+        def _member_can_act(member) -> bool:
+            if getattr(member, "hp", 0) <= 0:
+                return False
+            if getattr(member, "actions_per_turn", 0) <= 0:
+                return False
+
+            for attr in ("can_act", "can_take_turn"):
+                state = getattr(member, attr, None)
+                if state is False:
+                    return False
+                if callable(state):
+                    try:
+                        result = state()
+                    except TypeError:
+                        continue
+                    if inspect.isawaitable(result):
+                        continue
+                    if result is False:
+                        return False
+
+            return True
 
         async def _turn_start() -> None:
             if random.random() < chance:
                 for member in party.members:
+                    if not _member_can_act(member):
+                        continue
                     await BUS.emit_async("extra_turn", member)
 
         def _battle_end(_entity) -> None:
