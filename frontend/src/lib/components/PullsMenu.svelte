@@ -1,7 +1,7 @@
 <script>
   import { onMount } from 'svelte';
   import { createEventDispatcher } from 'svelte';
-  import { PackageOpen, Star, Users, RotateCcw } from 'lucide-svelte';
+  import { PackageOpen, Star, Users, RotateCcw, Info } from 'lucide-svelte';
   import MenuPanel from './MenuPanel.svelte';
   import { getGacha, pullGacha } from '../systems/api.js';
   import { browser, dev } from '$app/environment';
@@ -200,6 +200,16 @@
     </div>
     
     <div class="header-actions">
+      <button
+        class="info-btn"
+        type="button"
+        aria-label="Warp info"
+        title="Warp info"
+        on:click={() => openOverlay('warp-info')}
+      >
+        <svelte:component this={Info} size={16} aria-hidden="true" />
+        <span class="info-label">Info</span>
+      </button>
       <button class="reload-btn" on:click={reloadData} disabled={loading}>
         <svelte:component this={RotateCcw} size={16} />
         Refresh
@@ -357,7 +367,7 @@
     gap: 0.75rem;
   }
 
-  .reload-btn {
+  .header-actions button {
     display: inline-flex;
     align-items: center;
     gap: 0.35rem;
@@ -370,14 +380,22 @@
     font-size: 0.9rem;
   }
 
-  .reload-btn:hover {
+  .header-actions button:hover {
     background: rgba(255,255,255,0.15);
     border-color: rgba(120,180,255,0.5);
   }
 
-  .reload-btn:disabled {
+  .header-actions button:disabled {
     opacity: 0.5;
     cursor: not-allowed;
+  }
+
+  .info-btn {
+    border-radius: 6px;
+  }
+
+  .info-label {
+    font-weight: 500;
   }
 
   /* Content area */
