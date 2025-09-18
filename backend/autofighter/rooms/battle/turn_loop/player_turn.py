@@ -51,7 +51,7 @@ async def execute_player_phase(context: TurnLoopContext) -> bool:
                 await pace_sleep(YIELD_MULTIPLIER)
                 break
             context.turn += 1
-            await update_enrage_state(
+            enrage_update = await update_enrage_state(
                 context.turn,
                 context.enrage_state,
                 context.foes,
@@ -59,6 +59,19 @@ async def execute_player_phase(context: TurnLoopContext) -> bool:
                 context.enrage_mods,
                 context.combat_party.members,
             )
+            if enrage_update:
+                await push_progress_update(
+                    context.progress,
+                    context.combat_party.members,
+                    context.foes,
+                    context.enrage_state,
+                    context.temp_rdr,
+                    _EXTRA_TURNS,
+                    run_id=context.run_id,
+                    active_id=getattr(member, "id", None),
+                    active_target_id=None,
+                )
+                await pace_sleep(YIELD_MULTIPLIER)
             await context.registry.trigger("turn_start", member)
             if context.run_id is not None:
                 await _abort_other_runs(context, context.run_id)
