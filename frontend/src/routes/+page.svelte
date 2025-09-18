@@ -927,9 +927,79 @@
   }
 
   $: fullIdleMode && roomData && maybeAutoHandle();
+  function readFiniteNumber(value) {
+    const num = Number(value);
+    return Number.isFinite(num) ? num : null;
+  }
+
+  function extractShopPricing(entry) {
+    if (!entry || typeof entry !== 'object') {
+      return { base: null, taxed: null, tax: null };
+    }
+    const base = (() => {
+      const candidates = [
+        entry.base_cost,
+        entry.base_price,
+        entry.pricing?.base,
+        entry.price,
+        entry.cost
+      ];
+      for (const candidate of candidates) {
+        const resolved = readFiniteNumber(candidate);
+        if (resolved !== null) return resolved;
+      }
+      return null;
+    })();
+    const taxed = (() => {
+      const candidates = [
+        entry.taxed_cost,
+        entry.pricing?.taxed,
+        entry.price,
+        entry.cost,
+        base
+      ];
+      for (const candidate of candidates) {
+        const resolved = readFiniteNumber(candidate);
+        if (resolved !== null) return resolved;
+      }
+      return base;
+    })();
+    const tax = (() => {
+      const candidates = [
+        entry.tax,
+        entry.pricing?.tax,
+        (taxed !== null && base !== null) ? taxed - base : null
+      ];
+      for (const candidate of candidates) {
+        const resolved = readFiniteNumber(candidate);
+        if (resolved !== null) return resolved < 0 ? 0 : resolved;
+      }
+      if (taxed !== null && base !== null) {
+        const diff = taxed - base;
+        return Number.isFinite(diff) && diff > 0 ? diff : 0;
+      }
+      return null;
+    })();
+    return { base, taxed, tax };
+  }
+
   async function handleShopBuy(item) {
     if (!runId) return;
-    roomData = await roomAction('0', { id: item.id, cost: item.cost });
+    const { base, taxed, tax } = extractShopPricing(item || {});
+    const payload = { id: item?.id };
+    if (base !== null) {
+      payload.base_cost = base;
+      payload.base_price = base;
+    }
+    if (taxed !== null) {
+      payload.cost = taxed;
+      payload.price = taxed;
+      payload.taxed_cost = taxed;
+    }
+    if (tax !== null) {
+      payload.tax = tax;
+    }
+    roomData = await roomAction('0', payload);
   }
   async function handleShopReroll() {
     if (!runId) return;

@@ -356,6 +356,8 @@
     <ShopMenu
       items={roomData.stock || roomData.items || []}
       gold={roomData.gold}
+      itemsBought={roomData.items_bought}
+      taxSummary={roomData.tax_summary || roomData.taxSummary || null}
       reducedMotion={reducedMotion}
       on:buy={(e) => dispatch('shopBuy', e.detail)}
       on:reroll={() => dispatch('shopReroll')}

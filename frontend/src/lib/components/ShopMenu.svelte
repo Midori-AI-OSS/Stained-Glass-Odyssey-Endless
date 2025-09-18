@@ -10,13 +10,67 @@
   export let items = [];
   export let gold = 0;
   export let reducedMotion = false;
+  export let itemsBought = 0;
+  export let taxSummary = null;
 
   const dispatch = createEventDispatcher();
   // Preserve original stock ordering and keep purchased items visible until unload
   let baseList = []; // enriched entries with stable keys
   let awaitingReroll = false;
   let soldKeys = new Set();
-  
+
+  function toFinite(value) {
+    const num = Number(value);
+    return Number.isFinite(num) ? num : null;
+  }
+
+  function pickFinite(...values) {
+    for (const value of values) {
+      const resolved = toFinite(value);
+      if (resolved !== null) return resolved;
+    }
+    return null;
+  }
+
+  function pricingOf(entry) {
+    if (!entry || typeof entry !== 'object') {
+      return { base: 0, taxed: 0, tax: 0 };
+    }
+    const base = pickFinite(
+      entry.pricing?.base,
+      entry.base_price,
+      entry.base_cost,
+      entry.basePrice,
+      entry.baseCost,
+      entry.price,
+      entry.cost,
+      0
+    ) ?? 0;
+    const taxed = pickFinite(
+      entry.pricing?.taxed,
+      entry.taxed_cost,
+      entry.taxedCost,
+      entry.price,
+      entry.cost,
+      base
+    ) ?? base;
+    const tax = pickFinite(
+      entry.pricing?.tax,
+      entry.tax,
+      taxed - base,
+      0
+    ) ?? Math.max(taxed - base, 0);
+    return {
+      base,
+      taxed,
+      tax: tax < 0 ? 0 : tax
+    };
+  }
+
+  function priceOf(item) {
+    return pricingOf(item).taxed;
+  }
+
   // Animation state for reroll button
   let rerollAnimationText = '';
   let isAnimating = false;
@@ -40,7 +94,17 @@
     // mark this entry as sold (by key) and pass through the purchase
     const k = item?.key || keyOf(item);
     if (k) soldKeys.add(k);
-    dispatch('buy', item);
+    const pricing = pricingOf(item);
+    const payload = {
+      ...item,
+      base_price: pricing.base,
+      base_cost: pricing.base,
+      taxed_cost: pricing.taxed,
+      price: pricing.taxed,
+      cost: pricing.taxed,
+      tax: pricing.tax
+    };
+    dispatch('buy', payload);
   }
   
   // Animate text appearing letter by letter with jumping effect
@@ -93,7 +157,6 @@
     } catch {}
   });
 
-  function priceOf(item) { return Number(item?.price ?? item?.cost ?? 0); }
   // Enrich incoming stock entries with catalog data and presentable about text.
   // For relics, we compute a stable baseAbout to avoid duplicating stack notes
   // during reactive re-enrichment (metadata loads can re-run this).
@@ -123,7 +186,12 @@
   function getItemsSignature(itemsList) {
     if (!Array.isArray(itemsList) || itemsList.length === 0) return '';
     // Create a signature based on item IDs and prices to detect real changes
-    return itemsList.map(item => `${item?.type || 'item'}:${item?.id || ''}:${priceOf(item)}`).join('|');
+    return itemsList
+      .map((item) => {
+        const pricing = pricingOf(item);
+        return `${item?.type || 'item'}:${item?.id || ''}:${pricing.base}:${pricing.taxed}`;
+      })
+      .join('|');
   }
   
   // Initialize base list on first stock arrival; replace on reroll
@@ -155,6 +223,102 @@
   // Partition for layout
   $: displayCards = enrichedBaseList.filter(e => e?.type === 'card');
   $: displayRelics = enrichedBaseList.filter(e => e?.type === 'relic');
+
+  $: samplePricing = (() => {
+    if (!Array.isArray(enrichedBaseList) || enrichedBaseList.length === 0) {
+      return { base: 0, taxed: 0, tax: 0 };
+    }
+    const withTax = enrichedBaseList.find((entry) => pricingOf(entry).tax > 0);
+    if (withTax) return pricingOf(withTax);
+    return pricingOf(enrichedBaseList[0]);
+  })();
+
+  $: surchargeValue = pickFinite(
+    taxSummary?.current_tax,
+    taxSummary?.currentTax,
+    taxSummary?.tax,
+    taxSummary?.surcharge,
+    samplePricing.tax
+  ) ?? 0;
+
+  $: priorPurchases = pickFinite(
+    taxSummary?.items_bought,
+    taxSummary?.purchases,
+    taxSummary?.itemsBought,
+    itemsBought
+  ) ?? 0;
+
+  $: surchargeRate = (() => {
+    const percent = pickFinite(
+      taxSummary?.rate_percent,
+      taxSummary?.ratePercent,
+      taxSummary?.percent,
+      taxSummary?.percentage
+    );
+    if (percent !== null) return percent;
+    const decimal = pickFinite(taxSummary?.rate, taxSummary?.multiplier);
+    if (decimal === null) return null;
+    return decimal <= 1 ? decimal * 100 : decimal;
+  })();
+
+  $: nextSurcharge = pickFinite(
+    taxSummary?.next_tax,
+    taxSummary?.nextTax,
+    taxSummary?.next_tax_amount
+  );
+
+  function formatPercent(value) {
+    if (!Number.isFinite(value)) return null;
+    if (Math.abs(value - Math.round(value)) < 0.05) {
+      return `${Math.round(value)}%`;
+    }
+    return `${value.toFixed(1)}%`;
+  }
+
+  function formatSurchargeMessage(summary, tax, prior, rate, next) {
+    const directMessage = (typeof summary?.message === 'string' && summary.message.trim())
+      ? summary.message.trim()
+      : null;
+    if (directMessage) return directMessage;
+    const description = (typeof summary?.description === 'string' && summary.description.trim())
+      ? summary.description.trim()
+      : null;
+    if (description) return description;
+
+    const parts = [];
+    if (tax <= 0) {
+      if (prior > 0) {
+        parts.push('Tax waived');
+        parts.push(`${prior} prior buy${prior === 1 ? '' : 's'}`);
+        return parts.join(' · ');
+      }
+      return 'No tax applied';
+    }
+
+    parts.push(`+${tax}g tax`);
+    const pct = formatPercent(rate ?? null);
+    if (pct) parts.push(`${pct} rate`);
+    if (prior > 0) {
+      parts.push(`${prior} prior buy${prior === 1 ? '' : 's'}`);
+    }
+    const pressure = pickFinite(summary?.pressure, summary?.shop_pressure);
+    if (pressure !== null) {
+      parts.push(`pressure ${pressure}`);
+    }
+    if (next !== null && Number.isFinite(next) && next !== tax) {
+      parts.push(`next +${next}g`);
+    }
+    return parts.join(' · ');
+  }
+
+  $: surchargeMessage = formatSurchargeMessage(
+    taxSummary,
+    surchargeValue,
+    priorPurchases,
+    surchargeRate,
+    nextSurcharge
+  );
+  $: taxNoteClass = surchargeValue > 0 ? 'active' : 'inactive';
 </script>
 
 <MenuPanel data-testid="shop-menu" padding="0.6rem 0.6rem 0.8rem 0.6rem">
@@ -171,12 +335,21 @@
         <h4>Cards</h4>
         <div class="grid">
           {#each displayCards as item (item.key)}
+            {@const pricing = pricingOf(item)}
             <div class={`cell ${soldKeys.has(item.key) ? 'dim sold' : ''}`}>
               <RewardCard entry={item} type="card" disabled={soldKeys.has(item.key)} on:select={() => buy(item)} />
               <div class="buybar">
-                <button class="buy" disabled={soldKeys.has(item.key) || priceOf(item) > gold} on:click={() => buy(item)}>
-                  {#if soldKeys.has(item.key)}Sold{:else}<Coins size={14} class="coin-icon" /> {priceOf(item)}{/if}
+                <button class="buy" disabled={soldKeys.has(item.key) || (pricing.taxed ?? 0) > gold} on:click={() => buy(item)}>
+                  {#if soldKeys.has(item.key)}Sold{:else}<Coins size={14} class="coin-icon" /> {pricing.taxed ?? 0}{/if}
                 </button>
+                <div class="price-breakdown">
+                  <span class="base">Base {pricing.base ?? 0}</span>
+                  {#if (pricing.tax ?? 0) > 0}
+                    <span class="tax">+{pricing.tax} tax</span>
+                  {:else}
+                    <span class="tax waived">No tax</span>
+                  {/if}
+                </div>
               </div>
             </div>
           {/each}
@@ -190,12 +363,21 @@
       {:else}
         <div class="grid">
           {#each displayRelics as item (item.key)}
+            {@const pricing = pricingOf(item)}
             <div class={`cell ${soldKeys.has(item.key) ? 'dim sold' : ''}`}>
               <CurioChoice entry={item} disabled={soldKeys.has(item.key)} on:select={() => buy(item)} />
               <div class="buybar">
-                <button class="buy" disabled={soldKeys.has(item.key) || priceOf(item) > gold} on:click={() => buy(item)}>
-                  {#if soldKeys.has(item.key)}Sold{:else}<Coins size={14} class="coin-icon" /> {priceOf(item)}{/if}
+                <button class="buy" disabled={soldKeys.has(item.key) || (pricing.taxed ?? 0) > gold} on:click={() => buy(item)}>
+                  {#if soldKeys.has(item.key)}Sold{:else}<Coins size={14} class="coin-icon" /> {pricing.taxed ?? 0}{/if}
                 </button>
+                <div class="price-breakdown">
+                  <span class="base">Base {pricing.base ?? 0}</span>
+                  {#if (pricing.tax ?? 0) > 0}
+                    <span class="tax">+{pricing.tax} tax</span>
+                  {:else}
+                    <span class="tax waived">No tax</span>
+                  {/if}
+                </div>
               </div>
             </div>
           {/each}
@@ -204,20 +386,23 @@
     </section>
   </div>
   <div class="actions">
-    <button class="action" disabled={awaitingReroll} on:click={reroll}>
-      {#if awaitingReroll}
-        <span class="reroll-text">
-          {#each rerollAnimationText.split('') as char, i}
-            <span class="jump-letter" style="animation-delay: {i * 0.1}s">{char}</span>
-          {/each}
-        </span>
-      {:else}
-        Reroll
-      {/if}
-    </button>
-    <button class="action" on:click={close}>Leave</button>
+    <div class={`tax-note ${taxNoteClass}`} data-testid="shop-tax-note">{surchargeMessage}</div>
+    <div class="action-buttons">
+      <button class="action" disabled={awaitingReroll} on:click={reroll}>
+        {#if awaitingReroll}
+          <span class="reroll-text">
+            {#each rerollAnimationText.split('') as char, i}
+              <span class="jump-letter" style="animation-delay: {i * 0.1}s">{char}</span>
+            {/each}
+          </span>
+        {:else}
+          Reroll
+        {/if}
+      </button>
+      <button class="action" on:click={close}>Leave</button>
+    </div>
   </div>
-  
+
 </MenuPanel>
 
 <style>
@@ -249,13 +434,21 @@
   .cell.dim { opacity: 0.55; filter: grayscale(0.2); }
   .cell.sold :global(button.card),
   .cell.sold :global(button.curio) { pointer-events: none; }
-  .buybar { margin-top: 0.35rem; }
-  .buy { display:flex; align-items:center; gap:0.35rem; border: 1px solid rgba(255,255,255,0.35); background: rgba(0,0,0,0.5); color:#fff; padding: 0.3rem 0.6rem; }
+  .buybar { margin-top: 0.35rem; display:flex; flex-direction:column; gap:0.3rem; align-items:center; width:100%; }
+  .buy { display:flex; align-items:center; justify-content:center; gap:0.35rem; border: 1px solid rgba(255,255,255,0.35); background: rgba(0,0,0,0.5); color:#fff; padding: 0.3rem 0.6rem; width:100%; }
   .buy:disabled { opacity: 0.5; cursor: not-allowed; }
+  .price-breakdown { display:flex; gap:0.5rem; font-size:0.75rem; opacity:0.85; flex-wrap:wrap; justify-content:center; }
+  .price-breakdown span { white-space:nowrap; }
+  .price-breakdown .tax { color: #d4af37; }
+  .price-breakdown .tax.waived { color: #8ecf8e; }
 
-  .actions { display:flex; gap:0.5rem; justify-content:flex-end; margin-top: 0.75rem; }
+  .actions { display:flex; gap:0.75rem; justify-content:space-between; align-items:center; flex-wrap:wrap; margin-top: 0.75rem; }
+  .action-buttons { display:flex; gap:0.5rem; }
   .action { border: 1px solid rgba(255,255,255,0.35); background: rgba(0,0,0,0.5); color:#fff; padding: 0.35rem 0.7rem; }
   .action:disabled { opacity: 0.5; cursor: not-allowed; }
+  .tax-note { font-size:0.85rem; opacity:0.9; color:#d4af37; min-width: 12rem; }
+  .tax-note.inactive { color:#8ecf8e; }
+  .tax-note span { white-space:nowrap; }
 
   /* Reroll text animation */
   .reroll-text {
@@ -278,5 +471,8 @@
 
   @media (max-width: 920px) {
     .columns { grid-template-columns: 1fr; }
+    .actions { flex-direction:column; align-items:stretch; }
+    .tax-note { text-align:center; }
+    .action-buttons { justify-content:center; }
   }
 </style>
