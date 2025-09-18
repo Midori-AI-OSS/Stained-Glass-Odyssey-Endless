@@ -321,10 +321,10 @@ export function getDamageTypeColor(typeId, options = {}) {
   const key = normalizeDamageTypeId(typeId);
   const base = ELEMENT_COLORS[key] || '#cccccc';
   const variant = (options.variant || '').toLowerCase();
-  if (variant === 'heal' || variant === 'hot') {
+  if (variant === 'heal' || variant === 'hot' || variant === 'buff') {
     return shiftColor(base, 0.4);
   }
-  if (variant === 'dot') {
+  if (variant === 'dot' || variant === 'drain') {
     return shiftColor(base, -0.25);
   }
   return base;

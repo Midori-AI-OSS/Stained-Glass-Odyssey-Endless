@@ -19,7 +19,22 @@ describe('Battle event floaters', () => {
   });
 
   test('renders an exclamation mark for critical damage floaters', () => {
-    expect(floaterSource).toContain("entry.critical && entry.variant === 'damage'");
+    expect(floaterSource).toContain(
+      "entry.critical && (entry.variant === 'damage' || entry.variant === 'drain')"
+    );
     expect(floaterSource).toContain('critical = Boolean');
+  });
+
+  test('staggered floater scheduling uses index-based offsets', () => {
+    const anchor = 'list.forEach((raw, i) => {';
+    const start = floaterSource.indexOf(anchor);
+    expect(start).toBeGreaterThan(-1);
+    const endMarker = 'addTimers.add(handle);';
+    const end = floaterSource.indexOf(endMarker, start);
+    expect(end).toBeGreaterThan(start);
+    const snippet = floaterSource
+      .slice(start, end + endMarker.length)
+      .replace(/\s+$/g, '');
+    expect(snippet).toMatchSnapshot('floater-stagger-block');
   });
 });
