@@ -12,6 +12,7 @@ from .lady_fire_and_ice import LadyFireAndIce
 from .lady_light import LadyLight
 from .lady_lightning import LadyLightning
 from .lady_of_fire import LadyOfFire
+from .persona_light_and_dark import PersonaLightAndDark
 from .lady_wind import LadyWind
 from .luna import Luna
 from .mezzy import Mezzy
@@ -34,6 +35,7 @@ __all__ = [
     "LadyLight",
     "LadyLightning",
     "LadyOfFire",
+    "PersonaLightAndDark",
     "LadyWind",
     "Luna",
     "Mezzy",
