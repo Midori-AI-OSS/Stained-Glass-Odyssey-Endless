@@ -6,6 +6,7 @@
   import { fade, scale } from 'svelte/transition';
   import { quintOut } from 'svelte/easing';
   import { getElementIcon, getElementColor } from '../systems/assetLoader.js';
+  import { savePlayerConfig } from '../systems/api.js';
   import { Heart, Sword, Shield, Crosshair, Zap, HeartPulse, ShieldPlus } from 'lucide-svelte';
 
   export let roster = [];
@@ -16,6 +17,17 @@
   export let reducedMotion = false;
 
   const dispatch = createEventDispatcher();
+  const ELEMENTS = ['Light','Fire','Ice','Lightning','Wind','Dark'];
+  async function chooseElement(name) {
+    const s = String(name || '');
+    const pretty = s ? s.charAt(0).toUpperCase() + s.slice(1).toLowerCase() : '';
+    try {
+      if (pretty) await savePlayerConfig({ damage_type: pretty });
+      try { dispatch('element-change', { element: pretty }); } catch {}
+    } catch (e) {
+      // overlay shown by http layer
+    }
+  }
 
   const UPGRADE_STATS = [
     { key: 'max_hp', label: 'HP', hint: 'Bolster survivability.' },
@@ -239,6 +251,20 @@
               <div class="vignette" />
             </div>
           {/if}
+          <!-- Element selector toolbar -->
+          <div class="element-toolbar" on:click|stopPropagation>
+            {#each ELEMENTS as el}
+              {#key el}
+                <button type="button" class="element-btn" class:active={String(elementName).toLowerCase() === el.toLowerCase()}
+                  aria-label={`Set element ${el}`}
+                  style={`--el:${getElementColor(el)}; color:${getElementColor(el)}`}
+                  on:click={() => chooseElement(el)}
+                >
+                  <svelte:component this={getElementIcon(el)} aria-hidden="true" />
+                </button>
+              {/key}
+            {/each}
+          </div>
           <!-- Sun layout: used for all damage types for now -->
           <div
             class="stat-slots"
@@ -495,6 +521,31 @@
     /* Let background clicks pass through; re-enable on specific children */
     pointer-events: none;
   }
+  /* Element select toolbar */
+  .element-toolbar {
+    position: absolute;
+    top: 0.5rem;
+    left: 50%;
+    transform: translateX(-50%);
+    display: inline-flex;
+    gap: 0.35rem;
+    z-index: 3;
+    pointer-events: auto;
+  }
+  .element-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0,0,0,0.55);
+    border: 1px solid color-mix(in srgb, var(--el) 55%, rgba(255,255,255,0.35));
+    box-shadow: 0 2px 8px rgba(0,0,0,0.35);
+    cursor: pointer;
+  }
+  .element-btn.active { box-shadow: inset 0 0 0 2px var(--el); }
+  .element-btn :global(svg) { width: 18px; height: 18px; }
   /* Positioned stat slots for Light element */
   .stat-slots { position: absolute; inset: 0; z-index: 3; pointer-events: none; }
   .stat-slots .stat-icon-btn { position: absolute; pointer-events: auto; z-index: 1; }
@@ -642,3 +693,4 @@
     }
   }
 </style>
+ 

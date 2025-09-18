@@ -166,6 +166,7 @@
         on:open-upgrade={(e) => handlePreviewMode(e.detail, 'upgrade')}
         on:close-upgrade={(e) => handlePreviewMode(e.detail, 'portrait')}
         on:request-upgrade={(e) => forwardUpgradeRequest(e.detail)}
+        on:element-change={(e) => { previewElementOverride = e.detail?.element || previewElementOverride; refreshRoster(); }}
       />
       <div class="right-col">
         <StatTabs {roster} {previewId} {selected} {userBuffPercent} previewMode={$previewMode}
