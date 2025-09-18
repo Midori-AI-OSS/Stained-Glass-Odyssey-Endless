@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import { createEventDispatcher } from 'svelte';
   import { writable } from 'svelte/store';
-  import { getPlayers, upgradeStat } from '../systems/api.js';
+  import { getPlayers, getUpgrade, upgradeCharacter, upgradeStat } from '../systems/api.js';
   import { getCharacterImage, getRandomFallback, getElementColor } from '../systems/assetLoader.js';
   import MenuPanel from './MenuPanel.svelte';
   import PartyRoster from './PartyRoster.svelte';
@@ -26,6 +26,10 @@
   const previewMode = writable('portrait');
   let upgradeContext = null;
   let lastPreviewedId = null;
+  let upgradeCache = {};
+  let upgradeTokens = {};
+  const EMPTY_UPGRADE_STATE = { data: null, loading: false, error: null };
+  let previewUpgradeState = EMPTY_UPGRADE_STATE;
   const STAT_LABELS = {
     max_hp: 'HP',
     atk: 'ATK',
@@ -49,7 +53,42 @@
     lastPreviewedId = previewId ?? null;
     upgradeContext = null;
     previewMode.set('portrait');
+    if (previewId) refreshUpgradeData(previewId, { force: true });
     try { dispatch('previewMode', { mode: 'portrait', id: previewId ?? null }); } catch {}
+  }
+  $: previewUpgradeState = readUpgradeState(previewId);
+
+  function readUpgradeState(id) {
+    const key = id == null ? null : String(id);
+    return key && upgradeCache[key] ? upgradeCache[key] : EMPTY_UPGRADE_STATE;
+  }
+
+  async function refreshUpgradeData(id, { force = false } = {}) {
+    if (!id) return null;
+    const key = String(id);
+    const existing = upgradeCache[key];
+    if (!force && existing) {
+      if (existing.loading) return existing.data ?? null;
+      if (existing.data && !existing.error) return existing.data;
+    }
+
+    const token = (upgradeTokens[key] || 0) + 1;
+    upgradeTokens = { ...upgradeTokens, [key]: token };
+    upgradeCache = { ...upgradeCache, [key]: { ...(existing || {}), loading: true } };
+
+    try {
+      const data = await getUpgrade(id);
+      if (upgradeTokens[key] !== token) return data;
+      upgradeCache = { ...upgradeCache, [key]: { data, loading: false, error: null } };
+      return data;
+    } catch (err) {
+      if (upgradeTokens[key] !== token) return null;
+      upgradeCache = {
+        ...upgradeCache,
+        [key]: { data: existing?.data ?? null, loading: false, error: err }
+      };
+      return null;
+    }
   }
 
   onMount(async () => {
@@ -160,7 +199,7 @@
   }
 
   async function forwardUpgradeRequest(detail) {
-    if (upgradeContext?.pendingStat) return;
+    if (upgradeContext?.pendingStat || upgradeContext?.pendingConversion) return;
 
     const char = detail?.id ? roster.find((p) => p.id === detail.id) : roster.find((p) => p.id === previewId);
     const payload = {
@@ -178,6 +217,7 @@
         stat: stat || null,
         lastRequestedStat: stat || null,
         pendingStat: stat || null,
+        pendingConversion: false,
         message: '',
         error: ''
       };
@@ -189,6 +229,7 @@
 
     try {
       const result = await upgradeStat(id, stat);
+      await refreshUpgradeData(id, { force: true });
       await refreshRoster();
       const updatedChar = roster.find((p) => p.id === id) || payload.character || null;
       const statKey = result?.stat_upgraded || stat;
@@ -203,6 +244,7 @@
           stat: statKey,
           lastRequestedStat: stat || null,
           pendingStat: null,
+          pendingConversion: false,
           message,
           error: ''
         };
@@ -216,8 +258,75 @@
           stat: stat || null,
           lastRequestedStat: stat || null,
           pendingStat: null,
+          pendingConversion: false,
           message: '',
           error: err?.message || `Unable to upgrade ${label}.`
+        };
+      }
+    }
+  }
+
+  async function forwardConversionRequest(detail) {
+    if (upgradeContext?.pendingStat || upgradeContext?.pendingConversion) return;
+
+    const char = detail?.id ? roster.find((p) => p.id === detail.id) : roster.find((p) => p.id === previewId);
+    const payload = {
+      ...(detail || {}),
+      id: char?.id ?? previewId ?? null,
+      character: char || null
+    };
+
+    const { id } = payload;
+    const rawStar = Number(detail?.starLevel ?? detail?.star_level ?? detail?.star ?? detail?.starlevel);
+    const rawCount = Number(detail?.itemCount ?? detail?.item_count ?? detail?.count);
+    if (!id || !Number.isFinite(rawStar) || !Number.isFinite(rawCount)) return;
+    const starLevel = Math.min(4, Math.max(1, Math.floor(rawStar)));
+    const itemCount = Math.max(1, Math.floor(rawCount));
+
+    const isUpgradeMode = modeIsUpgrade();
+    const existing = upgradeContext && upgradeContext.id === id ? upgradeContext : null;
+
+    if (isUpgradeMode) {
+      upgradeContext = {
+        id,
+        character: payload.character,
+        stat: existing?.stat ?? null,
+        lastRequestedStat: existing?.lastRequestedStat ?? null,
+        pendingStat: null,
+        pendingConversion: true,
+        message: '',
+        error: ''
+      };
+    }
+
+    try {
+      await upgradeCharacter(id, starLevel, itemCount);
+      await refreshUpgradeData(id, { force: true });
+      await refreshRoster();
+      if (isUpgradeMode) {
+        const updatedChar = roster.find((p) => p.id === id) || payload.character || null;
+        upgradeContext = {
+          id,
+          character: updatedChar,
+          stat: existing?.stat ?? null,
+          lastRequestedStat: existing?.lastRequestedStat ?? null,
+          pendingStat: null,
+          pendingConversion: false,
+          message: `Converted ${itemCount}× ${starLevel}★ items to upgrade points.`,
+          error: ''
+        };
+      }
+    } catch (err) {
+      if (isUpgradeMode) {
+        upgradeContext = {
+          id,
+          character: payload.character,
+          stat: existing?.stat ?? null,
+          lastRequestedStat: existing?.lastRequestedStat ?? null,
+          pendingStat: null,
+          pendingConversion: false,
+          message: '',
+          error: err?.message || 'Unable to convert items.'
         };
       }
     }
@@ -243,10 +352,14 @@
         overrideElement={previewElementOverride}
         mode={$previewMode}
         upgradeContext={upgradeContext}
+        upgradeData={previewUpgradeState.data}
+        upgradeLoading={previewUpgradeState.loading}
+        upgradeError={previewUpgradeState.error}
         {reducedMotion}
         on:open-upgrade={(e) => handlePreviewMode(e.detail, 'upgrade')}
         on:close-upgrade={(e) => handlePreviewMode(e.detail, 'portrait')}
         on:request-upgrade={(e) => forwardUpgradeRequest(e.detail)}
+        on:request-convert={(e) => forwardConversionRequest(e.detail)}
         on:element-change={(e) => { previewElementOverride = e.detail?.element || previewElementOverride; refreshRoster(); }}
       />
       <div class="right-col">
