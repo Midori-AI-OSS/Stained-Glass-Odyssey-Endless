@@ -107,7 +107,7 @@ class RustyBuckle(RelicBase):
                             foe = random.choice(state["foes"])
                             safe_async_task(Aftertaste(base_pot=dmg).apply(target, foe))
 
-            def _heal(target, healer, _amount) -> None:
+            def _heal(target, healer, _amount, *_args) -> None:
                 if target in party.members:
                     state["prev_hp"][id(target)] = target.hp
 

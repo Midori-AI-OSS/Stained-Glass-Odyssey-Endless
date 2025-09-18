@@ -38,7 +38,7 @@ def bus(monkeypatch):
 
     async def simple_heal(self, amount, healer=None):
         self.hp = min(self.hp + int(amount), self.max_hp)
-        await bus.emit_async("heal_received", self, healer, amount)
+        await bus.emit_async("heal_received", self, healer, amount, None, None)
         return int(amount)
 
     monkeypatch.setattr(PlayerBase, "apply_damage", simple_damage)
