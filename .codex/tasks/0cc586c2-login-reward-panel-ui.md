@@ -12,3 +12,5 @@ Coder, add a main menu panel that displays daily login rewards using left-to-rig
 ## Notes
 - Follow existing main menu styling conventions and Lucide icon usage.
 - Include tooltip or hover text summarizing reward contents.
+
+task ready for review

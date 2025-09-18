@@ -3,6 +3,8 @@ from __future__ import annotations
 from quart import Blueprint
 from quart import jsonify
 from quart import request
+from services.login_reward_service import claim_login_reward
+from services.login_reward_service import get_login_reward_status
 from services.reward_service import acknowledge_loot as acknowledge_loot_service
 from services.reward_service import select_card as select_card_service
 from services.reward_service import select_relic as select_relic_service
@@ -36,6 +38,21 @@ async def select_relic(run_id: str):
 async def acknowledge_loot(run_id: str):
     try:
         result = await acknowledge_loot_service(run_id)
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    return jsonify(result)
+
+
+@bp.get("/rewards/login")
+async def get_login_reward():
+    status = await get_login_reward_status()
+    return jsonify(status)
+
+
+@bp.post("/rewards/login/claim")
+async def claim_login_reward_view():
+    try:
+        result = await claim_login_reward()
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
     return jsonify(result)

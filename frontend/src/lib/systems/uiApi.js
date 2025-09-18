@@ -113,6 +113,23 @@ export async function acknowledgeLoot(runId) {
 }
 
 /**
+ * Fetch the player's daily login reward status.
+ * @param {Object} [options]
+ * @param {boolean} [options.suppressOverlay=true] - Skip the global error overlay on failure.
+ */
+export async function getLoginRewardStatus({ suppressOverlay = true } = {}) {
+  return httpGet('/rewards/login', {}, suppressOverlay);
+}
+
+/**
+ * Claim the available daily login reward bundle.
+ * @param {boolean} [suppressOverlay=true] - Skip the global error overlay on failure.
+ */
+export async function claimLoginReward(suppressOverlay = true) {
+  return httpPost('/rewards/login/claim', {}, {}, suppressOverlay);
+}
+
+/**
  * Retrieve a battle summary for the current run.
  * @param {number} battleIndex - Index of the battle to fetch
  */
