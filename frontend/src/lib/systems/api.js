@@ -147,9 +147,8 @@ export async function upgradeCharacter(id, starLevel, itemCount = 1) {
 }
 
 // Spend upgrade points on a specific stat for the given character
-export async function upgradeStat(id, points, statName = 'atk') {
-  return httpPost(`/players/${id}/upgrade-stat`, { 
-    points, 
-    stat_name: statName 
+export async function upgradeStat(id, statName) {
+  return httpPost(`/players/${id}/upgrade-stat`, {
+    stat_name: statName
   });
 }

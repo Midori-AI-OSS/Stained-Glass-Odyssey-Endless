@@ -12,11 +12,12 @@
   let items = {};
   let statUpgrades = [];
   let statTotals = {};
+  let nextCosts = {};
   let upgradePoints = 0;
   let loading = true;
   let starLevel = 4;
   let itemCount = 1;
-  let spendPoints = 1;
+  let upgradeRepeats = 1;
   let spendStat = 'atk';
   let message = '';
   const dispatch = createEventDispatcher();
@@ -32,6 +33,7 @@
       items = data.items || {};
       statUpgrades = data.stat_upgrades || [];
       statTotals = data.stat_totals || {};
+      nextCosts = data.next_costs || {};
       upgradePoints = Number(data.upgrade_points) || 0;
     } finally {
       loading = false;
@@ -67,13 +69,48 @@
     }
   }
 
+  function formatPoints(value) {
+    const num = Number(value);
+    if (!Number.isFinite(num)) return '—';
+    return Math.max(0, Math.round(num)).toLocaleString();
+  }
+
+  function formatCost(value) {
+    const points = formatPoints(value);
+    return points === '—' ? '—' : `${points} pts`;
+  }
+
+  function formatPercent(value) {
+    if (value == null) return '0%';
+    const num = Number(value) * 100;
+    if (!Number.isFinite(num)) return '0%';
+    let digits = 2;
+    const abs = Math.abs(num);
+    if (abs >= 100) digits = 0;
+    else if (abs >= 10) digits = 1;
+    let formatted = num.toFixed(digits);
+    formatted = formatted.replace(/\.0+$/, '').replace(/(\.\d*[1-9])0+$/, '$1');
+    const sign = num >= 0 ? '+' : '';
+    return `${sign}${formatted}%`;
+  }
+
   async function spendPointsFn() {
     message = '';
+    const repeats = Math.max(1, Number(upgradeRepeats) || 1);
     try {
-      const res = await upgradeStat(id, Number(spendPoints), String(spendStat));
+      let result = null;
+      for (let i = 0; i < repeats; i += 1) {
+        result = await upgradeStat(id, String(spendStat));
+      }
       await load();
-      message = `Upgraded ${res?.stat_upgraded || spendStat} by ${(res?.upgrade_percent ?? 0) * 100}%`;
-      dispatch('upgraded', { id, spent: Number(spendPoints), stat: String(spendStat) });
+      if (result) {
+        const label = result.stat_upgraded || spendStat;
+        const bonus = formatPercent(result.upgrade_percent);
+        message = `Upgraded ${label} by ${bonus}.`;
+      } else {
+        message = `Upgraded ${spendStat}.`;
+      }
+      dispatch('upgraded', { id, stat: String(spendStat), repeats });
     } catch (e) {
       message = e?.message || 'Spend failed';
     }
@@ -120,11 +157,12 @@
             {/each}
           </select>
         </label>
-        <label>Points
-          <input type="number" min="1" bind:value={spendPoints} class="themed" />
+        <label>Times
+          <input type="number" min="1" bind:value={upgradeRepeats} class="themed" />
         </label>
-        <button class="themed" on:click={spendPointsFn} disabled={!upgradePoints || spendPoints < 1}>Spend</button>
+        <button class="themed" on:click={spendPointsFn} disabled={!upgradePoints || upgradeRepeats < 1}>Spend</button>
       </div>
+      <div class="hint">Next cost for {spendStat}: {formatCost(nextCosts[spendStat])}</div>
       {#if Object.keys(statTotals).length}
         <div class="hint">Totals: {Object.entries(statTotals).map(([k,v]) => `${k}: ${(v*100).toFixed(2)}%`).join(', ')}</div>
       {/if}
