@@ -168,18 +168,11 @@
         on:request-upgrade={(e) => forwardUpgradeRequest(e.detail)}
       />
       <div class="right-col">
-        <StatTabs {roster} {previewId} {selected} {userBuffPercent}
+        <StatTabs {roster} {previewId} {selected} {userBuffPercent} previewMode={$previewMode}
           on:toggle={(e) => toggleMember(e.detail)}
-          on:preview-element={(e) => {
-            const el = e.detail.element;
-            previewElementOverride = el;
-            // Also update the player's element in the roster so the left list reflects it
-            roster = roster.map(r => r.is_player ? { ...r, element: el } : r);
-            // Bubble an editor change so top-level editorState stays in sync for Start Run
-            try { dispatch('editorChange', { damageType: el }); } catch {}
-          }}
-          on:editor-change={(e) => dispatch('editorChange', e.detail)}
           on:refresh-roster={refreshRoster}
+          on:open-upgrade-mode={(e) => handlePreviewMode(e.detail, 'upgrade')}
+          on:close-upgrade-mode={(e) => handlePreviewMode(e.detail, 'portrait')}
         />
         <div class="party-actions-inline">
           {#if actionLabel === 'Start Run'}
