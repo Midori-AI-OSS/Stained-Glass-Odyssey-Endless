@@ -26,7 +26,6 @@ from autofighter.stats import Stats
 from autofighter.stats import set_battle_active
 from plugins.event_bus import bus
 
-
 STUB_PASSIVE_ID = "stub_passive"
 
 
@@ -234,6 +233,8 @@ async def test_status_phase_events_update_snapshot_queue(monkeypatch):
 
     target = Stats(hp=1000)
     target.id = "phase_target"
+    attacker = Stats(hp=1000)
+    attacker.id = "phase_attacker"
     target.set_base_stat("max_hp", 1000)
     target.set_base_stat("defense", 1)
     target.set_base_stat("mitigation", 1)
@@ -242,8 +243,14 @@ async def test_status_phase_events_update_snapshot_queue(monkeypatch):
     target.hp = 900
     target.passives = [STUB_PASSIVE_ID]
 
-    prepare_snapshot_overlay(run_id, [target])
-    register_snapshot_entities(run_id, [target])
+    monkeypatch.setattr(
+        "autofighter.rooms.battle.turns._RECENT_EVENT_LIMIT",
+        20,
+        raising=False,
+    )
+
+    prepare_snapshot_overlay(run_id, [target, attacker])
+    register_snapshot_entities(run_id, [target, attacker])
 
     monkeypatch.setattr("autofighter.passives.discover", _stub_discover)
 
@@ -264,14 +271,24 @@ async def test_status_phase_events_update_snapshot_queue(monkeypatch):
         set_battle_active(False)
 
     snapshot = battle_snapshots[run_id]
-    events = snapshot.get("recent_events", [])
-    events_by_type: dict[str, list[dict[str, object]]] = {}
-    for evt in events:
-        events_by_type.setdefault(evt["type"], []).append(evt)
+    events = list(snapshot.get("recent_events", []))
+
+    def _group_by_type(records: list[dict[str, object]]) -> dict[str, list[dict[str, object]]]:
+        grouped: dict[str, list[dict[str, object]]] = {}
+        for record in records:
+            grouped.setdefault(record["type"], []).append(record)
+        return grouped
+
+    events_by_type = _group_by_type(events)
+
+    assert "effect_applied" in events_by_type
+    applied_events = events_by_type["effect_applied"]
+    assert len(applied_events) == 2
+    first_applied_metadata = applied_events[0].get("metadata", {})
+    assert first_applied_metadata.get("effect_name") in {"regen", "burn"}
+    assert first_applied_metadata.get("effect_id") in {"hot_1", "dot_1"}
 
     assert "hot_tick" in events_by_type
-    assert "dot_tick" in events_by_type
-
     hot_event = events_by_type["hot_tick"][0]
     hot_metadata = hot_event.get("metadata", {})
     assert hot_metadata.get("effect_ids") == ["hot_1"]
@@ -280,6 +297,7 @@ async def test_status_phase_events_update_snapshot_queue(monkeypatch):
     assert effects and effects[0].get("id") == "hot_1"
     assert effects[0].get("type") == "hot"
 
+    assert "dot_tick" in events_by_type
     dot_event = events_by_type["dot_tick"][0]
     dot_metadata = dot_event.get("metadata", {})
     assert dot_metadata.get("effect_ids") == ["dot_1"]
@@ -288,13 +306,36 @@ async def test_status_phase_events_update_snapshot_queue(monkeypatch):
     assert dot_effects and dot_effects[0].get("id") == "dot_1"
     assert dot_effects[0].get("type") == "dot"
 
+    assert "effect_expired" in events_by_type
+    expired_events = events_by_type["effect_expired"]
+    assert len(expired_events) == 2
+    expired_metadata = {evt.get("metadata", {}).get("effect_id") for evt in expired_events}
+    assert {"hot_1", "dot_1"}.issubset(expired_metadata)
+
+    resist_details = {
+        "effect_type": "dot",
+        "target_id": target.id,
+        "source_id": attacker.id,
+        "chance": 25,
+        "roll": 99,
+    }
+    BUS.emit_batched("effect_resisted", "burn", target, attacker, resist_details)
+    await bus._process_batches_internal()
+
+    events_after_resist = list(battle_snapshots[run_id]["recent_events"])
+    events_by_type = _group_by_type(events_after_resist)
+    assert "effect_resisted" in events_by_type
+    resist_event = events_by_type["effect_resisted"][-1]
+    resist_metadata = resist_event.get("metadata", {})
+    assert resist_metadata.get("effect_name") == "burn"
+    assert resist_metadata.get("source_id") == attacker.id
+    assert resist_metadata.get("target_id") == target.id
+
     record_damage_taken_event(target, target, 77)
     record_heal_received_event(target, target, 33)
 
-    events = battle_snapshots[run_id]["recent_events"]
-    events_by_type = {}
-    for evt in events:
-        events_by_type.setdefault(evt["type"], []).append(evt)
+    final_events = list(battle_snapshots[run_id]["recent_events"])
+    events_by_type = _group_by_type(final_events)
 
     assert "heal_received" in events_by_type
     assert "damage_taken" in events_by_type
@@ -322,5 +363,5 @@ async def test_status_phase_events_update_snapshot_queue(monkeypatch):
         active_id=None,
         active_target_id=None,
     )
-    assert payload.get("recent_events") == events
+    assert payload.get("recent_events") == final_events
     assert payload.get("status_phase") == status_phase
