@@ -94,6 +94,27 @@ class GachaManager:
         if not featured_pool:
             featured_pool = ["becca", "ally"]  # Fallback
 
+        owned_characters = self._get_owned()
+        owned_pool = [cid for cid in featured_pool if cid in owned_characters]
+        unowned_pool = [cid for cid in featured_pool if cid not in owned_characters]
+        available_characters = set(featured_pool)
+        selected_characters: list[str] = []
+
+        def pick_character(preferred: list[str], alternate: list[str]) -> str:
+            pool = [cid for cid in preferred if cid in available_characters]
+            if not pool:
+                pool = [cid for cid in alternate if cid in available_characters]
+            if not pool:
+                pool = [cid for cid in available_characters]
+            if pool:
+                choice = random.choice(pool)
+                available_characters.discard(choice)
+                selected_characters.append(choice)
+                return choice
+            if selected_characters:
+                return selected_characters[0]
+            return random.choice(featured_pool)
+
         # Create 3-day rotating banners
         banner_duration = 86400 * 3  # 3 days in seconds
 
@@ -102,16 +123,21 @@ class GachaManager:
         ]
 
         # Create rotating custom banners
-        for i in range(2):  # Two custom banner slots
-            char_index = i % len(featured_pool)
-            banner_start = start_time + (i * banner_duration)
+        custom_slots = [
+            ("custom1", "Featured Character I", unowned_pool, owned_pool),
+            ("custom2", "Featured Character II", owned_pool, unowned_pool),
+        ]
+
+        for index, (banner_id, banner_name, preferred_pool, alternate_pool) in enumerate(custom_slots):
+            featured_character = pick_character(preferred_pool, alternate_pool)
+            banner_start = start_time + (index * banner_duration)
             banner_end = banner_start + banner_duration
 
             banners.append(Banner(
-                f"custom{i+1}",
-                f"Featured Character {['I', 'II'][i]}",
+                banner_id,
+                banner_name,
                 "custom",
-                featured_pool[char_index],
+                featured_character,
                 banner_start,
                 banner_end,
                 True
@@ -140,33 +166,83 @@ class GachaManager:
         if not featured_pool:
             return  # No characters to rotate
 
+        owned_characters = self._get_owned()
+        owned_pool = [cid for cid in featured_pool if cid in owned_characters]
+        unowned_pool = [cid for cid in featured_pool if cid not in owned_characters]
+
         banner_duration = 86400 * 3  # 3 days
 
         with self.save.connection() as conn:
             # Check for expired custom banners
             cur = conn.execute(
-                "SELECT id, featured_character, end_time FROM banners WHERE banner_type = 'custom' AND active = 1"
+                "SELECT id, featured_character, end_time FROM banners WHERE banner_type = 'custom' AND active = 1 ORDER BY id"
             )
             expired_banners = []
 
-            for row in cur.fetchall():
+            banner_rows = cur.fetchall()
+
+            for row in banner_rows:
                 banner_id, featured_char, end_time = row
                 if current_time > end_time:
                     expired_banners.append((banner_id, featured_char))
 
-            # Update expired banners with new characters
-            for banner_id, old_char in expired_banners:
-                # Get a different character from the pool
-                available_chars = [c for c in featured_pool if c != old_char]
-                if available_chars:
-                    import random
-                    new_char = random.choice(available_chars)
-                    new_start = current_time
-                    new_end = current_time + banner_duration
+            if not expired_banners:
+                return
 
+            locked_characters = {
+                featured_char
+                for banner_id, featured_char, end_time in banner_rows
+                if banner_id not in {banner for banner, _ in expired_banners} and featured_char
+            }
+            available_characters = {cid for cid in featured_pool if cid not in locked_characters}
+            if not available_characters:
+                available_characters = set(featured_pool)
+            selected_characters: list[str] = []
+
+            def pick_character(preferred: list[str], alternate: list[str], old_char: str | None) -> str | None:
+                pool = [
+                    cid for cid in preferred
+                    if cid in available_characters and cid != old_char
+                ]
+                if not pool:
+                    pool = [
+                        cid for cid in alternate
+                        if cid in available_characters and cid != old_char
+                    ]
+                if not pool:
+                    pool = [cid for cid in available_characters if cid != old_char]
+                if pool:
+                    choice = random.choice(pool)
+                    available_characters.discard(choice)
+                    selected_characters.append(choice)
+                    return choice
+                if selected_characters:
+                    return selected_characters[0]
+                return old_char
+
+            preference_map = {
+                "custom1": (unowned_pool, owned_pool),
+                "custom2": (owned_pool, unowned_pool),
+            }
+
+            for banner_id, old_char in expired_banners:
+                preferred_pool, alternate_pool = preference_map.get(
+                    banner_id,
+                    (unowned_pool, owned_pool),
+                )
+                new_char = pick_character(preferred_pool, alternate_pool, old_char)
+                new_start = current_time
+                new_end = current_time + banner_duration
+
+                if new_char:
                     conn.execute(
                         "UPDATE banners SET featured_character = ?, start_time = ?, end_time = ? WHERE id = ?",
                         (new_char, new_start, new_end, banner_id)
+                    )
+                else:
+                    conn.execute(
+                        "UPDATE banners SET start_time = ?, end_time = ? WHERE id = ?",
+                        (new_start, new_end, banner_id)
                     )
 
     def get_banners(self) -> list[Banner]:

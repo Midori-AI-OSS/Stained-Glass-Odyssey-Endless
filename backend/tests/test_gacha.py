@@ -1,4 +1,5 @@
 import importlib.util
+
 from pathlib import Path
 from unittest.mock import patch
 
@@ -143,3 +144,53 @@ async def test_pity_scales_item_rarity(app_with_db):
         resp = await client.post("/gacha/pull", json={"count": 1})
     data = await resp.get_json()
     assert data["results"][0]["rarity"] >= 2
+
+
+@pytest.mark.asyncio
+async def test_expired_banners_pick_owned_and_unowned(app_with_db, monkeypatch):
+    _, db_path = app_with_db
+
+    import app as app_module
+
+    manager = app_module.GachaManager(app_module.get_save_manager())
+
+    from autofighter.gacha import FIVE_STAR, SIX_STAR
+
+    featured_pool = list(dict.fromkeys([*FIVE_STAR, *SIX_STAR]))
+    if len(featured_pool) < 2:
+        pytest.skip("Insufficient featured characters for rotation test")
+
+    owned_char = featured_pool[0]
+    rotation_time = 1_000_000.0
+
+    conn = sqlcipher3.connect(db_path)
+    try:
+        conn.execute("PRAGMA key = 'testkey'")
+        conn.execute("CREATE TABLE IF NOT EXISTS owned_players (id TEXT PRIMARY KEY)")
+        conn.execute("DELETE FROM owned_players")
+        conn.execute("INSERT OR IGNORE INTO owned_players (id) VALUES (?)", (owned_char,))
+        conn.execute(
+            "UPDATE banners SET start_time = ?, end_time = ? WHERE banner_type = 'custom'",
+            (rotation_time - 1000, rotation_time - 10),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+    monkeypatch.setattr("autofighter.gacha.time.time", lambda: rotation_time)
+    monkeypatch.setattr("autofighter.gacha.random.choice", lambda seq: seq[0])
+
+    manager._update_banner_rotation()
+
+    owned_ids = manager._get_owned()
+    custom_banners = [banner for banner in manager.get_banners() if banner.banner_type == "custom"]
+
+    assert len(custom_banners) == 2
+    featured_ids = [banner.featured_character for banner in custom_banners]
+    assert len(set(featured_ids)) == len(featured_ids) or len(featured_ids) == 1
+
+    owned_featured = sum(1 for cid in featured_ids if cid in owned_ids)
+    unowned_featured = sum(1 for cid in featured_ids if cid not in owned_ids)
+
+    assert owned_featured == 1
+    assert unowned_featured == 1

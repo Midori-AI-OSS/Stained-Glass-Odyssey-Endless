@@ -15,5 +15,11 @@ Exposes gacha pulls and state through Quart.
   element. It accepts `{ "enabled": true | false }` and returns the updated
   flag.
 
+## Banner rotation
+- Two rotating `custom` banners operate on a three-day cadence. Each cycle
+  selects one featured character from the owned pool and one from the unowned
+  pool when both buckets contain options, avoiding duplicate assignments unless
+  no other choices remain.
+
 ## Testing
 - `uv run pytest tests/test_gacha.py`
