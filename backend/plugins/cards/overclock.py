@@ -10,16 +10,16 @@ from plugins.cards._base import safe_async_task
 
 @dataclass
 class Overclock(CardBase):
-    """+240% ATK & Effect Hit Rate; allies act twice at battle start."""
+    """+500% ATK & Effect Hit Rate; allies act twice at battle start."""
 
     id: str = "overclock"
     name: str = "Overclock"
     stars: int = 4
     effects: dict[str, float] = field(
-        default_factory=lambda: {"atk": 2.4, "effect_hit_rate": 2.4}
+        default_factory=lambda: {"atk": 5, "effect_hit_rate": 5}
     )
     about: str = (
-        "+240% ATK & +240% Effect Hit Rate; at the start of each battle, "
+        "+500% ATK & +500% Effect Hit Rate; at the start of each battle, "
         "all allies immediately take two actions back to back."
     )
 

@@ -9,14 +9,14 @@ from plugins.cards._base import safe_async_task
 
 @dataclass
 class ArcaneRepeater(CardBase):
-    """+240% ATK; 30% chance for attacks to repeat at 50% power."""
+    """+500% ATK; 30% chance for attacks to repeat at 50% power."""
 
     id: str = "arcane_repeater"
     name: str = "Arcane Repeater"
     stars: int = 4
-    effects: dict[str, float] = field(default_factory=lambda: {"atk": 2.4})
+    effects: dict[str, float] = field(default_factory=lambda: {"atk": 5})
     about: str = (
-        "+240% ATK; each attack has a 30% chance to immediately repeat at 50% power."
+        "+500% ATK; each attack has a 30% chance to immediately repeat at 50% power."
     )
 
     async def apply(self, party) -> None:  # type: ignore[override]

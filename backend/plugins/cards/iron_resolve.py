@@ -7,16 +7,16 @@ from plugins.cards._base import CardBase
 
 @dataclass
 class IronResolve(CardBase):
-    """+240% DEF & HP; first death revives at 30% HP, recharging every 3 turns."""
+    """+500% DEF & HP; first death revives at 30% HP, recharging every 3 turns."""
 
     id: str = "iron_resolve"
     name: str = "Iron Resolve"
     stars: int = 4
     effects: dict[str, float] = field(
-        default_factory=lambda: {"defense": 2.4, "max_hp": 2.4}
+        default_factory=lambda: {"defense": 5, "max_hp": 5}
     )
     about: str = (
-        "+240% DEF & +240% HP; the first time an ally dies, revive them at "
+        "+500% DEF & +500% HP; the first time an ally dies, revive them at "
         "30% HP. This effect refreshes every 3 turns."
     )
 
