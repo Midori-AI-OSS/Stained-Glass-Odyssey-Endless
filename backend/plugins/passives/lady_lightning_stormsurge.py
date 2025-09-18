@@ -102,6 +102,10 @@ class LadyLightningStormsurge:
             )
             attacker.add_effect(overload_effect)
 
+        # Consuming the stored tempo charge ensures new actions are required to
+        # rebuild Stormsurge stacks, matching the passive description.
+        self._tempo_stacks[attacker_id] = 0
+
     async def on_defeat(self, target: "Stats") -> None:
         """Clear tempo and shock tracking when Lady Lightning is defeated."""
 
