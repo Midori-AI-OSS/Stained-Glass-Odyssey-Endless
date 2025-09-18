@@ -107,6 +107,11 @@ async def test_player_spend_points_cost_curve(app_with_db):
     initial_data = await resp.get_json()
     initial_points = initial_data.get("upgrade_points", 0)
 
+    assert initial_data["stat_totals"].get("vitality", 0.0) == pytest.approx(0.0)
+    assert initial_data["stat_totals"].get("mitigation", 0.0) == pytest.approx(0.0)
+    assert initial_data["next_costs"].get("vitality") == 1
+    assert initial_data["next_costs"].get("mitigation") == 1
+
     resp = await client.post(
         "/players/player/upgrade",
         json={"star_level": 1, "item_count": 10}
@@ -127,6 +132,8 @@ async def test_player_spend_points_cost_curve(app_with_db):
     assert first_upgrade["remaining_points"] == total_after_gain - 1
     assert first_upgrade["stat_counts"]["max_hp"] == 1
     assert first_upgrade["next_costs"]["max_hp"] == 3
+    assert first_upgrade["next_costs"]["vitality"] == 1
+    assert first_upgrade["next_costs"]["mitigation"] == 1
 
     resp = await client.post(
         "/players/player/upgrade-stat",
@@ -140,6 +147,26 @@ async def test_player_spend_points_cost_curve(app_with_db):
     assert second_upgrade["stat_counts"]["max_hp"] == 2
     assert second_upgrade["stat_totals"]["max_hp"] == pytest.approx(0.004)
     assert second_upgrade["next_costs"]["max_hp"] == 5
+    assert second_upgrade["stat_totals"].get("vitality", 0.0) == pytest.approx(0.0)
+    assert second_upgrade["stat_totals"].get("mitigation", 0.0) == pytest.approx(0.0)
+    assert second_upgrade["next_costs"]["vitality"] == 1
+    assert second_upgrade["next_costs"]["mitigation"] == 1
+
+    resp = await client.post(
+        "/players/player/upgrade-stat",
+        json={"stat_name": "vitality"}
+    )
+    vitality_upgrade = await resp.get_json()
+
+    assert vitality_upgrade["stat_upgraded"] == "vitality"
+    assert vitality_upgrade["points_spent"] == 1
+    assert vitality_upgrade["upgrade_percent"] == pytest.approx(0.001)
+    assert vitality_upgrade["remaining_points"] == total_after_gain - 5
+    assert vitality_upgrade["stat_counts"]["vitality"] == 1
+    assert vitality_upgrade["stat_totals"]["vitality"] == pytest.approx(0.001)
+    assert vitality_upgrade["stat_totals"].get("mitigation", 0.0) == pytest.approx(0.0)
+    assert vitality_upgrade["next_costs"]["vitality"] == 3
+    assert vitality_upgrade["next_costs"]["mitigation"] == 1
 
 
 @pytest.mark.asyncio
@@ -163,6 +190,21 @@ async def test_ally_spend_points(app_with_db):
     assert data["points_spent"] == 1
     assert data["stat_counts"]["atk"] == 1
     assert data["next_costs"]["atk"] == 3
+    assert data["next_costs"]["vitality"] == 1
+    assert data["next_costs"]["mitigation"] == 1
+
+    resp = await client.post(
+        "/players/ally/upgrade-stat",
+        json={"stat_name": "mitigation"}
+    )
+    mitigation_upgrade = await resp.get_json()
+
+    assert mitigation_upgrade["stat_upgraded"] == "mitigation"
+    assert mitigation_upgrade["points_spent"] == 1
+    assert mitigation_upgrade["stat_totals"]["mitigation"] == pytest.approx(0.001)
+    assert mitigation_upgrade["stat_counts"]["mitigation"] == 1
+    assert mitigation_upgrade["next_costs"]["mitigation"] == 3
+    assert mitigation_upgrade["next_costs"]["vitality"] == 1
 
 
 @pytest.mark.asyncio
@@ -187,6 +229,10 @@ async def test_new_upgrade_data_in_get_endpoint(app_with_db):
     assert data["stat_totals"]["atk"] == pytest.approx(0.001)
     assert data["stat_counts"]["atk"] == 1
     assert data["next_costs"]["atk"] == 3
+    assert data["stat_totals"].get("vitality", 0.0) == pytest.approx(0.0)
+    assert data["stat_totals"].get("mitigation", 0.0) == pytest.approx(0.0)
+    assert data["next_costs"]["vitality"] == 1
+    assert data["next_costs"]["mitigation"] == 1
 
 
 @pytest.mark.asyncio

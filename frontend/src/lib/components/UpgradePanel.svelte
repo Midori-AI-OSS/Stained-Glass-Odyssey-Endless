@@ -7,7 +7,20 @@
   export let id;
   export let element; // e.g. 'Light', 'Fire'
 
-  const UPGRADEABLE_STATS = ['max_hp', 'atk', 'defense', 'crit_rate', 'crit_damage'];
+  const UPGRADEABLE_STATS = ['max_hp', 'atk', 'defense', 'crit_rate', 'crit_damage', 'vitality', 'mitigation'];
+  const STAT_LABELS = {
+    max_hp: 'HP',
+    atk: 'ATK',
+    defense: 'DEF',
+    crit_rate: 'Crit Rate',
+    crit_damage: 'Crit DMG',
+    vitality: 'Vitality',
+    mitigation: 'Mitigation'
+  };
+
+  function formatLabel(stat) {
+    return STAT_LABELS[stat] || String(stat).replace(/_/g, ' ');
+  }
 
   let items = {};
   let statUpgrades = [];
@@ -153,7 +166,7 @@
         <label>Stat
           <select bind:value={spendStat} class="themed">
             {#each UPGRADEABLE_STATS as s}
-              <option value={s}>{s}</option>
+              <option value={s}>{formatLabel(s)}</option>
             {/each}
           </select>
         </label>
@@ -164,7 +177,13 @@
       </div>
       <div class="hint">Next cost for {spendStat}: {formatCost(nextCosts[spendStat])}</div>
       {#if Object.keys(statTotals).length}
-        <div class="hint">Totals: {Object.entries(statTotals).map(([k,v]) => `${k}: ${(v*100).toFixed(2)}%`).join(', ')}</div>
+        <div class="hint">
+          Totals:
+          {UPGRADEABLE_STATS.map((k) => {
+            const val = Number(statTotals?.[k] ?? 0);
+            return `${formatLabel(k)}: ${(val * 100).toFixed(2)}%`;
+          }).join(', ')}
+        </div>
       {/if}
     </div>
 

@@ -34,14 +34,18 @@
     { key: 'atk', label: 'ATK', hint: 'Improve offensive power.' },
     { key: 'defense', label: 'DEF', hint: 'Stiffen defenses.' },
     { key: 'crit_rate', label: 'Crit Rate', hint: 'Raise critical odds.' },
-    { key: 'crit_damage', label: 'Crit DMG', hint: 'Amplify crit damage.' }
+    { key: 'crit_damage', label: 'Crit DMG', hint: 'Amplify crit damage.' },
+    { key: 'vitality', label: 'Vitality', hint: 'Extend buff durations & recovery.' },
+    { key: 'mitigation', label: 'Mitigation', hint: 'Soften incoming damage.' }
   ];
   const STAT_ICONS = {
     max_hp: Heart,
     atk: Sword,
     defense: Shield,
     crit_rate: Crosshair,
-    crit_damage: Zap
+    crit_damage: Zap,
+    vitality: HeartPulse,
+    mitigation: ShieldPlus
   };
 
   $: selected = roster.find((r) => r.id === previewId);
@@ -65,8 +69,8 @@
     def:        { x: 63, y: 36 },
     crit_rate:  { x: 26, y: 24 },
     crit_damage:{ x: 28, y: 50 },
-    vit:        { x: 20, y: 42 },
-    mit:        { x: 80, y: 44 },
+    vitality:   { x: 20, y: 42 },
+    mitigation: { x: 80, y: 44 },
   };
   // Per-damage-type layout map — start with copies of sunLayout for each
   function clone(o){ return JSON.parse(JSON.stringify(o)); }
@@ -81,7 +85,7 @@
   };
   $: elementKey = String(elementName || 'generic').toLowerCase();
   function deg2rad(d){ return (Math.PI/180) * d; }
-  function makeOrbLayout(base, radius = 18, order = ['atk','def','crit_rate','crit_damage','vit','mit'], startDeg = -90) {
+  function makeOrbLayout(base, radius = 18, order = ['atk','def','crit_rate','crit_damage','vitality','mitigation'], startDeg = -90) {
     const layout = clone(base);
     const cx = base.hp.x;
     const cy = base.hp.y;
@@ -102,8 +106,8 @@
     layout.def          = { x: 64, y: 38 };
     layout.crit_rate    = { x: 30, y: 52 };
     layout.crit_damage  = { x: 60, y: 64 };
-    layout.vit          = { x: 28, y: 78 };
-    layout.mit          = { x: 58, y: 88 };
+    layout.vitality     = { x: 28, y: 78 };
+    layout.mitigation   = { x: 58, y: 88 };
     return layout;
   }
   function makeFireLayout(base) {
@@ -113,9 +117,9 @@
     layout.atk          = { x: 42, y: 66 };
     layout.crit_rate    = { x: 36, y: 52 };
     layout.crit_damage  = { x: 42, y: 38 };
-    layout.mit          = { x: 50, y: 24 }; // flame tip
+    layout.mitigation   = { x: 50, y: 24 }; // flame tip
     layout.def          = { x: 58, y: 40 };
-    layout.vit          = { x: 64, y: 56 };
+    layout.vitality     = { x: 64, y: 56 };
     return layout;
   }
   function makeDarkLayout(base) {
@@ -127,9 +131,9 @@
     const pos = (deg) => ({ x: cx + r * Math.cos(deg2rad(deg + rot)), y: cy + r * Math.sin(deg2rad(deg + rot)) });
     layout.hp          = { x: 44, y: 52 };         // slightly left of center
     layout.def         = pos(110);  // upper-left
-    layout.vit         = pos(145);
+    layout.vitality    = pos(145);
     layout.crit_damage = pos(180);
-    layout.mit         = pos(215);
+    layout.mitigation  = pos(215);
     layout.crit_rate   = pos(240);
     layout.atk         = pos(265);  // lower-left
     return layout;
@@ -138,7 +142,7 @@
     const layout = clone(base);
     // Six-armed snowflake around HP center
     const cx = 50, cy = 52, r = 22;
-    const order = ['atk','crit_rate','def','mit','crit_damage','vit'];
+    const order = ['atk','crit_rate','def','mitigation','crit_damage','vitality'];
     for (let i = 0; i < order.length; i++) {
       const ang = deg2rad(-90 + i * 60); // start at top, go clockwise
       layout[order[i]] = { x: cx + r * Math.cos(ang), y: cy + r * Math.sin(ang) };
@@ -146,7 +150,7 @@
     layout.hp = { x: cx, y: cy };
     return layout;
   }
-  const ICE_KEYS = ['atk','crit_rate','def','mit','crit_damage','vit'];
+  const ICE_KEYS = ['atk','crit_rate','def','mitigation','crit_damage','vitality'];
   function computeIceSpikes(layout) {
     const spikes = {};
     const cx = layout.hp.x, cy = layout.hp.y;
@@ -180,7 +184,7 @@
               ? makeIceLayout(baseLayouts.ice)
             : (baseLayouts[elementKey] || baseLayouts.generic);
   $: iceSpikes = elementKey === 'ice' ? computeIceSpikes(currentLayout) : null;
-  const PERIPH_KEYS = ['atk','def','crit_rate','crit_damage','vit','mit'];
+  const PERIPH_KEYS = ['atk','def','crit_rate','crit_damage','vitality','mitigation'];
   function computeRingEdges(layout, keys) {
     const cx = layout.hp.x, cy = layout.hp.y;
     const pts = keys
@@ -284,9 +288,9 @@
                   {/each}
                 {:else if elementKey === 'lightning'}
                   <!-- Lightning: sequential zig-zag from HP through all stats -->
-                  {#each ['hp','atk','def','crit_rate','crit_damage','vit','mit'] as key, i}
+                  {#each ['hp','atk','def','crit_rate','crit_damage','vitality','mitigation'] as key, i}
                     {#if i < 6}
-                      <line x1={`${currentLayout[key].x}`} y1={`${currentLayout[key].y}`} x2={`${currentLayout[['atk','def','crit_rate','crit_damage','vit','mit'][i]].x}`} y2={`${currentLayout[['atk','def','crit_rate','crit_damage','vit','mit'][i]].y}`} stroke="currentColor" />
+                      <line x1={`${currentLayout[key].x}`} y1={`${currentLayout[key].y}`} x2={`${currentLayout[['atk','def','crit_rate','crit_damage','vitality','mitigation'][i]].x}`} y2={`${currentLayout[['atk','def','crit_rate','crit_damage','vitality','mitigation'][i]].y}`} stroke="currentColor" />
                     {/if}
                   {/each}
                 {:else if elementKey === 'ice'}
@@ -299,18 +303,18 @@
                   {/each}
                 {:else if elementKey === 'fire'}
                   <!-- Fire: flame outline from base (HP) up to tip and back around -->
-                  {#each ['hp','atk','crit_rate','crit_damage','mit','def','vit','hp'] as key, i}
+                  {#each ['hp','atk','crit_rate','crit_damage','mitigation','def','vitality','hp'] as key, i}
                     {#if i < 7}
-                      <line x1={`${currentLayout[key].x}`} y1={`${currentLayout[key].y}`} x2={`${currentLayout[['atk','crit_rate','crit_damage','mit','def','vit','hp'][i]].x}`} y2={`${currentLayout[['atk','crit_rate','crit_damage','mit','def','vit','hp'][i]].y}`} stroke="currentColor" />
+                      <line x1={`${currentLayout[key].x}`} y1={`${currentLayout[key].y}`} x2={`${currentLayout[['atk','crit_rate','crit_damage','mitigation','def','vitality','hp'][i]].x}`} y2={`${currentLayout[['atk','crit_rate','crit_damage','mitigation','def','vitality','hp'][i]].y}`} stroke="currentColor" />
                     {/if}
                   {/each}
                 {:else if elementKey === 'dark'}
                   <!-- Dark: crescent moon. Hub links from HP to ATK and DEF; arc around left side -->
                   <line x1={`${currentLayout.hp.x}`} y1={`${currentLayout.hp.y}`} x2={`${currentLayout.atk.x}`} y2={`${currentLayout.atk.y}`} stroke="currentColor" />
                   <line x1={`${currentLayout.hp.x}`} y1={`${currentLayout.hp.y}`} x2={`${currentLayout.def.x}`} y2={`${currentLayout.def.y}`} stroke="currentColor" />
-                  {#each ['def','vit','crit_damage','mit','crit_rate','atk'] as a, i}
+                  {#each ['def','vitality','crit_damage','mitigation','crit_rate','atk'] as a, i}
                     {#if i < 5}
-                      <line x1={`${currentLayout[a].x}`} y1={`${currentLayout[a].y}`} x2={`${currentLayout[['vit','crit_damage','mit','crit_rate','atk','def'][i]].x}`} y2={`${currentLayout[['vit','crit_damage','mit','crit_rate','atk','def'][i]].y}`} stroke="currentColor" />
+                      <line x1={`${currentLayout[a].x}`} y1={`${currentLayout[a].y}`} x2={`${currentLayout[['vitality','crit_damage','mitigation','crit_rate','atk','def'][i]].x}`} y2={`${currentLayout[['vitality','crit_damage','mitigation','crit_rate','atk','def'][i]].y}`} stroke="currentColor" />
                     {/if}
                   {/each}
                 {:else}
@@ -319,8 +323,8 @@
                   <line x1={`${currentLayout.hp.x}`} y1={`${currentLayout.hp.y}`} x2={`${currentLayout.def.x}`} y2={`${currentLayout.def.y}`} stroke="currentColor" />
                   <line x1={`${currentLayout.atk.x}`} y1={`${currentLayout.atk.y}`} x2={`${currentLayout.crit_rate.x}`} y2={`${currentLayout.crit_rate.y}`} stroke="currentColor" />
                   <line x1={`${currentLayout.atk.x}`} y1={`${currentLayout.atk.y}`} x2={`${currentLayout.crit_damage.x}`} y2={`${currentLayout.crit_damage.y}`} stroke="currentColor" />
-                  <line x1={`${currentLayout.atk.x}`} y1={`${currentLayout.atk.y}`} x2={`${currentLayout.vit.x}`} y2={`${currentLayout.vit.y}`} stroke="currentColor" />
-                  <line x1={`${currentLayout.def.x}`} y1={`${currentLayout.def.y}`} x2={`${currentLayout.mit.x}`} y2={`${currentLayout.mit.y}`} stroke="currentColor" />
+                  <line x1={`${currentLayout.atk.x}`} y1={`${currentLayout.atk.y}`} x2={`${currentLayout.vitality.x}`} y2={`${currentLayout.vitality.y}`} stroke="currentColor" />
+                  <line x1={`${currentLayout.def.x}`} y1={`${currentLayout.def.y}`} x2={`${currentLayout.mitigation.x}`} y2={`${currentLayout.mitigation.y}`} stroke="currentColor" />
                 {/if}
                </svg>
 
@@ -345,16 +349,12 @@
                 class:active={highlightedStat==='crit_damage'} disabled={!!pendingStat} on:click={() => requestUpgrade('crit_damage')} aria-label="Crit Damage" title="Crit DMG — Amplify crit damage.">
                 <Zap aria-hidden="true" />
               </button>
-              <!-- VIT (new) -->
-              <!-- TODO: Backend: add 'vit' stat to upgrade API and totals -->
-              <button type="button" class="stat-icon-btn" style={`left:${currentLayout.vit.x}%; top:${currentLayout.vit.y}%; transform:translate(-50%,-50%); color:${accent}`}
-                disabled aria-disabled="true" aria-label="Vitality (coming soon)" title="Vit — backend integration pending">
+              <button type="button" class="stat-icon-btn" style={`left:${currentLayout.vitality.x}%; top:${currentLayout.vitality.y}%; transform:translate(-50%,-50%); color:${accent}`}
+                class:active={highlightedStat==='vitality'} disabled={!!pendingStat} on:click={() => requestUpgrade('vitality')} aria-label="Vitality" title="Vitality — Extend buff durations & recovery.">
                 <HeartPulse aria-hidden="true" />
               </button>
-              <!-- MIT (new) -->
-              <!-- TODO: Backend: add 'mit' stat to upgrade API and totals -->
-              <button type="button" class="stat-icon-btn" style={`left:${currentLayout.mit.x}%; top:${currentLayout.mit.y}%; transform:translate(-50%,-50%); color:${accent}`}
-                disabled aria-disabled="true" aria-label="Mitigation (coming soon)" title="Mit — backend integration pending">
+              <button type="button" class="stat-icon-btn" style={`left:${currentLayout.mitigation.x}%; top:${currentLayout.mitigation.y}%; transform:translate(-50%,-50%); color:${accent}`}
+                class:active={highlightedStat==='mitigation'} disabled={!!pendingStat} on:click={() => requestUpgrade('mitigation')} aria-label="Mitigation" title="Mitigation — Soften incoming damage.">
                 <ShieldPlus aria-hidden="true" />
               </button>
           </div>

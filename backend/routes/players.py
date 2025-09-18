@@ -456,7 +456,15 @@ async def update_character_editor(pid: str):
 
 
 # Constants for new upgrade system
-UPGRADEABLE_STATS = ["max_hp", "atk", "defense", "crit_rate", "crit_damage"]
+UPGRADEABLE_STATS = [
+    "max_hp",
+    "atk",
+    "defense",
+    "crit_rate",
+    "crit_damage",
+    "vitality",
+    "mitigation",
+]
 PLAYER_POINTS_VALUES = {1: 1, 2: 150, 3: 22500, 4: 3375000}
 
 
@@ -650,6 +658,10 @@ def _build_player_upgrade_payload(player_id: str) -> Dict:
 
     stat_counts = _count_completed_upgrades(stat_upgrades)
     next_costs = _determine_next_costs(stat_upgrades)
+
+    for stat in UPGRADEABLE_STATS:
+        stat_totals.setdefault(stat, 0.0)
+        next_costs.setdefault(stat, _calculate_next_cost(None))
 
     return {
         "stat_upgrades": stat_upgrades,
