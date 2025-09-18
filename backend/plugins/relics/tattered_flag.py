@@ -19,7 +19,7 @@ class TatteredFlag(RelicBase):
     async def apply(self, party) -> None:
         await super().apply(party)
 
-        async def _fallen(target, attacker, amount) -> None:
+        async def _fallen(target, attacker, amount, *_: object) -> None:
             if target not in party.members or target.hp > 0:
                 return
             survivors = [member for member in party.members if member is not target and member.hp > 0]

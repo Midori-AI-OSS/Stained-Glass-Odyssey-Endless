@@ -245,7 +245,7 @@ class BattleLogger:
                 self.summary.damage_by_action[attacker_id] = {}
             self.summary.damage_by_action[attacker_id][action_name] = self.summary.damage_by_action[attacker_id].get(action_name, 0) + amount
 
-    def _on_damage_taken(self, target, attacker, amount):
+    def _on_damage_taken(self, target, attacker, amount, *_: object) -> None:
         """Handle damage taken event."""
         attacker_id = getattr(attacker, 'id', str(attacker)) if attacker else None
         target_id = getattr(target, 'id', str(target))
