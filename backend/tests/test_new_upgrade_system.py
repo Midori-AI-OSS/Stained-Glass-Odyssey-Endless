@@ -12,6 +12,10 @@ def app_with_db(tmp_path, monkeypatch):
     monkeypatch.setenv("AF_DB_PATH", str(db_path))
     monkeypatch.setenv("AF_DB_KEY", "testkey")
     monkeypatch.syspath_prepend(Path(__file__).resolve().parents[1])
+    import runs.encryption as encryption
+
+    encryption.SAVE_MANAGER = None
+    encryption.FERNET = None
     spec = importlib.util.spec_from_file_location(
         "app", Path(__file__).resolve().parents[1] / "app.py",
     )
@@ -94,36 +98,48 @@ async def test_player_points_system(app_with_db):
 
 
 @pytest.mark.asyncio
-async def test_player_spend_points(app_with_db):
-    """Test that player can spend points on specific stats."""
+async def test_player_spend_points_cost_curve(app_with_db):
+    """Player stat upgrades follow the rising cost curve."""
     app, db_path = app_with_db
     client = app.test_client()
 
-    # Check initial points
     resp = await client.get("/players/player/upgrade")
     initial_data = await resp.get_json()
     initial_points = initial_data.get("upgrade_points", 0)
 
-    # Gain some points
     resp = await client.post(
         "/players/player/upgrade",
         json={"star_level": 1, "item_count": 10}
     )
     data = await resp.get_json()
-    expected_points = initial_points + 10  # 10 * 1 point each
-    assert data["total_points"] == expected_points
+    total_after_gain = initial_points + 10
+    assert data["total_points"] == total_after_gain
 
-    # Now spend points on max_hp
     resp = await client.post(
         "/players/player/upgrade-stat",
-        json={"stat_name": "max_hp", "points": 5}
+        json={"stat_name": "max_hp"}
     )
-    data = await resp.get_json()
+    first_upgrade = await resp.get_json()
 
-    assert data["stat_upgraded"] == "max_hp"
-    assert data["points_spent"] == 5
-    assert data["upgrade_percent"] == 0.005  # 5 * 0.001 = 0.5%
-    assert data["remaining_points"] == expected_points - 5  # Should have spent 5 points
+    assert first_upgrade["stat_upgraded"] == "max_hp"
+    assert first_upgrade["points_spent"] == 1
+    assert first_upgrade["upgrade_percent"] == pytest.approx(0.001)
+    assert first_upgrade["remaining_points"] == total_after_gain - 1
+    assert first_upgrade["stat_counts"]["max_hp"] == 1
+    assert first_upgrade["next_costs"]["max_hp"] == 3
+
+    resp = await client.post(
+        "/players/player/upgrade-stat",
+        json={"stat_name": "max_hp"}
+    )
+    second_upgrade = await resp.get_json()
+
+    assert second_upgrade["points_spent"] == 3
+    assert second_upgrade["upgrade_percent"] == pytest.approx(0.003)
+    assert second_upgrade["remaining_points"] == total_after_gain - 4
+    assert second_upgrade["stat_counts"]["max_hp"] == 2
+    assert second_upgrade["stat_totals"]["max_hp"] == pytest.approx(0.004)
+    assert second_upgrade["next_costs"]["max_hp"] == 5
 
 
 @pytest.mark.asyncio
@@ -139,12 +155,14 @@ async def test_ally_spend_points(app_with_db):
 
     resp = await client.post(
         "/players/ally/upgrade-stat",
-        json={"stat_name": "atk", "points": POINTS_VALUES[2]}
+        json={"stat_name": "atk"}
     )
     data = await resp.get_json()
 
     assert data["stat_upgraded"] == "atk"
-    assert data["points_spent"] == POINTS_VALUES[2]
+    assert data["points_spent"] == 1
+    assert data["stat_counts"]["atk"] == 1
+    assert data["next_costs"]["atk"] == 3
 
 
 @pytest.mark.asyncio
@@ -159,14 +177,16 @@ async def test_new_upgrade_data_in_get_endpoint(app_with_db):
     )
     await client.post(
         "/players/ally/upgrade-stat",
-        json={"stat_name": "atk", "points": POINTS_VALUES[2]}
+        json={"stat_name": "atk"}
     )
 
     resp = await client.get("/players/ally/upgrade")
     data = await resp.get_json()
 
-    assert data["upgrade_points"] == 0
-    assert data["stat_totals"]["atk"] == pytest.approx(POINTS_VALUES[2] * 0.001)
+    assert data["upgrade_points"] == POINTS_VALUES[2] - 1
+    assert data["stat_totals"]["atk"] == pytest.approx(0.001)
+    assert data["stat_counts"]["atk"] == 1
+    assert data["next_costs"]["atk"] == 3
 
 
 @pytest.mark.asyncio
@@ -235,19 +255,13 @@ async def test_insufficient_points(app_with_db):
     app, db_path = app_with_db
     client = app.test_client()
 
-    # Check current points
-    resp = await client.get("/players/player/upgrade")
-    data = await resp.get_json()
-    current_points = data.get("upgrade_points", 0)
-
-    # Try to spend more points than available
-    points_to_spend = current_points + 100  # Definitely more than available
     resp = await client.post(
         "/players/player/upgrade-stat",
-        json={"stat_name": "max_hp", "points": points_to_spend}
+        json={"stat_name": "max_hp"}
     )
     data = await resp.get_json()
 
     assert resp.status_code == 400
     assert "error" in data
     assert "insufficient upgrade points" in data["error"]
+    assert data["required_points"] == 1

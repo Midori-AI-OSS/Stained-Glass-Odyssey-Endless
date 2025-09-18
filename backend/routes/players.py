@@ -4,6 +4,7 @@ import asyncio
 from dataclasses import fields
 import json
 import logging
+import math
 from typing import Dict
 from typing import List
 
@@ -459,6 +460,62 @@ UPGRADEABLE_STATS = ["max_hp", "atk", "defense", "crit_rate", "crit_damage"]
 PLAYER_POINTS_VALUES = {1: 1, 2: 150, 3: 22500, 4: 3375000}
 
 
+def _estimate_cost_from_upgrade_percent(upgrade_percent: object) -> int | None:
+    """Translate a stored percent boost back into spent upgrade points."""
+
+    try:
+        percent = float(upgrade_percent)
+    except (TypeError, ValueError):
+        return None
+
+    if percent <= 0:
+        return None
+
+    points = int(round(percent * 1000))
+    return points if points > 0 else None
+
+
+def _backfill_upgrade_costs(conn) -> None:
+    """Populate missing ``cost_spent`` values for legacy upgrade rows."""
+
+    cur = conn.execute(
+        """
+        SELECT id, player_id, stat_name, upgrade_percent, cost_spent
+        FROM player_stat_upgrades
+        ORDER BY player_id ASC, stat_name ASC, created_at ASC, id ASC
+        """
+    )
+
+    updates: list[tuple[int, int]] = []
+    stat_counts: dict[tuple[str, str], int] = {}
+
+    for row in cur.fetchall():
+        upgrade_id, player_id, stat_name, upgrade_percent, cost_spent = row
+
+        if not player_id or not stat_name:
+            continue
+
+        key = (str(player_id), str(stat_name))
+        upgrade_count = stat_counts.get(key, 0)
+
+        if cost_spent and cost_spent > 0:
+            stat_counts[key] = upgrade_count + 1
+            continue
+
+        estimated_points = _estimate_cost_from_upgrade_percent(upgrade_percent)
+        if estimated_points is None:
+            estimated_points = upgrade_count + 1
+
+        stat_counts[key] = upgrade_count + 1
+        updates.append((int(estimated_points), upgrade_id))
+
+    if updates:
+        conn.executemany(
+            "UPDATE player_stat_upgrades SET cost_spent = ? WHERE id = ?",
+            updates,
+        )
+
+
 def _create_upgrade_tables():
     """Create the new upgrade system database tables."""
     with get_save_manager().connection() as conn:
@@ -469,6 +526,7 @@ def _create_upgrade_tables():
                 stat_name TEXT NOT NULL,
                 upgrade_percent REAL NOT NULL,
                 source_star INTEGER NOT NULL,
+                cost_spent INTEGER NOT NULL DEFAULT 0,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
@@ -479,13 +537,33 @@ def _create_upgrade_tables():
             )
         """)
 
+        cur = conn.execute("PRAGMA table_info(player_stat_upgrades)")
+        columns = {row[1] for row in cur.fetchall()}
+        needs_backfill = False
+        if "cost_spent" not in columns:
+            conn.execute(
+                "ALTER TABLE player_stat_upgrades ADD COLUMN cost_spent INTEGER NOT NULL DEFAULT 0"
+            )
+            needs_backfill = True
+
+        if not needs_backfill:
+            cur = conn.execute(
+                "SELECT 1 FROM player_stat_upgrades WHERE cost_spent <= 0 LIMIT 1"
+            )
+            needs_backfill = cur.fetchone() is not None
+
+        if needs_backfill:
+            _backfill_upgrade_costs(conn)
+
+        conn.commit()
+
 
 def _get_player_stat_upgrades(player_id: str) -> List[Dict]:
     """Get all stat upgrades for a player."""
     with get_save_manager().connection() as conn:
         _create_upgrade_tables()
         cur = conn.execute("""
-            SELECT id, stat_name, upgrade_percent, source_star, created_at
+            SELECT id, stat_name, upgrade_percent, source_star, cost_spent, created_at
             FROM player_stat_upgrades
             WHERE player_id = ?
             ORDER BY created_at DESC
@@ -496,10 +574,90 @@ def _get_player_stat_upgrades(player_id: str) -> List[Dict]:
                 "stat_name": row[1],
                 "upgrade_percent": row[2],
                 "source_star": row[3],
-                "created_at": row[4]
+                "cost_spent": row[4],
+                "created_at": row[5]
             }
             for row in cur.fetchall()
         ]
+
+
+def _count_completed_upgrades(stat_upgrades: List[Dict]) -> Dict[str, int]:
+    counts: Dict[str, int] = {stat: 0 for stat in UPGRADEABLE_STATS}
+    for upgrade in stat_upgrades:
+        stat_name = upgrade.get("stat_name")
+        if stat_name is None:
+            continue
+        counts[stat_name] = counts.get(stat_name, 0) + 1
+    return counts
+
+
+def _calculate_next_cost(last_cost: int | None) -> int:
+    if not last_cost or last_cost < 1:
+        return 1
+    return math.ceil(last_cost * 1.005 + 1)
+
+
+def _determine_next_costs(stat_upgrades: List[Dict]) -> Dict[str, int]:
+    last_costs: Dict[str, int] = {}
+    for upgrade in stat_upgrades:
+        stat_name = upgrade.get("stat_name")
+        if stat_name is None or stat_name in last_costs:
+            continue
+        try:
+            last_costs[stat_name] = int(upgrade.get("cost_spent") or 0)
+        except (TypeError, ValueError):
+            last_costs[stat_name] = 0
+
+    next_costs: Dict[str, int] = {}
+    seen_stats = set(UPGRADEABLE_STATS)
+    for stat in UPGRADEABLE_STATS:
+        next_costs[stat] = _calculate_next_cost(last_costs.get(stat))
+    for stat, last_cost in last_costs.items():
+        if stat in seen_stats:
+            continue
+        next_costs[stat] = _calculate_next_cost(last_cost)
+    return next_costs
+
+
+def _get_next_cost_for_stat(player_id: str, stat_name: str) -> int:
+    with get_save_manager().connection() as conn:
+        _create_upgrade_tables()
+        cur = conn.execute(
+            """
+            SELECT cost_spent
+            FROM player_stat_upgrades
+            WHERE player_id = ? AND stat_name = ?
+            ORDER BY created_at DESC, id DESC
+            LIMIT 1
+            """,
+            (player_id, stat_name),
+        )
+        row = cur.fetchone()
+        last_cost = int(row[0]) if row and row[0] is not None else 0
+    return _calculate_next_cost(last_cost)
+
+
+def _build_player_upgrade_payload(player_id: str) -> Dict:
+    stat_upgrades = _get_player_stat_upgrades(player_id)
+    stat_totals: Dict[str, float] = {stat: 0.0 for stat in UPGRADEABLE_STATS}
+    for upgrade in stat_upgrades:
+        stat_name = upgrade.get("stat_name")
+        if stat_name is None:
+            continue
+        stat_totals[stat_name] = stat_totals.get(stat_name, 0.0) + float(
+            upgrade.get("upgrade_percent") or 0.0
+        )
+
+    stat_counts = _count_completed_upgrades(stat_upgrades)
+    next_costs = _determine_next_costs(stat_upgrades)
+
+    return {
+        "stat_upgrades": stat_upgrades,
+        "stat_totals": stat_totals,
+        "stat_counts": stat_counts,
+        "next_costs": next_costs,
+        "upgrade_points": _get_player_upgrade_points(player_id),
+    }
 
 
 def _get_player_upgrade_points(player_id: str) -> int:
@@ -538,9 +696,9 @@ def _spend_player_upgrade_points(player_id: str, points: int, stat_name: str, up
             UPDATE player_upgrade_points SET points = points - ? WHERE player_id = ?
         """, (points, player_id))
         conn.execute("""
-            INSERT INTO player_stat_upgrades (player_id, stat_name, upgrade_percent, source_star)
-            VALUES (?, ?, ?, ?)
-        """, (player_id, stat_name, upgrade_percent, 0))  # 0 for point-based upgrades
+            INSERT INTO player_stat_upgrades (player_id, stat_name, upgrade_percent, source_star, cost_spent)
+            VALUES (?, ?, ?, ?, ?)
+        """, (player_id, stat_name, upgrade_percent, 0, points))  # 0 for point-based upgrades
         conn.commit()
         return True
 
@@ -551,19 +709,7 @@ async def get_player_upgrade(pid: str):
     items = await asyncio.to_thread(manager._get_items)
 
     def fetch_new_upgrade_data() -> Dict:
-        stat_upgrades = _get_player_stat_upgrades(pid)
-
-        # Calculate total upgrades per stat
-        stat_totals = {}
-        for upgrade in stat_upgrades:
-            stat_name = upgrade["stat_name"]
-            stat_totals[stat_name] = stat_totals.get(stat_name, 0) + upgrade["upgrade_percent"]
-
-        return {
-            "stat_upgrades": stat_upgrades,
-            "stat_totals": stat_totals,
-            "upgrade_points": _get_player_upgrade_points(pid),
-        }
+        return _build_player_upgrade_payload(pid)
 
     new_data = await asyncio.to_thread(fetch_new_upgrade_data)
 
@@ -651,10 +797,7 @@ async def upgrade_player(pid: str):
     await asyncio.to_thread(manager._set_items, items)
 
     # Get updated information
-    new_data = await asyncio.to_thread(lambda: {
-        "stat_upgrades": _get_player_stat_upgrades(pid),
-        "upgrade_points": _get_player_upgrade_points(pid),
-    })
+    new_data = await asyncio.to_thread(lambda: _build_player_upgrade_payload(pid))
 
     return jsonify({
         **result,
@@ -669,28 +812,39 @@ async def upgrade_player_stat(pid: str):
 
     data = await request.get_json(silent=True) or {}
     stat_name = data.get("stat_name")
-    points_to_spend = data.get("points", 1)
+    requested_points = data.get("points")
 
     if stat_name not in UPGRADEABLE_STATS:
         return jsonify({"error": f"invalid stat, must be one of: {UPGRADEABLE_STATS}"}), 400
 
-    if points_to_spend < 1:
-        return jsonify({"error": "points must be at least 1"}), 400
-
-    # Each point gives 0.1% boost
-    upgrade_percent = points_to_spend * 0.001  # 0.1% per point
-
     def spend_points():
-        success = _spend_player_upgrade_points(pid, points_to_spend, stat_name, upgrade_percent)
-        if not success:
-            return {"error": "insufficient upgrade points"}
+        cost_to_spend = _get_next_cost_for_stat(pid, stat_name)
+        if requested_points is not None and requested_points != cost_to_spend:
+            payload = _build_player_upgrade_payload(pid)
+            payload.update({
+                "error": "invalid point cost",
+                "expected_points": cost_to_spend,
+            })
+            return payload
 
-        return {
+        upgrade_percent = cost_to_spend * 0.001  # 0.1% per point
+        success = _spend_player_upgrade_points(pid, cost_to_spend, stat_name, upgrade_percent)
+        payload = _build_player_upgrade_payload(pid)
+        if not success:
+            payload.update({
+                "error": "insufficient upgrade points",
+                "required_points": cost_to_spend,
+            })
+            return payload
+
+        response = {
             "stat_upgraded": stat_name,
-            "points_spent": points_to_spend,
+            "points_spent": cost_to_spend,
             "upgrade_percent": upgrade_percent,
-            "remaining_points": _get_player_upgrade_points(pid)
         }
+        response.update(payload)
+        response["remaining_points"] = payload.get("upgrade_points", 0)
+        return response
 
     result = await asyncio.to_thread(spend_points)
 
