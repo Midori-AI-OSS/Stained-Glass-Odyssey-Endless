@@ -18,7 +18,6 @@
   import SystemSettings from './SystemSettings.svelte';
   import LLMSettings from './LLMSettings.svelte';
   import GameplaySettings from './GameplaySettings.svelte';
-  import { getActiveRuns } from '../systems/uiApi.js';
   import { saveSettings, clearSettings, clearAllClientData } from '../systems/settingsStorage.js';
 
   const MIN_ANIMATION_SPEED = 0.1;
@@ -202,41 +201,34 @@
   }
   async function handleEndRun() {
     endingRun = true;
-    endRunStatus = runId ? 'Ending run…' : 'Ending all runs…';
+    endRunStatus = runId ? 'Ending run and cleaning up…' : 'Ending all runs…';
     // Immediately halt any battle snapshot polling while ending the run
     try { if (typeof window !== 'undefined') window.afHaltSync = true; } catch {}
 
-    let ended = false;
+    let cleaned = false;
     if (runId) {
       try {
         await endRun(runId);
-        // Verify deletion; if the run persists, fall back to end-all
         try {
-          const data = await getActiveRuns();
-          const stillActive = Array.isArray(data?.runs) && data.runs.some(r => r.run_id === runId);
-          if (stillActive) {
-            await endAllRuns();
-            endRunStatus = 'Run force-ended';
-          } else {
-            endRunStatus = 'Run ended';
-          }
-          ended = true;
-        } catch {
-          endRunStatus = 'Run ended';
-          ended = true;
+          await endAllRuns();
+          endRunStatus = 'All backend runs ended';
+          cleaned = true;
+        } catch (cleanupError) {
+          console.error('Failed to clean up runs after ending run', cleanupError);
         }
       } catch (e) {
         console.error('Failed to end run', e);
       }
     }
 
-    if (!ended) {
+    if (!cleaned) {
       try {
         await endAllRuns();
-        endRunStatus = 'Run force-ended';
+        endRunStatus = 'All backend runs force-ended';
+        cleaned = true;
       } catch (e) {
         console.error('Failed to force end runs', e);
-        endRunStatus = 'Failed to end run';
+        endRunStatus = 'Failed to end backend runs';
       }
     }
 
