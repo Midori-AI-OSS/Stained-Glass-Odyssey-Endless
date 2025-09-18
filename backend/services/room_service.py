@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import copy
+from types import SimpleNamespace
 from typing import Any
 
 from battle_logging.writers import get_current_run_logger
@@ -26,7 +27,39 @@ from autofighter.rooms import _choose_foe
 from autofighter.rooms import _scale_stats
 from autofighter.rooms import _serialize
 from autofighter.summons.manager import SummonManager
+from plugins import foes as foe_plugins
 from plugins.damage_types import load_damage_type
+
+
+def _boss_matches_node(info: Any, node: Any) -> bool:
+    try:
+        return (
+            isinstance(info, dict)
+            and info.get("id")
+            and int(info.get("floor", -1)) == int(getattr(node, "floor", -1))
+            and int(info.get("loop", -1)) == int(getattr(node, "loop", -1))
+        )
+    except Exception:
+        return False
+
+
+def _instantiate_boss(foe_id: str | None):
+    if not foe_id:
+        return None
+    try:
+        for name in getattr(foe_plugins, "__all__", []):
+            cls = getattr(foe_plugins, name, None)
+            if cls is not None and getattr(cls, "id", None) == foe_id:
+                return cls()
+    except Exception:
+        pass
+    try:
+        foe_cls = foe_plugins.PLAYER_FOES.get(foe_id)
+        if foe_cls is not None:
+            return foe_cls()
+    except Exception:
+        pass
+    return None
 
 
 def _collect_summons(entities: list) -> dict[str, list[dict[str, Any]]]:
@@ -174,7 +207,20 @@ async def battle_room(run_id: str, data: dict[str, Any]) -> dict[str, Any]:
         state["battle"] = True
         await asyncio.to_thread(save_map, run_id, state)
         room = BattleRoom(node)
-        foes = _build_foes(node, party)
+        boss_info = state.get("floor_boss")
+        build_party = party
+        if _boss_matches_node(boss_info, node):
+            boss_id = boss_info.get("id") if isinstance(boss_info, dict) else None
+            if boss_id:
+                dummy = SimpleNamespace(id=boss_id)
+                build_party = Party(
+                    members=[*party.members, dummy],
+                    gold=party.gold,
+                    relics=party.relics,
+                    cards=party.cards,
+                    rdr=party.rdr,
+                )
+        foes = _build_foes(node, build_party)
         for f in foes:
             _scale_stats(f, node, room.strength)
         combat_party = Party(
@@ -347,7 +393,19 @@ async def boss_room(run_id: str, data: dict[str, Any]) -> dict[str, Any]:
         await asyncio.to_thread(save_map, run_id, state)
         room = BossRoom(node)
         party = await asyncio.to_thread(load_party, run_id)
-        foe = _choose_foe(party)
+        boss_info = state.get("floor_boss")
+        foe = None
+        if _boss_matches_node(boss_info, node):
+            boss_id = boss_info.get("id") if isinstance(boss_info, dict) else None
+            foe = _instantiate_boss(boss_id)
+        if foe is None:
+            foe = _choose_foe(party)
+            state["floor_boss"] = {
+                "id": getattr(foe, "id", type(foe).__name__),
+                "floor": getattr(node, "floor", 1),
+                "loop": getattr(node, "loop", 1),
+            }
+        foe.rank = "glitched boss" if "glitched" in node.room_type else "boss"
         _scale_stats(foe, node, room.strength)
         foes = [foe]
         combat_party = Party(
