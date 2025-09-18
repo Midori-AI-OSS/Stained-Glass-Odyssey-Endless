@@ -56,11 +56,11 @@
     if (previewId) refreshUpgradeData(previewId, { force: true });
     try { dispatch('previewMode', { mode: 'portrait', id: previewId ?? null }); } catch {}
   }
-  $: previewUpgradeState = readUpgradeState(previewId);
+  $: previewUpgradeState = readUpgradeState(previewId, upgradeCache);
 
-  function readUpgradeState(id) {
+  function readUpgradeState(id, cache = upgradeCache) {
     const key = id == null ? null : String(id);
-    return key && upgradeCache[key] ? upgradeCache[key] : EMPTY_UPGRADE_STATE;
+    return key && cache[key] ? cache[key] : EMPTY_UPGRADE_STATE;
   }
 
   async function refreshUpgradeData(id, { force = false } = {}) {
