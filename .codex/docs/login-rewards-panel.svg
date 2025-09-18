@@ -1,0 +1,122 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" width="960" height="540" role="img" aria-labelledby="title desc">
+  <title id="title">Daily Login Rewards panel layout</title>
+  <desc id="desc">Diagram showing the login rewards banner with streak chevrons, countdown timer, reward preview, and claim button.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#111827" />
+      <stop offset="100%" stop-color="#1f2937" />
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#7dd3fc" />
+      <stop offset="100%" stop-color="#38bdf8" />
+    </linearGradient>
+    <linearGradient id="accent-muted" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#334155" />
+      <stop offset="100%" stop-color="#1e293b" />
+    </linearGradient>
+    <linearGradient id="claim" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#34d399" />
+      <stop offset="100%" stop-color="#22c55e" />
+    </linearGradient>
+    <style>
+      text { font-family: 'Inter', 'Segoe UI', sans-serif; fill: #f8fafc; }
+      .caption { font-size: 20px; fill: #94a3b8; }
+      .label { font-size: 22px; font-weight: 600; }
+      .annotation { font-size: 18px; fill: #e2e8f0; }
+      .callout { fill: #0f172a; stroke: #38bdf8; stroke-width: 2; rx: 12; }
+      .callout text { fill: #e0f2fe; font-size: 18px; }
+    </style>
+  </defs>
+  <rect width="960" height="540" fill="url(#bg)" rx="32" />
+
+  <g transform="translate(60 40)">
+    <text class="label" font-size="30" font-weight="700">Daily Login Rewards</text>
+    <text class="caption" y="34">Banner anchored in the main menu center</text>
+  </g>
+
+  <g transform="translate(60 100)">
+    <rect width="840" height="360" fill="#0b1120" stroke="#38bdf8" stroke-width="2" rx="28" />
+
+    <g transform="translate(30 28)">
+      <rect width="260" height="48" fill="#1f2937" rx="12" />
+      <text class="label" x="18" y="32">Streak Day 12</text>
+      <text class="caption" x="16" y="68">Last claim at 2:37 PM PT</text>
+    </g>
+
+    <g transform="translate(340 20)">
+      <rect width="240" height="60" fill="#1f2937" rx="14" />
+      <text class="caption" x="20" y="24">Next reset in</text>
+      <text class="label" x="20" y="48">08:41:12</text>
+    </g>
+
+    <g transform="translate(620 20)">
+      <rect width="190" height="60" fill="#1f2937" rx="14" />
+      <text class="caption" x="20" y="24">Rooms cleared</text>
+      <text class="label" x="20" y="48">2 / 3</text>
+    </g>
+
+    <g transform="translate(40 120)">
+      <text class="caption" y="-14">Chevron streak preview (scrolls when streak &gt; 12 days)</text>
+      <g transform="translate(0 0)">
+        <polygon points="0,32 36,0 140,0 176,32 140,64 36,64" fill="url(#accent-muted)" />
+        <text x="48" y="38" font-size="24" fill="#f1f5f9">Day 8</text>
+      </g>
+      <g transform="translate(150 0)">
+        <polygon points="0,32 36,0 140,0 176,32 140,64 36,64" fill="url(#accent-muted)" />
+        <text x="48" y="38" font-size="24" fill="#f1f5f9">Day 9</text>
+      </g>
+      <g transform="translate(300 0)">
+        <polygon points="0,32 36,0 140,0 176,32 140,64 36,64" fill="url(#accent)" stroke="#facc15" stroke-width="4" />
+        <text x="40" y="38" font-size="24" fill="#082f49">Day 10</text>
+      </g>
+      <g transform="translate(450 0)">
+        <polygon points="0,32 36,0 140,0 176,32 140,64 36,64" fill="url(#accent-muted)" />
+        <text x="48" y="38" font-size="24" fill="#f1f5f9">Day 11</text>
+      </g>
+      <g transform="translate(600 0)">
+        <polygon points="0,32 36,0 140,0 176,32 140,64 36,64" fill="url(#accent-muted)" />
+        <text x="48" y="38" font-size="24" fill="#f1f5f9">Day 12</text>
+      </g>
+      <g transform="translate(750 0)">
+        <polygon points="0,32 36,0 140,0 176,32 140,64 36,64" fill="url(#accent-muted)" opacity="0.55" />
+        <text x="54" y="38" font-size="24" fill="#94a3b8">Day 13</text>
+      </g>
+    </g>
+
+    <g transform="translate(40 240)">
+      <rect width="520" height="90" fill="#111827" rx="16" />
+      <text class="caption" x="24" y="32">Today's bundle</text>
+      <g transform="translate(24 44)">
+        <rect width="88" height="36" fill="#1f2937" rx="10" />
+        <text x="18" y="24" font-size="20">⚡ Volt</text>
+      </g>
+      <g transform="translate(140 44)">
+        <rect width="88" height="36" fill="#1f2937" rx="10" />
+        <text x="18" y="24" font-size="20">🔥 Pyro</text>
+      </g>
+      <g transform="translate(256 44)">
+        <rect width="88" height="36" fill="#1f2937" rx="10" />
+        <text x="18" y="24" font-size="20">❄️ Cryo</text>
+      </g>
+      <g transform="translate(372 44)">
+        <rect width="120" height="36" fill="#1f2937" rx="10" />
+        <text x="16" y="24" font-size="20">✨ 2★ Void</text>
+      </g>
+    </g>
+
+    <g transform="translate(600 240)">
+      <rect width="210" height="90" fill="url(#claim)" rx="18" />
+      <text x="54" y="44" font-size="24" font-weight="700" fill="#064e3b">Claim</text>
+      <text x="54" y="68" font-size="18" fill="#047857">Ready once 3 rooms cleared</text>
+    </g>
+  </g>
+
+  <g transform="translate(60 470)">
+    <rect class="callout" width="380" height="60" />
+    <text x="20" y="34">Highlights: streak progress, reward preview, reset countdown.</text>
+  </g>
+  <g transform="translate(460 470)">
+    <rect class="callout" width="440" height="60" />
+    <text x="20" y="34">Claim button enables after backend reports 3 rooms for the day.</text>
+  </g>
+</svg>

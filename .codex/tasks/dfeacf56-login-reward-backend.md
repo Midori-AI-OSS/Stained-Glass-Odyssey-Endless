@@ -13,3 +13,5 @@ Coder, implement a backend system to grant daily login rewards that scale with c
 ## Notes
 - Ensure time zone handling uses PT regardless of server location.
 - Provide clear hooks to expose reward data via API.
+
+task ready for review

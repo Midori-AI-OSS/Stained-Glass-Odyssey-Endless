@@ -10,3 +10,5 @@ Coder, expose login reward progress and claiming through backend APIs.
 ## Notes
 - Ensure endpoints integrate with authentication and existing backend framework.
 - Use PT for reset timers to match backend streak logic.
+
+task ready for review
