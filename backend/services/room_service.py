@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import asyncio
 import copy
-from types import SimpleNamespace
 from typing import Any
 
 from battle_logging.writers import get_current_run_logger
@@ -208,19 +207,12 @@ async def battle_room(run_id: str, data: dict[str, Any]) -> dict[str, Any]:
         await asyncio.to_thread(save_map, run_id, state)
         room = BattleRoom(node)
         boss_info = state.get("floor_boss")
-        build_party = party
+        exclude_ids = None
         if _boss_matches_node(boss_info, node):
             boss_id = boss_info.get("id") if isinstance(boss_info, dict) else None
             if boss_id:
-                dummy = SimpleNamespace(id=boss_id)
-                build_party = Party(
-                    members=[*party.members, dummy],
-                    gold=party.gold,
-                    relics=party.relics,
-                    cards=party.cards,
-                    rdr=party.rdr,
-                )
-        foes = _build_foes(node, build_party)
+                exclude_ids = {boss_id}
+        foes = _build_foes(node, party, exclude_ids=exclude_ids)
         for f in foes:
             _scale_stats(f, node, room.strength)
         combat_party = Party(
