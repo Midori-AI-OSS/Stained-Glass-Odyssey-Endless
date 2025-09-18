@@ -27,6 +27,23 @@ from autofighter.stats import set_battle_active
 from plugins.event_bus import bus
 
 
+STUB_PASSIVE_ID = "stub_passive"
+
+
+class StubTurnEndPassive:
+    """Simple passive that ticks at turn end for testing."""
+
+    max_stacks = 1
+    trigger = "turn_end"
+
+    async def on_turn_end(self, stats: Stats) -> None:  # pragma: no cover - trivial stub
+        _ = stats
+
+
+def _stub_discover() -> dict[str, type[StubTurnEndPassive]]:
+    return {STUB_PASSIVE_ID: StubTurnEndPassive}
+
+
 @pytest.mark.asyncio
 async def test_status_phase_events_emit_with_pacing(monkeypatch):
     target = Stats(hp=1000)
@@ -35,6 +52,10 @@ async def test_status_phase_events_emit_with_pacing(monkeypatch):
     target.set_base_stat('mitigation', 1)
     target.set_base_stat('vitality', 1)
     target.id = "phase_target"
+
+    target.passives = [STUB_PASSIVE_ID]
+
+    monkeypatch.setattr("autofighter.passives.discover", _stub_discover)
 
     manager = EffectManager(target)
 
@@ -69,10 +90,13 @@ async def test_status_phase_events_emit_with_pacing(monkeypatch):
         expected_multiplier,
         expected_multiplier,
         expected_multiplier,
+        expected_multiplier,
     ]
 
     status_events = [evt for evt in captured_events if evt[0].startswith("status_phase_")]
     assert [name for name, _ in status_events] == [
+        "status_phase_start",
+        "status_phase_end",
         "status_phase_start",
         "status_phase_end",
         "status_phase_start",
@@ -126,6 +150,29 @@ async def test_status_phase_events_emit_with_pacing(monkeypatch):
     assert end_mod_args[2]["expired_count"] == 0
     assert end_mod_args[2]["order"] == 2
     assert end_mod_args[2]["effect_ids"] == []
+
+    start_passive_name, start_passive_args = status_events[6]
+    assert start_passive_name == "status_phase_start"
+    assert start_passive_args[0] == "passives"
+    assert start_passive_args[1] is target
+    start_passive_payload = start_passive_args[2]
+    assert start_passive_payload["phase"] == "passives"
+    assert start_passive_payload["effect_count"] == 1
+    assert start_passive_payload["expired_count"] == 0
+    assert start_passive_payload["order"] == 3
+    assert start_passive_payload["has_effects"] is True
+    assert start_passive_payload["effect_ids"] == [STUB_PASSIVE_ID]
+
+    end_passive_name, end_passive_args = status_events[7]
+    assert end_passive_name == "status_phase_end"
+    assert end_passive_args[0] == "passives"
+    assert end_passive_args[1] is target
+    end_passive_payload = end_passive_args[2]
+    assert end_passive_payload["phase"] == "passives"
+    assert end_passive_payload["effect_count"] == 1
+    assert end_passive_payload["expired_count"] == 0
+    assert end_passive_payload["order"] == 3
+    assert end_passive_payload["effect_ids"] == [STUB_PASSIVE_ID]
 
     assert manager.hots == []
     assert manager.dots == []
@@ -181,7 +228,7 @@ async def test_target_acquired_event_records_recent_events():
 
 
 @pytest.mark.asyncio
-async def test_status_phase_events_update_snapshot_queue():
+async def test_status_phase_events_update_snapshot_queue(monkeypatch):
     run_id = "snapshot-status"
     battle_snapshots.clear()
 
@@ -193,9 +240,12 @@ async def test_status_phase_events_update_snapshot_queue():
     target.set_base_stat("vitality", 1)
     target.set_base_stat("dodge_odds", 0)
     target.hp = 900
+    target.passives = [STUB_PASSIVE_ID]
 
     prepare_snapshot_overlay(run_id, [target])
     register_snapshot_entities(run_id, [target])
+
+    monkeypatch.setattr("autofighter.passives.discover", _stub_discover)
 
     manager = EffectManager(target)
     hot = HealingOverTime("regen", healing=10, turns=1, id="hot_1", source=target)
@@ -257,8 +307,10 @@ async def test_status_phase_events_update_snapshot_queue():
 
     status_phase = snapshot.get("status_phase")
     assert status_phase is not None
-    assert status_phase.get("phase") == "stat_mods"
+    assert status_phase.get("phase") == "passives"
     assert status_phase.get("state") == "end"
+    assert status_phase.get("effect_count") == 1
+    assert status_phase.get("effect_ids") == [STUB_PASSIVE_ID]
 
     payload = await build_battle_progress_payload(
         [target],
