@@ -239,6 +239,39 @@
   </OverlaySurface>
 {/if}
 
+{#if $overlayView === 'warp-info'}
+  <OverlaySurface zIndex={1350}>
+    <PopupWindow
+      title="Warp Mechanics"
+      maxWidth="640px"
+      zIndex={1350}
+      on:close={() => dispatch('back')}
+    >
+      <div class="warp-info-body">
+        <p>
+          Warps spend gacha tickets to roll from the current banner. Each pull advances pity,
+          steadily improving the odds of 5★ and 6★ rewards until a top rarity is found.
+        </p>
+        <ul class="warp-info-list">
+          <li>Single pulls cost 1 ticket, while ×5 and ×10 options spend 5 or 10 at once.</li>
+          <li>
+            Pity carries across all banners and resets after any 5★ or 6★ reward, whichever comes
+            first.
+          </li>
+          <li>Duplicate characters grant upgrade materials instead of extra copies.</li>
+        </ul>
+        <p class="warp-info-note">
+          Tip: Saving up for larger batches guarantees the animation plays once per session while still
+          honoring your current pity level.
+        </p>
+        <div class="stained-glass-row" style="justify-content: flex-end; margin-top: 0.75rem;">
+          <button class="icon-btn" on:click={() => dispatch('back')}>Back to pulls</button>
+        </div>
+      </div>
+    </PopupWindow>
+  </OverlaySurface>
+{/if}
+
   {#if $overlayView === 'pull-results'}
   <OverlaySurface zIndex={1400}>
     <PullResultsOverlay {sfxVolume} results={$overlayData.results || []} on:close={() => dispatch('back')} />
@@ -390,6 +423,27 @@
 {/each}
 
 <style>
+  .warp-info-body {
+    padding: 0.5rem 0.25rem;
+    line-height: 1.5;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .warp-info-list {
+    margin: 0;
+    padding-left: 1.2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+
+  .warp-info-note {
+    font-size: 0.9rem;
+    color: rgba(255,255,255,0.75);
+  }
+
   .overlay-inset {
     position: absolute;
     inset: 0;
