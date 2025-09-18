@@ -361,7 +361,10 @@
         on:request-upgrade={(e) => forwardUpgradeRequest(e.detail)}
         on:request-convert={(e) => forwardConversionRequest(e.detail)}
         on:element-change={(e) => {
-          previewElementOverride = e.detail?.element || previewElementOverride;
+          const el = e.detail?.element || '';
+          previewElementOverride = el || previewElementOverride;
+          // Propagate player element change to editor state so start_run gets damage_type
+          try { dispatch('editorChange', { damageType: el }); } catch {}
           refreshRoster();
           if (previewId) {
             // Refresh upgrade data so convert availability reflects new type
