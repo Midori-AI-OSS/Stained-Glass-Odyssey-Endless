@@ -51,6 +51,7 @@ Passives generally shouldn't be capped unless a designer explicitly specifies a 
 - **Lady Echo** (B, Lightning) – baseline fighter themed around echoes.
 - **Lady Fire and Ice** (B, Fire or Ice) – baseline fighter themed around fire and ice. Duality Engine alternates elements to build Flux and reduces foe mitigation when repeating an element.
 - **Lady Light** (B, Light) – baseline fighter themed around light.
+- **Lady Lightning** (B, Lightning) – 5★ gacha recruit whose Stormsurge stacks add +3 Speed and +5% effect hit per action, then discharge into two-turn shocks that slow foes and cut 3% effect resistance while granting her a brief attack overload.
 - **Lady of Fire** (B, Fire) – baseline fighter themed around fire.
 - **Lady Wind** (B, Wind) – 5★ aeromancer and twin of Lady Lightning whose manic, wind-lashed experiments leave her workspace in constant disarray. Tempest Guard wraps her in a permanent slipstream of dodge and mitigation, bleeds off stacks at the start of her turn, then adds one for every foe she critically strikes to fuel gust boosts and siphon a slice of incoming damage into healing.
 - **Luna** (B, Generic) – applies `luna_passive`.
