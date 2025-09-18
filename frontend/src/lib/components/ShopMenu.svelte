@@ -275,44 +275,49 @@
     return `${value.toFixed(1)}%`;
   }
 
-  function formatSurchargeMessage() {
-    const directMessage = (typeof taxSummary?.message === 'string' && taxSummary.message.trim())
-      ? taxSummary.message.trim()
+  function formatSurchargeMessage(summary, tax, prior, rate, next) {
+    const directMessage = (typeof summary?.message === 'string' && summary.message.trim())
+      ? summary.message.trim()
       : null;
     if (directMessage) return directMessage;
-    const description = (typeof taxSummary?.description === 'string' && taxSummary.description.trim())
-      ? taxSummary.description.trim()
+    const description = (typeof summary?.description === 'string' && summary.description.trim())
+      ? summary.description.trim()
       : null;
     if (description) return description;
 
-    const tax = surchargeValue;
     const parts = [];
     if (tax <= 0) {
-      if (priorPurchases > 0) {
+      if (prior > 0) {
         parts.push('Tax waived');
-        parts.push(`${priorPurchases} prior buy${priorPurchases === 1 ? '' : 's'}`);
+        parts.push(`${prior} prior buy${prior === 1 ? '' : 's'}`);
         return parts.join(' · ');
       }
       return 'No tax applied';
     }
 
     parts.push(`+${tax}g tax`);
-    const pct = formatPercent(surchargeRate ?? null);
+    const pct = formatPercent(rate ?? null);
     if (pct) parts.push(`${pct} rate`);
-    if (priorPurchases > 0) {
-      parts.push(`${priorPurchases} prior buy${priorPurchases === 1 ? '' : 's'}`);
+    if (prior > 0) {
+      parts.push(`${prior} prior buy${prior === 1 ? '' : 's'}`);
     }
-    const pressure = pickFinite(taxSummary?.pressure, taxSummary?.shop_pressure);
+    const pressure = pickFinite(summary?.pressure, summary?.shop_pressure);
     if (pressure !== null) {
       parts.push(`pressure ${pressure}`);
     }
-    if (nextSurcharge !== null && Number.isFinite(nextSurcharge) && nextSurcharge !== tax) {
-      parts.push(`next +${nextSurcharge}g`);
+    if (next !== null && Number.isFinite(next) && next !== tax) {
+      parts.push(`next +${next}g`);
     }
     return parts.join(' · ');
   }
 
-  $: surchargeMessage = formatSurchargeMessage();
+  $: surchargeMessage = formatSurchargeMessage(
+    taxSummary,
+    surchargeValue,
+    priorPurchases,
+    surchargeRate,
+    nextSurcharge
+  );
   $: taxNoteClass = surchargeValue > 0 ? 'active' : 'inactive';
 </script>
 
