@@ -23,10 +23,13 @@
 <style>
   .cards-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 0.25rem;
+    /* Pack tracks to the card width so there is no extra horizontal padding inside cells */
+    grid-template-columns: repeat(auto-fill, 280px);
+    column-gap: 4px;   /* slightly wider left-right gap */
+    row-gap: 6px;      /* extra space below each card */
     align-items: start;
-    justify-items: center;
+    justify-content: center; /* center whole grid within container */
+    justify-items: start;     /* align items to left edge of their track */
   }
 
   .card-cell {

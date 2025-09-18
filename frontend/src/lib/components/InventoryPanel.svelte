@@ -60,7 +60,11 @@
   }
 
   function getStarColor(key) {
-    const rank = parseInt(String(key).split('_')[1]);
+    const k = String(key || '');
+    // Extract first number group anywhere (handles formats like "fire_3", "fire_generic3", etc.)
+    const m = k.match(/(\d+)/);
+    const n = m ? parseInt(m[1], 10) : NaN;
+    const rank = Number.isFinite(n) ? Math.max(1, Math.min(n, 6)) : 1;
     return starColors[rank] || starColors.fallback;
   }
 
@@ -173,11 +177,13 @@
   .grid { display:flex; flex-wrap:wrap; gap:0.5rem; }
   .cards-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    /* Tighter spacing to sit cards closer */
-    gap: 0.25rem;
+    /* Fixed track width prevents extra horizontal padding inside cells */
+    grid-template-columns: repeat(auto-fill, 280px);
+    column-gap: 4px;
+    row-gap: 6px;
     align-items: start;
-    justify-items: center;
+    justify-content: center;
+    justify-items: start;
   }
   .relics-grid {
     display: grid;

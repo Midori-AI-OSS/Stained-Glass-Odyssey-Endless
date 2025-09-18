@@ -135,6 +135,16 @@
     position: relative;
     box-sizing: border-box;
   }
+  /* Star-rank tint spanning the full card, so both top and bottom areas pick up the accent.
+     Keep it subtle so the bottom stays dark but colored. */
+  .card-art::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: color-mix(in srgb, var(--accent) 3%, transparent);
+    pointer-events: none;
+    /* No z-index needed; pseudo-element paints behind normal content by default */
+  }
   .topbox {
     position: relative;
     height: 50%;
@@ -168,7 +178,7 @@
     background-size: auto, 220% 220%;
     background-position: center, 0% 50%;
     animation: accent-pan 14s ease-in-out infinite;
-    opacity: 0.72; /* see-through tint */
+    opacity: 0.60; /* reduced tint */
     pointer-events: none;
     z-index: 0;
   }
@@ -348,7 +358,8 @@
   .about-box {
     flex: 1;
     margin: 0;
-    background: rgba(0,0,0,0.45);
+    /* Darken slightly more to reduce color bleed from full-card tint */
+    background: rgba(0,0,0,0.58);
     border: 1px solid rgba(255,255,255,0.18);
     border-radius: 0;
     padding: 10px 12px;
