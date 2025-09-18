@@ -171,6 +171,18 @@ def _normalize_metadata(metadata: dict[str, Any]) -> dict[str, Any]:
     return {key: val for key, val in normalized.items() if val is not None}
 
 
+def _effect_metadata(
+    effect_name: str | None,
+    details: dict[str, Any] | None,
+) -> dict[str, Any] | None:
+    metadata: dict[str, Any] = {}
+    if isinstance(details, dict):
+        metadata.update(details)
+    if effect_name:
+        metadata.setdefault("effect_name", effect_name)
+    return metadata or None
+
+
 def _record_event(
     run_id: str,
     *,
@@ -416,6 +428,81 @@ async def _on_hot_tick(
     )
 
 
+def _on_effect_applied(
+    effect_name: str | None,
+    entity: Stats | None,
+    details: dict[str, Any] | None = None,
+) -> None:
+    run_id = _resolve_run_id(entity)
+    if not run_id:
+        return
+    metadata = _effect_metadata(effect_name, details)
+    _record_event(
+        run_id,
+        event_type="effect_applied",
+        source=None,
+        target=entity,
+        amount=None,
+        metadata=metadata,
+    )
+    if entity is not None:
+        mutate_snapshot_overlay(
+            run_id,
+            active_target_id=getattr(entity, "id", None),
+        )
+
+
+def _on_effect_resisted(
+    effect_name: str | None,
+    target: Stats | None,
+    source: Stats | None = None,
+    details: dict[str, Any] | None = None,
+) -> None:
+    run_id = _resolve_run_id(target, source)
+    if not run_id:
+        return
+    metadata = _effect_metadata(effect_name, details)
+    _record_event(
+        run_id,
+        event_type="effect_resisted",
+        source=source,
+        target=target,
+        amount=None,
+        metadata=metadata,
+    )
+    kwargs: dict[str, Any] = {}
+    if source is not None:
+        kwargs["active_id"] = getattr(source, "id", None)
+    if target is not None:
+        kwargs["active_target_id"] = getattr(target, "id", None)
+    if kwargs:
+        mutate_snapshot_overlay(run_id, **kwargs)
+
+
+def _on_effect_expired(
+    effect_name: str | None,
+    entity: Stats | None,
+    details: dict[str, Any] | None = None,
+) -> None:
+    run_id = _resolve_run_id(entity)
+    if not run_id:
+        return
+    metadata = _effect_metadata(effect_name, details)
+    _record_event(
+        run_id,
+        event_type="effect_expired",
+        source=None,
+        target=entity,
+        amount=None,
+        metadata=metadata,
+    )
+    if entity is not None:
+        mutate_snapshot_overlay(
+            run_id,
+            active_target_id=getattr(entity, "id", None),
+        )
+
+
 BUS.subscribe("status_phase_start", _on_status_phase_start)
 BUS.subscribe("status_phase_end", _on_status_phase_end)
 BUS.subscribe("hit_landed", _on_hit_landed)
@@ -424,6 +511,9 @@ BUS.subscribe("heal_received", _on_heal_received)
 BUS.subscribe("target_acquired", _on_target_acquired)
 BUS.subscribe("dot_tick", _on_dot_tick)
 BUS.subscribe("hot_tick", _on_hot_tick)
+BUS.subscribe("effect_applied", _on_effect_applied)
+BUS.subscribe("effect_resisted", _on_effect_resisted)
+BUS.subscribe("effect_expired", _on_effect_expired)
 
 
 @dataclass(slots=True)
