@@ -6,6 +6,7 @@
   import { fade, scale } from 'svelte/transition';
   import { quintOut } from 'svelte/easing';
   import { getElementIcon, getElementColor } from '../systems/assetLoader.js';
+  import { Heart, Sword, Shield, Crosshair, Zap, HeartPulse, ShieldPlus } from 'lucide-svelte';
 
   export let roster = [];
   export let previewId;
@@ -23,12 +24,30 @@
     { key: 'crit_rate', label: 'Crit Rate', hint: 'Raise critical odds.' },
     { key: 'crit_damage', label: 'Crit DMG', hint: 'Amplify crit damage.' }
   ];
+  const STAT_ICONS = {
+    max_hp: Heart,
+    atk: Sword,
+    defense: Shield,
+    crit_rate: Crosshair,
+    crit_damage: Zap
+  };
 
   $: selected = roster.find((r) => r.id === previewId);
   $: elementName = overrideElement || selected?.element || '';
   $: accent = getElementColor(elementName || 'Generic');
   $: ElementIcon = getElementIcon(elementName || 'Generic');
   $: highlightedStat = upgradeContext?.stat || upgradeContext?.lastRequestedStat || null;
+  $: isLight = String(elementName || '').toLowerCase() === 'light';
+  // Light "sun" layout: percentage anchors (x,y) in [0..100]
+  const lightLayout = {
+    hp:         { x: 50, y: 52 },
+    atk:        { x: 37, y: 36 },
+    def:        { x: 63, y: 36 },
+    crit_rate:  { x: 26, y: 24 },
+    crit_damage:{ x: 28, y: 50 },
+    vit:        { x: 20, y: 42 },
+    mit:        { x: 80, y: 44 },
+  };
 
   function enterUpgrade() {
     if (!selected) return;
@@ -64,6 +83,8 @@
             alt={selected.name}
             style={`--outline: ${getElementColor(overrideElement || selected.element)};`}
           />
+          <!-- Hidden: legacy portrait-mode upgrade button -->
+          <!--
           <button
             type="button"
             class="upgrade-toggle"
@@ -72,23 +93,116 @@
           >
             Upgrade stats
           </button>
+          -->
         </div>
       {:else if mode === 'upgrade'}
         <div
           class="upgrade-wrapper"
-          on:click={handleBackgroundClick}
           in:fade={{ duration: reducedMotion ? 0 : 120 }}
           out:fade={{ duration: reducedMotion ? 0 : 120 }}
         >
+          <!-- Dimmed & blurred portrait backdrop -->
+          {#if selected?.img}
+            <div class="upgrade-bg" aria-hidden="true">
+              <img src={selected.img} alt="" />
+              <!-- Fill the photo area with a large damage-type icon -->
+              <div class="element-bg" style={`color: ${accent};`}>
+                <svelte:component this={ElementIcon} aria-hidden="true" />
+              </div>
+              <div class="vignette" />
+            </div>
+          {/if}
+          {#if isLight}
+            <!-- Light damage type layout: sun diagram with connectors -->
+            <div
+              class="stat-slots light"
+              aria-label="Stat upgrade options (Light)"
+              on:click|stopPropagation
+              style={`--accent:${accent}; color:${accent}`}
+            >
+              <svg class="stat-links" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true" style={`color:${accent}`}>
+                <!-- HP center to ATK/DEF -->
+                <line x1={`${lightLayout.hp.x}`} y1={`${lightLayout.hp.y}`} x2={`${lightLayout.atk.x}`} y2={`${lightLayout.atk.y}`} stroke="currentColor" />
+                <line x1={`${lightLayout.hp.x}`} y1={`${lightLayout.hp.y}`} x2={`${lightLayout.def.x}`} y2={`${lightLayout.def.y}`} stroke="currentColor" />
+                <!-- ATK to children: crit rate, crit dmg, vit -->
+                <line x1={`${lightLayout.atk.x}`} y1={`${lightLayout.atk.y}`} x2={`${lightLayout.crit_rate.x}`} y2={`${lightLayout.crit_rate.y}`} stroke="currentColor" />
+                <line x1={`${lightLayout.atk.x}`} y1={`${lightLayout.atk.y}`} x2={`${lightLayout.crit_damage.x}`} y2={`${lightLayout.crit_damage.y}`} stroke="currentColor" />
+                <line x1={`${lightLayout.atk.x}`} y1={`${lightLayout.atk.y}`} x2={`${lightLayout.vit.x}`} y2={`${lightLayout.vit.y}`} stroke="currentColor" />
+                <!-- DEF to MIT -->
+                <line x1={`${lightLayout.def.x}`} y1={`${lightLayout.def.y}`} x2={`${lightLayout.mit.x}`} y2={`${lightLayout.mit.y}`} stroke="currentColor" />
+              </svg>
+
+              <!-- Buttons; icons inherit accent via color -->
+              <button type="button" class="stat-icon-btn" style={`left:${lightLayout.hp.x}%; top:${lightLayout.hp.y}%; transform:translate(-50%,-50%); color:${accent}`}
+                class:active={highlightedStat==='max_hp'} on:click={() => requestUpgrade('max_hp')} aria-label="HP" title="HP — Bolster survivability.">
+                <Heart aria-hidden="true" />
+              </button>
+              <button type="button" class="stat-icon-btn" style={`left:${lightLayout.atk.x}%; top:${lightLayout.atk.y}%; transform:translate(-50%,-50%); color:${accent}`}
+                class:active={highlightedStat==='atk'} on:click={() => requestUpgrade('atk')} aria-label="Attack" title="ATK — Improve offensive power.">
+                <Sword aria-hidden="true" />
+              </button>
+              <button type="button" class="stat-icon-btn" style={`left:${lightLayout.def.x}%; top:${lightLayout.def.y}%; transform:translate(-50%,-50%); color:${accent}`}
+                class:active={highlightedStat==='defense'} on:click={() => requestUpgrade('defense')} aria-label="Defense" title="DEF — Stiffen defenses.">
+                <Shield aria-hidden="true" />
+              </button>
+              <button type="button" class="stat-icon-btn" style={`left:${lightLayout.crit_rate.x}%; top:${lightLayout.crit_rate.y}%; transform:translate(-50%,-50%); color:${accent}`}
+                class:active={highlightedStat==='crit_rate'} on:click={() => requestUpgrade('crit_rate')} aria-label="Crit Rate" title="Crit Rate — Raise critical odds.">
+                <Crosshair aria-hidden="true" />
+              </button>
+              <button type="button" class="stat-icon-btn" style={`left:${lightLayout.crit_damage.x}%; top:${lightLayout.crit_damage.y}%; transform:translate(-50%,-50%); color:${accent}`}
+                class:active={highlightedStat==='crit_damage'} on:click={() => requestUpgrade('crit_damage')} aria-label="Crit Damage" title="Crit DMG — Amplify crit damage.">
+                <Zap aria-hidden="true" />
+              </button>
+              <!-- VIT (new) -->
+              <!-- TODO: Backend: add 'vit' stat to upgrade API and totals -->
+              <button type="button" class="stat-icon-btn" style={`left:${lightLayout.vit.x}%; top:${lightLayout.vit.y}%; transform:translate(-50%,-50%); color:${accent}`}
+                disabled aria-disabled="true" aria-label="Vitality (coming soon)" title="Vit — backend integration pending">
+                <HeartPulse aria-hidden="true" />
+              </button>
+              <!-- MIT (new) -->
+              <!-- TODO: Backend: add 'mit' stat to upgrade API and totals -->
+              <button type="button" class="stat-icon-btn" style={`left:${lightLayout.mit.x}%; top:${lightLayout.mit.y}%; transform:translate(-50%,-50%); color:${accent}`}
+                disabled aria-disabled="true" aria-label="Mitigation (coming soon)" title="Mit — backend integration pending">
+                <ShieldPlus aria-hidden="true" />
+              </button>
+            </div>
+          {:else}
+            <!-- Default layout: top toolbar row -->
+            <div class="stat-toolbar" aria-label="Stat upgrade options" on:click|stopPropagation>
+              {#each UPGRADE_STATS as stat}
+                {#if STAT_ICONS[stat.key]}
+                  <button
+                    type="button"
+                    class="stat-icon-btn"
+                    class:active={highlightedStat === stat.key}
+                    on:click={() => requestUpgrade(stat.key)}
+                    aria-label={stat.label}
+                    title={`${stat.label} — ${stat.hint}`}
+                  >
+                    <svelte:component this={STAT_ICONS[stat.key]} aria-hidden="true" />
+                  </button>
+                {/if}
+              {/each}
+              <!-- Extra stats available for all damage types; disabled until backend adds support -->
+              <!-- TODO: Backend: add 'vit' and 'mit' to upgrade API and player stat totals -->
+              <button type="button" class="stat-icon-btn" disabled aria-disabled="true" aria-label="Vitality (coming soon)" title="Vit — backend integration pending">
+                <HeartPulse aria-hidden="true" />
+              </button>
+              <button type="button" class="stat-icon-btn" disabled aria-disabled="true" aria-label="Mitigation (coming soon)" title="Mit — backend integration pending">
+                <ShieldPlus aria-hidden="true" />
+              </button>
+            </div>
+          {/if}
           <div
             class="upgrade-card"
             style={`--accent: ${accent};`}
             in:scale={{ duration: reducedMotion ? 0 : 160, easing: quintOut }}
             out:scale={{ duration: reducedMotion ? 0 : 120, easing: quintOut }}
           >
-            <button class="close" type="button" aria-label="Return to portrait" on:click={() => closeUpgrade('button')}>
-              ×
-            </button>
+            <!--
+              TEMPORARILY DISABLED UPGRADE MENU
+              The element chip and stat buttons are commented out per request.
+              We will re-enable these later.
             <div class="icon-row">
               <div class="element-chip" aria-label={`${elementName || 'Generic'} damage type`}>
                 <svelte:component this={ElementIcon} aria-hidden="true" />
@@ -108,6 +222,7 @@
                 </button>
               {/each}
             </div>
+            -->
           </div>
         </div>
       {/if}
@@ -181,30 +296,79 @@
   }
   .upgrade-wrapper {
     position: relative;
+    z-index: 10;
     width: 100%;
     height: 100%;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: rgba(6, 8, 12, 0.72);
+    background: rgba(6, 8, 12, 0.5);
     border-radius: 14px;
+    overflow: hidden;
+  }
+  /* Backdrop with dimmed & blurred portrait */
+  .upgrade-bg { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
+  .upgrade-bg img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    filter: blur(10px) saturate(0.9) brightness(0.6);
+    transform: scale(1.08);
+  }
+  .upgrade-bg .element-bg {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    /* Place above the blurred photo but below vignette */
+    z-index: 1;
+  }
+  .upgrade-bg .element-bg :global(svg) {
+    width: min(70vmin, 86%);
+    height: auto;
+    opacity: 0.22;
+    /* Lucide icons use stroke; color controls stroke via currentColor */
+    filter: blur(2px) drop-shadow(0 6px 22px rgba(0,0,0,0.45));
+  }
+  .upgrade-bg .vignette {
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(ellipse at 50% 35%, rgba(0,0,0,0.0), rgba(0,0,0,0.35) 60%, rgba(0,0,0,0.65) 100%),
+      linear-gradient(180deg, rgba(0,0,0,0.55), rgba(0,0,0,0.55));
+    pointer-events: none;
   }
   .upgrade-card {
     position: relative;
+    z-index: 1;
     width: 100%;
     max-width: 100%;
     max-height: 100%;
-    background: rgba(12,14,20,0.92);
-    border: 2px solid color-mix(in srgb, var(--accent, #6ab) 30%, rgba(255,255,255,0.35));
+    /* Temporarily remove panel visuals to reveal background icon */
+    background: transparent;
+    border: none;
     border-radius: 14px;
-    padding: 1rem;
-    box-shadow:
-      0 12px 30px rgba(0,0,0,0.55),
-      0 0 24px color-mix(in srgb, var(--accent, #6ab) 40%, transparent);
+    padding: 0;
+    box-shadow: none;
     display: flex;
     flex-direction: column;
-    gap: 0.85rem;
+    gap: 0;
+    /* Let background clicks pass through; re-enable on specific children */
+    pointer-events: none;
   }
+  /* Positioned stat slots for Light element */
+  .stat-slots { position: absolute; inset: 0; z-index: 3; pointer-events: none; }
+  .stat-slots .stat-icon-btn { position: absolute; pointer-events: auto; z-index: 1; }
+  .stat-links { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; color: var(--accent, #6ab); z-index: 0; }
+  .stat-links line {
+    /* Much thinner and significantly darker mix of the element color */
+    stroke: color-mix(in srgb, currentColor 30%, #000000);
+    stroke-width: 0.45;
+    stroke-linecap: round;
+    opacity: 0.85;
+    filter: none;
+  }
+  .stat-icon-btn:disabled { opacity: 0.55; cursor: not-allowed; }
   .close {
     position: absolute;
     top: 0.5rem;
@@ -221,6 +385,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    /* Re-enable pointer events for the close button */
+    pointer-events: auto;
   }
   .close:hover {
     background: rgba(255,255,255,0.15);
@@ -283,6 +449,52 @@
   .placeholder {
     color: #888;
     font-style: italic;
+  }
+  /* Top stat toolbar */
+  .stat-toolbar {
+    position: absolute;
+    top: 0.75rem;
+    left: 50%;
+    transform: translateX(-50%);
+    display: inline-flex;
+    gap: 0.5rem;
+    padding: 0;            /* remove grouped background padding */
+    border-radius: 999px;  /* harmless with transparent background */
+    background: transparent; /* remove grouped background */
+    border: none;            /* remove grouped border */
+    box-shadow: none;        /* remove grouped shadow */
+    pointer-events: auto;
+    z-index: 2;
+  }
+  .stat-icon-btn {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0,0,0,0.55);
+    color: color-mix(in srgb, var(--accent, #6ab) 90%, #ffffff);
+    border: 1px solid color-mix(in srgb, var(--accent, #6ab) 40%, rgba(255,255,255,0.35));
+    transition: transform 140ms ease, background 140ms ease, border-color 140ms ease;
+    cursor: pointer;
+    pointer-events: auto;
+  }
+  .stat-icon-btn:hover,
+  .stat-icon-btn:focus-visible {
+    transform: translateY(-1px);
+    background: color-mix(in srgb, var(--accent, #6ab) 25%, rgba(0,0,0,0.55));
+    border-color: color-mix(in srgb, var(--accent, #6ab) 55%, rgba(255,255,255,0.35));
+    outline: none;
+  }
+  .stat-icon-btn.active {
+    background: color-mix(in srgb, var(--accent, #6ab) 30%, rgba(0,0,0,0.65));
+    border-color: color-mix(in srgb, var(--accent, #6ab) 65%, rgba(255,255,255,0.5));
+  }
+  .stat-icon-btn :global(svg) {
+    width: 22px;
+    height: 22px;
+    filter: drop-shadow(0 1px 2px rgba(0,0,0,0.4));
   }
   @media (prefers-reduced-motion: reduce) {
     .upgrade-toggle,
