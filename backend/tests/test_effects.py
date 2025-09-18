@@ -48,7 +48,7 @@ async def test_damage_and_heal_events():
     def _dmg(target, attacker, amount, *_: object):
         events.append(("dmg", amount))
 
-    def _heal(target, healer, amount):
+    def _heal(target, healer, amount, *_args):
         events.append(("heal", amount))
 
     bus.subscribe("damage_taken", _dmg)
@@ -72,7 +72,7 @@ async def test_hot_ticks_before_dot():
     def _dmg(target, attacker, amount, *_: object):
         events.append(("dmg", amount))
 
-    def _heal(target, healer, amount):
+    def _heal(target, healer, amount, *_args):
         events.append(("heal", amount))
 
     bus.subscribe("damage_taken", _dmg)

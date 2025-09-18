@@ -245,6 +245,21 @@
       if (entry.name) return String(entry.name);
       if (entry.id) return String(entry.id);
     }
+    const fallbackKeys = [
+      'effect_name',
+      'action_name',
+      'actionName',
+      'source_name',
+      'sourceName',
+      'source_type',
+      'sourceType',
+    ];
+    for (const key of fallbackKeys) {
+      const value = metadata[key];
+      if (value !== undefined && value !== null && String(value).trim() !== '') {
+        return String(value);
+      }
+    }
     return '';
   }
 

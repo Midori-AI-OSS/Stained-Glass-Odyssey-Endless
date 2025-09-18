@@ -261,27 +261,28 @@ def _on_damage_taken(
     pre_damage_hp: int | None = None,
     post_damage_hp: int | None = None,
     is_critical: bool | None = None,
+    action_name: str | None = None,
     *_: Any,
 ) -> None:
     run_id = _resolve_run_id(target, attacker)
     if not run_id:
         return
-    metadata: dict[str, Any] | None = None
+    metadata: dict[str, Any] = {}
     damage_type_id = _resolve_damage_type_id(attacker)
     if damage_type_id:
-        metadata = {"damage_type_id": damage_type_id}
+        metadata["damage_type_id"] = damage_type_id
     if is_critical is not None:
-        if metadata is None:
-            metadata = {"is_critical": bool(is_critical)}
-        else:
-            metadata = {**metadata, "is_critical": bool(is_critical)}
+        metadata["is_critical"] = bool(is_critical)
+    if action_name:
+        metadata["action_name"] = str(action_name)
+    metadata_payload = metadata or None
     _record_event(
         run_id,
         event_type="damage_taken",
         source=attacker,
         target=target,
         amount=amount,
-        metadata=metadata,
+        metadata=metadata_payload,
     )
     kwargs: dict[str, Any] = {}
     if attacker is not None:
@@ -296,22 +297,29 @@ def _on_heal_received(
     target: Stats | None,
     healer: Stats | None = None,
     amount: int | None = None,
+    source_type: str | None = None,
+    source_name: str | None = None,
     *_: Any,
 ) -> None:
     run_id = _resolve_run_id(target, healer)
     if not run_id:
         return
-    metadata: dict[str, Any] | None = None
+    metadata: dict[str, Any] = {}
     damage_type_id = _resolve_damage_type_id(healer)
     if damage_type_id:
-        metadata = {"damage_type_id": damage_type_id}
+        metadata["damage_type_id"] = damage_type_id
+    if source_type:
+        metadata["source_type"] = str(source_type)
+    if source_name:
+        metadata["source_name"] = str(source_name)
+    metadata_payload = metadata or None
     _record_event(
         run_id,
         event_type="heal_received",
         source=healer,
         target=target,
         amount=amount,
-        metadata=metadata,
+        metadata=metadata_payload,
     )
     kwargs: dict[str, Any] = {}
     if healer is not None:
