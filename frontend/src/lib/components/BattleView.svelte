@@ -75,7 +75,7 @@
   let rootEl;
   let recentEventCounts = new Map();
   let lastRecentEventTokens = [];
-  let floaterDuration = 1200;
+  let floaterDuration = 1500;
   const relevantRecentEventTypes = new Set([
     'damage_taken',
     'heal_received',
@@ -87,7 +87,7 @@
   let lastRunId = runId;
 
   // Slow down floater animation a bit for readability
-  $: floaterDuration = Math.max(1400, pollDelay * 5);
+  $: floaterDuration = Math.max(1800, pollDelay * 6);
   $: if (runId !== lastRunId) {
     recentEventCounts = new Map();
     lastRecentEventTokens = [];

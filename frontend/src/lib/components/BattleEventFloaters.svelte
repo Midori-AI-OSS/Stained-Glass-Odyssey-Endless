@@ -3,11 +3,12 @@
   import { getDamageTypeVisual } from '$lib/systems/assetLoader.js';
 
   const RANDOM_OFFSETS = 120;
-  const BASE_DURATION = 900;
+  const BASE_DURATION = 1500;
+  const REMOVAL_BUFFER = 150;
 
   export let events = [];
   export let reducedMotion = false;
-  export let paceMs = 1200;
+  export let paceMs = 1500;
   // Constant offsets (px) applied in addition to random X offset per floater
   export let baseOffsetX = 0;
   export let baseOffsetY = -10;
@@ -20,6 +21,9 @@
   let counter = 0;
   const timeouts = new Map();
   const addTimers = new Set();
+  let floaterDurationMs = BASE_DURATION;
+
+  $: floaterDurationMs = Math.max(BASE_DURATION, Number(paceMs) || BASE_DURATION);
 
   const LABEL_FALLBACK_KEYS = [
     'effect_label',
@@ -180,8 +184,8 @@
     return 'damage';
   }
 
-  function scheduleRemoval(id, duration) {
-    const timeoutMs = Math.max(BASE_DURATION, Number(duration) || BASE_DURATION) + 100;
+  function scheduleRemoval(id, duration = floaterDurationMs) {
+    const timeoutMs = Math.max(floaterDurationMs, Number(duration) || floaterDurationMs) + REMOVAL_BUFFER;
     const handle = setTimeout(() => removeFloater(id), timeoutMs);
     timeouts.set(id, handle);
   }
@@ -197,7 +201,7 @@
 
   function pushEvents(list) {
     if (!Array.isArray(list) || list.length === 0) return;
-    const duration = Math.max(BASE_DURATION, Number(paceMs) || BASE_DURATION);
+    const duration = floaterDurationMs;
     const step = Math.max(0, Math.min(Number(staggerMs) || 0, 2000));
     list.forEach((raw, i) => {
       if (!raw || typeof raw !== 'object') return;
@@ -271,7 +275,7 @@
   {#each floaters as entry (entry.id)}
     <div
       class={`floater ${entry.tone} ${entry.variant}`}
-      style={`--accent: ${entry.color}; --offset: ${entry.offset}px; --x: ${entry.x}; --y: ${entry.y}; --floater-duration: ${Math.max(BASE_DURATION, Number(paceMs) || BASE_DURATION)}ms; --x-offset: ${Number(baseOffsetX) || 0}px; --y-offset: ${Number(baseOffsetY) || 0}px;`}
+      style={`--accent: ${entry.color}; --offset: ${entry.offset}px; --x: ${entry.x}; --y: ${entry.y}; --floater-duration: ${floaterDurationMs}ms; --x-offset: ${Number(baseOffsetX) || 0}px; --y-offset: ${Number(baseOffsetY) || 0}px;`}
       on:animationend={() => handleAnimationEnd(entry)}
     >
       <div class="badge">
@@ -309,7 +313,7 @@
     left: calc(var(--x, 0.5) * 100% + var(--offset, 0px) + var(--x-offset, 0px));
     top: calc(var(--y, 0.52) * 100% + var(--y-offset, 0px));
     transform: translate(-50%, 0);
-    animation: float-up var(--floater-duration, 1200ms) cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+    animation: float-up var(--floater-duration, 1800ms) cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
   }
 
   .floater.dot {
@@ -360,19 +364,19 @@
   @keyframes float-up {
     0% {
       opacity: 0;
-      transform: translate(-50%, 24px) scale(0.9);
+      transform: translate(-50%, 28px) scale(0.9);
     }
-    10% {
+    12% {
       opacity: 1;
       transform: translate(-50%, 0) scale(1);
     }
-    85% {
+    82% {
       opacity: 1;
-      transform: translate(-50%, -48px) scale(1);
+      transform: translate(-50%, -60px) scale(1);
     }
     100% {
       opacity: 0;
-      transform: translate(-50%, -56px) scale(0.98);
+      transform: translate(-50%, -72px) scale(0.98);
     }
   }
 
