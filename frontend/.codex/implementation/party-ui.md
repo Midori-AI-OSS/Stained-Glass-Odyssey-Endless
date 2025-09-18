@@ -26,12 +26,19 @@ Implementation details:
   skipped entirely when Reduced Motion is enabled.
 - `PartyPicker.svelte` propagates `reducedMotion` to the roster so the effect
   can be disabled via Settings.
-- `StatTabs.svelte` uses flexible sizing so the panel fills its side.
-- `StatTabs.svelte` now embeds an `UpgradePanel` beneath the stats list,
-  showing upgrade level and per-star item counts with a button disabled until
-  enough materials are available (20×4★ or 100×3★ or 500×2★ or 1000×1★).
-- `StatTabs.svelte` caches per-character stat editor values in a module-scoped
-  `Map` keyed by character ID and persists allocations through
-  `/players/<id>/editor` so non-player tweaks are saved across sessions and
-  restored when reopening the editor or switching characters.
+- `StatTabs.svelte` uses flexible sizing so the panel fills its side and now
+  surfaces a read-only stat summary alongside upgrade controls rather than
+  embedding the inline Character Editor.
+- The stat upgrade section pulls `/players/<id>/upgrade` to show remaining
+  points, per-stat totals, and next costs, dispatches `open-upgrade-mode` /
+  `close-upgrade-mode` events for `PartyPicker.svelte`, and issues upgrade
+  requests through the API helper that lets the server determine point costs.
+- `PartyPicker.svelte` tracks the preview pane mode in a local store. Upgrade
+  interactions toggle an inline upgrade sheet, which bubbles events back to the
+  overlay so stat spend requests can be handled alongside the existing upgrade
+  panel.
+- `PlayerPreview.svelte` renders both the portrait and the upgrade sheet. The
+  upgrade sheet reuses damage-type colors/icons, respects Reduced Motion, and
+  exposes `open-upgrade`, `close-upgrade`, and `request-upgrade` events for the
+  picker to handle.
 

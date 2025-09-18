@@ -159,8 +159,17 @@ describe('api calls', () => {
   });
 
   test('upgradeStat spends points', async () => {
-    global.fetch = createFetch({ stat_upgraded: 'atk', points_spent: 1 });
-    const result = await upgradeStat('player', 1, 'atk');
+    const fetchMock = mock(async (url, options) => {
+      expect(url).toBe('http://backend.test/players/player/upgrade-stat');
+      expect(JSON.parse(options.body)).toEqual({ stat_name: 'atk' });
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({ stat_upgraded: 'atk', points_spent: 1 })
+      };
+    });
+    global.fetch = fetchMock;
+    const result = await upgradeStat('player', 'atk');
     expect(result).toEqual({ stat_upgraded: 'atk', points_spent: 1 });
   });
 });

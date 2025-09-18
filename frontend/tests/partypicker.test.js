@@ -23,7 +23,7 @@ describe('PartyPicker component', () => {
 
   test('filters unowned characters and normalizes element names', () => {
     const content = readFileSync(join(import.meta.dir, '../src/lib/components/PartyPicker.svelte'), 'utf8');
-    expect(content).toContain('filter((p) => p.owned || p.is_player)');
+    expect(content).toContain('filter((p) => (p.owned || p.is_player) && !isNonPlayable(p))');
     expect(content).toContain('selected = oldSelected.filter((id) => roster.some((c) => c.id === id))');
     expect(content).toContain('element: resolveElement(p)');
   });
@@ -71,6 +71,16 @@ describe('PartyPicker component', () => {
     const content = readFileSync(join(import.meta.dir, '../src/lib/components/PartyPicker.svelte'), 'utf8');
     expect(content).toContain('previewId = oldPreview ?? selected[0] ?? defaultPreview;');
     expect(content).toContain('<StatTabs {roster} {previewId} {selected} {userBuffPercent}');
+  });
+
+  test('declares preview mode store and upgrade handlers', () => {
+    const content = readFileSync(join(import.meta.dir, '../src/lib/components/PartyPicker.svelte'), 'utf8');
+    expect(content).toContain("const previewMode = writable('portrait')");
+    expect(content).toContain('previewMode.set(\'portrait\')');
+    expect(content).toContain('previewMode.set(mode)');
+    expect(content).toContain('on:open-upgrade={(e) => handlePreviewMode(e.detail, \'upgrade\')}');
+    expect(content).toContain('on:close-upgrade={(e) => handlePreviewMode(e.detail, \'portrait\')}');
+    expect(content).toContain('on:request-upgrade={(e) => forwardUpgradeRequest(e.detail)}');
   });
 });
 

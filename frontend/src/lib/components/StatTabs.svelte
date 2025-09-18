@@ -1,247 +1,88 @@
-<script context="module">
-  // Cache per-character editor values across component instances
-  export const editorConfigs = new Map();
-</script>
-
 <script>
-  /*
-   * StatTabs.svelte
-   *
-   * Renders the character stats panel used by the Party Picker (right column).
-   * Features:
-   * - Tabbed view (Core, Offense, Defense).
-   * - Shows the currently previewed character's stats.
-   * - Embeds a slim Character Editor inside the panel for both player and
-   *   non‑player characters, allowing percent tweaks to HP, Attack, Defense,
-   *   Crit Rate, and Crit Damage. Player changes auto‑save via API.
-   */
-  import { getElementIcon, getElementColor } from '../systems/assetLoader.js';
   import { createEventDispatcher } from 'svelte';
-  import CharacterEditor from './CharacterEditor.svelte';
-  import { getPlayerConfig, savePlayerConfig, getCharacterConfig, saveCharacterConfig, getUpgrade, upgradeCharacter } from '../systems/api.js';
+  import { HeartPulse, Swords, Shield, Crosshair, Sparkles } from 'lucide-svelte';
+  import { getElementIcon, getElementColor } from '../systems/assetLoader.js';
+  import { getUpgrade, upgradeStat } from '../systems/api.js';
 
-  /**
-   * Renders the stats panel with category tabs and a toggle control.
-   *
-   * Props:
-   * - roster: array of character objects
-   * - previewId: ID of character to show stats for
-   * - selected: array of selected character IDs
-   *
-   * Events:
-  * - toggle: dispatched with the previewId when Add/Remove is clicked
-  */
   export let roster = [];
   export let previewId;
   export let selected = [];
   export let userBuffPercent = 0;
+  export let previewMode = 'portrait';
 
   const statTabs = ['Core', 'Offense', 'Defense'];
   let activeTab = 'Core';
   const dispatch = createEventDispatcher();
 
-  // Previewed character and inline editor overlay state
+  const UPGRADE_STATS = [
+    { key: 'max_hp', label: 'HP', icon: HeartPulse, summary: 'Increase max health.' },
+    { key: 'atk', label: 'ATK', icon: Swords, summary: 'Boost offensive power.' },
+    { key: 'defense', label: 'DEF', icon: Shield, summary: 'Reduce incoming damage.' },
+    { key: 'crit_rate', label: 'CRIT Rate', icon: Crosshair, summary: 'Raise critical odds.' },
+    { key: 'crit_damage', label: 'CRIT DMG', icon: Sparkles, summary: 'Amplify critical hits.' }
+  ];
+
   let previewChar;
-  let isPlayer = false;
-  let editorVals = null; // { pronouns, damageType, hp, attack, defense, critRate, critDamage }
-  let savedEditor = null; // snapshot of saved config to compute deltas
-  let viewStats = {};    // stats object used for display (with overrides when player)
-  let loadingEditorCfg = false;
-  let saveTimer = null;
-  let lastPreviewId = null; // track last character ID to detect switches
-
-  // Upgrade system state
-  let upgradeData = null;
-  let loadingUpgrade = false;
-  let upgradeMessage = '';
-
-  function scheduleSave() {
-    if (!editorVals || !previewChar) return;
-    clearTimeout(saveTimer);
-    saveTimer = setTimeout(async () => {
-      const payload = {
-        pronouns: editorVals.pronouns || '',
-        damage_type: editorVals.damageType || 'Light',
-        hp: Number(editorVals.hp) || 0,
-        attack: Number(editorVals.attack) || 0,
-        defense: Number(editorVals.defense) || 0,
-        crit_rate: Number(editorVals.critRate) || 0,
-        crit_damage: Number(editorVals.critDamage) || 0,
-      };
-      try {
-        await saveCharacterConfig(previewChar.id, payload);
-        if (isPlayer) {
-          await savePlayerConfig(payload);
-        }
-        editorConfigs.set(previewChar.id, { ...editorVals });
-        savedEditor = { ...editorVals };
-        if (!isPlayer) {
-          dispatch('refresh-roster');
-        }
-      } catch {}
-    }, 400);
-  }
-
-  // Load upgrade data for the current character
-  async function loadUpgradeData() {
-    if (!previewChar) {
-      upgradeData = null;
-      return;
-    }
-    
-    loadingUpgrade = true;
-    upgradeMessage = '';
-    try {
-      upgradeData = await getUpgrade(previewChar.id);
-    } catch (e) {
-      upgradeData = null;
-      upgradeMessage = 'Failed to load upgrade data';
-    } finally {
-      loadingUpgrade = false;
-    }
-  }
-
-  // Handle spending 4-star items to increase point cap (new button flow)
-  async function handleUpgrade() {
-    if (!previewChar || !canUpgrade) return;
-    
-    upgradeMessage = '';
-    try {
-      await upgradeCharacter(previewChar.id, 4, 1);
-      await loadUpgradeData(); // Refresh upgrade data
-      upgradeMessage = 'Upgrade successful! +1 point to allocation cap.';
-    } catch (e) {
-      upgradeMessage = e?.message || 'Upgrade failed';
-    }
-  }
-
-  // Resolve selected entry and whether it's the Player
-  $: previewChar = roster.find(r => r.id === previewId);
+  $: previewChar = roster.find((r) => r.id === previewId);
   $: isPlayer = !!previewChar?.is_player;
+  $: viewStats = previewChar?.stats || {};
 
-  // Load upgrade data when the previewed character changes (robust, independent of editor flow)
-  let lastUpgradeForId = null;
-  $: if (previewChar?.id && lastUpgradeForId !== previewChar.id && !loadingUpgrade) {
-    lastUpgradeForId = previewChar.id;
-    loadUpgradeData();
+  let upgradeData = null;
+  let upgradeError = '';
+  let upgradeMessage = '';
+  let upgradeMessageType = 'info';
+  let loadingUpgrade = false;
+  let loadingForId = null;
+  let pendingStats = new Set();
+  let lastLoadedId = null;
+
+  $: statTotals = upgradeData?.stat_totals || {};
+  $: nextCosts = upgradeData?.next_costs || {};
+  $: availablePoints = Number(upgradeData?.upgrade_points ?? upgradeData?.remaining_points ?? 0);
+
+  async function loadUpgradeDataFor(id) {
+    if (!id) return;
+    loadingForId = id;
+    loadingUpgrade = true;
+    upgradeError = '';
+    try {
+      const data = await getUpgrade(id);
+      if (previewChar?.id === id) {
+        upgradeData = data || {};
+      }
+    } catch (err) {
+      if (previewChar?.id === id) {
+        upgradeData = null;
+        upgradeError = err?.message || 'Failed to load upgrade data';
+      }
+    } finally {
+      if (loadingForId === id) {
+        loadingUpgrade = false;
+        loadingForId = null;
+      }
+    }
   }
 
-  // Check if character can upgrade (has 4-star items available)
-  $: canUpgrade = (() => {
-    if (!previewChar || !upgradeData?.items || loadingUpgrade) return false;
-    
-    const items = upgradeData.items;
-    if (isPlayer) {
-      // Player can use 4-star items of any element
-      return Object.entries(items)
-        .filter(([k]) => k.endsWith('_4'))
-        .some(([, v]) => (v || 0) > 0);
-    } else {
-      // Other characters need 4-star items matching their element
-      const element = previewChar.element?.toLowerCase() || '';
-      return (items[`${element}_4`] || 0) > 0;
-    }
-  })();
-
-  // Calculate max points (base 100 + upgrade count)
-  // Each 4-star item costs 3,375,000 points, convert back to upgrade count
-  $: upgradeCount = Math.floor((upgradeData?.upgrade_points || 0) / 3375000);
-  $: maxPoints = 100 + upgradeCount;
-
-  // Lazy‑load the saved Player Editor config when the player is selected.
-  $: if (previewChar) {
-    if (lastPreviewId !== previewId) {
-      editorVals = null;
-      loadingEditorCfg = false;
-      lastPreviewId = previewId;
-    }
-
-    const cached = editorConfigs.get(previewChar.id);
-    if (cached) {
-      editorVals = { ...cached };
-      savedEditor = { ...cached };
-    } else if (!loadingEditorCfg) {
-      loadingEditorCfg = true;
-      (async () => {
-        try {
-          let cfg;
-          if (isPlayer) {
-            cfg = await getPlayerConfig();
-          } else {
-            cfg = await getCharacterConfig(previewChar.id);
-          }
-          editorVals = {
-            pronouns: isPlayer ? (cfg?.pronouns || '') : (previewChar.pronouns || ''),
-            damageType: isPlayer ? (cfg?.damage_type || 'Light') : (previewChar.element || 'Light'),
-            hp: Number(cfg?.hp) || 0,
-            attack: Number(cfg?.attack) || 0,
-            defense: Number(cfg?.defense) || 0,
-            critRate: Number(cfg?.crit_rate) || 0,
-            critDamage: Number(cfg?.crit_damage) || 0,
-          };
-          savedEditor = { ...editorVals };
-          editorConfigs.set(previewChar.id, { ...editorVals });
-          if (isPlayer) {
-            try { dispatch('preview-element', { element: editorVals.damageType }); } catch {}
-          }
-        } catch {
-          editorVals = {
-            pronouns: previewChar.pronouns || '',
-            damageType: previewChar.element || 'Light',
-            hp: 0,
-            attack: 0,
-            defense: 0,
-            critRate: 0,
-            critDamage: 0,
-          };
-          savedEditor = { ...editorVals };
-          editorConfigs.set(previewChar.id, { ...editorVals });
-          if (isPlayer) {
-            try { dispatch('preview-element', { element: editorVals.damageType }); } catch {}
-          }
-        } finally {
-          loadingEditorCfg = false;
-        }
-      })();
-    }
-  } else {
-    editorVals = null;
-    lastPreviewId = null;
+  async function refreshUpgradeData() {
+    if (!previewChar?.id) return;
+    await loadUpgradeDataFor(previewChar.id);
   }
-  // Compute displayed stats - use backend-computed stats which already include all effects
-  $: {
-    const statsObj = previewChar?.stats || {};
-    const baseStats = statsObj.base_stats || {};
-    const result = { ...statsObj };
 
-    // Apply live editor preview changes on top of computed stats
-    if (editorVals) {
-      const saved = savedEditor || { hp: 0, attack: 0, defense: 0, critRate: 0, critDamage: 0 };
-      const hpDelta = (Number(editorVals.hp) || 0) - (Number(saved.hp) || 0);
-      const atkDelta = (Number(editorVals.attack) || 0) - (Number(saved.attack) || 0);
-      const defDelta = (Number(editorVals.defense) || 0) - (Number(saved.defense) || 0);
-      const critRateDelta = (Number(editorVals.critRate) || 0) - (Number(saved.critRate) || 0);
-      const critDamageDelta = (Number(editorVals.critDamage) || 0) - (Number(saved.critDamage) || 0);
+  $: if (previewChar?.id && previewChar.id !== lastLoadedId) {
+    lastLoadedId = previewChar.id;
+    upgradeData = null;
+    upgradeError = '';
+    upgradeMessage = '';
+    pendingStats = new Set();
+    loadUpgradeDataFor(previewChar.id);
+  }
 
-      // Apply deltas to the already-computed stats (not base stats)
-      const currentMax = Number(statsObj.max_hp) || Number(baseStats.max_hp) || 1000;
-      const currentAtk = Number(statsObj.atk) || Number(baseStats.atk) || 100;
-      const currentDef = Number(statsObj.defense) || Number(baseStats.defense) || 50;
-      const currentCritRate = Number(statsObj.crit_rate) || Number(baseStats.crit_rate) || 0.05;
-      const currentCritDamage = Number(statsObj.crit_damage) || Number(baseStats.crit_damage) || 2.0;
-
-      result.max_hp = Math.round(currentMax * (1 + hpDelta / 100));
-      result.atk = Math.round(currentAtk * (1 + atkDelta / 100));
-      result.defense = Math.round(currentDef * (1 + defDelta / 100));
-      result.crit_rate = currentCritRate * (1 + critRateDelta / 100);
-      result.crit_damage = currentCritDamage * (1 + critDamageDelta / 100);
-
-      // Preserve HP ratio against upgraded max
-      const hpRatioBase = Number(statsObj.hp) / Math.max(1, currentMax);
-      result.hp = Math.round(result.max_hp * Math.max(0, Math.min(1, isFinite(hpRatioBase) ? hpRatioBase : 1)));
-    }
-
-    viewStats = result;
+  $: if (!previewChar?.id) {
+    upgradeData = null;
+    upgradeError = '';
+    upgradeMessage = '';
+    lastLoadedId = null;
+    pendingStats = new Set();
   }
 
   function toggleMember() {
@@ -249,8 +90,6 @@
     dispatch('toggle', previewId);
   }
 
-  // Helper function to format stat display
-  // Supports percentage-style values by multiplying by 100 when suffix === '%'.
   function formatStat(runtimeValue, baseValue, suffix = '') {
     const isPercent = suffix === '%';
     const rv = runtimeValue == null ? null : (isPercent ? runtimeValue * 100 : runtimeValue);
@@ -266,13 +105,11 @@
     return `${Number.isInteger(rv) ? rv : rv.toFixed(1)}${suffix}`;
   }
 
-  // Helper to format multiplier-style values (e.g., 1.0 -> 1x)
   function formatMult(runtimeValue, baseValue) {
     const rv = runtimeValue == null ? null : Number(runtimeValue);
     const bv = baseValue == null ? null : Number(baseValue);
     const show = (v) => {
       if (v == null || !isFinite(v)) return '-';
-      // Prefer integer when close, else show up to 2 decimals
       const rounded = Math.round(v);
       return Math.abs(v - rounded) < 1e-6 ? String(rounded) : v.toFixed(2);
     };
@@ -285,11 +122,93 @@
     return `${show(rv)}x`;
   }
 
-  // Helper to get base stat value (legacy).
-  // In current in-run refactor, base comparisons may be unavailable;
-  // this returns undefined to suppress base deltas unless provided.
   function getBaseStat(character, statName) {
     return character.stats?.base_stats?.[statName];
+  }
+
+  function statLabel(key) {
+    return UPGRADE_STATS.find((s) => s.key === key)?.label || key;
+  }
+
+  function formatPercent(value) {
+    if (value == null) return '+0%';
+    const num = Number(value) * 100;
+    if (!Number.isFinite(num)) return '+0%';
+    let digits = 2;
+    const abs = Math.abs(num);
+    if (abs >= 100) digits = 0;
+    else if (abs >= 10) digits = 1;
+    let formatted = num.toFixed(digits);
+    formatted = formatted.replace(/\.0+$/, '').replace(/(\.\d*[1-9])0+$/, '$1');
+    const sign = num >= 0 ? '+' : '';
+    return `${sign}${formatted}%`;
+  }
+
+  function formatPoints(value, placeholder = '0') {
+    const num = Number(value);
+    if (!Number.isFinite(num)) return placeholder;
+    return Math.max(0, Math.round(num)).toLocaleString();
+  }
+
+  function costFor(statKey) {
+    const raw = nextCosts?.[statKey];
+    if (raw == null) return null;
+    const parsed = Number(raw);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+
+  function formatCost(statKey) {
+    const cost = costFor(statKey);
+    if (cost == null) return '—';
+    return `${formatPoints(cost, '—')} pts`;
+  }
+
+  function canUpgradeStat(statKey) {
+    if (!previewChar?.id) return false;
+    if (loadingUpgrade) return false;
+    if (pendingStats.has(statKey)) return false;
+    if (availablePoints <= 0) return false;
+    const cost = costFor(statKey);
+    if (cost == null) return true;
+    return availablePoints >= cost;
+  }
+
+  async function handleStatUpgrade(statKey) {
+    if (!previewChar?.id) return;
+    if (!canUpgradeStat(statKey)) return;
+
+    upgradeMessage = '';
+    upgradeMessageType = 'info';
+    const next = new Set(pendingStats);
+    next.add(statKey);
+    pendingStats = next;
+
+    const id = previewChar.id;
+    try {
+      const result = await upgradeStat(id, statKey);
+      const percent = result?.upgrade_percent;
+      const bonusText = percent != null ? formatPercent(percent) : '';
+      upgradeMessage = bonusText ? `Upgraded ${statLabel(statKey)} by ${bonusText}.` : `Upgraded ${statLabel(statKey)}.`;
+      upgradeMessageType = 'success';
+      await loadUpgradeDataFor(id);
+      dispatch('refresh-roster');
+    } catch (err) {
+      upgradeMessage = err?.message || 'Upgrade failed';
+      upgradeMessageType = 'error';
+    } finally {
+      const copy = new Set(pendingStats);
+      copy.delete(statKey);
+      pendingStats = copy;
+    }
+  }
+
+  function openUpgradeMode() {
+    if (!previewChar?.id) return;
+    dispatch('open-upgrade-mode', { id: previewChar.id });
+  }
+
+  function closeUpgradeMode() {
+    dispatch('close-upgrade-mode', { id: previewChar?.id ?? null });
   }
 </script>
 
@@ -302,14 +221,14 @@
     {/each}
   </div>
   {#if previewId}
-    {#each roster.filter(r => r.id === previewId) as sel}
+    {#each roster.filter((r) => r.id === previewId) as sel}
       <div class="stats-header">
         <span class="char-name">{sel.name}</span>
-        <span class="char-level">Lv {sel.stats.level}</span>
+        <span class="char-level">Lv {sel.stats.level ?? sel.stats.lv ?? 1}</span>
         <svelte:component
-          this={getElementIcon((isPlayer && editorVals?.damageType) ? editorVals.damageType : sel.element)}
+          this={getElementIcon(sel.element || 'Generic')}
           class="type-icon"
-          style={`color: ${getElementColor((isPlayer && editorVals?.damageType) ? editorVals.damageType : sel.element)}`}
+          style={`color: ${getElementColor(sel.element || 'Generic')}`}
           aria-hidden="true" />
       </div>
       {#if sel.about}
@@ -360,195 +279,300 @@
     </div>
   {/if}
   {#if previewId}
-    {#each roster.filter(r => r.id === previewId) as sel}
-      <!-- Inline editor and upgrade region -->
-      <div class="hello-anchor">
-        <div class="inline-divider" aria-hidden="true"></div>
-        <div class="editor-wrap">
-          <CharacterEditor
-            embedded={true}
-            showIdentity={sel.is_player}
-            maxPoints={maxPoints}
-            pronouns={editorVals?.pronouns || ''}
-            damageType={editorVals?.damageType || 'Light'}
-            hp={editorVals?.hp || 0}
-            attack={editorVals?.attack || 0}
-            defense={editorVals?.defense || 0}
-            critRate={editorVals?.critRate || 0}
-            critDamage={editorVals?.critDamage || 0}
-            on:change={(e) => { editorVals = e.detail; editorConfigs.set(previewId, { ...editorVals }); if (sel.is_player) { try { dispatch('preview-element', { element: editorVals.damageType }); } catch {} } dispatch('editor-change', { id: previewId, config: editorVals }); scheduleSave(); }}
-          />
-          
-          <!-- Upgrade button for spending 4-star items (always visible; disabled when unavailable) -->
-          <div class="upgrade-section">
-            <button class="upgrade-btn" on:click={handleUpgrade} disabled={!canUpgrade || loadingUpgrade}>
-              Upgrade
-            </button>
-            <p class="upgrade-hint">
-              {#if loadingUpgrade}
-                Checking materials...
-              {:else if !canUpgrade}
-                Need 1× 4★ {isPlayer ? 'any element' : (sel.element || '').toLowerCase()} item
-              {:else}
-                Spend 1× 4★ damage item to increase allocation cap
-              {/if}
-            </p>
+    {#each roster.filter((r) => r.id === previewId) as sel}
+      <div class="inline-divider" aria-hidden="true"></div>
+      <section class="upgrade-block">
+        <header class="upgrade-header">
+          <div class="upgrade-title">
+            <h3>Stat Upgrades</h3>
+            <span>Permanent bonuses earned from upgrade items.</span>
           </div>
-          
-          {#if upgradeMessage}
-            <div class="upgrade-message" class:success={upgradeMessage.includes('successful')}>
-              {upgradeMessage}
-            </div>
-          {/if}
+          <div class="upgrade-actions">
+            <button class="refresh-btn" on:click={refreshUpgradeData} disabled={loadingUpgrade}>
+              Refresh
+            </button>
+            {#if previewMode === 'upgrade'}
+              <button class="mode-toggle" on:click={closeUpgradeMode}>
+                Done
+              </button>
+            {:else}
+              <button class="mode-toggle" on:click={openUpgradeMode} disabled={!previewChar}>
+                Upgrade view
+              </button>
+            {/if}
+          </div>
+        </header>
+        <div class="points-summary">
+          <span class="label">Available points</span>
+          <span class="value">{formatPoints(availablePoints, '0')}</span>
         </div>
-      </div>
+        {#if upgradeError}
+          <div class="upgrade-message error">{upgradeError}</div>
+        {/if}
+        {#if loadingUpgrade && !upgradeData}
+          <div class="upgrade-loading">Loading upgrade info…</div>
+        {:else if upgradeData}
+          <div class="upgrade-list">
+            {#each UPGRADE_STATS as stat}
+              <div class="upgrade-row">
+                <div class="stat-label">
+                  <svelte:component this={stat.icon} class="stat-icon" aria-hidden="true" />
+                  <div class="stat-text">
+                    <span>{stat.label}</span>
+                    <small>{stat.summary}</small>
+                  </div>
+                </div>
+                <div class="stat-metrics">
+                  <span class="metric bonus">Bonus: {formatPercent(statTotals[stat.key])}</span>
+                  <span class="metric available">Available: {formatPoints(availablePoints, '0')}</span>
+                  <span class="metric cost">Next cost: {formatCost(stat.key)}</span>
+                </div>
+                <button
+                  class="stat-upgrade-btn"
+                  on:click={() => handleStatUpgrade(stat.key)}
+                  disabled={!canUpgradeStat(stat.key)}
+                >
+                  {pendingStats.has(stat.key) ? 'Applying…' : 'Upgrade'}
+                </button>
+              </div>
+            {/each}
+          </div>
+        {:else}
+          <div class="upgrade-loading">Upgrade data unavailable.</div>
+        {/if}
+        {#if upgradeMessage}
+          <div class="upgrade-message" class:success={upgradeMessageType === 'success'} class:error={upgradeMessageType === 'error'}>
+            {upgradeMessage}
+          </div>
+        {/if}
+      </section>
     {/each}
   {/if}
 </div>
 
 <style>
-.stats-panel {
-  flex: 1;
-  width: 100%;
-  height: 100%;
-  background: rgba(0,0,0,0.25);
-  padding: 1rem;
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  box-sizing: border-box;
-  border-radius: 8px;
-  position: relative; /* allow absolute positioning for anchored elements */
-}
-.stats-header {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  border-bottom: 1px solid rgba(255,255,255,0.2);
-  padding-bottom: 0.5rem;
-}
-.char-name { font-size: 1.2rem; color: #fff; flex: 1; }
-.char-level { font-size: 1rem; color: #ccc; }
-.type-icon { width: 24px; height: 24px; }
-.buff-note { font-size: 0.85rem; color: #ccc; margin-bottom: 0.3rem; }
-.char-about { margin: 0.25rem 0; font-style: italic; }
-.stats-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-.stats-list div { display: flex; justify-content: space-between; color: #ddd; }
-.stats-placeholder {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #888;
-  font-style: italic;
-}
-.stats-confirm {
-  display: flex;
-  justify-content: flex-end;
-  align-items: center;
-  min-height: 32px;
-  padding: 0.15rem 0;
-  margin-top: 0.25rem;
-}
-button.confirm {
-  background: rgba(0,0,0,0.5);
-  color: #fff;
-  border: 1px solid rgba(255,255,255,0.35);
-  padding: 0.45rem 0.8rem;
-  align-self: flex-end;
-  font-size: 0.95rem;
-  min-height: 28px;
-  border-radius: 0;
-  transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
-}
-button.confirm:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.5); }
-.stats-tabs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-bottom: 1rem;
-}
-.tab-btn {
-  background: rgba(255,255,255,0.1);
-  color: #ddd;
-  padding: 0.5rem 1rem;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-.tab-btn.active { background: rgba(255,255,255,0.3); color: #fff; }
+  .stats-panel {
+    flex: 1;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.25);
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    box-sizing: border-box;
+    border-radius: 8px;
+    position: relative;
+  }
+  .stats-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    border-bottom: 1px solid rgba(255,255,255,0.2);
+    padding-bottom: 0.5rem;
+  }
+  .char-name { font-size: 1.2rem; color: #fff; flex: 1; }
+  .char-level { font-size: 1rem; color: #ccc; }
+  .type-icon { width: 24px; height: 24px; }
+  .buff-note { font-size: 0.85rem; color: #ccc; margin-bottom: 0.3rem; }
+  .char-about { margin: 0.25rem 0; font-style: italic; }
+  .stats-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  .stats-list div { display: flex; justify-content: space-between; color: #ddd; }
+  .stats-placeholder {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #888;
+    font-style: italic;
+  }
+  .stats-confirm {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    min-height: 32px;
+    padding: 0.15rem 0;
+    margin-top: 0.25rem;
+  }
+  button.confirm {
+    background: rgba(0,0,0,0.5);
+    color: #fff;
+    border: 1px solid rgba(255,255,255,0.35);
+    padding: 0.45rem 0.8rem;
+    align-self: flex-end;
+    font-size: 0.95rem;
+    min-height: 28px;
+    border-radius: 0;
+    transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+  }
+  button.confirm:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.5); }
+  .stats-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+  }
+  .tab-btn {
+    background: rgba(255,255,255,0.1);
+    color: #ddd;
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .tab-btn.active { background: rgba(255,255,255,0.3); color: #fff; }
+  .inline-divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.35), transparent);
+    margin: 0 0 0.35rem 0;
+  }
 
-/* Divider and inline half-height spacer below stats within panel */
-.inline-divider {
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.35), transparent);
-  margin: 0 0 0.35rem 0;
-}
-/* Inline container flows naturally below stats */
-.hello-anchor { margin-top: 0.5rem; }
-
-/* Inline container occupying 50% of the stats panel width */
-.editor-wrap { width: 100%; }
-
-/* Upgrade section styling */
-.upgrade-section {
-  margin-top: 0.75rem;
-  padding-top: 0.5rem;
-  border-top: 1px solid rgba(255,255,255,0.2);
-  display: flex;
-  flex-direction: column;
-  gap: 0.3rem;
-}
-
-.upgrade-btn {
-  background: rgba(0,0,0,0.5);
-  color: #fff;
-  border: 1px solid rgba(255,255,255,0.35);
-  padding: 0.45rem 0.8rem;
-  border-radius: 0;
-  font-weight: 400;
-  font-size: 0.9rem;
-  cursor: pointer;
-  transition: background 0.15s ease, border-color 0.15s ease;
-  align-self: flex-start;
-}
-
-.upgrade-btn:hover:not(:disabled) {
-  background: rgba(255,255,255,0.1);
-  border-color: rgba(255,255,255,0.5);
-}
-
-.upgrade-btn:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
-  transform: none;
-}
-
-.upgrade-hint {
-  margin: 0;
-  font-size: 0.75rem;
-  color: #ccc;
-  opacity: 0.8;
-}
-
-.upgrade-message {
-  margin-top: 0.5rem;
-  padding: 0.4rem 0.6rem;
-  border-radius: 4px;
-  font-size: 0.8rem;
-  background: rgba(255, 0, 0, 0.1);
-  border: 1px solid rgba(255, 0, 0, 0.3);
-  color: #ffaaaa;
-}
-
-.upgrade-message.success {
-  background: rgba(0, 255, 0, 0.1);
-  border-color: rgba(0, 255, 0, 0.3);
-  color: #aaffaa;
-}
+  .upgrade-block {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    background: rgba(0,0,0,0.22);
+    padding: 0.75rem;
+    border-radius: 6px;
+  }
+  .upgrade-header {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 0.5rem;
+    align-items: flex-start;
+  }
+  .upgrade-title h3 {
+    margin: 0;
+    font-size: 1rem;
+    color: #fff;
+  }
+  .upgrade-title span {
+    display: block;
+    margin-top: 0.2rem;
+    font-size: 0.75rem;
+    color: #ccc;
+  }
+  .upgrade-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+  .mode-toggle,
+  .refresh-btn {
+    background: rgba(0,0,0,0.55);
+    color: #fff;
+    border: 1px solid rgba(255,255,255,0.35);
+    padding: 0.35rem 0.7rem;
+    border-radius: 4px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease;
+  }
+  .mode-toggle:hover:not(:disabled),
+  .refresh-btn:hover:not(:disabled) {
+    background: rgba(255,255,255,0.12);
+    border-color: rgba(255,255,255,0.5);
+  }
+  .mode-toggle:disabled,
+  .refresh-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+  .points-summary {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(255,255,255,0.05);
+    padding: 0.45rem 0.6rem;
+    border-radius: 4px;
+    color: #ddd;
+    font-size: 0.9rem;
+  }
+  .points-summary .label { font-weight: 600; }
+  .points-summary .value { font-family: 'IBM Plex Mono', monospace; }
+  .upgrade-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.55rem;
+  }
+  .upgrade-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr) auto;
+    gap: 0.75rem;
+    align-items: center;
+    background: rgba(0,0,0,0.2);
+    padding: 0.55rem 0.6rem;
+    border-radius: 6px;
+  }
+  .stat-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #fff;
+  }
+  .stat-icon {
+    width: 22px;
+    height: 22px;
+  }
+  .stat-text span { font-weight: 600; }
+  .stat-text small {
+    display: block;
+    font-size: 0.7rem;
+    color: #aaa;
+    margin-top: 0.1rem;
+  }
+  .stat-metrics {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    color: #ccc;
+    font-size: 0.75rem;
+  }
+  .stat-metrics .metric { display: flex; gap: 0.25rem; }
+  .stat-upgrade-btn {
+    background: rgba(0,0,0,0.5);
+    color: #fff;
+    border: 1px solid rgba(255,255,255,0.35);
+    padding: 0.4rem 0.7rem;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: background 0.15s ease, border-color 0.15s ease;
+  }
+  .stat-upgrade-btn:hover:not(:disabled) {
+    background: rgba(255,255,255,0.12);
+    border-color: rgba(255,255,255,0.5);
+  }
+  .stat-upgrade-btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+  .upgrade-loading {
+    font-size: 0.85rem;
+    color: #bbb;
+  }
+  .upgrade-message {
+    font-size: 0.8rem;
+    padding: 0.45rem 0.6rem;
+    border-radius: 4px;
+    border: 1px solid rgba(255,255,255,0.25);
+    background: rgba(255,255,255,0.06);
+    color: #eee;
+  }
+  .upgrade-message.success {
+    border-color: rgba(0, 255, 160, 0.35);
+    background: rgba(0, 255, 160, 0.12);
+    color: #c7ffe5;
+  }
+  .upgrade-message.error {
+    border-color: rgba(255, 64, 64, 0.35);
+    background: rgba(255, 64, 64, 0.12);
+    color: #ffbcbc;
+  }
 </style>
