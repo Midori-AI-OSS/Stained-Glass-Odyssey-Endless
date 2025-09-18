@@ -52,6 +52,7 @@ Passives generally shouldn't be capped unless a designer explicitly specifies a 
 - **Lady Fire and Ice** (B, Fire or Ice) – baseline fighter themed around fire and ice. Duality Engine alternates elements to build Flux and reduces foe mitigation when repeating an element.
 - **Lady Light** (B, Light) – baseline fighter themed around light.
 - **Lady of Fire** (B, Fire) – baseline fighter themed around fire.
+- **Lady Wind** (B, Wind) – 5★ aeromancer and twin of Lady Lightning whose manic, wind-lashed experiments leave her workspace in constant disarray. Tempest Guard wraps her in a permanent slipstream of dodge and mitigation, bleeds off stacks at the start of her turn, then adds one for every foe she critically strikes to fuel gust boosts and siphon a slice of incoming damage into healing.
 - **Luna** (B, Generic) – applies `luna_passive`.
 - **Mezzy** (B, random) – raises Max HP, takes less damage, and siphons stats from healthy allies each turn.
 - **PersonaIce** (A, Ice) – 5★ cryo tank who shields his sisters with Cryo Cycle, layering mitigation and thawing the stored frost into end-of-turn healing barriers for the party.

@@ -11,6 +11,7 @@ from .lady_echo import LadyEcho
 from .lady_fire_and_ice import LadyFireAndIce
 from .lady_light import LadyLight
 from .lady_of_fire import LadyOfFire
+from .lady_wind import LadyWind
 from .luna import Luna
 from .mezzy import Mezzy
 from .mimic import Mimic
@@ -31,6 +32,7 @@ __all__ = [
     "LadyFireAndIce",
     "LadyLight",
     "LadyOfFire",
+    "LadyWind",
     "Luna",
     "Mezzy",
     "Mimic",
