@@ -226,11 +226,14 @@ async def shop_room(run_id: str, data: dict[str, Any]) -> dict[str, Any]:
     node_stock = stock_state.get(str(node.room_id))
     if node_stock is not None:
         setattr(node, "stock", node_stock)
+    items_bought = int(state.get("shop_items_bought", 0))
+    setattr(node, "items_bought", items_bought)
     room = ShopRoom(node)
     party = await asyncio.to_thread(load_party, run_id)
     result = await room.resolve(party, data)
     stock_state[str(node.room_id)] = getattr(node, "stock", [])
     state["shop_stock"] = stock_state
+    state["shop_items_bought"] = int(getattr(node, "items_bought", items_bought))
     action = data.get("action", "")
     next_type = None
     if action == "leave":
