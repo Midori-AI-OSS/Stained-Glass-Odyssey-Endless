@@ -1,6 +1,7 @@
 <script>
   import { onMount } from 'svelte';
   import { createEventDispatcher } from 'svelte';
+  import { writable } from 'svelte/store';
   import { getPlayers } from '../systems/api.js';
   import { getCharacterImage, getRandomFallback, getElementColor } from '../systems/assetLoader.js';
   import MenuPanel from './MenuPanel.svelte';
@@ -22,6 +23,9 @@
   let pressure = 0;
   const dispatch = createEventDispatcher();
   let previewElementOverride = '';
+  const previewMode = writable('portrait');
+  let upgradeContext = null;
+  let lastPreviewedId = null;
   // Clear override when preview is not the player
   $: {
     const cur = roster.find(r => r.id === previewId);
@@ -34,6 +38,12 @@
     return el ? String(el) : '';
   })();
   $: starColor = currentElementName ? (() => { try { return getElementColor(currentElementName); } catch { return ''; } })() : '';
+  $: if ((previewId ?? null) !== lastPreviewedId) {
+    lastPreviewedId = previewId ?? null;
+    upgradeContext = null;
+    previewMode.set('portrait');
+    try { dispatch('previewMode', { mode: 'portrait', id: previewId ?? null }); } catch {}
+  }
 
   onMount(async () => {
     await refreshRoster();
@@ -108,6 +118,36 @@
       selected = [...selected, id];
     }
   }
+
+  function handlePreviewMode(detail, mode) {
+    const char = detail?.id ? roster.find((p) => p.id === detail.id) : roster.find((p) => p.id === previewId);
+    const nextDetail = {
+      ...(detail || {}),
+      id: char?.id ?? previewId ?? null,
+      character: char || null
+    };
+    upgradeContext = mode === 'upgrade' ? nextDetail : null;
+    previewMode.set(mode);
+    try { dispatch('previewMode', { mode, ...nextDetail }); } catch {}
+  }
+
+  function forwardUpgradeRequest(detail) {
+    const char = detail?.id ? roster.find((p) => p.id === detail.id) : roster.find((p) => p.id === previewId);
+    const payload = {
+      ...(detail || {}),
+      id: char?.id ?? previewId ?? null,
+      character: char || null
+    };
+    if (modeIsUpgrade()) upgradeContext = { ...upgradeContext, lastRequestedStat: payload.stat || null };
+    try { dispatch('requestUpgrade', payload); } catch {}
+  }
+
+  function modeIsUpgrade() {
+    let val = 'portrait';
+    const unsubscribe = previewMode.subscribe((v) => { val = v; });
+    unsubscribe?.();
+    return val === 'upgrade';
+  }
 </script>
 
 {#if compact}
@@ -116,7 +156,17 @@
   <MenuPanel {starColor} {reducedMotion}>
     <div class="full" data-testid="party-picker">
       <PartyRoster {roster} {selected} bind:previewId {reducedMotion} on:toggle={(e) => toggleMember(e.detail)} />
-      <PlayerPreview {roster} {previewId} overrideElement={previewElementOverride} />
+      <PlayerPreview
+        {roster}
+        {previewId}
+        overrideElement={previewElementOverride}
+        mode={$previewMode}
+        upgradeContext={upgradeContext}
+        {reducedMotion}
+        on:open-upgrade={(e) => handlePreviewMode(e.detail, 'upgrade')}
+        on:close-upgrade={(e) => handlePreviewMode(e.detail, 'portrait')}
+        on:request-upgrade={(e) => forwardUpgradeRequest(e.detail)}
+      />
       <div class="right-col">
         <StatTabs {roster} {previewId} {selected} {userBuffPercent}
           on:toggle={(e) => toggleMember(e.detail)}

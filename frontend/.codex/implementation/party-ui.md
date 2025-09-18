@@ -34,4 +34,12 @@ Implementation details:
   `Map` keyed by character ID and persists allocations through
   `/players/<id>/editor` so non-player tweaks are saved across sessions and
   restored when reopening the editor or switching characters.
+- `PartyPicker.svelte` tracks the preview pane mode in a local store. Upgrade
+  interactions toggle an inline upgrade sheet, which bubbles events back to the
+  overlay so stat spend requests can be handled alongside the existing upgrade
+  panel.
+- `PlayerPreview.svelte` renders both the portrait and the upgrade sheet. The
+  upgrade sheet reuses damage-type colors/icons, respects Reduced Motion, and
+  exposes `open-upgrade`, `close-upgrade`, and `request-upgrade` events for the
+  picker to handle.
 
