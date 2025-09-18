@@ -14,6 +14,7 @@ from .lady_of_fire import LadyOfFire
 from .luna import Luna
 from .mezzy import Mezzy
 from .mimic import Mimic
+from .persona_ice import PersonaIce
 from .player import Player
 
 __all__ = [
@@ -33,5 +34,6 @@ __all__ = [
     "Luna",
     "Mezzy",
     "Mimic",
+    "PersonaIce",
     "Player",
 ]
