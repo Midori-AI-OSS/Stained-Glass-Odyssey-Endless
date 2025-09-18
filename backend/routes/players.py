@@ -460,6 +460,62 @@ UPGRADEABLE_STATS = ["max_hp", "atk", "defense", "crit_rate", "crit_damage"]
 PLAYER_POINTS_VALUES = {1: 1, 2: 150, 3: 22500, 4: 3375000}
 
 
+def _estimate_cost_from_upgrade_percent(upgrade_percent: object) -> int | None:
+    """Translate a stored percent boost back into spent upgrade points."""
+
+    try:
+        percent = float(upgrade_percent)
+    except (TypeError, ValueError):
+        return None
+
+    if percent <= 0:
+        return None
+
+    points = int(round(percent * 1000))
+    return points if points > 0 else None
+
+
+def _backfill_upgrade_costs(conn) -> None:
+    """Populate missing ``cost_spent`` values for legacy upgrade rows."""
+
+    cur = conn.execute(
+        """
+        SELECT id, player_id, stat_name, upgrade_percent, cost_spent
+        FROM player_stat_upgrades
+        ORDER BY player_id ASC, stat_name ASC, created_at ASC, id ASC
+        """
+    )
+
+    updates: list[tuple[int, int]] = []
+    stat_counts: dict[tuple[str, str], int] = {}
+
+    for row in cur.fetchall():
+        upgrade_id, player_id, stat_name, upgrade_percent, cost_spent = row
+
+        if not player_id or not stat_name:
+            continue
+
+        key = (str(player_id), str(stat_name))
+        upgrade_count = stat_counts.get(key, 0)
+
+        if cost_spent and cost_spent > 0:
+            stat_counts[key] = upgrade_count + 1
+            continue
+
+        estimated_points = _estimate_cost_from_upgrade_percent(upgrade_percent)
+        if estimated_points is None:
+            estimated_points = upgrade_count + 1
+
+        stat_counts[key] = upgrade_count + 1
+        updates.append((int(estimated_points), upgrade_id))
+
+    if updates:
+        conn.executemany(
+            "UPDATE player_stat_upgrades SET cost_spent = ? WHERE id = ?",
+            updates,
+        )
+
+
 def _create_upgrade_tables():
     """Create the new upgrade system database tables."""
     with get_save_manager().connection() as conn:
@@ -483,10 +539,21 @@ def _create_upgrade_tables():
 
         cur = conn.execute("PRAGMA table_info(player_stat_upgrades)")
         columns = {row[1] for row in cur.fetchall()}
+        needs_backfill = False
         if "cost_spent" not in columns:
             conn.execute(
                 "ALTER TABLE player_stat_upgrades ADD COLUMN cost_spent INTEGER NOT NULL DEFAULT 0"
             )
+            needs_backfill = True
+
+        if not needs_backfill:
+            cur = conn.execute(
+                "SELECT 1 FROM player_stat_upgrades WHERE cost_spent <= 0 LIMIT 1"
+            )
+            needs_backfill = cur.fetchone() is not None
+
+        if needs_backfill:
+            _backfill_upgrade_costs(conn)
 
         conn.commit()
 
