@@ -709,26 +709,37 @@ class EffectManager:
         await pace_sleep(YIELD_MULTIPLIER)
 
         # Process passive abilities if available
-        await self._tick_passives(others)
+        await self._tick_passives(others, order=mod_order + 1)
 
-    async def _tick_passives(self, others: Optional["EffectManager"] = None) -> None:
+        await pace_sleep(YIELD_MULTIPLIER)
+
+    async def _tick_passives(
+        self,
+        others: Optional["EffectManager"] = None,
+        *,
+        order: int = 0,
+    ) -> None:
         """
         Enhanced passive processing with parallelization when beneficial.
         Integrates passive ability processing into the effect manager for better performance.
         """
-        if not hasattr(self.stats, 'passives') or not self.stats.passives:
-            return
-
         from collections import Counter
 
         from autofighter.passives import discover
+        from autofighter.stats import BUS
+
+        if not hasattr(self.stats, 'passives'):
+            passives: list[str] = []
+        else:
+            passives = self.stats.passives or []
 
         # Get passive counts and registry
-        counts = Counter(self.stats.passives)
+        counts = Counter(passives)
         registry = discover()
 
         # Filter to only turn-based passives that need tick processing
-        tick_passives = []
+        tick_passives: list[tuple[str, type[object]]] = []
+        effect_ids: list[str] = []
         for pid, count in counts.items():
             cls = registry.get(pid)
             if cls is None:
@@ -738,8 +749,37 @@ class EffectManager:
                 stacks = min(count, getattr(cls, 'max_stacks', count))
                 for _ in range(stacks):
                     tick_passives.append((pid, cls))
+                    effect_ids.append(pid)
+
+        phase_payload = {
+            "phase": "passives",
+            "effect_count": len(tick_passives),
+            "expired_count": 0,
+            "has_effects": len(tick_passives) > 0,
+            "order": order,
+            "target_id": getattr(self.stats, "id", None),
+            "effect_ids": effect_ids,
+        }
+
+        start_payload = phase_payload.copy()
+        start_payload["effect_ids"] = list(effect_ids)
+
+        await BUS.emit_async(
+            "status_phase_start",
+            "passives",
+            self.stats,
+            start_payload,
+        )
 
         if not tick_passives:
+            end_payload = phase_payload.copy()
+            end_payload["effect_ids"] = list(effect_ids)
+            await BUS.emit_async(
+                "status_phase_end",
+                "passives",
+                self.stats,
+                end_payload,
+            )
             return
 
         # Batch logging for performance when many passives need processing
@@ -811,6 +851,16 @@ class EffectManager:
                 # Early termination: if character dies, stop processing
                 if self.stats.hp <= 0:
                     break
+        end_payload = phase_payload.copy()
+        end_payload["effect_ids"] = list(effect_ids)
+
+        await BUS.emit_async(
+            "status_phase_end",
+            "passives",
+            self.stats,
+            end_payload,
+        )
+
         if self.stats.hp <= 0 and others is not None:
             for eff in list(self.dots):
                 on_death = getattr(eff, "on_death", None)
