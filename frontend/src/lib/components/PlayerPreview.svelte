@@ -231,14 +231,7 @@
             alt={selected.name}
             style={`--outline: ${getElementColor(overrideElement || selected.element)};`}
           />
-          <button
-            type="button"
-            class="upgrade-toggle"
-            on:click={enterUpgrade}
-            disabled={!selected}
-          >
-            Upgrade stats
-          </button>
+          <!-- Upgrade button moved next to Add/Remove in StatTabs -->
         </div>
       {:else if mode === 'upgrade'}
         <div
@@ -378,8 +371,6 @@
                 <p class="upgrade-status error">{upgradeContext.error}</p>
               {:else if upgradeContext?.message}
                 <p class="upgrade-status success">{upgradeContext.message}</p>
-              {:else}
-                <p class="upgrade-status hint">Select a stat node to spend upgrade points.</p>
               {/if}
             </div>
             <!--

@@ -160,15 +160,14 @@
     }
   }
 
-  // Get character image path
+  // Resolve character portraits from assets (supports flat and nested folders)
+  // Example paths supported:
+  // - $lib/assets/characters/kboshi.png
+  // - $lib/assets/characters/kboshi/kboshi.png
+  import { getCharacterImage as resolveCharacterPortrait } from '$lib/systems/assetLoader.js';
   function getCharacterImage(characterId) {
-    try {
-      // Try to load the character image
-      return `/src/lib/assets/characters/${characterId}.png`;
-    } catch {
-      // Fallback to folder-based approach for characters with multiple images
-      return `/src/lib/assets/characters/${characterId}/${characterId}.png`;
-    }
+    // Delegate to shared loader which supports nested folders and fallbacks
+    return resolveCharacterPortrait(String(characterId || '').toLowerCase());
   }
 
   // Handle image loading errors

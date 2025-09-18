@@ -6,6 +6,7 @@
   export let previewId;
   export let selected = [];
   export let userBuffPercent = 0;
+  export let upgradeMode = false;
 
   const statTabs = ['Core', 'Offense', 'Defense'];
   let activeTab = 'Core';
@@ -19,6 +20,16 @@
   function toggleMember() {
     if (!previewId) return;
     dispatch('toggle', previewId);
+  }
+
+  function openUpgrade() {
+    if (!previewId) return;
+    dispatch('open-upgrade', { id: previewId });
+  }
+
+  function closeUpgrade() {
+    if (!previewId) return;
+    dispatch('close-upgrade', { id: previewId });
   }
 
   function formatStat(runtimeValue, baseValue, suffix = '') {
@@ -116,6 +127,11 @@
   {/if}
   {#if previewId}
     <div class="stats-confirm">
+      {#if upgradeMode}
+        <button class="secondary" on:click={closeUpgrade} title="Close upgrade stats">Close stats</button>
+      {:else}
+        <button class="secondary" on:click={openUpgrade} title="Upgrade stats for this character">Upgrade stats</button>
+      {/if}
       {#if selected.includes(previewId) && isPlayer}
         <button class="confirm" disabled title="The player must stay in the party">Player is required</button>
       {:else}
@@ -174,7 +190,19 @@
     min-height: 32px;
     padding: 0.15rem 0;
     margin-top: 0.25rem;
+    gap: 0.5rem;
   }
+  button.secondary {
+    background: rgba(0,0,0,0.5);
+    color: #fff;
+    border: 1px solid rgba(255,255,255,0.35);
+    padding: 0.45rem 0.8rem;
+    font-size: 0.9rem;
+    min-height: 28px;
+    border-radius: 0;
+    transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+  }
+  button.secondary:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.5); }
   button.confirm {
     background: rgba(0,0,0,0.5);
     color: #fff;

@@ -251,7 +251,10 @@
       />
       <div class="right-col">
         <StatTabs {roster} {previewId} {selected} {userBuffPercent}
+          upgradeMode={$previewMode === 'upgrade'}
           on:toggle={(e) => toggleMember(e.detail)}
+          on:open-upgrade={(e) => handlePreviewMode(e.detail, 'upgrade')}
+          on:close-upgrade={(e) => handlePreviewMode(e.detail, 'portrait')}
         />
         <div class="party-actions-inline">
           {#if actionLabel === 'Start Run'}

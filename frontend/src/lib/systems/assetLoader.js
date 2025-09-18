@@ -236,7 +236,7 @@ export function getCharacterImage(characterId, _isPlayer = false) {
   const cached = characterImageCache.get(characterId);
   if (cached) return cached;
 
-  // Lady Echo and Player: choose a random image once per page load, then cache
+  // Player/Lady Echo: random-once-per-page-load (session-cached)
   if (_isPlayer === true || characterId === 'lady_echo') {
     const list = characterAssets[key];
     if (Array.isArray(list) && list.length > 0) {
@@ -255,10 +255,17 @@ export function getCharacterImage(characterId, _isPlayer = false) {
     return defaultFallback;
   }
 
+  // Any character with a folder/gallery: random-once-per-page-load (session-cached)
   if (characterAssets[key] && characterAssets[key].length > 0) {
     const images = characterAssets[key];
-    const idx = stringHashIndex(characterId, images.length);
-    const chosen = images[idx];
+    if (images.length > 1) {
+      const rnd = Math.floor(Math.random() * images.length);
+      const chosen = images[rnd];
+      characterImageCache.set(characterId, chosen);
+      return chosen;
+    }
+    // Single image in folder — just use it
+    const chosen = images[0];
     characterImageCache.set(characterId, chosen);
     return chosen;
   }
