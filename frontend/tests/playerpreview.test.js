@@ -21,4 +21,11 @@ describe('PlayerPreview component', () => {
     expect(content).toContain('Upgrade stats');
     expect(content).toContain('class="stat-button"');
   });
+
+  test('renders upgrade feedback status', () => {
+    const content = readFileSync(file, 'utf8');
+    expect(content).toContain('class="upgrade-feedback"');
+    expect(content).toContain('aria-busy={pendingStat ? \'true\' : undefined}');
+    expect(content).toContain('pendingStat || upgradeContext?.stat');
+  });
 });
