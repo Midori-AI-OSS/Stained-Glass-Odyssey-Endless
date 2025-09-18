@@ -37,9 +37,8 @@
   $: accent = getElementColor(elementName || 'Generic');
   $: ElementIcon = getElementIcon(elementName || 'Generic');
   $: highlightedStat = upgradeContext?.stat || upgradeContext?.lastRequestedStat || null;
-  $: isLight = String(elementName || '').toLowerCase() === 'light';
-  // Light "sun" layout: percentage anchors (x,y) in [0..100]
-  const lightLayout = {
+  // Sun layout: baseline positions (percentages) we will copy to each element
+  const sunLayout = {
     hp:         { x: 50, y: 52 },
     atk:        { x: 37, y: 36 },
     def:        { x: 63, y: 36 },
@@ -48,6 +47,134 @@
     vit:        { x: 20, y: 42 },
     mit:        { x: 80, y: 44 },
   };
+  // Per-damage-type layout map — start with copies of sunLayout for each
+  function clone(o){ return JSON.parse(JSON.stringify(o)); }
+  const baseLayouts = {
+    light: clone(sunLayout),
+    fire: clone(sunLayout),
+    ice: clone(sunLayout),
+    lightning: clone(sunLayout),
+    dark: clone(sunLayout),
+    wind: clone(sunLayout),
+    generic: clone(sunLayout)
+  };
+  $: elementKey = String(elementName || 'generic').toLowerCase();
+  function deg2rad(d){ return (Math.PI/180) * d; }
+  function makeOrbLayout(base, radius = 18, order = ['atk','def','crit_rate','crit_damage','vit','mit'], startDeg = -90) {
+    const layout = clone(base);
+    const cx = base.hp.x;
+    const cy = base.hp.y;
+    for (let i = 0; i < order.length; i++) {
+      const ang = deg2rad(startDeg + i * (360 / order.length));
+      layout[order[i]] = {
+        x: cx + radius * Math.cos(ang),
+        y: cy + radius * Math.sin(ang)
+      };
+    }
+    return layout;
+  }
+  function makeLightningLayout(base) {
+    const layout = clone(base);
+    // Top-down zig-zag bolt path
+    layout.hp           = { x: 50, y: 12 };
+    layout.atk          = { x: 34, y: 26 };
+    layout.def          = { x: 64, y: 38 };
+    layout.crit_rate    = { x: 30, y: 52 };
+    layout.crit_damage  = { x: 60, y: 64 };
+    layout.vit          = { x: 28, y: 78 };
+    layout.mit          = { x: 58, y: 88 };
+    return layout;
+  }
+  function makeFireLayout(base) {
+    const layout = clone(base);
+    // Teardrop flame silhouette: HP near base, tip at top
+    layout.hp           = { x: 50, y: 78 };
+    layout.atk          = { x: 42, y: 66 };
+    layout.crit_rate    = { x: 36, y: 52 };
+    layout.crit_damage  = { x: 42, y: 38 };
+    layout.mit          = { x: 50, y: 24 }; // flame tip
+    layout.def          = { x: 58, y: 40 };
+    layout.vit          = { x: 64, y: 56 };
+    return layout;
+  }
+  function makeDarkLayout(base) {
+    const layout = clone(base);
+    // Crescent moon: points along a left-side arc, gap on the upper-right
+    const cx = 48, cy = 52, r = 22;
+    // Rotate anticlockwise by ~20 degrees (screen coordinates: decrease deg)
+    const rot = -20;
+    const pos = (deg) => ({ x: cx + r * Math.cos(deg2rad(deg + rot)), y: cy + r * Math.sin(deg2rad(deg + rot)) });
+    layout.hp          = { x: 44, y: 52 };         // slightly left of center
+    layout.def         = pos(110);  // upper-left
+    layout.vit         = pos(145);
+    layout.crit_damage = pos(180);
+    layout.mit         = pos(215);
+    layout.crit_rate   = pos(240);
+    layout.atk         = pos(265);  // lower-left
+    return layout;
+  }
+  function makeIceLayout(base) {
+    const layout = clone(base);
+    // Six-armed snowflake around HP center
+    const cx = 50, cy = 52, r = 22;
+    const order = ['atk','crit_rate','def','mit','crit_damage','vit'];
+    for (let i = 0; i < order.length; i++) {
+      const ang = deg2rad(-90 + i * 60); // start at top, go clockwise
+      layout[order[i]] = { x: cx + r * Math.cos(ang), y: cy + r * Math.sin(ang) };
+    }
+    layout.hp = { x: cx, y: cy };
+    return layout;
+  }
+  const ICE_KEYS = ['atk','crit_rate','def','mit','crit_damage','vit'];
+  function computeIceSpikes(layout) {
+    const spikes = {};
+    const cx = layout.hp.x, cy = layout.hp.y;
+    for (let i = 0; i < ICE_KEYS.length; i++) {
+      const k = ICE_KEYS[i];
+      const n = layout[k];
+      if (!n) continue;
+      // Place short spikes in a small ring around the icon, not just outward
+      const count = 4 + ((i * 2) % 5); // 4..8
+      const length = 6; // shorter, closer to the icon
+      const offset = deg2rad((i * 37) % 360); // deterministic rotation per node
+      const arr = [];
+      for (let j = 0; j < count; j++) {
+        const ang = offset + (j * (2 * Math.PI / count)); // full circle around the node
+        arr.push({ x: n.x + length * Math.cos(ang), y: n.y + length * Math.sin(ang) });
+      }
+      spikes[k] = arr;
+    }
+    return spikes;
+  }
+  $: currentLayout =
+    elementKey === 'light'
+      ? makeOrbLayout(baseLayouts.light)
+      : elementKey === 'lightning'
+        ? makeLightningLayout(baseLayouts.lightning)
+        : elementKey === 'fire'
+          ? makeFireLayout(baseLayouts.fire)
+          : elementKey === 'dark'
+            ? makeDarkLayout(baseLayouts.dark)
+            : elementKey === 'ice'
+              ? makeIceLayout(baseLayouts.ice)
+            : (baseLayouts[elementKey] || baseLayouts.generic);
+  $: iceSpikes = elementKey === 'ice' ? computeIceSpikes(currentLayout) : null;
+  const PERIPH_KEYS = ['atk','def','crit_rate','crit_damage','vit','mit'];
+  function computeRingEdges(layout, keys) {
+    const cx = layout.hp.x, cy = layout.hp.y;
+    const pts = keys
+      .filter((k) => layout[k])
+      .map((k) => ({ k, a: Math.atan2(layout[k].y - cy, layout[k].x - cx) }));
+    pts.sort((p, q) => p.a - q.a);
+    const edges = [];
+    for (let i = 0; i < pts.length; i++) {
+      const a = pts[i].k;
+      const b = pts[(i + 1) % pts.length].k; // close the ring
+      edges.push([a, b]);
+    }
+    return edges;
+  }
+  $: ringEdges = elementKey === 'light' ? computeRingEdges(currentLayout, PERIPH_KEYS) : [];
 
   function enterUpgrade() {
     if (!selected) return;
@@ -112,87 +239,99 @@
               <div class="vignette" />
             </div>
           {/if}
-          {#if isLight}
-            <!-- Light damage type layout: sun diagram with connectors -->
-            <div
-              class="stat-slots light"
-              aria-label="Stat upgrade options (Light)"
-              on:click|stopPropagation
-              style={`--accent:${accent}; color:${accent}`}
-            >
-              <svg class="stat-links" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true" style={`color:${accent}`}>
-                <!-- HP center to ATK/DEF -->
-                <line x1={`${lightLayout.hp.x}`} y1={`${lightLayout.hp.y}`} x2={`${lightLayout.atk.x}`} y2={`${lightLayout.atk.y}`} stroke="currentColor" />
-                <line x1={`${lightLayout.hp.x}`} y1={`${lightLayout.hp.y}`} x2={`${lightLayout.def.x}`} y2={`${lightLayout.def.y}`} stroke="currentColor" />
-                <!-- ATK to children: crit rate, crit dmg, vit -->
-                <line x1={`${lightLayout.atk.x}`} y1={`${lightLayout.atk.y}`} x2={`${lightLayout.crit_rate.x}`} y2={`${lightLayout.crit_rate.y}`} stroke="currentColor" />
-                <line x1={`${lightLayout.atk.x}`} y1={`${lightLayout.atk.y}`} x2={`${lightLayout.crit_damage.x}`} y2={`${lightLayout.crit_damage.y}`} stroke="currentColor" />
-                <line x1={`${lightLayout.atk.x}`} y1={`${lightLayout.atk.y}`} x2={`${lightLayout.vit.x}`} y2={`${lightLayout.vit.y}`} stroke="currentColor" />
-                <!-- DEF to MIT -->
-                <line x1={`${lightLayout.def.x}`} y1={`${lightLayout.def.y}`} x2={`${lightLayout.mit.x}`} y2={`${lightLayout.mit.y}`} stroke="currentColor" />
-              </svg>
+          <!-- Sun layout: used for all damage types for now -->
+          <div
+            class="stat-slots"
+            aria-label="Stat upgrade options"
+            on:click|stopPropagation
+            style={`--accent:${accent}; color:${accent}`}
+          >
+               <svg class="stat-links" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true" style={`color:${accent}`}>
+                {#if elementKey === 'light'}
+                  <!-- Hub links: connect HP to every stat -->
+                  {#each PERIPH_KEYS as k}
+                    <line x1={`${currentLayout.hp.x}`} y1={`${currentLayout.hp.y}`} x2={`${currentLayout[k].x}`} y2={`${currentLayout[k].y}`} stroke="currentColor" />
+                  {/each}
+                  <!-- Ring links: connect stats around in a circle -->
+                  {#each ringEdges as e}
+                    <line x1={`${currentLayout[e[0]].x}`} y1={`${currentLayout[e[0]].y}`} x2={`${currentLayout[e[1]].x}`} y2={`${currentLayout[e[1]].y}`} stroke="currentColor" />
+                  {/each}
+                {:else if elementKey === 'lightning'}
+                  <!-- Lightning: sequential zig-zag from HP through all stats -->
+                  {#each ['hp','atk','def','crit_rate','crit_damage','vit','mit'] as key, i}
+                    {#if i < 6}
+                      <line x1={`${currentLayout[key].x}`} y1={`${currentLayout[key].y}`} x2={`${currentLayout[['atk','def','crit_rate','crit_damage','vit','mit'][i]].x}`} y2={`${currentLayout[['atk','def','crit_rate','crit_damage','vit','mit'][i]].y}`} stroke="currentColor" />
+                    {/if}
+                  {/each}
+                {:else if elementKey === 'ice'}
+                  <!-- Ice: spokes from HP; each outer node emits multiple short spikes -->
+                  {#each ICE_KEYS as k}
+                    <line x1={`${currentLayout.hp.x}`} y1={`${currentLayout.hp.y}`} x2={`${currentLayout[k].x}`} y2={`${currentLayout[k].y}`} stroke="currentColor" />
+                    {#each iceSpikes?.[k] || [] as p}
+                      <line x1={`${currentLayout[k].x}`} y1={`${currentLayout[k].y}`} x2={`${p.x}`} y2={`${p.y}`} stroke="currentColor" />
+                    {/each}
+                  {/each}
+                {:else if elementKey === 'fire'}
+                  <!-- Fire: flame outline from base (HP) up to tip and back around -->
+                  {#each ['hp','atk','crit_rate','crit_damage','mit','def','vit','hp'] as key, i}
+                    {#if i < 7}
+                      <line x1={`${currentLayout[key].x}`} y1={`${currentLayout[key].y}`} x2={`${currentLayout[['atk','crit_rate','crit_damage','mit','def','vit','hp'][i]].x}`} y2={`${currentLayout[['atk','crit_rate','crit_damage','mit','def','vit','hp'][i]].y}`} stroke="currentColor" />
+                    {/if}
+                  {/each}
+                {:else if elementKey === 'dark'}
+                  <!-- Dark: crescent moon. Hub links from HP to ATK and DEF; arc around left side -->
+                  <line x1={`${currentLayout.hp.x}`} y1={`${currentLayout.hp.y}`} x2={`${currentLayout.atk.x}`} y2={`${currentLayout.atk.y}`} stroke="currentColor" />
+                  <line x1={`${currentLayout.hp.x}`} y1={`${currentLayout.hp.y}`} x2={`${currentLayout.def.x}`} y2={`${currentLayout.def.y}`} stroke="currentColor" />
+                  {#each ['def','vit','crit_damage','mit','crit_rate','atk'] as a, i}
+                    {#if i < 5}
+                      <line x1={`${currentLayout[a].x}`} y1={`${currentLayout[a].y}`} x2={`${currentLayout[['vit','crit_damage','mit','crit_rate','atk','def'][i]].x}`} y2={`${currentLayout[['vit','crit_damage','mit','crit_rate','atk','def'][i]].y}`} stroke="currentColor" />
+                    {/if}
+                  {/each}
+                {:else}
+                  <!-- Default hub/branch pattern (previous behavior) -->
+                  <line x1={`${currentLayout.hp.x}`} y1={`${currentLayout.hp.y}`} x2={`${currentLayout.atk.x}`} y2={`${currentLayout.atk.y}`} stroke="currentColor" />
+                  <line x1={`${currentLayout.hp.x}`} y1={`${currentLayout.hp.y}`} x2={`${currentLayout.def.x}`} y2={`${currentLayout.def.y}`} stroke="currentColor" />
+                  <line x1={`${currentLayout.atk.x}`} y1={`${currentLayout.atk.y}`} x2={`${currentLayout.crit_rate.x}`} y2={`${currentLayout.crit_rate.y}`} stroke="currentColor" />
+                  <line x1={`${currentLayout.atk.x}`} y1={`${currentLayout.atk.y}`} x2={`${currentLayout.crit_damage.x}`} y2={`${currentLayout.crit_damage.y}`} stroke="currentColor" />
+                  <line x1={`${currentLayout.atk.x}`} y1={`${currentLayout.atk.y}`} x2={`${currentLayout.vit.x}`} y2={`${currentLayout.vit.y}`} stroke="currentColor" />
+                  <line x1={`${currentLayout.def.x}`} y1={`${currentLayout.def.y}`} x2={`${currentLayout.mit.x}`} y2={`${currentLayout.mit.y}`} stroke="currentColor" />
+                {/if}
+               </svg>
 
               <!-- Buttons; icons inherit accent via color -->
-              <button type="button" class="stat-icon-btn" style={`left:${lightLayout.hp.x}%; top:${lightLayout.hp.y}%; transform:translate(-50%,-50%); color:${accent}`}
+              <button type="button" class="stat-icon-btn" style={`left:${currentLayout.hp.x}%; top:${currentLayout.hp.y}%; transform:translate(-50%,-50%); color:${accent}`}
                 class:active={highlightedStat==='max_hp'} on:click={() => requestUpgrade('max_hp')} aria-label="HP" title="HP — Bolster survivability.">
                 <Heart aria-hidden="true" />
               </button>
-              <button type="button" class="stat-icon-btn" style={`left:${lightLayout.atk.x}%; top:${lightLayout.atk.y}%; transform:translate(-50%,-50%); color:${accent}`}
+              <button type="button" class="stat-icon-btn" style={`left:${currentLayout.atk.x}%; top:${currentLayout.atk.y}%; transform:translate(-50%,-50%); color:${accent}`}
                 class:active={highlightedStat==='atk'} on:click={() => requestUpgrade('atk')} aria-label="Attack" title="ATK — Improve offensive power.">
                 <Sword aria-hidden="true" />
               </button>
-              <button type="button" class="stat-icon-btn" style={`left:${lightLayout.def.x}%; top:${lightLayout.def.y}%; transform:translate(-50%,-50%); color:${accent}`}
+              <button type="button" class="stat-icon-btn" style={`left:${currentLayout.def.x}%; top:${currentLayout.def.y}%; transform:translate(-50%,-50%); color:${accent}`}
                 class:active={highlightedStat==='defense'} on:click={() => requestUpgrade('defense')} aria-label="Defense" title="DEF — Stiffen defenses.">
                 <Shield aria-hidden="true" />
               </button>
-              <button type="button" class="stat-icon-btn" style={`left:${lightLayout.crit_rate.x}%; top:${lightLayout.crit_rate.y}%; transform:translate(-50%,-50%); color:${accent}`}
+              <button type="button" class="stat-icon-btn" style={`left:${currentLayout.crit_rate.x}%; top:${currentLayout.crit_rate.y}%; transform:translate(-50%,-50%); color:${accent}`}
                 class:active={highlightedStat==='crit_rate'} on:click={() => requestUpgrade('crit_rate')} aria-label="Crit Rate" title="Crit Rate — Raise critical odds.">
                 <Crosshair aria-hidden="true" />
               </button>
-              <button type="button" class="stat-icon-btn" style={`left:${lightLayout.crit_damage.x}%; top:${lightLayout.crit_damage.y}%; transform:translate(-50%,-50%); color:${accent}`}
+              <button type="button" class="stat-icon-btn" style={`left:${currentLayout.crit_damage.x}%; top:${currentLayout.crit_damage.y}%; transform:translate(-50%,-50%); color:${accent}`}
                 class:active={highlightedStat==='crit_damage'} on:click={() => requestUpgrade('crit_damage')} aria-label="Crit Damage" title="Crit DMG — Amplify crit damage.">
                 <Zap aria-hidden="true" />
               </button>
               <!-- VIT (new) -->
               <!-- TODO: Backend: add 'vit' stat to upgrade API and totals -->
-              <button type="button" class="stat-icon-btn" style={`left:${lightLayout.vit.x}%; top:${lightLayout.vit.y}%; transform:translate(-50%,-50%); color:${accent}`}
+              <button type="button" class="stat-icon-btn" style={`left:${currentLayout.vit.x}%; top:${currentLayout.vit.y}%; transform:translate(-50%,-50%); color:${accent}`}
                 disabled aria-disabled="true" aria-label="Vitality (coming soon)" title="Vit — backend integration pending">
                 <HeartPulse aria-hidden="true" />
               </button>
               <!-- MIT (new) -->
               <!-- TODO: Backend: add 'mit' stat to upgrade API and totals -->
-              <button type="button" class="stat-icon-btn" style={`left:${lightLayout.mit.x}%; top:${lightLayout.mit.y}%; transform:translate(-50%,-50%); color:${accent}`}
+              <button type="button" class="stat-icon-btn" style={`left:${currentLayout.mit.x}%; top:${currentLayout.mit.y}%; transform:translate(-50%,-50%); color:${accent}`}
                 disabled aria-disabled="true" aria-label="Mitigation (coming soon)" title="Mit — backend integration pending">
                 <ShieldPlus aria-hidden="true" />
               </button>
-            </div>
-          {:else}
-            <!-- Default layout: top toolbar row -->
-            <div class="stat-toolbar" aria-label="Stat upgrade options" on:click|stopPropagation>
-              {#each UPGRADE_STATS as stat}
-                {#if STAT_ICONS[stat.key]}
-                  <button
-                    type="button"
-                    class="stat-icon-btn"
-                    class:active={highlightedStat === stat.key}
-                    on:click={() => requestUpgrade(stat.key)}
-                    aria-label={stat.label}
-                    title={`${stat.label} — ${stat.hint}`}
-                  >
-                    <svelte:component this={STAT_ICONS[stat.key]} aria-hidden="true" />
-                  </button>
-                {/if}
-              {/each}
-              <!-- Extra stats available for all damage types; disabled until backend adds support -->
-              <!-- TODO: Backend: add 'vit' and 'mit' to upgrade API and player stat totals -->
-              <button type="button" class="stat-icon-btn" disabled aria-disabled="true" aria-label="Vitality (coming soon)" title="Vit — backend integration pending">
-                <HeartPulse aria-hidden="true" />
-              </button>
-              <button type="button" class="stat-icon-btn" disabled aria-disabled="true" aria-label="Mitigation (coming soon)" title="Mit — backend integration pending">
-                <ShieldPlus aria-hidden="true" />
-              </button>
-            </div>
-          {/if}
+          </div>
           <div
             class="upgrade-card"
             style={`--accent: ${accent};`}
