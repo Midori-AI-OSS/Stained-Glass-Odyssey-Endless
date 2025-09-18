@@ -6,6 +6,7 @@ import hashlib
 import os
 from pathlib import Path
 import sys
+import re
 
 # Handle platform-specific SQLite encryption imports
 if sys.platform == 'win32':
@@ -55,8 +56,11 @@ class SaveManager:
                 # string interpolation before giving up so encrypted saves remain
                 # accessible across platforms.
                 try:
-                    escaped = self.key.replace("'", "''")
-                    conn.execute(f"PRAGMA key = '{escaped}'")
+                    # Accept only keys that match safe characters (customize to match key requirements)
+                    if not re.fullmatch(r"[A-Za-z0-9@#%+=_\-]{1,64}", self.key):
+                        conn.close()
+                        raise ValueError("Unsafe database key: must be alphanumeric or limited special characters")
+                    conn.execute(f"PRAGMA key = '{self.key}'")
                 except Exception:
                     conn.close()
                     raise
