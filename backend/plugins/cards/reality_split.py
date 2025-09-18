@@ -23,18 +23,43 @@ class RealitySplit(CardBase):
 
     async def apply(self, party):
         await super().apply(party)
+
+        handlers_store = getattr(party, "_reality_split_handlers", None)
+        if handlers_store is None:
+            handlers_store = {}
+            party._reality_split_handlers = handlers_store
+
+        if handlers_store.get(self.id):
+            return
+
         state: dict[str, object] = {"active": None, "foes": []}
 
+        def _cleanup() -> None:
+            bundle = handlers_store.pop(self.id, None)
+            if not bundle:
+                state["foes"].clear()
+                state["active"] = None
+                return
+            for event_name, handler in bundle["handlers"].items():
+                BUS.unsubscribe(event_name, handler)
+            state["foes"].clear()
+            state["active"] = None
+
         def _battle_start(entity) -> None:
-            if isinstance(entity, FoeBase):
+            if isinstance(entity, FoeBase) and entity not in state["foes"]:
                 state["foes"].append(entity)
 
         def _battle_end(entity) -> None:
             if isinstance(entity, FoeBase):
                 state["foes"].clear()
                 state["active"] = None
+                _cleanup()
+                return
+            members = getattr(party, "members", ())
+            if entity is None or entity in members or entity is party:
+                _cleanup()
 
-        def _turn_start() -> None:
+        def _turn_start_handler(*_args) -> None:
             if not party.members:
                 return
             target = random.choice(party.members)
@@ -71,7 +96,15 @@ class RealitySplit(CardBase):
                     {"foe": getattr(foe, "id", "foe")},
                 )
 
-        BUS.subscribe("battle_start", _battle_start)
-        BUS.subscribe("battle_end", _battle_end)
-        BUS.subscribe("turn_start", lambda *_: _turn_start())
-        BUS.subscribe("hit_landed", _hit_landed)
+        handlers: dict[str, object] = {}
+
+        def _register(event_name: str, handler) -> None:
+            handlers[event_name] = handler
+            BUS.subscribe(event_name, handler)
+
+        handlers_store[self.id] = {"handlers": handlers}
+
+        _register("battle_start", _battle_start)
+        _register("battle_end", _battle_end)
+        _register("turn_start", _turn_start_handler)
+        _register("hit_landed", _hit_landed)
