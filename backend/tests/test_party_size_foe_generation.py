@@ -29,7 +29,7 @@ def _run(monkeypatch, values: list[float]) -> int:
     monkeypatch.setattr(utils.random, "random", lambda: next(it, 1.0))
     party = _make_party(3)
     node = _make_node()
-    return len(utils._build_foes(node, party))
+    return len(utils._build_foes(node, party, []))
 
 
 def test_add_two_foes(monkeypatch) -> None:

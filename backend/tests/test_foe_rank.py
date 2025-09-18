@@ -32,7 +32,7 @@ def test_normal_foe_rank() -> None:
         loop=1,
         pressure=0,
     )
-    foes = _build_foes(node, party)
+    foes = _build_foes(node, party, [])
     data = [_serialize(f) for f in foes]
     assert all(f["rank"] == "normal" for f in data)
 
@@ -47,6 +47,6 @@ def test_boss_foe_rank() -> None:
         loop=1,
         pressure=0,
     )
-    foes = _build_foes(node, party)
+    foes = _build_foes(node, party, [])
     data = [_serialize(f) for f in foes]
     assert data[0]["rank"] == "boss"

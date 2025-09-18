@@ -27,6 +27,29 @@ battle_tasks: dict[str, asyncio.Task] = {}
 battle_snapshots: dict[str, dict[str, Any]] = {}
 battle_locks: dict[str, asyncio.Lock] = {}
 
+RECENT_FOE_COOLDOWN = 3
+
+
+def sanitize_recent_foes(raw: Any) -> list[dict[str, int]]:
+    """Return a normalized list of active foe cooldown entries."""
+
+    entries: list[dict[str, int]] = []
+    if not isinstance(raw, list):
+        return entries
+    for entry in raw:
+        if not isinstance(entry, dict):
+            continue
+        foe_id = entry.get("id")
+        cooldown = entry.get("cooldown")
+        try:
+            cooldown_int = int(cooldown)
+        except (TypeError, ValueError):
+            continue
+        if not foe_id or cooldown_int <= 0:
+            continue
+        entries.append({"id": str(foe_id), "cooldown": cooldown_int})
+    return entries
+
 
 async def cleanup_battle_state() -> None:
     """Remove completed battle tasks and associated state."""
@@ -255,6 +278,39 @@ async def _run_battle(
                     if state["current"] + 1 < len(rooms)
                     else None
                 )
+            existing_recent = sanitize_recent_foes(state.get("recent_foes"))
+            updated_recent: dict[str, int] = {}
+            for entry in existing_recent:
+                new_cooldown = entry["cooldown"] - 1
+                if new_cooldown > 0:
+                    updated_recent[entry["id"]] = max(
+                        updated_recent.get(entry["id"], 0), new_cooldown
+                    )
+
+            foe_ids: list[str] = []
+            for foe_info in result.get("foes", []):
+                if isinstance(foe_info, dict):
+                    foe_id = foe_info.get("id")
+                    if foe_id:
+                        foe_ids.append(str(foe_id))
+
+            if not foe_ids:
+                foe_list = foes if isinstance(foes, list) else [foes]
+                for foe_obj in foe_list:
+                    foe_id = getattr(foe_obj, "id", None)
+                    if foe_id:
+                        foe_ids.append(str(foe_id))
+
+            for foe_id in foe_ids:
+                updated_recent[foe_id] = RECENT_FOE_COOLDOWN
+
+            state["recent_foes"] = [
+                {"id": foe_id, "cooldown": cooldown}
+                for foe_id, cooldown in sorted(
+                    updated_recent.items(), key=lambda item: (-item[1], item[0])
+                )
+            ]
+
             await asyncio.to_thread(save_map, run_id, state)
             await asyncio.to_thread(save_party, run_id, party)
             result.update(
@@ -297,5 +353,6 @@ __all__ = [
     "battle_tasks",
     "battle_snapshots",
     "battle_locks",
+    "sanitize_recent_foes",
     "_run_battle",
 ]

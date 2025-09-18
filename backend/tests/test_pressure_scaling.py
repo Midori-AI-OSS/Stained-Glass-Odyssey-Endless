@@ -25,7 +25,7 @@ def test_build_foes_pressure(pressure, expected) -> None:
     player = Stats(hp=10)
     player.id = "p1"
     party = Party(members=[player])
-    foes = _build_foes(node, party)
+    foes = _build_foes(node, party, [])
     assert len(foes) == expected
 
 

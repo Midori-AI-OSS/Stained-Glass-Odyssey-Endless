@@ -30,7 +30,7 @@ def _make_node(pressure: int) -> MapNode:
 def test_boss_rooms_spawn_one_foe(size: int, pressure: int) -> None:
     party = _make_party(size)
     node = _make_node(pressure)
-    foes = utils._build_foes(node, party)
+    foes = utils._build_foes(node, party, [])
     assert len(foes) == 1
     assert foes[0].rank == "boss"
 

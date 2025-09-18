@@ -13,6 +13,7 @@ from runs.lifecycle import battle_locks
 from runs.lifecycle import battle_snapshots
 from runs.lifecycle import battle_tasks
 from runs.lifecycle import load_map
+from runs.lifecycle import sanitize_recent_foes
 from runs.lifecycle import save_map
 from runs.party_manager import load_party
 from runs.party_manager import save_party
@@ -101,10 +102,13 @@ async def battle_room(run_id: str, data: dict[str, Any]) -> dict[str, Any]:
             if run_id not in battle_tasks or battle_tasks[run_id].done():
                 party = await asyncio.to_thread(load_party, run_id)
                 state, rooms = await asyncio.to_thread(load_map, run_id)
+                recent_entries = sanitize_recent_foes(state.get("recent_foes"))
+                state["recent_foes"] = recent_entries
+                recent_ids = [entry["id"] for entry in recent_entries]
                 if rooms and 0 <= int(state.get("current", 0)) < len(rooms):
                     node = rooms[state["current"]]
                     room = BattleRoom(node)
-                    foes = _build_foes(node, party)
+                    foes = _build_foes(node, party, recent_ids)
                     for f in foes:
                         _scale_stats(f, node, room.strength)
                     combat_party = Party(
@@ -152,6 +156,9 @@ async def battle_room(run_id: str, data: dict[str, Any]) -> dict[str, Any]:
         # Return an error instead of creating a phantom battle
         raise LookupError("run ended or room out of range")
     node = rooms[state["current"]]
+    recent_entries = sanitize_recent_foes(state.get("recent_foes"))
+    state["recent_foes"] = recent_entries
+    recent_ids = [entry["id"] for entry in recent_entries]
     if node.room_type not in {"battle-weak", "battle-normal"}:
         raise ValueError("invalid room")
     # Check awaiting flags before attempting to launch a new battle
@@ -220,7 +227,7 @@ async def battle_room(run_id: str, data: dict[str, Any]) -> dict[str, Any]:
                     cards=party.cards,
                     rdr=party.rdr,
                 )
-        foes = _build_foes(node, build_party)
+        foes = _build_foes(node, build_party, recent_ids)
         for f in foes:
             _scale_stats(f, node, room.strength)
         combat_party = Party(

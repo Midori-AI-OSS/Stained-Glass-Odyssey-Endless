@@ -4,6 +4,7 @@ from dataclasses import fields
 import math
 import random
 from typing import Any
+from typing import Sequence
 
 from plugins import foes as foe_plugins
 from plugins import players as player_plugins
@@ -18,6 +19,8 @@ from ..stats import Stats
 # Action caps for foes to prevent runaway turn economy
 FOE_MAX_ACTIONS_PER_TURN: int = 1     # 1 action per turn
 FOE_MAX_ACTION_POINTS: int = 1        # start and cap at very low AP
+RECENT_FOE_WEIGHT_FACTOR: float = 0.25
+RECENT_FOE_MIN_WEIGHT: float = 0.1
 
 
 def _scale_stats(obj: Stats, node: MapNode, strength: float = 1.0) -> None:
@@ -468,12 +471,17 @@ def _choose_foe(party: Party) -> FoeBase:
     return foe_cls()
 
 
-def _build_foes(node: MapNode, party: Party) -> list[FoeBase]:
+def _build_foes(
+    node: MapNode,
+    party: Party,
+    recent_ids: Sequence[str] | None = None,
+) -> list[FoeBase]:
     """Build a list of foes for the given room node.
 
     Ensures no duplicate foe IDs within a single encounter. If the available
     unique foe pool is smaller than the desired count, the final list is
-    capped to the number of unique candidates.
+    capped to the number of unique candidates. Recently defeated foes have
+    their selection weight reduced but remain eligible to appear if necessary.
     """
     if "boss" in node.room_type:
         foe = _choose_foe(party)
@@ -526,10 +534,15 @@ def _build_foes(node: MapNode, party: Party) -> list[FoeBase]:
     pool = list(unique_by_id.values())
     if not pool:
         pool = [foe_plugins.Slime]
-    weights = [
-        3 if getattr(cls, "id", None) == "luna" and "luna" not in party_ids else 1
-        for cls in pool
-    ]
+    recent_id_set = {str(foe_id) for foe_id in recent_ids} if recent_ids else set()
+
+    weights = []
+    for cls in pool:
+        foe_id = getattr(cls, "id", None)
+        weight = 3 if foe_id == "luna" and "luna" not in party_ids else 1
+        if foe_id and foe_id in recent_id_set:
+            weight = max(weight * RECENT_FOE_WEIGHT_FACTOR, RECENT_FOE_MIN_WEIGHT)
+        weights.append(weight)
 
     k = min(desired, len(pool))
     chosen_classes: list[type[FoeBase]] = []
