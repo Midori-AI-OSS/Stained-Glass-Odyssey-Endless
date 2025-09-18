@@ -360,7 +360,14 @@
         on:close-upgrade={(e) => handlePreviewMode(e.detail, 'portrait')}
         on:request-upgrade={(e) => forwardUpgradeRequest(e.detail)}
         on:request-convert={(e) => forwardConversionRequest(e.detail)}
-        on:element-change={(e) => { previewElementOverride = e.detail?.element || previewElementOverride; refreshRoster(); }}
+        on:element-change={(e) => {
+          previewElementOverride = e.detail?.element || previewElementOverride;
+          refreshRoster();
+          if (previewId) {
+            // Refresh upgrade data so convert availability reflects new type
+            refreshUpgradeData(previewId, { force: true });
+          }
+        }}
       />
       <div class="right-col">
         <StatTabs {roster} {previewId} {selected} {userBuffPercent}

@@ -51,8 +51,7 @@
     vitality: HeartPulse,
     mitigation: ShieldPlus
   };
-  let convertStar = 1;
-  let convertCount = 1;
+  // Simplified conversion: only 4★ items, one at a time
 
   $: selected = roster.find((r) => r.id === previewId);
   $: elementName = overrideElement || selected?.element || '';
@@ -66,12 +65,10 @@
   $: upgradeTotals = upgradeData?.stat_totals || {};
   $: upgradeCosts = upgradeData?.next_costs || {};
   $: upgradeErrorMessage = upgradeError ? (upgradeError.message || String(upgradeError)) : '';
-  $: convertStarNum = Math.min(4, Math.max(1, Number(convertStar) || 1));
-  $: convertCountNum = Math.max(1, Number(convertCount) || 1);
-  $: availableAtStar = computeAvailable(convertStarNum);
+  $: available4 = computeAvailableFour();
   $: pendingConversion = Boolean(upgradeContext?.pendingConversion);
   $: pendingAction = Boolean(upgradeContext?.pendingStat || upgradeContext?.pendingConversion);
-  $: canConvert = Boolean(upgradeData && !upgradeLoading && !pendingAction && availableAtStar >= convertCountNum && convertCountNum > 0);
+  $: canConvert4 = Boolean(upgradeData && !upgradeLoading && !pendingAction && available4 >= 1);
   function statLabel(stat) {
     if (!stat) return '';
     const match = UPGRADE_STATS.find((s) => s.key === stat);
@@ -80,10 +77,9 @@
     return pretty ? pretty.replace(/\b\w/g, (c) => c.toUpperCase()) : stat;
   }
 
-  function computeAvailable(starLevel) {
+  function computeAvailableFour() {
     if (!selected) return 0;
-    const star = Math.max(1, Math.min(4, Number(starLevel) || 0));
-    if (!star) return 0;
+    const star = 4;
     if (selected.is_player) {
       return Object.entries(upgradeItems)
         .filter(([key]) => key.endsWith(`_${star}`))
@@ -160,7 +156,8 @@
   function makeDarkLayout(base) {
     const layout = clone(base);
     // Crescent moon: points along a left-side arc, gap on the upper-right
-    const cx = 48, cy = 52, r = 22;
+    // Spread out a bit more by increasing radius
+    const cx = 48, cy = 52, r = 28;
     // Rotate anticlockwise by ~20 degrees (screen coordinates: decrease deg)
     const rot = -20;
     const pos = (deg) => ({ x: cx + r * Math.cos(deg2rad(deg + rot)), y: cy + r * Math.sin(deg2rad(deg + rot)) });
@@ -171,6 +168,20 @@
     layout.mitigation  = pos(215);
     layout.crit_rate   = pos(240);
     layout.atk         = pos(265);  // lower-left
+    return layout;
+  }
+  function makeWindLayout(base) {
+    const layout = clone(base);
+    // Two clean rows of stat buttons left-to-right; keep HP centered between rows
+    layout.hp = { x: 50, y: 52 };
+    // Top row (y ≈ 40): ATK, DEF, CRIT Rate
+    layout.atk       = { x: 30, y: 40 };
+    layout.def       = { x: 50, y: 40 };
+    layout.crit_rate = { x: 70, y: 40 };
+    // Bottom row (y ≈ 64): CRIT DMG, Vitality, Mitigation
+    layout.crit_damage = { x: 28, y: 64 };
+    layout.vitality    = { x: 50, y: 64 };
+    layout.mitigation  = { x: 72, y: 64 };
     return layout;
   }
   function makeIceLayout(base) {
@@ -209,15 +220,17 @@
   $: currentLayout =
     elementKey === 'light'
       ? makeOrbLayout(baseLayouts.light)
-      : elementKey === 'lightning'
-        ? makeLightningLayout(baseLayouts.lightning)
-        : elementKey === 'fire'
-          ? makeFireLayout(baseLayouts.fire)
-          : elementKey === 'dark'
-            ? makeDarkLayout(baseLayouts.dark)
-            : elementKey === 'ice'
-              ? makeIceLayout(baseLayouts.ice)
-            : (baseLayouts[elementKey] || baseLayouts.generic);
+    : elementKey === 'lightning'
+      ? makeLightningLayout(baseLayouts.lightning)
+    : elementKey === 'fire'
+      ? makeFireLayout(baseLayouts.fire)
+    : elementKey === 'dark'
+      ? makeDarkLayout(baseLayouts.dark)
+    : elementKey === 'wind'
+      ? makeWindLayout(baseLayouts.wind)
+    : elementKey === 'ice'
+      ? makeIceLayout(baseLayouts.ice)
+      : (baseLayouts[elementKey] || baseLayouts.generic);
   $: iceSpikes = elementKey === 'ice' ? computeIceSpikes(currentLayout) : null;
   const PERIPH_KEYS = ['atk','def','crit_rate','crit_damage','vitality','mitigation'];
   function computeRingEdges(layout, keys) {
@@ -254,9 +267,9 @@
     dispatch('request-upgrade', { id: selected.id, stat });
   }
 
-  function convertItems() {
-    if (!selected || !canConvert) return;
-    dispatch('request-convert', { id: selected.id, starLevel: convertStarNum, itemCount: convertCountNum });
+  function convertFourStar() {
+    if (!selected || !canConvert4) return;
+    dispatch('request-convert', { id: selected.id, starLevel: 4, itemCount: 1 });
   }
 
   function handleBackgroundClick(event) {
@@ -282,6 +295,7 @@
           class="upgrade-wrapper"
           in:fade={{ duration: reducedMotion ? 0 : 120 }}
           out:fade={{ duration: reducedMotion ? 0 : 120 }}
+          style={`--accent: ${accent};`}
         >
           <!-- Dimmed & blurred portrait backdrop -->
           {#if selected?.img}
@@ -294,20 +308,22 @@
               <div class="vignette" />
             </div>
           {/if}
-          <!-- Element selector toolbar -->
-          <div class="element-toolbar" on:click|stopPropagation>
-            {#each ELEMENTS as el}
-              {#key el}
-                <button type="button" class="element-btn" class:active={String(elementName).toLowerCase() === el.toLowerCase()}
-                  aria-label={`Set element ${el}`}
-                  style={`--el:${getElementColor(el)}; color:${getElementColor(el)}`}
-                  on:click={() => chooseElement(el)}
-                >
-                  <svelte:component this={getElementIcon(el)} aria-hidden="true" />
-                </button>
-              {/key}
-            {/each}
-          </div>
+          <!-- Element selector toolbar (player only) -->
+          {#if selected?.is_player}
+            <div class="element-toolbar" on:click|stopPropagation>
+              {#each ELEMENTS as el}
+                {#key el}
+                  <button type="button" class="element-btn" class:active={String(elementName).toLowerCase() === el.toLowerCase()}
+                    aria-label={`Set element ${el}`}
+                    style={`--el:${getElementColor(el)}; color:${getElementColor(el)}`}
+                    on:click={() => chooseElement(el)}
+                  >
+                    <svelte:component this={getElementIcon(el)} aria-hidden="true" />
+                  </button>
+                {/key}
+              {/each}
+            </div>
+          {/if}
           <!-- Sun layout: used for all damage types for now -->
           <div
             class="stat-slots"
@@ -333,6 +349,17 @@
                       <line x1={`${currentLayout[key].x}`} y1={`${currentLayout[key].y}`} x2={`${currentLayout[['atk','def','crit_rate','crit_damage','vitality','mitigation'][i]].x}`} y2={`${currentLayout[['atk','def','crit_rate','crit_damage','vitality','mitigation'][i]].y}`} stroke="currentColor" />
                     {/if}
                   {/each}
+                {:else if elementKey === 'wind'}
+                  <!-- Wind: two-row layout with minimal linking per spec -->
+                  <!-- Top row: link ATK-DEF and DEF-CRIT RATE; link DEF to HP -->
+                  <line x1={`${currentLayout.atk.x}`} y1={`${currentLayout.atk.y}`} x2={`${currentLayout.def.x}`} y2={`${currentLayout.def.y}`} stroke="currentColor" />
+                  <line x1={`${currentLayout.def.x}`} y1={`${currentLayout.def.y}`} x2={`${currentLayout.crit_rate.x}`} y2={`${currentLayout.crit_rate.y}`} stroke="currentColor" />
+                  <line x1={`${currentLayout.def.x}`} y1={`${currentLayout.def.y}`} x2={`${currentLayout.hp.x}`} y2={`${currentLayout.hp.y}`} stroke="currentColor" />
+                  <!-- Bottom row: link nodes together and Vitality to HP -->
+                  <line x1={`${currentLayout.crit_damage.x}`} y1={`${currentLayout.crit_damage.y}`} x2={`${currentLayout.vitality.x}`} y2={`${currentLayout.vitality.y}`} stroke="currentColor" />
+                  <line x1={`${currentLayout.vitality.x}`} y1={`${currentLayout.vitality.y}`} x2={`${currentLayout.mitigation.x}`} y2={`${currentLayout.mitigation.y}`} stroke="currentColor" />
+                  <line x1={`${currentLayout.crit_damage.x}`} y1={`${currentLayout.crit_damage.y}`} x2={`${currentLayout.mitigation.x}`} y2={`${currentLayout.mitigation.y}`} stroke="currentColor" />
+                  <line x1={`${currentLayout.vitality.x}`} y1={`${currentLayout.vitality.y}`} x2={`${currentLayout.hp.x}`} y2={`${currentLayout.hp.y}`} stroke="currentColor" />
                 {:else if elementKey === 'ice'}
                   <!-- Ice: spokes from HP; each outer node emits multiple short spikes -->
                   {#each ICE_KEYS as k}
@@ -398,80 +425,31 @@
                 <ShieldPlus aria-hidden="true" />
               </button>
           </div>
-          <div
-            class="upgrade-card"
-            style={`--accent: ${accent};`}
-            in:scale={{ duration: reducedMotion ? 0 : 160, easing: quintOut }}
-            out:scale={{ duration: reducedMotion ? 0 : 120, easing: quintOut }}
-          >
-            <div class="upgrade-feedback" role="status" aria-live="polite">
+          <!-- Bottom text area: two compact rows -->
+          <div class="upgrade-bottom" on:click|stopPropagation>
+            <div class="row row1" aria-live="polite">
               {#if pendingStat}
-                <p class="upgrade-status pending">Upgrading {statLabel(pendingStat)}…</p>
+                <span class="status pending">Upgrading {statLabel(pendingStat)}…</span>
               {:else if pendingConversion}
-                <p class="upgrade-status pending">Converting items…</p>
+                <span class="status pending">Converting…</span>
               {:else if upgradeContext?.error}
-                <p class="upgrade-status error">{upgradeContext.error}</p>
+                <span class="status error">{upgradeContext.error}</span>
               {:else if upgradeContext?.message}
-                <p class="upgrade-status success">{upgradeContext.message}</p>
+                <span class="status success">{upgradeContext.message}</span>
               {/if}
-            </div>
-            <div class="upgrade-summary" aria-live="polite">
               {#if upgradeLoading}
-                <p class="upgrade-note">Loading upgrade data…</p>
-              {:else if upgradeData}
-                {#if upgradeErrorMessage}
-                  <p class="upgrade-status error">{upgradeErrorMessage}</p>
-                {/if}
-                <div class="points-row">
-                  <span class="points-label">Upgrade points</span>
-                  <span class="points-value">{formatPoints(upgradePointsValue)}</span>
-                </div>
-                <div class="stat-upgrade-grid">
-                  {#each UPGRADE_STATS as stat}
-                    <div class="stat-upgrade-row">
-                      <span class="stat-upgrade-label">{stat.label}</span>
-                      <span class="stat-upgrade-total" data-label="Total">{formatStatTotal(upgradeTotals[stat.key])}</span>
-                      <span class="stat-upgrade-cost" data-label="Next">{formatCost(upgradeCosts[stat.key])}</span>
-                    </div>
-                  {/each}
-                </div>
-                <div class="conversion-section">
-                  <div class="conversion-header">Convert items to points</div>
-                  <div class="conversion-form">
-                    <label class="conversion-field">
-                      <span>Star</span>
-                      <select bind:value={convertStar} disabled={pendingAction || upgradeLoading}>
-                        <option value={1}>1★</option>
-                        <option value={2}>2★</option>
-                        <option value={3}>3★</option>
-                        <option value={4}>4★</option>
-                      </select>
-                    </label>
-                    <label class="conversion-field">
-                      <span>Count</span>
-                      <input type="number" min="1" step="1" bind:value={convertCount} disabled={pendingAction || upgradeLoading} />
-                    </label>
-                    <button type="button" class="convert-btn" on:click={convertItems} disabled={!canConvert}>
-                      Convert
-                    </button>
-                  </div>
-                  <div class="conversion-note">
-                    <span>Available {convertStarNum}★: {availableAtStar}</span>
-                    {#if availableAtStar < convertCountNum}
-                      <span class="conversion-warning">Need {convertCountNum}</span>
-                    {/if}
-                  </div>
-                  <div class="conversion-note">
-                    {selected?.is_player
-                      ? 'Player can convert any element items.'
-                      : `Requires ${elementName || 'Generic'} items.`}
-                  </div>
-                </div>
+                <span class="status note">Loading upgrade data…</span>
               {:else if upgradeErrorMessage}
-                <p class="upgrade-status error">{upgradeErrorMessage}</p>
-              {:else}
-                <p class="upgrade-note">Upgrade data unavailable.</p>
+                <span class="status error">{upgradeErrorMessage}</span>
               {/if}
+              <span class="points">Points: {formatPoints(upgradePointsValue)}</span>
+            </div>
+            <div class="row row2">
+              <button type="button" class="convert4-btn" on:click={convertFourStar} disabled={!canConvert4}>
+                Convert 4★ into 5 points
+              </button>
+              <span class="avail">Available 4★: {available4}</span>
+              <span class="note">{selected?.is_player ? 'Any element' : `${elementName || 'Generic'} only`}</span>
             </div>
           </div>
         </div>
@@ -556,6 +534,50 @@
     border-radius: 14px;
     overflow: hidden;
   }
+  /* Bottom info area with two rows */
+  .upgrade-bottom {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    padding: 0.5rem 0.6rem;
+    background:
+      linear-gradient(180deg, rgba(0,0,0,0.0), rgba(0,0,0,0.35) 40%, rgba(0,0,0,0.6));
+    pointer-events: auto;
+    z-index: 3;
+  }
+  .upgrade-bottom .row {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    flex-wrap: wrap;
+  }
+  .upgrade-bottom .row1 { justify-content: space-between; }
+  .upgrade-bottom .row2 { justify-content: flex-start; }
+  .upgrade-bottom .status { font-size: 0.9rem; color: rgba(236,242,255,0.9); }
+  .upgrade-bottom .status.pending { color: #ffecb5; }
+  .upgrade-bottom .status.success { color: #d7f3ff; }
+  .upgrade-bottom .status.error { color: #ffc4c4; }
+  .upgrade-bottom .status.note { color: rgba(220,228,255,0.8); }
+  .upgrade-bottom .points { margin-left: auto; color: #fff; font-weight: 600; }
+  .convert4-btn {
+    background: color-mix(in srgb, var(--accent, #6ab) 25%, rgba(0,0,0,0.6));
+    border: 1px solid color-mix(in srgb, var(--accent, #6ab) 55%, rgba(255,255,255,0.35));
+    color: #f5f9ff;
+    border-radius: 0.5rem;
+    padding: 0.4rem 0.7rem;
+    cursor: pointer;
+    transition: transform 140ms ease, background 140ms ease, border-color 140ms ease;
+  }
+  .convert4-btn:hover:enabled {
+    transform: translateY(-1px);
+    background: color-mix(in srgb, var(--accent, #6ab) 40%, rgba(0,0,0,0.55));
+  }
+  .convert4-btn:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
+  .upgrade-bottom .avail, .upgrade-bottom .note { color: rgba(220,228,255,0.85); font-size: 0.85rem; }
   /* Backdrop with dimmed & blurred portrait */
   .upgrade-bg { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
   .upgrade-bg img {
