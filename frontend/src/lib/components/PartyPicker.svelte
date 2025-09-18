@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import { createEventDispatcher } from 'svelte';
   import { writable } from 'svelte/store';
-  import { getPlayers } from '../systems/api.js';
+  import { getPlayers, upgradeStat } from '../systems/api.js';
   import { getCharacterImage, getRandomFallback, getElementColor } from '../systems/assetLoader.js';
   import MenuPanel from './MenuPanel.svelte';
   import PartyRoster from './PartyRoster.svelte';
@@ -26,6 +26,13 @@
   const previewMode = writable('portrait');
   let upgradeContext = null;
   let lastPreviewedId = null;
+  const STAT_LABELS = {
+    max_hp: 'HP',
+    atk: 'ATK',
+    defense: 'DEF',
+    crit_rate: 'Crit Rate',
+    crit_damage: 'Crit DMG'
+  };
   // Clear override when preview is not the player
   $: {
     const cur = roster.find(r => r.id === previewId);
@@ -107,6 +114,27 @@
     }
   }
 
+  function statLabel(statKey) {
+    if (!statKey) return 'Stat';
+    if (STAT_LABELS[statKey]) return STAT_LABELS[statKey];
+    const pretty = String(statKey).replace(/_/g, ' ').trim();
+    return pretty ? pretty.replace(/\b\w/g, (c) => c.toUpperCase()) : statKey;
+  }
+
+  function formatPercent(value) {
+    if (value == null) return '+0%';
+    const num = Number(value) * 100;
+    if (!Number.isFinite(num)) return '+0%';
+    let digits = 2;
+    const abs = Math.abs(num);
+    if (abs >= 100) digits = 0;
+    else if (abs >= 10) digits = 1;
+    let formatted = num.toFixed(digits);
+    formatted = formatted.replace(/\.0+$/, '').replace(/(\.\d*[1-9])0+$/, '$1');
+    const sign = num >= 0 ? '+' : '';
+    return `${sign}${formatted}%`;
+  }
+
   function toggleMember(id) {
     if (!id) return;
     // The player cannot be removed from the party
@@ -131,15 +159,68 @@
     try { dispatch('previewMode', { mode, ...nextDetail }); } catch {}
   }
 
-  function forwardUpgradeRequest(detail) {
+  async function forwardUpgradeRequest(detail) {
+    if (upgradeContext?.pendingStat) return;
+
     const char = detail?.id ? roster.find((p) => p.id === detail.id) : roster.find((p) => p.id === previewId);
     const payload = {
       ...(detail || {}),
       id: char?.id ?? previewId ?? null,
       character: char || null
     };
-    if (modeIsUpgrade()) upgradeContext = { ...upgradeContext, lastRequestedStat: payload.stat || null };
+    const { id, stat } = payload;
+    const isUpgradeMode = modeIsUpgrade();
+
+    if (isUpgradeMode) {
+      upgradeContext = {
+        id,
+        character: payload.character,
+        stat: stat || null,
+        lastRequestedStat: stat || null,
+        pendingStat: stat || null,
+        message: '',
+        error: ''
+      };
+    }
+
     try { dispatch('requestUpgrade', payload); } catch {}
+
+    if (!id || !stat) return;
+
+    try {
+      const result = await upgradeStat(id, stat);
+      await refreshRoster();
+      const updatedChar = roster.find((p) => p.id === id) || payload.character || null;
+      const statKey = result?.stat_upgraded || stat;
+      const percent = result?.upgrade_percent;
+      const bonusText = percent != null ? formatPercent(percent) : '';
+      const label = statLabel(statKey);
+      const message = bonusText ? `Upgraded ${label} by ${bonusText}.` : `Upgraded ${label}.`;
+      if (isUpgradeMode) {
+        upgradeContext = {
+          id,
+          character: updatedChar,
+          stat: statKey,
+          lastRequestedStat: stat || null,
+          pendingStat: null,
+          message,
+          error: ''
+        };
+      }
+    } catch (err) {
+      if (isUpgradeMode) {
+        const label = statLabel(stat || '');
+        upgradeContext = {
+          id,
+          character: payload.character,
+          stat: stat || null,
+          lastRequestedStat: stat || null,
+          pendingStat: null,
+          message: '',
+          error: err?.message || `Unable to upgrade ${label}.`
+        };
+      }
+    }
   }
 
   function modeIsUpgrade() {
@@ -169,11 +250,8 @@
         on:element-change={(e) => { previewElementOverride = e.detail?.element || previewElementOverride; refreshRoster(); }}
       />
       <div class="right-col">
-        <StatTabs {roster} {previewId} {selected} {userBuffPercent} previewMode={$previewMode}
+        <StatTabs {roster} {previewId} {selected} {userBuffPercent}
           on:toggle={(e) => toggleMember(e.detail)}
-          on:refresh-roster={refreshRoster}
-          on:open-upgrade-mode={(e) => handlePreviewMode(e.detail, 'upgrade')}
-          on:close-upgrade-mode={(e) => handlePreviewMode(e.detail, 'portrait')}
         />
         <div class="party-actions-inline">
           {#if actionLabel === 'Start Run'}
