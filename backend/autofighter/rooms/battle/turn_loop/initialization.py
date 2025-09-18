@@ -99,7 +99,12 @@ async def initialize_turn_loop(
 
     prepare_snapshot_overlay(
         context.run_id,
-        list(context.combat_party.members) + list(context.foes),
+        [
+            context.party,
+            context.combat_party,
+            *list(context.combat_party.members),
+            *list(context.foes),
+        ],
     )
     await _prepare_entities(context)
     await _send_initial_progress(context)
@@ -109,6 +114,10 @@ async def initialize_turn_loop(
 async def _prepare_entities(context: TurnLoopContext) -> None:
     """Set action point counts and emit extra turn events for all entities."""
 
+    register_snapshot_entities(
+        context.run_id,
+        [context.party, context.combat_party],
+    )
     for entity in list(context.combat_party.members) + list(context.foes):
         entity.action_points = entity.actions_per_turn
         register_snapshot_entities(context.run_id, [entity])
