@@ -12,6 +12,7 @@
   import OverlayHost from './OverlayHost.svelte';
   import { getHourlyBackground } from '../systems/assetLoader.js';
   import MainMenu from './MainMenu.svelte';
+  import LoginRewardsPanel from './LoginRewardsPanel.svelte';
   import AboutGamePanel from './AboutGamePanel.svelte';
   import {
     loadInitialState,
@@ -274,6 +275,7 @@
       </div>
     {/if}
     {#if $overlayView === 'main' && !battleActive && !rewardOpen && !reviewOpen}
+      <LoginRewardsPanel />
       <MainMenu {items} />
       <AboutGamePanel {userState} />
     {/if}
