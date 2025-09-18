@@ -736,8 +736,11 @@ async def update_enrage_state(
     foe_effects: Sequence["EffectManager"],
     enrage_mods: list[Any],
     party_members: Sequence[Stats],
-) -> None:
+) -> dict[str, Any] | None:
     """Update enrage modifiers and catastrophic damage thresholds."""
+
+    previous_active = state.active
+    previous_stacks = state.stacks
 
     if turn > state.threshold:
         if not state.active:
@@ -781,6 +784,10 @@ async def update_enrage_state(
                         await foe_obj.apply_damage(extra_damage)
     else:
         await asyncio.to_thread(set_enrage_percent, 0.0)
+
+    if state.active != previous_active or state.stacks != previous_stacks:
+        return state.as_payload()
+    return None
 
 
 async def apply_enrage_bleed(
