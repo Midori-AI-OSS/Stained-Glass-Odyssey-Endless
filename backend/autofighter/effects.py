@@ -287,6 +287,10 @@ class HealingOverTime:
     async def tick(self, target: Stats, *_: object) -> bool:
         from autofighter.stats import BUS  # Import here to avoid circular imports
 
+        if getattr(target, "hp", 0) <= 0:
+            self.turns = 0
+            return False
+
         healer = self.source or target
         dtype = getattr(self, "damage_type", None)
         if dtype is None:
@@ -504,6 +508,29 @@ class EffectManager:
 
         from autofighter.stats import BUS
 
+        async def prune_hots_on_death() -> None:
+            if self.stats.hp > 0 or not self.hots:
+                return
+
+            removed_hots = list(self.hots)
+            self.hots.clear()
+            if hasattr(self.stats, "hots"):
+                self.stats.hots.clear()
+
+            for eff in removed_hots:
+                await BUS.emit_async(
+                    "effect_expired",
+                    eff.name,
+                    self.stats,
+                    {
+                        "effect_type": "hot",
+                        "effect_id": eff.id,
+                        "expired_naturally": False,
+                    },
+                )
+
+        await prune_hots_on_death()
+
         phase_definitions = (
             ("hot", self.hots, self.stats.hots),
             ("dot", self.dots, self.stats.dots),
@@ -632,6 +659,8 @@ class EffectManager:
             )
 
             await pace_sleep(YIELD_MULTIPLIER)
+
+        await prune_hots_on_death()
 
         # Enhanced stat modifier processing with parallelization
         mod_order = len(phase_definitions)
