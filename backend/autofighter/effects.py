@@ -504,12 +504,12 @@ class EffectManager:
 
         from autofighter.stats import BUS
 
-        for order, (phase_name, collection, names) in enumerate(
-            (
-                ("hot", self.hots, self.stats.hots),
-                ("dot", self.dots, self.stats.dots),
-            )
-        ):
+        phase_definitions = (
+            ("hot", self.hots, self.stats.hots),
+            ("dot", self.dots, self.stats.dots),
+        )
+
+        for order, (phase_name, collection, names) in enumerate(phase_definitions):
             expired: list[object] = []
             effect_count = len(collection)
             phase_label = "HoT" if phase_name == "hot" else "DoT"
@@ -609,7 +609,28 @@ class EffectManager:
             await pace_sleep(YIELD_MULTIPLIER)
 
         # Enhanced stat modifier processing with parallelization
+        mod_order = len(phase_definitions)
         expired_mods: list[StatModifier] = []
+
+        mod_phase_payload = {
+            "phase": "stat_mods",
+            "effect_count": len(self.mods),
+            "expired_count": 0,
+            "has_effects": len(self.mods) > 0,
+            "order": mod_order,
+            "target_id": getattr(self.stats, "id", None),
+            "effect_ids": list(self.stats.mods),
+        }
+
+        start_mod_payload = mod_phase_payload.copy()
+        start_mod_payload["effect_ids"] = list(mod_phase_payload["effect_ids"])
+
+        await BUS.emit_async(
+            "status_phase_start",
+            "stat_mods",
+            self.stats,
+            start_mod_payload,
+        )
 
         # Batch logging for performance when many stat modifiers are present
         if self._debug and len(self.mods) > 10:
@@ -665,6 +686,27 @@ class EffectManager:
             self.mods.remove(mod)
             if mod.id in self.stats.mods:
                 self.stats.mods.remove(mod.id)
+
+        mod_phase_payload.update(
+            {
+                "effect_count": len(self.mods),
+                "expired_count": len(expired_mods),
+                "has_effects": len(self.mods) > 0,
+                "effect_ids": list(self.stats.mods),
+            }
+        )
+
+        end_mod_payload = mod_phase_payload.copy()
+        end_mod_payload["effect_ids"] = list(mod_phase_payload["effect_ids"])
+
+        await BUS.emit_async(
+            "status_phase_end",
+            "stat_mods",
+            self.stats,
+            end_mod_payload,
+        )
+
+        await pace_sleep(YIELD_MULTIPLIER)
 
         # Process passive abilities if available
         await self._tick_passives(others)

@@ -65,10 +65,16 @@ async def test_status_phase_events_emit_with_pacing(monkeypatch):
 
     await manager.tick()
 
-    assert sleep_calls == [expected_multiplier, expected_multiplier]
+    assert sleep_calls == [
+        expected_multiplier,
+        expected_multiplier,
+        expected_multiplier,
+    ]
 
     status_events = [evt for evt in captured_events if evt[0].startswith("status_phase_")]
     assert [name for name, _ in status_events] == [
+        "status_phase_start",
+        "status_phase_end",
         "status_phase_start",
         "status_phase_end",
         "status_phase_start",
@@ -100,6 +106,26 @@ async def test_status_phase_events_emit_with_pacing(monkeypatch):
     assert end_dot_args[2]["effect_count"] == 0
     assert end_dot_args[2]["expired_count"] == 1
     assert end_dot_args[2]["order"] == 1
+
+    start_mod_name, start_mod_args = status_events[4]
+    assert start_mod_name == "status_phase_start"
+    assert start_mod_args[0] == "stat_mods"
+    assert start_mod_args[1] is target
+    assert start_mod_args[2]["phase"] == "stat_mods"
+    assert start_mod_args[2]["effect_count"] == 0
+    assert start_mod_args[2]["order"] == 2
+    assert start_mod_args[2]["has_effects"] is False
+    assert start_mod_args[2]["effect_ids"] == []
+
+    end_mod_name, end_mod_args = status_events[5]
+    assert end_mod_name == "status_phase_end"
+    assert end_mod_args[0] == "stat_mods"
+    assert end_mod_args[1] is target
+    assert end_mod_args[2]["phase"] == "stat_mods"
+    assert end_mod_args[2]["effect_count"] == 0
+    assert end_mod_args[2]["expired_count"] == 0
+    assert end_mod_args[2]["order"] == 2
+    assert end_mod_args[2]["effect_ids"] == []
 
     assert manager.hots == []
     assert manager.dots == []
@@ -231,7 +257,7 @@ async def test_status_phase_events_update_snapshot_queue():
 
     status_phase = snapshot.get("status_phase")
     assert status_phase is not None
-    assert status_phase.get("phase") == "dot"
+    assert status_phase.get("phase") == "stat_mods"
     assert status_phase.get("state") == "end"
 
     payload = await build_battle_progress_payload(
