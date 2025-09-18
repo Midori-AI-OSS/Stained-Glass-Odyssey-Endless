@@ -8,12 +8,16 @@
   import { getElementIcon, getElementColor } from '../systems/assetLoader.js';
   import { savePlayerConfig } from '../systems/api.js';
   import { Heart, Sword, Shield, Crosshair, Zap, HeartPulse, ShieldPlus } from 'lucide-svelte';
+  import { formatPoints, formatCost, formatPercent } from '../utils/upgradeFormatting.js';
 
   export let roster = [];
   export let previewId;
   export let overrideElement = '';
   export let mode = 'portrait';
   export let upgradeContext = null;
+  export let upgradeData = null;
+  export let upgradeLoading = false;
+  export let upgradeError = null;
   export let reducedMotion = false;
 
   const dispatch = createEventDispatcher();
@@ -47,6 +51,8 @@
     vitality: HeartPulse,
     mitigation: ShieldPlus
   };
+  let convertStar = 1;
+  let convertCount = 1;
 
   $: selected = roster.find((r) => r.id === previewId);
   $: elementName = overrideElement || selected?.element || '';
@@ -55,12 +61,41 @@
   $: pendingStat = upgradeContext?.pendingStat || null;
   $: highlightedStat =
     pendingStat || upgradeContext?.stat || upgradeContext?.lastRequestedStat || null;
+  $: upgradeItems = upgradeData?.items || {};
+  $: upgradePointsValue = upgradeData?.upgrade_points;
+  $: upgradeTotals = upgradeData?.stat_totals || {};
+  $: upgradeCosts = upgradeData?.next_costs || {};
+  $: upgradeErrorMessage = upgradeError ? (upgradeError.message || String(upgradeError)) : '';
+  $: convertStarNum = Math.min(4, Math.max(1, Number(convertStar) || 1));
+  $: convertCountNum = Math.max(1, Number(convertCount) || 1);
+  $: availableAtStar = computeAvailable(convertStarNum);
+  $: pendingConversion = Boolean(upgradeContext?.pendingConversion);
+  $: pendingAction = Boolean(upgradeContext?.pendingStat || upgradeContext?.pendingConversion);
+  $: canConvert = Boolean(upgradeData && !upgradeLoading && !pendingAction && availableAtStar >= convertCountNum && convertCountNum > 0);
   function statLabel(stat) {
     if (!stat) return '';
     const match = UPGRADE_STATS.find((s) => s.key === stat);
     if (match) return match.label;
     const pretty = String(stat).replace(/_/g, ' ').trim();
     return pretty ? pretty.replace(/\b\w/g, (c) => c.toUpperCase()) : stat;
+  }
+
+  function computeAvailable(starLevel) {
+    if (!selected) return 0;
+    const star = Math.max(1, Math.min(4, Number(starLevel) || 0));
+    if (!star) return 0;
+    if (selected.is_player) {
+      return Object.entries(upgradeItems)
+        .filter(([key]) => key.endsWith(`_${star}`))
+        .reduce((acc, [, value]) => acc + (Number(value) || 0), 0);
+    }
+    const key = `${String(elementName || 'generic').toLowerCase()}_${star}`;
+    return Number(upgradeItems[key]) || 0;
+  }
+
+  function formatStatTotal(value) {
+    if (value == null) return '—';
+    return formatPercent(value);
   }
   // Sun layout: baseline positions (percentages) we will copy to each element
   const sunLayout = {
@@ -215,8 +250,13 @@
   }
 
   function requestUpgrade(stat) {
-    if (!selected || !stat) return;
+    if (!selected || !stat || pendingAction) return;
     dispatch('request-upgrade', { id: selected.id, stat });
+  }
+
+  function convertItems() {
+    if (!selected || !canConvert) return;
+    dispatch('request-convert', { id: selected.id, starLevel: convertStarNum, itemCount: convertCountNum });
   }
 
   function handleBackgroundClick(event) {
@@ -330,23 +370,23 @@
 
               <!-- Buttons; icons inherit accent via color -->
               <button type="button" class="stat-icon-btn" style={`left:${currentLayout.hp.x}%; top:${currentLayout.hp.y}%; transform:translate(-50%,-50%); color:${accent}`}
-                class:active={highlightedStat==='max_hp'} disabled={!!pendingStat} on:click={() => requestUpgrade('max_hp')} aria-label="HP" title="HP — Bolster survivability.">
+                class:active={highlightedStat==='max_hp'} disabled={pendingAction} on:click={() => requestUpgrade('max_hp')} aria-label="HP" title="HP — Bolster survivability.">
                 <Heart aria-hidden="true" />
               </button>
               <button type="button" class="stat-icon-btn" style={`left:${currentLayout.atk.x}%; top:${currentLayout.atk.y}%; transform:translate(-50%,-50%); color:${accent}`}
-                class:active={highlightedStat==='atk'} disabled={!!pendingStat} on:click={() => requestUpgrade('atk')} aria-label="Attack" title="ATK — Improve offensive power.">
+                class:active={highlightedStat==='atk'} disabled={pendingAction} on:click={() => requestUpgrade('atk')} aria-label="Attack" title="ATK — Improve offensive power.">
                 <Sword aria-hidden="true" />
               </button>
               <button type="button" class="stat-icon-btn" style={`left:${currentLayout.def.x}%; top:${currentLayout.def.y}%; transform:translate(-50%,-50%); color:${accent}`}
-                class:active={highlightedStat==='defense'} disabled={!!pendingStat} on:click={() => requestUpgrade('defense')} aria-label="Defense" title="DEF — Stiffen defenses.">
+                class:active={highlightedStat==='defense'} disabled={pendingAction} on:click={() => requestUpgrade('defense')} aria-label="Defense" title="DEF — Stiffen defenses.">
                 <Shield aria-hidden="true" />
               </button>
               <button type="button" class="stat-icon-btn" style={`left:${currentLayout.crit_rate.x}%; top:${currentLayout.crit_rate.y}%; transform:translate(-50%,-50%); color:${accent}`}
-                class:active={highlightedStat==='crit_rate'} disabled={!!pendingStat} on:click={() => requestUpgrade('crit_rate')} aria-label="Crit Rate" title="Crit Rate — Raise critical odds.">
+                class:active={highlightedStat==='crit_rate'} disabled={pendingAction} on:click={() => requestUpgrade('crit_rate')} aria-label="Crit Rate" title="Crit Rate — Raise critical odds.">
                 <Crosshair aria-hidden="true" />
               </button>
               <button type="button" class="stat-icon-btn" style={`left:${currentLayout.crit_damage.x}%; top:${currentLayout.crit_damage.y}%; transform:translate(-50%,-50%); color:${accent}`}
-                class:active={highlightedStat==='crit_damage'} disabled={!!pendingStat} on:click={() => requestUpgrade('crit_damage')} aria-label="Crit Damage" title="Crit DMG — Amplify crit damage.">
+                class:active={highlightedStat==='crit_damage'} disabled={pendingAction} on:click={() => requestUpgrade('crit_damage')} aria-label="Crit Damage" title="Crit DMG — Amplify crit damage.">
                 <Zap aria-hidden="true" />
               </button>
               <button type="button" class="stat-icon-btn" style={`left:${currentLayout.vitality.x}%; top:${currentLayout.vitality.y}%; transform:translate(-50%,-50%); color:${accent}`}
@@ -367,36 +407,72 @@
             <div class="upgrade-feedback" role="status" aria-live="polite">
               {#if pendingStat}
                 <p class="upgrade-status pending">Upgrading {statLabel(pendingStat)}…</p>
+              {:else if pendingConversion}
+                <p class="upgrade-status pending">Converting items…</p>
               {:else if upgradeContext?.error}
                 <p class="upgrade-status error">{upgradeContext.error}</p>
               {:else if upgradeContext?.message}
                 <p class="upgrade-status success">{upgradeContext.message}</p>
               {/if}
             </div>
-            <!--
-              TEMPORARILY DISABLED UPGRADE MENU
-              The element chip and stat buttons are commented out per request.
-              We will re-enable these later.
-            <div class="icon-row">
-              <div class="element-chip" aria-label={`${elementName || 'Generic'} damage type`}>
-                <svelte:component this={ElementIcon} aria-hidden="true" />
-                <span>{elementName || 'Generic'}</span>
-              </div>
+            <div class="upgrade-summary" aria-live="polite">
+              {#if upgradeLoading}
+                <p class="upgrade-note">Loading upgrade data…</p>
+              {:else if upgradeData}
+                {#if upgradeErrorMessage}
+                  <p class="upgrade-status error">{upgradeErrorMessage}</p>
+                {/if}
+                <div class="points-row">
+                  <span class="points-label">Upgrade points</span>
+                  <span class="points-value">{formatPoints(upgradePointsValue)}</span>
+                </div>
+                <div class="stat-upgrade-grid">
+                  {#each UPGRADE_STATS as stat}
+                    <div class="stat-upgrade-row">
+                      <span class="stat-upgrade-label">{stat.label}</span>
+                      <span class="stat-upgrade-total" data-label="Total">{formatStatTotal(upgradeTotals[stat.key])}</span>
+                      <span class="stat-upgrade-cost" data-label="Next">{formatCost(upgradeCosts[stat.key])}</span>
+                    </div>
+                  {/each}
+                </div>
+                <div class="conversion-section">
+                  <div class="conversion-header">Convert items to points</div>
+                  <div class="conversion-form">
+                    <label class="conversion-field">
+                      <span>Star</span>
+                      <select bind:value={convertStar} disabled={pendingAction || upgradeLoading}>
+                        <option value={1}>1★</option>
+                        <option value={2}>2★</option>
+                        <option value={3}>3★</option>
+                        <option value={4}>4★</option>
+                      </select>
+                    </label>
+                    <label class="conversion-field">
+                      <span>Count</span>
+                      <input type="number" min="1" step="1" bind:value={convertCount} disabled={pendingAction || upgradeLoading} />
+                    </label>
+                    <button type="button" class="convert-btn" on:click={convertItems} disabled={!canConvert}>
+                      Convert
+                    </button>
+                  </div>
+                  <div class="conversion-note">
+                    <span>Available {convertStarNum}★: {availableAtStar}</span>
+                    {#if availableAtStar < convertCountNum}
+                      <span class="conversion-warning">Need {convertCountNum}</span>
+                    {/if}
+                  </div>
+                  <div class="conversion-note">
+                    {selected?.is_player
+                      ? 'Player can convert any element items.'
+                      : `Requires ${elementName || 'Generic'} items.`}
+                  </div>
+                </div>
+              {:else if upgradeErrorMessage}
+                <p class="upgrade-status error">{upgradeErrorMessage}</p>
+              {:else}
+                <p class="upgrade-note">Upgrade data unavailable.</p>
+              {/if}
             </div>
-            <div class="stat-grid">
-              {#each UPGRADE_STATS as stat}
-                <button
-                  type="button"
-                  class="stat-button"
-                  class:active={highlightedStat === stat.key}
-                  on:click={() => requestUpgrade(stat.key)}
-                >
-                  <span class="label">{stat.label}</span>
-                  <span class="hint">{stat.hint}</span>
-                </button>
-              {/each}
-            </div>
-            -->
           </div>
         </div>
       {/if}
@@ -548,6 +624,150 @@
   .upgrade-status.error { color: #ffc4c4; }
   .upgrade-status.pending { color: #ffecb5; }
   .upgrade-status.hint { color: rgba(255,255,255,0.65); }
+  .upgrade-summary {
+    pointer-events: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 0 0.85rem 0.85rem;
+  }
+  .upgrade-note {
+    margin: 0;
+    font-size: 0.85rem;
+    color: rgba(230,236,255,0.8);
+    text-align: center;
+  }
+  .points-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    background: rgba(0,0,0,0.45);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 0.65rem;
+    padding: 0.55rem 0.75rem;
+  }
+  .points-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: rgba(240,246,255,0.65);
+  }
+  .points-value {
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: #f1f5ff;
+  }
+  .stat-upgrade-grid {
+    display: grid;
+    gap: 0.45rem;
+  }
+  .stat-upgrade-row {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    align-items: center;
+    gap: 0.45rem;
+    background: rgba(0,0,0,0.4);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 0.55rem;
+    padding: 0.45rem 0.6rem;
+  }
+  .stat-upgrade-label {
+    font-weight: 600;
+    color: #f0f6ff;
+    letter-spacing: 0.04em;
+  }
+  .stat-upgrade-total,
+  .stat-upgrade-cost {
+    font-size: 0.85rem;
+    color: rgba(220,228,255,0.85);
+    text-align: right;
+  }
+  .stat-upgrade-total::before,
+  .stat-upgrade-cost::before {
+    content: attr(data-label);
+    display: block;
+    font-size: 0.65rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgba(220,228,255,0.55);
+  }
+  .conversion-section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding-top: 0.65rem;
+    border-top: 1px solid rgba(255,255,255,0.12);
+  }
+  .conversion-header {
+    font-size: 0.82rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: rgba(236,242,255,0.8);
+  }
+  .conversion-form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: flex-end;
+  }
+  .conversion-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    font-size: 0.78rem;
+    color: rgba(228,234,255,0.75);
+  }
+  .conversion-field select,
+  .conversion-field input {
+    background: rgba(0,0,0,0.55);
+    color: #f5f9ff;
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 0.5rem;
+    padding: 0.35rem 0.55rem;
+    min-width: 4.5rem;
+  }
+  .conversion-field select:focus,
+  .conversion-field select:focus-visible,
+  .conversion-field input:focus,
+  .conversion-field input:focus-visible {
+    outline: none;
+    border-color: color-mix(in srgb, var(--accent, #6ab) 45%, rgba(255,255,255,0.35));
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent, #6ab) 25%, transparent);
+  }
+  .conversion-field select:disabled,
+  .conversion-field input:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+  .convert-btn {
+    background: color-mix(in srgb, var(--accent, #6ab) 25%, rgba(0,0,0,0.6));
+    border: 1px solid color-mix(in srgb, var(--accent, #6ab) 55%, rgba(255,255,255,0.35));
+    color: #f5f9ff;
+    border-radius: 0.55rem;
+    padding: 0.45rem 0.85rem;
+    cursor: pointer;
+    transition: transform 140ms ease, background 140ms ease, border-color 140ms ease;
+    pointer-events: auto;
+  }
+  .convert-btn:hover:enabled {
+    transform: translateY(-1px);
+    background: color-mix(in srgb, var(--accent, #6ab) 40%, rgba(0,0,0,0.55));
+  }
+  .convert-btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+    transform: none;
+  }
+  .conversion-note {
+    font-size: 0.75rem;
+    color: rgba(220,228,255,0.75);
+    display: flex;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+  }
+  .conversion-warning {
+    color: #ffc4c4;
+  }
   /* Element select toolbar */
   .element-toolbar {
     position: absolute;
