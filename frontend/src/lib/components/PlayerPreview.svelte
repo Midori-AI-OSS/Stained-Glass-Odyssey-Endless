@@ -48,7 +48,16 @@
   $: elementName = overrideElement || selected?.element || '';
   $: accent = getElementColor(elementName || 'Generic');
   $: ElementIcon = getElementIcon(elementName || 'Generic');
-  $: highlightedStat = upgradeContext?.stat || upgradeContext?.lastRequestedStat || null;
+  $: pendingStat = upgradeContext?.pendingStat || null;
+  $: highlightedStat =
+    pendingStat || upgradeContext?.stat || upgradeContext?.lastRequestedStat || null;
+  function statLabel(stat) {
+    if (!stat) return '';
+    const match = UPGRADE_STATS.find((s) => s.key === stat);
+    if (match) return match.label;
+    const pretty = String(stat).replace(/_/g, ' ').trim();
+    return pretty ? pretty.replace(/\b\w/g, (c) => c.toUpperCase()) : stat;
+  }
   // Sun layout: baseline positions (percentages) we will copy to each element
   const sunLayout = {
     hp:         { x: 50, y: 52 },
@@ -266,6 +275,7 @@
           <div
             class="stat-slots"
             aria-label="Stat upgrade options"
+            aria-busy={pendingStat ? 'true' : undefined}
             on:click|stopPropagation
             style={`--accent:${accent}; color:${accent}`}
           >
@@ -323,23 +333,23 @@
 
               <!-- Buttons; icons inherit accent via color -->
               <button type="button" class="stat-icon-btn" style={`left:${currentLayout.hp.x}%; top:${currentLayout.hp.y}%; transform:translate(-50%,-50%); color:${accent}`}
-                class:active={highlightedStat==='max_hp'} on:click={() => requestUpgrade('max_hp')} aria-label="HP" title="HP — Bolster survivability.">
+                class:active={highlightedStat==='max_hp'} disabled={!!pendingStat} on:click={() => requestUpgrade('max_hp')} aria-label="HP" title="HP — Bolster survivability.">
                 <Heart aria-hidden="true" />
               </button>
               <button type="button" class="stat-icon-btn" style={`left:${currentLayout.atk.x}%; top:${currentLayout.atk.y}%; transform:translate(-50%,-50%); color:${accent}`}
-                class:active={highlightedStat==='atk'} on:click={() => requestUpgrade('atk')} aria-label="Attack" title="ATK — Improve offensive power.">
+                class:active={highlightedStat==='atk'} disabled={!!pendingStat} on:click={() => requestUpgrade('atk')} aria-label="Attack" title="ATK — Improve offensive power.">
                 <Sword aria-hidden="true" />
               </button>
               <button type="button" class="stat-icon-btn" style={`left:${currentLayout.def.x}%; top:${currentLayout.def.y}%; transform:translate(-50%,-50%); color:${accent}`}
-                class:active={highlightedStat==='defense'} on:click={() => requestUpgrade('defense')} aria-label="Defense" title="DEF — Stiffen defenses.">
+                class:active={highlightedStat==='defense'} disabled={!!pendingStat} on:click={() => requestUpgrade('defense')} aria-label="Defense" title="DEF — Stiffen defenses.">
                 <Shield aria-hidden="true" />
               </button>
               <button type="button" class="stat-icon-btn" style={`left:${currentLayout.crit_rate.x}%; top:${currentLayout.crit_rate.y}%; transform:translate(-50%,-50%); color:${accent}`}
-                class:active={highlightedStat==='crit_rate'} on:click={() => requestUpgrade('crit_rate')} aria-label="Crit Rate" title="Crit Rate — Raise critical odds.">
+                class:active={highlightedStat==='crit_rate'} disabled={!!pendingStat} on:click={() => requestUpgrade('crit_rate')} aria-label="Crit Rate" title="Crit Rate — Raise critical odds.">
                 <Crosshair aria-hidden="true" />
               </button>
               <button type="button" class="stat-icon-btn" style={`left:${currentLayout.crit_damage.x}%; top:${currentLayout.crit_damage.y}%; transform:translate(-50%,-50%); color:${accent}`}
-                class:active={highlightedStat==='crit_damage'} on:click={() => requestUpgrade('crit_damage')} aria-label="Crit Damage" title="Crit DMG — Amplify crit damage.">
+                class:active={highlightedStat==='crit_damage'} disabled={!!pendingStat} on:click={() => requestUpgrade('crit_damage')} aria-label="Crit Damage" title="Crit DMG — Amplify crit damage.">
                 <Zap aria-hidden="true" />
               </button>
               <!-- VIT (new) -->
@@ -361,6 +371,17 @@
             in:scale={{ duration: reducedMotion ? 0 : 160, easing: quintOut }}
             out:scale={{ duration: reducedMotion ? 0 : 120, easing: quintOut }}
           >
+            <div class="upgrade-feedback" role="status" aria-live="polite">
+              {#if pendingStat}
+                <p class="upgrade-status pending">Upgrading {statLabel(pendingStat)}…</p>
+              {:else if upgradeContext?.error}
+                <p class="upgrade-status error">{upgradeContext.error}</p>
+              {:else if upgradeContext?.message}
+                <p class="upgrade-status success">{upgradeContext.message}</p>
+              {:else}
+                <p class="upgrade-status hint">Select a stat node to spend upgrade points.</p>
+              {/if}
+            </div>
             <!--
               TEMPORARILY DISABLED UPGRADE MENU
               The element chip and stat buttons are commented out per request.
@@ -518,6 +539,24 @@
     /* Let background clicks pass through; re-enable on specific children */
     pointer-events: none;
   }
+  .upgrade-feedback {
+    pointer-events: none;
+    display: flex;
+    justify-content: center;
+    padding: 0.75rem 0 0.5rem;
+    min-height: 2.2rem;
+  }
+  .upgrade-status {
+    margin: 0;
+    font-size: 0.95rem;
+    text-align: center;
+    color: rgba(255,255,255,0.88);
+    text-shadow: 0 2px 6px rgba(0,0,0,0.5);
+  }
+  .upgrade-status.success { color: #d7f3ff; }
+  .upgrade-status.error { color: #ffc4c4; }
+  .upgrade-status.pending { color: #ffecb5; }
+  .upgrade-status.hint { color: rgba(255,255,255,0.65); }
   /* Element select toolbar */
   .element-toolbar {
     position: absolute;

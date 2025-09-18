@@ -82,5 +82,12 @@ describe('PartyPicker component', () => {
     expect(content).toContain('on:close-upgrade={(e) => handlePreviewMode(e.detail, \'portrait\')}');
     expect(content).toContain('on:request-upgrade={(e) => forwardUpgradeRequest(e.detail)}');
   });
+
+  test('wires upgrade requests to the API', () => {
+    const content = readFileSync(join(import.meta.dir, '../src/lib/components/PartyPicker.svelte'), 'utf8');
+    expect(content).toContain('import { getPlayers, upgradeStat }');
+    expect(content).toContain('await upgradeStat(id, stat);');
+    expect(content).toContain('upgradeContext?.pendingStat');
+  });
 });
 
