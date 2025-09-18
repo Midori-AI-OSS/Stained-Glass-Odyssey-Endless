@@ -21,7 +21,7 @@ class EmberStone(RelicBase):
         stacks = party.relics.count(self.id)
 
         if state is None:
-            async def _burn(target, attacker, amount) -> None:
+            async def _burn(target, attacker, amount, *_: object) -> None:
                 if attacker is None or target not in party.members:
                     return
                 current_stacks = state.get("stacks", 0)

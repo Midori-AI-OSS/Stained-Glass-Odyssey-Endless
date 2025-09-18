@@ -732,6 +732,7 @@ class Stats:
             original_amount,
             old_hp,
             post_hit_hp,
+            critical,
         )
         if attacker is not None:
             attacker.damage_dealt += original_amount
@@ -760,7 +761,15 @@ class Stats:
             except Exception as e:  # pragma: no cover - defensive
                 log.warning("Error triggering damage_taken passives: %s", e)
         post_hit_hp = self.hp
-        BUS.emit_batched("damage_taken", self, None, amount, old_hp, post_hit_hp)
+        BUS.emit_batched(
+            "damage_taken",
+            self,
+            None,
+            amount,
+            old_hp,
+            post_hit_hp,
+            False,
+        )
         return amount
 
     async def apply_healing(self, amount: int, healer: Optional["Stats"] = None, source_type: str = "heal", source_name: Optional[str] = None) -> int:
@@ -859,7 +868,10 @@ def _reset_temporary_slots_on_battle_end(*_args, **__):
 BUS.subscribe("battle_end", _reset_temporary_slots_on_battle_end)
 
 def _log_damage_taken(
-    target: "Stats", attacker: Optional["Stats"], amount: int
+    target: "Stats",
+    attacker: Optional["Stats"],
+    amount: int,
+    *_: object,
 ) -> None:
     attacker_id = getattr(attacker, "id", "unknown")
     log.info("%s takes %s from %s", target.id, amount, attacker_id)

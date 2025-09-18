@@ -74,6 +74,7 @@
         const anchor = (anchors && target && anchors[target]) ? anchors[target] : null;
         const x = anchor && Number.isFinite(anchor.x) ? anchor.x : 0.5;
         const y = anchor && Number.isFinite(anchor.y) ? anchor.y : 0.52;
+        const critical = Boolean(raw.isCritical || raw.metadata?.is_critical);
         floaters = [
           ...floaters,
           {
@@ -88,6 +89,7 @@
             y,
             tone: variant === 'heal' || variant === 'hot' ? 'heal' : 'damage',
             type: raw.type,
+            critical,
           }
         ];
         scheduleRemoval(id, duration);
@@ -131,6 +133,7 @@
         </span>
         <span class="amount" data-variant={entry.variant}>
           {entry.variant === 'heal' || entry.variant === 'hot' ? '+' : '-'}{Math.round(entry.amount)}
+          {entry.critical && entry.variant === 'damage' ? '!' : ''}
         </span>
         {#if entry.label}
           <span class="label">{entry.label}</span>

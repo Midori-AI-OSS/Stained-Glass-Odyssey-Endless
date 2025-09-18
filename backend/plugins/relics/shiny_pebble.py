@@ -26,7 +26,7 @@ class ShinyPebble(RelicBase):
             state = {"active": {}, "triggered": set()}
             party._shiny_pebble_state = state
 
-            async def _first_hit(target, attacker, amount) -> None:
+            async def _first_hit(target, attacker, amount, *_: object) -> None:
                 if target not in party.members or id(target) in state["triggered"]:
                     return
                 state["triggered"].add(id(target))

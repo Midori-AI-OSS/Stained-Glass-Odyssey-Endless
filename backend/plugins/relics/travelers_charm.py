@@ -23,7 +23,7 @@ class TravelersCharm(RelicBase):
         pending: dict[int, tuple[float, float]] = {}
         active: dict[int, tuple[PlayerBase, object]] = {}
 
-        async def _hit(target, attacker, amount) -> None:
+        async def _hit(target, attacker, amount, *_: object) -> None:
             if target not in party.members:
                 return
             pid = id(target)

@@ -54,7 +54,7 @@ class KillerInstinct(RelicBase):
                 user.effect_manager.add_modifier(mod)
                 buffs[id(user)] = (user, mod)
 
-            async def _damage(target, attacker, amount) -> None:
+            async def _damage(target, attacker, amount, *_: object) -> None:
                 if attacker is None:
                     return
                 if target.hp <= 0 and id(attacker) in buffs:

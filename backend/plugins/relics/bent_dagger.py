@@ -21,7 +21,7 @@ class BentDagger(RelicBase):
 
         stacks = party.relics.count(self.id)
 
-        async def _on_death(target, attacker, amount) -> None:
+        async def _on_death(target, attacker, amount, *_: object) -> None:
             if target in party.members or target.hp > 0:
                 return
 

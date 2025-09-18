@@ -265,11 +265,15 @@
       }
     }
     const amount = Number(evt.amount ?? 0);
+    const isCritical = Boolean(
+      metadata?.is_critical ?? metadata?.isCritical ?? metadata?.critical ?? evt.isCritical
+    );
     return {
       ...evt,
       amount,
       damageTypeId,
       metadata,
+      isCritical,
       effectLabel: extractEffectLabel(metadata),
     };
   }
@@ -293,6 +297,7 @@
       evt.source_id || '',
       evt.amount ?? '',
       metadata.damage_type_id || '',
+      metadata.is_critical ? 'crit' : '',
       effectIds,
       effectDetails,
     ].join('::');

@@ -21,7 +21,14 @@ class BulwarkTotem(CardBase):
     async def apply(self, party) -> None:  # type: ignore[override]
         await super().apply(party)
 
-        async def _on_damage_taken(target, attacker, damage, pre_damage_hp=None, post_damage_hp=None):
+        async def _on_damage_taken(
+            target,
+            attacker,
+            damage,
+            pre_damage_hp=None,
+            post_damage_hp=None,
+            *_: object,
+        ):
             if target not in party.members:
                 return
 
