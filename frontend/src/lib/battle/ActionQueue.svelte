@@ -7,6 +7,8 @@
   export let combatants = [];
   export let reducedMotion = false;
   export let showActionValues = false;
+  // Current actor id (normal or bonus); used to pin actor at top
+  export let activeId = null;
 
     const dispatch = createEventDispatcher();
 
@@ -14,22 +16,47 @@
       return combatants.find((c) => c.id === id) || null;
     }
 
+    // Filter queue to alive/visible entries
     $: displayQueue = queue.filter((e) => {
       const fighter = findCombatant(e.id);
       // Only include entries for combatants that still exist and are alive
       if (!fighter) return false; // removed/despawned
       return Number(fighter.hp ?? 0) >= 1;
     });
+    // Count bonus entries by actor id
+    $: bonusCounts = (() => {
+      const map = new Map();
+      for (const e of displayQueue) {
+        if (e?.bonus) map.set(e.id, (map.get(e.id) || 0) + 1);
+      }
+      return map;
+    })();
+
+    // Base list excludes bonus entries; we render one tile per actor
+    $: baseQueue = displayQueue.filter((e) => !e.bonus);
+
+    // Determine current active actor id (prefer provided activeId; otherwise first visible in queue)
+    $: currentActiveId = (() => {
+      const id = activeId ?? (displayQueue[0] && displayQueue[0].id);
+      return id;
+    })();
+
+    // Build display items with active actor pinned to top
     $: displayItems = (() => {
+      const firstIdx = baseQueue.findIndex((e) => e.id === currentActiveId);
+      const ordered = firstIdx > 0
+        ? [baseQueue[firstIdx], ...baseQueue.slice(0, firstIdx), ...baseQueue.slice(firstIdx + 1)]
+        : baseQueue.slice();
       const counts = new Map();
-      return displayQueue.map((e) => {
+      return ordered.map((e) => {
         const n = (counts.get(e.id) || 0) + 1;
         counts.set(e.id, n);
         return { entry: e, key: `${e.id}#${n}` };
       });
     })();
-    $: activeIndex = displayQueue.findIndex((e) => !e.bonus);
-    $: needsFade = (displayQueue?.length || 0) > 8;
+
+    $: activeIndex = 0; // top item is active
+    $: needsFade = (displayItems?.length || 0) > 8;
 
   </script>
 
@@ -43,13 +70,15 @@
         <div
           class="entry"
           class:active={i === activeIndex}
-          class:bonus={entry.bonus}
           style="--element-color: {elColor}"
           animate:flip={{ duration: reducedMotion ? 0 : 220 }}
           on:mouseenter={() => dispatch('hover', { id: fighter.id })}
           on:mouseleave={() => dispatch('hover', { id: null })}
         >
           <div class="inner">
+            {#if (bonusCounts.get(entry.id) || 0) > 0}
+              <div class="bonus-badge">x{bonusCounts.get(entry.id)}</div>
+            {/if}
             <img 
               src={getCharacterImage((fighter?.summon_type === 'phantom' && fighter?.summoner_id) ? fighter.summoner_id : (fighter?.summon_type || fighter?.id))} 
               alt="" 
@@ -143,11 +172,21 @@
     border: 8px solid transparent;
     border-right-color: var(--element-color);
   }
-  .entry.bonus {
-    /* Slightly de-emphasize bonus entries */
-  }
-  .entry.bonus .inner {
-    opacity: 0.6;
+  /* Bonus count badge shown on the actor's tile */
+  .bonus-badge {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    font-weight: 800;
+    font-size: 0.8rem;
+    color: #fff;
+    background: rgba(0,0,0,0.55);
+    border: 1px solid color-mix(in oklab, var(--element-color) 70%, #fff);
+    border-radius: 10px;
+    padding: 0 6px;
+    line-height: 1.2;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.8);
+    pointer-events: none;
   }
   .portrait {
     width: 100%;

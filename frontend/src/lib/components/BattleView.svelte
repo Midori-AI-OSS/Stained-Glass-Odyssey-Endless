@@ -903,6 +903,7 @@
     {queue}
     {combatants}
     {reducedMotion}
+    {activeId}
     showActionValues={displayActionValues}
     on:hover={(e) => hoveredId = e.detail?.id || null}
   />
