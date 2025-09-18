@@ -4,6 +4,7 @@ from dataclasses import fields
 import math
 import random
 from typing import Any
+from typing import Collection
 
 from plugins import foes as foe_plugins
 from plugins import players as player_plugins
@@ -468,7 +469,12 @@ def _choose_foe(party: Party) -> FoeBase:
     return foe_cls()
 
 
-def _build_foes(node: MapNode, party: Party) -> list[FoeBase]:
+def _build_foes(
+    node: MapNode,
+    party: Party,
+    *,
+    exclude_ids: Collection[str] | None = None,
+) -> list[FoeBase]:
     """Build a list of foes for the given room node.
 
     Ensures no duplicate foe IDs within a single encounter. If the available
@@ -496,6 +502,8 @@ def _build_foes(node: MapNode, party: Party) -> list[FoeBase]:
 
     # Build a candidate pool of foe classes that are not members of the party
     party_ids = {p.id for p in party.members}
+    if exclude_ids:
+        party_ids.update(eid for eid in exclude_ids if eid)
     candidates: list[type[FoeBase]] = []
     try:
         for name in getattr(foe_plugins, "__all__", []):
