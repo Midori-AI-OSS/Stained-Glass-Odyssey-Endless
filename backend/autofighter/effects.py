@@ -509,11 +509,24 @@ class EffectManager:
             ("dot", self.dots, self.stats.dots),
         )
 
+        def resolve_effect_name(effect: object) -> str:
+            name = getattr(effect, "name", None)
+            if name:
+                return str(name)
+
+            identifier = getattr(effect, "id", None)
+            if identifier is None:
+                return ""
+
+            return str(identifier)
+
         for order, (phase_name, collection, names) in enumerate(phase_definitions):
             expired: list[object] = []
             effect_count = len(collection)
             phase_label = "HoT" if phase_name == "hot" else "DoT"
             color = "green" if phase_name == "hot" else "light_red"
+            effect_ids = [str(effect_id) for effect_id in names]
+            effect_names = [resolve_effect_name(eff) for eff in collection]
             phase_payload = {
                 "phase": phase_name,
                 "effect_count": effect_count,
@@ -521,14 +534,20 @@ class EffectManager:
                 "has_effects": effect_count > 0,
                 "order": order,
                 "target_id": getattr(self.stats, "id", None),
+                "effect_ids": effect_ids,
+                "effect_names": effect_names,
             }
 
             # Announce phase start so the frontend can render pacing beats
+            start_phase_payload = phase_payload.copy()
+            start_phase_payload["effect_ids"] = list(effect_ids)
+            start_phase_payload["effect_names"] = list(effect_names)
+
             await BUS.emit_async(
                 "status_phase_start",
                 phase_name,
                 self.stats,
-                phase_payload.copy(),
+                start_phase_payload,
             )
 
             # Batch logging for performance when many effects are present
@@ -596,14 +615,20 @@ class EffectManager:
                     "effect_count": len(collection),
                     "expired_count": len(expired),
                     "has_effects": len(collection) > 0,
+                    "effect_ids": [str(effect_id) for effect_id in names],
+                    "effect_names": [resolve_effect_name(eff) for eff in collection],
                 }
             )
+
+            end_phase_payload = phase_payload.copy()
+            end_phase_payload["effect_ids"] = list(phase_payload["effect_ids"])
+            end_phase_payload["effect_names"] = list(phase_payload["effect_names"])
 
             await BUS.emit_async(
                 "status_phase_end",
                 phase_name,
                 self.stats,
-                phase_payload,
+                end_phase_payload,
             )
 
             await pace_sleep(YIELD_MULTIPLIER)

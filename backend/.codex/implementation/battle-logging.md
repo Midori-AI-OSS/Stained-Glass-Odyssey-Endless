@@ -73,6 +73,8 @@ Both events provide the same argument signature as other battle bus events:
    - `effect_count`: active effect total at the start/end of the phase.
    - `expired_count`: number of effects that ended during the phase (zero on start events).
    - `has_effects`: convenience boolean indicating whether any effects remain.
+   - `effect_ids`: ordered identifiers for every status evaluated in the phase, matching the combatant's HoT/DoT trackers.
+   - `effect_names`: human-friendly labels for each entry when available (falls back to identifiers when names are missing).
    - `target_id`: the combatant identifier (if available).
 
 Phases always fire in HoT → DoT order even when a combatant has no active statuses, and the manager yields via `pace_sleep(YIELD_MULTIPLIER)` between phases to create a short, predictable beat for UI animations and log snapshots.
