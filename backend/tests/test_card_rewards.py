@@ -250,7 +250,7 @@ async def test_vital_surge_low_hp_bonus():
     await BUS.emit_async("turn_start")
     assert member.atk == int(200 * 1.55)
     member.hp = member.max_hp
-    await BUS.emit_async("heal_received", member, member, 100)
+    await BUS.emit_async("heal_received", member, member, 100, None, None)
     assert member.atk == 200
 
 
