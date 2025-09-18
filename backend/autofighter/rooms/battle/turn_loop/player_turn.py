@@ -232,11 +232,14 @@ async def execute_player_phase(context: TurnLoopContext) -> bool:
                 foes=context.foes,
             )
             try:
-                SummonManager.add_summons_to_party(context.combat_party)
+                party_summons_added = SummonManager.add_summons_to_party(
+                    context.combat_party
+                )
                 register_snapshot_entities(
                     context.run_id,
                     context.combat_party.members,
                 )
+                new_foe_summons: list[Any] = []
                 for owner in list(context.foes):
                     owner_id = getattr(owner, "id", str(id(owner)))
                     for summon in SummonManager.get_summons(owner_id):
@@ -247,6 +250,21 @@ async def execute_player_phase(context: TurnLoopContext) -> bool:
                             context.foe_effects.append(manager)
                             context.enrage_mods.append(None)
                             register_snapshot_entities(context.run_id, [summon])
+                            new_foe_summons.append(summon)
+                if party_summons_added or new_foe_summons:
+                    await push_progress_update(
+                        context.progress,
+                        context.combat_party.members,
+                        context.foes,
+                        context.enrage_state,
+                        context.temp_rdr,
+                        _EXTRA_TURNS,
+                        run_id=context.run_id,
+                        active_id=getattr(member, "id", None),
+                        active_target_id=getattr(target_foe, "id", None),
+                        include_summon_foes=True,
+                    )
+                    await pace_sleep(YIELD_MULTIPLIER)
             except Exception:
                 pass
             member.add_ultimate_charge(member.actions_per_turn)

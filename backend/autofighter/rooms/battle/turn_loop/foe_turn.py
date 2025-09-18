@@ -18,6 +18,7 @@ from ..pacing import impact_pause
 from ..pacing import pace_sleep
 from ..turn_helpers import credit_if_dead
 from ..turns import mutate_snapshot_overlay
+from ..turns import push_progress_update
 from ..turns import register_snapshot_entities
 from .initialization import TurnLoopContext
 from .turn_end import finish_turn
@@ -174,11 +175,14 @@ async def execute_foe_phase(context: TurnLoopContext) -> bool:
             await impact_pause(acting_foe, targets_hit, duration=duration)
             await context.registry.trigger("action_taken", acting_foe)
             try:
-                SummonManager.add_summons_to_party(context.combat_party)
+                party_summons_added = SummonManager.add_summons_to_party(
+                    context.combat_party
+                )
                 register_snapshot_entities(
                     context.run_id,
                     context.combat_party.members,
                 )
+                new_foe_summons: list[Any] = []
                 for owner in list(context.foes):
                     owner_id = getattr(owner, "id", str(id(owner)))
                     for summon in SummonManager.get_summons(owner_id):
@@ -189,6 +193,21 @@ async def execute_foe_phase(context: TurnLoopContext) -> bool:
                             context.foe_effects.append(manager)
                             context.enrage_mods.append(None)
                             register_snapshot_entities(context.run_id, [summon])
+                            new_foe_summons.append(summon)
+                if party_summons_added or new_foe_summons:
+                    await push_progress_update(
+                        context.progress,
+                        context.combat_party.members,
+                        context.foes,
+                        context.enrage_state,
+                        context.temp_rdr,
+                        _EXTRA_TURNS,
+                        run_id=context.run_id,
+                        active_id=getattr(acting_foe, "id", None),
+                        active_target_id=getattr(target, "id", None),
+                        include_summon_foes=True,
+                    )
+                    await pace_sleep(YIELD_MULTIPLIER)
             except Exception:
                 pass
             acting_foe.add_ultimate_charge(acting_foe.actions_per_turn)
