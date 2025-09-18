@@ -54,7 +54,7 @@ async def test_room_heal_event_and_enrage(monkeypatch):
     player.passives = ["room_heal"]
     amounts: list[int] = []
 
-    def _heal(target, healer, amount):
+    def _heal(target, healer, amount, *_args):
         amounts.append(amount)
 
     BUS.subscribe("heal_received", _heal)

@@ -18,7 +18,7 @@ class BalancedDiet(CardBase):
     async def apply(self, party) -> None:  # type: ignore[override]
         await super().apply(party)
 
-        async def _on_heal_received(target, healer, heal_amount):
+        async def _on_heal_received(target, healer, heal_amount, *_args):
             # Check if target is one of our party members
             if target in party.members:
                 # Grant +2% DEF for 1 turn

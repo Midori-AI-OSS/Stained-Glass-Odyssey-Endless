@@ -339,8 +339,22 @@ async def test_status_phase_events_update_snapshot_queue(monkeypatch):
     assert resist_metadata.get("source_id") == attacker.id
     assert resist_metadata.get("target_id") == target.id
 
-    record_damage_taken_event(target, target, 77)
-    record_heal_received_event(target, target, 33)
+    record_damage_taken_event(
+        target,
+        target,
+        77,
+        None,
+        None,
+        True,
+        "test_action",
+    )
+    record_heal_received_event(
+        target,
+        target,
+        33,
+        "test_source_type",
+        "Test Source",
+    )
 
     final_events = list(battle_snapshots[run_id]["recent_events"])
     events_by_type = _group_by_type(final_events)
@@ -355,6 +369,11 @@ async def test_status_phase_events_update_snapshot_queue(monkeypatch):
     damage_metadata = damage_event.get("metadata", {})
     assert damage_metadata.get("damage_type_id") == "Generic"
     assert damage_metadata.get("is_critical") is True
+    assert damage_metadata.get("action_name") == "test_action"
+
+    heal_metadata = heal_event.get("metadata", {})
+    assert heal_metadata.get("source_type") == "test_source_type"
+    assert heal_metadata.get("source_name") == "Test Source"
 
     status_phase = snapshot.get("status_phase")
     assert status_phase is not None

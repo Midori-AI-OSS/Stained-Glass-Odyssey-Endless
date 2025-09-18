@@ -733,6 +733,7 @@ class Stats:
             old_hp,
             post_hit_hp,
             critical,
+            action_name,
         )
         if attacker is not None:
             attacker.damage_dealt += original_amount
@@ -769,6 +770,7 @@ class Stats:
             old_hp,
             post_hit_hp,
             False,
+            None,
         )
         return amount
 
@@ -825,7 +827,7 @@ class Stats:
             self.hp = min(self.hp + amount, self.max_hp)
 
         # Use batched emission for high-frequency healing events
-        BUS.emit_batched("heal_received", self, healer, amount)
+        BUS.emit_batched("heal_received", self, healer, amount, source_type, source_name)
         if healer is not None:
             BUS.emit_batched("heal", healer, self, amount, source_type, source_name)
         return amount
@@ -878,7 +880,10 @@ def _log_damage_taken(
 
 
 def _log_heal_received(
-    target: "Stats", healer: Optional["Stats"], amount: int
+    target: "Stats",
+    healer: Optional["Stats"],
+    amount: int,
+    *_: object,
 ) -> None:
     healer_id = getattr(healer, "id", "unknown")
     log.info("%s heals %s from %s", target.id, amount, healer_id)
