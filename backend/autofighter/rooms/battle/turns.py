@@ -13,13 +13,18 @@ from typing import MutableMapping
 from typing import Sequence
 import weakref
 
+from autofighter.cards import _registry as _card_registry
 from autofighter.effects import create_stat_buff
+from autofighter.party import Party
+from autofighter.relics import _registry as _relic_registry
 from autofighter.stats import BUS
 from autofighter.summons.base import Summon
 from autofighter.summons.manager import SummonManager
 
 from ...stats import Stats
 from ...stats import set_enrage_percent
+from .pacing import YIELD_MULTIPLIER
+from .pacing import pace_sleep
 from ..utils import _serialize
 
 if TYPE_CHECKING:
@@ -32,13 +37,22 @@ _RECENT_EVENT_LIMIT = 6
 
 _entity_run_ids: dict[int, str] = {}
 _entity_refs: dict[int, weakref.ref[Stats]] = {}
+_party_run_ids: dict[int, str] = {}
+_party_refs: dict[int, weakref.ref[Party]] = {}
 _recent_events: dict[str, deque[dict[str, Any]]] = {}
 _status_phases: dict[str, dict[str, Any] | None] = {}
+
+_card_name_cache: dict[str, str | None] = {}
+_relic_name_cache: dict[str, str | None] = {}
 
 def _resolve_run_id(*entities: Any) -> str | None:
     for entity in entities:
         if isinstance(entity, Stats):
             run_id = _entity_run_ids.get(id(entity))
+            if run_id:
+                return run_id
+        if isinstance(entity, Party):
+            run_id = _party_run_ids.get(id(entity))
             if run_id:
                 return run_id
     return None
@@ -59,6 +73,15 @@ def register_snapshot_entities(run_id: str | None, entities: Iterable[Any]) -> N
 
             _entity_run_ids[ident] = run_id
             _entity_refs[ident] = weakref.ref(entity, _cleanup)
+        elif isinstance(entity, Party):
+            ident = id(entity)
+
+            def _cleanup(_ref: weakref.ref[Party], *, key: int = ident) -> None:
+                _party_run_ids.pop(key, None)
+                _party_refs.pop(key, None)
+
+            _party_run_ids[ident] = run_id
+            _party_refs[ident] = weakref.ref(entity, _cleanup)
 
 
 def prepare_snapshot_overlay(run_id: str | None, entities: Iterable[Any]) -> None:
@@ -169,6 +192,56 @@ def _normalize_metadata(metadata: dict[str, Any]) -> dict[str, Any]:
 
     normalized = {key: _convert(val) for key, val in (metadata or {}).items()}
     return {key: val for key, val in normalized.items() if val is not None}
+
+
+def _lookup_card_name(card_id: str | None) -> str | None:
+    if not card_id:
+        return None
+    if card_id in _card_name_cache:
+        return _card_name_cache[card_id]
+    try:
+        registry = _card_registry()
+    except Exception:
+        _card_name_cache[card_id] = None
+        return None
+    card_cls = registry.get(card_id)
+    if card_cls is None:
+        _card_name_cache[card_id] = None
+        return None
+    try:
+        instance = card_cls()
+    except Exception:
+        friendly = getattr(card_cls, "name", None)
+    else:
+        friendly = getattr(instance, "name", None)
+    friendly_name = friendly if friendly else None
+    _card_name_cache[card_id] = friendly_name
+    return friendly_name
+
+
+def _lookup_relic_name(relic_id: str | None) -> str | None:
+    if not relic_id:
+        return None
+    if relic_id in _relic_name_cache:
+        return _relic_name_cache[relic_id]
+    try:
+        registry = _relic_registry()
+    except Exception:
+        _relic_name_cache[relic_id] = None
+        return None
+    relic_cls = registry.get(relic_id)
+    if relic_cls is None:
+        _relic_name_cache[relic_id] = None
+        return None
+    try:
+        instance = relic_cls()
+    except Exception:
+        friendly = getattr(relic_cls, "name", None)
+    else:
+        friendly = getattr(instance, "name", None)
+    friendly_name = friendly if friendly else None
+    _relic_name_cache[relic_id] = friendly_name
+    return friendly_name
 
 
 def _effect_metadata(
@@ -428,6 +501,78 @@ async def _on_hot_tick(
     )
 
 
+async def _on_card_effect(
+    card_id: str | None,
+    recipient: Any,
+    effect_type: str | None = None,
+    amount: int | float | None = None,
+    details: dict[str, Any] | None = None,
+    *_: Any,
+) -> None:
+    run_id = _resolve_run_id(recipient)
+    if not run_id:
+        return
+    metadata = {
+        "card_id": card_id,
+        "card_name": _lookup_card_name(card_id),
+        "effect": effect_type,
+        "details": details,
+    }
+    target = recipient if isinstance(recipient, Stats) else None
+    _record_event(
+        run_id,
+        event_type="card_effect",
+        source=None,
+        target=target,
+        amount=amount,
+        metadata=metadata,
+    )
+    if target is not None:
+        ident = getattr(target, "id", None)
+        mutate_snapshot_overlay(
+            run_id,
+            active_id=ident,
+            active_target_id=ident,
+        )
+    await pace_sleep(YIELD_MULTIPLIER)
+
+
+async def _on_relic_effect(
+    relic_id: str | None,
+    recipient: Any,
+    effect_type: str | None = None,
+    amount: int | float | None = None,
+    details: dict[str, Any] | None = None,
+    *_: Any,
+) -> None:
+    run_id = _resolve_run_id(recipient)
+    if not run_id:
+        return
+    metadata = {
+        "relic_id": relic_id,
+        "relic_name": _lookup_relic_name(relic_id),
+        "effect": effect_type,
+        "details": details,
+    }
+    target = recipient if isinstance(recipient, Stats) else None
+    _record_event(
+        run_id,
+        event_type="relic_effect",
+        source=None,
+        target=target,
+        amount=amount,
+        metadata=metadata,
+    )
+    if target is not None:
+        ident = getattr(target, "id", None)
+        mutate_snapshot_overlay(
+            run_id,
+            active_id=ident,
+            active_target_id=ident,
+        )
+    await pace_sleep(YIELD_MULTIPLIER)
+
+
 def _on_effect_applied(
     effect_name: str | None,
     entity: Stats | None,
@@ -511,6 +656,8 @@ BUS.subscribe("heal_received", _on_heal_received)
 BUS.subscribe("target_acquired", _on_target_acquired)
 BUS.subscribe("dot_tick", _on_dot_tick)
 BUS.subscribe("hot_tick", _on_hot_tick)
+BUS.subscribe("card_effect", _on_card_effect)
+BUS.subscribe("relic_effect", _on_relic_effect)
 BUS.subscribe("effect_applied", _on_effect_applied)
 BUS.subscribe("effect_resisted", _on_effect_resisted)
 BUS.subscribe("effect_expired", _on_effect_expired)
