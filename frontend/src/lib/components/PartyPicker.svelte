@@ -169,11 +169,8 @@
         on:element-change={(e) => { previewElementOverride = e.detail?.element || previewElementOverride; refreshRoster(); }}
       />
       <div class="right-col">
-        <StatTabs {roster} {previewId} {selected} {userBuffPercent} previewMode={$previewMode}
+        <StatTabs {roster} {previewId} {selected} {userBuffPercent}
           on:toggle={(e) => toggleMember(e.detail)}
-          on:refresh-roster={refreshRoster}
-          on:open-upgrade-mode={(e) => handlePreviewMode(e.detail, 'upgrade')}
-          on:close-upgrade-mode={(e) => handlePreviewMode(e.detail, 'portrait')}
         />
         <div class="party-actions-inline">
           {#if actionLabel === 'Start Run'}

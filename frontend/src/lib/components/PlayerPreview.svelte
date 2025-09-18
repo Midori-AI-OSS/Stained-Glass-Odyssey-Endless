@@ -222,8 +222,6 @@
             alt={selected.name}
             style={`--outline: ${getElementColor(overrideElement || selected.element)};`}
           />
-          <!-- Hidden: legacy portrait-mode upgrade button -->
-          <!--
           <button
             type="button"
             class="upgrade-toggle"
@@ -232,7 +230,6 @@
           >
             Upgrade stats
           </button>
-          -->
         </div>
       {:else if mode === 'upgrade'}
         <div
