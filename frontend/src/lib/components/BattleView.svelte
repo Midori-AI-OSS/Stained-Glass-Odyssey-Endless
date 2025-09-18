@@ -364,6 +364,23 @@
     if (!evt) return '';
     const metadata = evt.metadata || {};
     const effectIds = Array.isArray(metadata.effect_ids) ? metadata.effect_ids.join('|') : '';
+    const cardIdentifiers = [
+      metadata.card_id,
+      metadata.cardId,
+      metadata.card_name,
+      metadata.cardName,
+    ]
+      .map(value => (value === undefined || value === null ? '' : String(value)))
+      .join('~');
+    const relicIdentifiers = [
+      metadata.relic_id,
+      metadata.relicId,
+      metadata.relic_name,
+      metadata.relicName,
+    ]
+      .map(value => (value === undefined || value === null ? '' : String(value)))
+      .join('~');
+    const label = evt.effectLabel === undefined || evt.effectLabel === null ? '' : String(evt.effectLabel);
     const effectDetails = Array.isArray(metadata.effects)
       ? metadata.effects
           .map(e =>
@@ -381,6 +398,9 @@
       metadata.damage_type_id || '',
       metadata.is_critical ? 'crit' : '',
       effectIds,
+      label,
+      cardIdentifiers,
+      relicIdentifiers,
       effectDetails,
     ].join('::');
   }
