@@ -1,8 +1,16 @@
+import asyncio
 import importlib.util
+import math
 from pathlib import Path
 import random
 
 import pytest
+from runs.lifecycle import load_map
+from runs.party_manager import load_party
+from runs.party_manager import save_party
+from services.room_service import shop_room
+from services.run_service import advance_room
+from services.run_service import start_run
 
 from autofighter.mapgen import MapGenerator
 from autofighter.mapgen import MapNode
@@ -81,7 +89,71 @@ async def test_shop_cost_scales_with_pressure():
         base = PRICE_BY_STARS[item["stars"]]
         min_cost = int(base * (1.26 ** pressure) * 0.95)
         max_cost = int(base * (1.26 ** pressure) * 1.05)
-        assert min_cost <= item["cost"] <= max_cost
+        assert min_cost <= item["base_price"] <= max_cost
+        assert item["cost"] >= item["base_price"]
+        assert item["tax"] == item["cost"] - item["base_price"]
+
+
+@pytest.mark.asyncio
+async def test_shop_tax_scales_and_persists():
+    base_entry = {
+        "id": "test_card_1",
+        "name": "Test Card",
+        "stars": 1,
+        "type": "card",
+        "base_price": 100,
+        "price": 100,
+        "cost": 100,
+        "tax": 0,
+    }
+
+    node_low = MapNode(room_id=5, room_type="shop", floor=1, index=1, loop=1, pressure=0)
+    node_low.stock = [dict(base_entry), {**base_entry, "id": "test_card_2"}]
+    room_low = ShopRoom(node_low)
+
+    member = PlayerBase()
+    member.id = "tester"
+    member.set_base_stat('max_hp', 100)
+    member.hp = 50
+    party_low = Party(members=[member], gold=500)
+
+    first_low = await room_low.resolve(party_low, {})
+    assert first_low["items_bought"] == 0
+    assert first_low["stock"][0]["tax"] == 0
+
+    purchase = first_low["stock"][0]
+    second_low = await room_low.resolve(party_low, {"id": purchase["id"], "cost": purchase["cost"]})
+    assert second_low["items_bought"] == 1
+
+    revisit_low = await room_low.resolve(party_low, {})
+    assert revisit_low["items_bought"] == 1
+    assert revisit_low["stock"]
+    low_item = revisit_low["stock"][0]
+    expected_low_tax = math.ceil(
+        low_item["base_price"] * 0.01 * (node_low.pressure + 1) * revisit_low["items_bought"]
+    )
+    assert low_item["tax"] == expected_low_tax
+    assert low_item["cost"] == low_item["base_price"] + expected_low_tax
+
+    node_high = MapNode(room_id=6, room_type="shop", floor=1, index=2, loop=1, pressure=4)
+    node_high.items_bought = revisit_low["items_bought"]
+    node_high.stock = [dict(base_entry)]
+    room_high = ShopRoom(node_high)
+
+    member_high = PlayerBase()
+    member_high.id = "tester_high"
+    member_high.set_base_stat('max_hp', 100)
+    member_high.hp = 50
+    party_high = Party(members=[member_high], gold=500)
+
+    high_view = await room_high.resolve(party_high, {})
+    assert high_view["items_bought"] == revisit_low["items_bought"]
+    high_item = high_view["stock"][0]
+    expected_high_tax = math.ceil(
+        high_item["base_price"] * 0.01 * (node_high.pressure + 1) * high_view["items_bought"]
+    )
+    assert high_item["tax"] == expected_high_tax
+    assert expected_high_tax > expected_low_tax
 
 
 @pytest.fixture()
@@ -111,56 +183,50 @@ def app_with_shop(tmp_path, monkeypatch):
 
 @pytest.mark.asyncio
 async def test_shop_allows_multiple_actions(app_with_shop):
-    app, _ = app_with_shop
-    client = app.test_client()
+    _, _ = app_with_shop
+    start = await start_run(["player"])
+    run_id = start["run_id"]
 
-    start = await client.post("/run/start", json={"party": ["player"]})
-    run_id = (await start.get_json())["run_id"]
-    await client.put(
-        f"/party/{run_id}", json={"party": ["player"], "gold": 300},
-    )
+    party = await asyncio.to_thread(load_party, run_id)
+    party.gold = 300
+    await asyncio.to_thread(save_party, run_id, party)
 
-    first = await client.post(f"/rooms/{run_id}/shop")
-    data = await first.get_json()
+    async def resolve_shop(params: dict | None = None):
+        payload = params or {}
+        result = await shop_room(run_id, payload)
+        assert result["result"] == "shop"
+        return result
+
+    data = await resolve_shop()
     assert data["stock"]
     gold = data["gold"]
 
     item1 = data["stock"][0]
-    buy1 = await client.post(
-        f"/rooms/{run_id}/shop", json={"id": item1["id"], "cost": item1["cost"]}
-    )
-    data = await buy1.get_json()
+    data = await resolve_shop({"id": item1["id"], "cost": item1["cost"]})
     spent = item1["cost"]
     assert data["gold"] == gold - spent
 
-    reroll1 = await client.post(
-        f"/rooms/{run_id}/shop", json={"action": "reroll"}
-    )
-    data = await reroll1.get_json()
+    data = await resolve_shop({"action": "reroll"})
     spent += REROLL_COST
     assert data["gold"] == gold - spent
 
     item2 = data["stock"][0]
-    buy2 = await client.post(
-        f"/rooms/{run_id}/shop", json={"id": item2["id"], "cost": item2["cost"]}
-    )
-    data = await buy2.get_json()
+    data = await resolve_shop({"id": item2["id"], "cost": item2["cost"]})
     spent += item2["cost"]
     assert data["gold"] == gold - spent
 
-    reroll2 = await client.post(
-        f"/rooms/{run_id}/shop", json={"action": "reroll"}
-    )
-    data = await reroll2.get_json()
+    data = await resolve_shop({"action": "reroll"})
     spent += REROLL_COST
     assert data["gold"] == gold - spent
 
-    next_attempt = await client.post(f"/run/{run_id}/next")
-    assert next_attempt.status_code == 400
+    state, _ = await asyncio.to_thread(load_map, run_id)
+    assert not state.get("awaiting_next")
 
-    leave = await client.post(f"/rooms/{run_id}/shop", json={"action": "leave"})
-    leave_data = await leave.get_json()
+    leave_data = await resolve_shop({"action": "leave"})
     assert "next_room" in leave_data
 
-    final = await client.post(f"/run/{run_id}/next")
-    assert final.status_code == 200
+    state, _ = await asyncio.to_thread(load_map, run_id)
+    assert state.get("awaiting_next")
+
+    final = await advance_room(run_id)
+    assert isinstance(final.get("current_index"), int)
