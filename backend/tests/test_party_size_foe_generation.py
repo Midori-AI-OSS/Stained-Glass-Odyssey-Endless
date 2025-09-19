@@ -25,7 +25,7 @@ def _make_node() -> MapNode:
 
 def _run(monkeypatch, values: list[float]) -> int:
     it: Iterator[float] = iter(values)
-    monkeypatch.setattr(utils, "_choose_foe", lambda party: DummyFoe())
+    monkeypatch.setattr(utils, "_choose_foe", lambda node, party: DummyFoe())
     monkeypatch.setattr(utils.random, "random", lambda: next(it, 1.0))
     party = _make_party(3)
     node = _make_node()

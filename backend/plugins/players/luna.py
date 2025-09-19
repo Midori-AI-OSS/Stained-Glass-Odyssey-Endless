@@ -1,7 +1,9 @@
 from dataclasses import dataclass
 from dataclasses import field
+from typing import Collection
 
 from autofighter.character import CharacterType
+from autofighter.mapgen import MapNode
 from plugins.damage_types import load_damage_type
 from plugins.damage_types._base import DamageTypeBase
 from plugins.players._base import PlayerBase
@@ -20,3 +22,24 @@ class Luna(PlayerBase):
     passives: list[str] = field(default_factory=lambda: ["luna_lunar_reservoir"])
     # UI hint: show numeric actions indicator
     actions_display: str = "number"
+
+    @classmethod
+    def get_spawn_weight(
+        cls,
+        *,
+        node: MapNode,
+        party_ids: Collection[str],
+        recent_ids: Collection[str] | None = None,
+        boss: bool = False,
+    ) -> float:
+        if cls.id in {str(pid) for pid in party_ids}:
+            return 0.0
+
+        try:
+            floor = int(getattr(node, "floor", 0))
+        except Exception:
+            floor = 0
+
+        if boss and floor % 3 == 0:
+            return 6.0
+        return 1.0

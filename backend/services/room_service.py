@@ -475,7 +475,7 @@ async def boss_room(run_id: str, data: dict[str, Any]) -> dict[str, Any]:
             boss_id = boss_info.get("id") if isinstance(boss_info, dict) else None
             foe = _instantiate_boss(boss_id)
         if foe is None:
-            foe = _choose_foe(party)
+            foe = _choose_foe(node, party)
             state["floor_boss"] = {
                 "id": getattr(foe, "id", type(foe).__name__),
                 "floor": getattr(node, "floor", 1),

@@ -27,7 +27,7 @@ async def test_per_actor_pacing():
 
     import autofighter.rooms.utils as rooms_module
     original = rooms_module._choose_foe
-    rooms_module._choose_foe = lambda _party: foe
+    rooms_module._choose_foe = lambda _node, _party: foe
     start = time.perf_counter()
     await room.resolve(party, {})
     elapsed = time.perf_counter() - start

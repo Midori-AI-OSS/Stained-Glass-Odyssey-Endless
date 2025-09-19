@@ -4,6 +4,7 @@ import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from autofighter.mapgen import MapNode
 from autofighter.party import Party
 from autofighter.rooms.utils import _choose_foe
 from plugins import players
@@ -17,7 +18,8 @@ def test_random_player_foes() -> None:
     player_ids = {
         getattr(players, name).id for name in getattr(players, "__all__", [])
     }
-    seen = [_choose_foe(party) for _ in range(20)]
+    node = MapNode(room_id=0, room_type="boss", floor=1, index=1, loop=1, pressure=0)
+    seen = [_choose_foe(node, party) for _ in range(20)]
     ids = {foe.id for foe in seen}
     assert any(fid in player_ids and fid != "slime" for fid in ids)
     player_foes = [foe for foe in seen if foe.id != "slime"]

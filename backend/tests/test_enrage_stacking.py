@@ -23,7 +23,10 @@ async def test_enrage_stacks(monkeypatch):
         atk = 5
         defense = 1000
 
-    monkeypatch.setattr(rooms, "_choose_foe", lambda party: DummyFoe())
+    monkeypatch.setattr(
+        "autofighter.rooms.battle.setup._build_foes",
+        lambda node, party, **kwargs: [DummyFoe()],
+    )
     monkeypatch.setattr(rooms, "ENRAGE_TURNS_NORMAL", 2)
 
     node = MapNode(room_id=0, room_type="battle-normal", floor=1, index=1, loop=1, pressure=0)

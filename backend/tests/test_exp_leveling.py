@@ -26,7 +26,10 @@ async def test_battle_room_awards_exp(monkeypatch):
     foe = DummyFoe()
     foe.hp = 1
     foe.level = 3
-    monkeypatch.setattr("autofighter.rooms.utils._choose_foe", lambda p: foe)
+    monkeypatch.setattr(
+        "autofighter.rooms.battle.setup._build_foes",
+        lambda node, party, **kwargs: [foe],
+    )
     monkeypatch.setattr("autofighter.rooms.utils._scale_stats", lambda *args, **kwargs: None)
     result = await room.resolve(party, {})
     assert party.members[0].level == 3
@@ -51,7 +54,10 @@ async def test_level_up_persists_hp(monkeypatch):
     foe = DummyFoe()
     foe.hp = 1
     foe.level = 3
-    monkeypatch.setattr("autofighter.rooms.utils._choose_foe", lambda p: foe)
+    monkeypatch.setattr(
+        "autofighter.rooms.battle.setup._build_foes",
+        lambda node, party, **kwargs: [foe],
+    )
     monkeypatch.setattr("autofighter.rooms.utils._scale_stats", lambda *args, **kwargs: None)
     await room.resolve(party, {})
     assert party.members[0].level > 1

@@ -5,7 +5,9 @@ from dataclasses import dataclass
 from dataclasses import field
 from dataclasses import fields
 import logging
+from typing import Collection
 
+from autofighter.mapgen import MapNode
 from autofighter.character import CharacterType
 from autofighter.stats import BUS
 from autofighter.stats import Stats
@@ -74,6 +76,17 @@ class PlayerBase(Stats):
     stat_gain_map: dict[str, str] = field(default_factory=dict)
     stat_loss_map: dict[str, str] = field(default_factory=dict)
     lrm_memory: object | None = field(default=None, init=False, repr=False)
+
+    @classmethod
+    def get_spawn_weight(
+        cls,
+        *,
+        node: MapNode,
+        party_ids: Collection[str],
+        recent_ids: Collection[str] | None = None,
+        boss: bool = False,
+    ) -> float:
+        return 1.0
 
     def __post_init__(self) -> None:
         if self.voice_gender is None:
