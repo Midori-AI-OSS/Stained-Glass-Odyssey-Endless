@@ -329,16 +329,15 @@
 
   .panel-header h2 {
     margin: 0;
-    font-size: 1.15rem;
+    font-size: 1.1rem; /* match About panel section title */
     letter-spacing: 0.02em;
     text-shadow: 0 2px 6px rgba(0, 0, 0, 0.6);
   }
 
   .streak-label {
-    font-size: 0.82rem;
+    font-size: 0.78rem; /* slightly smaller meta text */
     opacity: 0.9;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.04em;
   }
 
   /* Shared game button style (icon-btn) */
@@ -406,7 +405,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 0.78rem;
+    font-size: 0.8rem; /* small but readable inside chevrons */
     font-weight: 600;
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
     border: 1px solid rgba(255, 255, 255, 0.12);
@@ -494,9 +493,11 @@
   .progress-header {
     display: flex;
     justify-content: space-between;
-    font-size: 0.82rem;
+    font-size: 0.82rem; /* leave slightly smaller than body */
     letter-spacing: 0.05em;
-    text-transform: uppercase;
+    /* natural case, no forced uppercase */
+    text-transform: none;
+    font-weight: 600;
     opacity: 0.85;
   }
 
@@ -559,7 +560,7 @@
   }
 
   .reward-type {
-    font-size: 0.72rem;
+    font-size: 0.75rem; /* align with other small meta text */
     opacity: 0.7;
     letter-spacing: 0.06em;
   }
@@ -587,7 +588,7 @@
   .claim-btn:not(:disabled) { border-color: rgba(200,240,255,0.35); }
 
   .claim-status {
-    font-size: 0.78rem;
+    font-size: 0.75rem; /* align with progress-text scale */
     opacity: 0.8;
   }
 
