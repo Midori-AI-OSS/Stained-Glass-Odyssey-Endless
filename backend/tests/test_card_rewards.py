@@ -44,7 +44,7 @@ NEW_CARDS: list[tuple[str, dict[str, float]]] = [
     ("critical_focus", {"atk": 0.55}),
     ("critical_transfer", {}),
     ("iron_guard", {"defense": 0.55}),
-    ("swift_footwork", {}),
+    ("swift_footwork", {"spd": 0.2}),
     ("mystic_aegis", {"effect_resistance": 0.55}),
     ("vital_surge", {"max_hp": 0.55}),
     ("elemental_spark", {"atk": 0.55, "effect_hit_rate": 0.55}),
@@ -197,32 +197,32 @@ async def test_iron_guard_defense_buff():
 
 
 @pytest.mark.asyncio
-async def test_swift_footwork_first_action(monkeypatch):
+async def test_swift_footwork_speed_burst():
     member = Stats()
-    member.action_points = 1
+    base_spd = member.spd
     party = Party(members=[member])
     award_card(party, "swift_footwork")
     await cards_module.apply_cards(party)
     await asyncio.sleep(0)
-    assert member.actions_per_turn == 2
+
+    # Permanent SPD multiplier is applied on award
+    assert member.spd == int(base_spd * 1.2)
+
     events: list[str] = []
 
-    async def _listener(card_id, *_args):
+    async def _listener(card_id, _member, effect_type, _value, _payload):
         if card_id == "swift_footwork":
-            events.append(_args[1])
+            events.append(effect_type)
 
     BUS.subscribe("card_effect", _listener)
     await BUS.emit_async("battle_start")
-    member.action_points -= 1
-    await BUS.emit_async("action_used", member, None, 10)
-    await asyncio.sleep(0.05)
-    assert member.action_points == 1
-    member.action_points -= 1
-    await BUS.emit_async("action_used", member, None, 10)
     await asyncio.sleep(0.05)
     BUS.unsubscribe("card_effect", _listener)
-    assert member.action_points == 0
-    assert events.count("free_action") == 1
+
+    # Temporary burst should increase SPD further and emit the new effect payload
+    assert member.spd == int(base_spd * 1.5)
+    assert "battle_start_spd_burst" in events
+    assert "free_action" not in events
 
 
 @pytest.mark.asyncio
