@@ -32,5 +32,5 @@ def test_boss_rooms_spawn_one_foe(size: int, pressure: int) -> None:
     node = _make_node(pressure)
     foes = utils._build_foes(node, party)
     assert len(foes) == 1
-    assert foes[0].rank == "boss"
+    assert foes[0].rank in {"boss", "prime boss", "glitched boss", "glitched prime boss"}
 

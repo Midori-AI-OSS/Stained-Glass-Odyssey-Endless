@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import copy
+import random
 from typing import Any
 
 from battle_logging.writers import get_current_run_logger
@@ -21,12 +22,45 @@ from autofighter.rooms import BattleRoom
 from autofighter.rooms import BossRoom
 from autofighter.rooms import ChatRoom
 from autofighter.rooms import ShopRoom
+from autofighter.rooms import calculate_rank_probabilities
 from autofighter.rooms import _build_foes
 from autofighter.rooms import _choose_foe
 from autofighter.rooms import _scale_stats
 from autofighter.rooms import _serialize
 from autofighter.summons.manager import SummonManager
+from plugins import foes as foe_plugins
 from plugins.damage_types import load_damage_type
+
+
+def _boss_matches_node(info: Any, node: Any) -> bool:
+    try:
+        return (
+            isinstance(info, dict)
+            and info.get("id")
+            and int(info.get("floor", -1)) == int(getattr(node, "floor", -1))
+            and int(info.get("loop", -1)) == int(getattr(node, "loop", -1))
+        )
+    except Exception:
+        return False
+
+
+def _instantiate_boss(foe_id: str | None):
+    if not foe_id:
+        return None
+    try:
+        for name in getattr(foe_plugins, "__all__", []):
+            cls = getattr(foe_plugins, name, None)
+            if cls is not None and getattr(cls, "id", None) == foe_id:
+                return cls()
+    except Exception:
+        pass
+    try:
+        foe_cls = foe_plugins.PLAYER_FOES.get(foe_id)
+        if foe_cls is not None:
+            return foe_cls()
+    except Exception:
+        pass
+    return None
 
 
 def _collect_summons(entities: list) -> dict[str, list[dict[str, Any]]]:
@@ -38,6 +72,53 @@ def _collect_summons(entities: list) -> dict[str, list[dict[str, Any]]]:
             snap["owner_id"] = sid
             snapshots.setdefault(sid, []).append(snap)
     return snapshots
+
+
+def _normalize_recent_foes(
+    state: dict[str, Any],
+) -> tuple[list[dict[str, int]], set[str], bool]:
+    entries = state.get("recent_foes", [])
+    changed = False
+    if not isinstance(entries, list):
+        if entries:
+            changed = True
+        return [], set(), changed
+
+    ordered_ids: list[str] = []
+    aggregated: dict[str, int] = {}
+
+    for entry in entries:
+        if not isinstance(entry, dict):
+            changed = True
+            continue
+        foe_id = entry.get("id")
+        if not foe_id:
+            changed = True
+            continue
+        try:
+            cooldown = int(entry.get("cooldown", 0))
+        except Exception:
+            changed = True
+            continue
+        if cooldown <= 0:
+            changed = True
+            continue
+        foe_key = str(foe_id)
+        if foe_key not in aggregated:
+            ordered_ids.append(foe_key)
+            aggregated[foe_key] = cooldown
+        else:
+            prev = aggregated[foe_key]
+            if cooldown > prev:
+                aggregated[foe_key] = cooldown
+                changed = True
+            elif cooldown != prev:
+                changed = True
+
+    normalized = [{"id": foe_id, "cooldown": aggregated[foe_id]} for foe_id in ordered_ids]
+    if len(normalized) != len(entries):
+        changed = True
+    return normalized, set(ordered_ids), changed
 
 
 async def battle_room(run_id: str, data: dict[str, Any]) -> dict[str, Any]:
@@ -71,7 +152,24 @@ async def battle_room(run_id: str, data: dict[str, Any]) -> dict[str, Any]:
                 if rooms and 0 <= int(state.get("current", 0)) < len(rooms):
                     node = rooms[state["current"]]
                     room = BattleRoom(node)
-                    foes = _build_foes(node, party)
+                    normalized, recent_ids, changed = _normalize_recent_foes(state)
+                    if changed:
+                        state["recent_foes"] = normalized
+                        await asyncio.to_thread(save_map, run_id, state)
+                    progression = {
+                        "total_rooms_cleared": state.get("total_rooms_cleared", 0),
+                        "floors_cleared": state.get("floors_cleared", 0),
+                        "current_pressure": state.get(
+                            "current_pressure",
+                            getattr(node, "pressure", 0),
+                        ),
+                    }
+                    foes = _build_foes(
+                        node,
+                        party,
+                        recent_ids=recent_ids,
+                        progression=progression,
+                    )
                     for f in foes:
                         _scale_stats(f, node, room.strength)
                     combat_party = Party(
@@ -121,6 +219,10 @@ async def battle_room(run_id: str, data: dict[str, Any]) -> dict[str, Any]:
     node = rooms[state["current"]]
     if node.room_type not in {"battle-weak", "battle-normal"}:
         raise ValueError("invalid room")
+    normalized_recent, recent_ids, recent_changed = _normalize_recent_foes(state)
+    if recent_changed:
+        state["recent_foes"] = normalized_recent
+        await asyncio.to_thread(save_map, run_id, state)
     # Check awaiting flags before attempting to launch a new battle
     awaiting_card = state.get("awaiting_card")
     awaiting_relic = state.get("awaiting_relic")
@@ -174,7 +276,27 @@ async def battle_room(run_id: str, data: dict[str, Any]) -> dict[str, Any]:
         state["battle"] = True
         await asyncio.to_thread(save_map, run_id, state)
         room = BattleRoom(node)
-        foes = _build_foes(node, party)
+        boss_info = state.get("floor_boss")
+        exclude_ids = None
+        if _boss_matches_node(boss_info, node):
+            boss_id = boss_info.get("id") if isinstance(boss_info, dict) else None
+            if boss_id:
+                exclude_ids = {boss_id}
+        progression = {
+            "total_rooms_cleared": state.get("total_rooms_cleared", 0),
+            "floors_cleared": state.get("floors_cleared", 0),
+            "current_pressure": state.get(
+                "current_pressure",
+                getattr(node, "pressure", 0),
+            ),
+        }
+        foes = _build_foes(
+            node,
+            party,
+            exclude_ids=exclude_ids,
+            recent_ids=recent_ids,
+            progression=progression,
+        )
         for f in foes:
             _scale_stats(f, node, room.strength)
         combat_party = Party(
@@ -347,7 +469,47 @@ async def boss_room(run_id: str, data: dict[str, Any]) -> dict[str, Any]:
         await asyncio.to_thread(save_map, run_id, state)
         room = BossRoom(node)
         party = await asyncio.to_thread(load_party, run_id)
-        foe = _choose_foe(party)
+        boss_info = state.get("floor_boss")
+        foe = None
+        if _boss_matches_node(boss_info, node):
+            boss_id = boss_info.get("id") if isinstance(boss_info, dict) else None
+            foe = _instantiate_boss(boss_id)
+        if foe is None:
+            foe = _choose_foe(party)
+            state["floor_boss"] = {
+                "id": getattr(foe, "id", type(foe).__name__),
+                "floor": getattr(node, "floor", 1),
+                "loop": getattr(node, "loop", 1),
+            }
+        progression = {
+            "total_rooms_cleared": state.get("total_rooms_cleared", 0),
+            "floors_cleared": state.get("floors_cleared", 0),
+            "current_pressure": state.get(
+                "current_pressure",
+                getattr(node, "pressure", 0),
+            ),
+        }
+        prime_chance, glitched_chance = calculate_rank_probabilities(
+            progression["total_rooms_cleared"],
+            progression["floors_cleared"],
+            progression["current_pressure"],
+        )
+        forced_prime = "prime" in node.room_type
+        forced_glitched = "glitched" in node.room_type
+        is_prime = forced_prime
+        is_glitched = forced_glitched
+        if not is_prime and prime_chance > 0.0:
+            is_prime = random.random() < prime_chance
+        if not is_glitched and glitched_chance > 0.0:
+            is_glitched = random.random() < glitched_chance
+        if is_prime and is_glitched:
+            foe.rank = "glitched prime boss"
+        elif is_prime:
+            foe.rank = "prime boss"
+        elif is_glitched:
+            foe.rank = "glitched boss"
+        else:
+            foe.rank = "boss"
         _scale_stats(foe, node, room.strength)
         foes = [foe]
         combat_party = Party(

@@ -3,7 +3,7 @@
 The Battle Review interface uses a vertical icon column and a persistent side panel:
 
 - Navigation icons appear in a left-side column. The overview uses a Swords icon, while party and foe entries show their portraits.
-- Foe tabs append the foe's rank after its name using an em dash (e.g., `Slime — Prime`).
+- Foe tabs keep the label to the foe's name; rank badges render inside the portrait via `LegacyFighterPortrait` while the tab's aria-label still includes the rank for screen readers.
 - Selecting an icon swaps the main content without hiding statistics; the right-side stats panel updates for the active entry.
 - `.battle-review-tabs` arranges three columns: `icon-column`, `content-area`, and `stats-panel`.
 - `.icon-btn` provides a square click target with hover and active states.

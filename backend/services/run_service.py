@@ -17,8 +17,11 @@ from runs.lifecycle import save_map
 from runs.party_manager import _assign_damage_type
 from runs.party_manager import _describe_passives
 from runs.party_manager import _load_player_customization
+from runs.party_manager import load_party
 
 from autofighter.mapgen import MapGenerator
+from autofighter.party import Party
+from autofighter.rooms import _choose_foe
 from plugins import players as player_plugins
 from services.login_reward_service import record_room_completion
 from services.user_level_service import get_user_level
@@ -70,6 +73,41 @@ async def start_run(
 
     generator = MapGenerator(run_id, pressure=pressure)
     nodes = generator.generate_floor()
+
+    party_members: list[player_plugins._base.PlayerBase] = []
+    party_info: list[dict[str, object]] = []
+    for pid in members:
+        for name in player_plugins.__all__:
+            cls = getattr(player_plugins, name)
+            if cls.id == pid:
+                inst = cls()
+                inst.exp = 0
+                inst.level = 1
+                _assign_damage_type(inst)
+                party_members.append(inst)
+                party_info.append(
+                    {
+                        "id": inst.id,
+                        "name": inst.name,
+                        "passives": _describe_passives(inst),
+                        "exp": inst.exp,
+                        "level": inst.level,
+                    }
+                )
+                break
+
+    initial_party = Party(
+        members=party_members,
+        gold=0,
+        relics=[],
+        cards=[],
+        rdr=1.0,
+    )
+
+    boss_choice = None
+    if initial_party.members:
+        boss_choice = _choose_foe(initial_party)
+
     state = {
         "rooms": [n.to_dict() for n in nodes],
         "current": 1,
@@ -78,7 +116,16 @@ async def start_run(
         "awaiting_relic": False,
         "awaiting_loot": False,
         "awaiting_next": False,
+        "total_rooms_cleared": 0,
+        "floors_cleared": 0,
+        "current_pressure": int(pressure or 0),
     }
+    if boss_choice is not None and nodes:
+        state["floor_boss"] = {
+            "id": getattr(boss_choice, "id", type(boss_choice).__name__),
+            "floor": getattr(nodes[-1], "floor", 1),
+            "loop": getattr(nodes[-1], "loop", 1),
+        }
     pronouns, stats = await asyncio.to_thread(_load_player_customization)
 
     def get_player_damage_type():
@@ -122,25 +169,6 @@ async def start_run(
             )
 
     await asyncio.to_thread(save_new_run)
-    party_info: list[dict[str, object]] = []
-    for pid in members:
-        for name in player_plugins.__all__:
-            cls = getattr(player_plugins, name)
-            if cls.id == pid:
-                inst = cls()
-                inst.exp = 0
-                inst.level = 1
-                _assign_damage_type(inst)
-                party_info.append(
-                    {
-                        "id": inst.id,
-                        "name": inst.name,
-                        "passives": _describe_passives(inst),
-                        "exp": inst.exp,
-                        "level": inst.level,
-                    }
-                )
-                break
     return {"run_id": run_id, "map": state, "party": party_info}
 
 
@@ -229,6 +257,12 @@ async def advance_room(run_id: str) -> dict[str, object]:
     if task and not task.done():
         task.cancel()
 
+    previous_index = int(state.get("current", 0))
+    total_rooms_cleared = int(state.get("total_rooms_cleared", 0))
+    if 0 < previous_index < len(rooms):
+        total_rooms_cleared += 1
+    state["total_rooms_cleared"] = total_rooms_cleared
+
     state["current"] += 1
     state["awaiting_next"] = False
 
@@ -247,11 +281,32 @@ async def advance_room(run_id: str) -> dict[str, object]:
         nodes = generator.generate_floor()
         state["rooms"] = [n.to_dict() for n in nodes]
         state["current"] = 1
+        state["floors_cleared"] = int(state.get("floors_cleared", 0)) + 1
+        state["current_pressure"] = int(getattr(nodes[-1], "pressure", pressure)) if nodes else int(pressure)
+        new_floor = getattr(nodes[-1], "floor", next_floor) if nodes else next_floor
+        new_loop = getattr(nodes[-1], "loop", loop) if nodes else loop
+        try:
+            party = await asyncio.to_thread(load_party, run_id)
+        except Exception:
+            party = None
+        if party and party.members and nodes:
+            boss_choice = _choose_foe(party)
+            state["floor_boss"] = {
+                "id": getattr(boss_choice, "id", type(boss_choice).__name__),
+                "floor": new_floor,
+                "loop": new_loop,
+            }
+        else:
+            state.pop("floor_boss", None)
         next_type = nodes[state["current"]].room_type if state["current"] < len(nodes) else None
     else:
         next_type = (
             rooms[state["current"]].room_type if state["current"] < len(rooms) else None
         )
+        if state["current"] < len(rooms):
+            state["current_pressure"] = int(
+                getattr(rooms[state["current"]], "pressure", state.get("current_pressure", 0))
+            )
 
     await asyncio.to_thread(save_map, run_id, state)
     try:

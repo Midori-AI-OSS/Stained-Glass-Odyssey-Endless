@@ -1,6 +1,7 @@
 <script>
   import { Circle as PipCircle } from 'lucide-svelte';
   import TripleRingSpinner from '../components/TripleRingSpinner.svelte';
+  import RankBadge from './RankBadge.svelte';
   import { getCharacterImage, getElementColor, getElementIcon, hasCharacterGallery, advanceCharacterImage } from '../systems/assetLoader.js';
 
   export let fighter = {};
@@ -170,6 +171,11 @@
         <div class="element-effect {elementGlow.effect}"></div>
       {/if}
     </div>
+      <RankBadge
+        rank={fighter?.rank}
+        className="card-rank-badge"
+        size="calc(var(--portrait-size) * 0.28)"
+      />
     <!-- Overlay UI: pips (left), passives (middle), ult gauge (right) -->
     <div class="overlay-ui">
       <!-- Old "action pips" removed to avoid confusion with passive pips. -->
@@ -273,6 +279,13 @@
     transition: border-color 0.3s ease;
   }
   .fighter-portrait.can-cycle { cursor: pointer; }
+  .fighter-portrait :global(.card-rank-badge) {
+    position: absolute;
+    top: clamp(0.35rem, calc(var(--portrait-size) * 0.08), 0.75rem);
+    left: clamp(0.35rem, calc(var(--portrait-size) * 0.08), 0.75rem);
+    pointer-events: none;
+    z-index: 4;
+  }
 
   /* External highlight (e.g., hovering the action queue) */
   .modern-fighter-card.highlight .fighter-portrait {

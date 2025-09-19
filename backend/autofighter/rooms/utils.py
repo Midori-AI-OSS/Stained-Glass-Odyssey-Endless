@@ -4,6 +4,8 @@ from dataclasses import fields
 import math
 import random
 from typing import Any
+from typing import Collection
+from typing import Mapping
 
 from plugins import foes as foe_plugins
 from plugins import players as player_plugins
@@ -18,6 +20,47 @@ from ..stats import Stats
 # Action caps for foes to prevent runaway turn economy
 FOE_MAX_ACTIONS_PER_TURN: int = 1     # 1 action per turn
 FOE_MAX_ACTION_POINTS: int = 1        # start and cap at very low AP
+
+RECENT_FOE_WEIGHT_FACTOR: float = 0.25
+RECENT_FOE_MIN_WEIGHT: float = 0.1
+
+
+def calculate_rank_probabilities(
+    total_rooms_cleared: int = 0,
+    floors_cleared: int = 0,
+    pressure: int = 0,
+) -> tuple[float, float]:
+    """Return independent odds for prime and glitched tags based on progression."""
+
+    try:
+        rooms = max(int(total_rooms_cleared), 0)
+    except Exception:
+        rooms = 0
+    try:
+        floors = max(int(floors_cleared), 0)
+    except Exception:
+        floors = 0
+    try:
+        pressure_value = max(int(pressure), 0)
+    except Exception:
+        pressure_value = 0
+
+    base_rate = rooms * 0.000001  # 0.0001% per cleared room
+    if floors > 0:
+        try:
+            floor_multiplier = max(1.0, math.pow(2.0, floors))
+        except OverflowError:
+            floor_multiplier = float("inf")
+    else:
+        floor_multiplier = 1.0
+    scaled_rate = base_rate * floor_multiplier
+    pressure_bonus = pressure_value * 0.01
+    total_rate = scaled_rate + pressure_bonus
+    if total_rate >= 1.0:
+        chance = 1.0
+    else:
+        chance = max(total_rate, 0.0)
+    return chance, chance
 
 
 def _scale_stats(obj: Stats, node: MapNode, strength: float = 1.0) -> None:
@@ -468,16 +511,51 @@ def _choose_foe(party: Party) -> FoeBase:
     return foe_cls()
 
 
-def _build_foes(node: MapNode, party: Party) -> list[FoeBase]:
+def _build_foes(
+    node: MapNode,
+    party: Party,
+    *,
+    exclude_ids: Collection[str] | None = None,
+    recent_ids: Collection[str] | None = None,
+    progression: Mapping[str, Any] | None = None,
+) -> list[FoeBase]:
     """Build a list of foes for the given room node.
 
     Ensures no duplicate foe IDs within a single encounter. If the available
     unique foe pool is smaller than the desired count, the final list is
     capped to the number of unique candidates.
     """
-    if "boss" in node.room_type:
+    progression_info: Mapping[str, Any] = progression or {}
+    total_rooms = progression_info.get("total_rooms_cleared", 0)
+    floors = progression_info.get("floors_cleared", 0)
+    pressure_override = progression_info.get("current_pressure")
+    if pressure_override is None:
+        pressure_override = getattr(node, "pressure", 0)
+    prime_chance, glitched_chance = calculate_rank_probabilities(
+        total_rooms,
+        floors,
+        pressure_override,
+    )
+    room_type = getattr(node, "room_type", "") or ""
+    forced_prime = "prime" in room_type
+    forced_glitched = "glitched" in room_type
+
+    if "boss" in room_type:
         foe = _choose_foe(party)
-        foe.rank = "glitched boss" if "glitched" in node.room_type else "boss"
+        is_prime = forced_prime
+        is_glitched = forced_glitched
+        if not is_prime and prime_chance > 0.0:
+            is_prime = random.random() < prime_chance
+        if not is_glitched and glitched_chance > 0.0:
+            is_glitched = random.random() < glitched_chance
+        if is_prime and is_glitched:
+            foe.rank = "glitched prime boss"
+        elif is_prime:
+            foe.rank = "prime boss"
+        elif is_glitched:
+            foe.rank = "glitched boss"
+        else:
+            foe.rank = "boss"
         return [foe]
 
     base = min(10, 1 + node.pressure // 5)
@@ -496,6 +574,8 @@ def _build_foes(node: MapNode, party: Party) -> list[FoeBase]:
 
     # Build a candidate pool of foe classes that are not members of the party
     party_ids = {p.id for p in party.members}
+    if exclude_ids:
+        party_ids.update(eid for eid in exclude_ids if eid)
     candidates: list[type[FoeBase]] = []
     try:
         for name in getattr(foe_plugins, "__all__", []):
@@ -526,10 +606,20 @@ def _build_foes(node: MapNode, party: Party) -> list[FoeBase]:
     pool = list(unique_by_id.values())
     if not pool:
         pool = [foe_plugins.Slime]
-    weights = [
-        3 if getattr(cls, "id", None) == "luna" and "luna" not in party_ids else 1
-        for cls in pool
-    ]
+    recent_set = {str(rid) for rid in recent_ids if rid} if recent_ids else set()
+    weights = []
+    for cls in pool:
+        foe_id = getattr(cls, "id", None)
+        base_weight = (
+            3
+            if foe_id == "luna" and "luna" not in party_ids
+            else 1
+        )
+        if foe_id in recent_set:
+            reduced = max(base_weight * RECENT_FOE_WEIGHT_FACTOR, RECENT_FOE_MIN_WEIGHT)
+            weights.append(reduced)
+        else:
+            weights.append(base_weight)
 
     k = min(desired, len(pool))
     chosen_classes: list[type[FoeBase]] = []
@@ -545,8 +635,23 @@ def _build_foes(node: MapNode, party: Party) -> list[FoeBase]:
         candidate_weights.pop(idx)
     foes = [cls() for cls in chosen_classes]
     for foe in foes:
-        if "prime" in node.room_type:
-            foe.rank = "glitched prime" if "glitched" in node.room_type else "prime"
-        elif "glitched" in node.room_type:
+        is_prime = forced_prime
+        is_glitched = forced_glitched
+        if not is_prime and prime_chance > 0.0:
+            try:
+                is_prime = random.random() < prime_chance
+            except Exception:
+                is_prime = False
+        if not is_glitched and glitched_chance > 0.0:
+            try:
+                is_glitched = random.random() < glitched_chance
+            except Exception:
+                is_glitched = False
+
+        if is_prime and is_glitched:
             foe.rank = "glitched prime"
+        elif is_prime:
+            foe.rank = "prime"
+        elif is_glitched:
+            foe.rank = "glitched"
     return foes

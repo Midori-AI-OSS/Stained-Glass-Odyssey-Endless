@@ -60,8 +60,10 @@ function backendDiscoveryPlugin() {
 }
 
 export default defineConfig(async () => {
-  // Discover backend during config time
-  const backendUrl = await discoverBackend();
+  const isVitest = process.env.VITEST === 'true';
+  const backendUrl = isVitest
+    ? (process.env.VITE_API_BASE || 'http://localhost')
+    : await discoverBackend();
   
   return {
     plugins: [
@@ -74,7 +76,7 @@ export default defineConfig(async () => {
           }
         ]
       }),
-      backendDiscoveryPlugin()
+      ...(isVitest ? [] : [backendDiscoveryPlugin()])
     ],
     server: {
       proxy: {
@@ -85,6 +87,12 @@ export default defineConfig(async () => {
         }
       }
     },
-    assetsInclude: ['**/*.efkefc']
+    assetsInclude: ['**/*.efkefc'],
+    test: {
+      environment: 'jsdom',
+      setupFiles: ['./vitest.setup.js'],
+      include: ['tests/**/*.vitest.{js,ts}'],
+      css: true
+    }
   };
 });

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+from collections import OrderedDict
 from collections.abc import Awaitable
 from collections.abc import Callable
 import gc
@@ -26,6 +27,8 @@ log = logging.getLogger(__name__)
 battle_tasks: dict[str, asyncio.Task] = {}
 battle_snapshots: dict[str, dict[str, Any]] = {}
 battle_locks: dict[str, asyncio.Lock] = {}
+
+RECENT_FOE_COOLDOWN: int = 3
 
 
 async def cleanup_battle_state() -> None:
@@ -169,6 +172,50 @@ async def _run_battle(
             manager._auto_craft(items)
             manager._set_items(items)
             result["items"] = items
+            if result.get("result") != "defeat":
+                recent_entries = state.get("recent_foes", [])
+                updated: OrderedDict[str, int] = OrderedDict()
+                if isinstance(recent_entries, list):
+                    for entry in recent_entries:
+                        if not isinstance(entry, dict):
+                            continue
+                        foe_id = entry.get("id")
+                        if not foe_id:
+                            continue
+                        try:
+                            cooldown = int(entry.get("cooldown", 0))
+                        except Exception:
+                            cooldown = 0
+                        new_cd = max(cooldown - 1, 0)
+                        if new_cd <= 0:
+                            continue
+                        foe_key = str(foe_id)
+                        current = updated.get(foe_key)
+                        if current is None or new_cd > current:
+                            updated[foe_key] = new_cd
+                foe_ids: list[str] = []
+                for info in result.get("foes", []):
+                    if not isinstance(info, dict):
+                        continue
+                    foe_id = info.get("id")
+                    if not foe_id:
+                        continue
+                    foe_ids.append(str(foe_id))
+                seen_new: set[str] = set()
+                for foe_id in foe_ids:
+                    if foe_id in seen_new:
+                        continue
+                    seen_new.add(foe_id)
+                    cooldown = max(updated.get(foe_id, 0), RECENT_FOE_COOLDOWN)
+                    updated[foe_id] = cooldown
+                    try:
+                        updated.move_to_end(foe_id)
+                    except AttributeError:
+                        pass
+                state["recent_foes"] = [
+                    {"id": foe_id, "cooldown": cooldown}
+                    for foe_id, cooldown in updated.items()
+                ]
             if result.get("result") == "defeat":
                 state["awaiting_card"] = False
                 state["awaiting_relic"] = False
@@ -297,5 +344,6 @@ __all__ = [
     "battle_tasks",
     "battle_snapshots",
     "battle_locks",
+    "RECENT_FOE_COOLDOWN",
     "_run_battle",
 ]
