@@ -2,7 +2,10 @@ import asyncio
 from dataclasses import dataclass
 from dataclasses import field
 
+from autofighter.effects import EffectManager
+from autofighter.effects import create_stat_buff
 from autofighter.stats import BUS
+from autofighter.stats import GAUGE_START
 from autofighter.stats import Stats
 from plugins.cards._base import CardBase
 from plugins.cards._base import safe_async_task
@@ -10,7 +13,7 @@ from plugins.cards._base import safe_async_task
 
 @dataclass
 class Overclock(CardBase):
-    """+500% ATK & Effect Hit Rate; allies act twice at battle start."""
+    """+500% ATK & Effect Hit Rate; allies surge with speed at battle start."""
 
     id: str = "overclock"
     name: str = "Overclock"
@@ -20,27 +23,61 @@ class Overclock(CardBase):
     )
     about: str = (
         "+500% ATK & +500% Effect Hit Rate; at the start of each battle, "
-        "all allies immediately take two actions back to back."
+        "all allies gain +200% SPD for 2 turns."
     )
 
     async def apply(self, party) -> None:  # type: ignore[override]
         await super().apply(party)
 
-        async def _double_act(ally: Stats) -> None:
-            for _ in range(2):
-                await BUS.emit_async("extra_turn", ally)
-                await BUS.emit_async(
-                    "card_effect",
-                    self.id,
-                    ally,
-                    "extra_action",
-                    0,
-                    {},
-                )
-                await asyncio.sleep(0.002)
+        def _refresh_action_timings(entity: Stats) -> None:
+            try:
+                base = GAUGE_START / max(entity.spd, 1)
+            except Exception:
+                base = GAUGE_START
+            entity.base_action_value = base
+            entity.action_value = base
+
+        async def _grant_speed_boost(ally: Stats) -> None:
+            manager = getattr(ally, "effect_manager", None)
+            if manager is None:
+                manager = EffectManager(ally)
+                ally.effect_manager = manager
+
+            modifier = create_stat_buff(
+                ally,
+                name=f"{self.id}_spd_boost",
+                turns=2,
+                spd_mult=3.0,
+            )
+
+            _refresh_action_timings(ally)
+
+            original_remove = modifier.remove
+
+            def _remove_and_refresh() -> None:
+                original_remove()
+                _refresh_action_timings(ally)
+
+            modifier.remove = _remove_and_refresh  # type: ignore[assignment]
+            manager.add_modifier(modifier)
+
+            await BUS.emit_async(
+                "card_effect",
+                self.id,
+                ally,
+                "stat_buff_spd",
+                200,
+                {
+                    "stat_affected": "spd",
+                    "percentage_change": 200,
+                    "turns": 2,
+                    "new_modifier": modifier.id,
+                },
+            )
+            await asyncio.sleep(0.002)
 
         def _battle_start(entity: Stats) -> None:
             if entity in party.members:
-                safe_async_task(_double_act(entity))
+                safe_async_task(_grant_speed_boost(entity))
 
         BUS.subscribe("battle_start", _battle_start)
