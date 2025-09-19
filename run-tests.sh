@@ -185,6 +185,8 @@ if command -v bun >/dev/null 2>&1; then
     echo "Running frontend test: $file"
     run_test "$NODE_CMD tests/$file" "frontend tests/$file"
   done
+  echo "Running frontend vitest suite"
+  run_test "bun x vitest run --config vitest.config.js" "frontend vitest"
 else
   echo "bun not found, skipping frontend tests (tests require bun:test API)"
   echo "To run frontend tests, install bun: https://bun.sh/"
