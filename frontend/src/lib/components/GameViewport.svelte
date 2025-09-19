@@ -275,7 +275,6 @@
       </div>
     {/if}
     {#if $overlayView === 'main' && !battleActive && !rewardOpen && !reviewOpen}
-      <LoginRewardsPanel />
       <MainMenu {items} />
       <AboutGamePanel {userState} />
     {/if}

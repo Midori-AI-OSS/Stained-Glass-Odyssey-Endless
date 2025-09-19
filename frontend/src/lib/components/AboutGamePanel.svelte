@@ -1,5 +1,6 @@
 <script>
   import { Swords, Target, Gem, Star } from 'lucide-svelte';
+  import LoginRewardsPanel from './LoginRewardsPanel.svelte';
   
   export let userState = { level: 1, exp: 0, next_level_exp: 100, total_playtime: 0 };
   
@@ -78,6 +79,14 @@
       </div>
     </div>
   </div>
+
+  <div class="internal-divider" aria-hidden="true"></div>
+
+  <!-- Daily Login Rewards anchored to bottom half of panel -->
+  <div class="rewards-section">
+    <LoginRewardsPanel embedded={true} flat={true} />
+  </div>
+
 </div>
 
 <style>
@@ -106,6 +115,20 @@
   .stats-section {
     flex: 1;
     min-height: 0;
+  }
+
+  .internal-divider {
+    margin: 0.25rem 0 0.4rem 0;
+    height: 0; /* use borders for crisp visibility across backgrounds */
+    border-top: 1px solid rgba(255,255,255,0.55);
+    border-bottom: 1px solid rgba(0,0,0,0.65);
+  }
+
+  .rewards-section {
+    /* Place directly under stats with tight spacing */
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
   }
 
   .section-title {
@@ -225,5 +248,6 @@
       top: 0;
       margin: 1rem 0;
     }
+    .internal-divider { margin: 0.6rem 0; }
   }
 </style>

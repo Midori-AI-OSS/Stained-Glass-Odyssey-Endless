@@ -4,7 +4,12 @@
 
   import { claimLoginReward, getLoginRewardStatus } from '$lib/systems/uiApi.js';
 
-  const MAX_VISIBLE_DAYS = 12;
+  // When true, renders in an embedded layout suitable for panels
+  export let embedded = false;
+  // When true (usually alongside embedded), removes outer glass container styling
+  export let flat = false;
+
+  const MAX_VISIBLE_DAYS = 5;
   const MIN_REFRESH_INTERVAL = 5_000;
 
   let loading = true;
@@ -41,15 +46,10 @@
   }
 
   function computeVisibleDays(streak) {
-    const normalized = Math.max(1, Number.isFinite(streak) ? Math.floor(streak) : 1);
-    if (normalized <= MAX_VISIBLE_DAYS) {
-      return { values: Array.from({ length: normalized }, (_, index) => index + 1), truncated: false };
-    }
-    const start = normalized - MAX_VISIBLE_DAYS + 1;
-    return {
-      values: Array.from({ length: MAX_VISIBLE_DAYS }, (_, index) => start + index),
-      truncated: true
-    };
+    const s = Math.max(1, Number.isFinite(streak) ? Math.floor(streak) : 1);
+    const midIndex = Math.floor(MAX_VISIBLE_DAYS / 2); // 2 when MAX_VISIBLE_DAYS=5
+    const start = Math.max(1, s - midIndex);
+    return Array.from({ length: MAX_VISIBLE_DAYS }, (_, i) => start + i);
   }
 
   function startCountdown(seconds) {
@@ -160,7 +160,7 @@
   $: roomsProgress = roomsRequired > 0 ? Math.min(1, Math.max(0, roomsCompleted / roomsRequired)) : 0;
   $: roomsRemaining = Math.max(0, roomsRequired - roomsCompleted);
   $: streak = Math.max(1, Number(status?.streak || 0));
-  $: ({ values: streakDays, truncated: streakTruncated } = computeVisibleDays(streak));
+  $: streakDays = computeVisibleDays(streak);
   $: resetLabel = formatResetLabel(status?.reset_at);
   $: countdownLabel = formatCountdown(countdownSeconds);
   $: claimDisabled = claiming || !status || status.claimed_today || !status.can_claim;
@@ -175,7 +175,7 @@
     : 'Claim Reward';
 </script>
 
-<div class="login-reward-panel" role="region" aria-live="polite">
+<div class="login-reward-panel" class:embedded class:flat role="region" aria-live="polite">
   <div class="panel-header">
     <div class="title-group">
       <h2>Daily Login Rewards</h2>
@@ -183,7 +183,7 @@
         <span class="streak-label">Streak {streak} day{streak === 1 ? '' : 's'}</span>
       {/if}
     </div>
-      <button class="refresh-btn" on:click={handleRefresh} disabled={refreshing || loading} aria-label="Refresh login rewards">
+      <button class="icon-btn refresh-btn" on:click={handleRefresh} disabled={refreshing || loading} aria-label="Refresh login rewards">
         <span class="refresh-icon" class:spinning={refreshing}>
           <RefreshCw size={16} />
         </span>
@@ -197,14 +197,12 @@
     <div class="error-banner">{errorMessage}</div>
   {:else if status}
     <div class="streak-track" aria-label={`Current streak ${streak} days`}>
-      {#if streakTruncated}
-        <div class="chevron placeholder" aria-hidden="true">…</div>
-      {/if}
       {#each streakDays as day, index}
         <div
           class="chevron"
           class:claimed={day < streak || (status.claimed_today && day === streak)}
           class:current={day === streak && !status.claimed_today}
+          class:future={day > streak}
           aria-current={day === streak && !status.claimed_today ? 'step' : undefined}
         >
           <span>{day}</span>
@@ -261,7 +259,7 @@
     </div>
 
     <div class="actions">
-      <button class="claim-btn" on:click={handleClaim} disabled={claimDisabled}>
+      <button class="icon-btn claim-btn" on:click={handleClaim} disabled={claimDisabled}>
         {#if status.claimed_today}
           <Sparkles size={16} />
         {:else}
@@ -293,6 +291,27 @@
     gap: 0.9rem;
     color: #fff;
     z-index: 10;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  }
+
+  /* Embedded variant for use inside side panels */
+  .login-reward-panel.embedded {
+    position: relative;
+    top: auto;
+    left: auto;
+    transform: none;
+    width: 100%;
+    z-index: auto;
+  }
+
+  /* Flat variant removes outer glass container visuals */
+  .login-reward-panel.embedded.flat {
+    background: transparent;
+    box-shadow: none;
+    border: none;
+    backdrop-filter: none;
+    padding: 0;
+    padding-top: 0.3rem;
   }
 
   .panel-header {
@@ -322,29 +341,27 @@
     letter-spacing: 0.08em;
   }
 
-  .refresh-btn {
+  /* Shared game button style (icon-btn) */
+  .icon-btn {
+    background: rgba(255,255,255,0.10);
+    border: 1px solid rgba(255,255,255,0.18);
+    border-radius: 0;
     display: inline-flex;
     align-items: center;
-    gap: 0.4rem;
-    border: none;
-    background: rgba(255, 255, 255, 0.08);
+    justify-content: center;
+    gap: 0.45rem;
     color: #fff;
-    padding: 0.35rem 0.65rem;
+    padding: 0.45rem 0.9rem;
     cursor: pointer;
-    font-size: 0.78rem;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    transition: background 0.2s ease;
+    font-size: 0.85rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    box-shadow: 0 1px 4px 0 rgba(0,40,120,0.10);
+    transition: background 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
   }
-
-  .refresh-btn:hover:not(:disabled) {
-    background: rgba(120, 180, 255, 0.2);
-  }
-
-  .refresh-btn:disabled {
-    opacity: 0.6;
-    cursor: default;
-  }
+  .icon-btn:hover:not(:disabled) { background: rgba(120,180,255,0.22); border-color: rgba(160,205,255,0.6); box-shadow: 0 2px 8px 0 rgba(0,40,120,0.18); }
+  .icon-btn:active:not(:disabled) { transform: translateY(1px); }
+  .icon-btn:disabled { opacity: 0.55; cursor: not-allowed; box-shadow: none; }
 
   .refresh-btn .refresh-icon {
     display: inline-flex;
@@ -373,14 +390,16 @@
   .streak-track {
     display: flex;
     align-items: center;
-    gap: 0.4rem;
+    gap: 0; /* use overlap via adjacent sibling margin */
+    width: 100%;
     flex-wrap: nowrap;
     overflow: hidden;
   }
 
   .chevron {
     position: relative;
-    min-width: 3rem;
+    flex: 1 1 0;
+    min-width: 0;
     height: 1.75rem;
     clip-path: polygon(0 0, 82% 0, 100% 50%, 82% 100%, 0 100%);
     background: rgba(255, 255, 255, 0.08);
@@ -392,6 +411,19 @@
     text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
     border: 1px solid rgba(255, 255, 255, 0.12);
     transition: transform 0.2s ease, background 0.2s ease, border 0.2s ease;
+    /* no fixed width; fill row evenly */
+    z-index: 2; /* default above claimed */
+  }
+
+  /* All chevrons use the same right-pointing shape; overlap handles continuity */
+
+  /* Overlap chevrons slightly; later chevrons render above earlier by DOM order */
+  .chevron + .chevron { margin-left: -0.5rem; }
+  .chevron > span { pointer-events: none; }
+
+  /* Make the last chevron end flat (no right arrow tip) */
+  .streak-track > .chevron:last-child {
+    clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
   }
 
   .chevron.placeholder {
@@ -401,17 +433,30 @@
     border: none;
     font-size: 1.1rem;
     opacity: 0.7;
+    margin-right: 0; /* do not overlap the ellipsis */
   }
 
   .chevron.claimed {
     background: linear-gradient(135deg, rgba(120, 255, 200, 0.28), rgba(60, 160, 110, 0.4));
     border-color: rgba(120, 255, 200, 0.4);
+    z-index: 1; /* stack beneath current/unclaimed */
+  }
+
+  .chevron.future {
+    /* Desaturated dark red tending toward gray */
+    background: #2a1a1a; /* fallback */
+    background: color-mix(in srgb, #3a0000 35%, #1a1a1a);
+    border-color: #4a2a2a; /* fallback */
+    border-color: color-mix(in srgb, #700000 35%, #333333);
+    filter: none;
+    opacity: 1;
   }
 
   .chevron.current {
-    background: linear-gradient(135deg, rgba(255, 200, 120, 0.25), rgba(255, 170, 70, 0.5));
-    border-color: rgba(255, 210, 120, 0.8);
+    background: linear-gradient(135deg, rgba(255, 200, 120, 0.85), rgba(255, 170, 70, 0.95));
+    border-color: rgba(255, 210, 120, 0.95);
     box-shadow: 0 0 12px rgba(255, 190, 90, 0.45);
+    z-index: 3; /* ensure on top */
   }
 
   .countdown-row {
@@ -532,35 +577,14 @@
     display: flex;
     flex-direction: column;
     gap: 0.4rem;
-    align-items: flex-start;
+    align-items: stretch;
   }
 
-  .claim-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    border: none;
-    background: linear-gradient(135deg, rgba(255, 180, 70, 0.9), rgba(255, 120, 60, 0.9));
-    color: #1b0900;
-    padding: 0.55rem 1.1rem;
-    cursor: pointer;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    box-shadow: 0 6px 12px rgba(255, 120, 60, 0.35);
-    transition: transform 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease;
-  }
+  /* Full-width primary action at bottom */
+  .actions .icon-btn { width: 100%; height: auto; justify-content: center; }
 
-  .claim-btn:hover:not(:disabled) {
-    transform: translateY(-1px);
-    box-shadow: 0 8px 18px rgba(255, 140, 60, 0.45);
-  }
-
-  .claim-btn:disabled {
-    opacity: 0.55;
-    cursor: default;
-    box-shadow: none;
-  }
+  /* Optional: small visual distinction for the primary action */
+  .claim-btn:not(:disabled) { border-color: rgba(200,240,255,0.35); }
 
   .claim-status {
     font-size: 0.78rem;
@@ -573,11 +597,7 @@
       padding: 0.85rem 1rem;
       gap: 0.8rem;
     }
-
-    .chevron {
-      min-width: 2.6rem;
-      font-size: 0.7rem;
-    }
+    .chevron { font-size: 0.7rem; }
 
     .reward-items {
       grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
@@ -585,7 +605,9 @@
   }
 
   @media (max-width: 720px) {
-    .login-reward-panel {
+    .login-reward-panel,
+    .login-reward-panel.embedded,
+    .login-reward-panel.embedded.flat {
       position: relative;
       transform: none;
       left: auto;
