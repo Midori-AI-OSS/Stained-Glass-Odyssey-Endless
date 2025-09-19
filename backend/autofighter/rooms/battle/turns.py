@@ -23,9 +23,9 @@ from autofighter.summons.manager import SummonManager
 
 from ...stats import Stats
 from ...stats import set_enrage_percent
+from ..utils import _serialize
 from .pacing import YIELD_MULTIPLIER
 from .pacing import pace_sleep
-from ..utils import _serialize
 
 if TYPE_CHECKING:
     from autofighter.effects import EffectManager
@@ -423,6 +423,7 @@ async def _on_target_acquired(
         amount=None,
         metadata=metadata,
     )
+    await pace_sleep(YIELD_MULTIPLIER)
 
 
 async def _on_dot_tick(
@@ -465,6 +466,7 @@ async def _on_dot_tick(
         amount=amount,
         metadata=metadata,
     )
+    await pace_sleep(YIELD_MULTIPLIER)
 
 
 async def _on_hot_tick(
@@ -507,6 +509,7 @@ async def _on_hot_tick(
         amount=amount,
         metadata=metadata,
     )
+    await pace_sleep(YIELD_MULTIPLIER)
 
 
 async def _on_card_effect(
