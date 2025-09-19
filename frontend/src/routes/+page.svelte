@@ -19,6 +19,8 @@
     saveRunState,
     clearRunState,
     FEEDBACK_URL,
+    DISCORD_URL,
+    WEBSITE_URL,
     openOverlay,
     backOverlay,
     homeOverlay
@@ -506,6 +508,14 @@
 
   function openFeedback() {
     window.open(FEEDBACK_URL, '_blank', 'noopener');
+  }
+
+  function openDiscord() {
+    window.open(DISCORD_URL, '_blank', 'noopener');
+  }
+
+  function openWebsite() {
+    window.open(WEBSITE_URL, '_blank', 'noopener');
   }
 
   async function openInventory() {
@@ -1269,6 +1279,8 @@
       handleParty,
       openPulls,
       openFeedback,
+      openDiscord,
+      openWebsite,
       openInventory,
       openSettings: () => openOverlay('settings'),
       openGuidebook: () => openOverlay('guidebook')

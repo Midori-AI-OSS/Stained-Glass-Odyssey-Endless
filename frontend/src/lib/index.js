@@ -68,5 +68,7 @@ export {
 
 // Export constants
 export {
-  FEEDBACK_URL
+  FEEDBACK_URL,
+  DISCORD_URL,
+  WEBSITE_URL
 } from './systems/constants.js';
