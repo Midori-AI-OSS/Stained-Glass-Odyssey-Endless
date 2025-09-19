@@ -245,3 +245,23 @@ class Luna(PlayerBase):
 
         helper.sync_actions_per_turn()
         self._luna_sword_helper = helper
+
+    def apply_boss_scaling(self) -> None:
+        rank = str(getattr(self, "rank", ""))
+        lowered = rank.lower()
+        if "boss" not in lowered:
+            return
+
+        multiplier = 11 if "glitched" in lowered else 4
+        for stat in ("max_hp", "atk", "defense"):
+            base_value = self.get_base_stat(stat)
+            try:
+                scaled = type(base_value)(base_value * multiplier)
+            except Exception:
+                continue
+            self.set_base_stat(stat, scaled)
+
+        try:
+            self.hp = int(self.max_hp)
+        except Exception:
+            self.hp = self.max_hp
