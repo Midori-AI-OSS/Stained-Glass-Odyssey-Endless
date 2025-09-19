@@ -75,6 +75,9 @@ async def setup_battle(
 
     for stats in foes:
         _scale_stats(stats, node, strength)
+        prepare = getattr(stats, "prepare_for_battle", None)
+        if callable(prepare):
+            prepare(node, registry)
 
     members = await _clone_members(party.members)
     combat_party = Party(
@@ -107,6 +110,9 @@ async def setup_battle(
     for member in combat_party.members:
         manager = EffectManager(member)
         member.effect_manager = manager
+        prepare = getattr(member, "prepare_for_battle", None)
+        if callable(prepare):
+            prepare(node, registry)
 
     try:
         entities = list(combat_party.members) + list(foes)
