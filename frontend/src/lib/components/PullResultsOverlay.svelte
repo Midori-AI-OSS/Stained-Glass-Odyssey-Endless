@@ -70,7 +70,15 @@
 
   function playDeal() {
     if (reducedMotion || !dealSfx) return;
-    try { dealSfx.cloneNode().play(); } catch {}
+    try {
+      const node = dealSfx.paused ? dealSfx : dealSfx.cloneNode(true);
+      if (node === dealSfx) {
+        dealSfx.currentTime = 0;
+      } else {
+        node.volume = dealSfx.volume;
+      }
+      node.play();
+    } catch {}
   }
 
   function dealNext() {

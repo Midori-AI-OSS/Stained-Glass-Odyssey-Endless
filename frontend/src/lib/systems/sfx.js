@@ -58,12 +58,15 @@ function generateBeepWav(freq = 880, duration = 0.12, sampleRate = 44100) {
   return `data:audio/wav;base64,${base64}`;
 }
 
-export function createDealSfx(volumePercent = 5) {
+export function createDealSfx(volumeSteps = 5) {
   try {
     const url = generateBeepWav(880, 0.12);
     const a = new Audio(url);
-    const v = Math.max(0, Math.min(1, Number(volumePercent) / 100));
-    a.volume = v;
+    const numericVolume = Number(volumeSteps);
+    const clamped = Number.isFinite(numericVolume)
+      ? Math.max(0, Math.min(10, numericVolume))
+      : 0;
+    a.volume = clamped / 10;
     return a;
   } catch {
     return null;
