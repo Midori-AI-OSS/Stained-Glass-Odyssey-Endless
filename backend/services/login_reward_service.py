@@ -8,6 +8,7 @@ from datetime import datetime
 from datetime import time
 from datetime import timedelta
 import json
+import math
 import random
 from typing import Any
 from zoneinfo import ZoneInfo
@@ -21,6 +22,11 @@ PT_ZONE = ZoneInfo("America/Los_Angeles")
 RESET_OFFSET = timedelta(hours=2)
 STATE_KEY = "login_rewards"
 ROOMS_REQUIRED = 3
+
+DAILY_RDR_BONUS_KEY = "daily_rdr_bonus"
+DAILY_RDR_TIER_WIDTH = 0.15
+DAILY_RDR_DIMINISHING_FACTOR = 10.0
+DAILY_RDR_BASE_CHUNK = 1.0
 
 STATE_LOCK = asyncio.Lock()
 
@@ -80,6 +86,40 @@ def _build_reward_entry(damage_type: str, stars: int) -> dict[str, Any]:
     }
 
 
+def _calculate_daily_rdr_bonus(rooms_completed: int, streak: int) -> float:
+    extra_rooms = max(_as_positive_int(rooms_completed) - ROOMS_REQUIRED, 0)
+    effective_streak = max(_as_positive_int(streak), 0)
+    if extra_rooms <= 0 or effective_streak <= 0:
+        return 0.0
+
+    raw_bonus = 0.0001 * extra_rooms * effective_streak
+    if raw_bonus <= 0:
+        return 0.0
+
+    if raw_bonus <= DAILY_RDR_BASE_CHUNK:
+        return raw_bonus
+
+    bonus = DAILY_RDR_BASE_CHUNK
+    remainder = raw_bonus - DAILY_RDR_BASE_CHUNK
+    tier_width = DAILY_RDR_TIER_WIDTH
+    diminishing = DAILY_RDR_DIMINISHING_FACTOR
+
+    if tier_width <= 0 or diminishing <= 1:
+        return raw_bonus
+
+    base_multiplier = 1.0 / diminishing
+    tier_count = int(remainder // tier_width)
+    if tier_count > 0:
+        sum_multiplier = base_multiplier * (1.0 - math.pow(base_multiplier, tier_count)) / (1.0 - base_multiplier)
+        bonus += tier_width * sum_multiplier
+
+    partial = remainder - (tier_count * tier_width)
+    if partial > 0:
+        bonus += partial * math.pow(base_multiplier, tier_count + 1)
+
+    return bonus
+
+
 @dataclass(slots=True)
 class LoginRewardState:
     streak: int = 0
@@ -135,6 +175,32 @@ class LoginRewardState:
         }
         payload.update(self.extra)
         return payload
+
+
+def _get_daily_rdr_bonus_value(state: LoginRewardState) -> float:
+    extra = state.extra
+    if not isinstance(extra, dict):
+        extra = {}
+        state.extra = extra
+
+    value = extra.get(DAILY_RDR_BONUS_KEY, 0.0)
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def _update_daily_rdr_bonus(state: LoginRewardState) -> bool:
+    if not isinstance(state.extra, dict):
+        state.extra = {}
+
+    bonus = _calculate_daily_rdr_bonus(state.rooms_completed, state.streak)
+    previous = _get_daily_rdr_bonus_value(state)
+    if DAILY_RDR_BONUS_KEY not in state.extra or not math.isclose(previous, bonus, rel_tol=1e-9, abs_tol=1e-9):
+        state.extra[DAILY_RDR_BONUS_KEY] = bonus
+        return True
+
+    return False
 
 
 def _ensure_timezone(now: datetime | None = None) -> datetime:
@@ -255,6 +321,9 @@ def _refresh_state(state: LoginRewardState, now: datetime, *, mark_login: bool) 
         state.reward_items = _generate_reward_items(state.streak)
         updated = True
 
+    if _update_daily_rdr_bonus(state):
+        updated = True
+
     return updated
 
 
@@ -306,6 +375,7 @@ async def get_login_reward_status(now: datetime | None = None) -> dict[str, Any]
             "can_claim": can_claim,
             "claimed_today": claimed_today,
             "reward_items": [dict(item) for item in state.reward_items],
+            "daily_rdr_bonus": _get_daily_rdr_bonus_value(state),
             "seconds_until_reset": max(int((reset_at - current_time).total_seconds()), 0),
             "reset_at": reset_at.isoformat(),
         }
@@ -325,6 +395,9 @@ async def record_room_completion(now: datetime | None = None) -> None:
         previous = state.rooms_completed
         state.rooms_completed = previous + 1
         if state.rooms_completed != previous:
+            changed = True
+
+        if _update_daily_rdr_bonus(state):
             changed = True
 
         if changed:
@@ -361,3 +434,13 @@ async def claim_login_reward(now: datetime | None = None) -> dict[str, Any]:
             "reward_items": items,
             "inventory": inventory,
         }
+
+
+async def get_daily_rdr_bonus(now: datetime | None = None) -> float:
+    async with STATE_LOCK:
+        state = await _load_state()
+        current_time = _ensure_timezone(now)
+        changed = _refresh_state(state, current_time, mark_login=False)
+        if changed:
+            await _save_state(state)
+        return _get_daily_rdr_bonus_value(state)
