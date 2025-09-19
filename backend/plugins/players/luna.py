@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from dataclasses import field
 import random
 from typing import TYPE_CHECKING
+from typing import ClassVar
 from typing import Collection
 import weakref
 
@@ -179,6 +180,7 @@ class Luna(PlayerBase):
     passives: list[str] = field(default_factory=lambda: ["luna_lunar_reservoir"])
     # UI hint: show numeric actions indicator
     actions_display: str = "number"
+    spawn_weight_multiplier: ClassVar[dict[str, float]] = {"non_boss": 5.0}
 
     @classmethod
     def get_spawn_weight(
@@ -192,14 +194,25 @@ class Luna(PlayerBase):
         if cls.id in {str(pid) for pid in party_ids}:
             return 0.0
 
+        base_weight = super().get_spawn_weight(
+            node=node,
+            party_ids=party_ids,
+            recent_ids=recent_ids,
+            boss=boss,
+        )
+        try:
+            weight = float(base_weight)
+        except (TypeError, ValueError):
+            weight = 1.0
+
         try:
             floor = int(getattr(node, "floor", 0))
         except Exception:
             floor = 0
 
         if boss and floor % 3 == 0:
-            return 6.0
-        return 1.0
+            return weight * 6.0
+        return weight
 
     def prepare_for_battle(
         self,

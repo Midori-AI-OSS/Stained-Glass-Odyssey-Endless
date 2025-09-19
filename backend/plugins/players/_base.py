@@ -5,8 +5,12 @@ from dataclasses import dataclass
 from dataclasses import field
 from dataclasses import fields
 import logging
+import numbers
 from typing import TYPE_CHECKING
+from typing import Callable
+from typing import ClassVar
 from typing import Collection
+from typing import Mapping
 
 from autofighter.character import CharacterType
 from autofighter.mapgen import MapNode
@@ -52,6 +56,10 @@ if TYPE_CHECKING:
 class PlayerBase(Stats):
     plugin_type = "player"
 
+    spawn_weight_multiplier: ClassVar[
+        float | Mapping[str, float] | Callable[..., float | None] | None
+    ] = None
+
     # Override Stats defaults with PlayerBase-specific values
     hp: int = 1000
     char_type: CharacterType = CharacterType.C
@@ -91,7 +99,94 @@ class PlayerBase(Stats):
         recent_ids: Collection[str] | None = None,
         boss: bool = False,
     ) -> float:
+        configured = cls._get_configured_spawn_weight_multiplier(
+            node=node,
+            party_ids=party_ids,
+            recent_ids=recent_ids,
+            boss=boss,
+        )
+        if configured is not None:
+            return configured
         return 1.0
+
+    @classmethod
+    def _get_configured_spawn_weight_multiplier(
+        cls,
+        *,
+        node: MapNode,
+        party_ids: Collection[str],
+        recent_ids: Collection[str] | None,
+        boss: bool,
+    ) -> float | None:
+        """Resolve configured spawn multipliers without subclass overrides."""
+
+        configs = (
+            getattr(cls, "spawn_weight_multiplier", None),
+            getattr(cls, "spawn_weight_multipliers", None),
+        )
+        for config in configs:
+            if config is None:
+                continue
+            value = cls._normalize_spawn_weight_config(
+                config,
+                node=node,
+                party_ids=party_ids,
+                recent_ids=recent_ids,
+                boss=boss,
+            )
+            if value is not None:
+                return value
+        return None
+
+    @staticmethod
+    def _normalize_spawn_weight_config(
+        config: object,
+        *,
+        node: MapNode,
+        party_ids: Collection[str],
+        recent_ids: Collection[str] | None,
+        boss: bool,
+    ) -> float | None:
+        if callable(config):
+            try:
+                result = config(
+                    node=node,
+                    party_ids=party_ids,
+                    recent_ids=recent_ids,
+                    boss=boss,
+                )
+            except Exception:
+                return None
+            if result is None:
+                return None
+            try:
+                return float(result)
+            except (TypeError, ValueError):
+                return None
+
+        if isinstance(config, Mapping):
+            lookup_keys: list[object] = []
+            if boss:
+                lookup_keys.extend(("boss", True))
+            else:
+                lookup_keys.extend(("non_boss", False))
+            lookup_keys.append("default")
+            for key in lookup_keys:
+                if key not in config:
+                    continue
+                try:
+                    return float(config[key])
+                except (TypeError, ValueError):
+                    continue
+            return None
+
+        if isinstance(config, numbers.Real):
+            return float(config)
+
+        try:
+            return float(config)  # type: ignore[arg-type]
+        except (TypeError, ValueError):
+            return None
 
     def __post_init__(self) -> None:
         if self.voice_gender is None:
