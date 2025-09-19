@@ -66,7 +66,7 @@ ROOM_BALANCE_CONFIG: dict[str, Any] = {
 
 
 def _plugin_root() -> Path:
-    return Path(__file__).resolve().parents[2].parent / "plugins"
+    return Path(__file__).resolve().parents[2] / "plugins"
 
 
 def _ensure_pending(stats: Stats, modifier: StatModifier) -> None:
