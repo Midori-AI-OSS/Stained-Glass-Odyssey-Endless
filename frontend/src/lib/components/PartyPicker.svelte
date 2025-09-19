@@ -146,6 +146,11 @@
       }
       const defaultPreview = player ? player.id : (roster[0]?.id || null);
       previewId = oldPreview ?? selected[0] ?? defaultPreview;
+
+      if (player) {
+        const savedElement = player.element || '';
+        try { dispatch('editorChange', { damageType: savedElement }); } catch {}
+      }
     } catch (e) {
       if (dev || !browser) {
         const { error } = await import('$lib/systems/logger.js');
