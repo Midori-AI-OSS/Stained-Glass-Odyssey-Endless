@@ -641,27 +641,28 @@ class Stats:
                 obj.damage_type = dt
             return dt
 
+        attacker_obj = attacker if attacker is not self else None
         critical = False
-        if attacker is not None:
+        if attacker_obj is not None:
             if random.random() < self.dodge_odds:
                 log.info(
                     "%s dodges attack from %s",
                     self.id,
-                    getattr(attacker, "id", "unknown"),
+                    getattr(attacker_obj, "id", "unknown"),
                 )
                 return 0
-            atk_type = _ensure(attacker)
+            atk_type = _ensure(attacker_obj)
             # Avoid recursive chains from secondary effects (e.g., Lightning on-hit reactions)
             if trigger_on_hit:
-                atk_type.on_hit(attacker, self)
-            if random.random() < attacker.crit_rate:
+                atk_type.on_hit(attacker_obj, self)
+            if random.random() < attacker_obj.crit_rate:
                 critical = True
-                amount *= attacker.crit_damage
-            amount = atk_type.on_damage(amount, attacker, self)
+                amount *= attacker_obj.crit_damage
+            amount = atk_type.on_damage(amount, attacker_obj, self)
         self_type = _ensure(self)
-        amount = self_type.on_damage_taken(amount, attacker, self)
-        amount = self_type.on_party_damage_taken(amount, attacker, self)
-        src_vit = attacker.vitality if attacker is not None else 1.0
+        amount = self_type.on_damage_taken(amount, attacker_obj, self)
+        amount = self_type.on_party_damage_taken(amount, attacker_obj, self)
+        src_vit = attacker_obj.vitality if attacker_obj is not None else 1.0
         # Guard against division by zero if vitality/mitigation are driven to 0 by effects
         defense_term = max(self.defense ** 5, 1)
         vit = float(self.vitality) if isinstance(self.vitality, (int, float)) else 1.0
@@ -677,10 +678,10 @@ class Stats:
         if enr > 0:
             amount *= (1.0 + enr)
         amount = max(int(amount), 1)
-        if critical and attacker is not None:
-            log.info("Critical hit! %s -> %s for %s", attacker.id, self.id, amount)
+        if critical and attacker_obj is not None:
+            log.info("Critical hit! %s -> %s for %s", attacker_obj.id, self.id, amount)
             # Emit critical hit event for battle logging - async for better performance
-            await BUS.emit_async("critical_hit", attacker, self, amount, action_name or "attack")
+            await BUS.emit_async("critical_hit", attacker_obj, self, amount, action_name or "attack")
         original_amount = amount
         self.last_damage_taken = amount
         self.damage_taken += amount
@@ -703,14 +704,14 @@ class Stats:
 
         # Emit defeat/kill events if this damage reduced HP to zero
         if old_hp > 0 and self.hp <= 0:
-            if attacker is not None:
+            if attacker_obj is not None:
                 await BUS.emit_async(
                     "entity_killed",
                     self,
-                    attacker,
+                    attacker_obj,
                     original_amount,
                     "death",
-                    {"killer_id": getattr(attacker, "id", "unknown")},
+                    {"killer_id": getattr(attacker_obj, "id", "unknown")},
                 )
             await BUS.emit_async("entity_defeat", self)
 
@@ -720,7 +721,7 @@ class Stats:
                 # Import locally to avoid circular imports
                 from autofighter.passives import PassiveRegistry
                 registry = PassiveRegistry()
-                await registry.trigger_damage_taken(self, attacker, original_amount)
+                await registry.trigger_damage_taken(self, attacker_obj, original_amount)
             except Exception as e:
                 log.warning("Error triggering damage_taken passives: %s", e)
 
@@ -728,16 +729,16 @@ class Stats:
         BUS.emit_batched(
             "damage_taken",
             self,
-            attacker,
+            attacker_obj,
             original_amount,
             old_hp,
             post_hit_hp,
             critical,
             action_name,
         )
-        if attacker is not None:
-            attacker.damage_dealt += original_amount
-            BUS.emit_batched("damage_dealt", attacker, self, original_amount, "attack", None, None, action_name)
+        if attacker_obj is not None:
+            attacker_obj.damage_dealt += original_amount
+            BUS.emit_batched("damage_dealt", attacker_obj, self, original_amount, "attack", None, None, action_name)
         return original_amount
 
     async def apply_cost_damage(self, amount: int) -> int:

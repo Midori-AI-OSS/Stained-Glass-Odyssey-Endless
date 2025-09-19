@@ -231,28 +231,31 @@ class DamageOverTime:
     async def tick(self, target: Stats, *_: object) -> bool:
         from autofighter.stats import BUS  # Import here to avoid circular imports
 
-        attacker = self.source or target
+        source_actor = self.source or target
+        attacker_for_events = None
+        if isinstance(self.source, Stats) and self.source is not target:
+            attacker_for_events = self.source
         dtype = getattr(self, "damage_type", None)
         if dtype is None:
-            dtype = getattr(attacker, "damage_type", target.damage_type)
+            dtype = getattr(source_actor, "damage_type", target.damage_type)
         dmg = dtype.on_dot_damage_taken(
             self.damage,
-            attacker,
+            source_actor,
             target,
         )
         dmg = dtype.on_party_dot_damage_taken(
             dmg,
-            attacker,
+            source_actor,
             target,
         )
-        source_type = getattr(attacker, "damage_type", None)
+        source_type = getattr(source_actor, "damage_type", None)
         if source_type is not dtype:
-            dmg = source_type.on_party_dot_damage_taken(dmg, attacker, target)
+            dmg = source_type.on_party_dot_damage_taken(dmg, source_actor, target)
 
         dmg = max(1, int(dmg))
 
         # Emit DoT tick event before applying damage - async for better performance
-        await BUS.emit_async("dot_tick", attacker, target, dmg, self.name, {
+        await BUS.emit_async("dot_tick", attacker_for_events, target, dmg, self.name, {
             "dot_id": self.id,
             "remaining_turns": self.turns - 1,
             "original_damage": self.damage
@@ -260,11 +263,11 @@ class DamageOverTime:
 
         # Check if this DOT will kill the target
         target_hp_before = target.hp
-        await target.apply_damage(dmg, attacker=attacker)
+        await target.apply_damage(dmg, attacker=attacker_for_events)
 
         # If target died from this DOT, emit a DOT kill event - async for better performance
         if target_hp_before > 0 and target.hp <= 0:
-            await BUS.emit_async("dot_kill", attacker, target, dmg, self.name, {
+            await BUS.emit_async("dot_kill", attacker_for_events, target, dmg, self.name, {
                 "dot_id": self.id,
                 "dot_name": self.name,
                 "final_damage": dmg
