@@ -20,6 +20,9 @@
   let soldKeys = new Set();
   let selectedKeys = new Set();
   let currentIndex = 0; // center index for carousel
+  // Light nav lock to avoid rapid index changes; keeps motion stable
+  let navLocked = false;
+  const NAV_LOCK_MS = 420;
 
   function toFinite(value) {
     const num = Number(value);
@@ -97,6 +100,8 @@
     // mark this entry as sold (by key) and pass through the purchase
     const k = item?.key || keyOf(item);
     if (k) soldKeys.add(k);
+    // Force reactivity for Set mutation
+    soldKeys = new Set(soldKeys);
     const pricing = pricingOf(item);
     const payload = {
       ...item,
@@ -115,6 +120,8 @@
     if (!k || soldKeys.has(k)) return;
     if (selectedKeys.has(k)) selectedKeys.delete(k);
     else selectedKeys.add(k);
+    // Force reactivity for Set mutation
+    selectedKeys = new Set(selectedKeys);
     const idx = combinedList.findIndex((it) => it.key === k);
     if (idx >= 0) currentIndex = idx;
   }
@@ -126,6 +133,8 @@
       const item = list[i];
       const k = item.key;
       soldKeys.add(k);
+      // Force reactivity so line crosses off immediately
+      soldKeys = new Set(soldKeys);
       const pricing = pricingOf(item);
       const payload = {
         ...item,
@@ -137,9 +146,12 @@
         tax: pricing.tax
       };
       dispatch('buy', payload);
-      await new Promise((r) => setTimeout(r, 220));
+      // Slow down purchase processing for stability
+      await new Promise((r) => setTimeout(r, 650));
     }
     selectedKeys.clear();
+    // Force reactivity after clearing selection
+    selectedKeys = new Set();
   }
   
   // Animate text appearing letter by letter with jumping effect
@@ -287,28 +299,24 @@
   function prev() {
     const n = combinedList.length;
     if (n === 0) return;
+    if (navLocked) { return; }
+    navLocked = true;
     const before = currentIndex;
     currentIndex = (currentIndex - 1 + n) % n;
     const after = currentIndex;
-    console.log('[Shop] Prev clicked', { before, after, total: combinedList.length });
-    debugNote(`Prev: ${before} → ${after} / ${combinedList.length}`);
+    // navigation debug removed
+    setTimeout(() => { navLocked = false; }, NAV_LOCK_MS);
   }
   function next() {
     const n = combinedList.length;
     if (n === 0) return;
+    if (navLocked) { return; }
+    navLocked = true;
     const before = currentIndex;
     currentIndex = (currentIndex + 1) % n;
     const after = currentIndex;
-    console.log('[Shop] Next clicked', { before, after, total: combinedList.length });
-    debugNote(`Next: ${before} → ${after} / ${combinedList.length}`);
-  }
-
-  let debugMsg = '';
-  let debugTimer = null;
-  function debugNote(msg) {
-    try { if (debugTimer) clearTimeout(debugTimer); } catch {}
-    debugMsg = String(msg || '');
-    debugTimer = setTimeout(() => { debugMsg = ''; }, 1600);
+    // navigation debug removed
+    setTimeout(() => { navLocked = false; }, NAV_LOCK_MS);
   }
 
   function estimateCost(item) {
@@ -430,27 +438,23 @@
   <div class="bottom">
   <div class="shop-layout">
     <div class="carousel" on:keydown={(e)=>{ if(e.key==='ArrowLeft') prev(); if(e.key==='ArrowRight') next(); }} tabindex="0">
-      <div class="debug-note" aria-live="polite">{debugMsg}</div>
       <button class="nav left" type="button"
         on:click|stopPropagation|preventDefault={prev}
         aria-label="Previous">‹</button>
       <div class="strip">
-        {#each visibleItems as { item, pos } (item.key)}
-          {@const isCard = item.type === 'card'}
-          <div class={`slot pos${pos} ${soldKeys.has(item.key) ? 'sold' : ''} ${selectedKeys.has(item.key) ? 'selected' : ''}`}
-               on:click={() => toggleSelect(item)}
-               title={`${item.name} (${item.stars}★ ${isCard ? 'card' : 'relic'})`}>
+          {#each visibleItems as { item, pos } (item.key)}
+            {@const isCard = item.type === 'card'}
+            <div class={`slot pos${pos} ${soldKeys.has(item.key) ? 'sold' : ''} ${selectedKeys.has(item.key) ? 'selected' : ''}`}
+                 on:click={() => toggleSelect(item)}
+                 title={`${item.name} (${item.stars}★ ${isCard ? 'card' : 'relic'})`}>
             {#if isCard}
-              <RewardCard entry={item} type="card" fluid={true} quiet={true} disabled={soldKeys.has(item.key)} />
+              <RewardCard entry={item} type="card" fluid={true} disabled={soldKeys.has(item.key)} />
             {:else}
-              <CurioChoice entry={item} fluid={true} quiet={true} disabled={soldKeys.has(item.key)} />
+              <CurioChoice entry={item} fluid={true} disabled={soldKeys.has(item.key)} />
             {/if}
             <div class="slot-price">
               <Coins size={12} class="coin-icon" /> {pricingOf(item).taxed}
             </div>
-            {#if selectedKeys.has(item.key)}
-              <div class="mark">✓</div>
-            {/if}
           </div>
         {/each}
       </div>
@@ -482,22 +486,22 @@
         </div>
       {/if}
     </aside>
-  </div>
-  <div class="actions">
-    <div class="action-buttons">
-      <button class="action primary" disabled={selectedKeys.size === 0} on:click={buySelected}>Buy Selected</button>
-      <button class="action" disabled={awaitingReroll} on:click={reroll}>
-        {#if awaitingReroll}
-          <span class="reroll-text">
-            {#each rerollAnimationText.split('') as char, i}
-              <span class="jump-letter" style="animation-delay: {i * 0.1}s">{char}</span>
-            {/each}
-          </span>
-        {:else}
-          Reroll
-        {/if}
-      </button>
-      <button class="action" on:click={close}>Leave</button>
+    <div class="actions actions-under">
+      <div class="action-buttons">
+        <button class="action primary" disabled={selectedKeys.size === 0} on:click={buySelected}>Buy Selected</button>
+        <button class="action" disabled={awaitingReroll} on:click={reroll}>
+          {#if awaitingReroll}
+            <span class="reroll-text">
+              {#each rerollAnimationText.split('') as char, i}
+                <span class="jump-letter" style={`animation-delay: ${i * 0.1}s`}>{char}</span>
+              {/each}
+            </span>
+          {:else}
+            Reroll
+          {/if}
+        </button>
+        <button class="action" on:click={close}>Leave</button>
+      </div>
     </div>
   </div>
   </div>
@@ -513,28 +517,45 @@
   .shine { animation: coin-shine 2s linear infinite; }
   @keyframes coin-shine { 0%,100% { filter: brightness(1); } 50% { filter: brightness(1.4); } }
 
-  .bottom { margin-top: auto; display:flex; flex-direction:column; }
-  .shop-layout { display:grid; grid-template-columns: minmax(0, 2fr) 240px; gap: 1.2rem; margin-top: 0.5rem; align-items: stretch; }
-  .carousel { position: relative; display:flex; align-items:flex-end; justify-content:center; min-height: 68vh; }
-  .strip { position: relative; display:flex; gap: 1.2rem; align-items:flex-end; justify-content:center; width:100%; padding: 0.25rem 2rem; }
+  .bottom { margin-top: 0; flex: 1; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+  .shop-layout { display:grid; grid-template-columns: minmax(0, 2fr) 240px; column-gap: 1.2rem; row-gap: 0; margin-top: 0.5rem; align-items: center; }
+  .carousel { position: relative; display:flex; align-items:center; justify-content:center; min-height: 68vh; }
+  .strip { position: relative; display:flex; gap: 1.2rem; align-items:center; justify-content:center; width:100%; padding: 0.25rem 2rem; }
   .nav { position:absolute; top:50%; transform: translateY(-50%); z-index: 50; width: 3rem; height: 3rem; border: 1px solid rgba(255,255,255,0.35); background: rgba(0,0,0,0.7); color:#fff; display:flex; align-items:center; justify-content:center; cursor:pointer; pointer-events:auto; user-select:none; }
   .nav.left { left: 0; }
   .nav.right { right: 0; }
-  .slot { position: relative; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; transition: width 160ms ease, filter 160ms ease, opacity 160ms ease; opacity: 0.98; flex: 0 0 auto; height: clamp(520px, 70vh, 860px); }
+  .slot { position: relative; display:flex; flex-direction:column; align-items:center; justify-content:center; transition: width 360ms ease-in-out, height 360ms ease-in-out, filter 220ms ease, opacity 220ms ease; opacity: 0.98; flex: 0 0 auto; height: clamp(520px, 70vh, 860px); will-change: width, height; }
   .slot.sold { opacity: 0.55; filter: grayscale(0.25); }
-  .slot.selected::after { content: ''; position:absolute; inset: -6px; border: 2px solid var(--accent, #8ac); pointer-events:none; box-shadow: 0 0 10px color-mix(in srgb, var(--accent, #8ac) 28%, transparent); }
-  .slot .mark { position:absolute; top: 6px; right: 8px; background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.5); padding: 0 6px; font-weight: 700; }
+  /* Remove selection outline; keep checkmark indicator only */
+  .slot.selected::after { display: none; }
+  /* Removed checkmark UI for selection to avoid visual bugs */
   .slot-price { margin-top: 0.25rem; font-size: 0.85rem; opacity: 0.9; display:flex; align-items:center; gap: 0.25rem; }
   .pos-1, .pos0, .pos1 {}
   .pos-1 { width: clamp(260px, 26vw, 380px); opacity: 0.96; }
   .pos0  { width: clamp(380px, 42vw, 560px); z-index: 3; }
   .pos1  { width: clamp(260px, 26vw, 380px); opacity: 0.96; }
-  /* Ensure inner buttons and card art fill the slot */
+  /* Make side items shorter than center to reduce visual dominance */
+  .pos0  { height: clamp(500px, 66vh, 820px); }
+  .pos-1, .pos1 { height: clamp(440px, 56vh, 720px); }
+  /* Center (big) relics: slightly reduce round glyph size so it stays inside */
+  /* Shop relic sizing: make all relic round glyphs consistent across positions */
+  .slot :global(.card-art.fluid) :global(.glyph.round) { width: 70% !important; }
+  /* Ensure inner buttons and card art fill the slot, leaving space for price */
+  .slot :global(.tooltip-wrapper) {
+    display: block;
+    width: 100%;
+  }
   .slot :global(button.card),
-  .slot :global(button.curio),
-  .slot :global(.card-art),
+  .slot :global(button.curio) {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+  .slot :global(.card-art) {
+    width: 100%;
+  }
 
-  .receipt { background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.25); padding: 0.6rem; display:flex; flex-direction:column; gap: 0.5rem; min-height: 360px; }
+  .receipt { background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.25); padding: 0.6rem 0.6rem 0.2rem 0.6rem; display:flex; flex-direction:column; gap: 0.5rem; min-height: 360px; }
   .receipt-head { display:flex; align-items:center; justify-content:space-between; gap:0.5rem; }
   .receipt h4 { margin: 0; font-size: 1rem; }
   .receipt .empty { opacity: 0.75; font-size: 0.9rem; }
@@ -544,19 +565,22 @@
   .line .dots { flex:1; height: 1px; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.35), transparent); }
   .line .price { display:flex; align-items:center; gap: 0.25rem; }
   .line.done { opacity: 0.55; text-decoration: line-through; }
-  .summary { margin-top: 0.5rem; padding-top: 0.4rem; border-top: 1px solid rgba(255,255,255,0.2); display:flex; flex-direction:column; gap: 0.35rem; }
+  .summary { margin-top: 0.25rem; padding-top: 0.4rem; border-top: 1px solid rgba(255,255,255,0.2); display:flex; flex-direction:column; gap: 0.35rem; }
   .summary .row { display:flex; align-items:center; gap: 0.5rem; }
   .summary .row .dots { flex:1; height: 1px; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.35), transparent); }
   .summary .row .price { display:flex; align-items:center; gap: 0.25rem; }
   .summary .total { font-weight: 700; }
 
-  .debug-note { position:absolute; top:-1.8rem; left:0; right:0; text-align:center; font-size: 0.8rem; opacity:0.85; color:#fff; pointer-events:none; }
+  /* debug-note removed */
 
   .actions { display:flex; gap:0.75rem; justify-content:space-between; align-items:center; flex-wrap:wrap; margin-top: 0.75rem; }
   .action-buttons { margin-left:auto; display:flex; gap:0.5rem; }
   .action { border: 1px solid rgba(255,255,255,0.35); background: rgba(0,0,0,0.5); color:#fff; padding: 0.35rem 0.7rem; }
   .action.primary { border-color: color-mix(in srgb, #8ac 60%, #fff); background: rgba(20,30,60,0.6); }
   .action:disabled { opacity: 0.5; cursor: not-allowed; }
+  /* Place the action row under the receipt column in the grid */
+  .actions-under { grid-column: 2; justify-self: stretch; display:flex; margin-top: 0; }
+  .actions-under .action-buttons { margin-left: auto; }
   .tax-note { font-size:0.85rem; opacity:0.9; color:#d4af37; min-width: 12rem; }
   .tax-note.inactive { color:#8ecf8e; }
   .tax-note span { white-space:nowrap; }

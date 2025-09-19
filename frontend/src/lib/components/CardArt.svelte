@@ -31,7 +31,9 @@
   $: cardHeight = compact ? 60 : (size === 'small' ? 320 : 440);
   // Styles used for outer wrapper; if fluid, stretch to parent
   $: widthStyle = fluid ? '100%' : `${width}px`;
-  $: heightStyle = fluid ? '100%' : `${cardHeight}px`;
+  // Preserve aspect ratio when fluid to avoid distortion
+  $: heightStyle = fluid ? 'auto' : `${cardHeight}px`;
+  $: ratioStyle = fluid ? 'aspect-ratio: 7 / 11;' : '';
   $: color = starColors[entry.stars] || starColors.fallback;
   // Background image for the interbox (top section)
   // Use special art for specific relics when available.
@@ -81,7 +83,7 @@
   $: twinkles = quiet ? [] : makeTwinkles(twinkleCount);
 </script>
 
-<div class="card-art" style={`width:${widthStyle}; height:${heightStyle}; --accent:${color}; --twA:${twinkleAlpha}` }>
+<div class="card-art" class:fluid={fluid} style={`width:${widthStyle}; height:${heightStyle}; ${ratioStyle} --accent:${color}; --twA:${twinkleAlpha}` }>
   {#if imageOnly}
     <div class="glyph full">
       <div class="glyph-bg" style={`background-image:url(${bg})`}></div>
@@ -344,6 +346,11 @@
     max-width: 180px;
     aspect-ratio: 1 / 1;
     border-radius: 50%;
+  }
+  /* When fluid, allow the relic round glyph to scale with the card width */
+  .card-art.fluid .glyph.round {
+    max-width: none;
+    width: 78%;
   }
   .stars-overlay {
     position: absolute;
