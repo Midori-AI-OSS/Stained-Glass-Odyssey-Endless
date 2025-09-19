@@ -95,20 +95,54 @@ async def test_killer_instinct_grants_extra_turn():
     a = DummyPlayer()
     b = DummyPlayer()
     b.hp = 10
+    a.spd = 20
     party.members.append(a)
     award_relic(party, "killer_instinct")
     await apply_relics(party)
-    base = a.atk
+
+    base_atk = a.atk
+    base_spd = a.spd
+
     a.add_ultimate_charge(15)
     await a.use_ultimate()
-    assert a.atk > base
+    assert a.atk > base_atk
+
     turns: list[PlayerBase] = []
     BUS.subscribe("extra_turn", lambda m: turns.append(m))
+
+    speed_events: list[tuple[int, dict[str, object]]] = []
+
+    def _capture_relic_effect(relic_id, *_args):
+        if relic_id != "killer_instinct":
+            return
+        _, event_name, value, payload = _args
+        if event_name == "kill_speed_boost":
+            speed_events.append((value, payload))
+
+    BUS.subscribe("relic_effect", _capture_relic_effect)
+
     b.hp = 0
     await BUS.emit_async("damage_taken", b, a, 10)
+
+    expected_spd = int(base_spd * 1.5)
+    assert turns == []
+    assert a.spd == expected_spd
+    assert speed_events
+    boost_value, payload = speed_events[-1]
+    assert boost_value == 50
+    assert payload["spd_percentage"] == 50
+    assert payload["duration"] == "2_turns"
+    assert payload["speed_multiplier"] == pytest.approx(1.5)
+
     await BUS.emit_async("turn_end")
-    assert turns == [a]
-    assert a.atk == base
+    assert a.atk == base_atk
+    assert a.spd == expected_spd
+
+    await a.effect_manager.tick()
+    assert a.spd == expected_spd
+
+    await a.effect_manager.tick()
+    assert a.spd == base_spd
 
 
 @pytest.mark.asyncio
