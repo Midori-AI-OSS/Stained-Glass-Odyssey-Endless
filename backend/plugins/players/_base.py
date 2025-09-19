@@ -5,10 +5,11 @@ from dataclasses import dataclass
 from dataclasses import field
 from dataclasses import fields
 import logging
+from typing import TYPE_CHECKING
 from typing import Collection
 
-from autofighter.mapgen import MapNode
 from autofighter.character import CharacterType
+from autofighter.mapgen import MapNode
 from autofighter.stats import BUS
 from autofighter.stats import Stats
 from plugins.damage_types import random_damage_type
@@ -41,6 +42,10 @@ class SimpleConversationMemory:
             if ai:
                 lines.append(f"AI: {ai}")
         return {"history": "\n".join(lines)}
+
+
+if TYPE_CHECKING:
+    from autofighter.passives import PassiveRegistry
 
 
 @dataclass
@@ -171,6 +176,16 @@ class PlayerBase(Stats):
             val = getattr(self, name)
             setattr(result, name, copy.deepcopy(val, memo))
         return result
+
+    def prepare_for_battle(
+        self,
+        node: MapNode,
+        registry: "PassiveRegistry",
+    ) -> None:
+        """Hook for subclasses to adjust state prior to entering battle."""
+
+    def apply_boss_scaling(self) -> None:
+        """Hook for subclasses to tweak scaled stats when treated as bosses."""
 
     async def use_ultimate(self) -> bool:
         """Consume charge and emit an event when firing the ultimate."""
