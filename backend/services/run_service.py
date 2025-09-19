@@ -105,8 +105,8 @@ async def start_run(
     )
 
     boss_choice = None
-    if initial_party.members:
-        boss_choice = _choose_foe(initial_party)
+    if initial_party.members and nodes:
+        boss_choice = _choose_foe(nodes[-1], initial_party)
 
     state = {
         "rooms": [n.to_dict() for n in nodes],
@@ -290,7 +290,7 @@ async def advance_room(run_id: str) -> dict[str, object]:
         except Exception:
             party = None
         if party and party.members and nodes:
-            boss_choice = _choose_foe(party)
+            boss_choice = _choose_foe(nodes[-1], party)
             state["floor_boss"] = {
                 "id": getattr(boss_choice, "id", type(boss_choice).__name__),
                 "floor": new_floor,

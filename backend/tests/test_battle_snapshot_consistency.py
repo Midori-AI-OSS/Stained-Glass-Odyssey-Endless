@@ -37,7 +37,7 @@ async def test_foe_element_stable_across_snapshots(app_with_db, monkeypatch):
         id = "dummy"
         name = "Dummy"
 
-    def choose_foe(_party):
+    def choose_foe(_node, _party):
         foe = DummyFoe()
         foe.damage_type = elements.pop(0)
         foe.hp = foe.set_base_stat('max_hp', 1)
@@ -46,6 +46,10 @@ async def test_foe_element_stable_across_snapshots(app_with_db, monkeypatch):
     import autofighter.rooms.utils as rooms_module
 
     monkeypatch.setattr(rooms_module, "_choose_foe", choose_foe)
+    monkeypatch.setattr(
+        "autofighter.rooms.battle.setup._build_foes",
+        lambda node, party, **kwargs: [choose_foe(node, party)],
+    )
     monkeypatch.setattr(app_module, "_scale_stats", lambda *args, **kwargs: None)
     monkeypatch.setattr(rooms_module, "_scale_stats", lambda *args, **kwargs: None)
 

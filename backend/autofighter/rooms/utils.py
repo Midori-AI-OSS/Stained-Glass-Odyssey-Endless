@@ -25,6 +25,35 @@ RECENT_FOE_WEIGHT_FACTOR: float = 0.25
 RECENT_FOE_MIN_WEIGHT: float = 0.1
 
 
+def _resolve_spawn_weight(
+    cls: type[FoeBase],
+    *,
+    node: MapNode,
+    party_ids: Collection[str],
+    recent_ids: Collection[str] | None = None,
+    boss: bool = False,
+) -> float:
+    weight: float = 1.0
+    hook = getattr(cls, "get_spawn_weight", None)
+    if callable(hook):
+        try:
+            weight = float(
+                hook(
+                    node=node,
+                    party_ids=party_ids,
+                    recent_ids=recent_ids,
+                    boss=boss,
+                )
+            )
+        except Exception:
+            weight = 1.0
+    if not math.isfinite(weight):
+        return 1.0
+    if weight < 0:
+        return 0.0
+    return weight
+
+
 def calculate_rank_probabilities(
     total_rooms_cleared: int = 0,
     floors_cleared: int = 0,
@@ -486,7 +515,7 @@ def _serialize(obj: Stats) -> dict[str, Any]:
     return data
 
 
-def _choose_foe(party: Party) -> FoeBase:
+def _choose_foe(node: MapNode, party: Party) -> FoeBase:
     """Select a foe class not already in the party."""
     party_ids = {p.id for p in party.members}
     candidates = [
@@ -504,9 +533,17 @@ def _choose_foe(party: Party) -> FoeBase:
     if not candidates:
         candidates = [foe_plugins.Slime]
     weights = [
-        3 if getattr(cls, "id", None) == "luna" and "luna" not in party_ids else 1
+        _resolve_spawn_weight(
+            cls,
+            node=node,
+            party_ids=party_ids,
+            recent_ids=None,
+            boss=True,
+        )
         for cls in candidates
     ]
+    if not any(weight > 0 for weight in weights):
+        weights = [1.0 for _ in candidates]
     foe_cls = random.choices(candidates, weights=weights, k=1)[0]
     return foe_cls()
 
@@ -541,7 +578,7 @@ def _build_foes(
     forced_glitched = "glitched" in room_type
 
     if "boss" in room_type:
-        foe = _choose_foe(party)
+        foe = _choose_foe(node, party)
         is_prime = forced_prime
         is_glitched = forced_glitched
         if not is_prime and prime_chance > 0.0:
@@ -610,13 +647,18 @@ def _build_foes(
     weights = []
     for cls in pool:
         foe_id = getattr(cls, "id", None)
-        base_weight = (
-            3
-            if foe_id == "luna" and "luna" not in party_ids
-            else 1
+        base_weight = _resolve_spawn_weight(
+            cls,
+            node=node,
+            party_ids=party_ids,
+            recent_ids=recent_set,
+            boss=False,
         )
-        if foe_id in recent_set:
-            reduced = max(base_weight * RECENT_FOE_WEIGHT_FACTOR, RECENT_FOE_MIN_WEIGHT)
+        if foe_id in recent_set and base_weight > 0:
+            reduced = max(
+                base_weight * RECENT_FOE_WEIGHT_FACTOR,
+                RECENT_FOE_MIN_WEIGHT,
+            )
             weights.append(reduced)
         else:
             weights.append(base_weight)
@@ -628,6 +670,8 @@ def _build_foes(
     for _ in range(k):
         if not candidates:
             break
+        if not any(weight > 0 for weight in candidate_weights):
+            candidate_weights = [1.0 for _ in candidates]
         cls = random.choices(candidates, weights=candidate_weights, k=1)[0]
         chosen_classes.append(cls)
         idx = candidates.index(cls)

@@ -28,7 +28,7 @@ async def test_floor_boss_refreshes_per_floor(app_with_db, monkeypatch):
 
     picks: list[str] = []
 
-    def choose_once(party):  # noqa: ANN001
+    def choose_once(node, party):  # noqa: ANN001
         ident = f"boss-{len(picks)}"
         picks.append(ident)
         return DummyFoe(ident)
