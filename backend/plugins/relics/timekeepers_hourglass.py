@@ -3,19 +3,23 @@ from dataclasses import field
 import inspect
 import random
 
+from autofighter.effects import StatModifier
+from autofighter.effects import create_stat_buff
 from autofighter.stats import BUS
 from plugins.relics._base import RelicBase
 
 
 @dataclass
 class TimekeepersHourglass(RelicBase):
-    """Each turn, 10% +1% per stack chance for allies to gain an extra turn."""
+    """Each turn, allies may gain a short burst of speed."""
 
     id: str = "timekeepers_hourglass"
     name: str = "Timekeeper's Hourglass"
     stars: int = 4
     effects: dict[str, float] = field(default_factory=dict)
-    about: str = "Each turn, 10% +1% per stack chance for allies to gain an extra turn."
+    about: str = (
+        "Each turn, 10% base chance (+1% per extra stack) to grant ready allies a 2-turn speed buff."
+    )
 
     async def apply(self, party) -> None:
         if getattr(party, "_t_hourglass_applied", False):
@@ -26,6 +30,8 @@ class TimekeepersHourglass(RelicBase):
         stacks = party.relics.count(self.id)
         chance = 0.10 + 0.01 * (stacks - 1)
         chance = min(1.0, max(0.0, chance))
+        boost = 1.0 + 0.20 * stacks
+        active_mods: dict[int, StatModifier] = {}
 
         def _member_can_act(member) -> bool:
             if getattr(member, "hp", 0) <= 0:
@@ -54,11 +60,47 @@ class TimekeepersHourglass(RelicBase):
                 for member in party.members:
                     if not _member_can_act(member):
                         continue
-                    await BUS.emit_async("extra_turn", member)
+                    mgr = getattr(member, "effect_manager", None)
+                    if mgr is None:
+                        continue
+
+                    existing = active_mods.pop(id(member), None)
+                    if existing is not None:
+                        try:
+                            existing.remove()
+                        except Exception:
+                            pass
+                        if existing in mgr.mods:
+                            mgr.mods.remove(existing)
+                        if getattr(member, "mods", None) and existing.id in member.mods:
+                            member.mods.remove(existing.id)
+
+                    mod = create_stat_buff(
+                        member,
+                        name=f"{self.id}_spd",
+                        spd_mult=boost,
+                        turns=2,
+                    )
+                    mgr.add_modifier(mod)
+                    active_mods[id(member)] = mod
 
         def _battle_end(_entity) -> None:
             BUS.unsubscribe("turn_start", _turn_start)
             BUS.unsubscribe("battle_end", _battle_end)
+            for member in party.members:
+                mod = active_mods.pop(id(member), None)
+                if mod is None:
+                    continue
+                try:
+                    mod.remove()
+                except Exception:
+                    pass
+                mgr = getattr(member, "effect_manager", None)
+                if mgr is not None and mod in mgr.mods:
+                    mgr.mods.remove(mod)
+                if getattr(member, "mods", None) and mod.id in member.mods:
+                    member.mods.remove(mod.id)
+            active_mods.clear()
             if hasattr(party, "_t_hourglass_applied"):
                 delattr(party, "_t_hourglass_applied")
 
@@ -67,4 +109,7 @@ class TimekeepersHourglass(RelicBase):
 
     def describe(self, stacks: int) -> str:
         pct = 10 + 1 * (stacks - 1)
-        return f"Each turn, {pct}% chance for allies to gain an extra turn."
+        boost = int(20 * stacks)
+        return (
+            f"Each turn, {pct}% chance for ready allies to gain +{boost}% SPD for 2 turns."
+        )
