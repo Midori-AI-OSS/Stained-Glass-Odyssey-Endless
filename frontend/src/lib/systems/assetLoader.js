@@ -48,6 +48,16 @@ const backgroundModules = Object.fromEntries(
   ).map(([p, src]) => [p, normalizeUrl(src)])
 );
 
+const lightstreamSwordModules = Object.fromEntries(
+  Object.entries(
+    import.meta.glob('../assets/**/lightstreamswords/**/*.png', {
+      eager: true,
+      import: 'default',
+      query: '?url'
+    })
+  ).map(([p, src]) => [p, normalizeUrl(src)])
+);
+
 // Load DoT icons by element folder (e.g., ./assets/dots/fire/*.png)
 const dotModules = Object.fromEntries(
   Object.entries(
@@ -108,7 +118,40 @@ const DAMAGE_TYPE_ALIASES = {
   air: 'wind',
 };
 
-function normalizeDamageTypeId(typeId) {
+const SWORD_KEYWORD_ALIASES = {
+  bolt: 'lightning',
+  bolts: 'lightning',
+  charge: 'lightning',
+  crimson: 'fire',
+  ember: 'fire',
+  embers: 'fire',
+  flame: 'fire',
+  flames: 'fire',
+  flare: 'fire',
+  frost: 'ice',
+  glaive: 'generic',
+  glimmer: 'light',
+  glow: 'light',
+  green: 'wind',
+  ice: 'ice',
+  lightning: 'lightning',
+  lightstream: 'light',
+  luna: 'dark',
+  lunar: 'dark',
+  moon: 'dark',
+  radiant: 'light',
+  shadow: 'dark',
+  shock: 'lightning',
+  spark: 'lightning',
+  storm: 'lightning',
+  sun: 'light',
+  tempest: 'wind',
+  verdant: 'wind',
+  white: 'light',
+  wind: 'wind'
+};
+
+export function normalizeDamageTypeId(typeId) {
   if (!typeId) return 'generic';
   const lowered = String(typeId).trim().toLowerCase();
   if (!lowered) return 'generic';
@@ -363,6 +406,101 @@ const dotAssets = (() => {
   }
   return map;
 })();
+
+function tokenizeSwordPath(path) {
+  const tokens = [];
+  if (!path) return tokens;
+  try {
+    const parts = path.split('/');
+    const idx = parts.findIndex(part => part.toLowerCase().includes('lightstreamswords'));
+    if (idx >= 0) {
+      if (parts[idx + 1]) {
+        tokens.push(...parts[idx + 1].split(/[^a-zA-Z0-9]+/));
+      }
+      if (parts[idx + 2]) {
+        tokens.push(...parts[idx + 2].split(/[^a-zA-Z0-9]+/));
+      }
+    }
+    const file = parts[parts.length - 1] || '';
+    const stem = file.replace(/\.png$/i, '');
+    tokens.push(...stem.split(/[^a-zA-Z0-9]+/));
+  } catch {}
+  return tokens
+    .map(token => token?.toLowerCase?.() || '')
+    .filter(Boolean);
+}
+
+function inferSwordElementFromPath(path) {
+  const tokens = tokenizeSwordPath(path);
+  for (const token of tokens) {
+    const alias = SWORD_KEYWORD_ALIASES[token];
+    if (alias) return alias;
+    const normalized = normalizeDamageTypeId(token);
+    if (normalized && normalized !== 'generic') {
+      return normalized;
+    }
+  }
+  return 'generic';
+}
+
+const lightstreamSwordAssets = (() => {
+  const map = {
+    fire: [],
+    ice: [],
+    lightning: [],
+    light: [],
+    dark: [],
+    wind: [],
+    generic: []
+  };
+  for (const [p, url] of Object.entries(lightstreamSwordModules)) {
+    const element = inferSwordElementFromPath(p);
+    if (!map[element]) map[element] = [];
+    map[element].push(url);
+  }
+  return map;
+})();
+
+function ensureSwordList(element) {
+  const key = normalizeDamageTypeId(element);
+  const list = lightstreamSwordAssets[key];
+  if (Array.isArray(list) && list.length) return list;
+  const generic = lightstreamSwordAssets.generic || [];
+  return generic.length ? generic : [];
+}
+
+export function getLightstreamSwordArt(typeId, options = {}) {
+  const key = normalizeDamageTypeId(typeId);
+  const list = ensureSwordList(key);
+  if (!list.length) {
+    return defaultFallback;
+  }
+  const seed = String(options.seed || '') || key;
+  const idx = stringHashIndex(`${key}:${seed}`, list.length);
+  return list[idx] || list[0];
+}
+
+export function getDamageTypePalette(typeId) {
+  const key = normalizeDamageTypeId(typeId);
+  const base = getDamageTypeColor(key);
+  return {
+    base,
+    highlight: shiftColor(base, 0.35),
+    shadow: shiftColor(base, -0.35)
+  };
+}
+
+export function getLightstreamSwordVisual(typeId, options = {}) {
+  const element = normalizeDamageTypeId(typeId);
+  const art = getLightstreamSwordArt(element, options);
+  const palette = getDamageTypePalette(element);
+  return {
+    art,
+    element,
+    color: palette.base,
+    palette
+  };
+}
 
 // Build Effect assets map: { buffs: {name: url, ...}, debuffs: {name: url, ...} }
 const effectAssets = (() => {

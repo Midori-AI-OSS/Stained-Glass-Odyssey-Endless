@@ -2,7 +2,12 @@
   import { onMount, onDestroy, createEventDispatcher, tick } from 'svelte';
   import { scale, fade } from 'svelte/transition';
   import { roomAction } from '$lib';
-  import { getRandomBackground, getElementColor } from '../systems/assetLoader.js';
+  import {
+    getRandomBackground,
+    getElementColor,
+    getLightstreamSwordVisual,
+    normalizeDamageTypeId
+  } from '../systems/assetLoader.js';
   import BattleFighterCard from '../battle/BattleFighterCard.svelte';
   import EnrageIndicator from '../battle/EnrageIndicator.svelte';
   import BattleLog from '../battle/BattleLog.svelte';
@@ -489,6 +494,51 @@
     knownSummons = all;
   }
 
+  function resolveDamageTypeFromEntity(entity, fallback = '') {
+    if (!entity || typeof entity !== 'object') {
+      return normalizeDamageTypeId(fallback);
+    }
+    const primary = Array.isArray(entity.damage_types)
+      ? entity.damage_types.find(Boolean)
+      : null;
+    const candidate =
+      primary ||
+      entity.damage_type ||
+      entity.element ||
+      entity.luna_sword_label ||
+      fallback;
+    return normalizeDamageTypeId(candidate);
+  }
+
+  function applyLunaSwordVisuals(entry, ownerId, baseElement = 'generic') {
+    if (!entry || typeof entry !== 'object') return entry;
+    const summonType = String(entry.summon_type || '').toLowerCase();
+    const source = String(entry.summon_source || '').toLowerCase();
+    const isSword =
+      Boolean(entry.luna_sword) ||
+      source === 'luna_sword' ||
+      summonType.startsWith('luna_sword');
+    if (!isSword) {
+      return entry;
+    }
+
+    const label = entry.luna_sword_label || entry.damage_type || entry.element || baseElement;
+    const visual = getLightstreamSwordVisual(label, {
+      seed: entry.id || `${ownerId || ''}:${summonType || ''}:${label || ''}`
+    });
+    const element = visual.element || normalizeDamageTypeId(label || baseElement);
+
+    return {
+      ...entry,
+      lunaSword: true,
+      lunaSwordType: element,
+      lunaSwordArt: visual.art,
+      lunaSwordColor: getElementColor(element),
+      lunaSwordPalette: visual.palette,
+      element
+    };
+  }
+
   function combatantKey(kind, id, ownerId = '') {
     const parts = [kind];
     if (ownerId !== undefined && ownerId !== null && ownerId !== '') {
@@ -767,7 +817,13 @@
         if (key) {
           trackHp(key, summon.hp, summon.max_hp);
         }
-        return { ...summon, hpKey: key };
+        const baseElement = resolveDamageTypeFromEntity(summon);
+        let result = { ...summon, hpKey: key };
+        if (baseElement && baseElement !== 'generic') {
+          result = { ...result, element: baseElement };
+        }
+        result = applyLunaSwordVisuals(result, ownerId, baseElement);
+        return result;
       }
 
       // Map summons to their owners
