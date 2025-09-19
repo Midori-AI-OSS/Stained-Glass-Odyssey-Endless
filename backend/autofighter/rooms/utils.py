@@ -1,14 +1,10 @@
 from __future__ import annotations
 
 from dataclasses import fields
-import math
-import random
 from typing import Any
 from typing import Collection
 from typing import Mapping
 
-from plugins import foes as foe_plugins
-from plugins import players as player_plugins
 from plugins.foes._base import FoeBase
 
 from ..mapgen import MapNode
@@ -16,42 +12,7 @@ from ..party import Party
 from ..passives import PassiveRegistry
 from ..stats import GAUGE_START
 from ..stats import Stats
-
-# Action caps for foes to prevent runaway turn economy
-FOE_MAX_ACTIONS_PER_TURN: int = 1     # 1 action per turn
-FOE_MAX_ACTION_POINTS: int = 1        # start and cap at very low AP
-
-RECENT_FOE_WEIGHT_FACTOR: float = 0.25
-RECENT_FOE_MIN_WEIGHT: float = 0.1
-
-
-def _resolve_spawn_weight(
-    cls: type[FoeBase],
-    *,
-    node: MapNode,
-    party_ids: Collection[str],
-    recent_ids: Collection[str] | None = None,
-    boss: bool = False,
-) -> float:
-    weight: float = 1.0
-    hook = getattr(cls, "get_spawn_weight", None)
-    if callable(hook):
-        try:
-            weight = float(
-                hook(
-                    node=node,
-                    party_ids=party_ids,
-                    recent_ids=recent_ids,
-                    boss=boss,
-                )
-            )
-        except Exception:
-            weight = 1.0
-    if not math.isfinite(weight):
-        return 1.0
-    if weight < 0:
-        return 0.0
-    return weight
+from .foe_factory import get_foe_factory
 
 
 def calculate_rank_probabilities(
@@ -59,247 +20,28 @@ def calculate_rank_probabilities(
     floors_cleared: int = 0,
     pressure: int = 0,
 ) -> tuple[float, float]:
-    """Return independent odds for prime and glitched tags based on progression."""
+    """Proxy to the factory helper for rank progression odds."""
 
-    try:
-        rooms = max(int(total_rooms_cleared), 0)
-    except Exception:
-        rooms = 0
-    try:
-        floors = max(int(floors_cleared), 0)
-    except Exception:
-        floors = 0
-    try:
-        pressure_value = max(int(pressure), 0)
-    except Exception:
-        pressure_value = 0
-
-    base_rate = rooms * 0.000001  # 0.0001% per cleared room
-    if floors > 0:
-        try:
-            floor_multiplier = max(1.0, math.pow(2.0, floors))
-        except OverflowError:
-            floor_multiplier = float("inf")
-    else:
-        floor_multiplier = 1.0
-    scaled_rate = base_rate * floor_multiplier
-    pressure_bonus = pressure_value * 0.01
-    total_rate = scaled_rate + pressure_bonus
-    if total_rate >= 1.0:
-        chance = 1.0
-    else:
-        chance = max(total_rate, 0.0)
-    return chance, chance
+    factory = get_foe_factory()
+    return factory.calculate_rank_probabilities(total_rooms_cleared, floors_cleared, pressure)
 
 
 def _scale_stats(obj: Stats, node: MapNode, strength: float = 1.0) -> None:
-    """Scale foe stats based on room metadata.
+    """Scale foe stats based on room metadata using the shared factory."""
 
-    Foes grow stronger with cumulative room progression across floors, loop count, and user-set pressure.
-    Each floor adds 10 rooms worth of stat progression (rooms_per_floor from MapGenerator).
-    Small per-stat variation keeps battles from feeling identical.
-    """
-    from ..mapgen import MapGenerator
+    factory = get_foe_factory()
+    factory.scale_stats(obj, node, strength)
 
-    starter_int = 1.0 + random.uniform(-0.05, 0.05)
-    # Calculate cumulative room progression: (floors - 1) * rooms_per_floor + current_room_index
-    cumulative_rooms = (node.floor - 1) * MapGenerator.rooms_per_floor + node.index
-    room_mult = starter_int + 0.85 * max(cumulative_rooms - 1, 0)
-    loop_mult = starter_int + 1.30 * max(node.loop - 1, 0)
-    pressure_mult = 1.0 * max(node.pressure, 1)
-    base_mult = max(strength * room_mult * loop_mult * pressure_mult, 0.5)
 
-    # Apply a global pre-scale debuff to foes so they are significantly weaker
-    # before room modifiers are applied.
-    foe_debuff = 0.5 if isinstance(obj, FoeBase) else 1.0
-    if foe_debuff != 1.1:
-        try:
-            if hasattr(obj, "atk") and isinstance(obj.atk, (int, float)):
-                obj.atk = type(obj.atk)(obj.atk * foe_debuff)
-        except Exception:
-            pass
-        try:
-            if hasattr(obj, "defense") and isinstance(obj.defense, (int, float)):
-                obj.defense = type(obj.defense)(obj.defense * min((foe_debuff * node.floor) / 4, 1))
-        except Exception:
-            pass
-        try:
-            if hasattr(obj, "max_hp") and isinstance(obj.max_hp, (int, float)):
-                obj.max_hp = type(obj.max_hp)(obj.max_hp * foe_debuff)
-            if hasattr(obj, "hp") and isinstance(obj.hp, (int, float)):
-                obj.hp = type(obj.hp)(obj.hp * foe_debuff)
-        except Exception:
-            pass
+def _choose_foe(node: MapNode, party: Party) -> FoeBase:
+    """Select a single foe instance using the shared factory."""
 
-    for field in fields(type(obj)):
-        if field.name in {"exp", "level", "exp_multiplier"}:
-            continue
-        value = getattr(obj, field.name, None)
-        if isinstance(value, (int, float)):
-            per_stat_variation = 1.0 + random.uniform(-0.05, 0.05)
-            total = value * base_mult * per_stat_variation
-            setattr(obj, field.name, type(value)(total))
-
-    try:
-        from plugins.players._base import PlayerBase as _PlayerBase
-    except Exception:
-        _PlayerBase = None
-
-    if _PlayerBase is not None and isinstance(obj, _PlayerBase):
-        try:
-            obj.apply_boss_scaling()
-        except Exception:
-            pass
-
-    try:
-        room_num = max(int(cumulative_rooms), 1)
-        desired = max(1, math.ceil(room_num / 2))
-        obj.level = int(max(getattr(obj, "level", 1), desired))
-    except Exception:
-        pass
-
-    try:
-        room_num = max(int(node.index), 1)
-        # Keep the same base curve but apply foe debuff to the minimum target as well
-        base_hp = int(15 * room_num * (foe_debuff if isinstance(obj, FoeBase) else 1.0))
-        low = int(base_hp * 0.85)
-        high = int(base_hp * 1.10)
-        target = random.randint(low, max(high, low + 1))
-        current_max = int(getattr(obj, "max_hp", 1))
-        new_max = max(current_max, target)
-        obj.max_hp = new_max
-        obj.hp = new_max
-    except Exception:
-        pass
-
-    try:
-        cd = getattr(obj, "crit_damage", None)
-        if isinstance(cd, (int, float)):
-            obj.crit_damage = type(cd)(max(float(cd), 2.0))
-    except Exception:
-        pass
-
-    # Apply post-scale clamps for foes' action economy
-    if isinstance(obj, FoeBase):
-        try:
-            er = getattr(obj, "effect_resistance", None)
-            if isinstance(er, (int, float)):
-                obj.effect_resistance = float(max(0.0, er))
-        except Exception:
-            pass
-        try:
-            apt = getattr(obj, "actions_per_turn", None)
-            if isinstance(apt, (int, float)):
-                obj.actions_per_turn = int(min(max(1, int(apt)), FOE_MAX_ACTIONS_PER_TURN))
-        except Exception:
-            pass
-        try:
-            ap = getattr(obj, "action_points", None)
-            if isinstance(ap, (int, float)):
-                obj.action_points = int(min(max(0, int(ap)), FOE_MAX_ACTION_POINTS))
-        except Exception:
-            pass
-
-    # Enforce a minimum defense value for foes so they are not trivially zeroed.
-    try:
-        if isinstance(obj, FoeBase):
-            d = getattr(obj, "defense", None)
-            if isinstance(d, (int, float)):
-                override = getattr(obj, "min_defense_override", None)
-                if isinstance(override, (int, float)):
-                    min_def = max(int(override), 0)
-                else:
-                    min_def = 2 + cumulative_rooms
-
-                new_def = max(min_def, int(d))
-                # For foes, 'defense' is a dataclass field; set the field directly
-                try:
-                    setattr(obj, "defense", type(d)(new_def))
-                except Exception:
-                    # As a fallback, adjust base stat
-                    try:
-                        obj.set_base_stat("defense", new_def)
-                    except Exception:
-                        pass
-    except Exception:
-        pass
-
-    # Apply pressure-based defense scaling for foes with randomness
-    try:
-        if isinstance(obj, FoeBase) and node.pressure > 0:
-            d = getattr(obj, "defense", None)
-            if isinstance(d, (int, float)):
-                # Calculate pressure-based defense: pressure * 10 with randomness
-                # For pressure=5: target 41-75 (base 50 with range -18% to +50%)
-                pressure_base_def = node.pressure * 10
-                min_factor = 0.82  # -18% (50 * 0.82 = 41)
-                max_factor = 1.50  # +50% (50 * 1.50 = 75)
-                random_factor = random.uniform(min_factor, max_factor)
-                pressure_defense = int(pressure_base_def * random_factor)
-
-                # Set the defense to be at least the pressure-based value
-                # but also respect any higher value from other scaling
-                current_def = int(d)
-                final_defense = max(current_def, pressure_defense)
-
-                try:
-                    setattr(obj, "defense", type(d)(final_defense))
-                except Exception:
-                    # As a fallback, adjust base stat
-                    try:
-                        obj.set_base_stat("defense", final_defense)
-                    except Exception:
-                        pass
-    except Exception:
-        pass
-
-    try:
-        if isinstance(obj, FoeBase):
-            vit = getattr(obj, "vitality", None)
-            if isinstance(vit, (int, float)):
-                thr = 0.5
-                step = 0.25
-                base_slow = 5.0
-                fvit = float(vit)
-                if fvit < thr:
-                    fvit = thr
-                else:
-                    excess = fvit - thr
-                    steps = int(excess // step)
-                    factor = base_slow + steps
-                    fvit = thr + (excess / factor)
-                    fvit = max(fvit, thr)
-                # Foes use dataclass fields, so set the live field directly
-                try:
-                    setattr(obj, "vitality", type(vit)(fvit))
-                except Exception:
-                    pass
-    except Exception:
-        pass
-
-    try:
-        if isinstance(obj, FoeBase):
-            mit = getattr(obj, "mitigation", None)
-            if isinstance(mit, (int, float)):
-                thr = 0.2
-                step = 0.01
-                base_slow = 5.0
-                fmit = float(mit)
-                if fmit < thr:
-                    fmit = thr
-                else:
-                    excess = fmit - thr
-                    steps = int(excess // step)
-                    factor = base_slow + steps
-                    fmit = thr + (excess / factor)
-                    fmit = max(fmit, thr)
-                # Foes use dataclass fields, so set the live field directly
-                try:
-                    setattr(obj, "mitigation", type(mit)(fmit))
-                except Exception:
-                    pass
-    except Exception:
-        pass
+    factory = get_foe_factory()
+    foes = factory.build_encounter(node, party, exclude_ids=(), recent_ids=())
+    if foes:
+        return foes[0]
+    fallback = next(iter(factory.templates.values()))
+    return factory._instantiate(fallback).foe
 
 
 def _get_effect_description(effect_name: str) -> str:
@@ -526,39 +268,6 @@ def _serialize(obj: Stats) -> dict[str, Any]:
     return data
 
 
-def _choose_foe(node: MapNode, party: Party) -> FoeBase:
-    """Select a foe class not already in the party."""
-    party_ids = {p.id for p in party.members}
-    candidates = [
-        getattr(foe_plugins, name)
-        for name in getattr(foe_plugins, "__all__", [])
-        if getattr(foe_plugins, name).id not in party_ids
-    ]
-    for name in getattr(player_plugins, "__all__", []):
-        player_cls = getattr(player_plugins, name)
-        if player_cls.id in party_ids:
-            continue
-        foe_cls = foe_plugins.PLAYER_FOES.get(player_cls.id)
-        if foe_cls and foe_cls not in candidates:
-            candidates.append(foe_cls)
-    if not candidates:
-        candidates = [foe_plugins.Slime]
-    weights = [
-        _resolve_spawn_weight(
-            cls,
-            node=node,
-            party_ids=party_ids,
-            recent_ids=None,
-            boss=True,
-        )
-        for cls in candidates
-    ]
-    if not any(weight > 0 for weight in weights):
-        weights = [1.0 for _ in candidates]
-    foe_cls = random.choices(candidates, weights=weights, k=1)[0]
-    return foe_cls()
-
-
 def _build_foes(
     node: MapNode,
     party: Party,
@@ -567,146 +276,11 @@ def _build_foes(
     recent_ids: Collection[str] | None = None,
     progression: Mapping[str, Any] | None = None,
 ) -> list[FoeBase]:
-    """Build a list of foes for the given room node.
-
-    Ensures no duplicate foe IDs within a single encounter. If the available
-    unique foe pool is smaller than the desired count, the final list is
-    capped to the number of unique candidates.
-    """
-    progression_info: Mapping[str, Any] = progression or {}
-    total_rooms = progression_info.get("total_rooms_cleared", 0)
-    floors = progression_info.get("floors_cleared", 0)
-    pressure_override = progression_info.get("current_pressure")
-    if pressure_override is None:
-        pressure_override = getattr(node, "pressure", 0)
-    prime_chance, glitched_chance = calculate_rank_probabilities(
-        total_rooms,
-        floors,
-        pressure_override,
+    factory = get_foe_factory()
+    return factory.build_encounter(
+        node,
+        party,
+        exclude_ids=exclude_ids or (),
+        recent_ids=recent_ids or (),
+        progression=progression or {},
     )
-    room_type = getattr(node, "room_type", "") or ""
-    forced_prime = "prime" in room_type
-    forced_glitched = "glitched" in room_type
-
-    if "boss" in room_type:
-        foe = _choose_foe(node, party)
-        is_prime = forced_prime
-        is_glitched = forced_glitched
-        if not is_prime and prime_chance > 0.0:
-            is_prime = random.random() < prime_chance
-        if not is_glitched and glitched_chance > 0.0:
-            is_glitched = random.random() < glitched_chance
-        if is_prime and is_glitched:
-            foe.rank = "glitched prime boss"
-        elif is_prime:
-            foe.rank = "prime boss"
-        elif is_glitched:
-            foe.rank = "glitched boss"
-        else:
-            foe.rank = "boss"
-        return [foe]
-
-    base = min(10, 1 + node.pressure // 5)
-    extras = 0
-    size = len(party.members)
-    max_extra = max(size - 1, 0)
-    if max_extra:
-        if random.random() < 0.35:
-            extras = max_extra
-        else:
-            for tier in range(max_extra - 1, 0, -1):
-                if random.random() < 0.75:
-                    extras = tier
-                    break
-    desired = min(10, base + extras)
-
-    # Build a candidate pool of foe classes that are not members of the party
-    party_ids = {p.id for p in party.members}
-    if exclude_ids:
-        party_ids.update(eid for eid in exclude_ids if eid)
-    candidates: list[type[FoeBase]] = []
-    try:
-        for name in getattr(foe_plugins, "__all__", []):
-            cls = getattr(foe_plugins, name, None)
-            if cls is None:
-                continue
-            try:
-                if getattr(cls, "id", None) in party_ids:
-                    continue
-            except Exception:
-                pass
-            candidates.append(cls)
-    except Exception:
-        # Fallback: keep Slime as a candidate at minimum
-        candidates = [foe_plugins.Slime]
-
-    # Remove any accidental duplicates in the candidate list by ID
-    unique_by_id: dict[str, type[FoeBase]] = {}
-    for cls in candidates:
-        try:
-            cid = getattr(cls, "id", None)
-            if cid and cid not in unique_by_id:
-                unique_by_id[cid] = cls
-        except Exception:
-            # If a class has no static id, include it once under its name
-            unique_by_id.setdefault(getattr(cls, "__name__", str(id(cls))), cls)
-
-    pool = list(unique_by_id.values())
-    if not pool:
-        pool = [foe_plugins.Slime]
-    recent_set = {str(rid) for rid in recent_ids if rid} if recent_ids else set()
-    weights = []
-    for cls in pool:
-        foe_id = getattr(cls, "id", None)
-        base_weight = _resolve_spawn_weight(
-            cls,
-            node=node,
-            party_ids=party_ids,
-            recent_ids=recent_set,
-            boss=False,
-        )
-        if foe_id in recent_set and base_weight > 0:
-            reduced = max(
-                base_weight * RECENT_FOE_WEIGHT_FACTOR,
-                RECENT_FOE_MIN_WEIGHT,
-            )
-            weights.append(reduced)
-        else:
-            weights.append(base_weight)
-
-    k = min(desired, len(pool))
-    chosen_classes: list[type[FoeBase]] = []
-    candidates = pool[:]
-    candidate_weights = weights[:]
-    for _ in range(k):
-        if not candidates:
-            break
-        if not any(weight > 0 for weight in candidate_weights):
-            candidate_weights = [1.0 for _ in candidates]
-        cls = random.choices(candidates, weights=candidate_weights, k=1)[0]
-        chosen_classes.append(cls)
-        idx = candidates.index(cls)
-        candidates.pop(idx)
-        candidate_weights.pop(idx)
-    foes = [cls() for cls in chosen_classes]
-    for foe in foes:
-        is_prime = forced_prime
-        is_glitched = forced_glitched
-        if not is_prime and prime_chance > 0.0:
-            try:
-                is_prime = random.random() < prime_chance
-            except Exception:
-                is_prime = False
-        if not is_glitched and glitched_chance > 0.0:
-            try:
-                is_glitched = random.random() < glitched_chance
-            except Exception:
-                is_glitched = False
-
-        if is_prime and is_glitched:
-            foe.rank = "glitched prime"
-        elif is_prime:
-            foe.rank = "prime"
-        elif is_glitched:
-            foe.rank = "glitched"
-    return foes
