@@ -20,6 +20,9 @@ from ..stats import Stats
 FOE_MAX_ACTIONS_PER_TURN: int = 1     # 1 action per turn
 FOE_MAX_ACTION_POINTS: int = 1        # start and cap at very low AP
 
+RECENT_FOE_WEIGHT_FACTOR: float = 0.25
+RECENT_FOE_MIN_WEIGHT: float = 0.1
+
 
 def _scale_stats(obj: Stats, node: MapNode, strength: float = 1.0) -> None:
     """Scale foe stats based on room metadata.
@@ -474,6 +477,7 @@ def _build_foes(
     party: Party,
     *,
     exclude_ids: Collection[str] | None = None,
+    recent_ids: Collection[str] | None = None,
 ) -> list[FoeBase]:
     """Build a list of foes for the given room node.
 
@@ -534,10 +538,20 @@ def _build_foes(
     pool = list(unique_by_id.values())
     if not pool:
         pool = [foe_plugins.Slime]
-    weights = [
-        3 if getattr(cls, "id", None) == "luna" and "luna" not in party_ids else 1
-        for cls in pool
-    ]
+    recent_set = {str(rid) for rid in recent_ids if rid} if recent_ids else set()
+    weights = []
+    for cls in pool:
+        foe_id = getattr(cls, "id", None)
+        base_weight = (
+            3
+            if foe_id == "luna" and "luna" not in party_ids
+            else 1
+        )
+        if foe_id in recent_set:
+            reduced = max(base_weight * RECENT_FOE_WEIGHT_FACTOR, RECENT_FOE_MIN_WEIGHT)
+            weights.append(reduced)
+        else:
+            weights.append(base_weight)
 
     k = min(desired, len(pool))
     chosen_classes: list[type[FoeBase]] = []

@@ -72,6 +72,53 @@ def _collect_summons(entities: list) -> dict[str, list[dict[str, Any]]]:
     return snapshots
 
 
+def _normalize_recent_foes(
+    state: dict[str, Any],
+) -> tuple[list[dict[str, int]], set[str], bool]:
+    entries = state.get("recent_foes", [])
+    changed = False
+    if not isinstance(entries, list):
+        if entries:
+            changed = True
+        return [], set(), changed
+
+    ordered_ids: list[str] = []
+    aggregated: dict[str, int] = {}
+
+    for entry in entries:
+        if not isinstance(entry, dict):
+            changed = True
+            continue
+        foe_id = entry.get("id")
+        if not foe_id:
+            changed = True
+            continue
+        try:
+            cooldown = int(entry.get("cooldown", 0))
+        except Exception:
+            changed = True
+            continue
+        if cooldown <= 0:
+            changed = True
+            continue
+        foe_key = str(foe_id)
+        if foe_key not in aggregated:
+            ordered_ids.append(foe_key)
+            aggregated[foe_key] = cooldown
+        else:
+            prev = aggregated[foe_key]
+            if cooldown > prev:
+                aggregated[foe_key] = cooldown
+                changed = True
+            elif cooldown != prev:
+                changed = True
+
+    normalized = [{"id": foe_id, "cooldown": aggregated[foe_id]} for foe_id in ordered_ids]
+    if len(normalized) != len(entries):
+        changed = True
+    return normalized, set(ordered_ids), changed
+
+
 async def battle_room(run_id: str, data: dict[str, Any]) -> dict[str, Any]:
     action = data.get("action", "")
 
@@ -103,7 +150,11 @@ async def battle_room(run_id: str, data: dict[str, Any]) -> dict[str, Any]:
                 if rooms and 0 <= int(state.get("current", 0)) < len(rooms):
                     node = rooms[state["current"]]
                     room = BattleRoom(node)
-                    foes = _build_foes(node, party)
+                    normalized, recent_ids, changed = _normalize_recent_foes(state)
+                    if changed:
+                        state["recent_foes"] = normalized
+                        await asyncio.to_thread(save_map, run_id, state)
+                    foes = _build_foes(node, party, recent_ids=recent_ids)
                     for f in foes:
                         _scale_stats(f, node, room.strength)
                     combat_party = Party(
@@ -153,6 +204,10 @@ async def battle_room(run_id: str, data: dict[str, Any]) -> dict[str, Any]:
     node = rooms[state["current"]]
     if node.room_type not in {"battle-weak", "battle-normal"}:
         raise ValueError("invalid room")
+    normalized_recent, recent_ids, recent_changed = _normalize_recent_foes(state)
+    if recent_changed:
+        state["recent_foes"] = normalized_recent
+        await asyncio.to_thread(save_map, run_id, state)
     # Check awaiting flags before attempting to launch a new battle
     awaiting_card = state.get("awaiting_card")
     awaiting_relic = state.get("awaiting_relic")
@@ -212,7 +267,12 @@ async def battle_room(run_id: str, data: dict[str, Any]) -> dict[str, Any]:
             boss_id = boss_info.get("id") if isinstance(boss_info, dict) else None
             if boss_id:
                 exclude_ids = {boss_id}
-        foes = _build_foes(node, party, exclude_ids=exclude_ids)
+        foes = _build_foes(
+            node,
+            party,
+            exclude_ids=exclude_ids,
+            recent_ids=recent_ids,
+        )
         for f in foes:
             _scale_stats(f, node, room.strength)
         combat_party = Party(
