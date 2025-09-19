@@ -7,6 +7,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from autofighter.mapgen import MapNode
 from autofighter.party import Party
+from autofighter.rooms import foe_factory
 from autofighter.rooms import utils
 from plugins.players import Player
 from plugins.players.luna import Luna
@@ -21,7 +22,7 @@ def _capture_weights(monkeypatch, node: MapNode, party: Party) -> dict[str, floa
             captured[str(ident)] = weight
         return [candidates[0]]
 
-    monkeypatch.setattr(utils.random, "choices", fake_choices)
+    monkeypatch.setattr(foe_factory.random, "choices", fake_choices)
     utils._choose_foe(node, party)
     return captured
 
@@ -56,6 +57,13 @@ def test_luna_boss_weight_default_other_floors(monkeypatch) -> None:
     party = Party(members=[Player()])
     weights = _capture_weights(monkeypatch, node, party)
     assert weights.get("luna") == pytest.approx(1.0)
+
+
+def test_luna_non_boss_weight_multiplier(monkeypatch) -> None:
+    node = MapNode(room_id=0, room_type="normal", floor=1, index=1, loop=1, pressure=0)
+    party = Party(members=[Player()])
+    weights = _capture_weights(monkeypatch, node, party)
+    assert weights.get("luna") == pytest.approx(5.0)
 
 
 def test_luna_weighting_respects_party_ids() -> None:
