@@ -164,6 +164,8 @@ class ShopRoom(Room):
             payload_items = data.get("items")
             if isinstance(payload_items, list) and payload_items:
                 purchases = [p for p in payload_items if isinstance(p, dict)]
+            elif isinstance(payload_items, dict) and payload_items:
+                purchases = [payload_items]
             else:
                 item_id = data.get("id") or data.get("item")
                 cost_value = data.get("cost") or data.get("price")

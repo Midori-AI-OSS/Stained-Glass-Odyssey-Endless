@@ -1056,22 +1056,65 @@
     return { base, taxed, tax };
   }
 
-  async function handleShopBuy(item) {
-    if (!runId) return;
-    const { base, taxed, tax } = extractShopPricing(item || {});
-    const payload = { id: item?.id };
+  function normalizeShopPurchase(entry) {
+    if (!entry || typeof entry !== 'object') {
+      return null;
+    }
+    const id = entry.id ?? entry.item ?? null;
+    if (!id) {
+      return null;
+    }
+    const { base, taxed, tax } = extractShopPricing(entry);
+    const normalized = { id };
     if (base !== null) {
-      payload.base_cost = base;
-      payload.base_price = base;
+      normalized.base_cost = base;
+      normalized.base_price = base;
     }
     if (taxed !== null) {
-      payload.cost = taxed;
-      payload.price = taxed;
-      payload.taxed_cost = taxed;
+      normalized.cost = taxed;
+      normalized.price = taxed;
+      normalized.taxed_cost = taxed;
     }
     if (tax !== null) {
-      payload.tax = tax;
+      normalized.tax = tax;
     }
+    return normalized;
+  }
+
+  async function handleShopBuy(item) {
+    if (!runId) return;
+    const rawEntries = (() => {
+      if (Array.isArray(item)) {
+        return item;
+      }
+      if (item && typeof item === 'object') {
+        if (Array.isArray(item.items)) {
+          return item.items;
+        }
+        if (item.items && typeof item.items === 'object') {
+          return [item.items];
+        }
+        return [item];
+      }
+      return [];
+    })();
+
+    const purchases = rawEntries
+      .map((entry) => normalizeShopPurchase(entry))
+      .filter((entry) => entry !== null);
+
+    if (!purchases.length) {
+      return;
+    }
+
+    const payload = (() => {
+      if (purchases.length === 1) {
+        const [single] = purchases;
+        return { ...single, items: { ...single } };
+      }
+      return { items: purchases.map((entry) => ({ ...entry })) };
+    })();
+
     // Begin processing gate: first active purchase halts UI polling and shows indicator
     shopProcessingCount += 1;
     if (shopProcessingCount === 1) {

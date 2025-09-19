@@ -236,6 +236,46 @@ async def test_shop_handles_multi_item_payload():
 
 
 @pytest.mark.asyncio
+async def test_shop_accepts_single_item_dict_payload():
+    node = MapNode(room_id=11, room_type="shop", floor=1, index=1, loop=1, pressure=0)
+    node.stock = [
+        {
+            "id": "single_dict_card",
+            "name": "Single Dict Card",
+            "stars": 1,
+            "type": "card",
+            "base_price": 100,
+            "price": 100,
+            "cost": 100,
+            "tax": 0,
+        }
+    ]
+    room = ShopRoom(node)
+
+    member = PlayerBase()
+    member.id = "single"
+    member.set_base_stat('max_hp', 100)
+    member.hp = 70
+    party = Party(members=[member], gold=200)
+
+    initial_view = await room.resolve(party, {})
+    assert len(initial_view["stock"]) == 1
+
+    entry = initial_view["stock"][0]
+    expected_cost = _taxed_price(entry["base_price"], node.pressure, initial_view["items_bought"])
+
+    result = await room.resolve(
+        party,
+        {"items": {"id": entry["id"], "cost": expected_cost}},
+    )
+
+    assert result["items_bought"] == 1
+    assert not result["stock"]
+    assert party.gold == 200 - expected_cost
+    assert entry["id"] in party.cards
+
+
+@pytest.mark.asyncio
 async def test_shop_multi_item_payload_skips_invalid_entries():
     node = MapNode(room_id=10, room_type="shop", floor=1, index=1, loop=1, pressure=1)
     node.stock = [

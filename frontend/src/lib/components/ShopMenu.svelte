@@ -80,6 +80,27 @@
     return pricingOf(item).taxed;
   }
 
+  function normalizePurchase(item) {
+    if (!item || typeof item !== 'object') {
+      return null;
+    }
+    const id = item.id ?? item.item ?? null;
+    if (!id) {
+      return null;
+    }
+    const pricing = pricingOf(item);
+    return {
+      ...item,
+      id,
+      base_price: pricing.base,
+      base_cost: pricing.base,
+      taxed_cost: pricing.taxed,
+      price: pricing.taxed,
+      cost: pricing.taxed,
+      tax: pricing.tax
+    };
+  }
+
   // Animation state for reroll button
   let rerollAnimationText = '';
   let isAnimating = false;
@@ -109,21 +130,15 @@
     }
   }
   function buy(item) {
+    const payload = normalizePurchase(item);
+    if (!payload) {
+      return;
+    }
     // mark this entry as sold (by key) and pass through the purchase
-    const k = item?.ident || identOf(item);
+    const k = payload.ident || item?.ident || identOf(item);
     if (k) soldIds.add(k);
     // Force reactivity for Set mutation
     soldIds = new Set(soldIds);
-    const pricing = pricingOf(item);
-    const payload = {
-      ...item,
-      base_price: pricing.base,
-      base_cost: pricing.base,
-      taxed_cost: pricing.taxed,
-      price: pricing.taxed,
-      cost: pricing.taxed,
-      tax: pricing.tax
-    };
     dispatch('buy', payload);
   }
 
@@ -143,31 +158,35 @@
     if (processing || isBuying) return;
     isBuying = true;
     const list = combinedList.filter((it) => selectedIds.has(it.ident));
-    if (!list.length) return;
-    for (let i = 0; i < list.length; i++) {
-      const item = list[i];
-      const k = item.ident;
-      soldIds.add(k);
-      // Force reactivity so line crosses off immediately
-      soldIds = new Set(soldIds);
-      const pricing = pricingOf(item);
-      const payload = {
-        ...item,
-        base_price: pricing.base,
-        base_cost: pricing.base,
-        taxed_cost: pricing.taxed,
-        price: pricing.taxed,
-        cost: pricing.taxed,
-        tax: pricing.tax
-      };
-      dispatch('buy', payload);
-      // Slow down purchase processing for stability
-      await new Promise((r) => setTimeout(r, 650));
+    if (!list.length) {
+      isBuying = false;
+      return;
     }
-    selectedIds.clear();
-    // Force reactivity after clearing selection
-    selectedIds = new Set();
-    isBuying = false;
+    try {
+      const purchases = [];
+      for (const item of list) {
+        const payload = normalizePurchase(item);
+        if (!payload) {
+          continue;
+        }
+        const k = payload.ident || item.ident;
+        if (k) {
+          soldIds.add(k);
+        }
+        purchases.push(payload);
+      }
+      if (purchases.length) {
+        // Force reactivity so line crosses off immediately
+        soldIds = new Set(soldIds);
+        const detail = purchases.length === 1 ? purchases[0] : purchases;
+        dispatch('buy', detail);
+      }
+    } finally {
+      selectedIds.clear();
+      // Force reactivity after clearing selection
+      selectedIds = new Set();
+      isBuying = false;
+    }
   }
   
   // Animate text appearing letter by letter with jumping effect
