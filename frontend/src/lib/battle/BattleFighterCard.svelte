@@ -1,7 +1,14 @@
 <script>
   import { Circle as PipCircle } from 'lucide-svelte';
   import TripleRingSpinner from '../components/TripleRingSpinner.svelte';
-  import { getCharacterImage, getElementColor, getElementIcon, hasCharacterGallery, advanceCharacterImage } from '../systems/assetLoader.js';
+  import {
+    getCharacterImage,
+    getElementColor,
+    getElementIcon,
+    getDamageTypePalette,
+    hasCharacterGallery,
+    advanceCharacterImage
+  } from '../systems/assetLoader.js';
 
   export let fighter = {};
   export let position = 'bottom'; // 'top' for foes, 'bottom' for party
@@ -23,9 +30,20 @@
   $: elIcon = getElementIcon(fighter.element);
   // Make party (bottom) portraits larger for readability
   $: portraitSize = sizePx ? `${sizePx}px` : (size === 'small' ? '48px' : (size === 'medium' ? '96px' : (position === 'bottom' ? '256px' : '96px')));
-  
+
   // Element-specific glow effects for different damage types
   $: elementGlow = getElementGlow(fighter.element);
+
+  $: isLunaSwordSummon = Boolean(fighter?.lunaSword || fighter?.luna_sword);
+  $: lunaSwordElement = isLunaSwordSummon ? (fighter?.lunaSwordType || fighter?.element || fighter?.damage_type) : '';
+  $: lunaSwordArtUrl = isLunaSwordSummon ? (fighter?.lunaSwordArt || fighter?.luna_sword_art || '') : '';
+  $: lunaSwordPalette = isLunaSwordSummon
+    ? fighter?.lunaSwordPalette || getDamageTypePalette(lunaSwordElement || fighter?.element || fighter?.damage_type)
+    : null;
+  $: lunaSwordOverlayStyle = isLunaSwordSummon && lunaSwordPalette
+    ? `--luna-sword-base:${lunaSwordPalette.base}; --luna-sword-highlight:${lunaSwordPalette.highlight}; --luna-sword-shadow:${lunaSwordPalette.shadow};`
+    : '';
+  $: showLunaSwordArt = Boolean(isLunaSwordSummon && lunaSwordArtUrl);
 
   // Rank-based outline animation (slow, subtle)
   $: rankKey = String(fighter?.rank || '').toLowerCase().trim();
@@ -130,7 +148,8 @@
 
   // Local image state to enable cross-fade when cycling gallery images
   let imageVersion = 0;
-  $: currentImageUrl = (imageVersion, getCharacterImage(imageId));
+  $: basePortraitUrl = (imageVersion, getCharacterImage(imageId));
+  $: portraitImageUrl = showLunaSwordArt ? lunaSwordArtUrl : basePortraitUrl;
   let fading = false;
 
   function cyclePortraitIfAvailable() {
@@ -181,8 +200,12 @@
         class:reduced={reducedMotion}
         class:phantom={isPhantom && !isDead}
         class:fading={fading}
-        style={`background-image: url("${currentImageUrl}")`}
+        class:luna-sword={showLunaSwordArt}
+        style={`background-image: url("${portraitImageUrl}")`}
       >
+      {#if showLunaSwordArt}
+        <div class="luna-sword-overlay" style={lunaSwordOverlayStyle} aria-hidden="true"></div>
+      {/if}
       {#if !reducedMotion && !isDead && fighter?.ultimate_ready}
         <div class="element-effect {elementGlow.effect}"></div>
       {/if}
@@ -345,7 +368,34 @@
     transition: opacity 180ms ease, filter 0.3s ease;
     opacity: 1;
   }
+  .portrait-image.luna-sword {
+    background-repeat: no-repeat;
+    filter: saturate(1.08);
+  }
   .portrait-image.fading { opacity: 0; }
+
+  .luna-sword-overlay {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background-color: color-mix(in oklab, var(--luna-sword-base, rgba(255, 255, 255, 0.35)) 45%, transparent);
+    background-image:
+      radial-gradient(circle at 25% 20%, color-mix(in oklab, var(--luna-sword-highlight, rgba(255, 255, 255, 0.4)) 80%, transparent) 0%, transparent 55%),
+      radial-gradient(circle at 78% 72%, color-mix(in oklab, var(--luna-sword-base, rgba(255, 255, 255, 0.3)) 70%, transparent) 0%, transparent 70%),
+      linear-gradient(150deg, color-mix(in oklab, var(--luna-sword-base, rgba(255, 255, 255, 0.25)) 60%, transparent) 0%, color-mix(in oklab, var(--luna-sword-shadow, rgba(0, 0, 0, 0.5)) 75%, transparent) 100%);
+    mix-blend-mode: screen;
+    opacity: 0.78;
+    transition: opacity 220ms ease;
+  }
+
+  .portrait-image.fading .luna-sword-overlay {
+    opacity: 0;
+  }
+
+  .reduced .luna-sword-overlay {
+    mix-blend-mode: normal;
+    opacity: 0.55;
+  }
 
   .portrait-image.element-glow {
     filter: drop-shadow(0 0 6px var(--element-glow-color));
