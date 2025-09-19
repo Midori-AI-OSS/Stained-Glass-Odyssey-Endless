@@ -1,7 +1,6 @@
 <script>
   import { Circle as PipCircle } from 'lucide-svelte';
   import TripleRingSpinner from '../components/TripleRingSpinner.svelte';
-  import RankBadge from './RankBadge.svelte';
   import { getCharacterImage, getElementColor, getElementIcon, hasCharacterGallery, advanceCharacterImage } from '../systems/assetLoader.js';
 
   export let fighter = {};
@@ -27,6 +26,15 @@
   
   // Element-specific glow effects for different damage types
   $: elementGlow = getElementGlow(fighter.element);
+
+  // Rank-based outline animation (slow, subtle)
+  $: rankKey = String(fighter?.rank || '').toLowerCase().trim();
+  $: isPrimeRank = rankKey.includes('prime');
+  $: isBossRank = rankKey.includes('boss');
+  // Very slow base duration (~150s) with slight per-instance variation and offset
+  const BASE_OUTLINE_SEC = 150;
+  let outlineAnimDur = `${(BASE_OUTLINE_SEC * (0.88 + Math.random() * 0.24)).toFixed(2)}s`;
+  let outlineAnimDelay = `${(Math.random() * BASE_OUTLINE_SEC).toFixed(2)}s`;
 
   $: if (fighter.element !== prevElement) {
     if (!reducedMotion) {
@@ -158,7 +166,15 @@
     class:reduced={reducedMotion}
     on:animationend={resetElementChange}
   >
-    <div class="fighter-portrait" class:can-cycle={canCycle} on:click={cyclePortraitIfAvailable}>
+    <div
+      class="fighter-portrait"
+      class:can-cycle={canCycle}
+      class:rank-prime={isPrimeRank}
+      class:rank-boss={isBossRank}
+      class:reduced={reducedMotion}
+      on:click={cyclePortraitIfAvailable}
+      style={`--outline-anim-dur: ${outlineAnimDur}; --outline-anim-delay: ${outlineAnimDelay};`}
+    >
       <div
         class="portrait-image"
         class:element-glow={!isDead && Boolean(fighter?.ultimate_ready)}
@@ -171,11 +187,7 @@
         <div class="element-effect {elementGlow.effect}"></div>
       {/if}
     </div>
-      <RankBadge
-        rank={fighter?.rank}
-        className="card-rank-badge"
-        size="calc(var(--portrait-size) * 0.28)"
-      />
+      <!-- Rank badge removed per design: outline subtly animates instead. -->
     <!-- Overlay UI: pips (left), passives (middle), ult gauge (right) -->
     <div class="overlay-ui">
       <!-- Old "action pips" removed to avoid confusion with passive pips. -->
@@ -277,6 +289,37 @@
     border: 2px solid var(--element-color, rgba(255, 255, 255, 0.3));
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
     transition: border-color 0.3s ease;
+  }
+  /* Rank-based outline animations (very slow, subtle) */
+  .fighter-portrait.rank-prime:not(.reduced) {
+    animation: prime-outline-pulse var(--outline-anim-dur, 150s) linear infinite;
+    animation-delay: var(--outline-anim-delay, 0s);
+  }
+  .fighter-portrait.rank-boss:not(.reduced) {
+    animation: boss-outline-shift var(--outline-anim-dur, 150s) linear infinite;
+    animation-delay: var(--outline-anim-delay, 0s);
+  }
+  @keyframes prime-outline-pulse {
+    0% {
+      border-color: color-mix(in oklab, var(--element-color) 85%, white 15%);
+    }
+    50% {
+      border-color: color-mix(in oklab, var(--element-color) 100%, black 0%);
+    }
+    100% {
+      border-color: color-mix(in oklab, var(--element-color) 85%, black 15%);
+    }
+  }
+  @keyframes boss-outline-shift {
+    0% {
+      border-color: var(--element-color);
+    }
+    50% {
+      border-color: color-mix(in oklab, var(--element-color) 10%, white 90%);
+    }
+    100% {
+      border-color: var(--element-color);
+    }
   }
   .fighter-portrait.can-cycle { cursor: pointer; }
   .fighter-portrait :global(.card-rank-badge) {
@@ -801,3 +844,4 @@
     pointer-events: none;
   }
 </style>
+ 

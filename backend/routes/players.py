@@ -309,6 +309,20 @@ async def get_player_editor() -> tuple[str, int, dict[str, object]]:
 @bp.put("/player/editor")
 async def update_player_editor() -> tuple[str, int, dict[str, str]]:
     data = await request.get_json(silent=True) or {}
+    # Guard: do not allow edits while any run is active
+    def _has_active_runs() -> bool:
+        with get_save_manager().connection() as conn:
+            conn.execute("CREATE TABLE IF NOT EXISTS runs (id TEXT PRIMARY KEY, party TEXT, map TEXT)")
+            cur = conn.execute("SELECT COUNT(1) FROM runs")
+            row = cur.fetchone()
+            try:
+                return bool(row and int(row[0]) > 0)
+            except Exception:
+                return False
+
+    has_active = await asyncio.to_thread(_has_active_runs)
+    if has_active:
+        return jsonify({"error": "run active"}), 409
     pronouns = (data.get("pronouns") or "").strip()
     damage_type = (data.get("damage_type") or "").capitalize()
     try:
