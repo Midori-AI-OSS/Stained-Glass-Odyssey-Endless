@@ -123,9 +123,7 @@ class _LunaSwordCoordinator:
             per_hit = 8
         _register_luna_sword(owner, attacker, label or "")
         passive = _get_luna_passive()
-        entity_id = passive._ensure_charge_slot(owner)  # type: ignore[attr-defined]
-        passive._charge_points[entity_id] = passive._charge_points.get(entity_id, 0) + per_hit  # type: ignore[attr-defined]
-        owner.luna_sword_charge = getattr(owner, "luna_sword_charge", 0) + per_hit
+        passive.add_charge(owner, amount=per_hit)  # type: ignore[attr-defined]
         try:
             helper = getattr(owner, "_luna_sword_helper", None)
             if helper is not None and hasattr(helper, "sync_actions_per_turn"):
