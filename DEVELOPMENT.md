@@ -23,6 +23,13 @@ The script will automatically detect available tools and use the best option:
 - With `uv` and `bun`: Fast, modern tooling (same as CI)
 - Without `uv`/`bun`: Falls back to `python3`/`pip3` and `npm`
 
+### Character Plugin Boundaries
+- Read the plugin boundary reminder in
+  [`.codex/instructions/plugin-system.md`](.codex/instructions/plugin-system.md)
+  before touching combat helpers. All spawn weighting, boss behaviours, and
+  passive effects must live in the relevant plugin modules so shared battle
+  utilities remain character-agnostic.
+
 ### Building the Application
 ```bash
 ./build.sh [variant] [platform]
