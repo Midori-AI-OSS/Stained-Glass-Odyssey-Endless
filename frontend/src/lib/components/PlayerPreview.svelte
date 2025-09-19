@@ -14,6 +14,7 @@
   export let previewId;
   export let overrideElement = '';
   export let mode = 'portrait';
+  export let allowElementChange = false;
   export let upgradeContext = null;
   export let upgradeData = null;
   export let upgradeLoading = false;
@@ -309,7 +310,7 @@
             </div>
           {/if}
           <!-- Element selector toolbar (player only) -->
-          {#if selected?.is_player}
+          {#if selected?.is_player && allowElementChange}
             <div class="element-toolbar" on:click|stopPropagation>
               {#each ELEMENTS as el}
                 {#key el}

@@ -20,6 +20,7 @@
   // Label for the primary action; overlays set this to "Save Party" or "Start Run"
   export let actionLabel = 'Save Party';
   // Pressure level for run difficulty
+  export let allowElementChange = false;
   let pressure = 0;
   const dispatch = createEventDispatcher();
   let previewElementOverride = '';
@@ -350,6 +351,7 @@
         {roster}
         {previewId}
         overrideElement={previewElementOverride}
+        {allowElementChange}
         mode={$previewMode}
         upgradeContext={upgradeContext}
         upgradeData={previewUpgradeState.data}

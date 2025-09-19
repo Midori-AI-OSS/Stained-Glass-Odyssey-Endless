@@ -66,13 +66,13 @@
       {#each displayItems as item, i (item.key)}
         {@const entry = item.entry}
         {@const fighter = findCombatant(entry.id)}
-        {@const elColor = getElementColor(fighter.element)}
+        {@const elColor = getElementColor(fighter?.element || entry?.element || 'generic')}
         <div
           class="entry"
           class:active={i === activeIndex}
           style="--element-color: {elColor}"
           animate:flip={{ duration: reducedMotion ? 0 : 220 }}
-          on:mouseenter={() => dispatch('hover', { id: fighter.id })}
+          on:mouseenter={() => dispatch('hover', { id: fighter?.id ?? null })}
           on:mouseleave={() => dispatch('hover', { id: null })}
         >
           <div class="inner">
@@ -80,16 +80,16 @@
               <div class="bonus-badge">x{bonusCounts.get(entry.id)}</div>
             {/if}
             <img 
-              src={getCharacterImage((fighter?.summon_type === 'phantom' && fighter?.summoner_id) ? fighter.summoner_id : (fighter?.summon_type || fighter?.id))} 
+              src={getCharacterImage((fighter?.summon_type === 'phantom' && fighter?.summoner_id) ? fighter.summoner_id : (fighter?.summon_type || fighter?.id || entry?.id))} 
               alt="" 
               class="portrait {fighter?.summon_type === 'phantom' ? 'phantom' : ''}" 
-              title={(fighter?.name || fighter?.id || '').toString().replace(/[_-]+/g, ' ')}
+              title={(fighter?.name || fighter?.id || entry?.id || '').toString().replace(/[_-]+/g, ' ')}
             />
             {#if showActionValues}
               <div class="av">{Math.round(entry.action_value)}</div>
             {/if}
             <!-- Hover-only name chip -->
-            <div class="name-chip">{(fighter?.name || fighter?.id || '').toString().replace(/[_-]+/g, ' ')}</div>
+            <div class="name-chip">{(fighter?.name || fighter?.id || entry?.id || '').toString().replace(/[_-]+/g, ' ')}</div>
           </div>
         </div>
       {/each}

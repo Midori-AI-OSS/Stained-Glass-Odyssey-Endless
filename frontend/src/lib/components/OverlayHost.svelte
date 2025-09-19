@@ -177,6 +177,7 @@
 {#if $overlayView === 'party'}
   <OverlaySurface zIndex={1300}>
     <PartyPicker bind:selected {reducedMotion}
+      allowElementChange={false}
       on:save={() => dispatch('saveParty')}
       on:editorChange={(e) => dispatch('editorChange', e.detail)}
       on:cancel={() => dispatch('back')}
@@ -225,6 +226,7 @@
 {#if $overlayView === 'party-start'}
   <OverlaySurface>
     <PartyPicker bind:selected {reducedMotion}
+      allowElementChange={true}
       actionLabel="Start Run"
       on:save={(e) => dispatch('startRun', e.detail)}
       on:editorChange={(e) => dispatch('editorChange', e.detail)}
