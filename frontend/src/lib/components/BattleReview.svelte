@@ -209,12 +209,12 @@
     for (const foe of foesDisplay || []) {
       if (foe.id) {
         const name = foe.name || foe.id;
-        const label = foe.rank ? `${name} — ${foe.rank}` : name;
         tabs.push({
           id: foe.id,
-          label,
+          label: name,
           type: 'foe',
-          entity: foe
+          entity: foe,
+          rank: foe.rank || null
         });
       }
     }
@@ -678,6 +678,15 @@
     margin: 0;
     color: #fff;
     font-size: 1.2rem;
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+  }
+
+  .rank-inline {
+    font-size: 0.95rem;
+    color: rgba(255, 255, 255, 0.8);
+    font-weight: 500;
   }
   
   .entity-section {
@@ -905,14 +914,18 @@
             class="icon-btn"
             class:active={activeTab === tab.id}
             on:click={() => activeTab = tab.id}
-            aria-label={tab.label}
+            aria-label={tab.rank ? `${tab.label} — ${tab.rank}` : tab.label}
           >
             {#if tab.icon}
               <svelte:component this={tab.icon} size={20} />
             {:else if tab.entity}
               {@const _tabFighter = toDisplayFighter(tab.entity)}
               <div style="--portrait-size: 4rem;">
-                <LegacyFighterPortrait fighter={_tabFighter} {reducedMotion} />
+                <LegacyFighterPortrait
+                  fighter={_tabFighter}
+                  rankTag={tab.rank ?? _tabFighter.rank}
+                  {reducedMotion}
+                />
               </div>
             {:else}
               <User size={20} />
@@ -1313,10 +1326,20 @@
               {#if currentTab.entity}
                 {@const _fighter = toDisplayFighter(currentTab.entity)}
                 <div style="--portrait-size: 7rem;">
-                  <LegacyFighterPortrait fighter={_fighter} {reducedMotion} />
+                  <LegacyFighterPortrait
+                    fighter={_fighter}
+                    rankTag={currentTab.rank ?? _fighter.rank}
+                    {reducedMotion}
+                  />
                 </div>
               {/if}
-              <h3>{currentTab.label} Breakdown</h3>
+              <h3>
+                {currentTab.label}
+                {#if currentTab.rank}
+                  <span class="rank-inline">— {currentTab.rank}</span>
+                {/if}
+                Breakdown
+              </h3>
             </div>
 
             {#if Object.keys(entityData.damage).length > 0}
