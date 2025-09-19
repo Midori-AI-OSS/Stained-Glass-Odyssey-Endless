@@ -1,6 +1,7 @@
-import pytest
 import asyncio
 from unittest.mock import patch
+
+import pytest
 
 from autofighter.action_queue import ActionQueue
 from autofighter.cards import apply_cards
@@ -10,6 +11,7 @@ from autofighter.effects import EffectManager
 from autofighter.party import Party
 from autofighter.rooms import battle as battle_module
 from autofighter.stats import BUS
+from autofighter.stats import GAUGE_START
 from plugins.players._base import PlayerBase
 
 
@@ -20,7 +22,7 @@ def setup_event_loop():
 
 
 @pytest.mark.asyncio
-async def test_overclock_extra_turn_queue():
+async def test_overclock_speed_buff_queue():
     loop = setup_event_loop()
     party = Party()
     ally = PlayerBase()
@@ -37,32 +39,34 @@ async def test_overclock_extra_turn_queue():
     await BUS.emit_async("battle_start", foe)
     await BUS.emit_async("battle_start", ally)
     loop.run_until_complete(asyncio.sleep(0))
-    ordered = [ally, foe]
-    def _snapshot() -> list[dict[str, str | bool]]:
-        extras: list[dict[str, str | bool]] = []
-        for ent in sorted(ordered, key=lambda c: getattr(c, "action_value", 0.0)):
-            turns = battle_module._EXTRA_TURNS.get(id(ent), 0)
-            for _ in range(turns):
-                extras.append({"id": ent.id, "bonus": True})
-        normal = [{"id": c.id} for c in sorted(ordered, key=lambda c: getattr(c, "action_value", 0.0))]
-        return extras + normal
-    snap = _snapshot()
-    assert [e["id"] for e in snap] == ["ally", "ally", "foe", "ally"]
-    assert snap[0]["bonus"] and snap[1]["bonus"]
-    actions: list[str] = []
-    for _ in range(3):
-        if battle_module._EXTRA_TURNS.get(id(ally), 0) > 0:
-            battle_module._EXTRA_TURNS[id(ally)] -= 1
-            actions.append("ally")
-            continue
-        actor = min(ordered, key=lambda c: getattr(c, "action_value", 0.0))
-        spent = getattr(actor, "action_value", 0.0)
-        for c in ordered:
-            c.action_value = getattr(c, "action_value", 0.0) - spent
-        actor.action_value = getattr(actor, "base_action_value", 0.0)
-        actions.append(actor.id)
-    battle_module._VISUAL_QUEUE = None
-    assert actions == ["ally", "ally", "foe"]
+    try:
+        assert battle_module._EXTRA_TURNS == {}
+
+        boosted_spd = ally.spd
+        assert boosted_spd > ally.get_base_stat("spd")
+
+        expected_base = GAUGE_START / max(boosted_spd, 1)
+        assert ally.base_action_value == pytest.approx(expected_base)
+        assert ally.action_value == pytest.approx(expected_base)
+
+        queue = battle_module._VISUAL_QUEUE
+        assert queue is not None
+        snapshot = queue.snapshot()
+        assert snapshot[0]["id"] == "ally"
+        assert not snapshot[0].get("bonus", False)
+
+        manager = getattr(ally, "effect_manager", None)
+        assert manager is not None
+        for _ in range(2):
+            loop.run_until_complete(manager.tick())
+        loop.run_until_complete(asyncio.sleep(0))
+
+        restored_spd = ally.spd
+        assert restored_spd == ally.get_base_stat("spd")
+        restored_base = GAUGE_START / max(restored_spd, 1)
+        assert ally.base_action_value == pytest.approx(restored_base)
+    finally:
+        battle_module._VISUAL_QUEUE = None
 
 
 @pytest.mark.asyncio
