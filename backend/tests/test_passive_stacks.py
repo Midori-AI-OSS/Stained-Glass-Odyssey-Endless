@@ -138,7 +138,7 @@ async def test_carly_guardian_stack_display():
     assert aegis_passive["max_stacks"] == 50
 
     # Simulate taking damage (which should add mitigation stacks)
-    from plugins.passives.carly_guardians_aegis import CarlyGuardiansAegis
+    from plugins.passives.normal.carly_guardians_aegis import CarlyGuardiansAegis
     carly_passive = CarlyGuardiansAegis()
 
     # Manually call on_damage_taken to simulate being hit
@@ -188,7 +188,7 @@ async def test_bubbles_burst_stack_display():
 async def test_soft_caps_luna_beyond_200():
     """Test that Luna Lunar Reservoir can stack beyond 200 and provides dodge bonus."""
     registry = PassiveRegistry()
-    from plugins.passives.luna_lunar_reservoir import LunaLunarReservoir
+    from plugins.passives.normal.luna_lunar_reservoir import LunaLunarReservoir
 
     luna = Stats(hp=1000, damage_type=Generic())
     luna.passives = ["luna_lunar_reservoir"]
@@ -212,7 +212,7 @@ async def test_soft_caps_luna_beyond_200():
 async def test_soft_caps_ally_beyond_120():
     """Test that Ally Overload can stack beyond 120 with reduced charge gain."""
     registry = PassiveRegistry()
-    from plugins.passives.ally_overload import AllyOverload
+    from plugins.passives.normal.ally_overload import AllyOverload
 
     ally = Stats(hp=1000, damage_type=Generic())
     ally.passives = ["ally_overload"]

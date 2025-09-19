@@ -9,8 +9,8 @@ from autofighter.stats import Stats
 from autofighter.stats import set_battle_active
 from plugins.damage_types.generic import Generic
 from plugins.effects.aftertaste import Aftertaste
-from plugins.passives.hilander_critical_ferment import HilanderCriticalFerment
-from plugins.passives.mezzy_gluttonous_bulwark import MezzyGluttonousBulwark
+from plugins.passives.normal.hilander_critical_ferment import HilanderCriticalFerment
+from plugins.passives.normal.mezzy_gluttonous_bulwark import MezzyGluttonousBulwark
 
 
 @pytest.mark.asyncio

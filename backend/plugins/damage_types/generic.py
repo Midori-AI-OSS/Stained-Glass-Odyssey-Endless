@@ -27,7 +27,7 @@ class Generic(DamageTypeBase):
 
         registry = PassiveRegistry()
         old_luna_cls = registry._registry.get("luna_lunar_reservoir")
-        from plugins.passives.luna_lunar_reservoir import LunaLunarReservoir
+        from plugins.passives.normal.luna_lunar_reservoir import LunaLunarReservoir
 
         actor_passives = getattr(actor, "passives", None)
         has_luna_reservoir = bool(

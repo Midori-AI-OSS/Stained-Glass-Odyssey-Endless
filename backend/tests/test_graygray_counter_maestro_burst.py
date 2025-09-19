@@ -3,7 +3,7 @@ import pytest
 from autofighter.passives import PassiveRegistry
 from autofighter.stats import Stats
 from plugins.damage_types.generic import Generic
-from plugins.passives.graygray_counter_maestro import GraygrayCounterMaestro
+from plugins.passives.normal.graygray_counter_maestro import GraygrayCounterMaestro
 
 
 @pytest.mark.asyncio

@@ -1,0 +1,1 @@
+"""Prime rank passive stubs."""

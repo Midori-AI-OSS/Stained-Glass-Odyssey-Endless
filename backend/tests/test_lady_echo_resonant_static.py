@@ -5,7 +5,7 @@ import pytest
 from autofighter.effects import DamageOverTime
 from autofighter.effects import EffectManager
 from autofighter.stats import Stats
-from plugins.passives.lady_echo_resonant_static import LadyEchoResonantStatic
+from plugins.passives.normal.lady_echo_resonant_static import LadyEchoResonantStatic
 
 
 @pytest.mark.asyncio
