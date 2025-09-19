@@ -151,6 +151,15 @@ const SWORD_KEYWORD_ALIASES = {
   wind: 'wind'
 };
 
+const LIGHTSTREAM_SWORD_ELEMENTS = new Set([
+  'fire',
+  'ice',
+  'lightning',
+  'light',
+  'dark',
+  'wind'
+]);
+
 export function normalizeDamageTypeId(typeId) {
   if (!typeId) return 'generic';
   const lowered = String(typeId).trim().toLowerCase();
@@ -434,9 +443,11 @@ function inferSwordElementFromPath(path) {
   const tokens = tokenizeSwordPath(path);
   for (const token of tokens) {
     const alias = SWORD_KEYWORD_ALIASES[token];
-    if (alias) return alias;
+    if (alias && LIGHTSTREAM_SWORD_ELEMENTS.has(alias)) {
+      return alias;
+    }
     const normalized = normalizeDamageTypeId(token);
-    if (normalized && normalized !== 'generic') {
+    if (LIGHTSTREAM_SWORD_ELEMENTS.has(normalized)) {
       return normalized;
     }
   }
