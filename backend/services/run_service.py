@@ -116,6 +116,9 @@ async def start_run(
         "awaiting_relic": False,
         "awaiting_loot": False,
         "awaiting_next": False,
+        "total_rooms_cleared": 0,
+        "floors_cleared": 0,
+        "current_pressure": int(pressure or 0),
     }
     if boss_choice is not None and nodes:
         state["floor_boss"] = {
@@ -254,6 +257,12 @@ async def advance_room(run_id: str) -> dict[str, object]:
     if task and not task.done():
         task.cancel()
 
+    previous_index = int(state.get("current", 0))
+    total_rooms_cleared = int(state.get("total_rooms_cleared", 0))
+    if 0 < previous_index < len(rooms):
+        total_rooms_cleared += 1
+    state["total_rooms_cleared"] = total_rooms_cleared
+
     state["current"] += 1
     state["awaiting_next"] = False
 
@@ -272,6 +281,8 @@ async def advance_room(run_id: str) -> dict[str, object]:
         nodes = generator.generate_floor()
         state["rooms"] = [n.to_dict() for n in nodes]
         state["current"] = 1
+        state["floors_cleared"] = int(state.get("floors_cleared", 0)) + 1
+        state["current_pressure"] = int(getattr(nodes[-1], "pressure", pressure)) if nodes else int(pressure)
         new_floor = getattr(nodes[-1], "floor", next_floor) if nodes else next_floor
         new_loop = getattr(nodes[-1], "loop", loop) if nodes else loop
         try:
@@ -292,6 +303,10 @@ async def advance_room(run_id: str) -> dict[str, object]:
         next_type = (
             rooms[state["current"]].room_type if state["current"] < len(rooms) else None
         )
+        if state["current"] < len(rooms):
+            state["current_pressure"] = int(
+                getattr(rooms[state["current"]], "pressure", state.get("current_pressure", 0))
+            )
 
     await asyncio.to_thread(save_map, run_id, state)
     try:

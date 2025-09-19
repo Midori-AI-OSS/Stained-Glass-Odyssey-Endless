@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import copy
+import random
 from typing import Any
 
 from battle_logging.writers import get_current_run_logger
@@ -21,6 +22,7 @@ from autofighter.rooms import BattleRoom
 from autofighter.rooms import BossRoom
 from autofighter.rooms import ChatRoom
 from autofighter.rooms import ShopRoom
+from autofighter.rooms import calculate_rank_probabilities
 from autofighter.rooms import _build_foes
 from autofighter.rooms import _choose_foe
 from autofighter.rooms import _scale_stats
@@ -154,7 +156,20 @@ async def battle_room(run_id: str, data: dict[str, Any]) -> dict[str, Any]:
                     if changed:
                         state["recent_foes"] = normalized
                         await asyncio.to_thread(save_map, run_id, state)
-                    foes = _build_foes(node, party, recent_ids=recent_ids)
+                    progression = {
+                        "total_rooms_cleared": state.get("total_rooms_cleared", 0),
+                        "floors_cleared": state.get("floors_cleared", 0),
+                        "current_pressure": state.get(
+                            "current_pressure",
+                            getattr(node, "pressure", 0),
+                        ),
+                    }
+                    foes = _build_foes(
+                        node,
+                        party,
+                        recent_ids=recent_ids,
+                        progression=progression,
+                    )
                     for f in foes:
                         _scale_stats(f, node, room.strength)
                     combat_party = Party(
@@ -267,11 +282,20 @@ async def battle_room(run_id: str, data: dict[str, Any]) -> dict[str, Any]:
             boss_id = boss_info.get("id") if isinstance(boss_info, dict) else None
             if boss_id:
                 exclude_ids = {boss_id}
+        progression = {
+            "total_rooms_cleared": state.get("total_rooms_cleared", 0),
+            "floors_cleared": state.get("floors_cleared", 0),
+            "current_pressure": state.get(
+                "current_pressure",
+                getattr(node, "pressure", 0),
+            ),
+        }
         foes = _build_foes(
             node,
             party,
             exclude_ids=exclude_ids,
             recent_ids=recent_ids,
+            progression=progression,
         )
         for f in foes:
             _scale_stats(f, node, room.strength)
@@ -457,7 +481,35 @@ async def boss_room(run_id: str, data: dict[str, Any]) -> dict[str, Any]:
                 "floor": getattr(node, "floor", 1),
                 "loop": getattr(node, "loop", 1),
             }
-        foe.rank = "glitched boss" if "glitched" in node.room_type else "boss"
+        progression = {
+            "total_rooms_cleared": state.get("total_rooms_cleared", 0),
+            "floors_cleared": state.get("floors_cleared", 0),
+            "current_pressure": state.get(
+                "current_pressure",
+                getattr(node, "pressure", 0),
+            ),
+        }
+        prime_chance, glitched_chance = calculate_rank_probabilities(
+            progression["total_rooms_cleared"],
+            progression["floors_cleared"],
+            progression["current_pressure"],
+        )
+        forced_prime = "prime" in node.room_type
+        forced_glitched = "glitched" in node.room_type
+        is_prime = forced_prime
+        is_glitched = forced_glitched
+        if not is_prime and prime_chance > 0.0:
+            is_prime = random.random() < prime_chance
+        if not is_glitched and glitched_chance > 0.0:
+            is_glitched = random.random() < glitched_chance
+        if is_prime and is_glitched:
+            foe.rank = "glitched prime boss"
+        elif is_prime:
+            foe.rank = "prime boss"
+        elif is_glitched:
+            foe.rank = "glitched boss"
+        else:
+            foe.rank = "boss"
         _scale_stats(foe, node, room.strength)
         foes = [foe]
         combat_party = Party(
