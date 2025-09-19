@@ -103,6 +103,7 @@ class PassiveRegistry:
 
     async def trigger_damage_taken(self, target, attacker: Optional[Any] = None, damage: int = 0) -> None:
         """Trigger passives specifically for damage taken events."""
+        attacker_obj = attacker if attacker is not target else None
         counts = Counter(target.passives)
         for pid, count in counts.items():
             cls = self._registry.get(pid)
@@ -115,7 +116,7 @@ class PassiveRegistry:
             if hasattr(passive_instance, "on_damage_taken"):
                 stacks = min(count, getattr(cls, "max_stacks", count))
                 for _ in range(stacks):
-                    await passive_instance.on_damage_taken(target, attacker, damage)
+                    await passive_instance.on_damage_taken(target, attacker_obj, damage)
                     await self._yield_control()
 
             # Also trigger passives with explicit damage_taken trigger
@@ -123,10 +124,10 @@ class PassiveRegistry:
                 stacks = min(count, getattr(cls, "max_stacks", count))
                 for _ in range(stacks):
                     try:
-                        await passive_instance.apply(target, attacker=attacker, damage=damage, event="damage_taken")
+                        await passive_instance.apply(target, attacker=attacker_obj, damage=damage, event="damage_taken")
                     except TypeError:
                         try:
-                            await passive_instance.apply(target, attacker=attacker, damage=damage)
+                            await passive_instance.apply(target, attacker=attacker_obj, damage=damage)
                         except TypeError:
                             await passive_instance.apply(target)
                     await self._yield_control()
