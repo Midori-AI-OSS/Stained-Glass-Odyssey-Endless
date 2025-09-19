@@ -1,3 +1,3 @@
 # StarStorm Component
 
-Adds a field of falling element-colored stars. A global `storm-blur` layer duplicates the star positions with a heavy blur and soft opacity, replacing the previous per-star `blob` overlay. Star lifetimes remain slowed by roughly doubling their animation duration and delay ranges.
+Renders a small constellation of orbiting element-colored orbs. Each orb has a fixed position, radius, and drift timing, and is rendered exactly once with a layered radial gradient that mixes its base color with the component tint. Slow transform/opacity animations are handled purely in CSS, so retinting the `StarStorm` background simply updates gradient stops instead of respawning DOM nodes. A reduced-motion branch swaps the animation for a static blended gradient so the background remains gently tinted without movement.
