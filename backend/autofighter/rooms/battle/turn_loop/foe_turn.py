@@ -147,6 +147,12 @@ async def _run_foe_turn_iteration(
         )
 
     if all(getattr(foe_obj, "hp", 0) <= 0 for foe_obj in context.foes):
+        await finish_turn(
+            context,
+            acting_foe,
+            action_start,
+            active_target_id=getattr(target, "id", None),
+        )
         return FoeTurnIterationResult(repeat=False, battle_over=True)
 
     if acting_foe.hp <= 0:
