@@ -141,6 +141,17 @@ def _scale_stats(obj: Stats, node: MapNode, strength: float = 1.0) -> None:
             setattr(obj, field.name, type(value)(total))
 
     try:
+        from plugins.players._base import PlayerBase as _PlayerBase
+    except Exception:
+        _PlayerBase = None
+
+    if _PlayerBase is not None and isinstance(obj, _PlayerBase):
+        try:
+            obj.apply_boss_scaling()
+        except Exception:
+            pass
+
+    try:
         room_num = max(int(cumulative_rooms), 1)
         desired = max(1, math.ceil(room_num / 2))
         obj.level = int(max(getattr(obj, "level", 1), desired))
