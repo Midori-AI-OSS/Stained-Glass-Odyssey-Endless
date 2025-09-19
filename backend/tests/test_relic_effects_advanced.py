@@ -132,20 +132,38 @@ async def test_travelers_charm_buff():
 
 
 @pytest.mark.asyncio
-async def test_timekeepers_hourglass_extra_turn():
+async def test_timekeepers_hourglass_speed_buff():
     event_bus_module.bus._subs.clear()
     party = Party()
     a = PlayerBase()
     party.members.append(a)
     award_relic(party, "timekeepers_hourglass")
     await apply_relics(party)
+
     turns: list[PlayerBase] = []
     BUS.subscribe("extra_turn", lambda m: turns.append(m))
+
     orig = random.random
     random.random = lambda: 0.0
-    await BUS.emit_async("turn_start")
-    random.random = orig
-    assert turns == [a]
+    try:
+        await BUS.emit_async("turn_start")
+    finally:
+        random.random = orig
+
+    assert turns == []
+
+    mgr = getattr(a, "effect_manager", None)
+    assert mgr is not None
+
+    mods = [mod for mod in mgr.mods if mod.name == "timekeepers_hourglass_spd"]
+    assert len(mods) == 1
+    mod = mods[0]
+    assert mod.turns == 2
+    assert mod.multipliers is not None
+    assert mod.multipliers.get("spd") == pytest.approx(1.20)
+
+    effects = [eff for eff in a.get_active_effects() if eff.name == "timekeepers_hourglass_spd"]
+    assert len(effects) == 1
 
 
 @pytest.mark.asyncio
