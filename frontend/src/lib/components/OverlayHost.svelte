@@ -22,6 +22,7 @@
     import BattleView from './BattleView.svelte';
   import ErrorOverlay from './ErrorOverlay.svelte';
   import BackendNotReady from './BackendNotReady.svelte';
+  import BackendShutdownOverlay from './BackendShutdownOverlay.svelte';
   import FloatingLoot from './FloatingLoot.svelte';
   import CombatViewer from './CombatViewer.svelte';
   import { rewardOpen as computeRewardOpen } from '../systems/viewportState.js';
@@ -201,6 +202,15 @@
   <ErrorOverlay
     message={$overlayData.message || 'An unexpected error occurred.'}
     traceback={$overlayData.traceback || ''}
+    on:close={() => dispatch('back')}
+  />
+{/if}
+
+{#if $overlayView === 'backend-shutdown'}
+  <BackendShutdownOverlay
+    message={$overlayData.message || 'A critical backend error occurred.'}
+    traceback={$overlayData.traceback || ''}
+    status={$overlayData.status || 500}
     on:close={() => dispatch('back')}
   />
 {/if}
