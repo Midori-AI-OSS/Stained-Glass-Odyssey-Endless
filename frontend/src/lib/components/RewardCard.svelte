@@ -6,6 +6,7 @@
   export let type = 'card';
   export let size = 'normal';
   export let quiet = false;
+  export let fluid = false;
   const dispatch = createEventDispatcher();
   function handleClick() {
     dispatch('select', { type, id: entry?.id, entry });
@@ -33,12 +34,12 @@
 {#if entry.tooltip || entry.about}
   <Tooltip text={entry.tooltip || entry.about}>
     <button class="card" type={btnType} aria-label={label} {tabIndex} role={role} aria-disabled={ariaDisabled} on:click={handleClick} on:keydown={onKey}>
-      <CardArt {entry} {type} {size} hideFallback={true} {quiet} />
+      <CardArt {entry} {type} {size} hideFallback={true} {quiet} {fluid} />
     </button>
   </Tooltip>
 {:else}
   <button class="card" type={btnType} aria-label={label} {tabIndex} role={role} aria-disabled={ariaDisabled} on:click={handleClick} on:keydown={onKey}>
-    <CardArt {entry} {type} {size} hideFallback={true} {quiet} />
+    <CardArt {entry} {type} {size} hideFallback={true} {quiet} {fluid} />
   </button>
 {/if}
 

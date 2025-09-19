@@ -18,6 +18,8 @@
   let baseList = []; // enriched entries with stable keys
   let awaitingReroll = false;
   let soldKeys = new Set();
+  let selectedKeys = new Set();
+  let currentIndex = 0; // center index for carousel
 
   function toFinite(value) {
     const num = Number(value);
@@ -88,6 +90,7 @@
   function initBaseOnce() {
     if (!baseList.length && Array.isArray(items) && items.length) {
       baseList = buildBaseList(items);
+      currentIndex = 0; // start at first item; wrap-around handles edges
     }
   }
   function buy(item) {
@@ -105,6 +108,38 @@
       tax: pricing.tax
     };
     dispatch('buy', payload);
+  }
+
+  function toggleSelect(item) {
+    const k = item?.key || keyOf(item);
+    if (!k || soldKeys.has(k)) return;
+    if (selectedKeys.has(k)) selectedKeys.delete(k);
+    else selectedKeys.add(k);
+    const idx = combinedList.findIndex((it) => it.key === k);
+    if (idx >= 0) currentIndex = idx;
+  }
+
+  async function buySelected() {
+    const list = combinedList.filter((it) => selectedKeys.has(it.key));
+    if (!list.length) return;
+    for (let i = 0; i < list.length; i++) {
+      const item = list[i];
+      const k = item.key;
+      soldKeys.add(k);
+      const pricing = pricingOf(item);
+      const payload = {
+        ...item,
+        base_price: pricing.base,
+        base_cost: pricing.base,
+        taxed_cost: pricing.taxed,
+        price: pricing.taxed,
+        cost: pricing.taxed,
+        tax: pricing.tax
+      };
+      dispatch('buy', payload);
+      await new Promise((r) => setTimeout(r, 220));
+    }
+    selectedKeys.clear();
   }
   
   // Animate text appearing letter by letter with jumping effect
@@ -126,6 +161,7 @@
     if (awaitingReroll) return; // Prevent rapid-fire clicks
     awaitingReroll = true;
     soldKeys = new Set();
+    selectedKeys = new Set();
     
     // Start the text animation
     await animateRerollText();
@@ -167,15 +203,18 @@
       const baseAbout = entry.about || m.about || '';
       const effectId = ITEM_EFFECT_MAP[entry.id];
       const tooltip = effectId && EFFECT_DESCRIPTIONS[effectId] ? EFFECT_DESCRIPTIONS[effectId] : baseAbout;
-      return { ...entry, name: entry.name || m.name || entry.id, stars: entry.stars || m.stars || 1, about: baseAbout, tooltip };
+      // Ensure visible description by falling back to tooltip when about is empty
+      const about = baseAbout || tooltip || '';
+      return { ...entry, name: entry.name || m.name || entry.id, stars: entry.stars || m.stars || 1, about, tooltip };
     } else if (entry.type === 'relic') {
       const m = relicMeta[entry.id] || {};
       // Keep a stable baseAbout so reactive re-enrichment doesn't duplicate the suffix
       const baseAbout = entry.baseAbout ?? entry.about ?? m.about ?? '';
       const stacks = typeof entry.stacks === 'number' ? entry.stacks : 0;
-      const about = stacks > 0 ? `${baseAbout} (Current stacks: ${stacks})` : baseAbout;
+      let about = stacks > 0 ? `${baseAbout} (Current stacks: ${stacks})` : baseAbout;
       const effectId = ITEM_EFFECT_MAP[entry.id];
       const tooltip = effectId && EFFECT_DESCRIPTIONS[effectId] ? EFFECT_DESCRIPTIONS[effectId] : baseAbout;
+      if (!about) about = tooltip || '';
       return { ...entry, name: entry.name || m.name || entry.id, stars: entry.stars || m.stars || 1, baseAbout, about, tooltip };
     }
     return entry;
@@ -223,6 +262,65 @@
   // Partition for layout
   $: displayCards = enrichedBaseList.filter(e => e?.type === 'card');
   $: displayRelics = enrichedBaseList.filter(e => e?.type === 'relic');
+
+  // Combined list in the order: cards then relics
+  $: combinedList = [...displayCards, ...displayRelics];
+  $: { if (currentIndex >= combinedList.length) currentIndex = Math.max(0, combinedList.length - 1); }
+
+  function computeVisible(list, index) {
+    // 3-item wheel with wrap-around
+    const n = (list && list.length) ? list.length : 0;
+    if (n === 0) return [];
+    if (n === 1) return [{ item: list[0], pos: 0 }];
+    const leftIdx = (index - 1 + n) % n;
+    const rightIdx = (index + 1) % n;
+    const out = [];
+    // Keep visual order left, center, right
+    out.push({ item: list[leftIdx], pos: -1 });
+    out.push({ item: list[index], pos: 0 });
+    // If only two items, don't duplicate center
+    if (n > 2) out.push({ item: list[rightIdx], pos: 1 });
+    return out;
+  }
+  $: visibleItems = computeVisible(combinedList, currentIndex);
+
+  function prev() {
+    const n = combinedList.length;
+    if (n === 0) return;
+    const before = currentIndex;
+    currentIndex = (currentIndex - 1 + n) % n;
+    const after = currentIndex;
+    console.log('[Shop] Prev clicked', { before, after, total: combinedList.length });
+    debugNote(`Prev: ${before} → ${after} / ${combinedList.length}`);
+  }
+  function next() {
+    const n = combinedList.length;
+    if (n === 0) return;
+    const before = currentIndex;
+    currentIndex = (currentIndex + 1) % n;
+    const after = currentIndex;
+    console.log('[Shop] Next clicked', { before, after, total: combinedList.length });
+    debugNote(`Next: ${before} → ${after} / ${combinedList.length}`);
+  }
+
+  let debugMsg = '';
+  let debugTimer = null;
+  function debugNote(msg) {
+    try { if (debugTimer) clearTimeout(debugTimer); } catch {}
+    debugMsg = String(msg || '');
+    debugTimer = setTimeout(() => { debugMsg = ''; }, 1600);
+  }
+
+  function estimateCost(item) {
+    const p = pricingOf(item);
+    return { base: p.base || 0, tax: Math.max(0, p.tax || 0), total: (p.base || 0) + Math.max(0, p.tax || 0) };
+  }
+  $: selectedList = combinedList
+    .filter((it) => selectedKeys.has(it.key))
+    .map((item) => ({ item, ...estimateCost(item) }));
+  $: estimatedSubtotal = selectedList.reduce((sum, s) => sum + (s.base || 0), 0);
+  $: estimatedTax = selectedList.reduce((sum, s) => sum + (s.tax || 0), 0);
+  $: estimatedTotal = estimatedSubtotal + estimatedTax;
 
   $: samplePricing = (() => {
     if (!Array.isArray(enrichedBaseList) || enrichedBaseList.length === 0) {
@@ -329,65 +427,65 @@
       <Coins size={16} class={`coin-icon${!reducedMotion ? ' shine' : ''}`} /> {gold}
     </div>
   </div>
-  <div class="columns">
-    {#if displayCards.length > 0}
-      <section class="col">
-        <h4>Cards</h4>
-        <div class="grid">
-          {#each displayCards as item (item.key)}
-            {@const pricing = pricingOf(item)}
-            <div class={`cell ${soldKeys.has(item.key) ? 'dim sold' : ''}`}>
-              <RewardCard entry={item} type="card" disabled={soldKeys.has(item.key)} on:select={() => buy(item)} />
-              <div class="buybar">
-                <button class="buy" disabled={soldKeys.has(item.key) || (pricing.taxed ?? 0) > gold} on:click={() => buy(item)}>
-                  {#if soldKeys.has(item.key)}Sold{:else}<Coins size={14} class="coin-icon" /> {pricing.taxed ?? 0}{/if}
-                </button>
-                <div class="price-breakdown">
-                  <span class="base">Base {pricing.base ?? 0}</span>
-                  {#if (pricing.tax ?? 0) > 0}
-                    <span class="tax">+{pricing.tax} tax</span>
-                  {:else}
-                    <span class="tax waived">No tax</span>
-                  {/if}
-                </div>
-              </div>
+  <div class="bottom">
+  <div class="shop-layout">
+    <div class="carousel" on:keydown={(e)=>{ if(e.key==='ArrowLeft') prev(); if(e.key==='ArrowRight') next(); }} tabindex="0">
+      <div class="debug-note" aria-live="polite">{debugMsg}</div>
+      <button class="nav left" type="button"
+        on:click|stopPropagation|preventDefault={prev}
+        aria-label="Previous">‹</button>
+      <div class="strip">
+        {#each visibleItems as { item, pos } (item.key)}
+          {@const isCard = item.type === 'card'}
+          <div class={`slot pos${pos} ${soldKeys.has(item.key) ? 'sold' : ''} ${selectedKeys.has(item.key) ? 'selected' : ''}`}
+               on:click={() => toggleSelect(item)}
+               title={`${item.name} (${item.stars}★ ${isCard ? 'card' : 'relic'})`}>
+            {#if isCard}
+              <RewardCard entry={item} type="card" fluid={true} quiet={true} disabled={soldKeys.has(item.key)} />
+            {:else}
+              <CurioChoice entry={item} fluid={true} quiet={true} disabled={soldKeys.has(item.key)} />
+            {/if}
+            <div class="slot-price">
+              <Coins size={12} class="coin-icon" /> {pricingOf(item).taxed}
             </div>
-          {/each}
-        </div>
-      </section>
-    {/if}
-    <section class="col">
-      <h4>Relics</h4>
-      {#if displayRelics.length === 0}
-        <div class="empty">No relics available.</div>
+            {#if selectedKeys.has(item.key)}
+              <div class="mark">✓</div>
+            {/if}
+          </div>
+        {/each}
+      </div>
+      <button class="nav right" type="button"
+        on:click|stopPropagation|preventDefault={next}
+        aria-label="Next">›</button>
+    </div>
+    <aside class="receipt">
+      <div class="receipt-head">
+        <h4>Receipt</h4>
+        <div class={`tax-note ${taxNoteClass}`}>{surchargeMessage}</div>
+      </div>
+      {#if selectedList.length === 0}
+        <div class="empty">No items selected.</div>
       {:else}
-        <div class="grid">
-          {#each displayRelics as item (item.key)}
-            {@const pricing = pricingOf(item)}
-            <div class={`cell ${soldKeys.has(item.key) ? 'dim sold' : ''}`}>
-              <CurioChoice entry={item} disabled={soldKeys.has(item.key)} on:select={() => buy(item)} />
-              <div class="buybar">
-                <button class="buy" disabled={soldKeys.has(item.key) || (pricing.taxed ?? 0) > gold} on:click={() => buy(item)}>
-                  {#if soldKeys.has(item.key)}Sold{:else}<Coins size={14} class="coin-icon" /> {pricing.taxed ?? 0}{/if}
-                </button>
-                <div class="price-breakdown">
-                  <span class="base">Base {pricing.base ?? 0}</span>
-                  {#if (pricing.tax ?? 0) > 0}
-                    <span class="tax">+{pricing.tax} tax</span>
-                  {:else}
-                    <span class="tax waived">No tax</span>
-                  {/if}
-                </div>
-              </div>
-            </div>
+        <ul class="lines">
+          {#each selectedList as sel (sel.item.key)}
+            <li class={`line ${soldKeys.has(sel.item.key) ? 'done' : ''}`}>
+              <span class="name">{sel.item.name}</span>
+              <span class="dots" />
+              <span class="price"><Coins size={12} class="coin-icon" /> {sel.total}</span>
+            </li>
           {/each}
+        </ul>
+        <div class="summary">
+          <div class="row"><span>Subtotal</span><span class="dots" /><span class="price"><Coins size={12} class="coin-icon" /> {estimatedSubtotal}</span></div>
+          <div class="row"><span>Tax (est.)</span><span class="dots" /><span class="price"><Coins size={12} class="coin-icon" /> {estimatedTax}</span></div>
+          <div class="row total"><span>Total</span><span class="dots" /><span class="price"><Coins size={12} class="coin-icon" /> {estimatedTotal}</span></div>
         </div>
       {/if}
-    </section>
+    </aside>
   </div>
   <div class="actions">
-    <div class={`tax-note ${taxNoteClass}`} data-testid="shop-tax-note">{surchargeMessage}</div>
     <div class="action-buttons">
+      <button class="action primary" disabled={selectedKeys.size === 0} on:click={buySelected}>Buy Selected</button>
       <button class="action" disabled={awaitingReroll} on:click={reroll}>
         {#if awaitingReroll}
           <span class="reroll-text">
@@ -402,6 +500,7 @@
       <button class="action" on:click={close}>Leave</button>
     </div>
   </div>
+  </div>
 
 </MenuPanel>
 
@@ -414,37 +513,49 @@
   .shine { animation: coin-shine 2s linear infinite; }
   @keyframes coin-shine { 0%,100% { filter: brightness(1); } 50% { filter: brightness(1.4); } }
 
-  .columns {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 0.75rem;
-    margin-top: 0.5rem;
-  }
-  .col { display:flex; flex-direction:column; gap:0.5rem; }
-  .col h4 { margin: 0; font-size: 1rem; }
-  .empty { opacity: 0.8; font-size: 0.9rem; }
-  .grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: 0.75rem;
-    align-items: stretch;
-    justify-items: center;
-  }
-  .cell { position: relative; display:flex; flex-direction:column; align-items:center; transition: opacity 120ms ease, filter 120ms ease; }
-  .cell.dim { opacity: 0.55; filter: grayscale(0.2); }
-  .cell.sold :global(button.card),
-  .cell.sold :global(button.curio) { pointer-events: none; }
-  .buybar { margin-top: 0.35rem; display:flex; flex-direction:column; gap:0.3rem; align-items:center; width:100%; }
-  .buy { display:flex; align-items:center; justify-content:center; gap:0.35rem; border: 1px solid rgba(255,255,255,0.35); background: rgba(0,0,0,0.5); color:#fff; padding: 0.3rem 0.6rem; width:100%; }
-  .buy:disabled { opacity: 0.5; cursor: not-allowed; }
-  .price-breakdown { display:flex; gap:0.5rem; font-size:0.75rem; opacity:0.85; flex-wrap:wrap; justify-content:center; }
-  .price-breakdown span { white-space:nowrap; }
-  .price-breakdown .tax { color: #d4af37; }
-  .price-breakdown .tax.waived { color: #8ecf8e; }
+  .bottom { margin-top: auto; display:flex; flex-direction:column; }
+  .shop-layout { display:grid; grid-template-columns: minmax(0, 2fr) 240px; gap: 1.2rem; margin-top: 0.5rem; align-items: stretch; }
+  .carousel { position: relative; display:flex; align-items:flex-end; justify-content:center; min-height: 68vh; }
+  .strip { position: relative; display:flex; gap: 1.2rem; align-items:flex-end; justify-content:center; width:100%; padding: 0.25rem 2rem; }
+  .nav { position:absolute; top:50%; transform: translateY(-50%); z-index: 50; width: 3rem; height: 3rem; border: 1px solid rgba(255,255,255,0.35); background: rgba(0,0,0,0.7); color:#fff; display:flex; align-items:center; justify-content:center; cursor:pointer; pointer-events:auto; user-select:none; }
+  .nav.left { left: 0; }
+  .nav.right { right: 0; }
+  .slot { position: relative; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; transition: width 160ms ease, filter 160ms ease, opacity 160ms ease; opacity: 0.98; flex: 0 0 auto; height: clamp(520px, 70vh, 860px); }
+  .slot.sold { opacity: 0.55; filter: grayscale(0.25); }
+  .slot.selected::after { content: ''; position:absolute; inset: -6px; border: 2px solid var(--accent, #8ac); pointer-events:none; box-shadow: 0 0 10px color-mix(in srgb, var(--accent, #8ac) 28%, transparent); }
+  .slot .mark { position:absolute; top: 6px; right: 8px; background: rgba(0,0,0,0.6); border: 1px solid rgba(255,255,255,0.5); padding: 0 6px; font-weight: 700; }
+  .slot-price { margin-top: 0.25rem; font-size: 0.85rem; opacity: 0.9; display:flex; align-items:center; gap: 0.25rem; }
+  .pos-1, .pos0, .pos1 {}
+  .pos-1 { width: clamp(260px, 26vw, 380px); opacity: 0.96; }
+  .pos0  { width: clamp(380px, 42vw, 560px); z-index: 3; }
+  .pos1  { width: clamp(260px, 26vw, 380px); opacity: 0.96; }
+  /* Ensure inner buttons and card art fill the slot */
+  .slot :global(button.card),
+  .slot :global(button.curio),
+  .slot :global(.card-art),
+
+  .receipt { background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.25); padding: 0.6rem; display:flex; flex-direction:column; gap: 0.5rem; min-height: 360px; }
+  .receipt-head { display:flex; align-items:center; justify-content:space-between; gap:0.5rem; }
+  .receipt h4 { margin: 0; font-size: 1rem; }
+  .receipt .empty { opacity: 0.75; font-size: 0.9rem; }
+  .lines { list-style: none; padding: 0; margin: 0; display:flex; flex-direction:column; gap: 0.35rem; }
+  .line { display:flex; align-items:center; gap: 0.5rem; }
+  .line .name { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width: 14rem; }
+  .line .dots { flex:1; height: 1px; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.35), transparent); }
+  .line .price { display:flex; align-items:center; gap: 0.25rem; }
+  .line.done { opacity: 0.55; text-decoration: line-through; }
+  .summary { margin-top: 0.5rem; padding-top: 0.4rem; border-top: 1px solid rgba(255,255,255,0.2); display:flex; flex-direction:column; gap: 0.35rem; }
+  .summary .row { display:flex; align-items:center; gap: 0.5rem; }
+  .summary .row .dots { flex:1; height: 1px; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.35), transparent); }
+  .summary .row .price { display:flex; align-items:center; gap: 0.25rem; }
+  .summary .total { font-weight: 700; }
+
+  .debug-note { position:absolute; top:-1.8rem; left:0; right:0; text-align:center; font-size: 0.8rem; opacity:0.85; color:#fff; pointer-events:none; }
 
   .actions { display:flex; gap:0.75rem; justify-content:space-between; align-items:center; flex-wrap:wrap; margin-top: 0.75rem; }
-  .action-buttons { display:flex; gap:0.5rem; }
+  .action-buttons { margin-left:auto; display:flex; gap:0.5rem; }
   .action { border: 1px solid rgba(255,255,255,0.35); background: rgba(0,0,0,0.5); color:#fff; padding: 0.35rem 0.7rem; }
+  .action.primary { border-color: color-mix(in srgb, #8ac 60%, #fff); background: rgba(20,30,60,0.6); }
   .action:disabled { opacity: 0.5; cursor: not-allowed; }
   .tax-note { font-size:0.85rem; opacity:0.9; color:#d4af37; min-width: 12rem; }
   .tax-note.inactive { color:#8ecf8e; }
@@ -470,9 +581,9 @@
   }
 
   @media (max-width: 920px) {
-    .columns { grid-template-columns: 1fr; }
+    .shop-layout { grid-template-columns: 1fr; }
     .actions { flex-direction:column; align-items:stretch; }
     .tax-note { text-align:center; }
-    .action-buttons { justify-content:center; }
+    .action-buttons { justify-content:center; margin-left: 0; }
   }
 </style>

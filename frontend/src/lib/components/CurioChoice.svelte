@@ -6,6 +6,7 @@
   export let size = 'normal';
   export let quiet = false;
   export let compact = false;
+  export let fluid = false;
   const dispatch = createEventDispatcher();
   function handleClick() {
     dispatch('select', { type: 'relic', id: entry?.id, entry });
@@ -25,12 +26,12 @@
 {#if !compact && (entry.tooltip || entry.about)}
   <Tooltip text={entry.tooltip || entry.about}>
     <button class="curio" aria-label={`Select relic ${entry.name || entry.id}`} {tabIndex} aria-disabled={ariaDisabled} on:click={handleClick} on:keydown={onKey}>
-      <CardArt {entry} type="relic" roundIcon={true} {size} {quiet} {compact} />
+      <CardArt {entry} type="relic" roundIcon={true} {size} {quiet} {compact} {fluid} />
     </button>
   </Tooltip>
 {:else}
   <button class="curio" aria-label={`Select relic ${entry.name || entry.id}`} {tabIndex} aria-disabled={ariaDisabled} on:click={handleClick} on:keydown={onKey}>
-    <CardArt {entry} type="relic" roundIcon={true} {size} {quiet} {compact} />
+    <CardArt {entry} type="relic" roundIcon={true} {size} {quiet} {compact} {fluid} />
   </button>
 {/if}
 
