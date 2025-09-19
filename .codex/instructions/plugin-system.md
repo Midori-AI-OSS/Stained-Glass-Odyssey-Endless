@@ -29,6 +29,36 @@ Each plugin module should define one or more classes with:
 
 Modules that fail to import are skipped so a broken plugin does not stop the
 discovery process.
+
+## Character Behaviour Boundaries
+
+> **Critical:** Combat behaviours, spawn weighting, and passive effects must live
+> inside the character's plugin module or the passive plugin that owns the
+> behaviour. Core battle utilities must stay character-agnostic—never add
+> `if plugin.id == "luna"` style branches to shared managers.
+
+- **Spawn weighting:** Override
+  [`PlayerBase.get_spawn_weight`](../../backend/plugins/players/_base.py) or the
+  equivalent foe hook instead of touching `foe_factory`. For example,
+  [`backend/plugins/players/luna.py`](../../backend/plugins/players/luna.py)
+  adjusts Luna's odds so her boss variant is six times more likely on every
+  third floor, all without editing the room generator.
+- **Battle preparation:** Use
+  [`PlayerBase.prepare_for_battle`](../../backend/plugins/players/_base.py) or
+  [`PlayerBase.apply_boss_scaling`](../../backend/plugins/players/_base.py) to
+  expose special behaviour. Luna's plugin pre-allocates her astral swords from
+  `prepare_for_battle` and raises their stats through `apply_boss_scaling` so
+  bosses feel unique while the encounter runner stays generic.
+- **Passive effects:** Attach stateful behaviour through the passive registry
+  instead of hard-coding IDs in combat loops. The Lunar Reservoir passive at
+  [`plugins/passives/normal/luna_lunar_reservoir.py`](../../backend/plugins/passives/normal/luna_lunar_reservoir.py)
+  subscribes to `BUS` events and implements `apply`/`on_turn_end` hooks to track
+  sword charge, demonstrating how to keep charge logic entirely inside the
+  passive file.
+
+By routing character-specific behaviour through these plugin hooks you make the
+systems discoverable, keep the battle layer unaware of roster details, and avoid
+regressions when new characters arrive.
  
 ## Event Bus
 Plugins communicate through `EventBus` for decoupled messaging:
