@@ -143,6 +143,12 @@ async def _run_player_turn_iteration(
     await member.maybe_regain(context.turn)
 
     if not _any_foes_alive(context.foes):
+        await finish_turn(
+            context,
+            member,
+            action_start,
+            active_target_id=None,
+        )
         return PlayerTurnIterationResult(repeat=False, battle_over=True)
 
     alive_targets = [
@@ -151,6 +157,12 @@ async def _run_player_turn_iteration(
         if getattr(foe_obj, "hp", 0) > 0
     ]
     if not alive_targets:
+        await finish_turn(
+            context,
+            member,
+            action_start,
+            active_target_id=None,
+        )
         return PlayerTurnIterationResult(repeat=False, battle_over=True)
 
     target_index, target_foe = _select_target(alive_targets)
@@ -178,6 +190,12 @@ async def _run_player_turn_iteration(
         enrage_mods=context.enrage_mods,
     )
     if not context.foes:
+        await finish_turn(
+            context,
+            member,
+            action_start,
+            active_target_id=getattr(target_foe, "id", None),
+        )
         return PlayerTurnIterationResult(repeat=False, battle_over=True)
 
     if member.hp <= 0:
