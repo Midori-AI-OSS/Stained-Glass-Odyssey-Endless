@@ -18,7 +18,7 @@
   import SettingsMenu from './SettingsMenu.svelte';
   import Guidebook from './Guidebook.svelte';
   import RunChooser from './RunChooser.svelte';
-    import ShopMenu from './ShopMenu.svelte';
+  import ShopMenu from './ShopMenu.svelte';
     import BattleView from './BattleView.svelte';
   import ErrorOverlay from './ErrorOverlay.svelte';
   import BackendNotReady from './BackendNotReady.svelte';
@@ -31,6 +31,7 @@
   export let selected = [];
   export let runId = '';
   export let roomData = null;
+  export let shopProcessing = false;
   export let battleSnapshot = null;
   export let editorState = {};
   export let sfxVolume = 5;
@@ -404,6 +405,7 @@
       itemsBought={roomData.items_bought}
       taxSummary={roomData.tax_summary || roomData.taxSummary || null}
       reducedMotion={reducedMotion}
+      processing={shopProcessing}
       on:buy={(e) => dispatch('shopBuy', e.detail)}
       on:reroll={() => dispatch('shopReroll')}
       on:close={() => dispatch('shopLeave')}

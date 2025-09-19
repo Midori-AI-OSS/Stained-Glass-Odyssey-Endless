@@ -43,6 +43,7 @@
   export let backendFlavor = '';
   export let fullIdleMode = false;
   export let animationSpeed = 1;
+  export let shopProcessing = false;
 
   let randomBg = '';
   let roster = [];
@@ -288,6 +289,7 @@
         {runId}
         {roomData}
         {battleSnapshot}
+        {shopProcessing}
         {editorState}
         {sfxVolume}
         {musicVolume}

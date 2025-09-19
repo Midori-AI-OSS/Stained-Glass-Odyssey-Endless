@@ -12,17 +12,21 @@
   export let reducedMotion = false;
   export let itemsBought = 0;
   export let taxSummary = null;
+  // Parent-provided processing flag to indicate backend is handling queued buys
+  export let processing = false;
 
   const dispatch = createEventDispatcher();
   // Preserve original stock ordering and keep purchased items visible until unload
-  let baseList = []; // enriched entries with stable keys
+  let baseList = []; // enriched entries with stable keys and idents
   let awaitingReroll = false;
-  let soldKeys = new Set();
-  let selectedKeys = new Set();
+  // Track sold/selected by stable ident so re-renders (price/order changes) don't lose selection
+  let soldIds = new Set();
+  let selectedIds = new Set();
   let currentIndex = 0; // center index for carousel
   // Light nav lock to avoid rapid index changes; keeps motion stable
   let navLocked = false;
   const NAV_LOCK_MS = 420;
+  let isBuying = false; // local UI lock while Buy Selected runs
 
   function toFinite(value) {
     const num = Number(value);
@@ -79,15 +83,23 @@
   // Animation state for reroll button
   let rerollAnimationText = '';
   let isAnimating = false;
-  const keyOf = (item) => `${item?.type || 'item'}:${item?.id || ''}:${priceOf(item)}`;
+  const identOf = (item) => `${item?.type || 'item'}:${item?.id || ''}`;
+  const keyOf = (item) => {
+    // Prefer a backend-provided unique token if present
+    const stock = item?.stock_uid || item?.stockUid || item?.uid || null;
+    const ident = identOf(item);
+    return stock ? `${ident}#${stock}` : `${ident}`;
+  };
   function buildBaseList(list) {
     const counts = Object.create(null);
     return (list || []).map((raw) => {
       const enriched = enrich(raw);
-      const base = keyOf(enriched);
-      counts[base] = (counts[base] || 0) + 1;
-      const key = `${base}#${counts[base]}`;
-      return { ...enriched, key };
+      const ident = identOf(enriched);
+      const stock = enriched.stock_uid || enriched.stockUid || enriched.uid || null;
+      const baseKey = stock ? `${ident}#${stock}` : ident;
+      counts[baseKey] = (counts[baseKey] || 0) + 1;
+      const key = `${baseKey}::${counts[baseKey]}`;
+      return { ...enriched, ident, key };
     });
   }
   function initBaseOnce() {
@@ -98,10 +110,10 @@
   }
   function buy(item) {
     // mark this entry as sold (by key) and pass through the purchase
-    const k = item?.key || keyOf(item);
-    if (k) soldKeys.add(k);
+    const k = item?.ident || identOf(item);
+    if (k) soldIds.add(k);
     // Force reactivity for Set mutation
-    soldKeys = new Set(soldKeys);
+    soldIds = new Set(soldIds);
     const pricing = pricingOf(item);
     const payload = {
       ...item,
@@ -116,25 +128,28 @@
   }
 
   function toggleSelect(item) {
-    const k = item?.key || keyOf(item);
-    if (!k || soldKeys.has(k)) return;
-    if (selectedKeys.has(k)) selectedKeys.delete(k);
-    else selectedKeys.add(k);
+    if (processing || isBuying) return;
+    const k = item?.ident || identOf(item);
+    if (!k || soldIds.has(k)) return;
+    if (selectedIds.has(k)) selectedIds.delete(k);
+    else selectedIds.add(k);
     // Force reactivity for Set mutation
-    selectedKeys = new Set(selectedKeys);
-    const idx = combinedList.findIndex((it) => it.key === k);
+    selectedIds = new Set(selectedIds);
+    const idx = combinedList.findIndex((it) => it.ident === k);
     if (idx >= 0) currentIndex = idx;
   }
 
   async function buySelected() {
-    const list = combinedList.filter((it) => selectedKeys.has(it.key));
+    if (processing || isBuying) return;
+    isBuying = true;
+    const list = combinedList.filter((it) => selectedIds.has(it.ident));
     if (!list.length) return;
     for (let i = 0; i < list.length; i++) {
       const item = list[i];
-      const k = item.key;
-      soldKeys.add(k);
+      const k = item.ident;
+      soldIds.add(k);
       // Force reactivity so line crosses off immediately
-      soldKeys = new Set(soldKeys);
+      soldIds = new Set(soldIds);
       const pricing = pricingOf(item);
       const payload = {
         ...item,
@@ -149,9 +164,10 @@
       // Slow down purchase processing for stability
       await new Promise((r) => setTimeout(r, 650));
     }
-    selectedKeys.clear();
+    selectedIds.clear();
     // Force reactivity after clearing selection
-    selectedKeys = new Set();
+    selectedIds = new Set();
+    isBuying = false;
   }
   
   // Animate text appearing letter by letter with jumping effect
@@ -172,8 +188,8 @@
   async function reroll() {
     if (awaitingReroll) return; // Prevent rapid-fire clicks
     awaitingReroll = true;
-    soldKeys = new Set();
-    selectedKeys = new Set();
+    soldIds = new Set();
+    selectedIds = new Set();
     
     // Start the text animation
     await animateRerollText();
@@ -186,7 +202,7 @@
   }
   function close() {
     baseList = [];
-    soldKeys = new Set();
+    soldIds = new Set();
     awaitingReroll = false;
     rerollAnimationText = '';
     isAnimating = false;
@@ -255,7 +271,7 @@
       // If we're awaiting reroll and items have actually changed, complete the reroll
       if (awaitingReroll && currentSignature !== lastItemsSignature && lastItemsSignature !== '') {
         baseList = buildBaseList(items);
-        soldKeys = new Set();
+        soldIds = new Set();
         awaitingReroll = false;
         rerollAnimationText = '';
         isAnimating = false;
@@ -270,7 +286,7 @@
   }
   // Keep metadata enrichment reactive. Also depend on catalog readiness so
   // names/descriptions appear as soon as metadata loads, not only after reroll/leave.
-  $: enrichedBaseList = (void cardMeta, void relicMeta, baseList.map((e) => ({ ...enrich(e), key: e.key })));
+  $: enrichedBaseList = (void cardMeta, void relicMeta, baseList.map((e) => ({ ...enrich(e), key: e.key, ident: e.ident })));
   // Partition for layout
   $: displayCards = enrichedBaseList.filter(e => e?.type === 'card');
   $: displayRelics = enrichedBaseList.filter(e => e?.type === 'relic');
@@ -297,6 +313,7 @@
   $: visibleItems = computeVisible(combinedList, currentIndex);
 
   function prev() {
+    if (processing || isBuying) return;
     const n = combinedList.length;
     if (n === 0) return;
     if (navLocked) { return; }
@@ -308,6 +325,7 @@
     setTimeout(() => { navLocked = false; }, NAV_LOCK_MS);
   }
   function next() {
+    if (processing || isBuying) return;
     const n = combinedList.length;
     if (n === 0) return;
     if (navLocked) { return; }
@@ -324,7 +342,7 @@
     return { base: p.base || 0, tax: Math.max(0, p.tax || 0), total: (p.base || 0) + Math.max(0, p.tax || 0) };
   }
   $: selectedList = combinedList
-    .filter((it) => selectedKeys.has(it.key))
+    .filter((it) => selectedIds.has(it.ident))
     .map((item) => ({ item, ...estimateCost(item) }));
   $: estimatedSubtotal = selectedList.reduce((sum, s) => sum + (s.base || 0), 0);
   $: estimatedTax = selectedList.reduce((sum, s) => sum + (s.tax || 0), 0);
@@ -440,39 +458,51 @@
     <div class="carousel" on:keydown={(e)=>{ if(e.key==='ArrowLeft') prev(); if(e.key==='ArrowRight') next(); }} tabindex="0">
       <button class="nav left" type="button"
         on:click|stopPropagation|preventDefault={prev}
-        aria-label="Previous">‹</button>
+        aria-label="Previous" disabled={processing || isBuying}>‹</button>
       <div class="strip">
           {#each visibleItems as { item, pos } (item.key)}
             {@const isCard = item.type === 'card'}
-            <div class={`slot pos${pos} ${soldKeys.has(item.key) ? 'sold' : ''} ${selectedKeys.has(item.key) ? 'selected' : ''}`}
-                 on:click={() => toggleSelect(item)}
+            <div class={`slot pos${pos} ${soldIds.has(item.ident) ? 'sold' : ''} ${selectedIds.has(item.ident) ? 'selected' : ''}`}
                  title={`${item.name} (${item.stars}★ ${isCard ? 'card' : 'relic'})`}>
             {#if isCard}
-              <RewardCard entry={item} type="card" fluid={true} disabled={soldKeys.has(item.key)} />
+              <RewardCard entry={item} type="card" fluid={true} disabled={soldIds.has(item.ident)} />
             {:else}
-              <CurioChoice entry={item} fluid={true} disabled={soldKeys.has(item.key)} />
+              <CurioChoice entry={item} fluid={true} disabled={soldIds.has(item.ident)} />
             {/if}
             <div class="slot-price">
               <Coins size={12} class="coin-icon" /> {pricingOf(item).taxed}
             </div>
+            {#if pos === 0}
+              <div class="mark-row">
+                <button
+                  class="mark-btn"
+                  disabled={processing || isBuying || soldIds.has(item.ident)}
+                  on:click|stopPropagation|preventDefault={() => toggleSelect(item)}>
+                  {selectedIds.has(item.ident) ? 'Remove from list' : 'Add to list'}
+                </button>
+              </div>
+            {/if}
           </div>
         {/each}
       </div>
       <button class="nav right" type="button"
         on:click|stopPropagation|preventDefault={next}
-        aria-label="Next">›</button>
+        aria-label="Next" disabled={processing || isBuying}>›</button>
     </div>
     <aside class="receipt">
       <div class="receipt-head">
         <h4>Receipt</h4>
         <div class={`tax-note ${taxNoteClass}`}>{surchargeMessage}</div>
       </div>
+      {#if processing || isBuying}
+        <div class="processing-note">Processing purchases…</div>
+      {/if}
       {#if selectedList.length === 0}
         <div class="empty">No items selected.</div>
       {:else}
         <ul class="lines">
-          {#each selectedList as sel (sel.item.key)}
-            <li class={`line ${soldKeys.has(sel.item.key) ? 'done' : ''}`}>
+          {#each selectedList as sel (sel.item.ident)}
+            <li class={`line ${soldIds.has(sel.item.ident) ? 'done' : ''}`}>
               <span class="name">{sel.item.name}</span>
               <span class="dots" />
               <span class="price"><Coins size={12} class="coin-icon" /> {sel.total}</span>
@@ -488,8 +518,8 @@
     </aside>
     <div class="actions actions-under">
       <div class="action-buttons">
-        <button class="action primary" disabled={selectedKeys.size === 0} on:click={buySelected}>Buy Selected</button>
-        <button class="action" disabled={awaitingReroll} on:click={reroll}>
+        <button class="action primary" disabled={processing || isBuying || selectedIds.size === 0} on:click={buySelected}>Buy Selected</button>
+        <button class="action" disabled={processing || isBuying || awaitingReroll} on:click={reroll}>
           {#if awaitingReroll}
             <span class="reroll-text">
               {#each rerollAnimationText.split('') as char, i}
@@ -500,7 +530,7 @@
             Reroll
           {/if}
         </button>
-        <button class="action" on:click={close}>Leave</button>
+        <button class="action" disabled={processing || isBuying} on:click={close}>Leave</button>
       </div>
     </div>
   </div>
@@ -522,6 +552,7 @@
   .carousel { position: relative; display:flex; align-items:center; justify-content:center; min-height: 68vh; }
   .strip { position: relative; display:flex; gap: 1.2rem; align-items:center; justify-content:center; width:100%; padding: 0.25rem 2rem; }
   .nav { position:absolute; top:50%; transform: translateY(-50%); z-index: 50; width: 3rem; height: 3rem; border: 1px solid rgba(255,255,255,0.35); background: rgba(0,0,0,0.7); color:#fff; display:flex; align-items:center; justify-content:center; cursor:pointer; pointer-events:auto; user-select:none; }
+  .nav:disabled { opacity: 0.5; cursor: not-allowed; }
   .nav.left { left: 0; }
   .nav.right { right: 0; }
   .slot { position: relative; display:flex; flex-direction:column; align-items:center; justify-content:center; transition: width 360ms ease-in-out, height 360ms ease-in-out, filter 220ms ease, opacity 220ms ease; opacity: 0.98; flex: 0 0 auto; height: clamp(520px, 70vh, 860px); will-change: width, height; }
@@ -530,6 +561,9 @@
   .slot.selected::after { display: none; }
   /* Removed checkmark UI for selection to avoid visual bugs */
   .slot-price { margin-top: 0.25rem; font-size: 0.85rem; opacity: 0.9; display:flex; align-items:center; gap: 0.25rem; }
+  .mark-row { margin-top: 0.4rem; }
+  .mark-btn { border: 1px solid rgba(255,255,255,0.35); background: rgba(0,0,0,0.55); color:#fff; padding: 0.25rem 0.6rem; font-size: 0.9rem; }
+  .mark-btn:disabled { opacity: 0.5; cursor: not-allowed; }
   .pos-1, .pos0, .pos1 {}
   .pos-1 { width: clamp(260px, 26vw, 380px); opacity: 0.96; }
   .pos0  { width: clamp(380px, 42vw, 560px); z-index: 3; }
@@ -559,6 +593,7 @@
   .receipt-head { display:flex; align-items:center; justify-content:space-between; gap:0.5rem; }
   .receipt h4 { margin: 0; font-size: 1rem; }
   .receipt .empty { opacity: 0.75; font-size: 0.9rem; }
+  .processing-note { font-size: 0.9rem; color: #8ecf8e; opacity: 0.95; }
   .lines { list-style: none; padding: 0; margin: 0; display:flex; flex-direction:column; gap: 0.35rem; }
   .line { display:flex; align-items:center; gap: 0.5rem; }
   .line .name { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width: 14rem; }

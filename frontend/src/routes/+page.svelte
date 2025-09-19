@@ -53,6 +53,11 @@
   let lastBattleSnapshot = null;
   // Prevent overlapping room fetches
   let enterRoomPending = false;
+  // Ensure shop purchases are processed sequentially
+  let shopBuyQueue = Promise.resolve();
+  // Track active shop processing to halt polling and show indicator
+  let shopProcessing = false;
+  let shopProcessingCount = 0;
 
   // Convert backend-provided party lists into a flat array of player IDs.
   // Filters out summons and de-duplicates entries.
@@ -1067,7 +1072,41 @@
     if (tax !== null) {
       payload.tax = tax;
     }
-    roomData = await roomAction('0', payload);
+    // Begin processing gate: first active purchase halts UI polling and shows indicator
+    shopProcessingCount += 1;
+    if (shopProcessingCount === 1) {
+      shopProcessing = true;
+      haltSync = true;
+      // Stop any polling timers immediately
+      try { stopBattlePoll(); } catch {}
+      try { stopStatePoll(); } catch {}
+      try { if (uiStateTimer) { clearTimeout(uiStateTimer); uiStateTimer = null; } } catch {}
+    }
+
+    try {
+      // Queue shop purchases to ensure backend requests run one at a time
+      // and add a brief pacing delay between purchases for clarity.
+      shopBuyQueue = shopBuyQueue
+        .then(async () => {
+          roomData = await roomAction('0', payload);
+          // Slow down between sequential purchases
+          await new Promise((r) => setTimeout(r, 750));
+        })
+        .catch((err) => {
+          console.error('Shop buy error', err);
+        });
+      // Await the queued operation so callers don't overlap implicitly
+      await shopBuyQueue;
+    } finally {
+      shopProcessingCount = Math.max(0, shopProcessingCount - 1);
+      if (shopProcessingCount === 0) {
+        // Resume polling after processing completes
+        shopProcessing = false;
+        haltSync = false;
+        // Optionally kick a state poll to refresh UI
+        try { startStatePoll(); } catch {}
+      }
+    }
   }
   async function handleShopReroll() {
     if (!runId) return;
@@ -1459,6 +1498,7 @@
     mapRooms={mapRooms}
     currentIndex={currentIndex}
     currentRoomType={currentRoomType}
+    {shopProcessing}
     bind:selected={selectedParty}
     items={items}
     editorState={editorState}
