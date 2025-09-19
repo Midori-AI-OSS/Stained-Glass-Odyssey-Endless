@@ -7,7 +7,7 @@ from autofighter.stats import set_battle_active
 from plugins.damage_types import ALL_DAMAGE_TYPES
 from plugins.damage_types import load_damage_type
 from plugins.damage_types.generic import Generic
-from plugins.passives.bubbles_bubble_burst import BubblesBubbleBurst
+from plugins.passives.normal.bubbles_bubble_burst import BubblesBubbleBurst
 
 
 @pytest.mark.asyncio

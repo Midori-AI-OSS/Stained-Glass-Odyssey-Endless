@@ -50,7 +50,7 @@ def test_luna_display_spinner_when_charged():
     fighter = Stats(hp=100, damage_type=Generic())
     fighter.passives = ["luna_lunar_reservoir"]
     # add charge above threshold
-    from plugins.passives.luna_lunar_reservoir import LunaLunarReservoir
+    from plugins.passives.normal.luna_lunar_reservoir import LunaLunarReservoir
 
     LunaLunarReservoir.add_charge(fighter, amount=250)
 

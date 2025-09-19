@@ -2,7 +2,7 @@ import pytest
 
 from autofighter.passives import PassiveRegistry
 from autofighter.stats import Stats
-from plugins.passives.carly_guardians_aegis import CarlyGuardiansAegis
+from plugins.passives.normal.carly_guardians_aegis import CarlyGuardiansAegis
 
 
 @pytest.mark.asyncio

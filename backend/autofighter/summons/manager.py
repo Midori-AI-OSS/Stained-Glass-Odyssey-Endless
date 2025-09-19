@@ -272,7 +272,7 @@ class SummonManager:
                     passive = getattr(summoner, "_becca_menagerie_passive", None)
                     try:
                         if passive is None:
-                            from plugins.passives.becca_menagerie_bond import (
+                            from plugins.passives.normal.becca_menagerie_bond import (
                                 BeccaMenagerieBond,
                             )
 
