@@ -40,6 +40,8 @@
 
   let editorConfigs = {};
   let editorState = { pronouns: '', damageType: 'Light', hp: 0, attack: 0, defense: 0 };
+  let playerConfigLoaded = false;
+  let playerConfigPromise = null;
   let battleActive = false;
   // When true, suppress backend syncing/polling (e.g., during defeat popup)
   let haltSync = false;
@@ -97,6 +99,65 @@
     return snapshot;
   }
 
+  function applyPlayerConfig(data = {}) {
+    const toNumber = (value, fallback = 0) => {
+      const num = Number(value);
+      return Number.isFinite(num) ? num : fallback;
+    };
+
+    const normalized = {
+      pronouns: data?.pronouns ?? '',
+      damageType: data?.damage_type ?? data?.damageType ?? editorState.damageType ?? 'Light',
+      hp: toNumber(data?.hp, editorState.hp ?? 0),
+      attack: toNumber(data?.attack, editorState.attack ?? 0),
+      defense: toNumber(data?.defense, editorState.defense ?? 0)
+    };
+
+    editorState = normalized;
+    editorConfigs = { ...editorConfigs, player: { ...normalized } };
+    playerConfigLoaded = true;
+    return normalized;
+  }
+
+  async function syncPlayerConfig({ force = false } = {}) {
+    if (!force) {
+      if (playerConfigLoaded && editorConfigs?.player) {
+        return { ...editorConfigs.player };
+      }
+      if (playerConfigPromise) {
+        return playerConfigPromise;
+      }
+    }
+
+    const loader = (async () => {
+      try {
+        const data = await getPlayerConfig();
+        if (!data) {
+          playerConfigLoaded = false;
+          return null;
+        }
+        return applyPlayerConfig(data);
+      } catch (error) {
+        playerConfigLoaded = false;
+        throw error;
+      }
+    })();
+
+    playerConfigPromise = loader;
+
+    try {
+      const result = await loader;
+      return result;
+    } catch (error) {
+      if (dev) {
+        console.warn('Failed to load player config:', error);
+      }
+      return null;
+    } finally {
+      playerConfigPromise = null;
+    }
+  }
+
   onMount(async () => {
     // Always ensure sync is not halted on load
     if (typeof window !== 'undefined') {
@@ -106,6 +167,8 @@
 
     // Always attempt to restore run state from localStorage, regardless of backend status
     const saved = loadRunState();
+
+    await syncPlayerConfig().catch(() => {});
     
     async function syncWithBackend() {
       if (!saved?.runId) return;
@@ -334,6 +397,8 @@
     }
 
     // No active runs found, start a new run
+    await syncPlayerConfig();
+
     const dmgType = editorConfigs.player?.damageType || editorState.damageType;
     const data = await startRun(selectedParty, dmgType, pressure);
     runId = data.run_id;
@@ -398,15 +463,7 @@
 
   async function openEditor() {
     if (battleActive) return;
-    const data = await getPlayerConfig();
-    editorState = {
-      pronouns: data.pronouns,
-      damageType: data.damage_type,
-      hp: data.hp,
-      attack: data.attack,
-      defense: data.defense,
-    };
-    editorConfigs.player = { ...editorState };
+    await syncPlayerConfig({ force: true });
     openOverlay('editor');
   }
 
@@ -418,6 +475,7 @@
       defense: +e.detail.defense,
     };
     editorConfigs.player = { ...editorState };
+    playerConfigLoaded = true;
     await savePlayerConfig({
       pronouns: editorState.pronouns,
       damage_type: editorState.damageType,
