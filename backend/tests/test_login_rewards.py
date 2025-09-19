@@ -1,5 +1,6 @@
 import asyncio
 from datetime import datetime
+from datetime import timedelta
 from pathlib import Path
 import sys
 from zoneinfo import ZoneInfo
@@ -51,6 +52,7 @@ async def test_login_reward_status_endpoint(app_with_db):
     assert data["can_claim"] is False
     assert data["seconds_until_reset"] > 0
     assert data["reward_items"]
+    assert data["daily_rdr_bonus"] == pytest.approx(0.0)
     expected_types = {dtype.lower() for dtype in login_rewards.ALL_DAMAGE_TYPES}
     for item in data["reward_items"]:
         assert item["stars"] >= 1
@@ -61,6 +63,7 @@ async def test_login_reward_status_endpoint(app_with_db):
     second = await client.get("/rewards/login")
     second_data = await second.get_json()
     assert second_data["reward_items"] == data["reward_items"]
+    assert second_data["daily_rdr_bonus"] == pytest.approx(data["daily_rdr_bonus"])
 
 
 @pytest.mark.asyncio
@@ -82,6 +85,7 @@ async def test_login_reward_claim_flow(app_with_db):
     status = await status_resp.get_json()
     assert status["can_claim"] is True
     assert status["rooms_completed"] >= 3
+    assert "daily_rdr_bonus" in status
 
     claim_resp = await client.post("/rewards/login/claim")
     assert claim_resp.status_code == 200
@@ -103,3 +107,46 @@ async def test_login_reward_claim_flow(app_with_db):
     refreshed_data = await refreshed.get_json()
     assert refreshed_data["claimed_today"] is True
     assert refreshed_data["can_claim"] is False
+
+
+@pytest.mark.asyncio
+async def test_daily_rdr_bonus_progression_and_reset():
+    await _initialize_state()
+
+    base_time = datetime(2024, 1, 1, 9, tzinfo=PT)
+    status = await login_rewards.get_login_reward_status(now=base_time)
+    assert status["daily_rdr_bonus"] == pytest.approx(0.0)
+
+    for offset in range(login_rewards.ROOMS_REQUIRED + 2):
+        await login_rewards.record_room_completion(now=base_time + timedelta(minutes=offset + 1))
+
+    updated = await login_rewards.get_login_reward_status(now=base_time + timedelta(hours=1))
+    expected_bonus = login_rewards._calculate_daily_rdr_bonus(updated["rooms_completed"], updated["streak"])
+    assert expected_bonus < 1.0
+    assert updated["daily_rdr_bonus"] == pytest.approx(expected_bonus)
+
+    bonus_accessor = await login_rewards.get_daily_rdr_bonus(now=base_time + timedelta(hours=2))
+    assert bonus_accessor == pytest.approx(updated["daily_rdr_bonus"])
+
+    next_day = await login_rewards.get_login_reward_status(now=base_time + timedelta(days=1))
+    assert next_day["daily_rdr_bonus"] == pytest.approx(0.0)
+    accessor_reset = await login_rewards.get_daily_rdr_bonus(now=base_time + timedelta(days=1, hours=1))
+    assert accessor_reset == pytest.approx(0.0)
+    assert next_day["rooms_completed"] == 0
+
+
+@pytest.mark.parametrize(
+    ("extra_rooms", "streak", "expected"),
+    [
+        (0, 1, 0.0),
+        (110, 100, 1.01),
+        (115, 100, 1.015),
+        (116, 100, 1.0151),
+        (130, 100, 1.0165),
+        (150, 100, 1.016655),
+    ],
+)
+def test_calculate_daily_rdr_bonus_diminishing(extra_rooms, streak, expected):
+    rooms_completed = login_rewards.ROOMS_REQUIRED + extra_rooms
+    bonus = login_rewards._calculate_daily_rdr_bonus(rooms_completed, streak)
+    assert bonus == pytest.approx(expected)

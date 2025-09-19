@@ -30,6 +30,19 @@
     return [hours, minutes, seconds].map((value) => String(value).padStart(2, '0')).join(':');
   }
 
+  function formatBonusPercent(value) {
+    const numeric = Number.isFinite(value) ? Math.max(0, value) : 0;
+    const percent = numeric * 100;
+    if (percent >= 1000) {
+      return percent.toFixed(0);
+    }
+    if (percent >= 100) {
+      return percent.toFixed(1);
+    }
+    return percent.toFixed(2);
+  }
+
+
   function formatResetLabel(resetIso) {
     if (!resetIso) return '';
     try {
@@ -159,6 +172,9 @@
   $: roomsRequired = Number(status?.rooms_required || 0);
   $: roomsProgress = roomsRequired > 0 ? Math.min(1, Math.max(0, roomsCompleted / roomsRequired)) : 0;
   $: roomsRemaining = Math.max(0, roomsRequired - roomsCompleted);
+  $: roomsOverRequirement = Math.max(0, roomsCompleted - roomsRequired);
+  $: dailyRdrBonus = Math.max(0, Number(status?.daily_rdr_bonus ?? 0));
+  $: dailyRdrBonusLabel = formatBonusPercent(dailyRdrBonus);
   $: streak = Math.max(1, Number(status?.streak || 0));
   $: streakDays = computeVisibleDays(streak);
   $: resetLabel = formatResetLabel(status?.reset_at);
@@ -233,6 +249,23 @@
       {:else if status.claimed_today}
         <p class="progress-hint success">Today's bundle has been delivered to your inventory.</p>
       {/if}
+    </div>
+
+    <div class="bonus-card" aria-label="Daily run drop rate bonus">
+      <div class="bonus-header">
+        <Sparkles size={14} aria-hidden="true" />
+        <span>Run Drop Rate Bonus</span>
+      </div>
+      <div class="bonus-value" class:positive={dailyRdrBonus > 0} title={`+${dailyRdrBonusLabel}% daily RDR`}>
+        +{dailyRdrBonusLabel}%
+      </div>
+      <p class="bonus-hint">
+        {#if dailyRdrBonus > 0}
+          Bonus scales with a {streak}-day streak and {roomsOverRequirement} extra room{roomsOverRequirement === 1 ? '' : 's'} cleared today.
+        {:else}
+          Clear extra rooms after meeting today's goal to start building this bonus.
+        {/if}
+      </p>
     </div>
 
     <div class="reward-items" aria-label="Today's reward items">
@@ -525,6 +558,43 @@
   .progress-hint.success {
     color: #c0ffda;
     opacity: 1;
+  }
+
+  .bonus-card {
+    background: rgba(0, 0, 0, 0.32);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    padding: 0.75rem 0.85rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+
+  .bonus-header {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.78rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    opacity: 0.85;
+  }
+
+  .bonus-value {
+    font-size: 1.25rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .bonus-value.positive {
+    color: #9fe5ff;
+  }
+
+  .bonus-hint {
+    margin: 0;
+    font-size: 0.78rem;
+    line-height: 1.3;
+    opacity: 0.82;
   }
 
   .reward-items {
