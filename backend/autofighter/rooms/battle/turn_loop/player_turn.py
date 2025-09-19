@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import asyncio
+from contextlib import suppress
+from dataclasses import dataclass
 import logging
 import random
 from typing import Any
@@ -24,9 +26,19 @@ from ..turns import push_progress_update
 from ..turns import register_snapshot_entities
 from ..turns import update_enrage_state
 from .initialization import TurnLoopContext
+from .timeouts import TURN_TIMEOUT_SECONDS
+from .timeouts import TurnTimeoutError
+from .timeouts import identify_actor
+from .timeouts import write_timeout_log
 from .turn_end import finish_turn
 
 log = logging.getLogger("autofighter.rooms.battle.turn_loop")
+
+
+@dataclass(slots=True)
+class PlayerTurnIterationResult:
+    repeat: bool
+    battle_over: bool
 
 
 async def execute_player_phase(context: TurnLoopContext) -> bool:
@@ -46,287 +58,35 @@ async def execute_player_phase(context: TurnLoopContext) -> bool:
             safety += 1
             if safety > 10:
                 break
-            action_start = asyncio.get_event_loop().time()
-            if member.hp <= 0:
-                await pace_sleep(YIELD_MULTIPLIER)
-                break
-            context.turn += 1
-            enrage_update = await update_enrage_state(
-                context.turn,
-                context.enrage_state,
-                context.foes,
-                context.foe_effects,
-                context.enrage_mods,
-                context.combat_party.members,
-            )
-            if enrage_update:
-                await push_progress_update(
-                    context.progress,
-                    context.combat_party.members,
-                    context.foes,
-                    context.enrage_state,
-                    context.temp_rdr,
-                    _EXTRA_TURNS,
-                    run_id=context.run_id,
-                    active_id=getattr(member, "id", None),
-                    active_target_id=None,
-                )
-                await pace_sleep(YIELD_MULTIPLIER)
-            await context.registry.trigger("turn_start", member)
-            if context.run_id is not None:
-                await _abort_other_runs(context, context.run_id)
-            await context.registry.trigger_turn_start(
-                member,
-                turn=context.turn,
-                party=context.combat_party.members,
-                foes=context.foes,
-                enrage_active=context.enrage_state.active,
-            )
-            await BUS.emit_async("turn_start", member)
-            log.debug("%s turn start", member.id)
-            await member.maybe_regain(context.turn)
-            if not _any_foes_alive(context.foes):
-                break
-            alive_targets = [
-                (index, foe_obj)
-                for index, foe_obj in enumerate(context.foes)
-                if foe_obj.hp > 0
-            ]
-            if not alive_targets:
-                break
-            target_index, target_foe = _select_target(alive_targets)
-            await BUS.emit_async("target_acquired", member, target_foe)
-            mutate_snapshot_overlay(
-                context.run_id,
-                active_id=getattr(member, "id", None),
-                active_target_id=getattr(target_foe, "id", None),
-            )
-            await pace_sleep(YIELD_MULTIPLIER)
-            target_manager = context.foe_effects[target_index]
-            damage_type = getattr(member, "damage_type", None)
-            await member_effect.tick(target_manager)
-            for foe_obj in context.foes:
-                context.exp_reward, context.temp_rdr = await credit_if_dead(
-                    foe_obj=foe_obj,
-                    exp_reward=context.exp_reward,
-                    temp_rdr=context.temp_rdr,
-                    **context.credit_kwargs,
-                )
-            remove_dead_foes(
-                foes=context.foes,
-                foe_effects=context.foe_effects,
-                enrage_mods=context.enrage_mods,
-            )
-            if not context.foes:
-                break
-            if member.hp <= 0:
-                await context.registry.trigger(
-                    "turn_end",
-                    member,
-                    party=context.combat_party.members,
-                    foes=context.foes,
-                )
-                await pace_sleep(YIELD_MULTIPLIER)
-                break
-            proceed = await member_effect.on_action()
-            if proceed is None:
-                proceed = True
-            if proceed and hasattr(damage_type, "on_action"):
-                result = await damage_type.on_action(
-                    member,
-                    context.combat_party.members,
-                    context.foes,
-                )
-                proceed = True if result is None else bool(result)
-            await _handle_ultimate(context, member, damage_type)
-            if not proceed:
-                await BUS.emit_async("action_used", member, member, 0)
-                await context.registry.trigger(
-                    "turn_end",
-                    member,
-                    party=context.combat_party.members,
-                    foes=context.foes,
-                )
-                if (
-                    _EXTRA_TURNS.get(id(member), 0) > 0
-                    and member.hp > 0
-                ):
-                    _EXTRA_TURNS[id(member)] -= 1
-                    await _pace(action_start)
-                    continue
-                await push_progress_update(
-                    context.progress,
-                    context.combat_party.members,
-                    context.foes,
-                    context.enrage_state,
-                    context.temp_rdr,
-                    _EXTRA_TURNS,
-                    run_id=context.run_id,
-                    active_id=member.id,
-                    active_target_id=getattr(target_foe, "id", None),
-                    include_summon_foes=True,
-                )
-                await _pace(action_start)
-                await pace_sleep(YIELD_MULTIPLIER)
-                break
-            damage = await target_foe.apply_damage(
-                member.atk,
-                attacker=member,
-                action_name="Normal Attack",
-            )
-            if damage <= 0:
-                queue_log(
-                    "%s's attack was dodged by %s",
-                    member.id,
-                    target_foe.id,
-                )
-            else:
-                queue_log(
-                    "%s hits %s for %s",
-                    member.id,
-                    target_foe.id,
-                    damage,
-                )
-                damage_type_id = (
-                    getattr(member.damage_type, "id", "generic")
-                    if hasattr(member, "damage_type")
-                    else "generic"
-                )
-                await BUS.emit_async(
-                    "hit_landed",
-                    member,
-                    target_foe,
-                    damage,
-                    "attack",
-                    f"{damage_type_id}_attack",
-                )
-                await context.registry.trigger_hit_landed(
-                    member,
-                    target_foe,
-                    damage,
-                    "attack",
-                    damage_type=damage_type_id,
-                    party=context.combat_party.members,
-                    foes=context.foes,
-                )
-            target_manager.maybe_inflict_dot(member, damage)
-            targets_hit = 1
-            if getattr(member.damage_type, "id", "").lower() == "wind":
-                targets_hit += await _handle_wind_spread(
-                    context,
-                    member,
-                    target_index,
-                )
-            await BUS.emit_async("action_used", member, target_foe, damage)
-            duration = calc_animation_time(member, targets_hit)
-            if duration > 0:
-                await BUS.emit_async(
-                    "animation_start",
-                    member,
-                    targets_hit,
-                    duration,
-                )
-                try:
-                    await asyncio.sleep(duration)
-                finally:
-                    await BUS.emit_async(
-                        "animation_end",
-                        member,
-                        targets_hit,
-                        duration,
-                    )
-            await impact_pause(member, targets_hit, duration=duration)
-            await context.registry.trigger(
-                "action_taken",
-                member,
-                target=target_foe,
-                damage=damage,
-                party=context.combat_party.members,
-                foes=context.foes,
+            iteration = asyncio.create_task(
+                _run_player_turn_iteration(context, member, member_effect)
             )
             try:
-                party_summons_added = SummonManager.add_summons_to_party(
-                    context.combat_party
+                result = await asyncio.wait_for(iteration, TURN_TIMEOUT_SECONDS)
+            except asyncio.TimeoutError as exc:
+                iteration.cancel()
+                with suppress(Exception):
+                    await asyncio.gather(iteration, return_exceptions=True)
+                actor_id = identify_actor(member)
+                timeout_path = await write_timeout_log(
+                    actor=member,
+                    role="player",
+                    turn=context.turn,
+                    run_id=context.run_id,
                 )
-                register_snapshot_entities(
-                    context.run_id,
-                    context.combat_party.members,
-                )
-                new_foe_summons: list[Any] = []
-                for owner in list(context.foes):
-                    owner_id = getattr(owner, "id", str(id(owner)))
-                    for summon in SummonManager.get_summons(owner_id):
-                        if summon not in context.foes:
-                            context.foes.append(summon)
-                            manager: EffectManager = EffectManager(summon)
-                            summon.effect_manager = manager
-                            context.foe_effects.append(manager)
-                            context.enrage_mods.append(None)
-                            register_snapshot_entities(context.run_id, [summon])
-                            new_foe_summons.append(summon)
-                if party_summons_added or new_foe_summons:
-                    await push_progress_update(
-                        context.progress,
-                        context.combat_party.members,
-                        context.foes,
-                        context.enrage_state,
-                        context.temp_rdr,
-                        _EXTRA_TURNS,
-                        run_id=context.run_id,
-                        active_id=getattr(member, "id", None),
-                        active_target_id=getattr(target_foe, "id", None),
-                        include_summon_foes=True,
+                try:
+                    log.error(
+                        "Player turn timed out for %s; details saved to %s",
+                        actor_id,
+                        timeout_path,
                     )
-                    await pace_sleep(YIELD_MULTIPLIER)
-            except Exception:
-                pass
-            member.add_ultimate_charge(member.actions_per_turn)
-            for ally in context.combat_party.members:
-                ally.handle_ally_action(member)
-            await apply_enrage_bleed(
-                context.enrage_state,
-                context.combat_party.members,
-                context.foes,
-                context.foe_effects,
-            )
-            context.exp_reward, context.temp_rdr = await credit_if_dead(
-                foe_obj=target_foe,
-                exp_reward=context.exp_reward,
-                temp_rdr=context.temp_rdr,
-                **context.credit_kwargs,
-            )
-            remove_dead_foes(
-                foes=context.foes,
-                foe_effects=context.foe_effects,
-                enrage_mods=context.enrage_mods,
-            )
-            battle_over = not context.foes
-            await context.registry.trigger(
-                "turn_end",
-                member,
-                party=context.combat_party.members,
-                foes=context.foes,
-            )
-            await context.registry.trigger_turn_end(member)
-            member.action_points = max(0, member.action_points - 1)
-            if (
-                _EXTRA_TURNS.get(id(member), 0) > 0
-                and member.hp > 0
-                and not battle_over
-            ):
-                _EXTRA_TURNS[id(member)] -= 1
-                await _pace(action_start)
-                await pace_sleep(YIELD_MULTIPLIER)
-                continue
-            await finish_turn(
-                context,
-                member,
-                action_start,
-                active_target_id=getattr(target_foe, "id", None),
-            )
-            if battle_over:
+                except Exception:
+                    pass
+                raise TurnTimeoutError(actor_id, str(timeout_path)) from exc
+            if result.battle_over or not context.foes:
                 break
-            break
+            if not result.repeat:
+                break
         if not context.foes:
             break
     if not context.foes:
@@ -334,6 +94,312 @@ async def execute_player_phase(context: TurnLoopContext) -> bool:
     if not any(member.hp > 0 for member in context.combat_party.members):
         return False
     return True
+
+
+async def _run_player_turn_iteration(
+    context: TurnLoopContext,
+    member: Any,
+    member_effect: Any,
+) -> PlayerTurnIterationResult:
+    action_start = asyncio.get_event_loop().time()
+    if member.hp <= 0:
+        await pace_sleep(YIELD_MULTIPLIER)
+        return PlayerTurnIterationResult(repeat=False, battle_over=False)
+
+    context.turn += 1
+    enrage_update = await update_enrage_state(
+        context.turn,
+        context.enrage_state,
+        context.foes,
+        context.foe_effects,
+        context.enrage_mods,
+        context.combat_party.members,
+    )
+    if enrage_update:
+        await push_progress_update(
+            context.progress,
+            context.combat_party.members,
+            context.foes,
+            context.enrage_state,
+            context.temp_rdr,
+            _EXTRA_TURNS,
+            run_id=context.run_id,
+            active_id=getattr(member, "id", None),
+            active_target_id=None,
+        )
+        await pace_sleep(YIELD_MULTIPLIER)
+    await context.registry.trigger("turn_start", member)
+    if context.run_id is not None:
+        await _abort_other_runs(context, context.run_id)
+    await context.registry.trigger_turn_start(
+        member,
+        turn=context.turn,
+        party=context.combat_party.members,
+        foes=context.foes,
+        enrage_active=context.enrage_state.active,
+    )
+    await BUS.emit_async("turn_start", member)
+    log.debug("%s turn start", getattr(member, "id", member))
+    await member.maybe_regain(context.turn)
+
+    if not _any_foes_alive(context.foes):
+        return PlayerTurnIterationResult(repeat=False, battle_over=True)
+
+    alive_targets = [
+        (index, foe_obj)
+        for index, foe_obj in enumerate(context.foes)
+        if getattr(foe_obj, "hp", 0) > 0
+    ]
+    if not alive_targets:
+        return PlayerTurnIterationResult(repeat=False, battle_over=True)
+
+    target_index, target_foe = _select_target(alive_targets)
+    await BUS.emit_async("target_acquired", member, target_foe)
+    mutate_snapshot_overlay(
+        context.run_id,
+        active_id=getattr(member, "id", None),
+        active_target_id=getattr(target_foe, "id", None),
+    )
+    await pace_sleep(YIELD_MULTIPLIER)
+
+    target_manager = context.foe_effects[target_index]
+    damage_type = getattr(member, "damage_type", None)
+    await member_effect.tick(target_manager)
+    for foe_obj in context.foes:
+        context.exp_reward, context.temp_rdr = await credit_if_dead(
+            foe_obj=foe_obj,
+            exp_reward=context.exp_reward,
+            temp_rdr=context.temp_rdr,
+            **context.credit_kwargs,
+        )
+    remove_dead_foes(
+        foes=context.foes,
+        foe_effects=context.foe_effects,
+        enrage_mods=context.enrage_mods,
+    )
+    if not context.foes:
+        return PlayerTurnIterationResult(repeat=False, battle_over=True)
+
+    if member.hp <= 0:
+        await context.registry.trigger(
+            "turn_end",
+            member,
+            party=context.combat_party.members,
+            foes=context.foes,
+        )
+        await pace_sleep(YIELD_MULTIPLIER)
+        return PlayerTurnIterationResult(repeat=False, battle_over=False)
+
+    proceed = await member_effect.on_action()
+    if proceed is None:
+        proceed = True
+    if proceed and hasattr(damage_type, "on_action"):
+        result = await damage_type.on_action(
+            member,
+            context.combat_party.members,
+            context.foes,
+        )
+        proceed = True if result is None else bool(result)
+
+    await _handle_ultimate(context, member, damage_type)
+
+    if not proceed:
+        await BUS.emit_async("action_used", member, member, 0)
+        await context.registry.trigger(
+            "turn_end",
+            member,
+            party=context.combat_party.members,
+            foes=context.foes,
+        )
+        if _EXTRA_TURNS.get(id(member), 0) > 0 and member.hp > 0:
+            _EXTRA_TURNS[id(member)] -= 1
+            await _pace(action_start)
+            return PlayerTurnIterationResult(repeat=True, battle_over=False)
+
+        await push_progress_update(
+            context.progress,
+            context.combat_party.members,
+            context.foes,
+            context.enrage_state,
+            context.temp_rdr,
+            _EXTRA_TURNS,
+            run_id=context.run_id,
+            active_id=getattr(member, "id", None),
+            active_target_id=getattr(target_foe, "id", None),
+            include_summon_foes=True,
+        )
+        await _pace(action_start)
+        await pace_sleep(YIELD_MULTIPLIER)
+        return PlayerTurnIterationResult(
+            repeat=False,
+            battle_over=not context.foes,
+        )
+
+    damage = await target_foe.apply_damage(
+        member.atk,
+        attacker=member,
+        action_name="Normal Attack",
+    )
+    if damage <= 0:
+        queue_log(
+            "%s's attack was dodged by %s",
+            getattr(member, "id", member),
+            getattr(target_foe, "id", target_foe),
+        )
+    else:
+        queue_log(
+            "%s hits %s for %s",
+            getattr(member, "id", member),
+            getattr(target_foe, "id", target_foe),
+            damage,
+        )
+        damage_type_id = (
+            getattr(member.damage_type, "id", "generic")
+            if hasattr(member, "damage_type")
+            else "generic"
+        )
+        await BUS.emit_async(
+            "hit_landed",
+            member,
+            target_foe,
+            damage,
+            "attack",
+            f"{damage_type_id}_attack",
+        )
+        await context.registry.trigger_hit_landed(
+            member,
+            target_foe,
+            damage,
+            "attack",
+            damage_type=damage_type_id,
+            party=context.combat_party.members,
+            foes=context.foes,
+        )
+
+    target_manager.maybe_inflict_dot(member, damage)
+    targets_hit = 1
+    if getattr(member.damage_type, "id", "").lower() == "wind":
+        targets_hit += await _handle_wind_spread(
+            context,
+            member,
+            target_index,
+        )
+
+    await BUS.emit_async("action_used", member, target_foe, damage)
+    duration = calc_animation_time(member, targets_hit)
+    if duration > 0:
+        await BUS.emit_async(
+            "animation_start",
+            member,
+            targets_hit,
+            duration,
+        )
+        try:
+            await asyncio.sleep(duration)
+        finally:
+            await BUS.emit_async(
+                "animation_end",
+                member,
+                targets_hit,
+                duration,
+            )
+
+    await impact_pause(member, targets_hit, duration=duration)
+    await context.registry.trigger(
+        "action_taken",
+        member,
+        target=target_foe,
+        damage=damage,
+        party=context.combat_party.members,
+        foes=context.foes,
+    )
+
+    try:
+        party_summons_added = SummonManager.add_summons_to_party(context.combat_party)
+        register_snapshot_entities(
+            context.run_id,
+            context.combat_party.members,
+        )
+        new_foe_summons: list[Any] = []
+        for owner in list(context.foes):
+            owner_id = getattr(owner, "id", str(id(owner)))
+            for summon in SummonManager.get_summons(owner_id):
+                if summon not in context.foes:
+                    context.foes.append(summon)
+                    manager: EffectManager = EffectManager(summon)
+                    summon.effect_manager = manager
+                    context.foe_effects.append(manager)
+                    context.enrage_mods.append(None)
+                    register_snapshot_entities(context.run_id, [summon])
+                    new_foe_summons.append(summon)
+        if party_summons_added or new_foe_summons:
+            await push_progress_update(
+                context.progress,
+                context.combat_party.members,
+                context.foes,
+                context.enrage_state,
+                context.temp_rdr,
+                _EXTRA_TURNS,
+                run_id=context.run_id,
+                active_id=getattr(member, "id", None),
+                active_target_id=getattr(target_foe, "id", None),
+                include_summon_foes=True,
+            )
+            await pace_sleep(YIELD_MULTIPLIER)
+    except Exception:
+        pass
+
+    member.add_ultimate_charge(member.actions_per_turn)
+    for ally in context.combat_party.members:
+        ally.handle_ally_action(member)
+
+    await apply_enrage_bleed(
+        context.enrage_state,
+        context.combat_party.members,
+        context.foes,
+        context.foe_effects,
+    )
+
+    context.exp_reward, context.temp_rdr = await credit_if_dead(
+        foe_obj=target_foe,
+        exp_reward=context.exp_reward,
+        temp_rdr=context.temp_rdr,
+        **context.credit_kwargs,
+    )
+    remove_dead_foes(
+        foes=context.foes,
+        foe_effects=context.foe_effects,
+        enrage_mods=context.enrage_mods,
+    )
+    battle_over = not context.foes
+
+    await context.registry.trigger(
+        "turn_end",
+        member,
+        party=context.combat_party.members,
+        foes=context.foes,
+    )
+    await context.registry.trigger_turn_end(member)
+
+    member.action_points = max(0, member.action_points - 1)
+    if (
+        _EXTRA_TURNS.get(id(member), 0) > 0
+        and member.hp > 0
+        and not battle_over
+    ):
+        _EXTRA_TURNS[id(member)] -= 1
+        await _pace(action_start)
+        await pace_sleep(YIELD_MULTIPLIER)
+        return PlayerTurnIterationResult(repeat=True, battle_over=False)
+
+    await finish_turn(
+        context,
+        member,
+        action_start,
+        active_target_id=getattr(target_foe, "id", None),
+    )
+
+    return PlayerTurnIterationResult(repeat=False, battle_over=battle_over)
 
 
 async def _abort_other_runs(context: TurnLoopContext, run_id: str) -> None:

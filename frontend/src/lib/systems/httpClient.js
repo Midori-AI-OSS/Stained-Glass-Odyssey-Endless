@@ -141,14 +141,21 @@ export async function httpRequest(url, options = {}, parser = null, suppressOver
       const normalizedError = normalizeError(errorData, response, context);
       
       // Show error overlay for most errors (except 404s which callers often handle)
+      const fatalBackendError = response.status >= 500 && Boolean(normalizedError.traceback);
+
       if (!suppressOverlay && response.status !== 404) {
-        openOverlay('error', normalizedError);
-        console.error('HTTP Error:', { url: fullUrl, ...normalizedError });
+        const overlayType = fatalBackendError ? 'backend-shutdown' : 'error';
+        const overlayPayload = fatalBackendError
+          ? { ...normalizedError, status: response.status }
+          : normalizedError;
+        openOverlay(overlayType, overlayPayload);
+        console.error('HTTP Error:', { url: fullUrl, fatalBackendError, ...normalizedError });
       }
 
       const error = new Error(normalizedError.message);
       error.status = normalizedError.status;
       error.code = normalizedError.code;
+      error.traceback = normalizedError.traceback;
       error.overlayShown = !suppressOverlay && response.status !== 404;
       throw error;
     }

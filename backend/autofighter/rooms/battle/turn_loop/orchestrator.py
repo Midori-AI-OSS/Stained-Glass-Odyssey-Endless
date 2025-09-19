@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Awaitable
@@ -19,6 +20,9 @@ if TYPE_CHECKING:
     from ...party import Party
     from ..core import BattleRoom
     from ..turns import EnrageState
+
+
+log = logging.getLogger("autofighter.rooms.battle.turn_loop")
 
 
 async def run_turn_loop(
@@ -59,10 +63,27 @@ async def run_turn_loop(
         abort=abort,
     )
 
+    from .timeouts import TurnTimeoutError as _TurnTimeoutError
+
     while battle_active(context):
-        if not await execute_player_phase(context):
+        try:
+            player_continues = await execute_player_phase(context)
+        except _TurnTimeoutError as exc:
+            try:
+                log.exception("Player phase timed out", exc_info=exc)
+            except Exception:
+                pass
+            raise
+        if not player_continues:
             break
-        foe_continues = await execute_foe_phase(context)
+        try:
+            foe_continues = await execute_foe_phase(context)
+        except _TurnTimeoutError as exc:
+            try:
+                log.exception("Foe phase timed out", exc_info=exc)
+            except Exception:
+                pass
+            raise
         still_active = cleanup_after_round(context)
         if not foe_continues or not still_active:
             break

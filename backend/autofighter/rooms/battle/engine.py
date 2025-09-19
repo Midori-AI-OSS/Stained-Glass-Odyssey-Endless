@@ -24,6 +24,7 @@ from .pacing import _EXTRA_TURNS
 from .resolution import resolve_rewards
 from .setup import BattleSetupResult
 from .turn_loop import run_turn_loop
+from .turn_loop.timeouts import TurnTimeoutError
 from .turns import EnrageState
 from .turns import build_action_queue_snapshot
 from .turns import collect_summon_snapshots
@@ -94,23 +95,34 @@ async def run_battle(
         raise RuntimeError(msg)
 
     temp_rdr = party.rdr
-    turn, temp_rdr, exp_reward = await run_turn_loop(
-        room=room,
-        party=party,
-        combat_party=combat_party,
-        registry=registry,
-        foes=foes,
-        foe_effects=foe_effects,
-        enrage_mods=enrage_mods,
-        enrage_state=enrage_state,
-        progress=progress,
-        visual_queue=visual_queue,
-        temp_rdr=temp_rdr,
-        exp_reward=exp_reward,
-        run_id=run_id,
-        battle_tasks=battle_tasks,
-        abort=_abort,
-    )
+    try:
+        turn, temp_rdr, exp_reward = await run_turn_loop(
+            room=room,
+            party=party,
+            combat_party=combat_party,
+            registry=registry,
+            foes=foes,
+            foe_effects=foe_effects,
+            enrage_mods=enrage_mods,
+            enrage_state=enrage_state,
+            progress=progress,
+            visual_queue=visual_queue,
+            temp_rdr=temp_rdr,
+            exp_reward=exp_reward,
+            run_id=run_id,
+            battle_tasks=battle_tasks,
+            abort=_abort,
+        )
+    except TurnTimeoutError as exc:
+        try:
+            log.exception("Battle turn loop timed out", exc_info=exc)
+        except Exception:
+            pass
+        try:
+            end_battle_logging("timeout")
+        except Exception:
+            pass
+        raise
 
     if progress is not None:
         try:
