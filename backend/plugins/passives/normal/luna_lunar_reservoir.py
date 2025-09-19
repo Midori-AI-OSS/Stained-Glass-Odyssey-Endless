@@ -3,6 +3,7 @@ from typing import TYPE_CHECKING
 from typing import ClassVar
 
 from autofighter.stat_effect import StatEffect
+from autofighter.stats import BUS
 
 if TYPE_CHECKING:
     from autofighter.stats import Stats
@@ -20,6 +21,98 @@ class LunaLunarReservoir:
 
     # Class-level tracking of charge points for each entity
     _charge_points: ClassVar[dict[int, int]] = {}
+    _events_registered: ClassVar[bool] = False
+    _swords_by_owner: ClassVar[dict[int, set[int]]] = {}
+
+    @classmethod
+    def _ensure_event_hooks(cls) -> None:
+        if cls._events_registered:
+            return
+        BUS.subscribe("luna_sword_hit", cls._on_sword_hit)
+        BUS.subscribe("summon_removed", cls._handle_summon_removed)
+        cls._events_registered = True
+
+    @classmethod
+    def _resolve_charge_holder(cls, target: "Stats") -> "Stats":
+        owner_attr = getattr(target, "luna_sword_owner", None)
+        if owner_attr is not None:
+            return owner_attr
+        return target
+
+    @classmethod
+    def _ensure_charge_slot(cls, target: "Stats") -> int:
+        holder = cls._resolve_charge_holder(target)
+        holder_id = id(holder)
+        cls._charge_points.setdefault(holder_id, 0)
+        return holder_id
+
+    @classmethod
+    def register_sword(
+        cls,
+        owner: "Stats",
+        sword: "Stats",
+        label: str | None = None,
+    ) -> None:
+        cls._ensure_event_hooks()
+        cls._ensure_charge_slot(owner)
+        owner_id = id(owner)
+        sword_id = id(sword)
+        cls._swords_by_owner.setdefault(owner_id, set()).add(sword_id)
+        if label is not None:
+            setattr(sword, "luna_sword_label", label)
+
+    @classmethod
+    def unregister_sword(cls, sword: "Stats") -> None:
+        sword_id = id(sword)
+        owner = getattr(sword, "luna_sword_owner", None)
+        owner_id = id(owner) if owner is not None else None
+        swords = cls._swords_by_owner.get(owner_id)
+        if not swords:
+            return
+        swords.discard(sword_id)
+        if not swords:
+            cls._swords_by_owner.pop(owner_id, None)
+
+    @classmethod
+    async def _on_sword_hit(
+        cls,
+        owner: "Stats | None",
+        sword: "Stats",
+        _target,
+        amount: int,
+        action_type: str,
+        metadata: dict | None = None,
+    ) -> None:
+        actual_owner = owner
+        handled = False
+        if owner is not None:
+            label = None
+            if metadata and isinstance(metadata, dict):
+                label = metadata.get("sword_label")
+                handled = bool(metadata.get("charge_handled"))
+            cls.register_sword(owner, sword, label if isinstance(label, str) else None)
+            actual_owner = owner
+        elif getattr(sword, "luna_sword_owner", None) is not None:
+            actual_owner = getattr(sword, "luna_sword_owner")
+        if actual_owner is None:
+            return
+        cls._ensure_charge_slot(actual_owner)
+        rank = str(getattr(actual_owner, "rank", ""))
+        per_hit = 8 if "glitched" in rank.lower() else 4
+        if not handled:
+            cls.add_charge(actual_owner, per_hit)
+        helper = getattr(actual_owner, "_luna_sword_helper", None)
+        try:
+            if helper is not None and hasattr(helper, "sync_actions_per_turn"):
+                helper.sync_actions_per_turn()
+        except Exception:
+            pass
+
+    @classmethod
+    def _handle_summon_removed(cls, summon: "Stats | None", *_: object) -> None:
+        if summon is None:
+            return
+        cls.unregister_sword(summon)
 
     async def apply(self, target: "Stats", event: str = "action_taken", **_: object) -> None:
         """Apply charge mechanics for Luna.
@@ -28,11 +121,9 @@ class LunaLunarReservoir:
             target: Entity gaining charge.
             event: Triggering event name.
         """
-        entity_id = id(target)
-
-        # Initialize charge if not present
-        if entity_id not in self._charge_points:
-            self._charge_points[entity_id] = 0
+        type(self)._ensure_event_hooks()
+        charge_target = type(self)._resolve_charge_holder(target)
+        entity_id = type(self)._ensure_charge_slot(charge_target)
 
         # Grant charge based on event type
         if event == "ultimate_used":
@@ -44,15 +135,15 @@ class LunaLunarReservoir:
 
         # Determine attack count based on charge level
         if current_charge < 35:
-            target.actions_per_turn = 2
+            charge_target.actions_per_turn = 2
         elif current_charge < 50:
-            target.actions_per_turn = 4
+            charge_target.actions_per_turn = 4
         elif current_charge < 70:
-            target.actions_per_turn = 8
+            charge_target.actions_per_turn = 8
         elif current_charge < 85:
-            target.actions_per_turn = 16
+            charge_target.actions_per_turn = 16
         else:  # 85+ charge
-            target.actions_per_turn = 32
+            charge_target.actions_per_turn = 32
 
         # Soft cap bonus: each stack past 200 gives 0.025% dodge odds
         if current_charge > 200:
@@ -65,15 +156,14 @@ class LunaLunarReservoir:
                 duration=-1,  # Permanent for rest of fight
                 source=self.id,
             )
-            target.add_effect(dodge_effect)
+            charge_target.add_effect(dodge_effect)
 
     async def on_turn_end(self, target: "Stats") -> None:
         """Handle charge spending at end of turn when in boosted mode."""
-        entity_id = id(target)
+        holder = type(self)._resolve_charge_holder(target)
+        entity_id = id(holder)
 
-        # Initialize charge if not present
         if entity_id not in self._charge_points:
-            self._charge_points[entity_id] = 0
             return
 
         current_charge = self._charge_points[entity_id]
@@ -85,22 +175,24 @@ class LunaLunarReservoir:
     @classmethod
     def get_charge(cls, target: "Stats") -> int:
         """Get current charge points for an entity."""
-        return cls._charge_points.get(id(target), 0)
+        holder = cls._resolve_charge_holder(target)
+        return cls._charge_points.get(id(holder), getattr(holder, "luna_sword_charge", 0))
 
     @classmethod
     def add_charge(cls, target: "Stats", amount: int = 1) -> None:
         """Add charge points (for external effects)."""
-        entity_id = id(target)
-        if entity_id not in cls._charge_points:
-            cls._charge_points[entity_id] = 0
+        entity_id = cls._ensure_charge_slot(target)
 
         # Remove hard cap - allow unlimited stacking
         cls._charge_points[entity_id] += amount
+        holder = cls._resolve_charge_holder(target)
+        setattr(holder, "luna_sword_charge", getattr(holder, "luna_sword_charge", 0) + amount)
 
     @classmethod
     def get_stacks(cls, target: "Stats") -> int:
         """Return current charge points for UI display."""
-        return cls._charge_points.get(id(target), 0)
+        holder = cls._resolve_charge_holder(target)
+        return cls._charge_points.get(id(holder), getattr(holder, "luna_sword_charge", 0))
 
     @classmethod
     def get_display(cls, target: "Stats") -> str:

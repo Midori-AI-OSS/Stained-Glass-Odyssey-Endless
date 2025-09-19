@@ -6,6 +6,7 @@ from dataclasses import field
 from dataclasses import fields
 import logging
 from typing import Collection
+from typing import TYPE_CHECKING
 
 from autofighter.mapgen import MapNode
 from autofighter.character import CharacterType
@@ -41,6 +42,10 @@ class SimpleConversationMemory:
             if ai:
                 lines.append(f"AI: {ai}")
         return {"history": "\n".join(lines)}
+
+
+if TYPE_CHECKING:
+    from autofighter.passives import PassiveRegistry
 
 
 @dataclass
@@ -171,6 +176,13 @@ class PlayerBase(Stats):
             val = getattr(self, name)
             setattr(result, name, copy.deepcopy(val, memo))
         return result
+
+    def prepare_for_battle(
+        self,
+        node: MapNode,
+        registry: "PassiveRegistry",
+    ) -> None:
+        """Hook for subclasses to adjust state prior to entering battle."""
 
     async def use_ultimate(self) -> bool:
         """Consume charge and emit an event when firing the ultimate."""
