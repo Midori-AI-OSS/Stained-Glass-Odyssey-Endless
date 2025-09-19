@@ -114,26 +114,10 @@ class LunaLunarReservoir:
             return
         cls.unregister_sword(summon)
 
-    async def apply(self, target: "Stats", event: str = "action_taken", **_: object) -> None:
-        """Apply charge mechanics for Luna.
+    @classmethod
+    def _apply_actions(cls, charge_target: "Stats", current_charge: int) -> None:
+        """Update action cadence and dodge bonuses based on charge."""
 
-        Args:
-            target: Entity gaining charge.
-            event: Triggering event name.
-        """
-        type(self)._ensure_event_hooks()
-        charge_target = type(self)._resolve_charge_holder(target)
-        entity_id = type(self)._ensure_charge_slot(charge_target)
-
-        # Grant charge based on event type
-        if event == "ultimate_used":
-            self._charge_points[entity_id] += 64
-        else:
-            self._charge_points[entity_id] += 1
-
-        current_charge = self._charge_points[entity_id]
-
-        # Determine attack count based on charge level
         if current_charge < 35:
             charge_target.actions_per_turn = 2
         elif current_charge < 50:
@@ -145,18 +129,47 @@ class LunaLunarReservoir:
         else:  # 85+ charge
             charge_target.actions_per_turn = 32
 
-        # Soft cap bonus: each stack past 200 gives 0.025% dodge odds
         if current_charge > 200:
             stacks_past_soft_cap = current_charge - 200
             dodge_bonus = stacks_past_soft_cap * 0.00025  # 0.025% per stack
 
             dodge_effect = StatEffect(
-                name=f"{self.id}_dodge_bonus",
+                name=f"{cls.id}_dodge_bonus",
                 stat_modifiers={"dodge_odds": dodge_bonus},
-                duration=-1,  # Permanent for rest of fight
-                source=self.id,
+                duration=-1,
+                source=cls.id,
             )
             charge_target.add_effect(dodge_effect)
+
+    @classmethod
+    def sync_actions(cls, target: "Stats") -> None:
+        """Recompute the owner's actions per turn using current charge."""
+
+        charge_target = cls._resolve_charge_holder(target)
+        entity_id = cls._ensure_charge_slot(charge_target)
+        current_charge = cls._charge_points.get(entity_id, 0)
+        cls._apply_actions(charge_target, current_charge)
+
+    async def apply(self, target: "Stats", event: str = "action_taken", **_: object) -> None:
+        """Apply charge mechanics for Luna.
+
+        Args:
+            target: Entity gaining charge.
+            event: Triggering event name.
+        """
+
+        cls = type(self)
+        cls._ensure_event_hooks()
+        charge_target = cls._resolve_charge_holder(target)
+        entity_id = cls._ensure_charge_slot(charge_target)
+
+        if event == "ultimate_used":
+            cls._charge_points[entity_id] += 64
+        else:
+            cls._charge_points[entity_id] += 1
+
+        current_charge = cls._charge_points[entity_id]
+        cls._apply_actions(charge_target, current_charge)
 
     async def on_turn_end(self, target: "Stats") -> None:
         """Handle charge spending at end of turn when in boosted mode."""
@@ -187,6 +200,7 @@ class LunaLunarReservoir:
         cls._charge_points[entity_id] += amount
         holder = cls._resolve_charge_holder(target)
         setattr(holder, "luna_sword_charge", getattr(holder, "luna_sword_charge", 0) + amount)
+        cls.sync_actions(holder)
 
     @classmethod
     def get_stacks(cls, target: "Stats") -> int:
