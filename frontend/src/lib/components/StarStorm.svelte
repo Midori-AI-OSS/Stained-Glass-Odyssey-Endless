@@ -1,181 +1,155 @@
 <script>
-  import { onDestroy } from 'svelte';
   import { getElementColor } from '../systems/assetLoader.js';
 
   export let color = '';
   export let reducedMotion = false;
 
-  function rand(min, max) { return Math.random() * (max - min) + min; }
-  const starElements = ['fire','ice','lightning','light','dark','wind'];
-  function randomElementColor() {
-    const el = starElements[Math.floor(Math.random() * starElements.length)];
-    try { return getElementColor(el); } catch { return '#88a'; }
-  }
-  function spawnStar(c = color || randomElementColor()) {
-    return {
-      left: Math.random() * 100,
-      size: rand(3, 6),
-      duration: rand(18, 28),
-      delay: rand(0, 12),
-      drift: rand(-20, 20),
-      color: c
-    };
-  }
-  function makeStars(count) {
-    return Array.from({ length: count }, () => spawnStar());
-  }
-  $: density = reducedMotion ? 60 : 240;
-  let stars = [];
-  $: if (stars.length === 0) {
-    stars = makeStars(density);
-    fadePulse(260);
-  }
-  $: if (stars.length && stars.length !== density) {
-    if (density > stars.length) {
-      stars = stars.concat(makeStars(density - stars.length));
-    } else if (density < stars.length) {
-      stars = stars.slice(0, density);
+  const fallbackTint = '#88a';
+  const fallbackPalette = ['#7eb8ff', '#ff9f9f', '#b58dff', '#7fe8c9', '#ffe694', '#94a7ff', '#ffb7df', '#8fe3ff'];
+
+  function resolveColorToken(token, fallback) {
+    if (!token) return fallback;
+    if (typeof token === 'string' && (token.startsWith('#') || token.startsWith('rgb'))) {
+      return token;
+    }
+    try {
+      return getElementColor(token);
+    } catch {
+      return fallback;
     }
   }
 
-  let fading = false;
-  function fadePulse(dur = 260, low = 0.25) {
-    fading = true;
-    clearTimeout(fadeTimer);
-    fadeTimer = setTimeout(() => { fading = false; }, dur);
-  }
-  let fadeTimer;
+  const orbDescriptors = [
+    { id: 'zenith', x: 18, y: 24, radius: 260, drift: 56, delay: 0, base: 'light' },
+    { id: 'aurora', x: 68, y: 18, radius: 220, drift: 64, delay: 8, base: 'wind' },
+    { id: 'ember', x: 32, y: 64, radius: 200, drift: 52, delay: 14, base: 'fire' },
+    { id: 'tide', x: 80, y: 68, radius: 280, drift: 70, delay: 20, base: 'ice' },
+    { id: 'umbra', x: 12, y: 76, radius: 240, drift: 60, delay: 11, base: 'dark' },
+    { id: 'volt', x: 48, y: 40, radius: 170, drift: 48, delay: 5, base: 'lightning' },
+    { id: 'bloom', x: 56, y: 82, radius: 190, drift: 74, delay: 25, base: '#ff9fcc' }
+  ];
 
-  let lastColor = '';
-  let replaceTimer = null;
-  let forceTimer = null;
-  function startColorTransition() {
-    if (!color) return;
-    if (replaceTimer) clearInterval(replaceTimer);
-    if (forceTimer) clearTimeout(forceTimer);
-    fadePulse(260);
-    let pool = stars.map((s, i) => ({ s, i }))
-      .filter(({ s }) => s.color !== color)
-      .map(({ i }) => i);
-    if (pool.length === 0) return;
-    const intervalMs = 120;
-    const targetMs = 1800;
-    const ticks = Math.max(1, Math.round(targetMs / intervalMs));
-    const batch = Math.max(1, Math.ceil(pool.length / ticks));
-    replaceTimer = setInterval(() => {
-      const n = Math.min(batch, pool.length);
-      for (let k = 0; k < n; k++) {
-        const idx = pool.pop();
-        if (idx == null) break;
-        stars[idx] = spawnStar(color);
-      }
-      stars = stars.slice();
-      if (pool.length === 0) {
-        clearInterval(replaceTimer);
-        replaceTimer = null;
-      }
-    }, intervalMs);
-    forceTimer = setTimeout(() => {
-      if (pool.length > 0) {
-        stars = stars.map(s => (s.color === color ? s : spawnStar(color)));
-      }
-      if (replaceTimer) { clearInterval(replaceTimer); replaceTimer = null; }
-    }, targetMs + 400);
-  }
-  $: if (color && lastColor && color !== lastColor) {
-    startColorTransition();
-  }
-  $: lastColor = color;
+  const orbs = orbDescriptors.map((descriptor, index) => ({
+    ...descriptor,
+    baseColor: resolveColorToken(descriptor.base, fallbackPalette[index % fallbackPalette.length])
+  }));
 
-  onDestroy(() => {
-    if (replaceTimer) clearInterval(replaceTimer);
-    if (fadeTimer) clearTimeout(fadeTimer);
-    if (forceTimer) clearTimeout(forceTimer);
-  });
+  $: tintColor = resolveColorToken(color, fallbackTint);
 </script>
 
-<div class="stars" aria-hidden="true" style={`opacity:${fading ? 0.25 : 0.55}`}>
-  <div class="storm-blur">
-    {#each stars as s}
-      <span class="star" style={`--x:${s.left}%; --s:${s.size}px; --d:${s.duration}s; --delay:${s.delay}s; --dx:${s.drift}px; --c:${s.color};`}></span>
+<div
+  class="storm"
+  class:storm--reduced={reducedMotion}
+  aria-hidden="true"
+  style={`--storm-tint:${tintColor};`}
+>
+  {#if reducedMotion}
+    <div class="storm__veil"></div>
+  {:else}
+    {#each orbs as orb (orb.id)}
+      <div
+        class="orb-shell"
+        style={`--orb-x:${orb.x}%; --orb-y:${orb.y}%; --orb-radius:${orb.radius}px; --orb-drift:${orb.drift}s; --orb-delay:${orb.delay}s; --orb-base-color:${orb.baseColor};`}
+      >
+        <span class="orb"></span>
+      </div>
     {/each}
-  </div>
-  {#each stars as s}
-    <span class="star" style={`--x:${s.left}%; --s:${s.size}px; --d:${s.duration}s; --delay:${s.delay}s; --dx:${s.drift}px; --c:${s.color};`}>
-      <span class="core"></span>
-    </span>
-  {/each}
+  {/if}
 </div>
 
 <style>
-  .stars { position:absolute; inset:0; overflow:hidden; pointer-events:none; z-index:-1; opacity:0.55; transition: opacity 220ms ease; }
-  .star {
+  .storm {
     position: absolute;
-    top: -10%;
-    left: var(--x);
-    width: 0;
-    height: 0;
-    animation-name: af-fallTop;
-    animation-timing-function: linear;
-    animation-iteration-count: infinite;
-    animation-duration: var(--d);
-    animation-delay: var(--delay);
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+    z-index: -1;
+    opacity: 0.6;
+    transition: opacity 420ms ease;
+    --storm-tint: #88a;
   }
-  .star .core {
+
+  .storm:not(.storm--reduced) {
+    display: block;
+  }
+
+  .orb-shell {
     position: absolute;
-    top: 0;
-    left: 0;
-    width: var(--s);
-    height: var(--s);
-    background: radial-gradient(circle, var(--c) 0%, transparent 70%);
+    left: var(--orb-x);
+    top: var(--orb-y);
+    width: calc(var(--orb-radius) * 2);
+    height: calc(var(--orb-radius) * 2);
+    margin-left: calc(var(--orb-radius) * -1);
+    margin-top: calc(var(--orb-radius) * -1);
+    animation: orbFloat var(--orb-drift) ease-in-out infinite;
+    animation-delay: calc(-1 * var(--orb-delay));
+    will-change: transform, opacity;
+  }
+
+  .orb-shell:nth-of-type(2n) {
+    animation-direction: alternate;
+  }
+
+  .orb {
+    position: absolute;
+    inset: 0;
     border-radius: 50%;
-    filter: drop-shadow(0 0 8px color-mix(in srgb, var(--c) 70%, transparent));
-    animation-name: af-drift;
-    animation-timing-function: linear;
-    animation-iteration-count: infinite;
-    animation-duration: var(--d);
-    animation-delay: var(--delay);
-    z-index: 0;
+    opacity: 0.85;
+    mix-blend-mode: screen;
+    --orb-tint: color-mix(in srgb, var(--orb-base-color) 48%, var(--storm-tint) 52%);
+    background:
+      radial-gradient(circle at 28% 26%, color-mix(in srgb, var(--orb-tint) 70%, white 30%) 0%, transparent 60%),
+      radial-gradient(circle at 72% 70%, color-mix(in srgb, var(--orb-tint) 80%, transparent) 0%, transparent 80%),
+      radial-gradient(circle, color-mix(in srgb, var(--orb-tint) 55%, transparent) 0%, transparent 92%);
+    transition: background 1500ms ease, opacity 1200ms ease;
   }
-.star .core::after {
-    content: '';
+
+  .orb-shell:nth-of-type(3n) .orb {
+    opacity: 0.9;
+  }
+
+  .orb-shell:nth-of-type(4n) .orb {
+    opacity: 0.7;
+  }
+
+  @keyframes orbFloat {
+    0% {
+      transform: translate3d(0, 0, 0) scale(0.94);
+      opacity: 0.75;
+    }
+    35% {
+      transform: translate3d(calc(var(--orb-radius) * 0.08), calc(var(--orb-radius) * -0.05), 0) scale(1.02);
+      opacity: 0.92;
+    }
+    70% {
+      transform: translate3d(calc(var(--orb-radius) * -0.07), calc(var(--orb-radius) * 0.06), 0) scale(1.05);
+      opacity: 1;
+    }
+    100% {
+      transform: translate3d(calc(var(--orb-radius) * 0.05), calc(var(--orb-radius) * -0.04), 0) scale(0.97);
+      opacity: 0.78;
+    }
+  }
+
+  .storm--reduced {
+    opacity: 0.5;
+  }
+
+  .storm__veil {
     position: absolute;
-    left: 50%;
-    transform: translateX(-50%);
-    top: calc(var(--s) * -8);
-    width: calc(max(2px, var(--s) * 0.4));
-    height: calc(var(--s) * 10);
-    background: linear-gradient(180deg, color-mix(in srgb, var(--c) 75%, transparent) 0%, transparent 70%);
-    filter: blur(1px);
+    inset: 0;
+    background:
+      radial-gradient(circle at 24% 24%, color-mix(in srgb, var(--storm-tint) 60%, white 40%) 0%, transparent 58%),
+      radial-gradient(circle at 78% 28%, color-mix(in srgb, var(--storm-tint) 55%, #85a9ff 45%) 0%, transparent 68%),
+      radial-gradient(circle at 46% 78%, color-mix(in srgb, var(--storm-tint) 50%, #ffb6ef 50%) 0%, transparent 72%),
+      linear-gradient(180deg, color-mix(in srgb, var(--storm-tint) 35%, #0d1220 65%) 0%, transparent 100%);
+    mix-blend-mode: screen;
+    opacity: 0.75;
   }
-  .storm-blur { position:absolute; inset:0; pointer-events:none; z-index:-1; filter: blur(20px); opacity:0.5; }
-  .storm-blur .star::before {
-    content: '';
-    position: absolute;
-    top: calc(var(--s) * -1);
-    left: calc(var(--s) * -1);
-    width: calc(var(--s) * 3);
-    height: calc(var(--s) * 3);
-    background: radial-gradient(circle, var(--c) 0%, transparent 70%);
-    border-radius: 50%;
-    animation-name: af-drift;
-    animation-timing-function: linear;
-    animation-iteration-count: infinite;
-    animation-duration: var(--d);
-    animation-delay: var(--delay);
+
+  :global(html.reduced-motion) .storm:not(.storm--reduced) .orb-shell,
+  :global(body.reduced-motion) .storm:not(.storm--reduced) .orb-shell {
+    animation: none;
+    opacity: 0.85;
   }
-  @keyframes af-fallTop {
-    0% { top: -10%; opacity:0.0; }
-    10% { opacity:1.0; }
-    90% { opacity:1.0; }
-    100% { top:110%; opacity:0.0; }
-  }
-  @keyframes af-drift {
-    0% { transform: translateX(0); }
-    100% { transform: translateX(var(--dx)); }
-  }
-  :global(html.reduced-motion) .stars .star,
-  :global(body.reduced-motion) .stars .star { animation: none; opacity:0.35; top:15%; }
-  :global(html.reduced-motion) .stars .star .core,
-  :global(body.reduced-motion) .stars .star .core { animation: none; }
 </style>
