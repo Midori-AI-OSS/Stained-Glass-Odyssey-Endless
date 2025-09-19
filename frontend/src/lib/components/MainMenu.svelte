@@ -35,7 +35,7 @@
       {#each quickLinks as item}
         <button
           type="button"
-          class="quick-link-btn"
+          class="icon-square-btn"
           title={item.label}
           aria-label={item.label}
           on:click={item.action}
@@ -66,7 +66,7 @@
     border: var(--glass-border);
     z-index: 10;
     backdrop-filter: var(--glass-filter);
-    max-height: calc(100% - var(--ui-top-offset) - 2.4rem);
+    max-height: calc(100% - var(--ui-top-offset) - 1.6rem);
     overflow: auto;
     align-items: center;
     min-width: 140px;
@@ -128,13 +128,15 @@
     justify-content: center;
     gap: 0.5rem;
     width: 100%;
+    padding-bottom: 0.8rem; /* more breathing room under the icons */
   }
-  .quick-link-btn {
+  /* Quick links: match top-left nav icon button style */
+  .icon-square-btn {
     background: rgba(255,255,255,0.10);
     border: none;
-    border-radius: 999px;
-    width: 2.75rem;
-    height: 2.75rem;
+    border-radius: 0;
+    width: 2.9rem;
+    height: 2.9rem;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -143,19 +145,19 @@
     box-shadow: 0 1px 4px 0 rgba(0,40,120,0.10);
     position: relative;
   }
-  .quick-link-btn:hover,
-  .quick-link-btn:focus-visible {
+  .icon-square-btn:hover,
+  .icon-square-btn:focus-visible {
     background: rgba(120,180,255,0.22);
     outline: none;
   }
-  .quick-link-btn:active {
+  .icon-square-btn:active {
     background: rgba(80,140,220,0.28);
   }
-  .quick-link-btn:disabled {
+  .icon-square-btn:disabled {
     opacity: 0.5;
     cursor: default;
   }
-  .quick-link-btn .tooltip {
+  .icon-square-btn .tooltip {
     position: absolute;
     bottom: calc(100% + 0.4rem);
     left: 50%;
@@ -171,8 +173,8 @@
     transition: opacity 0.18s ease, transform 0.18s ease;
     box-shadow: 0 2px 6px rgba(0,0,0,0.4);
   }
-  .quick-link-btn:hover .tooltip,
-  .quick-link-btn:focus-visible .tooltip {
+  .icon-square-btn:hover .tooltip,
+  .icon-square-btn:focus-visible .tooltip {
     opacity: 1;
     transform: translate(-50%, 0);
   }
