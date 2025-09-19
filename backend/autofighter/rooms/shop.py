@@ -160,24 +160,52 @@ class ShopRoom(Room):
                 stock = _apply_tax_to_stock(stock, self.node.pressure, items_bought)
                 self.node.stock = stock
         else:
-            item_id = data.get("id") or data.get("item")
-            cost = int(data.get("cost") or data.get("price") or 0)
-            if item_id and cost:
-                entry = next((s for s in stock if s["id"] == item_id), None)
-                if entry is not None:
-                    base_price = int(entry.get("base_price") or 0)
-                    expected_cost = _taxed_price(base_price, self.node.pressure, items_bought)
-                    if cost == expected_cost and party.gold >= expected_cost:
-                        party.gold -= expected_cost
-                        if entry["type"] == "card":
-                            party.cards.append(item_id)
-                        else:
-                            party.relics.append(item_id)
-                        stock.remove(entry)
-                        items_bought += 1
-                        self.node.items_bought = items_bought
-                        stock = _apply_tax_to_stock(stock, self.node.pressure, items_bought)
-                        self.node.stock = stock
+            purchases: list[dict[str, Any]] = []
+            payload_items = data.get("items")
+            if isinstance(payload_items, list) and payload_items:
+                purchases = [p for p in payload_items if isinstance(p, dict)]
+            else:
+                item_id = data.get("id") or data.get("item")
+                cost_value = data.get("cost") or data.get("price")
+                if item_id and cost_value is not None:
+                    purchases = [
+                        {"id": item_id, "cost": cost_value},
+                    ]
+
+            for purchase in purchases:
+                item_id = purchase.get("id") or purchase.get("item")
+                cost_value = purchase.get("cost") or purchase.get("price")
+                if not item_id or cost_value is None:
+                    continue
+
+                try:
+                    cost = int(cost_value)
+                except (TypeError, ValueError):
+                    continue
+
+                entry = next((s for s in stock if s.get("id") == item_id), None)
+                if entry is None:
+                    continue
+
+                base_price = int(entry.get("base_price") or 0)
+                expected_cost = _taxed_price(base_price, self.node.pressure, items_bought)
+                if cost != expected_cost or party.gold < expected_cost:
+                    continue
+
+                party.gold -= expected_cost
+                if entry.get("type") == "card":
+                    party.cards.append(item_id)
+                else:
+                    party.relics.append(item_id)
+
+                stock.remove(entry)
+
+                items_bought += 1
+                self.node.items_bought = items_bought
+                stock = _apply_tax_to_stock(stock, self.node.pressure, items_bought)
+                self.node.stock = stock
+
+            self.node.stock = stock
 
         # Enrich stock entries with stacking-aware descriptions for relics
         enriched_stock: list[dict[str, Any]] = []

@@ -18,6 +18,7 @@ from autofighter.party import Party
 from autofighter.rooms.shop import PRICE_BY_STARS
 from autofighter.rooms.shop import REROLL_COST
 from autofighter.rooms.shop import ShopRoom
+from autofighter.rooms.shop import _taxed_price
 from plugins.players._base import PlayerBase
 
 
@@ -154,6 +155,146 @@ async def test_shop_tax_scales_and_persists():
     )
     assert high_item["tax"] == expected_high_tax
     assert expected_high_tax > expected_low_tax
+
+
+@pytest.mark.asyncio
+async def test_shop_handles_multi_item_payload():
+    node = MapNode(room_id=9, room_type="shop", floor=1, index=1, loop=1, pressure=2)
+    node.stock = [
+        {
+            "id": "multi_card",
+            "name": "Multi Card",
+            "stars": 1,
+            "type": "card",
+            "base_price": 100,
+            "price": 100,
+            "cost": 100,
+            "tax": 0,
+        },
+        {
+            "id": "multi_relic",
+            "name": "Multi Relic",
+            "stars": 2,
+            "type": "relic",
+            "base_price": 200,
+            "price": 200,
+            "cost": 200,
+            "tax": 0,
+        },
+        {
+            "id": "multi_card_two",
+            "name": "Multi Card Two",
+            "stars": 1,
+            "type": "card",
+            "base_price": 100,
+            "price": 100,
+            "cost": 100,
+            "tax": 0,
+        },
+    ]
+    room = ShopRoom(node)
+
+    member = PlayerBase()
+    member.id = "multi"
+    member.set_base_stat('max_hp', 100)
+    member.hp = 90
+    party = Party(members=[member], gold=1000)
+
+    initial_view = await room.resolve(party, {})
+    assert initial_view["items_bought"] == 0
+    assert len(initial_view["stock"]) == 3
+
+    first_entry = initial_view["stock"][0]
+    second_entry = initial_view["stock"][1]
+    third_entry = initial_view["stock"][2]
+
+    first_cost = _taxed_price(first_entry["base_price"], node.pressure, initial_view["items_bought"])
+    second_cost = _taxed_price(second_entry["base_price"], node.pressure, initial_view["items_bought"] + 1)
+
+    result = await room.resolve(
+        party,
+        {
+            "items": [
+                {"id": first_entry["id"], "cost": first_cost},
+                {"id": second_entry["id"], "cost": second_cost},
+            ],
+        },
+    )
+
+    assert result["items_bought"] == 2
+    assert len(result["stock"]) == 1
+
+    assert party.gold == 1000 - first_cost - second_cost
+    assert first_entry["id"] in party.cards
+    assert second_entry["id"] in party.relics
+
+    remaining = result["stock"][0]
+    expected_remaining_cost = _taxed_price(remaining["base_price"], node.pressure, result["items_bought"])
+    assert remaining["cost"] == expected_remaining_cost
+    assert remaining["tax"] == expected_remaining_cost - remaining["base_price"]
+    assert remaining["id"] == third_entry["id"]
+
+
+@pytest.mark.asyncio
+async def test_shop_multi_item_payload_skips_invalid_entries():
+    node = MapNode(room_id=10, room_type="shop", floor=1, index=1, loop=1, pressure=1)
+    node.stock = [
+        {
+            "id": "invalid_card",
+            "name": "Invalid Card",
+            "stars": 1,
+            "type": "card",
+            "base_price": 100,
+            "price": 100,
+            "cost": 100,
+            "tax": 0,
+        },
+        {
+            "id": "valid_relic",
+            "name": "Valid Relic",
+            "stars": 2,
+            "type": "relic",
+            "base_price": 200,
+            "price": 200,
+            "cost": 200,
+            "tax": 0,
+        },
+    ]
+    room = ShopRoom(node)
+
+    member = PlayerBase()
+    member.id = "skip"
+    member.set_base_stat('max_hp', 100)
+    member.hp = 80
+    party = Party(members=[member], gold=600)
+
+    initial_view = await room.resolve(party, {})
+    initial_gold = party.gold
+    first_entry = initial_view["stock"][0]
+    second_entry = initial_view["stock"][1]
+
+    wrong_cost = first_entry["cost"] + 50
+    valid_cost = _taxed_price(second_entry["base_price"], node.pressure, initial_view["items_bought"])
+
+    result = await room.resolve(
+        party,
+        {
+            "items": [
+                {"id": first_entry["id"], "cost": wrong_cost},
+                {"id": second_entry["id"], "cost": valid_cost},
+            ],
+        },
+    )
+
+    assert result["items_bought"] == 1
+    assert party.gold == initial_gold - valid_cost
+    assert second_entry["id"] in party.relics
+    assert any(entry["id"] == first_entry["id"] for entry in result["stock"])
+
+    remaining_entry = next(entry for entry in result["stock"] if entry["id"] == first_entry["id"])
+    expected_cost = _taxed_price(remaining_entry["base_price"], node.pressure, result["items_bought"])
+    assert remaining_entry["cost"] == expected_cost
+    assert remaining_entry["tax"] == expected_cost - remaining_entry["base_price"]
 
 
 @pytest.fixture()
