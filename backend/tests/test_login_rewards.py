@@ -150,3 +150,45 @@ def test_calculate_daily_rdr_bonus_diminishing(extra_rooms, streak, expected):
     rooms_completed = login_rewards.ROOMS_REQUIRED + extra_rooms
     bonus = login_rewards._calculate_daily_rdr_bonus(rooms_completed, streak)
     assert bonus == pytest.approx(expected)
+
+
+@pytest.mark.asyncio
+async def test_party_load_applies_daily_bonus_and_resets(app_with_db):
+    app, _ = app_with_db
+
+    await _initialize_state()
+
+    current_time = datetime.now(tz=PT)
+    await login_rewards.get_login_reward_status(now=current_time)
+
+    start = await start_run(["player"])
+    run_id = start["run_id"]
+
+    from runs.party_manager import load_party as load_party_sync
+    from runs.party_manager import save_party as save_party_sync
+
+    initial_party = load_party_sync(run_id)
+    base_rdr = getattr(initial_party, "base_rdr", initial_party.rdr)
+
+    for offset in range(login_rewards.ROOMS_REQUIRED + 2):
+        await login_rewards.record_room_completion(
+            now=current_time + timedelta(minutes=offset + 1)
+        )
+
+    status = await login_rewards.get_login_reward_status(
+        now=current_time + timedelta(hours=1)
+    )
+    daily_bonus = status["daily_rdr_bonus"]
+    assert daily_bonus > 0.0
+
+    boosted_party = load_party_sync(run_id)
+    assert getattr(boosted_party, "login_rdr_bonus", None) == pytest.approx(daily_bonus)
+    assert boosted_party.rdr == pytest.approx(base_rdr + daily_bonus)
+
+    save_party_sync(run_id, boosted_party)
+
+    await login_rewards.get_login_reward_status(now=current_time + timedelta(days=1))
+
+    reset_party = load_party_sync(run_id)
+    assert getattr(reset_party, "login_rdr_bonus", None) == pytest.approx(0.0)
+    assert reset_party.rdr == pytest.approx(base_rdr)

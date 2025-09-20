@@ -10,6 +10,7 @@ from datetime import timedelta
 import json
 import math
 import random
+import threading
 from typing import Any
 from zoneinfo import ZoneInfo
 
@@ -29,6 +30,7 @@ DAILY_RDR_DIMINISHING_FACTOR = 10.0
 DAILY_RDR_BASE_CHUNK = 1.0
 
 STATE_LOCK = asyncio.Lock()
+STATE_THREAD_LOCK = threading.RLock()
 
 
 def _as_positive_int(value: Any, default: int = 0) -> int:
@@ -231,12 +233,13 @@ def _parse_date(value: str | None) -> date | None:
 
 
 def _load_state_sync() -> dict[str, Any]:
-    with get_save_manager().connection() as conn:
-        conn.execute(
-            "CREATE TABLE IF NOT EXISTS options (key TEXT PRIMARY KEY, value TEXT)"
-        )
-        cur = conn.execute("SELECT value FROM options WHERE key = ?", (STATE_KEY,))
-        row = cur.fetchone()
+    with STATE_THREAD_LOCK:
+        with get_save_manager().connection() as conn:
+            conn.execute(
+                "CREATE TABLE IF NOT EXISTS options (key TEXT PRIMARY KEY, value TEXT)"
+            )
+            cur = conn.execute("SELECT value FROM options WHERE key = ?", (STATE_KEY,))
+            row = cur.fetchone()
     if row and row[0]:
         try:
             data = json.loads(row[0])
@@ -249,14 +252,15 @@ def _load_state_sync() -> dict[str, Any]:
 
 def _save_state_sync(state: dict[str, Any]) -> None:
     payload = json.dumps(state)
-    with get_save_manager().connection() as conn:
-        conn.execute(
-            "CREATE TABLE IF NOT EXISTS options (key TEXT PRIMARY KEY, value TEXT)"
-        )
-        conn.execute(
-            "INSERT OR REPLACE INTO options (key, value) VALUES (?, ?)",
-            (STATE_KEY, payload),
-        )
+    with STATE_THREAD_LOCK:
+        with get_save_manager().connection() as conn:
+            conn.execute(
+                "CREATE TABLE IF NOT EXISTS options (key TEXT PRIMARY KEY, value TEXT)"
+            )
+            conn.execute(
+                "INSERT OR REPLACE INTO options (key, value) VALUES (?, ?)",
+                (STATE_KEY, payload),
+            )
 
 
 async def _load_state() -> LoginRewardState:
@@ -443,4 +447,15 @@ async def get_daily_rdr_bonus(now: datetime | None = None) -> float:
         changed = _refresh_state(state, current_time, mark_login=False)
         if changed:
             await _save_state(state)
+        return _get_daily_rdr_bonus_value(state)
+
+
+def get_daily_rdr_bonus_sync(now: datetime | None = None) -> float:
+    current_time = _ensure_timezone(now)
+    with STATE_THREAD_LOCK:
+        raw_state = _load_state_sync()
+        state = LoginRewardState.from_dict(raw_state)
+        changed = _refresh_state(state, current_time, mark_login=False)
+        if changed:
+            _save_state_sync(state.to_dict())
         return _get_daily_rdr_bonus_value(state)
