@@ -9,11 +9,9 @@
 
 <style>
   .rewards-side-panel {
-    position: absolute;
-    left: calc(1.2rem + 420px + 2rem);
-    top: calc(var(--ui-top-offset) + 1.2rem);
+    position: relative;
     width: 360px;
-    height: 70%;
+    height: 100%;
     display: flex;
     flex-direction: column;
     gap: 0.6rem;
@@ -22,7 +20,7 @@
     border: var(--glass-border);
     backdrop-filter: var(--glass-filter);
     padding: 0.8rem;
-    z-index: 10;
+    box-sizing: border-box;
     overflow-y: auto;
   }
 
@@ -35,11 +33,9 @@
   @media (max-width: 599px) {
     .rewards-side-panel {
       position: relative;
-      left: 0;
-      top: 0;
       width: 100%;
       height: auto;
-      margin: 0.75rem 0 0 0;
+      margin: 0.5rem 0 0 0;
     }
   }
 </style>

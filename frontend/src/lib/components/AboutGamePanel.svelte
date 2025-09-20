@@ -86,11 +86,9 @@
 
 <style>
   .about-panel {
-    position: absolute;
-    left: 1.2rem;
-    top: calc(var(--ui-top-offset) + 1.2rem);
+    position: relative;
     width: 320px;
-    height: 70%;
+    height: 100%;
     display: flex;
     flex-direction: column;
     gap: 1rem;
@@ -99,7 +97,7 @@
     border: var(--glass-border);
     backdrop-filter: var(--glass-filter);
     padding: 1rem;
-    z-index: 10;
+    box-sizing: border-box;
     overflow-y: auto;
   }
 
@@ -230,10 +228,7 @@
   }
 
   @media (max-width: 768px) {
-    .about-panel {
-      width: 280px;
-      left: 0.8rem;
-    }
+    .about-panel { width: 280px; }
   }
 
   @media (max-width: 599px) {
@@ -241,9 +236,7 @@
       position: relative;
       width: 100%;
       height: auto;
-      left: 0;
-      top: 0;
-      margin: 1rem 0;
+      margin: 0.5rem 0 0 0;
     }
     .internal-divider { margin: 0.6rem 0; }
   }

@@ -247,6 +247,40 @@
     height: 100%;
     background: linear-gradient(red, green);
   }
+
+  /* Home panels (About + Daily Rewards) aligned without hardcoded offsets */
+  .home-panels {
+    position: absolute;
+    top: calc(var(--ui-top-offset) + 1.2rem);
+    left: 1.2rem;
+    display: grid;
+    grid-auto-flow: column;
+    grid-template-columns: 320px 360px;
+    gap: 2.4rem; /* add breathing room between panels */
+    align-items: start;
+    height: 70%;
+    pointer-events: none; /* let inner panels handle interactions */
+  }
+  .home-panels > :global(*) {
+    pointer-events: auto;
+  }
+  @media (max-width: 1024px) {
+    .home-panels { grid-template-columns: 300px 340px; gap: 1.6rem; }
+  }
+  @media (max-width: 599px) {
+    .home-panels {
+      position: relative;
+      top: 0;
+      left: 0;
+      display: grid;
+      grid-auto-flow: row;
+      grid-template-columns: 1fr;
+      height: auto;
+      gap: 0.75rem;
+      width: 100%;
+      padding: 0 0.25rem;
+    }
+  }
 </style>
 
 <div class="viewport-wrap">
@@ -278,8 +312,10 @@
     {/if}
     {#if $overlayView === 'main' && !battleActive && !rewardOpen && !reviewOpen}
       <MainMenu {items} />
-      <AboutGamePanel {userState} />
-      <RewardsSidePanel />
+      <div class="home-panels">
+        <AboutGamePanel {userState} />
+        <RewardsSidePanel />
+      </div>
     {/if}
     {#if runId && roomData && !(((roomData.result === 'battle') || (roomData.result === 'boss')) && !battleActive)}
       <RoomView result={roomData.result} foes={roomData.foes} party={roomData.party} activeId={roomData.active_id} />
