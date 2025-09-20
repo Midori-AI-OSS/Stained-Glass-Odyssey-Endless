@@ -80,12 +80,7 @@
     </div>
   </div>
 
-  <div class="internal-divider" aria-hidden="true"></div>
-
-  <!-- Daily Login Rewards anchored to bottom half of panel -->
-  <div class="rewards-section">
-    <LoginRewardsPanel embedded={true} flat={true} />
-  </div>
+  <!-- Daily Login Rewards moved to separate panel -->
 
 </div>
 
@@ -129,6 +124,8 @@
     display: flex;
     flex-direction: column;
     gap: 0.3rem;
+    position: relative; /* ensure a new stacking context separate from stats */
+    z-index: 0;
   }
 
   .section-title {

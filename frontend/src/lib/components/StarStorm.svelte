@@ -20,13 +20,13 @@
   }
 
   const orbDescriptors = [
-    { id: 'zenith', x: 18, y: 24, radius: 260, drift: 56, delay: 0, base: 'light' },
-    { id: 'aurora', x: 68, y: 18, radius: 220, drift: 64, delay: 8, base: 'wind' },
-    { id: 'ember', x: 32, y: 64, radius: 200, drift: 52, delay: 14, base: 'fire' },
-    { id: 'tide', x: 80, y: 68, radius: 280, drift: 70, delay: 20, base: 'ice' },
-    { id: 'umbra', x: 12, y: 76, radius: 240, drift: 60, delay: 11, base: 'dark' },
-    { id: 'volt', x: 48, y: 40, radius: 170, drift: 48, delay: 5, base: 'lightning' },
-    { id: 'bloom', x: 56, y: 82, radius: 190, drift: 74, delay: 25, base: '#ff9fcc' }
+    { id: 'zenith', x: 18, y: 24, radius: 450, drift: 56, delay: 0, base: 'light' },
+    { id: 'aurora', x: 68, y: 18, radius: 425, drift: 64, delay: 8, base: 'wind' },
+    { id: 'ember', x: 32, y: 64, radius: 496, drift: 52, delay: 14, base: 'fire' },
+    { id: 'tide', x: 80, y: 68, radius: 415, drift: 70, delay: 20, base: 'ice' },
+    { id: 'umbra', x: 12, y: 76, radius: 430, drift: 60, delay: 11, base: 'dark' },
+    { id: 'volt', x: 48, y: 40, radius: 455, drift: 48, delay: 5, base: 'lightning' },
+    { id: 'bloom', x: 56, y: 82, radius: 461, drift: 74, delay: 25, base: '#ff9fcc' }
   ];
 
   const orbs = orbDescriptors.map((descriptor, index) => ({

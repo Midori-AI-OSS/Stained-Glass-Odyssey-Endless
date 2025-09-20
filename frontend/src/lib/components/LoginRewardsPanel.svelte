@@ -329,12 +329,14 @@
 
   /* Embedded variant for use inside side panels */
   .login-reward-panel.embedded {
-    position: relative;
-    top: auto;
-    left: auto;
-    transform: none;
-    width: 100%;
-    z-index: auto;
+    /* In embedded mode, force normal document flow and neutral stacking */
+    position: static !important;
+    top: auto !important;
+    left: auto !important;
+    transform: none !important;
+    width: 100% !important;
+    z-index: auto !important;
+    margin-top: 0.25rem;
   }
 
   /* Flat variant removes outer glass container visuals */

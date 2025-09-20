@@ -14,6 +14,7 @@
   import MainMenu from './MainMenu.svelte';
   import LoginRewardsPanel from './LoginRewardsPanel.svelte';
   import AboutGamePanel from './AboutGamePanel.svelte';
+  import RewardsSidePanel from './RewardsSidePanel.svelte';
   import {
     loadInitialState,
     mapSelectedParty,
@@ -278,6 +279,7 @@
     {#if $overlayView === 'main' && !battleActive && !rewardOpen && !reviewOpen}
       <MainMenu {items} />
       <AboutGamePanel {userState} />
+      <RewardsSidePanel />
     {/if}
     {#if runId && roomData && !(((roomData.result === 'battle') || (roomData.result === 'boss')) && !battleActive)}
       <RoomView result={roomData.result} foes={roomData.foes} party={roomData.party} activeId={roomData.active_id} />
