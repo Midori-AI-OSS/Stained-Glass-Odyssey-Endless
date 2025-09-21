@@ -1,5 +1,4 @@
 import importlib.util
-
 from pathlib import Path
 from unittest.mock import patch
 
@@ -108,7 +107,7 @@ async def test_pull_five_star_duplicate(app_with_db):
 
 
 @pytest.mark.asyncio
-async def test_duplicate_pull_awards_upgrade_points(app_with_db):
+async def test_duplicate_pull_awards_stat_levels(app_with_db):
     app, db_path = app_with_db
     client = app.test_client()
 
@@ -143,21 +142,33 @@ async def test_duplicate_pull_awards_upgrade_points(app_with_db):
         resp = await client.post("/gacha/pull", json={"count": 1})
 
     data = await resp.get_json()
-    assert data["results"][0]["upgrade_points_awarded"] == 100
+    from routes.players import UPGRADEABLE_STATS
+
+    awarded = data["results"][0].get("stat_levels_awarded")
+    assert awarded == len(UPGRADEABLE_STATS) * 5
 
     conn = sqlcipher3.connect(db_path)
     try:
         conn.execute("PRAGMA key = 'testkey'")
         cur = conn.execute(
-            "SELECT points FROM player_upgrade_points WHERE player_id = ?",
+            """
+            SELECT stat_name, COUNT(*)
+            FROM player_stat_upgrades
+            WHERE player_id = ?
+            GROUP BY stat_name
+            """,
             (char_id,),
         )
-        row = cur.fetchone()
+        counts = {row[0]: int(row[1]) for row in cur.fetchall()}
+        for stat in UPGRADEABLE_STATS:
+            assert counts.get(stat, 0) == 5
+
+        cur = conn.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='player_upgrade_points'",
+        )
+        assert cur.fetchone() is None
     finally:
         conn.close()
-
-    assert row is not None
-    assert row[0] == 100
 
 
 @pytest.mark.asyncio
@@ -207,7 +218,8 @@ async def test_expired_banners_pick_owned_and_unowned(app_with_db, monkeypatch):
 
     manager = app_module.GachaManager(app_module.get_save_manager())
 
-    from autofighter.gacha import FIVE_STAR, SIX_STAR
+    from autofighter.gacha import FIVE_STAR
+    from autofighter.gacha import SIX_STAR
 
     featured_pool = list(dict.fromkeys([*FIVE_STAR, *SIX_STAR]))
     if len(featured_pool) < 2:

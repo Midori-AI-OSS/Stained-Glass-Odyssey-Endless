@@ -535,7 +535,7 @@ def _backfill_upgrade_costs(conn) -> None:
 
     cur = conn.execute(
         """
-        SELECT id, player_id, stat_name, upgrade_percent, cost_spent
+        SELECT id, player_id, stat_name, upgrade_percent, cost_spent, source_star
         FROM player_stat_upgrades
         ORDER BY player_id ASC, stat_name ASC, created_at ASC, id ASC
         """
@@ -545,13 +545,22 @@ def _backfill_upgrade_costs(conn) -> None:
     stat_counts: dict[tuple[str, str], int] = {}
 
     for row in cur.fetchall():
-        upgrade_id, player_id, stat_name, upgrade_percent, cost_spent = row
+        upgrade_id, player_id, stat_name, upgrade_percent, cost_spent, source_star = row
 
         if not player_id or not stat_name:
             continue
 
         key = (str(player_id), str(stat_name))
         upgrade_count = stat_counts.get(key, 0)
+
+        try:
+            source_value = int(source_star)
+        except (TypeError, ValueError):
+            source_value = 1
+
+        if source_value <= 0:
+            stat_counts[key] = upgrade_count + 1
+            continue
 
         if cost_spent and cost_spent > 0:
             stat_counts[key] = upgrade_count + 1
@@ -625,6 +634,12 @@ def _ensure_upgrade_tables(conn) -> None:
 
     cur = conn.execute("PRAGMA table_info(player_stat_upgrades)")
     columns = {row[1] for row in cur.fetchall()}
+    has_source_star = "source_star" in columns
+    if not has_source_star:
+        conn.execute(
+            "ALTER TABLE player_stat_upgrades ADD COLUMN source_star INTEGER NOT NULL DEFAULT 0"
+        )
+        has_source_star = True
     needs_backfill = False
     if "cost_spent" not in columns:
         conn.execute(
@@ -633,9 +648,19 @@ def _ensure_upgrade_tables(conn) -> None:
         needs_backfill = True
 
     if not needs_backfill:
-        cur = conn.execute(
-            "SELECT 1 FROM player_stat_upgrades WHERE cost_spent <= 0 LIMIT 1"
-        )
+        if has_source_star:
+            cur = conn.execute(
+                """
+                SELECT 1
+                FROM player_stat_upgrades
+                WHERE (cost_spent IS NULL OR cost_spent <= 0) AND source_star > 0
+                LIMIT 1
+                """
+            )
+        else:
+            cur = conn.execute(
+                "SELECT 1 FROM player_stat_upgrades WHERE cost_spent <= 0 LIMIT 1"
+            )
         needs_backfill = cur.fetchone() is not None
 
     if needs_backfill:
@@ -699,6 +724,9 @@ def _determine_next_costs(stat_upgrades: List[Dict], element_key: str) -> Dict[s
             raw_cost = upgrade.get("cost_spent")
             if raw_cost in (None, 0):
                 raw_cost = upgrade.get("materials_spent")
+            if raw_cost in (None, 0):
+                percent_value = float(upgrade.get("upgrade_percent") or 0.0)
+                raw_cost = int(round(percent_value * 1000))
             last_costs[stat_name] = int(raw_cost or 0)
         except (TypeError, ValueError):
             last_costs[stat_name] = 0
@@ -722,12 +750,28 @@ def _determine_next_costs(stat_upgrades: List[Dict], element_key: str) -> Dict[s
 
 
 def _get_next_cost_for_stat(player_id: str, stat_name: str, *, conn=None) -> int:
+    def _resolve_last_cost(row) -> int:
+        if not row:
+            return 0
+        cost_spent, upgrade_percent = row
+        try:
+            if cost_spent and int(cost_spent) > 0:
+                return int(cost_spent)
+        except (TypeError, ValueError):
+            pass
+        try:
+            percent_value = float(upgrade_percent or 0.0)
+        except (TypeError, ValueError):
+            percent_value = 0.0
+        estimated = int(round(percent_value * 1000))
+        return max(0, estimated)
+
     if conn is None:
         with get_save_manager().connection() as local_conn:
             _ensure_upgrade_tables(local_conn)
             cur = local_conn.execute(
                 """
-                SELECT cost_spent
+                SELECT cost_spent, upgrade_percent
                 FROM player_stat_upgrades
                 WHERE player_id = ? AND stat_name = ?
                 ORDER BY created_at DESC, id DESC
@@ -735,13 +779,12 @@ def _get_next_cost_for_stat(player_id: str, stat_name: str, *, conn=None) -> int
                 """,
                 (player_id, stat_name),
             )
-            row = cur.fetchone()
-            last_cost = int(row[0]) if row and row[0] is not None else 0
+            last_cost = _resolve_last_cost(cur.fetchone())
             return _calculate_next_cost(last_cost)
 
     cur = conn.execute(
         """
-        SELECT cost_spent
+        SELECT cost_spent, upgrade_percent
         FROM player_stat_upgrades
         WHERE player_id = ? AND stat_name = ?
         ORDER BY created_at DESC, id DESC
@@ -749,8 +792,7 @@ def _get_next_cost_for_stat(player_id: str, stat_name: str, *, conn=None) -> int
         """,
         (player_id, stat_name),
     )
-    row = cur.fetchone()
-    last_cost = int(row[0]) if row and row[0] is not None else 0
+    last_cost = _resolve_last_cost(cur.fetchone())
     return _calculate_next_cost(last_cost)
 
 

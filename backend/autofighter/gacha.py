@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import math
 import random
 import time
 from typing import Any
@@ -30,6 +31,24 @@ def _build_pools() -> tuple[list[str], list[str]]:
 FIVE_STAR, SIX_STAR = _build_pools()
 ELEMENTS = [e.lower() for e in ALL_DAMAGE_TYPES]
 
+UPGRADEABLE_STATS = [
+    "max_hp",
+    "atk",
+    "defense",
+    "crit_rate",
+    "crit_damage",
+    "vitality",
+    "mitigation",
+]
+FREE_DUPLICATE_LEVELS_PER_STAT = 5
+FREE_DUPLICATE_SOURCE_STAR = 0
+
+
+def _calculate_next_cost(last_cost: int | None) -> int:
+    if not last_cost or last_cost < 1:
+        return 1
+    return max(1, math.ceil(last_cost * 1.05))
+
 
 @dataclass
 class PullResult:
@@ -37,7 +56,7 @@ class PullResult:
     id: str
     rarity: int
     stacks: int | None = None
-    upgrade_points_awarded: int | None = None
+    stat_levels_awarded: int | None = None
 
 
 @dataclass
@@ -377,8 +396,91 @@ class GachaManager:
         self._set_items(items)
         return items
 
+    def _ensure_stat_upgrade_table(self, conn) -> None:
+        conn.execute(
+            """
+            CREATE TABLE IF NOT EXISTS player_stat_upgrades (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                player_id TEXT NOT NULL,
+                stat_name TEXT NOT NULL,
+                upgrade_percent REAL NOT NULL,
+                source_star INTEGER NOT NULL,
+                cost_spent INTEGER NOT NULL DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+            """
+        )
+        cur = conn.execute("PRAGMA table_info(player_stat_upgrades)")
+        columns = {row[1] for row in cur.fetchall()}
+        if "source_star" not in columns:
+            conn.execute(
+                "ALTER TABLE player_stat_upgrades ADD COLUMN source_star INTEGER NOT NULL DEFAULT 0"
+            )
+        if "cost_spent" not in columns:
+            conn.execute(
+                "ALTER TABLE player_stat_upgrades ADD COLUMN cost_spent INTEGER NOT NULL DEFAULT 0"
+            )
+
+    def _get_last_upgrade_cost(self, conn, cid: str, stat: str) -> int:
+        cur = conn.execute(
+            """
+            SELECT cost_spent, upgrade_percent
+            FROM player_stat_upgrades
+            WHERE player_id = ? AND stat_name = ?
+            ORDER BY created_at DESC, id DESC
+            LIMIT 1
+            """,
+            (cid, stat),
+        )
+        row = cur.fetchone()
+        if not row:
+            return 0
+        cost_spent, upgrade_percent = row
+        try:
+            if cost_spent and int(cost_spent) > 0:
+                return int(cost_spent)
+        except (TypeError, ValueError):
+            cost_spent = None
+        try:
+            percent_value = float(upgrade_percent or 0.0)
+        except (TypeError, ValueError):
+            percent_value = 0.0
+        estimated_cost = int(round(percent_value * 1000))
+        return max(0, estimated_cost)
+
+    def _grant_duplicate_stat_levels(self, conn, cid: str) -> int:
+        self._ensure_stat_upgrade_table(conn)
+        total_levels = 0
+        for stat in UPGRADEABLE_STATS:
+            last_cost = self._get_last_upgrade_cost(conn, cid, stat)
+            for _ in range(FREE_DUPLICATE_LEVELS_PER_STAT):
+                next_cost = _calculate_next_cost(last_cost)
+                upgrade_percent = float(next_cost) * 0.001
+                conn.execute(
+                    """
+                    INSERT INTO player_stat_upgrades (
+                        player_id,
+                        stat_name,
+                        upgrade_percent,
+                        source_star,
+                        cost_spent
+                    )
+                    VALUES (?, ?, ?, ?, ?)
+                    """,
+                    (
+                        cid,
+                        stat,
+                        upgrade_percent,
+                        FREE_DUPLICATE_SOURCE_STAR,
+                        0,
+                    ),
+                )
+                total_levels += 1
+                last_cost = next_cost
+        return total_levels
+
     def _add_character(self, cid: str) -> tuple[int, int]:
-        bonus_points = 0
+        bonus_levels = 0
         with self.save.connection() as conn:
             conn.execute(
                 "INSERT OR IGNORE INTO owned_players (id) VALUES (?)",
@@ -395,26 +497,8 @@ class GachaManager:
                 (cid, stacks),
             )
             if duplicate:
-                conn.execute(
-                    """
-                    CREATE TABLE IF NOT EXISTS player_upgrade_points (
-                        player_id TEXT PRIMARY KEY,
-                        points INTEGER NOT NULL DEFAULT 0
-                    )
-                    """
-                )
-                conn.execute(
-                    """
-                    INSERT OR REPLACE INTO player_upgrade_points (player_id, points)
-                    VALUES (
-                        ?,
-                        COALESCE((SELECT points FROM player_upgrade_points WHERE player_id = ?), 0) + ?
-                    )
-                    """,
-                    (cid, cid, 100),
-                )
-                bonus_points = 100
-        return stacks, bonus_points
+                bonus_levels = self._grant_duplicate_stat_levels(conn, cid)
+        return stacks, bonus_levels
 
     def _get_owned(self) -> set[str]:
         with self.save.connection() as conn:
@@ -478,7 +562,7 @@ class GachaManager:
                 else:
                     pool = [c for c in SIX_STAR if c not in owned]
                     cid = random.choice(pool or SIX_STAR)
-                stacks, bonus_points = self._add_character(cid)
+                stacks, stat_levels = self._add_character(cid)
                 owned.add(cid)
                 results.append(
                     PullResult(
@@ -486,7 +570,7 @@ class GachaManager:
                         cid,
                         6,
                         stacks,
-                        bonus_points or None,
+                        stat_levels or None,
                     )
                 )
                 pity = 0
@@ -505,7 +589,7 @@ class GachaManager:
                 else:
                     pool = [c for c in FIVE_STAR if c not in owned]
                     cid = random.choice(pool or FIVE_STAR)
-                stacks, bonus_points = self._add_character(cid)
+                stacks, stat_levels = self._add_character(cid)
                 owned.add(cid)
                 results.append(
                     PullResult(
@@ -513,7 +597,7 @@ class GachaManager:
                         cid,
                         5,
                         stacks,
-                        bonus_points or None,
+                        stat_levels or None,
                     )
                 )
                 pity = 0
