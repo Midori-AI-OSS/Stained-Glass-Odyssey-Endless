@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import logging
+import math
 from typing import Any
 
 from autofighter.effects import create_stat_buff
@@ -27,6 +28,25 @@ def _describe_passives(obj: Stats | list[str]) -> list[dict[str, Any]]:
         temp.passives = obj
         return registry.describe(temp)
     return registry.describe(obj)
+
+
+def _extract_base_rdr(party: Party) -> float:
+    try:
+        current_rdr = float(getattr(party, "rdr", 1.0))
+    except (TypeError, ValueError):
+        current_rdr = 1.0
+
+    try:
+        bonus_value = float(getattr(party, "login_rdr_bonus", 0.0))
+    except (TypeError, ValueError):
+        bonus_value = 0.0
+
+    base_rdr = current_rdr - bonus_value
+    if not math.isfinite(base_rdr):
+        base_rdr = 1.0
+    base_rdr = max(base_rdr, 0.0)
+    setattr(party, "base_rdr", base_rdr)
+    return base_rdr
 
 def _load_character_customization(pid: str) -> dict[str, int]:
     """Load saved stat allocations for a character."""
@@ -268,13 +288,31 @@ def load_party(run_id: str) -> Party:
                 apply_status_hooks(inst)
                 members.append(inst)
                 break
+    stored_rdr_raw = data.get("rdr", 1.0)
+    try:
+        stored_rdr = float(stored_rdr_raw)
+    except (TypeError, ValueError):
+        stored_rdr = 1.0
+
+    try:
+        from services.login_reward_service import (
+            get_daily_rdr_bonus_sync,  # local import to avoid circular dependency
+        )
+
+        daily_bonus = float(get_daily_rdr_bonus_sync())
+    except Exception:
+        log.exception("Failed to resolve daily RDR bonus; falling back to base value")
+        daily_bonus = 0.0
+
     party = Party(
         members=members,
         gold=data.get("gold", 0),
         relics=data.get("relics", []),
         cards=data.get("cards", []),
-        rdr=data.get("rdr", 1.0),
+        rdr=stored_rdr + daily_bonus,
     )
+    setattr(party, "login_rdr_bonus", daily_bonus)
+    setattr(party, "base_rdr", stored_rdr)
     return party
 
 def save_party(run_id: str, party: Party) -> None:
@@ -297,7 +335,7 @@ def save_party(run_id: str, party: Party) -> None:
             "exp": {m.id: m.exp for m in party.members},
             "level": {m.id: m.level for m in party.members},
             "exp_multiplier": {m.id: m.exp_multiplier for m in party.members},
-            "rdr": party.rdr,
+            "rdr": _extract_base_rdr(party),
             "player": snapshot,
         }
         conn.execute(
