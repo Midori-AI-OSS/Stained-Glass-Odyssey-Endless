@@ -28,6 +28,7 @@
     stopGameMusic,
   } from '../systems/viewportState.js';
   import { rewardOpen as computeRewardOpen } from '../systems/viewportState.js';
+  import { getThemeSettings, THEMES } from '../systems/settingsStorage.js';
   import { overlayView } from '../systems/OverlayController.js';
 
   export let runId = '';
@@ -99,19 +100,28 @@
 
   let lastMusicKey = '';
 
-  // Compute a global accent color from the user's global level and
-  // use it as the outline for the full WebUI. This keeps a consistent
-  // visual theme tied to progression.
-  function levelToAccent(level) {
-    try {
-      const lv = Math.max(1, Number(level) || 1);
-      const hue = (lv * 12) % 360; // cycle hues as level increases
-      return `hsl(${hue} 85% 55%)`;
-    } catch {
-      return '#8ac';
+  // Compute accent color based on theme settings, with fallback to level-based color
+  function getAccentColor(userLevel) {
+    const themeSettings = getThemeSettings();
+    const selectedTheme = THEMES[themeSettings.selected] || THEMES.default;
+    
+    if (selectedTheme.accent === 'level-based') {
+      // Use original level-to-hue logic for default theme
+      try {
+        const lv = Math.max(1, Number(userLevel) || 1);
+        const hue = (lv * 12) % 360; // cycle hues as level increases
+        return `hsl(${hue} 85% 55%)`;
+      } catch {
+        return '#8ac';
+      }
+    } else if (themeSettings.selected === 'custom') {
+      return themeSettings.customAccent || '#8ac';
+    } else {
+      return selectedTheme.accent || '#8ac';
     }
   }
-  $: accentColor = levelToAccent(userState?.level || 1);
+  
+  $: accentColor = getAccentColor(userState?.level || 1);
   $: levelProgress = (() => {
     const exp = Number(userState?.exp || 0);
     const next = Number(userState?.next_level_exp || 0) || 0;

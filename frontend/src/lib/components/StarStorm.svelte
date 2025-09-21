@@ -1,8 +1,13 @@
 <script>
   import { getElementColor } from '../systems/assetLoader.js';
+  import { getMotionSettings } from '../systems/settingsStorage.js';
 
   export let color = '';
-  export let reducedMotion = false;
+  export let reducedMotion = false; // Legacy prop for backward compatibility
+
+  // Check both legacy prop and new granular settings
+  $: motionSettings = getMotionSettings();
+  $: isStarStormDisabled = reducedMotion || motionSettings.globalReducedMotion || motionSettings.disableStarStorm;
 
   const fallbackTint = '#88a';
   const fallbackPalette = ['#7eb8ff', '#ff9f9f', '#b58dff', '#7fe8c9', '#ffe694', '#94a7ff', '#ffb7df', '#8fe3ff'];
@@ -39,11 +44,11 @@
 
 <div
   class="storm"
-  class:storm--reduced={reducedMotion}
+  class:storm--reduced={isStarStormDisabled}
   aria-hidden="true"
   style={`--storm-tint:${tintColor};`}
 >
-  {#if reducedMotion}
+  {#if isStarStormDisabled}
     <div class="storm__veil"></div>
   {:else}
     {#each orbs as orb (orb.id)}

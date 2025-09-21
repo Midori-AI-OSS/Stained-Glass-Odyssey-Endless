@@ -19,3 +19,5 @@ Coder, expand the WebUI settings to support theming and granular motion control.
 - Do not regress keyboard navigation: all new controls must be reachable via tab order and have accessible labels.
 
 Task ready for implementation.
+
+ready to review
