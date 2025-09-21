@@ -1,3 +1,4 @@
+import contextlib
 from dataclasses import dataclass
 from dataclasses import field
 
@@ -29,11 +30,18 @@ class SwiftFootwork(CardBase):
                     member.effect_manager = mgr
 
                 for mod in list(getattr(mgr, "mods", [])):
-                    if getattr(mod, "id", "") == burst_id:
+                    if getattr(mod, "id", "") != burst_id:
+                        continue
+
+                    with contextlib.suppress(Exception):
                         mod.remove()
+
+                    with contextlib.suppress(ValueError):
                         mgr.mods.remove(mod)
-                        if burst_id in getattr(member, "mods", []):
-                            member.mods.remove(burst_id)
+
+                mods_list = getattr(member, "mods", None)
+                if isinstance(mods_list, list):
+                    mods_list[:] = [mid for mid in mods_list if mid != burst_id]
 
                 burst = create_stat_buff(
                     member,
@@ -56,4 +64,29 @@ class SwiftFootwork(CardBase):
                 )
 
         BUS.subscribe("battle_start", _battle_start)
+
+        async def _battle_end(*_args) -> None:
+            for member in party.members:
+                mgr = getattr(member, "effect_manager", None)
+                if mgr is None:
+                    continue
+
+                for mod in list(getattr(mgr, "mods", [])):
+                    if getattr(mod, "id", "") != burst_id:
+                        continue
+
+                    with contextlib.suppress(Exception):
+                        mod.remove()
+
+                    with contextlib.suppress(ValueError):
+                        mgr.mods.remove(mod)
+
+                mods_list = getattr(member, "mods", None)
+                if isinstance(mods_list, list):
+                    mods_list[:] = [mid for mid in mods_list if mid != burst_id]
+
+            BUS.unsubscribe("battle_start", _battle_start)
+            BUS.unsubscribe("battle_end", _battle_end)
+
+        BUS.subscribe("battle_end", _battle_end)
 

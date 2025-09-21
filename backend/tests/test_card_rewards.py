@@ -10,9 +10,10 @@ import sqlcipher3
 import autofighter.cards as cards_module
 from autofighter.cards import award_card
 from autofighter.party import Party
+import autofighter.rooms.battle.core as rooms_module
+import plugins.event_bus as event_bus_module
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
-import autofighter.rooms.battle.core as rooms_module
 from autofighter.stats import BUS
 from autofighter.stats import Stats
 from plugins.effects.critical_boost import CriticalBoost
@@ -198,12 +199,18 @@ async def test_iron_guard_defense_buff():
 
 @pytest.mark.asyncio
 async def test_swift_footwork_speed_burst():
+    event_bus_module.bus._subs.clear()
+    pre_battle_start = len(event_bus_module.bus._subs.get("battle_start", []))
+    pre_battle_end = len(event_bus_module.bus._subs.get("battle_end", []))
     member = Stats()
     base_spd = member.spd
     party = Party(members=[member])
     award_card(party, "swift_footwork")
     await cards_module.apply_cards(party)
     await asyncio.sleep(0)
+
+    assert len(event_bus_module.bus._subs.get("battle_start", [])) == pre_battle_start + 1
+    assert len(event_bus_module.bus._subs.get("battle_end", [])) == pre_battle_end + 1
 
     # Permanent SPD multiplier is applied on award
     assert member.spd == int(base_spd * 1.2)
@@ -223,6 +230,30 @@ async def test_swift_footwork_speed_burst():
     assert member.spd == int(base_spd * 1.5)
     assert "battle_start_spd_burst" in events
     assert "free_action" not in events
+
+    await BUS.emit_async("battle_end")
+    await asyncio.sleep(0.05)
+
+    burst_id = "swift_footwork_spd_burst"
+    mgr = getattr(member, "effect_manager", None)
+    assert mgr is not None
+    assert all(getattr(mod, "id", None) != burst_id for mod in getattr(mgr, "mods", []))
+    assert burst_id not in getattr(member, "mods", [])
+    assert member.spd == int(base_spd * 1.2)
+    assert len(event_bus_module.bus._subs.get("battle_start", [])) == pre_battle_start
+    assert len(event_bus_module.bus._subs.get("battle_end", [])) == pre_battle_end
+
+    await cards_module.apply_cards(party)
+    await asyncio.sleep(0)
+
+    assert len(event_bus_module.bus._subs.get("battle_start", [])) == pre_battle_start + 1
+    assert len(event_bus_module.bus._subs.get("battle_end", [])) == pre_battle_end + 1
+
+    await BUS.emit_async("battle_end")
+    await asyncio.sleep(0.05)
+
+    assert len(event_bus_module.bus._subs.get("battle_start", [])) == pre_battle_start
+    assert len(event_bus_module.bus._subs.get("battle_end", [])) == pre_battle_end
 
 
 @pytest.mark.asyncio
