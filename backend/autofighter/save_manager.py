@@ -6,7 +6,6 @@ import hashlib
 import os
 from pathlib import Path
 import sys
-import re
 
 # Handle platform-specific SQLite encryption imports
 if sys.platform == 'win32':

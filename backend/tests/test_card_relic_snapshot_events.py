@@ -1,14 +1,14 @@
-import sys
 from pathlib import Path
+import sys
 
 import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from autofighter.rooms.battle import turns as battle_turns
 from runs.lifecycle import battle_snapshots
 
 from autofighter.party import Party
+from autofighter.rooms.battle import turns as battle_turns
 from autofighter.rooms.battle.turns import prepare_snapshot_overlay
 from autofighter.rooms.battle.turns import register_snapshot_entities
 from autofighter.stats import BUS

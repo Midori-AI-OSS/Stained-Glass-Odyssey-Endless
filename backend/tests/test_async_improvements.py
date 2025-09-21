@@ -1,4 +1,5 @@
 import pytest
+
 #!/usr/bin/env python3
 """
 Simple test to verify async database operations work correctly.
