@@ -77,7 +77,15 @@
       } else {
         node.volume = dealSfx.volume;
       }
-      node.play();
+      node
+        .play()
+        .catch((error) => {
+          if (error?.name === 'AbortError') {
+            console.debug('PullResultsOverlay: playback aborted');
+          } else {
+            console.debug('PullResultsOverlay: playback failed', error);
+          }
+        });
     } catch {}
   }
 
