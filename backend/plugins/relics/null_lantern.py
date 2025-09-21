@@ -71,14 +71,14 @@ class NullLantern(RelicBase):
                         return
                     state["cleared"] += 1
                     party._null_lantern_cleared = state["cleared"]
-                    pull_reward = 1 + (current_stacks - 1)
+                    pull_reward = 1 + current_stacks
                     party.pull_tokens += pull_reward
 
                     # Track pull token generation
                     await BUS.emit_async("relic_effect", "null_lantern", entity, "pull_tokens_awarded", pull_reward, {
                         "battles_cleared": state["cleared"],
                         "base_tokens": 1,
-                        "stack_bonus": current_stacks - 1,
+                        "stack_bonus": current_stacks,
                         "disabled_shops": True,
                         "disabled_rests": True
                     })
@@ -107,7 +107,7 @@ class NullLantern(RelicBase):
             state["stacks"] = stacks
 
     def describe(self, stacks: int) -> str:
-        pulls = 1 + (stacks - 1)
+        pulls = 1 + stacks
         return (
             "Shops and rest rooms vanish. Foes grow stronger each fight; "
             f"each clear grants {pulls} pull{'s' if pulls != 1 else ''}."

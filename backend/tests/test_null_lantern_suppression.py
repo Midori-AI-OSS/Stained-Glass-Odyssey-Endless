@@ -142,9 +142,47 @@ async def test_null_lantern_awards_pull_tickets(monkeypatch):
     tickets = [item for item in loot_items if item.get("id") == "ticket"]
     assert tickets, "expected ticket entries from Null Lantern pulls"
 
+    expected_single_stack_reward = 1 + 1  # base + stacks (1 stack)
+    assert len(tickets) == expected_single_stack_reward
+
     manager = GachaManager(get_save_manager())
     items = manager._get_items()
-    assert items.get("ticket", 0) == len(tickets)
+    assert items.get("ticket", 0) == expected_single_stack_reward
 
     persisted_party = await asyncio.to_thread(load_party, run_id)
-    assert getattr(persisted_party, "pull_tokens", 0) == len(tickets)
+    assert getattr(persisted_party, "pull_tokens", 0) == expected_single_stack_reward
+
+    battle_tasks.pop(run_id, None)
+    battle_snapshots.pop(run_id, None)
+    initial_ticket_count = items.get("ticket", 0)
+
+    # Multi-stack regression coverage: ensure additional stacks award extra pulls
+    second_run_state = await start_run(["player"])
+    second_run_id = second_run_state["run_id"]
+
+    second_party = await asyncio.to_thread(load_party, second_run_id)
+    while second_party.relics.count("null_lantern") < 2:
+        second_party.relics.append("null_lantern")
+    stack_count = second_party.relics.count("null_lantern")
+    await asyncio.to_thread(save_party, second_run_id, second_party)
+
+    await battle_room(second_run_id, {})
+    second_task = battle_tasks[second_run_id]
+    await second_task
+
+    second_snapshot = battle_snapshots[second_run_id]
+    second_loot_items = second_snapshot.get("loot", {}).get("items", [])
+    second_tickets = [item for item in second_loot_items if item.get("id") == "ticket"]
+
+    expected_multi_stack_reward = 1 + stack_count
+    assert len(second_tickets) == expected_multi_stack_reward
+
+    second_manager = GachaManager(get_save_manager())
+    second_items = second_manager._get_items()
+    assert second_items.get("ticket", 0) == initial_ticket_count + expected_multi_stack_reward
+
+    second_persisted_party = await asyncio.to_thread(load_party, second_run_id)
+    assert getattr(second_persisted_party, "pull_tokens", 0) == expected_multi_stack_reward
+
+    battle_tasks.pop(second_run_id, None)
+    battle_snapshots.pop(second_run_id, None)
