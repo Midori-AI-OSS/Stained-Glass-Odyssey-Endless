@@ -2,24 +2,27 @@
   import { onDestroy } from 'svelte';
   import { getDamageTypeVisual } from '$lib/systems/assetLoader.js';
   import { motionStore } from '../systems/settingsStorage.js';
-
-  const RANDOM_OFFSETS = 120;
-  const BASE_DURATION = 900;
+  import { createFloaterTokens, deterministicVariation, EFFECT_TOKENS } from '../systems/animationTokens.js';
 
   export let events = [];
   export let reducedMotion = false; // Legacy prop for backward compatibility
   export let paceMs = 1200;
-  // Constant offsets (px) applied in addition to random X offset per floater
+  export let animationSpeed = 1; // Animation speed from settings
+  // Constant offsets (px) applied in addition to deterministic X offset per floater
   export let baseOffsetX = 0;
   export let baseOffsetY = -10;
   // Stagger additions within a batch so items show one-by-one
-  export let staggerMs = 140;
+  export let staggerMs = null; // Will use tokens if null
   // Map of entity id -> { x: fraction(0..1), y: fraction(0..1) } relative to the battle field
   export let anchors = {};
 
   // Check both legacy prop and new granular settings using reactive store
   $: motionSettings = $motionStore || { globalReducedMotion: false, disableFloatingDamage: false };
   $: isFloatingDamageDisabled = reducedMotion || motionSettings.globalReducedMotion || motionSettings.disableFloatingDamage;
+
+  // Create animation tokens for this component
+  $: floaterTokens = createFloaterTokens({ animationSpeed, motionSettings, pacingMs: paceMs });
+  $: effectiveStaggerMs = staggerMs ?? EFFECT_TOKENS.BATTLE_FLOATERS.STAGGER_STEP;
 
   let floaters = [];
   let counter = 0;
@@ -186,7 +189,7 @@
   }
 
   function scheduleRemoval(id, duration) {
-    const timeoutMs = Math.max(BASE_DURATION, Number(duration) || BASE_DURATION) + 100;
+    const timeoutMs = Math.max(floaterTokens.duration, Number(duration) || floaterTokens.duration) + 100;
     const handle = setTimeout(() => removeFloater(id), timeoutMs);
     timeouts.set(id, handle);
   }
@@ -202,8 +205,8 @@
 
   function pushEvents(list) {
     if (!Array.isArray(list) || list.length === 0) return;
-    const duration = Math.max(BASE_DURATION, Number(paceMs) || BASE_DURATION);
-    const step = Math.max(0, Math.min(Number(staggerMs) || 0, 2000));
+    const duration = floaterTokens.duration;
+    const step = Math.max(0, Math.min(Number(effectiveStaggerMs) || 0, 2000));
     list.forEach((raw, i) => {
       if (!raw || typeof raw !== 'object') return;
       const handle = setTimeout(() => {
@@ -219,8 +222,11 @@
         const showAmount = hasAmount && amount > 0;
         if (!showAmount && !label) return;
         const id = `${Date.now()}-${counter++}`;
-        const offset = Math.random() * RANDOM_OFFSETS - RANDOM_OFFSETS / 2;
         const target = String(raw.target_id || '');
+        
+        // Use deterministic offset based on target and event type for consistency
+        const offsetSeed = `${target}-${variant}-${amount}-${label}`;
+        const offset = deterministicVariation(offsetSeed, -EFFECT_TOKENS.BATTLE_FLOATERS.OFFSET_RANGE / 2, EFFECT_TOKENS.BATTLE_FLOATERS.OFFSET_RANGE / 2);
         const anchor = (anchors && target && anchors[target]) ? anchors[target] : null;
         const x = anchor && Number.isFinite(anchor.x) ? anchor.x : 0.5;
         const y = anchor && Number.isFinite(anchor.y) ? anchor.y : 0.52;
@@ -276,7 +282,7 @@
   {#each floaters as entry (entry.id)}
     <div
       class={`floater ${entry.tone} ${entry.variant} ${entry.critical ? 'critical' : ''}`}
-      style={`--accent: ${entry.color}; --offset: ${entry.offset}px; --x: ${entry.x}; --y: ${entry.y}; --floater-duration: ${Math.max(BASE_DURATION, Number(paceMs) || BASE_DURATION)}ms; --x-offset: ${Number(baseOffsetX) || 0}px; --y-offset: ${Number(baseOffsetY) || 0}px;`}
+      style={`--accent: ${entry.color}; --offset: ${entry.offset}px; --x: ${entry.x}; --y: ${entry.y}; --floater-duration: ${floaterTokens.durationMs}; --x-offset: ${Number(baseOffsetX) || 0}px; --y-offset: ${Number(baseOffsetY) || 0}px;`}
       on:animationend={() => handleAnimationEnd(entry)}
     >
       <div class="badge">

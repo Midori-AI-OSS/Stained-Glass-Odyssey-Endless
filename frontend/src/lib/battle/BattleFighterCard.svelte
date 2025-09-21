@@ -10,6 +10,7 @@
     advanceCharacterImage
   } from '../systems/assetLoader.js';
   import { motionStore } from '../systems/settingsStorage.js';
+  import { createPortraitEffectTokens } from '../systems/animationTokens.js';
 
   export let fighter = {};
   export let position = 'bottom'; // 'top' for foes, 'bottom' for party
@@ -17,6 +18,7 @@
   export let size = 'normal'; // 'normal' or 'small'
   export let sizePx = 0; // optional explicit pixel size override
   export let highlight = false; // glow when referenced (e.g., hovered in action queue)
+  export let animationSpeed = 1; // Animation speed from settings
 
   // Use granular motion settings for portrait glows
   $: motionSettings = $motionStore || { 
@@ -54,14 +56,16 @@
     : '';
   $: showLunaSwordArt = Boolean(isLunaSwordSummon && lunaSwordArtUrl);
 
-  // Rank-based outline animation (slow, subtle)
+  // Rank-based outline animation (slow, subtle) - using deterministic timing
   $: rankKey = String(fighter?.rank || '').toLowerCase().trim();
   $: isPrimeRank = rankKey.includes('prime');
   $: isBossRank = rankKey.includes('boss');
-  // Very slow base duration (~150s) with slight per-instance variation and offset
-  const BASE_OUTLINE_SEC = 150;
-  let outlineAnimDur = `${(BASE_OUTLINE_SEC * (0.88 + Math.random() * 0.24)).toFixed(2)}s`;
-  let outlineAnimDelay = `${(Math.random() * BASE_OUTLINE_SEC).toFixed(2)}s`;
+  
+  // Create deterministic animation tokens for rank and ult effects
+  $: fighterEntityId = String(fighter?.id || fighter?.name || 'unknown');
+  $: rankAnimTokens = createPortraitEffectTokens(fighterEntityId, 'rank', { animationSpeed, motionSettings });
+  $: ultAnimTokens = createPortraitEffectTokens(fighterEntityId, 'ult', { animationSpeed, motionSettings });
+  $: elementChangeTokens = createPortraitEffectTokens(fighterEntityId, 'elementChange', { animationSpeed, motionSettings });
 
   $: if (fighter.element !== prevElement) {
     if (!reducedMotion) {
@@ -72,10 +76,6 @@
 
   $: ultRatio = Math.max(0, Math.min(1, Number(fighter?.ultimate_charge || 0) / 15));
   $: tiltAngle = Math.min(ultRatio, 0.98) / 0.98;
-
-  // Randomized, slow pulse timing for the ult icon
-  let ultIconPulseDelay = (Math.random() * 4 + 2).toFixed(2); // 2–6s
-  let ultIconPulseDur = (Math.random() * 6 + 6).toFixed(2);   // 6–12s
 
   function getStackCount(p) {
     const stacks = p?.stacks;
@@ -192,6 +192,7 @@
     class="element-wrapper"
     class:element-change={elementChanged}
     class:reduced={reducedMotion}
+    style="--element-change-duration: {elementChangeTokens.durationMs};"
     on:animationend={resetElementChange}
   >
     <div
@@ -201,7 +202,7 @@
       class:rank-boss={isBossRank}
       class:reduced={reducedMotion}
       on:click={cyclePortraitIfAvailable}
-      style={`--outline-anim-dur: ${outlineAnimDur}; --outline-anim-delay: ${outlineAnimDelay};`}
+      style={`--outline-anim-dur: ${rankAnimTokens.durationS}; --outline-anim-delay: ${rankAnimTokens.delayS};`}
     >
       <div
         class="portrait-image"
@@ -263,7 +264,7 @@
         <svelte:component
           this={elIcon}
           class="ult-icon"
-          style={`--ult-icon-pulse-delay: ${ultIconPulseDelay}s; --ult-icon-pulse-dur: ${ultIconPulseDur}s;`}
+          style={`--ult-icon-pulse-delay: ${ultAnimTokens.delayS}; --ult-icon-pulse-dur: ${ultAnimTokens.durationS};`}
           aria-hidden="true"
         />
         {#if !fighter?.ultimate_ready}
@@ -296,7 +297,7 @@
 
   .element-change .fighter-portrait,
   .element-change :global(.ult-icon) {
-    animation: element-change 0.4s ease;
+    animation: element-change var(--element-change-duration, 300ms) ease;
   }
 
   .element-wrapper.reduced .fighter-portrait,

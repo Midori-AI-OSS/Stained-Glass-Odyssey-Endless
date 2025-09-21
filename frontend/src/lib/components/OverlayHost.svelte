@@ -437,6 +437,7 @@
       {runId}
       {framerate}
       {selectedParty}
+      {animationSpeed}
       enrage={roomData?.enrage}
       reducedMotion={simplifiedTransitions ? true : effectiveReducedMotion}
       showActionValues={showActionValues}

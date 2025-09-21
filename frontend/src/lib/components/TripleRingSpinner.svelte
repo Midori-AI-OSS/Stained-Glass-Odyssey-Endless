@@ -1,13 +1,20 @@
 <script>
+  import { createSpinnerTokens } from '../systems/animationTokens.js';
+
   export let color = 'var(--element-color, currentColor)';
-  export let duration = '1.2s';
+  export let duration = null; // Will use tokens if null
   export let reducedMotion = false;
+  export let animationSpeed = 1; // Animation speed from settings
+
+  // Create animation tokens for consistent timing
+  $: spinnerTokens = createSpinnerTokens({ animationSpeed, motionSettings: { globalReducedMotion: reducedMotion } });
+  $: effectiveDuration = duration ?? `${(spinnerTokens.duration / 1000).toFixed(2)}s`;
 </script>
 
 <div
   class="triple-ring-spinner"
-  style={`--spinner-color: ${color}; --duration: ${duration};`}
-  class:reduced={reducedMotion}
+  style={`--spinner-color: ${color}; --duration: ${effectiveDuration};`}
+  class:reduced={reducedMotion || spinnerTokens.isReduced}
   aria-hidden="true"
 >
   <div class="ring r1"></div>

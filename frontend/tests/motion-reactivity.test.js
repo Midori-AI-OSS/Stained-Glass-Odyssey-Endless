@@ -3,13 +3,13 @@ import { readFileSync } from 'fs';
 import { join } from 'path';
 
 describe('Motion settings reactivity fixes', () => {
-  const starStormFile = join(import.meta.dir, '../src/lib/components/StarStorm.svelte');
+  const elementOrbsFile = join(import.meta.dir, '../src/lib/components/ElementOrbs.svelte');
   const battleFloatersFile = join(import.meta.dir, '../src/lib/components/BattleEventFloaters.svelte');
   const systemSettingsFile = join(import.meta.dir, '../src/lib/components/SystemSettings.svelte');
   const settingsStorageFile = join(import.meta.dir, '../src/lib/systems/settingsStorage.js');
 
-  test('StarStorm uses motionStore for reactivity', () => {
-    const content = readFileSync(starStormFile, 'utf8');
+  test('ElementOrbs uses motionStore for reactivity', () => {
+    const content = readFileSync(elementOrbsFile, 'utf8');
     expect(content).toContain('import { motionStore }');
     expect(content).toContain('$: motionSettings = $motionStore');
   });

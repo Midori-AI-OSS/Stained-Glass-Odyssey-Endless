@@ -1,9 +1,10 @@
 <script>
-  import StarStorm from './StarStorm.svelte';
+  import ElementOrbs from './ElementOrbs.svelte';
   export let padding = '0.5rem';
   export let reducedMotion = false;
   export let starColor = '';
   export let style = '';
+  export let animationSpeed = 1; // Animation speed from settings
 </script>
 
 <style>
@@ -54,6 +55,6 @@
   class={`panel ${$$props.class || ''}`}
   style={`--padding: ${padding}; ${style}`}
 >
-  <StarStorm color={starColor} {reducedMotion} />
+  <ElementOrbs color={starColor} {reducedMotion} {animationSpeed} />
   <slot />
 </div>

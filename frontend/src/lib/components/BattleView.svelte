@@ -23,6 +23,7 @@
   export let party = [];
   export let enrage = { active: false, stacks: 0, turns: 0 };
   export let reducedMotion = false; // Legacy prop for backward compatibility
+  export let animationSpeed = 1; // Animation speed from settings
   export let active = true;
   export let showHud = false;
   export let showFoes = true;
@@ -1075,6 +1076,7 @@
     class="overlay-layer"
     events={floaterFeed}
     reducedMotion={effectiveReducedMotion}
+    {animationSpeed}
     paceMs={floaterDuration}
     anchors={anchors}
     baseOffsetX={16}
@@ -1179,7 +1181,7 @@
           
           <!-- Character photo/portrait -->
           <div class="fighter-anchor" use:registerAnchor={foe.id}>
-            <BattleFighterCard fighter={foe} position="top" {effectiveReducedMotion} sizePx={getFoeSizePx(foeCount)} highlight={hoveredId === foe.id} />
+            <BattleFighterCard fighter={foe} position="top" {effectiveReducedMotion} {animationSpeed} sizePx={getFoeSizePx(foeCount)} highlight={hoveredId === foe.id} />
           </div>
           
           <!-- Summons -->
@@ -1239,6 +1241,7 @@
                         fighter={summon} 
                         position="top" 
                         {effectiveReducedMotion} 
+                        {animationSpeed}
                         size="medium" 
                         highlight={hoveredId === summon.id || (hoveredId && summon?.summoner_id && summon?.summon_type && hoveredId === `${summon.summoner_id}_${summon.summon_type}_summon`)} 
                       />
@@ -1277,6 +1280,7 @@
                       fighter={summon} 
                       position="bottom" 
                       {effectiveReducedMotion} 
+                      {animationSpeed}
                       size="medium" 
                       highlight={hoveredId === summon.id || (hoveredId && summon?.summoner_id && summon?.summon_type && hoveredId === `${summon.summoner_id}_${summon.summon_type}_summon`)} 
                     />
@@ -1338,7 +1342,7 @@
 
         <div class="party-main fighter-anchor" use:registerAnchor={member.id}>
           <!-- Character photo as base (ult & pips overlay handled inside) -->
-          <BattleFighterCard fighter={member} position="bottom" {effectiveReducedMotion} highlight={hoveredId === member.id} />
+          <BattleFighterCard fighter={member} position="bottom" {effectiveReducedMotion} {animationSpeed} highlight={hoveredId === member.id} />
         </div>
         
         <!-- HP bar under the photo -->
