@@ -22,7 +22,7 @@ class HonedPoint(CardBase):
 
         marked_enemies: dict[int, set[int]] = {}
 
-        async def _on_damage_dealt(attacker, target, damage, _damage_type, source, source_action, action_name):
+        async def _on_damage_dealt(attacker, target, damage, _damage_type, source, source_action, action_name, details=None):
             if attacker in party.members and action_name == "attack":
                 attacker_id = id(attacker)
                 target_id = id(target)

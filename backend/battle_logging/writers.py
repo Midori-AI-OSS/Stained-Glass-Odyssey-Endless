@@ -190,7 +190,17 @@ class BattleLogger:
         # Participant lists are set by the battle controller; avoid guessing here
         # to prevent misclassification.
 
-    def _on_damage_dealt(self, attacker, target, amount, source_type="attack", source_name=None, damage_type=None, action_name=None):
+    def _on_damage_dealt(
+        self,
+        attacker,
+        target,
+        amount,
+        source_type="attack",
+        source_name=None,
+        damage_type=None,
+        action_name=None,
+        details=None,
+    ):
         """Handle damage dealt event."""
         attacker_id = getattr(attacker, 'id', str(attacker))
         target_id = getattr(target, 'id', str(target))
@@ -202,6 +212,8 @@ class BattleLogger:
         if damage_type is None and hasattr(attacker, 'damage_type'):
             damage_type = getattr(attacker.damage_type, 'id', str(attacker.damage_type))
 
+        detail_payload = dict(details) if isinstance(details, dict) else {}
+
         event = BattleEvent(
             timestamp=datetime.now(),
             event_type="damage_dealt",
@@ -210,7 +222,8 @@ class BattleLogger:
             amount=amount,
             source_type=source_type,
             source_name=source_name,
-            damage_type=damage_type
+            damage_type=damage_type,
+            details=detail_payload,
         )
         self._log_event(event)
         # Determine relationships for self damage and friendly fire
@@ -245,17 +258,38 @@ class BattleLogger:
                 self.summary.damage_by_action[attacker_id] = {}
             self.summary.damage_by_action[attacker_id][action_name] = self.summary.damage_by_action[attacker_id].get(action_name, 0) + amount
 
-    def _on_damage_taken(self, target, attacker, amount, *_: object) -> None:
+    def _on_damage_taken(
+        self,
+        target,
+        attacker,
+        amount,
+        pre_damage_hp=None,
+        post_damage_hp=None,
+        is_critical=None,
+        action_name=None,
+        details=None,
+    ) -> None:
         """Handle damage taken event."""
         attacker_id = getattr(attacker, 'id', str(attacker)) if attacker else None
         target_id = getattr(target, 'id', str(target))
+
+        detail_payload = dict(details) if isinstance(details, dict) else {}
+        if pre_damage_hp is not None and "pre_hp" not in detail_payload:
+            detail_payload["pre_hp"] = pre_damage_hp
+        if post_damage_hp is not None and "post_hp" not in detail_payload:
+            detail_payload["post_hp"] = post_damage_hp
+        if is_critical is not None and "is_critical" not in detail_payload:
+            detail_payload["is_critical"] = bool(is_critical)
+        if action_name and "action_name" not in detail_payload:
+            detail_payload["action_name"] = action_name
 
         event = BattleEvent(
             timestamp=datetime.now(),
             event_type="damage_taken",
             attacker_id=attacker_id,
             target_id=target_id,
-            amount=amount
+            amount=amount,
+            details=detail_payload,
         )
         self._log_event(event)
 
@@ -916,15 +950,18 @@ class BattleLogger:
         victim_id = getattr(victim, 'id', str(victim))
         killer_id = getattr(killer, 'id', str(killer)) if killer else None
 
+        detail_payload = dict(details) if isinstance(details, dict) else {}
+
         event = BattleEvent(
             timestamp=datetime.now(),
             event_type="entity_killed",
             attacker_id=killer_id,
             target_id=victim_id,
-            amount=0,
+            amount=amount,
             source_type=source_type,
             source_name="death",
-            effect_details=details or {}
+            details=detail_payload,
+            effect_details=detail_payload,
         )
         self._log_event(event)
 

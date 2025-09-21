@@ -151,6 +151,8 @@ class Stats:
     damage_dealt: int = 0
     kills: int = 0
     last_damage_taken: int = 0
+    last_shield_absorbed: int = 0
+    last_overkill: int = 0
     base_aggro: float = 0.1
     aggro_modifier: float = 0.0
 
@@ -626,10 +628,14 @@ class Stats:
         # Drop any stray post-battle damage tasks to avoid loops.
         from autofighter.stats import is_battle_active  # local import for clarity
         if not is_battle_active():
+            self.last_shield_absorbed = 0
+            self.last_overkill = 0
             return 0
         # If already dead, ignore further damage applications to avoid
         # post-death damage loops from async tasks or event subscribers.
         if getattr(self, "hp", 0) <= 0:
+            self.last_shield_absorbed = 0
+            self.last_overkill = 0
             return 0
         def _ensure(obj: "Stats") -> DamageTypeBase:
             dt = getattr(obj, "damage_type", Generic())
@@ -683,63 +689,94 @@ class Stats:
             # Emit critical hit event for battle logging - async for better performance
             await BUS.emit_async("critical_hit", attacker_obj, self, amount, action_name or "attack")
         original_amount = amount
-        self.last_damage_taken = amount
-        self.damage_taken += amount
 
-        # Handle shields/overheal absorption first
+        shield_absorbed = 0
+        hp_damage = 0
+        self.last_shield_absorbed = 0
+        self.last_overkill = 0
+
         if self.shields > 0:
             shield_absorbed = min(amount, self.shields)
             self.shields -= shield_absorbed
             amount -= shield_absorbed
-            # Emit shield absorbed event for battle logging - async for better performance
             if shield_absorbed > 0:
                 await BUS.emit_async("shield_absorbed", self, shield_absorbed, "shield")
 
-        # Apply remaining damage to HP
         old_hp = self.hp
         if amount > 0:
-            self.hp = max(self.hp - amount, 0)
+            hp_cap = min(old_hp, self.max_hp)
+            hp_damage = min(amount, hp_cap)
+            if hp_damage > 0:
+                self.hp = max(old_hp - hp_damage, 0)
 
         post_hit_hp = self.hp
+        overkill = max(original_amount - shield_absorbed - hp_damage, 0)
 
-        # Emit defeat/kill events if this damage reduced HP to zero
+        self.last_shield_absorbed = shield_absorbed
+        self.last_damage_taken = hp_damage
+        self.last_overkill = overkill
+        self.damage_taken += hp_damage
+
         if old_hp > 0 and self.hp <= 0:
             if attacker_obj is not None:
                 await BUS.emit_async(
                     "entity_killed",
                     self,
                     attacker_obj,
-                    original_amount,
+                    hp_damage,
                     "death",
-                    {"killer_id": getattr(attacker_obj, "id", "unknown")},
+                    {
+                        "killer_id": getattr(attacker_obj, "id", "unknown"),
+                        "raw_amount": original_amount,
+                        "hp_damage": hp_damage,
+                        "shield_absorbed": shield_absorbed,
+                        "overkill": overkill,
+                    },
                 )
             await BUS.emit_async("entity_defeat", self)
 
-        # Trigger passive registry for damage taken events
         if original_amount > 0:
             try:
                 # Import locally to avoid circular imports
                 from autofighter.passives import PassiveRegistry
+
                 registry = PassiveRegistry()
-                await registry.trigger_damage_taken(self, attacker_obj, original_amount)
+                await registry.trigger_damage_taken(self, attacker_obj, hp_damage)
             except Exception as e:
                 log.warning("Error triggering damage_taken passives: %s", e)
 
-        # Use async emission for high-frequency damage events to reduce blocking
+        damage_details = {
+            "raw_amount": original_amount,
+            "hp_damage": hp_damage,
+            "shield_absorbed": shield_absorbed,
+            "overkill": overkill,
+        }
+
         BUS.emit_batched(
             "damage_taken",
             self,
             attacker_obj,
-            original_amount,
+            hp_damage,
             old_hp,
             post_hit_hp,
             critical,
             action_name,
+            damage_details,
         )
         if attacker_obj is not None:
-            attacker_obj.damage_dealt += original_amount
-            BUS.emit_batched("damage_dealt", attacker_obj, self, original_amount, "attack", None, None, action_name)
-        return original_amount
+            attacker_obj.damage_dealt += hp_damage
+            BUS.emit_batched(
+                "damage_dealt",
+                attacker_obj,
+                self,
+                hp_damage,
+                "attack",
+                None,
+                None,
+                action_name,
+                damage_details,
+            )
+        return hp_damage
 
     async def apply_cost_damage(self, amount: int) -> int:
         """Apply self-inflicted damage that ignores mitigation and shields."""
@@ -751,6 +788,8 @@ class Stats:
             return 0
         amount = max(int(amount), 0)
         self.last_damage_taken = amount
+        self.last_shield_absorbed = 0
+        self.last_overkill = 0
         self.damage_taken += amount
         old_hp = self.hp
         if amount > 0:
