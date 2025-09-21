@@ -7,12 +7,17 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from runs import encryption as enc
+from runs.encryption import get_save_manager
+from runs.lifecycle import battle_snapshots
+from runs.lifecycle import battle_tasks
 from runs.lifecycle import load_map
 from runs.party_manager import load_party
 from runs.party_manager import save_party
+from services.room_service import battle_room
 from services.run_service import advance_room
 from services.run_service import start_run
 
+from autofighter.gacha import GachaManager
 from autofighter.mapgen import MapGenerator
 from autofighter.stats import BUS
 from plugins.relics.null_lantern import NullLantern
@@ -78,3 +83,68 @@ async def test_null_lantern_removes_future_shops():
     inner_types = [node.room_type for node in new_nodes[1:-1]]
     assert "shop" not in inner_types
     assert "rest" not in inner_types
+
+
+@pytest.mark.asyncio
+async def test_null_lantern_awards_pull_tickets(monkeypatch):
+    import autofighter.rooms.battle.engine as battle_engine
+
+    async def fast_run_turn_loop(
+        *,
+        room,
+        party,
+        combat_party,
+        registry,
+        foes,
+        foe_effects,
+        enrage_mods,
+        enrage_state,
+        progress,
+        visual_queue,
+        temp_rdr,
+        exp_reward,
+        run_id,
+        battle_tasks,
+        abort,
+    ):
+        for foe in foes:
+            if hasattr(foe, "hp"):
+                foe.hp = 0
+        for member in combat_party.members:
+            if getattr(member, "hp", 1) <= 0:
+                member.hp = getattr(member, "max_hp", 1) or 1
+        return 1, temp_rdr, 0
+
+    monkeypatch.setattr(battle_engine, "run_turn_loop", fast_run_turn_loop)
+    monkeypatch.setattr(
+        "autofighter.rooms.battle.resolution.random.random",
+        lambda: 1.0,
+    )
+    monkeypatch.setattr(
+        "autofighter.rooms.battle.resolution.random.choice",
+        lambda seq: seq[0],
+    )
+
+    run_state = await start_run(["player"])
+    run_id = run_state["run_id"]
+
+    party = await asyncio.to_thread(load_party, run_id)
+    if "null_lantern" not in party.relics:
+        party.relics.append("null_lantern")
+    await asyncio.to_thread(save_party, run_id, party)
+
+    await battle_room(run_id, {})
+    task = battle_tasks[run_id]
+    await task
+
+    snapshot = battle_snapshots[run_id]
+    loot_items = snapshot.get("loot", {}).get("items", [])
+    tickets = [item for item in loot_items if item.get("id") == "ticket"]
+    assert tickets, "expected ticket entries from Null Lantern pulls"
+
+    manager = GachaManager(get_save_manager())
+    items = manager._get_items()
+    assert items.get("ticket", 0) == len(tickets)
+
+    persisted_party = await asyncio.to_thread(load_party, run_id)
+    assert getattr(persisted_party, "pull_tokens", 0) == len(tickets)
