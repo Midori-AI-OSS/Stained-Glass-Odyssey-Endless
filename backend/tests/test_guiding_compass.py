@@ -30,8 +30,14 @@ async def test_guiding_compass_first_battle_xp_only_once() -> None:
     member2.id = "m2"
     party = Party([member1, member2])
     base_exp = member1.exp
+    pre_battle_start = len(event_bus_module.bus._subs.get("battle_start", []))
+    pre_battle_end = len(event_bus_module.bus._subs.get("battle_end", []))
+
     card = GuidingCompass()
     await card.apply(party)
+
+    assert len(event_bus_module.bus._subs.get("battle_start", [])) == pre_battle_start + 1
+    assert len(event_bus_module.bus._subs.get("battle_end", [])) == pre_battle_end + 1
 
     events: list[tuple[str, str, int]] = []
 
@@ -54,3 +60,24 @@ async def test_guiding_compass_first_battle_xp_only_once() -> None:
     assert member1.exp == base_exp + 10
     assert member2.exp == base_exp + 10
     assert len(events) == 2
+
+    await BUS.emit_async("battle_end")
+    await asyncio.sleep(0.05)
+
+    assert len(event_bus_module.bus._subs.get("battle_start", [])) == pre_battle_start
+    assert len(event_bus_module.bus._subs.get("battle_end", [])) == pre_battle_end
+
+    second_card = GuidingCompass()
+    await second_card.apply(party)
+
+    assert len(event_bus_module.bus._subs.get("battle_start", [])) == pre_battle_start + 1
+    assert len(event_bus_module.bus._subs.get("battle_end", [])) == pre_battle_end + 1
+
+    await BUS.emit_async("battle_end")
+    await asyncio.sleep(0.05)
+
+    assert len(event_bus_module.bus._subs.get("battle_start", [])) == pre_battle_start
+    assert len(event_bus_module.bus._subs.get("battle_end", [])) == pre_battle_end
+
+    BUS.unsubscribe("card_effect", _on_card_effect)
+

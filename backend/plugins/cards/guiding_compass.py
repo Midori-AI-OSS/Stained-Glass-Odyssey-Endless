@@ -48,3 +48,11 @@ class GuidingCompass(CardBase):
                     )
 
         BUS.subscribe("battle_start", _on_battle_start)
+
+        async def _on_battle_end(*_args):
+            nonlocal first_battle_bonus_used
+            first_battle_bonus_used = False
+            BUS.unsubscribe("battle_start", _on_battle_start)
+            BUS.unsubscribe("battle_end", _on_battle_end)
+
+        BUS.subscribe("battle_end", _on_battle_end)
