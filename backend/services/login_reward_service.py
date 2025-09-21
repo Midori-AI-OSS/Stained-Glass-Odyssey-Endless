@@ -31,6 +31,26 @@ DAILY_RDR_BASE_CHUNK = 1.0
 
 STATE_LOCK = asyncio.Lock()
 STATE_THREAD_LOCK = threading.RLock()
+STATE_LOOP_INFO_LOCK = threading.Lock()
+STATE_LOOP_INFO: tuple[asyncio.AbstractEventLoop, int] | None = None
+
+
+def _register_state_loop(loop: asyncio.AbstractEventLoop) -> None:
+    thread_id = threading.get_ident()
+    with STATE_LOOP_INFO_LOCK:
+        global STATE_LOOP_INFO
+        STATE_LOOP_INFO = (loop, thread_id)
+
+
+def _get_registered_state_loop() -> tuple[asyncio.AbstractEventLoop, int] | None:
+    with STATE_LOOP_INFO_LOCK:
+        info = STATE_LOOP_INFO
+    if not info:
+        return None
+    loop, thread_id = info
+    if loop.is_closed():
+        return None
+    return loop, thread_id
 
 
 def _as_positive_int(value: Any, default: int = 0) -> int:
@@ -264,6 +284,7 @@ def _save_state_sync(state: dict[str, Any]) -> None:
 
 
 async def _load_state() -> LoginRewardState:
+    _register_state_loop(asyncio.get_running_loop())
     raw = await asyncio.to_thread(_load_state_sync)
     return LoginRewardState.from_dict(raw)
 
@@ -452,6 +473,19 @@ async def get_daily_rdr_bonus(now: datetime | None = None) -> float:
 
 def get_daily_rdr_bonus_sync(now: datetime | None = None) -> float:
     current_time = _ensure_timezone(now)
+    loop_info = _get_registered_state_loop()
+    if loop_info:
+        loop, thread_id = loop_info
+        if loop.is_running() and thread_id != threading.get_ident():
+            try:
+                future = asyncio.run_coroutine_threadsafe(
+                    get_daily_rdr_bonus(current_time),
+                    loop,
+                )
+            except RuntimeError:
+                pass
+            else:
+                return future.result()
     with STATE_THREAD_LOCK:
         raw_state = _load_state_sync()
         state = LoginRewardState.from_dict(raw_state)
