@@ -4,7 +4,8 @@ from pathlib import Path
 import pytest
 import sqlcipher3
 
-POINTS_VALUES = {1: 1, 2: 150, 3: 22500, 4: 3375000}
+STAR_TO_MATERIALS = {1: 1, 2: 150, 3: 22500, 4: 3375000}
+
 
 @pytest.fixture()
 def app_with_db(tmp_path, monkeypatch):
@@ -23,6 +24,7 @@ def app_with_db(tmp_path, monkeypatch):
     assert spec.loader is not None
     spec.loader.exec_module(app_module)
     app_module.app.testing = True
+
     conn = sqlcipher3.connect(db_path)
     conn.execute("PRAGMA key = 'testkey'")
     conn.execute(
@@ -31,368 +33,250 @@ def app_with_db(tmp_path, monkeypatch):
     conn.execute(
         "CREATE TABLE IF NOT EXISTS upgrade_items (id TEXT PRIMARY KEY, count INTEGER NOT NULL)"
     )
-    # Set up a non-player character (ally) with fire damage type
     conn.execute(
         "INSERT OR REPLACE INTO damage_types (id, type) VALUES (?, ?)",
         ("ally", "fire"),
     )
-    # Add some upgrade items for testing
     conn.execute(
-        "INSERT OR REPLACE INTO upgrade_items (id, count) VALUES (?, ?)",
-        ("fire_2", 5),  # 5 2-star fire items
+        "INSERT OR REPLACE INTO damage_types (id, type) VALUES (?, ?)",
+        ("player", "light"),
     )
-    conn.execute(
-        "INSERT OR REPLACE INTO upgrade_items (id, count) VALUES (?, ?)",
-        ("dark_2", 5),  # 5 2-star dark items (in case ally gets dark)
-    )
-    conn.execute(
-        "INSERT OR REPLACE INTO upgrade_items (id, count) VALUES (?, ?)",
-        ("light_1", 10),  # 10 1-star light items for player points
-    )
-    conn.execute(
-        "INSERT OR REPLACE INTO upgrade_items (id, count) VALUES (?, ?)",
-        ("wind_1", 10),  # 10 1-star wind items for player points
-    )
-    conn.execute(
-        "INSERT OR REPLACE INTO upgrade_items (id, count) VALUES (?, ?)",
-        ("generic_1", 10),  # 10 1-star generic items for player points
-    )
+    starting_items = {
+        "fire_2": 5,
+        "fire_1": 10,
+        "light_1": 10,
+        "generic_1": 10,
+        "generic_2": 2,
+    }
+    for key, value in starting_items.items():
+        conn.execute(
+            "INSERT OR REPLACE INTO upgrade_items (id, count) VALUES (?, ?)",
+            (key, value),
+        )
     conn.commit()
     conn.close()
     return app_module.app, db_path
 
 
+def _fetch_item_counts(db_path):
+    conn = sqlcipher3.connect(db_path)
+    conn.execute("PRAGMA key = 'testkey'")
+    cur = conn.execute("SELECT id, count FROM upgrade_items")
+    data = {row[0]: int(row[1]) for row in cur.fetchall()}
+    conn.close()
+    return data
+
+
 @pytest.mark.asyncio
-async def test_character_point_conversion(app_with_db):
-    """Non-player characters convert items into upgrade points."""
+async def test_character_material_conversion(app_with_db):
     app, db_path = app_with_db
     client = app.test_client()
 
     resp = await client.post(
         "/players/ally/upgrade",
-        json={"star_level": 2, "item_count": 2}
-    )
-    data = await resp.get_json()
-
-    expected = POINTS_VALUES[2] * 2
-    assert data["points_gained"] == expected
-    assert data["total_points"] == expected
-    assert data["items_consumed"]["fire_2"] == 2
-    assert "upgrades_applied" not in data
-
-
-@pytest.mark.asyncio
-async def test_player_points_system(app_with_db):
-    """Player character also converts items into upgrade points."""
-    app, db_path = app_with_db
-    client = app.test_client()
-
-    resp = await client.post(
-        "/players/player/upgrade",
-        json={"star_level": 1, "item_count": 5}
-    )
-    data = await resp.get_json()
-
-    assert data["points_gained"] == 5
-    assert data["total_points"] == 5
-
-
-@pytest.mark.asyncio
-async def test_player_spend_points_cost_curve(app_with_db):
-    """Player stat upgrades follow the rising cost curve."""
-    app, db_path = app_with_db
-    client = app.test_client()
-
-    resp = await client.get("/players/player/upgrade")
-    initial_data = await resp.get_json()
-    initial_points = initial_data.get("upgrade_points", 0)
-
-    assert initial_data["stat_totals"].get("vitality", 0.0) == pytest.approx(0.0)
-    assert initial_data["stat_totals"].get("mitigation", 0.0) == pytest.approx(0.0)
-    assert initial_data["next_costs"].get("vitality") == 1
-    assert initial_data["next_costs"].get("mitigation") == 1
-
-    resp = await client.post(
-        "/players/player/upgrade",
-        json={"star_level": 1, "item_count": 10}
-    )
-    data = await resp.get_json()
-    total_after_gain = initial_points + 10
-    assert data["total_points"] == total_after_gain
-
-    resp = await client.post(
-        "/players/player/upgrade-stat",
-        json={"stat_name": "max_hp"}
-    )
-    first_upgrade = await resp.get_json()
-
-    assert first_upgrade["stat_upgraded"] == "max_hp"
-    assert first_upgrade["points_spent"] == 1
-    assert first_upgrade["upgrade_percent"] == pytest.approx(0.001)
-    assert first_upgrade["remaining_points"] == total_after_gain - 1
-    assert first_upgrade["stat_counts"]["max_hp"] == 1
-    assert first_upgrade["next_costs"]["max_hp"] == 3
-    assert first_upgrade["next_costs"]["vitality"] == 1
-    assert first_upgrade["next_costs"]["mitigation"] == 1
-
-    resp = await client.post(
-        "/players/player/upgrade-stat",
-        json={"stat_name": "max_hp"}
-    )
-    second_upgrade = await resp.get_json()
-
-    assert second_upgrade["points_spent"] == 3
-    assert second_upgrade["upgrade_percent"] == pytest.approx(0.003)
-    assert second_upgrade["remaining_points"] == total_after_gain - 4
-    assert second_upgrade["stat_counts"]["max_hp"] == 2
-    assert second_upgrade["stat_totals"]["max_hp"] == pytest.approx(0.004)
-    assert second_upgrade["next_costs"]["max_hp"] == 5
-    assert second_upgrade["stat_totals"].get("vitality", 0.0) == pytest.approx(0.0)
-    assert second_upgrade["stat_totals"].get("mitigation", 0.0) == pytest.approx(0.0)
-    assert second_upgrade["next_costs"]["vitality"] == 1
-    assert second_upgrade["next_costs"]["mitigation"] == 1
-
-    resp = await client.post(
-        "/players/player/upgrade-stat",
-        json={"stat_name": "vitality"}
-    )
-    vitality_upgrade = await resp.get_json()
-
-    assert vitality_upgrade["stat_upgraded"] == "vitality"
-    assert vitality_upgrade["points_spent"] == 1
-    assert vitality_upgrade["upgrade_percent"] == pytest.approx(0.001)
-    assert vitality_upgrade["remaining_points"] == total_after_gain - 5
-    assert vitality_upgrade["stat_counts"]["vitality"] == 1
-    assert vitality_upgrade["stat_totals"]["vitality"] == pytest.approx(0.001)
-    assert vitality_upgrade["stat_totals"].get("mitigation", 0.0) == pytest.approx(0.0)
-    assert vitality_upgrade["next_costs"]["vitality"] == 3
-    assert vitality_upgrade["next_costs"]["mitigation"] == 1
-
-
-@pytest.mark.asyncio
-async def test_player_repeat_upgrade_batch(app_with_db):
-    """Server handles repeat upgrade requests and aggregates the results."""
-    app, _ = app_with_db
-    client = app.test_client()
-
-    await client.post(
-        "/players/player/upgrade",
-        json={"star_level": 1, "item_count": 20},
-    )
-
-    resp = await client.post(
-        "/players/player/upgrade-stat",
-        json={"stat_name": "atk", "repeat": 3},
+        json={"star_level": 2, "item_count": 2},
     )
     data = await resp.get_json()
 
     assert resp.status_code == 200
-    assert data["completed_upgrades"] == 3
-    assert data["attempted_upgrades"] == 3
-    assert data["points_spent"] == 9
-    assert data["upgrade_percent"] == pytest.approx(0.009)
-    assert data.get("partial") in (None, False)
-    assert data["remaining_points"] == 11
-    assert data["stat_counts"]["atk"] == 3
-    assert data["stat_totals"]["atk"] == pytest.approx(0.009)
-    assert data["next_costs"]["atk"] == 7
+    assert data["materials_gained"] == STAR_TO_MATERIALS[2] * 2
+    assert data["items_consumed"] == {"fire_2": 2}
+    assert data["material_key"] == "fire_1"
+    assert data["materials_balance"] == 10 + STAR_TO_MATERIALS[2] * 2
+
+    inventory = _fetch_item_counts(db_path)
+    assert inventory["fire_2"] == 3
+    assert inventory["fire_1"] == 10 + STAR_TO_MATERIALS[2] * 2
 
 
 @pytest.mark.asyncio
-async def test_player_repeat_upgrade_insufficient_points(app_with_db):
-    """Repeat upgrades stop when upgrade points run out."""
+async def test_player_conversion_uses_active_element(app_with_db):
+    app, db_path = app_with_db
+    client = app.test_client()
+
+    resp = await client.post(
+        "/players/player/upgrade",
+        json={"star_level": 2, "item_count": 1},
+    )
+    data = await resp.get_json()
+
+    assert resp.status_code == 200
+    assert data["materials_gained"] == STAR_TO_MATERIALS[2]
+    assert data["material_key"] == "light_1"
+    assert data["items_consumed"] == {"generic_2": 1}
+    assert data["materials_balance"] == 10 + STAR_TO_MATERIALS[2]
+
+    inventory = _fetch_item_counts(db_path)
+    assert inventory["generic_2"] == 1
+    assert inventory["light_1"] == 10 + STAR_TO_MATERIALS[2]
+
+
+@pytest.mark.asyncio
+async def test_upgrade_spends_materials_and_scales_cost(app_with_db):
+    app, db_path = app_with_db
+    client = app.test_client()
+
+    # Convert generic items into light materials for the player
+    await client.post(
+        "/players/player/upgrade",
+        json={"star_level": 2, "item_count": 2},
+    )
+
+    resp = await client.post(
+        "/players/player/upgrade-stat",
+        json={"stat_name": "max_hp"},
+    )
+    first_upgrade = await resp.get_json()
+
+    assert resp.status_code == 200
+    assert first_upgrade["stat_upgraded"] == "max_hp"
+    assert first_upgrade["materials_spent"] == 1
+    assert first_upgrade["upgrade_percent"] == pytest.approx(0.001)
+    assert first_upgrade["completed_upgrades"] == 1
+    assert first_upgrade["next_costs"]["max_hp"]["count"] == 2
+    assert first_upgrade["next_costs"]["max_hp"]["item"] == "light_1"
+
+    resp = await client.post(
+        "/players/player/upgrade-stat",
+        json={"stat_name": "max_hp"},
+    )
+    second_upgrade = await resp.get_json()
+
+    assert second_upgrade["materials_spent"] == 2
+    assert second_upgrade["completed_upgrades"] == 1
+    assert second_upgrade["next_costs"]["max_hp"]["count"] == 3
+    assert second_upgrade["materials_remaining"] == first_upgrade["materials_remaining"] - 2
+
+
+@pytest.mark.asyncio
+async def test_upgrade_respects_budget_and_partial(app_with_db):
     app, _ = app_with_db
     client = app.test_client()
 
     await client.post(
         "/players/player/upgrade",
-        json={"star_level": 1, "item_count": 4},
+        json={"star_level": 2, "item_count": 1},
     )
 
     resp = await client.post(
         "/players/player/upgrade-stat",
-        json={"stat_name": "max_hp", "repeat": 3},
+        json={"stat_name": "atk", "repeat": 3, "total_materials": 3},
+    )
+    data = await resp.get_json()
+
+    assert resp.status_code == 200
+    assert data["materials_spent"] == 3
+    assert data["completed_upgrades"] == 2
+    assert data["partial"] is True
+    assert data["budget_remaining"] == 0
+
+
+@pytest.mark.asyncio
+async def test_invalid_material_cost_error(app_with_db):
+    app, _ = app_with_db
+    client = app.test_client()
+
+    await client.post(
+        "/players/player/upgrade",
+        json={"star_level": 1, "item_count": 3},
+    )
+
+    resp = await client.post(
+        "/players/player/upgrade-stat",
+        json={"stat_name": "defense", "materials": 2},
     )
     data = await resp.get_json()
 
     assert resp.status_code == 400
-    assert data["error"] == "insufficient upgrade points"
-    assert data["completed_upgrades"] == 2
-    assert data["attempted_upgrades"] == 3
-    assert data["points_spent"] == 4
-    assert data["upgrade_percent"] == pytest.approx(0.004)
-    assert data["stat_counts"]["max_hp"] == 2
-    assert data["next_costs"]["max_hp"] == 5
-    assert data["remaining_points"] == 0
+    assert data["error"] == "invalid material cost"
+    assert data["expected_materials"] == 1
 
 
 @pytest.mark.asyncio
-async def test_repeat_upgrade_respects_total_points_budget(app_with_db):
-    """total_points parameter caps spending even if repeats remain."""
+async def test_insufficient_materials_error(app_with_db):
+    app, _ = app_with_db
+    client = app.test_client()
+
+    app, db_path = app_with_db
+    client = app.test_client()
+
+    conn = sqlcipher3.connect(db_path)
+    conn.execute("PRAGMA key = 'testkey'")
+    conn.execute(
+        "INSERT OR REPLACE INTO upgrade_items (id, count) VALUES (?, ?)",
+        ("light_1", 0),
+    )
+    conn.commit()
+    conn.close()
+
+    resp = await client.post(
+        "/players/player/upgrade-stat",
+        json={"stat_name": "mitigation"},
+    )
+    data = await resp.get_json()
+
+    assert resp.status_code == 400
+    assert data["error"] == "insufficient materials"
+    assert data["required_materials"] == 1
+
+
+@pytest.mark.asyncio
+async def test_get_endpoint_payload_structure(app_with_db):
     app, _ = app_with_db
     client = app.test_client()
 
     await client.post(
-        "/players/player/upgrade",
-        json={"star_level": 1, "item_count": 10},
-    )
-
-    resp = await client.post(
-        "/players/player/upgrade-stat",
-        json={"stat_name": "defense", "repeat": 5, "total_points": 4},
-    )
-    data = await resp.get_json()
-
-    assert resp.status_code == 200
-    assert data["completed_upgrades"] == 2
-    assert data["attempted_upgrades"] == 5
-    assert data["points_spent"] == 4
-    assert data["upgrade_percent"] == pytest.approx(0.004)
-    assert data.get("partial") is True
-    assert data["budget_remaining"] == 0
-    assert data["remaining_points"] == 6
-    assert data["next_costs"]["defense"] == 5
-
-
-@pytest.mark.asyncio
-async def test_ally_spend_points(app_with_db):
-    """Non-player characters can also spend points."""
-    app, db_path = app_with_db
-    client = app.test_client()
-
-    await client.post(
         "/players/ally/upgrade",
-        json={"star_level": 2, "item_count": 1}
-    )
-
-    resp = await client.post(
-        "/players/ally/upgrade-stat",
-        json={"stat_name": "atk"}
-    )
-    data = await resp.get_json()
-
-    assert data["stat_upgraded"] == "atk"
-    assert data["points_spent"] == 1
-    assert data["stat_counts"]["atk"] == 1
-    assert data["next_costs"]["atk"] == 3
-    assert data["next_costs"]["vitality"] == 1
-    assert data["next_costs"]["mitigation"] == 1
-
-    resp = await client.post(
-        "/players/ally/upgrade-stat",
-        json={"stat_name": "mitigation"}
-    )
-    mitigation_upgrade = await resp.get_json()
-
-    assert mitigation_upgrade["stat_upgraded"] == "mitigation"
-    assert mitigation_upgrade["points_spent"] == 1
-    assert mitigation_upgrade["stat_totals"]["mitigation"] == pytest.approx(0.001)
-    assert mitigation_upgrade["stat_counts"]["mitigation"] == 1
-    assert mitigation_upgrade["next_costs"]["mitigation"] == 3
-    assert mitigation_upgrade["next_costs"]["vitality"] == 1
-
-
-@pytest.mark.asyncio
-async def test_new_upgrade_data_in_get_endpoint(app_with_db):
-    """GET endpoint surfaces upgrades and points."""
-    app, db_path = app_with_db
-    client = app.test_client()
-
-    await client.post(
-        "/players/ally/upgrade",
-        json={"star_level": 2, "item_count": 1}
+        json={"star_level": 2, "item_count": 1},
     )
     await client.post(
         "/players/ally/upgrade-stat",
-        json={"stat_name": "atk"}
+        json={"stat_name": "atk"},
     )
 
     resp = await client.get("/players/ally/upgrade")
     data = await resp.get_json()
 
-    assert data["upgrade_points"] == POINTS_VALUES[2] - 1
-    assert data["stat_totals"]["atk"] == pytest.approx(0.001)
+    assert resp.status_code == 200
+    assert "upgrade_points" not in data
+    assert data["next_costs"]["atk"]["item"] == "fire_1"
+    assert isinstance(data["next_costs"]["atk"]["count"], int)
     assert data["stat_counts"]["atk"] == 1
-    assert data["next_costs"]["atk"] == 3
-    assert data["stat_totals"].get("vitality", 0.0) == pytest.approx(0.0)
-    assert data["stat_totals"].get("mitigation", 0.0) == pytest.approx(0.0)
-    assert data["next_costs"]["vitality"] == 1
-    assert data["next_costs"]["mitigation"] == 1
+    assert data["element"] == "fire"
 
 
 @pytest.mark.asyncio
-async def test_insufficient_items_error(app_with_db):
-    """Test error handling for insufficient items."""
+async def test_migration_converts_legacy_points(app_with_db):
     app, db_path = app_with_db
     client = app.test_client()
 
-    # Try to upgrade with more items than available
-    resp = await client.post(
-        "/players/ally/upgrade",
-        json={"star_level": 2, "item_count": 10}  # Only have 5 fire_2 items
+    conn = sqlcipher3.connect(db_path)
+    conn.execute("PRAGMA key = 'testkey'")
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS player_upgrade_points (player_id TEXT PRIMARY KEY, points INTEGER NOT NULL)"
     )
-    data = await resp.get_json()
-
-    assert resp.status_code == 400
-    assert "error" in data
-    assert "insufficient" in data["error"]
-
-
-@pytest.mark.asyncio
-async def test_invalid_star_level(app_with_db):
-    """Test error handling for invalid star levels."""
-    app, db_path = app_with_db
-    client = app.test_client()
-
-    # Try invalid star level
-    resp = await client.post(
-        "/players/ally/upgrade",
-        json={"star_level": 5, "item_count": 1}  # 5-star not valid
+    conn.execute(
+        "INSERT OR REPLACE INTO player_upgrade_points (player_id, points) VALUES (?, ?)",
+        ("ally", 10),
     )
-    data = await resp.get_json()
-
-    assert resp.status_code == 400
-    assert "error" in data
-    assert "invalid star_level" in data["error"]
-
-
-@pytest.mark.asyncio
-async def test_invalid_stat_name_for_points(app_with_db):
-    """Test error handling for invalid stat names when spending points."""
-    app, db_path = app_with_db
-    client = app.test_client()
-
-    # First gain some points
-    await client.post(
-        "/players/player/upgrade",
-        json={"star_level": 1, "item_count": 5}
+    conn.execute(
+        "INSERT OR REPLACE INTO player_upgrade_points (player_id, points) VALUES (?, ?)",
+        ("player", 25),
     )
+    conn.commit()
+    conn.close()
 
-    # Try to spend on invalid stat
-    resp = await client.post(
-        "/players/player/upgrade-stat",
-        json={"stat_name": "invalid_stat", "points": 1}
+    resp = await client.get("/players/player/upgrade")
+    assert resp.status_code == 200
+
+    inventory = _fetch_item_counts(db_path)
+    assert inventory["fire_1"] >= 10
+    assert inventory["light_1"] >= 25
+
+    conn = sqlcipher3.connect(db_path)
+    conn.execute("PRAGMA key = 'testkey'")
+    cur = conn.execute(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='player_upgrade_points'"
     )
-    data = await resp.get_json()
-
-    assert resp.status_code == 400
-    assert "error" in data
-    assert "invalid stat" in data["error"]
-
-
-@pytest.mark.asyncio
-async def test_insufficient_points(app_with_db):
-    """Test error handling for insufficient points."""
-    app, db_path = app_with_db
-    client = app.test_client()
-
-    resp = await client.post(
-        "/players/player/upgrade-stat",
-        json={"stat_name": "max_hp"}
-    )
-    data = await resp.get_json()
-
-    assert resp.status_code == 400
-    assert "error" in data
-    assert "insufficient upgrade points" in data["error"]
-    assert data["required_points"] == 1
+    assert cur.fetchone() is None
+    conn.close()

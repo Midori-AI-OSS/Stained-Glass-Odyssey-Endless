@@ -340,14 +340,15 @@ async def update_player_editor() -> tuple[str, int, dict[str, str]]:
     if damage_type and damage_type not in allowed:
         return jsonify({"error": "invalid damage type"}), 400
 
-    # Calculate max allowed points including upgrade bonuses
-    upgrade_points = _get_player_upgrade_points("player")
-    upgrade_count = upgrade_points // 3375000  # Each 4-star item = 3,375,000 points = +1 cap
-    max_allowed = 100 + upgrade_count
+    # Calculate max allowed points. Legacy point-based caps are no longer in
+    # effect; upgrades now spend materials directly so the editor always uses
+    # the base cap of 100.
+    max_allowed = 100
 
     log.debug(
-        "Player editor validation: total=%d, upgrade_points=%d, upgrade_count=%d, max_allowed=%d",
-        total, upgrade_points, upgrade_count, max_allowed
+        "Player editor validation: total=%d, max_allowed=%d",
+        total,
+        max_allowed,
     )
 
     if total > max_allowed:
@@ -437,9 +438,7 @@ async def update_character_editor(pid: str):
         return jsonify({"error": "invalid stats"}), 400
 
     total = hp + attack + defense + crit_rate + crit_damage
-    upgrade_points = _get_player_upgrade_points(pid)
-    upgrade_count = upgrade_points // 3375000
-    max_allowed = 100 + upgrade_count
+    max_allowed = 100
     if total > max_allowed:
         return jsonify({"error": "over-allocation"}), 400
 
@@ -479,7 +478,41 @@ UPGRADEABLE_STATS = [
     "vitality",
     "mitigation",
 ]
-PLAYER_POINTS_VALUES = {1: 1, 2: 150, 3: 22500, 4: 3375000}
+STAR_TO_MATERIALS = {1: 1, 2: 150, 3: 22500, 4: 3375000}
+MATERIAL_STAR_LEVEL = 1
+
+
+def _resolve_player_element(conn, player_id: str) -> str:
+    """Resolve the active element for a player identifier."""
+
+    element = None
+    try:
+        conn.execute(
+            "CREATE TABLE IF NOT EXISTS damage_types (id TEXT PRIMARY KEY, type TEXT)"
+        )
+        row = conn.execute(
+            "SELECT type FROM damage_types WHERE id = ?",
+            (player_id,),
+        ).fetchone()
+        if row and row[0]:
+            element = str(row[0])
+    except Exception:
+        element = None
+
+    if element:
+        return element.lower()
+
+    for name in player_plugins.__all__:
+        cls = getattr(player_plugins, name)
+        if getattr(cls, "id", name) != player_id:
+            continue
+        inst = cls()
+        try:
+            return inst.element_id.lower()
+        except Exception:
+            return str(getattr(inst, "damage_type", "generic")).lower()
+
+    return "generic"
 
 
 def _estimate_cost_from_upgrade_percent(upgrade_percent: object) -> int | None:
@@ -502,7 +535,7 @@ def _backfill_upgrade_costs(conn) -> None:
 
     cur = conn.execute(
         """
-        SELECT id, player_id, stat_name, upgrade_percent, cost_spent
+        SELECT id, player_id, stat_name, upgrade_percent, cost_spent, source_star
         FROM player_stat_upgrades
         ORDER BY player_id ASC, stat_name ASC, created_at ASC, id ASC
         """
@@ -512,13 +545,22 @@ def _backfill_upgrade_costs(conn) -> None:
     stat_counts: dict[tuple[str, str], int] = {}
 
     for row in cur.fetchall():
-        upgrade_id, player_id, stat_name, upgrade_percent, cost_spent = row
+        upgrade_id, player_id, stat_name, upgrade_percent, cost_spent, source_star = row
 
         if not player_id or not stat_name:
             continue
 
         key = (str(player_id), str(stat_name))
         upgrade_count = stat_counts.get(key, 0)
+
+        try:
+            source_value = int(source_star)
+        except (TypeError, ValueError):
+            source_value = 1
+
+        if source_value <= 0:
+            stat_counts[key] = upgrade_count + 1
+            continue
 
         if cost_spent and cost_spent > 0:
             stat_counts[key] = upgrade_count + 1
@@ -538,52 +580,105 @@ def _backfill_upgrade_costs(conn) -> None:
         )
 
 
-def _create_upgrade_tables():
-    """Create the new upgrade system database tables."""
-    with get_save_manager().connection() as conn:
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS player_stat_upgrades (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                player_id TEXT NOT NULL,
-                stat_name TEXT NOT NULL,
-                upgrade_percent REAL NOT NULL,
-                source_star INTEGER NOT NULL,
-                cost_spent INTEGER NOT NULL DEFAULT 0,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        """)
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS player_upgrade_points (
-                player_id TEXT PRIMARY KEY,
-                points INTEGER NOT NULL DEFAULT 0
-            )
-        """)
+def _migrate_legacy_points(conn) -> None:
+    """Convert legacy upgrade points into 1★ materials."""
 
-        cur = conn.execute("PRAGMA table_info(player_stat_upgrades)")
-        columns = {row[1] for row in cur.fetchall()}
-        needs_backfill = False
-        if "cost_spent" not in columns:
-            conn.execute(
-                "ALTER TABLE player_stat_upgrades ADD COLUMN cost_spent INTEGER NOT NULL DEFAULT 0"
-            )
-            needs_backfill = True
+    cur = conn.execute(
+        "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'player_upgrade_points'"
+    )
+    if cur.fetchone() is None:
+        return
 
-        if not needs_backfill:
+    rows = conn.execute(
+        "SELECT player_id, points FROM player_upgrade_points"
+    ).fetchall()
+    for player_id, points in rows:
+        try:
+            material_count = int(points)
+        except (TypeError, ValueError):
+            material_count = 0
+        if material_count <= 0:
+            continue
+        element = _resolve_player_element(conn, str(player_id))
+        item_key = f"{element}_{MATERIAL_STAR_LEVEL}"
+        current = conn.execute(
+            "SELECT count FROM upgrade_items WHERE id = ?",
+            (item_key,),
+        ).fetchone()
+        existing = int(current[0]) if current else 0
+        conn.execute(
+            "INSERT OR REPLACE INTO upgrade_items (id, count) VALUES (?, ?)",
+            (item_key, existing + material_count),
+        )
+
+    conn.execute("DROP TABLE IF EXISTS player_upgrade_points")
+
+
+def _ensure_upgrade_tables(conn) -> None:
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS player_stat_upgrades (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            player_id TEXT NOT NULL,
+            stat_name TEXT NOT NULL,
+            upgrade_percent REAL NOT NULL,
+            source_star INTEGER NOT NULL,
+            cost_spent INTEGER NOT NULL DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+        """
+    )
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS upgrade_items (id TEXT PRIMARY KEY, count INTEGER NOT NULL)"
+    )
+
+    cur = conn.execute("PRAGMA table_info(player_stat_upgrades)")
+    columns = {row[1] for row in cur.fetchall()}
+    has_source_star = "source_star" in columns
+    if not has_source_star:
+        conn.execute(
+            "ALTER TABLE player_stat_upgrades ADD COLUMN source_star INTEGER NOT NULL DEFAULT 0"
+        )
+        has_source_star = True
+    needs_backfill = False
+    if "cost_spent" not in columns:
+        conn.execute(
+            "ALTER TABLE player_stat_upgrades ADD COLUMN cost_spent INTEGER NOT NULL DEFAULT 0"
+        )
+        needs_backfill = True
+
+    if not needs_backfill:
+        if has_source_star:
+            cur = conn.execute(
+                """
+                SELECT 1
+                FROM player_stat_upgrades
+                WHERE (cost_spent IS NULL OR cost_spent <= 0) AND source_star > 0
+                LIMIT 1
+                """
+            )
+        else:
             cur = conn.execute(
                 "SELECT 1 FROM player_stat_upgrades WHERE cost_spent <= 0 LIMIT 1"
             )
-            needs_backfill = cur.fetchone() is not None
+        needs_backfill = cur.fetchone() is not None
 
-        if needs_backfill:
-            _backfill_upgrade_costs(conn)
+    if needs_backfill:
+        _backfill_upgrade_costs(conn)
 
+    _migrate_legacy_points(conn)
+
+
+def _create_upgrade_tables():
+    with get_save_manager().connection() as conn:
+        _ensure_upgrade_tables(conn)
         conn.commit()
 
 
 def _get_player_stat_upgrades(player_id: str) -> List[Dict]:
     """Get all stat upgrades for a player."""
     with get_save_manager().connection() as conn:
-        _create_upgrade_tables()
+        _ensure_upgrade_tables(conn)
         cur = conn.execute("""
             SELECT id, stat_name, upgrade_percent, source_star, cost_spent, created_at
             FROM player_stat_upgrades
@@ -616,51 +711,99 @@ def _count_completed_upgrades(stat_upgrades: List[Dict]) -> Dict[str, int]:
 def _calculate_next_cost(last_cost: int | None) -> int:
     if not last_cost or last_cost < 1:
         return 1
-    return math.ceil(last_cost * 1.005 + 1)
+    return max(1, math.ceil(last_cost * 1.05))
 
 
-def _determine_next_costs(stat_upgrades: List[Dict]) -> Dict[str, int]:
+def _determine_next_costs(stat_upgrades: List[Dict], element_key: str) -> Dict[str, dict[str, int | str]]:
     last_costs: Dict[str, int] = {}
     for upgrade in stat_upgrades:
         stat_name = upgrade.get("stat_name")
         if stat_name is None or stat_name in last_costs:
             continue
         try:
-            last_costs[stat_name] = int(upgrade.get("cost_spent") or 0)
+            raw_cost = upgrade.get("cost_spent")
+            if raw_cost in (None, 0):
+                raw_cost = upgrade.get("materials_spent")
+            if raw_cost in (None, 0):
+                percent_value = float(upgrade.get("upgrade_percent") or 0.0)
+                raw_cost = int(round(percent_value * 1000))
+            last_costs[stat_name] = int(raw_cost or 0)
         except (TypeError, ValueError):
             last_costs[stat_name] = 0
 
-    next_costs: Dict[str, int] = {}
+    next_costs: Dict[str, dict[str, int | str]] = {}
     seen_stats = set(UPGRADEABLE_STATS)
+    item_key = f"{element_key}_{MATERIAL_STAR_LEVEL}"
     for stat in UPGRADEABLE_STATS:
-        next_costs[stat] = _calculate_next_cost(last_costs.get(stat))
+        next_costs[stat] = {
+            "item": item_key,
+            "count": _calculate_next_cost(last_costs.get(stat)),
+        }
     for stat, last_cost in last_costs.items():
         if stat in seen_stats:
             continue
-        next_costs[stat] = _calculate_next_cost(last_cost)
+        next_costs[stat] = {
+            "item": item_key,
+            "count": _calculate_next_cost(last_cost),
+        }
     return next_costs
 
 
-def _get_next_cost_for_stat(player_id: str, stat_name: str) -> int:
-    with get_save_manager().connection() as conn:
-        _create_upgrade_tables()
-        cur = conn.execute(
-            """
-            SELECT cost_spent
-            FROM player_stat_upgrades
-            WHERE player_id = ? AND stat_name = ?
-            ORDER BY created_at DESC, id DESC
-            LIMIT 1
-            """,
-            (player_id, stat_name),
-        )
-        row = cur.fetchone()
-        last_cost = int(row[0]) if row and row[0] is not None else 0
+def _get_next_cost_for_stat(player_id: str, stat_name: str, *, conn=None) -> int:
+    def _resolve_last_cost(row) -> int:
+        if not row:
+            return 0
+        cost_spent, upgrade_percent = row
+        try:
+            if cost_spent and int(cost_spent) > 0:
+                return int(cost_spent)
+        except (TypeError, ValueError):
+            pass
+        try:
+            percent_value = float(upgrade_percent or 0.0)
+        except (TypeError, ValueError):
+            percent_value = 0.0
+        estimated = int(round(percent_value * 1000))
+        return max(0, estimated)
+
+    if conn is None:
+        with get_save_manager().connection() as local_conn:
+            _ensure_upgrade_tables(local_conn)
+            cur = local_conn.execute(
+                """
+                SELECT cost_spent, upgrade_percent
+                FROM player_stat_upgrades
+                WHERE player_id = ? AND stat_name = ?
+                ORDER BY created_at DESC, id DESC
+                LIMIT 1
+                """,
+                (player_id, stat_name),
+            )
+            last_cost = _resolve_last_cost(cur.fetchone())
+            return _calculate_next_cost(last_cost)
+
+    cur = conn.execute(
+        """
+        SELECT cost_spent, upgrade_percent
+        FROM player_stat_upgrades
+        WHERE player_id = ? AND stat_name = ?
+        ORDER BY created_at DESC, id DESC
+        LIMIT 1
+        """,
+        (player_id, stat_name),
+    )
+    last_cost = _resolve_last_cost(cur.fetchone())
     return _calculate_next_cost(last_cost)
 
 
 def _build_player_upgrade_payload(player_id: str) -> Dict:
-    stat_upgrades = _get_player_stat_upgrades(player_id)
+    stat_upgrades_raw = _get_player_stat_upgrades(player_id)
+    stat_upgrades: List[Dict] = []
+    for upgrade in stat_upgrades_raw:
+        converted = dict(upgrade)
+        converted["materials_spent"] = converted.pop("cost_spent", 0)
+        stat_upgrades.append(converted)
+
     stat_totals: Dict[str, float] = {stat: 0.0 for stat in UPGRADEABLE_STATS}
     for upgrade in stat_upgrades:
         stat_name = upgrade.get("stat_name")
@@ -671,64 +814,30 @@ def _build_player_upgrade_payload(player_id: str) -> Dict:
         )
 
     stat_counts = _count_completed_upgrades(stat_upgrades)
-    next_costs = _determine_next_costs(stat_upgrades)
+
+    with get_save_manager().connection() as conn:
+        _ensure_upgrade_tables(conn)
+        element = _resolve_player_element(conn, player_id)
+
+    next_costs = _determine_next_costs(stat_upgrades, element)
 
     for stat in UPGRADEABLE_STATS:
         stat_totals.setdefault(stat, 0.0)
-        next_costs.setdefault(stat, _calculate_next_cost(None))
+        next_costs.setdefault(
+            stat,
+            {
+                "item": f"{element}_{MATERIAL_STAR_LEVEL}",
+                "count": _calculate_next_cost(None),
+            },
+        )
 
     return {
         "stat_upgrades": stat_upgrades,
         "stat_totals": stat_totals,
         "stat_counts": stat_counts,
         "next_costs": next_costs,
-        "upgrade_points": _get_player_upgrade_points(player_id),
+        "element": element,
     }
-
-
-def _get_player_upgrade_points(player_id: str) -> int:
-    """Get upgrade points for a player."""
-    with get_save_manager().connection() as conn:
-        _create_upgrade_tables()
-        cur = conn.execute("SELECT points FROM player_upgrade_points WHERE player_id = ?", (player_id,))
-        row = cur.fetchone()
-        return int(row[0]) if row else 0
-
-
-def _add_player_upgrade_points(player_id: str, points: int):
-    """Add upgrade points for a player."""
-    with get_save_manager().connection() as conn:
-        _create_upgrade_tables()
-        conn.execute("""
-            INSERT OR REPLACE INTO player_upgrade_points (player_id, points)
-            VALUES (?, COALESCE((SELECT points FROM player_upgrade_points WHERE player_id = ?), 0) + ?)
-        """, (player_id, player_id, points))
-        conn.commit()
-
-
-def _spend_player_upgrade_points(player_id: str, points: int, stat_name: str, upgrade_percent: float) -> bool:
-    """Spend upgrade points for a specific stat upgrade. Returns True if successful."""
-    with get_save_manager().connection() as conn:
-        _create_upgrade_tables()
-        cur = conn.execute("SELECT points FROM player_upgrade_points WHERE player_id = ?", (player_id,))
-        row = cur.fetchone()
-        current_points = int(row[0]) if row else 0
-
-        if current_points < points:
-            return False
-
-        # Deduct points and add upgrade in same transaction
-        conn.execute("""
-            UPDATE player_upgrade_points SET points = points - ? WHERE player_id = ?
-        """, (points, player_id))
-        conn.execute("""
-            INSERT INTO player_stat_upgrades (player_id, stat_name, upgrade_percent, source_star, cost_spent)
-            VALUES (?, ?, ?, ?, ?)
-        """, (player_id, stat_name, upgrade_percent, 0, points))  # 0 for point-based upgrades
-        conn.commit()
-        return True
-
-
 @bp.get("/players/<pid>/upgrade")
 async def get_player_upgrade(pid: str):
     manager = GachaManager(get_save_manager())
@@ -778,40 +887,64 @@ async def upgrade_player(pid: str):
     if item_count < 1:
         return jsonify({"error": "item_count must be at least 1"}), 400
 
+    element = inst.element_id.lower()
+    target_material_key = f"{element}_{MATERIAL_STAR_LEVEL}"
+
     def perform_upgrade():
-        total_points = 0
-        consumed_items = {}
-        points_per_item = PLAYER_POINTS_VALUES[star_level]
+        materials_added = 0
+        consumed_items: dict[str, int] = {}
+        materials_per_item = STAR_TO_MATERIALS[star_level]
 
         if pid == "player":
             items_needed = item_count
-            for damage_type in ["generic", "light", "dark", "wind", "lightning", "fire", "ice"]:
-                item_key = f"{damage_type}_{star_level}"
-                available = items.get(item_key, 0)
-                if available > 0:
-                    consume = min(available, items_needed)
-                    items[item_key] -= consume
-                    consumed_items[item_key] = consume
-                    total_points += consume * points_per_item
-                    items_needed -= consume
-                    if items_needed <= 0:
-                        break
-            if items_needed > 0:
-                return {"error": f"insufficient {star_level}★ items (need {item_count}, found {item_count - items_needed})"}
-        else:
-            element = inst.element_id.lower()
-            item_key = f"{element}_{star_level}"
-            if items.get(item_key, 0) < item_count:
-                return {"error": f"insufficient {element} {star_level}★ items"}
-            items[item_key] -= item_count
-            consumed_items[item_key] = item_count
-            total_points = item_count * points_per_item
+            preferred_keys: list[str] = []
+            active_key = f"{element}_{star_level}"
+            preferred_keys.append(active_key)
+            preferred_keys.append(f"generic_{star_level}")
+            for item_key in sorted(items):
+                if not item_key.endswith(f"_{star_level}"):
+                    continue
+                if item_key in preferred_keys:
+                    continue
+                preferred_keys.append(item_key)
 
-        _add_player_upgrade_points(pid, total_points)
+            for item_key in preferred_keys:
+                available = items.get(item_key, 0)
+                if available <= 0:
+                    continue
+                consume = min(available, items_needed)
+                items[item_key] -= consume
+                consumed_items[item_key] = consume
+                materials_added += consume * materials_per_item
+                items_needed -= consume
+                if items_needed <= 0:
+                    break
+            if items_needed > 0:
+                return {
+                    "error": (
+                        f"insufficient {star_level}★ items (need {item_count}, "
+                        f"found {item_count - items_needed})"
+                    )
+                }
+        else:
+            source_key = f"{element}_{star_level}"
+            available = int(items.get(source_key, 0))
+            if available < item_count:
+                return {"error": f"insufficient {element} {star_level}★ items"}
+            items[source_key] = available - item_count
+            consumed_items[source_key] = item_count
+            materials_added = item_count * materials_per_item
+
+        if materials_added <= 0:
+            return {"error": "no materials gained"}
+
+        items[target_material_key] = items.get(target_material_key, 0) + materials_added
+
         return {
-            "points_gained": total_points,
+            "materials_gained": materials_added,
             "items_consumed": consumed_items,
-            "total_points": _get_player_upgrade_points(pid),
+            "materials_balance": items.get(target_material_key, 0),
+            "material_key": target_material_key,
         }
 
     result = await asyncio.to_thread(perform_upgrade)
@@ -838,9 +971,20 @@ async def upgrade_player_stat(pid: str):
 
     data = await request.get_json(silent=True) or {}
     stat_name = data.get("stat_name")
-    requested_points = data.get("points")
+    requested_materials = data.get("materials")
+    if requested_materials is None:
+        requested_materials = data.get("points")
+    if requested_materials is not None:
+        try:
+            requested_materials = int(requested_materials)
+        except (TypeError, ValueError):
+            return jsonify({"error": "materials must be an integer >= 1"}), 400
+        if requested_materials < 1:
+            return jsonify({"error": "materials must be at least 1"}), 400
     raw_repeat = data.get("repeat", data.get("repeats"))
-    raw_total_points = data.get("total_points")
+    raw_total_materials = data.get("total_materials")
+    if raw_total_materials is None:
+        raw_total_materials = data.get("total_points")
 
     if stat_name not in UPGRADEABLE_STATS:
         return jsonify({"error": f"invalid stat, must be one of: {UPGRADEABLE_STATS}"}), 400
@@ -853,80 +997,113 @@ async def upgrade_player_stat(pid: str):
         repeat = 1
     repeat = min(repeat, 1000)
 
-    if raw_total_points is not None:
+    if raw_total_materials is not None:
         try:
-            total_points_limit = int(raw_total_points)
+            material_budget = int(raw_total_materials)
         except (TypeError, ValueError):
-            return jsonify({"error": "total_points must be an integer >= 1"}), 400
-        if total_points_limit < 1:
-            return jsonify({"error": "total_points must be at least 1"}), 400
+            return jsonify({"error": "total_materials must be an integer >= 1"}), 400
+        if material_budget < 1:
+            return jsonify({"error": "total_materials must be at least 1"}), 400
     else:
-        total_points_limit = None
+        material_budget = None
 
-    def spend_points():
-        validated_points = False
+    def apply_material_upgrades():
+        validated_cost = False
         completed = 0
         total_spent = 0
         total_percent = 0.0
-        budget_remaining = total_points_limit
+        budget_remaining = material_budget
         last_cost = None
 
-        while completed < repeat:
-            cost_to_spend = _get_next_cost_for_stat(pid, stat_name)
-            last_cost = cost_to_spend
+        with get_save_manager().connection() as conn:
+            _ensure_upgrade_tables(conn)
+            element = _resolve_player_element(conn, pid)
+            material_key = f"{element}_{MATERIAL_STAR_LEVEL}"
 
-            if not validated_points and requested_points is not None and requested_points != cost_to_spend:
-                payload = _build_player_upgrade_payload(pid)
-                payload.update({
-                    "error": "invalid point cost",
-                    "expected_points": cost_to_spend,
-                })
-                return payload
+            while completed < repeat:
+                cost_to_spend = _get_next_cost_for_stat(pid, stat_name, conn=conn)
+                last_cost = cost_to_spend
 
-            validated_points = True
+                if (
+                    not validated_cost
+                    and requested_materials is not None
+                    and int(requested_materials) != cost_to_spend
+                ):
+                    payload = _build_player_upgrade_payload(pid)
+                    payload.update({
+                        "error": "invalid material cost",
+                        "expected_materials": cost_to_spend,
+                    })
+                    return payload
 
-            if budget_remaining is not None and cost_to_spend > budget_remaining:
-                break
+                validated_cost = True
 
-            upgrade_percent = cost_to_spend * 0.001  # 0.1% per point
-            success = _spend_player_upgrade_points(pid, cost_to_spend, stat_name, upgrade_percent)
-            if not success:
-                payload = _build_player_upgrade_payload(pid)
-                payload.update({
-                    "error": "insufficient upgrade points",
-                    "required_points": cost_to_spend,
-                    "attempted_upgrades": repeat,
-                    "completed_upgrades": completed,
-                    "points_spent": total_spent,
-                    "upgrade_percent": total_percent,
-                })
-                payload["remaining_points"] = payload.get("upgrade_points", 0)
-                return payload
+                if budget_remaining is not None and cost_to_spend > budget_remaining:
+                    break
 
-            completed += 1
-            total_spent += cost_to_spend
-            total_percent += upgrade_percent
-            if budget_remaining is not None:
-                budget_remaining = max(0, budget_remaining - cost_to_spend)
+                row = conn.execute(
+                    "SELECT count FROM upgrade_items WHERE id = ?",
+                    (material_key,),
+                ).fetchone()
+                available = int(row[0]) if row else 0
+                if available < cost_to_spend:
+                    payload = _build_player_upgrade_payload(pid)
+                    payload.update({
+                        "error": "insufficient materials",
+                        "required_materials": cost_to_spend,
+                        "attempted_upgrades": repeat,
+                        "completed_upgrades": completed,
+                        "materials_spent": total_spent,
+                        "upgrade_percent": total_percent,
+                        "materials_available": available,
+                    })
+                    return payload
+
+                conn.execute(
+                    "UPDATE upgrade_items SET count = count - ? WHERE id = ?",
+                    (cost_to_spend, material_key),
+                )
+
+                upgrade_percent = cost_to_spend * 0.001
+                conn.execute(
+                    """
+                    INSERT INTO player_stat_upgrades (player_id, stat_name, upgrade_percent, source_star, cost_spent)
+                    VALUES (?, ?, ?, ?, ?)
+                    """,
+                    (pid, stat_name, upgrade_percent, MATERIAL_STAR_LEVEL, cost_to_spend),
+                )
+
+                completed += 1
+                total_spent += cost_to_spend
+                total_percent += upgrade_percent
+                if budget_remaining is not None:
+                    budget_remaining = max(0, budget_remaining - cost_to_spend)
+
+            remaining_row = conn.execute(
+                "SELECT count FROM upgrade_items WHERE id = ?",
+                (material_key,),
+            ).fetchone()
+            remaining_materials = int(remaining_row[0]) if remaining_row else 0
+            conn.commit()
 
         payload = _build_player_upgrade_payload(pid)
         response = {
             "stat_upgraded": stat_name,
-            "points_spent": total_spent,
+            "materials_spent": total_spent,
             "upgrade_percent": total_percent,
             "completed_upgrades": completed,
             "attempted_upgrades": repeat,
+            "materials_remaining": remaining_materials,
         }
         response.update(payload)
-        response["remaining_points"] = payload.get("upgrade_points", 0)
 
         if completed == 0:
             response.update({
-                "error": "insufficient upgrade points",
-                "required_points": last_cost,
+                "error": "insufficient materials",
+                "required_materials": last_cost,
             })
             if budget_remaining is not None and last_cost is not None and budget_remaining < last_cost:
-                response["error"] = "insufficient total_points budget"
+                response["error"] = "insufficient material budget"
             return response
 
         if budget_remaining is not None:
@@ -936,7 +1113,7 @@ async def upgrade_player_stat(pid: str):
 
         return response
 
-    result = await asyncio.to_thread(spend_points)
+    result = await asyncio.to_thread(apply_material_upgrades)
 
     if "error" in result:
         return jsonify(result), 400

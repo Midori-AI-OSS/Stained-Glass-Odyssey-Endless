@@ -6,11 +6,9 @@
   import { fade, scale } from 'svelte/transition';
   import { quintOut } from 'svelte/easing';
   import { getElementIcon, getElementColor } from '../systems/assetLoader.js';
-  import { onMount } from 'svelte';
-  import { savePlayerConfig, getGacha } from '../systems/api.js';
-  import { stackItems } from '../systems/craftingUtils.js';
+  import { savePlayerConfig } from '../systems/api.js';
   import { Heart, Sword, Shield, Crosshair, Zap, HeartPulse, ShieldPlus } from 'lucide-svelte';
-  import { formatPoints, formatCost, formatPercent } from '../utils/upgradeFormatting.js';
+  import { formatCost, formatPercent, formatMaterialQuantity, formatMaterialName } from '../utils/upgradeFormatting.js';
 
   export let roster = [];
   export let previewId;
@@ -66,64 +64,24 @@
   $: highlightedStat =
     pendingStat || upgradeContext?.stat || upgradeContext?.lastRequestedStat || null;
   $: upgradeItems = upgradeData?.items || {};
-  $: upgradePointsValue = upgradeData?.upgrade_points;
   $: upgradeTotals = upgradeData?.stat_totals || {};
   $: upgradeCosts = upgradeData?.next_costs || {};
+  $: upgradeCounts = upgradeData?.stat_counts || {};
   $: upgradeErrorMessage = upgradeError ? (upgradeError.message || String(upgradeError)) : '';
-  // Global inventory (materials) for conversion availability (fallback source)
-  let globalMaterials = {};
-  let materialsReady = false;
-  let matsToken = 0;
-  async function refreshGlobalMaterials() {
-    const token = ++matsToken;
-    const prev = globalMaterials;
-    // mark refreshing but don't clear data; UI keeps last-known values
-    materialsReady = false;
-    try {
-      const gacha = await getGacha();
-      const next = stackItems(gacha?.items || {});
-      if (token === matsToken) {
-        globalMaterials = next;
-      }
-    } catch {
-      // Keep previous materials on failure
-      if (token === matsToken) {
-        globalMaterials = prev;
-      }
-    } finally {
-      if (token === matsToken) materialsReady = true;
-    }
-  }
-  onMount(refreshGlobalMaterials);
-
-  // Refresh global materials when entering upgrade mode and when element changes in upgrade.
-  // This serves as a fallback if per-character upgradeData isn't available yet.
-  $: if (mode === 'upgrade') {
-    refreshGlobalMaterials();
-  }
-  $: if (mode === 'upgrade' && elementName) {
-    refreshGlobalMaterials();
-  }
-  $: if (previewId) {
-    // Ensure we have up-to-date counts for newly previewed character
-    refreshGlobalMaterials();
-  }
-
-  $: if (upgradeData && Object.prototype.hasOwnProperty.call(upgradeData, 'items')) {
-    globalMaterials = stackItems(upgradeData.items || {});
-    materialsReady = true;
-  }
-
-  $: available4 = computeAvailableFour();
-  $: pendingConversion = Boolean(upgradeContext?.pendingConversion);
-  $: pendingAction = Boolean(upgradeContext?.pendingStat || upgradeContext?.pendingConversion);
-  // Allow convert based on available counts. Prefer upgradeData if present; otherwise require
-  // global materials to be ready.
-  $: canConvert4 = Boolean(
-    !pendingAction &&
-    ((upgradeItems && Object.keys(upgradeItems).length > 0) || materialsReady) &&
-    available4 >= 1
-  );
+  $: resolvedUpgradeElement = (upgradeData?.element || elementName || 'generic');
+  $: upgradeElementKey = String(resolvedUpgradeElement || 'generic').toLowerCase();
+  $: upgradeMaterialKey = `${upgradeElementKey}_1`;
+  $: availableMaterials = Number(upgradeItems?.[upgradeMaterialKey] ?? 0);
+  $: pendingAction = Boolean(upgradeContext?.pendingStat);
+  $: levelsSummary = UPGRADE_STATS.map((entry) => {
+    const level = Number(upgradeCounts?.[entry.key] ?? 0);
+    const percent = upgradeTotals?.[entry.key] ?? 0;
+    return `${entry.label} L${level} (${formatPercent(percent)})`;
+  }).join(', ');
+  $: activeStatKey = highlightedStat || UPGRADE_STATS[0]?.key || null;
+  $: activeStatLevel = activeStatKey ? statLevel(activeStatKey) : 0;
+  $: activeStatLabel = activeStatKey ? statLabel(activeStatKey) : '';
+  $: activeNextCost = activeStatKey ? upgradeCosts?.[activeStatKey] ?? null : null;
   function statLabel(stat) {
     if (!stat) return '';
     const match = UPGRADE_STATS.find((s) => s.key === stat);
@@ -131,38 +89,8 @@
     const pretty = String(stat).replace(/_/g, ' ').trim();
     return pretty ? pretty.replace(/\b\w/g, (c) => c.toUpperCase()) : stat;
   }
-
-  function computeAvailableFour() {
-    if (!selected) return 0;
-    const starSuffix = '_4';
-    const elKey = String(elementName || 'generic').toLowerCase();
-
-    // Prefer per-character upgradeData items when available as they are specific to the
-    // currently previewed character and reflect backend state immediately after actions.
-    const items = upgradeItems || {};
-    const hasUpgradeItems = items && Object.keys(items).length > 0;
-    const fromUpgrade = (() => {
-      if (selected.is_player) {
-        // Player can convert from any element
-        return Object.entries(items)
-          .filter(([k]) => k.endsWith(starSuffix))
-          .reduce((acc, [, v]) => acc + (Number(v) || 0), 0);
-      }
-      const key = `${elKey}${starSuffix}`;
-      const val = items[key];
-      return Number(val) || 0;
-    })();
-
-    if (hasUpgradeItems) return fromUpgrade;
-
-    // Fallback to global materials if upgradeData isn't present (e.g. initial load / cache race)
-    if (selected.is_player) {
-      return Object.entries(globalMaterials)
-        .filter(([key]) => key.endsWith(starSuffix))
-        .reduce((acc, [, qty]) => acc + (Number(qty) || 0), 0);
-    }
-    const key = `${elKey}${starSuffix}`;
-    return Number(globalMaterials[key]) || 0;
+  function statLevel(stat) {
+    return Number(upgradeCounts?.[stat] ?? 0);
   }
 
   function formatStatTotal(value) {
@@ -340,12 +268,14 @@
 
   function requestUpgrade(stat) {
     if (!selected || !stat || pendingAction) return;
-    dispatch('request-upgrade', { id: selected.id, stat, repeats: upgradeRepeat });
-  }
-
-  function convertFourStar() {
-    if (!selected || !canConvert4) return;
-    dispatch('request-convert', { id: selected.id, starLevel: 4, itemCount: 1 });
+    const nextCost = upgradeCosts?.[stat]?.count ?? null;
+    dispatch('request-upgrade', {
+      id: selected.id,
+      stat,
+      repeats: upgradeRepeat,
+      expectedMaterials: nextCost,
+      availableMaterials
+    });
   }
 
   function handleBackgroundClick(event) {
@@ -473,31 +403,31 @@
 
               <!-- Buttons; icons inherit accent via color -->
               <button type="button" class="stat-icon-btn" style={`left:${currentLayout.hp.x}%; top:${currentLayout.hp.y}%; transform:translate(-50%,-50%); color:${accent}`}
-                class:active={highlightedStat==='max_hp'} disabled={pendingAction} on:click={() => requestUpgrade('max_hp')} aria-label="HP" title="HP — Bolster survivability.">
+                class:active={highlightedStat==='max_hp'} disabled={pendingAction} on:click={() => requestUpgrade('max_hp')} aria-label={`HP — Bolster survivability. Level ${statLevel('max_hp')}`} title={`HP — Bolster survivability. Level ${statLevel('max_hp')}`}>
                 <Heart aria-hidden="true" />
               </button>
               <button type="button" class="stat-icon-btn" style={`left:${currentLayout.atk.x}%; top:${currentLayout.atk.y}%; transform:translate(-50%,-50%); color:${accent}`}
-                class:active={highlightedStat==='atk'} disabled={pendingAction} on:click={() => requestUpgrade('atk')} aria-label="Attack" title="ATK — Improve offensive power.">
+                class:active={highlightedStat==='atk'} disabled={pendingAction} on:click={() => requestUpgrade('atk')} aria-label={`ATK — Improve offensive power. Level ${statLevel('atk')}`} title={`ATK — Improve offensive power. Level ${statLevel('atk')}`}>
                 <Sword aria-hidden="true" />
               </button>
               <button type="button" class="stat-icon-btn" style={`left:${currentLayout.def.x}%; top:${currentLayout.def.y}%; transform:translate(-50%,-50%); color:${accent}`}
-                class:active={highlightedStat==='defense'} disabled={pendingAction} on:click={() => requestUpgrade('defense')} aria-label="Defense" title="DEF — Stiffen defenses.">
+                class:active={highlightedStat==='defense'} disabled={pendingAction} on:click={() => requestUpgrade('defense')} aria-label={`DEF — Stiffen defenses. Level ${statLevel('defense')}`} title={`DEF — Stiffen defenses. Level ${statLevel('defense')}`}>
                 <Shield aria-hidden="true" />
               </button>
               <button type="button" class="stat-icon-btn" style={`left:${currentLayout.crit_rate.x}%; top:${currentLayout.crit_rate.y}%; transform:translate(-50%,-50%); color:${accent}`}
-                class:active={highlightedStat==='crit_rate'} disabled={pendingAction} on:click={() => requestUpgrade('crit_rate')} aria-label="Crit Rate" title="Crit Rate — Raise critical odds.">
+                class:active={highlightedStat==='crit_rate'} disabled={pendingAction} on:click={() => requestUpgrade('crit_rate')} aria-label={`Crit Rate — Raise critical odds. Level ${statLevel('crit_rate')}`} title={`Crit Rate — Raise critical odds. Level ${statLevel('crit_rate')}`}>
                 <Crosshair aria-hidden="true" />
               </button>
               <button type="button" class="stat-icon-btn" style={`left:${currentLayout.crit_damage.x}%; top:${currentLayout.crit_damage.y}%; transform:translate(-50%,-50%); color:${accent}`}
-                class:active={highlightedStat==='crit_damage'} disabled={pendingAction} on:click={() => requestUpgrade('crit_damage')} aria-label="Crit Damage" title="Crit DMG — Amplify crit damage.">
+                class:active={highlightedStat==='crit_damage'} disabled={pendingAction} on:click={() => requestUpgrade('crit_damage')} aria-label={`Crit DMG — Amplify crit damage. Level ${statLevel('crit_damage')}`} title={`Crit DMG — Amplify crit damage. Level ${statLevel('crit_damage')}`}>
                 <Zap aria-hidden="true" />
               </button>
               <button type="button" class="stat-icon-btn" style={`left:${currentLayout.vitality.x}%; top:${currentLayout.vitality.y}%; transform:translate(-50%,-50%); color:${accent}`}
-                class:active={highlightedStat==='vitality'} disabled={!!pendingStat} on:click={() => requestUpgrade('vitality')} aria-label="Vitality" title="Vitality — Extend buff durations & recovery.">
+                class:active={highlightedStat==='vitality'} disabled={!!pendingStat} on:click={() => requestUpgrade('vitality')} aria-label={`Vitality — Extend buff durations & recovery. Level ${statLevel('vitality')}`} title={`Vitality — Extend buff durations & recovery. Level ${statLevel('vitality')}`}>
                 <HeartPulse aria-hidden="true" />
               </button>
               <button type="button" class="stat-icon-btn" style={`left:${currentLayout.mitigation.x}%; top:${currentLayout.mitigation.y}%; transform:translate(-50%,-50%); color:${accent}`}
-                class:active={highlightedStat==='mitigation'} disabled={!!pendingStat} on:click={() => requestUpgrade('mitigation')} aria-label="Mitigation" title="Mitigation — Soften incoming damage.">
+                class:active={highlightedStat==='mitigation'} disabled={!!pendingStat} on:click={() => requestUpgrade('mitigation')} aria-label={`Mitigation — Soften incoming damage. Level ${statLevel('mitigation')}`} title={`Mitigation — Soften incoming damage. Level ${statLevel('mitigation')}`}>
                 <ShieldPlus aria-hidden="true" />
               </button>
           </div>
@@ -506,8 +436,6 @@
             <div class="row row1" aria-live="polite">
               {#if pendingStat}
                 <span class="status pending">Upgrading {statLabel(pendingStat)}…</span>
-              {:else if pendingConversion}
-                <span class="status pending">Converting…</span>
               {:else if upgradeContext?.error}
                 <span class="status error">{upgradeContext.error}</span>
               {:else if upgradeContext?.message}
@@ -518,7 +446,7 @@
               {:else if upgradeErrorMessage}
                 <span class="status error">{upgradeErrorMessage}</span>
               {/if}
-              <span class="points">Points: {formatPoints(upgradePointsValue)}</span>
+              <span class="materials">Available: {formatMaterialQuantity(availableMaterials, upgradeMaterialKey)}</span>
             </div>
             <div class="repeat-controls" aria-label="Upgrade repeats" on:click|stopPropagation>
               {#each REPEAT_OPTIONS as option}
@@ -536,11 +464,9 @@
               {/each}
             </div>
             <div class="row row2">
-              <button type="button" class="convert4-btn" on:click={convertFourStar} disabled={!canConvert4}>
-                Convert 4★ into 5 points
-              </button>
-              <span class="avail">Available 4★: {available4}</span>
-              <span class="note">{selected?.is_player ? 'Any element' : `${elementName || 'Generic'} only`}</span>
+              <span class="next-cost">Next {activeStatLabel || 'upgrade'}: {formatCost(activeNextCost)}</span>
+              <span class="level">Level {activeStatLevel}</span>
+              <span class="summary">{levelsSummary}</span>
             </div>
           </div>
         </div>
@@ -682,22 +608,14 @@
   .upgrade-bottom .status.success { color: #d7f3ff; }
   .upgrade-bottom .status.error { color: #ffc4c4; }
   .upgrade-bottom .status.note { color: rgba(220,228,255,0.8); }
-  .upgrade-bottom .points { margin-left: auto; color: #fff; font-weight: 600; }
-  .convert4-btn {
-    background: color-mix(in srgb, var(--accent, #6ab) 25%, rgba(0,0,0,0.6));
-    border: 1px solid color-mix(in srgb, var(--accent, #6ab) 55%, rgba(255,255,255,0.35));
-    color: #f5f9ff;
-    border-radius: 0.5rem;
-    padding: 0.4rem 0.7rem;
-    cursor: pointer;
-    transition: transform 140ms ease, background 140ms ease, border-color 140ms ease;
+  .upgrade-bottom .materials { margin-left: auto; color: #fff; font-weight: 600; }
+  .upgrade-bottom .next-cost,
+  .upgrade-bottom .level,
+  .upgrade-bottom .summary {
+    color: rgba(220,228,255,0.85);
+    font-size: 0.85rem;
   }
-  .convert4-btn:hover:enabled {
-    transform: translateY(-1px);
-    background: color-mix(in srgb, var(--accent, #6ab) 40%, rgba(0,0,0,0.55));
-  }
-  .convert4-btn:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
-  .upgrade-bottom .avail, .upgrade-bottom .note { color: rgba(220,228,255,0.85); font-size: 0.85rem; }
+  .upgrade-bottom .summary { margin-left: auto; text-align: right; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
   /* Backdrop with dimmed & blurred portrait */
   .upgrade-bg { position: absolute; inset: 0; z-index: 0; pointer-events: none; }
   .upgrade-bg img {
@@ -778,26 +696,6 @@
     font-size: 0.85rem;
     color: rgba(230,236,255,0.8);
     text-align: center;
-  }
-  .points-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: baseline;
-    background: rgba(0,0,0,0.45);
-    border: 1px solid rgba(255,255,255,0.12);
-    border-radius: 0.65rem;
-    padding: 0.55rem 0.75rem;
-  }
-  .points-label {
-    font-size: 0.75rem;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: rgba(240,246,255,0.65);
-  }
-  .points-value {
-    font-size: 1.05rem;
-    font-weight: 600;
-    color: #f1f5ff;
   }
   .stat-upgrade-grid {
     display: grid;
