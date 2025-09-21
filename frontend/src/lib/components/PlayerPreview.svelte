@@ -107,6 +107,11 @@
     refreshGlobalMaterials();
   }
 
+  $: if (upgradeData && Object.prototype.hasOwnProperty.call(upgradeData, 'items')) {
+    globalMaterials = stackItems(upgradeData.items || {});
+    materialsReady = true;
+  }
+
   $: available4 = computeAvailableFour();
   $: pendingConversion = Boolean(upgradeContext?.pendingConversion);
   $: pendingAction = Boolean(upgradeContext?.pendingStat || upgradeContext?.pendingConversion);

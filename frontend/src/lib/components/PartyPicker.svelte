@@ -9,6 +9,7 @@
   import PlayerPreview from './PlayerPreview.svelte';
   import StatTabs from './StatTabs.svelte';
   import { browser, dev } from '$app/environment';
+  import { mergeUpgradePayload, shouldRefreshRoster } from './upgradeCacheUtils.js';
 
   let roster = [];
   let userBuffPercent = 0;
@@ -314,9 +315,21 @@
     }
 
     try {
-      await upgradeCharacter(id, starLevel, itemCount);
-      await refreshUpgradeData(id, { force: true });
-      await refreshRoster();
+      const result = await upgradeCharacter(id, starLevel, itemCount);
+      const key = String(id);
+      const previous = upgradeCache[key];
+      const previousData = previous?.data || null;
+      const mergedData = mergeUpgradePayload(previousData, result);
+      upgradeCache = {
+        ...upgradeCache,
+        [key]: {
+          data: mergedData,
+          loading: false,
+          error: null
+        }
+      };
+
+      const needsRosterRefresh = shouldRefreshRoster(result);
       if (isUpgradeMode) {
         const updatedChar = roster.find((p) => p.id === id) || payload.character || null;
         upgradeContext = {
@@ -329,6 +342,18 @@
           message: `Converted ${itemCount}× ${starLevel}★ items to upgrade points.`,
           error: ''
         };
+      }
+
+      await refreshUpgradeData(id, { force: true });
+      if (needsRosterRefresh) {
+        await refreshRoster();
+        if (isUpgradeMode) {
+          const updatedChar = roster.find((p) => p.id === id) || payload.character || null;
+          upgradeContext = {
+            ...upgradeContext,
+            character: updatedChar
+          };
+        }
       }
     } catch (err) {
       if (isUpgradeMode) {
