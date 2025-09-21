@@ -19,19 +19,22 @@
 
 <OverlaySurface {zIndex}>
   <div class="box" style={`--max-w: ${maxWidth}; --max-h: ${maxHeight}` }>
-  <div class="inner">
-  <div class="content-wrap">
-  <MenuPanel {padding}>
-    {#if title}
-      <header class="head">
-        <h3>{title}</h3>
-        <button class="mini" title="Close" on:click={close}>✕</button>
-      </header>
-    {/if}
-    <slot />
-  </MenuPanel>
-  </div>
-  </div>
+    <div class="inner">
+      <div class="content-wrap">
+        <MenuPanel class="panel-body" {padding}>
+          {#if title}
+            <header class="head">
+              <h3>{title}</h3>
+              <button class="mini" title="Close" on:click={close}>✕</button>
+            </header>
+          {/if}
+          <slot />
+        </MenuPanel>
+        <div class="panel-footer">
+          <slot name="footer" />
+        </div>
+      </div>
+    </div>
   </div>
 </OverlaySurface>
 
@@ -66,21 +69,19 @@
     width: min(var(--max-w), 90%);
     /* Let height shrink to fit content, but cap it */
     max-height: var(--max-h);
-    /* Enable vertical scrolling when content exceeds max height */
-    overflow-y: auto;
+    /* Contain layout; inner body scrolls */
+    overflow: hidden;
     display: flex;
     flex-direction: column;
     /* allow children to shrink and scroll within */
     min-height: 0;
   }
 
-  .inner {
-    /* allow content to size naturally inside the box */
-    display: block;
-  }
+  .inner { display: flex; flex-direction: column; min-height: 0; }
 
-  .content-wrap {
-    /* natural content sizing; MenuPanel manages its own overflow */
-    display: block;
-  }
+  .content-wrap { display: flex; flex-direction: column; min-height: 0; }
+
+  /* Scroll the body, keep footer visible */
+  .panel-body { flex: 1 1 auto; min-height: 0; overflow: auto; }
+  .panel-footer { flex: 0 0 auto; }
 </style>

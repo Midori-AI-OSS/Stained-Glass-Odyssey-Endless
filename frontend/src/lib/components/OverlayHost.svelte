@@ -390,7 +390,7 @@
           {reducedMotion}
         />
       {/key}
-      <div class="stained-glass-row" style="justify-content: flex-end; margin-top: 0.75rem;">
+      <div slot="footer" class="stained-glass-row" style="justify-content: flex-end; margin-top: 0.75rem;">
         <button class="icon-btn" on:click={() => dispatch('nextRoom')}>Next Room</button>
       </div>
     </PopupWindow>
@@ -478,6 +478,17 @@
     box-shadow: var(--glass-shadow);
     border: var(--glass-border);
     backdrop-filter: var(--glass-filter);
+  }
+
+  /* Keep action bar pinned to the bottom inside scrollable MenuPanel */
+  .sticky-bottom {
+    position: sticky;
+    bottom: 0;
+    z-index: 5;
+    /* Subtle gradient to separate from content when overlapping */
+    background:
+      linear-gradient(180deg, rgba(0,0,0,0) 0%, rgba(0,0,0,0.12) 35%, rgba(0,0,0,0.18) 100%),
+      var(--glass-bg);
   }
 
   /* Party actions: stack full-width buttons vertically */
