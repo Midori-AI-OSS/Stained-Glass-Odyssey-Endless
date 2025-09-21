@@ -5,6 +5,9 @@ from autofighter.stats import BUS
 from plugins.relics._base import RelicBase
 from plugins.relics._base import safe_async_task
 
+# Global flag to prevent infinite echo loops
+_echo_processing = False
+
 
 @dataclass
 class EchoBell(RelicBase):
@@ -29,6 +32,11 @@ class EchoBell(RelicBase):
                 used.clear()
 
             async def _action(actor, target, amount, action_type="damage") -> None:
+                global _echo_processing
+                # Prevent infinite loops from recursive echo effects
+                if _echo_processing:
+                    return
+
                 pid = id(actor)
                 if pid in used:
                     return
@@ -36,23 +44,29 @@ class EchoBell(RelicBase):
                 current_stacks = state.get("stacks", 0)
                 if current_stacks <= 0:
                     return
-                echo_amount = int(amount * 0.15 * current_stacks)
 
-                # Emit relic effect event for echo action
-                await BUS.emit_async("relic_effect", "echo_bell", actor, "echo_action", echo_amount, {
-                    "original_amount": amount,
-                    "echo_percentage": 15 * current_stacks,
-                    "target": getattr(target, 'id', str(target)),
-                    "first_action": True,
-                    "action_type": action_type,
-                    "stacks": current_stacks
-                })
+                # Set flag to prevent recursive echo effects
+                _echo_processing = True
+                try:
+                    echo_amount = int(amount * 0.15 * current_stacks)
 
-                # Echo the same type of action - damage or healing
-                if action_type == "healing":
-                    safe_async_task(target.apply_healing(echo_amount, healer=actor))
-                else:
-                    safe_async_task(target.apply_damage(echo_amount, attacker=actor))
+                    # Emit relic effect event for echo action
+                    await BUS.emit_async("relic_effect", "echo_bell", actor, "echo_action", echo_amount, {
+                        "original_amount": amount,
+                        "echo_percentage": 15 * current_stacks,
+                        "target": getattr(target, 'id', str(target)),
+                        "first_action": True,
+                        "action_type": action_type,
+                        "stacks": current_stacks
+                    })
+
+                    # Echo the same type of action - damage or healing
+                    if action_type == "healing":
+                        safe_async_task(target.apply_healing(echo_amount, healer=actor))
+                    else:
+                        safe_async_task(target.apply_damage(echo_amount, attacker=actor))
+                finally:
+                    _echo_processing = False
 
             def _healing(actor, target, amount) -> None:
                 _action(actor, target, amount, "healing")
