@@ -24,8 +24,10 @@ Snapshots reporting `result: 'defeat'` are treated as complete even if an
 is shown.
 
 Unexpected network errors are logged and retried. `handleRunEnd()` now fires
-only when `pollBattle` or `pollState` receive an error with a `404` status or a
-message containing `"run ended"`; other errors allow the poll to continue.
+only when `pollBattle` or `pollState` receive an error with a `404` status, a
+`400` accompanied by a `"no active run"` message, an `ERR_NO_ACTIVE_RUN` code,
+or a message containing `"run ended"`; other errors allow the poll to
+continue.
 `handleLootAcknowledge` and `handleNextRoom` call `stopBattlePoll()` before
 acknowledging loot to prevent lingering timers from racing ahead and flagging
 the run as ended.

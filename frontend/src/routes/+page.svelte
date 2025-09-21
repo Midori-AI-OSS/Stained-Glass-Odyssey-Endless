@@ -26,6 +26,7 @@
     homeOverlay
   } from '$lib';
   import { updateParty, acknowledgeLoot } from '$lib/systems/uiApi.js';
+  import { shouldHandleRunEndError } from '$lib/systems/runErrorGuard.js';
   import { buildRunMenu } from '$lib/components/RunButtons.svelte';
   import { browser, dev } from '$app/environment';
 
@@ -704,7 +705,7 @@
       }
     } catch (err) {
       // Treat snapshot errors as transient unless run is confirmed ended.
-      if (err?.status === 404 || String(err?.message || '').toLowerCase().includes('run ended')) {
+      if (shouldHandleRunEndError(err)) {
         handleRunEnd();
         return;
       }
