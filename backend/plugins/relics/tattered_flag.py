@@ -40,7 +40,7 @@ class TatteredFlag(RelicBase):
                 mod = create_stat_buff(member, name=f"{self.id}_buff", atk_mult=1.03, turns=9999)
                 member.effect_manager.add_modifier(mod)
 
-        BUS.subscribe("damage_taken", _fallen)
+        self.subscribe(party, "damage_taken", _fallen)
 
     def describe(self, stacks: int) -> str:
         if stacks == 1:

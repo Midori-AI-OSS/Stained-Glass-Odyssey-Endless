@@ -20,33 +20,31 @@ class FrostSigil(RelicBase):
     async def apply(self, party) -> None:
         await super().apply(party)
 
-        state = getattr(party, "_frost_sigil_state", None)
-        if state is None:
-            party._frost_sigil_state = True
+        party._frost_sigil_state = True
 
-            async def _hit(attacker, target, amount, source_type="attack", source_name=None) -> None:
-                # Only trigger if the attacker is a party member
-                if attacker not in party.members:
-                    return
+        async def _hit(attacker, target, amount, source_type="attack", source_name=None) -> None:
+            # Only trigger if the attacker is a party member
+            if attacker not in party.members:
+                return
 
-                stacks = party.relics.count(self.id)
-                dmg = int(attacker.atk * 0.05)
+            stacks = party.relics.count(self.id)
+            dmg = int(attacker.atk * 0.05)
 
-                # Track frost sigil application
-                await BUS.emit_async("relic_effect", "frost_sigil", attacker, "chill_applied", dmg, {
-                    "target": getattr(target, 'id', str(target)),
-                    "aftertaste_hits": stacks,
-                    "damage_per_hit": dmg,
-                    "atk_percentage": 5,
-                    "attacker_atk": attacker.atk,
-                    "trigger": "hit_landed"
-                })
+            # Track frost sigil application
+            await BUS.emit_async("relic_effect", "frost_sigil", attacker, "chill_applied", dmg, {
+                "target": getattr(target, 'id', str(target)),
+                "aftertaste_hits": stacks,
+                "damage_per_hit": dmg,
+                "atk_percentage": 5,
+                "attacker_atk": attacker.atk,
+                "trigger": "hit_landed"
+            })
 
-                safe_async_task(
-                    Aftertaste(base_pot=dmg, hits=stacks).apply(attacker, target)
-                )
+            safe_async_task(
+                Aftertaste(base_pot=dmg, hits=stacks).apply(attacker, target)
+            )
 
-            BUS.subscribe("hit_landed", _hit)
+        self.subscribe(party, "hit_landed", _hit)
 
     def describe(self, stacks: int) -> str:
         hit_word = "hit" if stacks == 1 else "hits"

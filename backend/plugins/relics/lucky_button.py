@@ -58,17 +58,14 @@ class LuckyButton(RelicBase):
                 del active[pid]
 
         async def _battle_end(_entity, *_args) -> None:
-            BUS.unsubscribe("crit_missed", _crit_missed)
-            BUS.unsubscribe("turn_start", _turn_start)
-            BUS.unsubscribe("turn_end", _turn_end)
-            BUS.unsubscribe("battle_end", _battle_end)
+            self.clear_subscriptions(party)
             pending.clear()
             active.clear()
 
-        BUS.subscribe("crit_missed", _crit_missed)
-        BUS.subscribe("turn_start", _turn_start)
-        BUS.subscribe("turn_end", _turn_end)
-        BUS.subscribe("battle_end", _battle_end)
+        self.subscribe(party, "crit_missed", _crit_missed)
+        self.subscribe(party, "turn_start", _turn_start)
+        self.subscribe(party, "turn_end", _turn_end)
+        self.subscribe(party, "battle_end", _battle_end)
 
     def describe(self, stacks: int) -> str:
         if stacks == 1:

@@ -24,66 +24,68 @@ class StellarCompass(RelicBase):
             state = {"gold": 0.0, "crits": {}}
             party._stellar_compass_state = state
 
-            async def _crit(attacker, target, damage, *_):
-                if attacker not in party.members:
-                    return
-                copies = party.relics.count(self.id)
-                attacker_id = getattr(attacker, "id", id(attacker))
-                crits = state["crits"].get(attacker_id, 0) + 1
-                state["crits"][attacker_id] = crits
+        async def _crit(attacker, target, damage, *_):
+            if attacker not in party.members:
+                return
+            current_state = getattr(party, "_stellar_compass_state", state)
+            copies = party.relics.count(self.id)
+            attacker_id = getattr(attacker, "id", id(attacker))
+            crits = current_state["crits"].get(attacker_id, 0) + 1
+            current_state["crits"][attacker_id] = crits
 
-                atk_mult = 1 + 0.015 * crits * copies
-                mod_name = f"{self.id}_crit_{attacker_id}"
-                attacker.remove_effect_by_name(mod_name)
-                mod = create_stat_buff(
-                    attacker,
-                    name=mod_name,
-                    atk_mult=atk_mult,
-                    turns=9999,
-                )
-                attacker.effect_manager.add_modifier(mod)
-                state["gold"] += 0.015 * copies
+            atk_mult = 1 + 0.015 * crits * copies
+            mod_name = f"{self.id}_crit_{attacker_id}"
+            attacker.remove_effect_by_name(mod_name)
+            mod = create_stat_buff(
+                attacker,
+                name=mod_name,
+                atk_mult=atk_mult,
+                turns=9999,
+            )
+            attacker.effect_manager.add_modifier(mod)
+            current_state["gold"] += 0.015 * copies
 
-                # Track critical hit buff application
+            # Track critical hit buff application
+            await BUS.emit_async(
+                "relic_effect",
+                "stellar_compass",
+                attacker,
+                "crit_buff_applied",
+                damage,
+                {
+                    "target": getattr(target, "id", str(target)),
+                    "atk_boost_percentage": 1.5 * copies,
+                    "total_atk_boost": 1.5 * copies * crits,
+                    "gold_rate_increase": 1.5 * copies,
+                    "total_gold_rate": current_state["gold"] * 100,
+                    "stacks": copies,
+                    "crit_count": crits,
+                    "permanent": True,
+                },
+            )
+
+        async def _gold(amount: int) -> None:
+            current_state = getattr(party, "_stellar_compass_state", state)
+            if current_state["gold"] > 0:
+                bonus_gold = int(amount * current_state["gold"])
+                party.gold += bonus_gold
+
+                # Track bonus gold generation
                 await BUS.emit_async(
                     "relic_effect",
                     "stellar_compass",
-                    attacker,
-                    "crit_buff_applied",
-                    damage,
+                    party,
+                    "bonus_gold_earned",
+                    bonus_gold,
                     {
-                        "target": getattr(target, "id", str(target)),
-                        "atk_boost_percentage": 1.5 * copies,
-                        "total_atk_boost": 1.5 * copies * crits,
-                        "gold_rate_increase": 1.5 * copies,
-                        "total_gold_rate": state["gold"] * 100,
-                        "stacks": copies,
-                        "crit_count": crits,
-                        "permanent": True,
+                        "base_gold": amount,
+                        "gold_rate_multiplier": current_state["gold"],
+                        "total_crits_accumulated": sum(current_state["crits"].values()),
                     },
                 )
 
-            async def _gold(amount: int) -> None:
-                if state["gold"] > 0:
-                    bonus_gold = int(amount * state["gold"])
-                    party.gold += bonus_gold
-
-                    # Track bonus gold generation
-                    await BUS.emit_async(
-                        "relic_effect",
-                        "stellar_compass",
-                        party,
-                        "bonus_gold_earned",
-                        bonus_gold,
-                        {
-                            "base_gold": amount,
-                            "gold_rate_multiplier": state["gold"],
-                            "total_crits_accumulated": sum(state["crits"].values()),
-                        },
-                    )
-
-            BUS.subscribe("critical_hit", _crit)
-            BUS.subscribe("gold_earned", _gold)
+        self.subscribe(party, "critical_hit", _crit)
+        self.subscribe(party, "gold_earned", _gold)
 
     def describe(self, stacks: int) -> str:
         bonus = 1.5 * stacks

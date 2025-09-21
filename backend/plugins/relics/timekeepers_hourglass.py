@@ -5,7 +5,6 @@ import random
 
 from autofighter.effects import StatModifier
 from autofighter.effects import create_stat_buff
-from autofighter.stats import BUS
 from plugins.relics._base import RelicBase
 
 
@@ -85,8 +84,7 @@ class TimekeepersHourglass(RelicBase):
                     active_mods[id(member)] = mod
 
         def _battle_end(_entity) -> None:
-            BUS.unsubscribe("turn_start", _turn_start)
-            BUS.unsubscribe("battle_end", _battle_end)
+            self.clear_subscriptions(party)
             for member in party.members:
                 mod = active_mods.pop(id(member), None)
                 if mod is None:
@@ -104,8 +102,8 @@ class TimekeepersHourglass(RelicBase):
             if hasattr(party, "_t_hourglass_applied"):
                 delattr(party, "_t_hourglass_applied")
 
-        BUS.subscribe("turn_start", _turn_start)
-        BUS.subscribe("battle_end", _battle_end)
+        self.subscribe(party, "turn_start", _turn_start)
+        self.subscribe(party, "battle_end", _battle_end)
 
     def describe(self, stacks: int) -> str:
         pct = 10 + 1 * (stacks - 1)

@@ -137,8 +137,8 @@ class ParadoxHourglass(RelicBase):
                         member.mods.remove(mod.id)
             state.pop("done", None)
 
-        BUS.subscribe("battle_start", _battle_start)
-        BUS.subscribe("battle_end", _battle_end)
+        self.subscribe(party, "battle_start", _battle_start)
+        self.subscribe(party, "battle_end", _battle_end)
 
     def describe(self, stacks: int) -> str:
         div = 4 + (stacks - 1)

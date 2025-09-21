@@ -29,38 +29,40 @@ class GreedEngine(RelicBase):
             state = {"gold": gold_bonus, "loss": hp_loss, "rdr": rdr_bonus}
             party._greed_engine_state = state
             party.rdr += state["rdr"]
-
-            async def _gold(amount: int) -> None:
-                bonus_gold = int(amount * state["gold"])
-                party.gold += bonus_gold
-
-                # Emit relic effect event for gold bonus
-                await BUS.emit_async("relic_effect", "greed_engine", party, "gold_bonus", bonus_gold, {
-                    "original_gold": amount,
-                    "bonus_percentage": state["gold"] * 100,
-                    "total_gold_gained": amount + bonus_gold
-                })
-
-            async def _drain() -> None:
-                for member in party.members:
-                    dmg = int(member.max_hp * state["loss"])
-
-                    # Emit relic effect event for HP drain
-                    await BUS.emit_async("relic_effect", "greed_engine", member, "hp_drain", dmg, {
-                        "drain_percentage": state["loss"] * 100,
-                        "max_hp": member.max_hp
-                    })
-
-                    safe_async_task(member.apply_cost_damage(dmg))
-
-            BUS.subscribe("gold_earned", _gold)
-            BUS.subscribe("turn_start", _drain)
         else:
             party.rdr -= state.get("rdr", 0)
             state["gold"] = gold_bonus
             state["loss"] = hp_loss
             state["rdr"] = rdr_bonus
             party.rdr += state["rdr"]
+
+        async def _gold(amount: int) -> None:
+            current_state = getattr(party, "_greed_engine_state", state)
+            bonus_gold = int(amount * current_state["gold"])
+            party.gold += bonus_gold
+
+            # Emit relic effect event for gold bonus
+            await BUS.emit_async("relic_effect", "greed_engine", party, "gold_bonus", bonus_gold, {
+                "original_gold": amount,
+                "bonus_percentage": current_state["gold"] * 100,
+                "total_gold_gained": amount + bonus_gold
+            })
+
+        async def _drain() -> None:
+            current_state = getattr(party, "_greed_engine_state", state)
+            for member in party.members:
+                dmg = int(member.max_hp * current_state["loss"])
+
+                # Emit relic effect event for HP drain
+                await BUS.emit_async("relic_effect", "greed_engine", member, "hp_drain", dmg, {
+                    "drain_percentage": current_state["loss"] * 100,
+                    "max_hp": member.max_hp
+                })
+
+                safe_async_task(member.apply_cost_damage(dmg))
+
+        self.subscribe(party, "gold_earned", _gold)
+        self.subscribe(party, "turn_start", _drain)
 
     def describe(self, stacks: int) -> str:
         gold = 50 + 25 * (stacks - 1)

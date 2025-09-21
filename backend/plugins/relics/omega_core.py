@@ -95,9 +95,9 @@ class OmegaCore(RelicBase):
                     mod.remove()
             state["mods"].clear()
 
-        BUS.subscribe("battle_start", _battle_start)
-        BUS.subscribe("turn_start", _turn_start)
-        BUS.subscribe("battle_end", _battle_end)
+        self.subscribe(party, "battle_start", _battle_start)
+        self.subscribe(party, "turn_start", _turn_start)
+        self.subscribe(party, "battle_end", _battle_end)
 
     def describe(self, stacks: int) -> str:
         delay = 10 + 2 * (stacks - 1)

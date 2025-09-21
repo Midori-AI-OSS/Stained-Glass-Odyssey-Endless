@@ -24,39 +24,36 @@ class ArcaneFlask(RelicBase):
 
         if state is None:
             state = {"stacks": stacks}
-
-            async def _ultimate(user) -> None:
-                current_stacks = state.get("stacks", 0)
-                if current_stacks <= 0:
-                    return
-
-                user.enable_overheal()  # Enable shields for the user
-                shield = int(user.max_hp * 0.2 * current_stacks)
-
-                # Track the shield generation
-                await BUS.emit_async("relic_effect", "arcane_flask", user, "shield_granted", shield, {
-                    "shield_percentage": 20 * current_stacks,
-                    "max_hp": user.max_hp,
-                    "trigger": "ultimate_used",
-                    "stacks": current_stacks
-                })
-
-                safe_async_task(user.apply_healing(shield))
-
-            def _cleanup(*_: object) -> None:
-                BUS.unsubscribe("ultimate_used", state["ultimate_handler"])
-                BUS.unsubscribe("battle_end", state["cleanup_handler"])
-                if getattr(party, "_arcane_flask_state", None) is state:
-                    delattr(party, "_arcane_flask_state")
-
-            state["ultimate_handler"] = _ultimate
-            state["cleanup_handler"] = _cleanup
             party._arcane_flask_state = state
-
-            BUS.subscribe("ultimate_used", _ultimate)
-            BUS.subscribe("battle_end", _cleanup)
         else:
             state["stacks"] = stacks
+
+        async def _ultimate(user) -> None:
+            current_state = getattr(party, "_arcane_flask_state", {})
+            current_stacks = current_state.get("stacks", 0)
+            if current_stacks <= 0:
+                return
+
+            user.enable_overheal()  # Enable shields for the user
+            shield = int(user.max_hp * 0.2 * current_stacks)
+
+            # Track the shield generation
+            await BUS.emit_async("relic_effect", "arcane_flask", user, "shield_granted", shield, {
+                "shield_percentage": 20 * current_stacks,
+                "max_hp": user.max_hp,
+                "trigger": "ultimate_used",
+                "stacks": current_stacks
+            })
+
+            safe_async_task(user.apply_healing(shield))
+
+        def _cleanup(*_: object) -> None:
+            self.clear_subscriptions(party)
+            if getattr(party, "_arcane_flask_state", None) is state:
+                delattr(party, "_arcane_flask_state")
+
+        self.subscribe(party, "ultimate_used", _ultimate)
+        self.subscribe(party, "battle_end", _cleanup)
 
     def describe(self, stacks: int) -> str:
         pct = 20 * stacks

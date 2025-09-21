@@ -75,9 +75,15 @@ class WoodenIdol(RelicBase):
                     member.mods.remove(mod.id)
             active.clear()
 
-        BUS.subscribe("debuff_resisted", _resisted)
-        BUS.subscribe("turn_start", lambda *_: _turn_start())
-        BUS.subscribe("turn_end", lambda *_: _turn_end())
+        async def _turn_start_handler(*_args) -> None:
+            await _turn_start()
+
+        def _turn_end_handler(*_args) -> None:
+            _turn_end()
+
+        self.subscribe(party, "debuff_resisted", _resisted)
+        self.subscribe(party, "turn_start", _turn_start_handler)
+        self.subscribe(party, "turn_end", _turn_end_handler)
 
     def describe(self, stacks: int) -> str:
         if stacks == 1:
