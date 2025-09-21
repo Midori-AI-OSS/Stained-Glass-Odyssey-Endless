@@ -68,25 +68,34 @@
   $: upgradeTotals = upgradeData?.stat_totals || {};
   $: upgradeCosts = upgradeData?.next_costs || {};
   $: upgradeErrorMessage = upgradeError ? (upgradeError.message || String(upgradeError)) : '';
-  // Global inventory (materials) for accurate conversion availability
+  // Global inventory (materials) for conversion availability (fallback source)
   let globalMaterials = {};
   let materialsReady = false;
   let matsToken = 0;
   async function refreshGlobalMaterials() {
     const token = ++matsToken;
+    const prev = globalMaterials;
+    // mark refreshing but don't clear data; UI keeps last-known values
     materialsReady = false;
     try {
       const gacha = await getGacha();
-      globalMaterials = stackItems(gacha?.items || {});
+      const next = stackItems(gacha?.items || {});
+      if (token === matsToken) {
+        globalMaterials = next;
+      }
     } catch {
-      globalMaterials = {};
+      // Keep previous materials on failure
+      if (token === matsToken) {
+        globalMaterials = prev;
+      }
     } finally {
       if (token === matsToken) materialsReady = true;
     }
   }
   onMount(refreshGlobalMaterials);
 
-  // Refresh global materials when entering upgrade mode and when element changes in upgrade
+  // Refresh global materials when entering upgrade mode and when element changes in upgrade.
+  // This serves as a fallback if per-character upgradeData isn't available yet.
   $: if (mode === 'upgrade') {
     refreshGlobalMaterials();
   }
@@ -101,8 +110,13 @@
   $: available4 = computeAvailableFour();
   $: pendingConversion = Boolean(upgradeContext?.pendingConversion);
   $: pendingAction = Boolean(upgradeContext?.pendingStat || upgradeContext?.pendingConversion);
-  // Allow convert based on available materials, independent of upgradeData loading
-  $: canConvert4 = Boolean(!pendingAction && materialsReady && available4 >= 1);
+  // Allow convert based on available counts. Prefer upgradeData if present; otherwise require
+  // global materials to be ready.
+  $: canConvert4 = Boolean(
+    !pendingAction &&
+    ((upgradeItems && Object.keys(upgradeItems).length > 0) || materialsReady) &&
+    available4 >= 1
+  );
   function statLabel(stat) {
     if (!stat) return '';
     const match = UPGRADE_STATS.find((s) => s.key === stat);
@@ -115,13 +129,31 @@
     if (!selected) return 0;
     const starSuffix = '_4';
     const elKey = String(elementName || 'generic').toLowerCase();
+
+    // Prefer per-character upgradeData items when available as they are specific to the
+    // currently previewed character and reflect backend state immediately after actions.
+    const items = upgradeItems || {};
+    const hasUpgradeItems = items && Object.keys(items).length > 0;
+    const fromUpgrade = (() => {
+      if (selected.is_player) {
+        // Player can convert from any element
+        return Object.entries(items)
+          .filter(([k]) => k.endsWith(starSuffix))
+          .reduce((acc, [, v]) => acc + (Number(v) || 0), 0);
+      }
+      const key = `${elKey}${starSuffix}`;
+      const val = items[key];
+      return Number(val) || 0;
+    })();
+
+    if (hasUpgradeItems) return fromUpgrade;
+
+    // Fallback to global materials if upgradeData isn't present (e.g. initial load / cache race)
     if (selected.is_player) {
-      // Player can convert from any element — use global inventory only
       return Object.entries(globalMaterials)
         .filter(([key]) => key.endsWith(starSuffix))
         .reduce((acc, [, qty]) => acc + (Number(qty) || 0), 0);
     }
-    // Non-player: only their element — use global inventory only
     const key = `${elKey}${starSuffix}`;
     return Number(globalMaterials[key]) || 0;
   }
