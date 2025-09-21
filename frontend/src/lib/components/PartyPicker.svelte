@@ -94,6 +94,10 @@
 
   onMount(async () => {
     await refreshRoster();
+    // Ensure upgrade data (incl. inventory counts) is fresh when opening this menu
+    if (previewId) {
+      await refreshUpgradeData(previewId, { force: true });
+    }
   });
 
   async function refreshRoster() {
@@ -201,6 +205,10 @@
     };
     upgradeContext = mode === 'upgrade' ? nextDetail : null;
     previewMode.set(mode);
+    // When entering upgrade mode, force-refresh upgrade data so convert availability is accurate
+    if (mode === 'upgrade' && nextDetail.id) {
+      try { refreshUpgradeData(nextDetail.id, { force: true }); } catch {}
+    }
     try { dispatch('previewMode', { mode, ...nextDetail }); } catch {}
   }
 
