@@ -9,6 +9,7 @@ from autofighter.mapgen import MapNode
 from autofighter.party import Party
 from autofighter.rooms import foe_factory
 from autofighter.rooms import utils
+from autofighter.rooms.battle import setup as battle_setup
 from plugins.players import Player
 from plugins.players.luna import Luna
 
@@ -76,3 +77,24 @@ def test_luna_weighting_respects_party_ids() -> None:
 def test_battle_utils_has_no_luna_literal() -> None:
     utils_source = Path(utils.__file__).read_text(encoding="utf-8")
     assert "luna" not in utils_source.lower()
+
+
+@pytest.mark.asyncio
+async def test_setup_applies_boss_scaling(monkeypatch) -> None:
+    node = MapNode(room_id=0, room_type="boss", floor=3, index=1, loop=1, pressure=0)
+    party = Party(members=[Player()])
+    luna = Luna()
+    luna.rank = "boss"
+
+    base_stats = {
+        "max_hp": luna.get_base_stat("max_hp"),
+        "atk": luna.get_base_stat("atk"),
+        "defense": luna.get_base_stat("defense"),
+    }
+
+    monkeypatch.setattr(battle_setup, "_scale_stats", lambda *args, **kwargs: None)
+
+    await battle_setup.setup_battle(node, party, foe=luna)
+
+    for stat, original in base_stats.items():
+        assert luna.get_base_stat(stat) == pytest.approx(original * 4)
