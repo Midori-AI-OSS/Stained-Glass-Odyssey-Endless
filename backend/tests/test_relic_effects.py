@@ -10,6 +10,8 @@ from autofighter.stats import BUS
 from autofighter.stats import Stats
 from plugins.effects.aftertaste import Aftertaste
 import plugins.event_bus as event_bus_module
+import plugins.relics.echo_bell as echo_bell_module
+import plugins.relics._base as relic_base_module
 from plugins.players._base import PlayerBase
 
 
@@ -390,19 +392,40 @@ async def test_arcane_flask_shields():
 
 
 @pytest.mark.asyncio
-async def test_echo_bell_repeats_first_action():
+async def test_echo_bell_aftertaste_trigger(monkeypatch):
     event_bus_module.bus._subs.clear()
     party = Party()
-    a = PlayerBase()
-    b = PlayerBase()
-    b.hp = 100
-    party.members.append(a)
+    actor = PlayerBase()
+    target = PlayerBase()
+    target.hp = 100
+    party.members.append(actor)
     award_relic(party, "echo_bell")
     await apply_relics(party)
+
+    triggered_hits: list[int] = []
+    created_tasks: list[asyncio.Task] = []
+
+    async def fake_apply(self, *_args, **_kwargs):
+        triggered_hits.append(self.hits)
+        return [0] * self.hits
+
+    monkeypatch.setattr(Aftertaste, "apply", fake_apply, raising=False)
+    monkeypatch.setattr(echo_bell_module.random, "random", lambda: 0.0)
+    monkeypatch.setattr(
+        relic_base_module,
+        "safe_async_task",
+        lambda coro: created_tasks.append(asyncio.create_task(coro)) or created_tasks[-1],
+    )
+
     await BUS.emit_async("battle_start")
-    b.hp -= 20
-    await BUS.emit_async("action_used", a, b, 20)
-    assert b.hp == 100 - 20 - int(20 * 0.15)
-    b.hp -= 20
-    await BUS.emit_async("action_used", a, b, 20)
-    assert b.hp == 100 - 20 - int(20 * 0.15) - 20
+    await BUS.emit_async("action_used", actor, target, 20)
+    if created_tasks:
+        await asyncio.gather(*created_tasks)
+        created_tasks.clear()
+    assert triggered_hits == [1]
+
+    await BUS.emit_async("action_used", actor, target, 20)
+    if created_tasks:
+        await asyncio.gather(*created_tasks)
+        created_tasks.clear()
+    assert triggered_hits == [1]

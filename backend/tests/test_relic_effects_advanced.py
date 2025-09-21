@@ -21,6 +21,8 @@ from autofighter.stats import BUS
 from autofighter.stats import Stats
 from plugins.effects.aftertaste import Aftertaste
 import plugins.event_bus as event_bus_module
+import plugins.relics._base as relic_base_module
+import plugins.relics.echoing_drum as echoing_drum_module
 from plugins.players._base import PlayerBase
 import plugins.relics.timekeepers_hourglass as hourglass_module
 
@@ -375,36 +377,110 @@ async def test_stellar_compass_multiple_crits():
 
 
 @pytest.mark.asyncio
-async def test_echoing_drum_repeats_attack():
+async def test_echoing_drum_aftertaste_trigger(monkeypatch):
     event_bus_module.bus._subs.clear()
     party = Party()
-    a = PlayerBase()
-    b = PlayerBase()
-    b.hp = 100
-    party.members.append(a)
+    attacker = PlayerBase()
+    target = PlayerBase()
+    target.hp = 100
+    party.members.append(attacker)
     award_relic(party, "echoing_drum")
     await apply_relics(party)
+
+    triggered_hits: list[int] = []
+    created_tasks: list[asyncio.Task] = []
+
+    async def fake_apply(self, *_args, **_kwargs):
+        triggered_hits.append(self.hits)
+        return [0] * self.hits
+
+    monkeypatch.setattr(Aftertaste, "apply", fake_apply, raising=False)
+    monkeypatch.setattr(echoing_drum_module.random, "random", lambda: 0.0)
+    monkeypatch.setattr(
+        relic_base_module,
+        "safe_async_task",
+        lambda coro: created_tasks.append(asyncio.create_task(coro)) or created_tasks[-1],
+    )
+
     await BUS.emit_async("battle_start")
-    b.hp -= 20
-    await BUS.emit_async("attack_used", a, b, 20)
-    assert b.hp == 100 - 20 - int(20 * 0.25)
-    b.hp -= 20
-    await BUS.emit_async("attack_used", a, b, 20)
-    assert b.hp == 100 - 20 - int(20 * 0.25) - 20
+    await BUS.emit_async("attack_used", attacker, target, 20)
+    if created_tasks:
+        await asyncio.gather(*created_tasks)
+        created_tasks.clear()
+    assert triggered_hits == [1]
+
+    await BUS.emit_async("attack_used", attacker, target, 20)
+    if created_tasks:
+        await asyncio.gather(*created_tasks)
+        created_tasks.clear()
+    assert triggered_hits == [1]
 
 
 @pytest.mark.asyncio
-async def test_echoing_drum_stacks():
+async def test_echoing_drum_roll_failure(monkeypatch):
     event_bus_module.bus._subs.clear()
     party = Party()
-    a = PlayerBase()
-    b = PlayerBase()
-    b.hp = 100
-    party.members.append(a)
+    attacker = PlayerBase()
+    target = PlayerBase()
+    target.hp = 100
+    party.members.append(attacker)
     award_relic(party, "echoing_drum")
     award_relic(party, "echoing_drum")
     await apply_relics(party)
+
+    triggered_hits: list[int] = []
+    created_tasks: list[asyncio.Task] = []
+
+    async def fake_apply(self, *_args, **_kwargs):
+        triggered_hits.append(self.hits)
+        return [0] * self.hits
+
+    monkeypatch.setattr(Aftertaste, "apply", fake_apply, raising=False)
+    monkeypatch.setattr(echoing_drum_module.random, "random", lambda: 0.75)
+    monkeypatch.setattr(
+        relic_base_module,
+        "safe_async_task",
+        lambda coro: created_tasks.append(asyncio.create_task(coro)) or created_tasks[-1],
+    )
+
     await BUS.emit_async("battle_start")
-    b.hp -= 20
-    await BUS.emit_async("attack_used", a, b, 20)
-    assert b.hp == 100 - 20 - int(20 * 0.25) * 2
+    await BUS.emit_async("attack_used", attacker, target, 20)
+    if created_tasks:
+        await asyncio.gather(*created_tasks)
+        created_tasks.clear()
+    assert triggered_hits == []
+
+
+@pytest.mark.asyncio
+async def test_echoing_drum_overflow_aftertaste_hits(monkeypatch):
+    event_bus_module.bus._subs.clear()
+    party = Party()
+    attacker = PlayerBase()
+    target = PlayerBase()
+    target.hp = 100
+    party.members.append(attacker)
+    for _ in range(5):
+        award_relic(party, "echoing_drum")
+    await apply_relics(party)
+
+    triggered_hits: list[int] = []
+    created_tasks: list[asyncio.Task] = []
+
+    async def fake_apply(self, *_args, **_kwargs):
+        triggered_hits.append(self.hits)
+        return [0] * self.hits
+
+    monkeypatch.setattr(Aftertaste, "apply", fake_apply, raising=False)
+    monkeypatch.setattr(echoing_drum_module.random, "random", lambda: 0.2)
+    monkeypatch.setattr(
+        relic_base_module,
+        "safe_async_task",
+        lambda coro: created_tasks.append(asyncio.create_task(coro)) or created_tasks[-1],
+    )
+
+    await BUS.emit_async("battle_start")
+    await BUS.emit_async("attack_used", attacker, target, 20)
+    if created_tasks:
+        await asyncio.gather(*created_tasks)
+        created_tasks.clear()
+    assert triggered_hits == [2]

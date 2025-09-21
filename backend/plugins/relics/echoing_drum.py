@@ -1,7 +1,10 @@
+from math import ceil
+import random
 from dataclasses import dataclass
 from dataclasses import field
 
 from autofighter.stats import BUS
+from plugins.effects.aftertaste import Aftertaste
 from plugins.relics._base import RelicBase
 from plugins.relics._base import safe_async_task
 
@@ -11,13 +14,16 @@ _echo_processing = False
 
 @dataclass
 class EchoingDrum(RelicBase):
-    """First attack each battle repeats at 25% power per stack."""
+    """First attack each battle has 25% per-stack odds to trigger Aftertaste."""
 
     id: str = "echoing_drum"
     name: str = "Echoing Drum"
     stars: int = 3
     effects: dict[str, float] = field(default_factory=dict)
-    about: str = "First attack each battle repeats at 25% power per stack."
+    about: str = (
+        "First attack each battle has 25% chance per stack to trigger Aftertaste "
+        "(overflow converts every +100% into a guaranteed extra hit)."
+    )
 
     async def apply(self, party) -> None:
         await super().apply(party)
@@ -45,27 +51,56 @@ class EchoingDrum(RelicBase):
             pid = id(attacker)
             if pid in used:
                 return
+            if amount <= 0:
+                return
             used.add(pid)
             current_state = getattr(party, "_echoing_drum_state", state)
             current_stacks = current_state.get("stacks", 0)
             if current_stacks <= 0:
                 return
 
+            total_chance = 25 * current_stacks
+            guaranteed_hits = total_chance // 100
+            remainder_chance = total_chance % 100
+            remainder_triggered = False
+            total_hits = int(guaranteed_hits)
+
+            if remainder_chance and random.random() < remainder_chance / 100:
+                remainder_triggered = True
+                total_hits += 1
+
+            if total_hits <= 0:
+                return
+
+            base_amount = float(amount)
+            base_pot = max(1, int(ceil(base_amount / 0.8)))
+            if base_pot <= 0:
+                return
+
+            effect = Aftertaste(hits=total_hits, base_pot=base_pot)
+
             # Set flag to prevent recursive echo effects
             _echo_processing = True
             try:
-                dmg = int(amount * 0.25 * current_stacks)
+                await BUS.emit_async(
+                    "relic_effect",
+                    "echoing_drum",
+                    attacker,
+                    "aftertaste_trigger",
+                    total_hits,
+                    {
+                        "original_amount": amount,
+                        "total_chance": total_chance,
+                        "guaranteed_hits": guaranteed_hits,
+                        "remainder_chance": remainder_chance,
+                        "remainder_triggered": remainder_triggered,
+                        "stacks": current_stacks,
+                        "target": getattr(target, "id", str(target)),
+                        "base_pot": base_pot,
+                    },
+                )
 
-                # Emit relic effect event for echo attack
-                await BUS.emit_async("relic_effect", "echoing_drum", attacker, "echo_attack", dmg, {
-                    "original_amount": amount,
-                    "echo_percentage": 25 * current_stacks,
-                    "target": getattr(target, 'id', str(target)),
-                    "first_attack": True,
-                    "stacks": current_stacks
-                })
-
-                safe_async_task(target.apply_damage(dmg, attacker=attacker))
+                safe_async_task(effect.apply(attacker, target))
             finally:
                 _echo_processing = False
 
@@ -77,8 +112,8 @@ class EchoingDrum(RelicBase):
 
         self.subscribe(party, "battle_start", _battle_start)
         self.subscribe(party, "action_used", _attack)
+        self.subscribe(party, "attack_used", _attack)
         self.subscribe(party, "battle_end", _cleanup)
 
     def describe(self, stacks: int) -> str:
-        pct = 25 * stacks
-        return f"First attack each battle repeats at {pct}% power."
+        return self.about

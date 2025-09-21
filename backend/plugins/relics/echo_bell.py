@@ -1,7 +1,10 @@
+from math import ceil
+import random
 from dataclasses import dataclass
 from dataclasses import field
 
 from autofighter.stats import BUS
+from plugins.effects.aftertaste import Aftertaste
 from plugins.relics._base import RelicBase
 from plugins.relics._base import safe_async_task
 
@@ -11,13 +14,16 @@ _echo_processing = False
 
 @dataclass
 class EchoBell(RelicBase):
-    """First action each battle repeats at 15% power per stack."""
+    """First action each battle has 15% per-stack odds to trigger Aftertaste."""
 
     id: str = "echo_bell"
     name: str = "Echo Bell"
     stars: int = 2
     effects: dict[str, float] = field(default_factory=dict)
-    about: str = "First action each battle repeats at 15% power per stack."
+    about: str = (
+        "First action each battle has 15% chance per stack to trigger Aftertaste "
+        "(overflow converts every +100% into a guaranteed extra hit)."
+    )
 
     async def apply(self, party) -> None:
         await super().apply(party)
@@ -48,32 +54,57 @@ class EchoBell(RelicBase):
             pid = id(actor)
             if pid in used:
                 return
+            if amount <= 0:
+                return
             used.add(pid)
             current_state = getattr(party, "_echo_bell_state", state)
             current_stacks = current_state.get("stacks", 0)
             if current_stacks <= 0:
                 return
 
+            total_chance = 15 * current_stacks
+            guaranteed_hits = total_chance // 100
+            remainder_chance = total_chance % 100
+            remainder_triggered = False
+            total_hits = int(guaranteed_hits)
+
+            if remainder_chance and random.random() < remainder_chance / 100:
+                remainder_triggered = True
+                total_hits += 1
+
+            if total_hits <= 0:
+                return
+
+            base_amount = float(amount)
+            base_pot = max(1, int(ceil(base_amount / 0.8)))
+            if base_pot <= 0:
+                return
+
+            effect = Aftertaste(hits=total_hits, base_pot=base_pot)
+
             # Set flag to prevent recursive echo effects
             _echo_processing = True
             try:
-                echo_amount = int(amount * 0.15 * current_stacks)
+                await BUS.emit_async(
+                    "relic_effect",
+                    "echo_bell",
+                    actor,
+                    "aftertaste_trigger",
+                    total_hits,
+                    {
+                        "original_amount": amount,
+                        "total_chance": total_chance,
+                        "guaranteed_hits": guaranteed_hits,
+                        "remainder_chance": remainder_chance,
+                        "remainder_triggered": remainder_triggered,
+                        "stacks": current_stacks,
+                        "target": getattr(target, "id", str(target)),
+                        "action_type": action_type,
+                        "base_pot": base_pot,
+                    },
+                )
 
-                # Emit relic effect event for echo action
-                await BUS.emit_async("relic_effect", "echo_bell", actor, "echo_action", echo_amount, {
-                    "original_amount": amount,
-                    "echo_percentage": 15 * current_stacks,
-                    "target": getattr(target, 'id', str(target)),
-                    "first_action": True,
-                    "action_type": action_type,
-                    "stacks": current_stacks
-                })
-
-                # Echo the same type of action - damage or healing
-                if action_type == "healing":
-                    safe_async_task(target.apply_healing(echo_amount, healer=actor))
-                else:
-                    safe_async_task(target.apply_damage(echo_amount, attacker=actor))
+                safe_async_task(effect.apply(actor, target))
             finally:
                 _echo_processing = False
 
@@ -88,9 +119,9 @@ class EchoBell(RelicBase):
 
         self.subscribe(party, "battle_start", _battle_start)
         self.subscribe(party, "action_used", _action)
+        self.subscribe(party, "attack_used", _action)
         self.subscribe(party, "healing_used", _healing)
         self.subscribe(party, "battle_end", _cleanup)
 
     def describe(self, stacks: int) -> str:
-        pct = 15 * stacks
-        return f"First action each battle repeats at {pct}% power."
+        return self.about
