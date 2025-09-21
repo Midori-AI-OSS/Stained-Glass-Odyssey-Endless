@@ -635,6 +635,11 @@ def _ensure_upgrade_tables(conn) -> None:
     cur = conn.execute("PRAGMA table_info(player_stat_upgrades)")
     columns = {row[1] for row in cur.fetchall()}
     has_source_star = "source_star" in columns
+    if not has_source_star:
+        conn.execute(
+            "ALTER TABLE player_stat_upgrades ADD COLUMN source_star INTEGER NOT NULL DEFAULT 0"
+        )
+        has_source_star = True
     needs_backfill = False
     if "cost_spent" not in columns:
         conn.execute(
