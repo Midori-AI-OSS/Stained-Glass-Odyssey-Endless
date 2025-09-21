@@ -22,11 +22,11 @@ from autofighter.rooms import BattleRoom
 from autofighter.rooms import BossRoom
 from autofighter.rooms import ChatRoom
 from autofighter.rooms import ShopRoom
-from autofighter.rooms import calculate_rank_probabilities
 from autofighter.rooms import _build_foes
 from autofighter.rooms import _choose_foe
 from autofighter.rooms import _scale_stats
 from autofighter.rooms import _serialize
+from autofighter.rooms import calculate_rank_probabilities
 from autofighter.summons.manager import SummonManager
 from plugins import foes as foe_plugins
 from plugins.damage_types import load_damage_type
@@ -305,7 +305,17 @@ async def battle_room(run_id: str, data: dict[str, Any]) -> dict[str, Any]:
             relics=party.relics,
             cards=party.cards,
             rdr=party.rdr,
+            no_shops=getattr(party, "no_shops", False),
+            no_rests=getattr(party, "no_rests", False),
         )
+        if hasattr(party, "pull_tokens"):
+            combat_party.pull_tokens = getattr(party, "pull_tokens", 0)
+        if hasattr(party, "_null_lantern_cleared"):
+            setattr(
+                combat_party,
+                "_null_lantern_cleared",
+                getattr(party, "_null_lantern_cleared", 0),
+            )
         battle_snapshots[run_id] = {
             "result": "battle",
             "party": [_serialize(m) for m in combat_party.members],
@@ -518,7 +528,17 @@ async def boss_room(run_id: str, data: dict[str, Any]) -> dict[str, Any]:
             relics=party.relics,
             cards=party.cards,
             rdr=party.rdr,
+            no_shops=getattr(party, "no_shops", False),
+            no_rests=getattr(party, "no_rests", False),
         )
+        if hasattr(party, "pull_tokens"):
+            combat_party.pull_tokens = getattr(party, "pull_tokens", 0)
+        if hasattr(party, "_null_lantern_cleared"):
+            setattr(
+                combat_party,
+                "_null_lantern_cleared",
+                getattr(party, "_null_lantern_cleared", 0),
+            )
         battle_snapshots[run_id] = {
             "result": "boss",
             "party": [_serialize(m) for m in combat_party.members],

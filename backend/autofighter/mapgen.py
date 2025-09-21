@@ -3,7 +3,11 @@ from __future__ import annotations
 from dataclasses import asdict
 from dataclasses import dataclass
 from random import Random
+from typing import TYPE_CHECKING
 from typing import ClassVar
+
+if TYPE_CHECKING:  # pragma: no cover - import only for type checking
+    from .party import Party
 
 
 @dataclass
@@ -40,7 +44,7 @@ class MapGenerator:
         self.loop = loop
         self.pressure = pressure
 
-    def generate_floor(self) -> list[MapNode]:
+    def generate_floor(self, party: Party | None = None) -> list[MapNode]:
         nodes: list[MapNode] = []
         index = 0
         nodes.append(
@@ -55,7 +59,19 @@ class MapGenerator:
         )
         index += 1
         middle = self.rooms_per_floor - 2
-        quotas = {"shop": 1}
+        suppressed: set[str] = set()
+        if party is not None:
+            if getattr(party, "no_shops", False):
+                suppressed.add("shop")
+            if getattr(party, "no_rests", False):
+                suppressed.add("rest")
+            relics = getattr(party, "relics", [])
+            if isinstance(relics, list) and "null_lantern" in relics:
+                suppressed.update({"shop", "rest"})
+
+        quotas: dict[str, int] = {}
+        if "shop" not in suppressed:
+            quotas["shop"] = 1
         room_types: list[str] = []
         for key, count in quotas.items():
             room_types.extend([key] * count)
@@ -70,6 +86,18 @@ class MapGenerator:
                 if rt != "shop":
                     room_types[0], room_types[i] = room_types[i], room_types[0]
                     break
+        if suppressed:
+            filtered = [rt for rt in room_types if rt not in suppressed]
+            removed = len(room_types) - len(filtered)
+            if removed:
+                replacements: list[str] = []
+                for i in range(removed):
+                    replacements.append("battle-weak" if i % 2 == 0 else "battle-normal")
+                filtered.extend(replacements)
+                self._rand.shuffle(filtered)
+            room_types = filtered[:middle]
+        while len(room_types) < middle:
+            room_types.append("battle-normal" if len(room_types) % 2 else "battle-weak")
         for rt in room_types:
             nodes.append(
                 MapNode(
