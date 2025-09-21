@@ -45,9 +45,9 @@ Replaces the single "Reduced Motion" toggle with granular accessibility controls
 - **Disable Floating Damage**: Turns off `BattleEventFloaters` damage popups and battle text
 - **Disable Portrait Glows**: Removes glowing effects from `BattleFighterCard` portraits
 - **Simplify Overlay Transitions**: Uses simpler transitions for overlays and menus
-- **Disable Star Storm**: Turns off the animated `StarStorm.svelte` background effect
+- **Disable Element Orbs**: Turns off the animated `ElementOrbs.svelte` background effect
 
-Each control operates independently, allowing players to disable specific animations while keeping others. Components like `StarStorm.svelte` and `BattleEventFloaters.svelte` check both legacy `reducedMotion` props and the new granular settings via `getMotionSettings()`.
+Each control operates independently, allowing players to disable specific animations while keeping others. Components like `ElementOrbs.svelte` and `BattleEventFloaters.svelte` check both legacy `reducedMotion` props and the new granular settings via the animation tokens system (`animationTokens.js`). All animations now use deterministic timing derived from entity IDs rather than random values, ensuring consistent visual behavior across sessions.
 
 ### System Monitoring & Data Management
 Audio volume controls use the `DotSelector` component to render ten selectable levels (0–100%). Gameplay controls that need explanations wrap their labels in the `Tooltip` component for accessible hover and focus hints. System settings include icons for backend health (`activity`), framerate (`gauge`), and data management (`trash-2`, `download`, `upload`).

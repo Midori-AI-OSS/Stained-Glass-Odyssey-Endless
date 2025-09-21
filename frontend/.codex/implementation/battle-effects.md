@@ -56,20 +56,10 @@ with an ambient orbs effect implemented in `battle/EnrageIndicator.svelte`:
 
 ## Animation Pipeline
 
-`BattleEffects.svelte` is currently disabled (no‑op) behind an internal
-feature flag while we stabilize the runtime integration. When enabled, it
-wraps the `@zaniar/effekseer-webgl-wasm` runtime. It creates a full-screen
-canvas, initializes the WebGL context, and loads `.efkefc` files from
-`src/lib/assets/effects`. `BattleView.svelte`
-watches incoming battle log lines, maps keywords like `damage`, `burn`,
-`poison`, and `heal` to effect names, and passes the result to the
-component so the matching animation plays. `vite.config.js` copies the
-`effekseer.wasm` runtime and marks `.efkefc` files as static assets so the
-player can fetch them at runtime.
+All battle animations now use the standardized animation tokens system (see `animation-tokens.md`) for consistent, deterministic timing that respects user motion preferences.
 
-`BattleEventFloaters.svelte` listens to the incremental `recent_events`
-stream from battle snapshots. It filters damage and healing payloads,
-derives damage-type visuals through `assetLoader.js`, and spawns floating
-badges that drift upward over the polling cadence. The overlay removes each
-badge after its animation (or a timer when Reduced Motion is enabled) so
-the DOM stays bounded.
+`BattleEventFloaters.svelte` listens to the incremental `recent_events` stream from battle snapshots. It filters damage and healing payloads, derives damage-type visuals through `assetLoader.js`, and spawns floating badges that drift upward. The component now uses animation tokens for consistent float duration and stagger timing, with deterministic horizontal offsets based on event content rather than random positioning. The overlay removes each badge after its animation (or immediately when floating damage is disabled) so the DOM stays bounded.
+
+`BattleFighterCard.svelte` portrait animations (rank outlines, ultimate icon pulses, element changes) use deterministic timing derived from entity IDs, ensuring consistent visual behavior across sessions while still providing natural variation between different fighters.
+
+`BattleEffects.svelte` is currently disabled (no‑op) behind an internal feature flag while we stabilize the runtime integration. When enabled, it wraps the `@zaniar/effekseer-webgl-wasm` runtime. It creates a full-screen canvas, initializes the WebGL context, and loads `.efkefc` files from `src/lib/assets/effects`. `BattleView.svelte` watches incoming battle log lines, maps keywords like `damage`, `burn`, `poison`, and `heal` to effect names, and passes the result to the component so the matching animation plays. `vite.config.js` copies the `effekseer.wasm` runtime and marks `.efkefc` files as static assets so the player can fetch them at runtime.
