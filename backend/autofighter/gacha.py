@@ -37,6 +37,7 @@ class PullResult:
     id: str
     rarity: int
     stacks: int | None = None
+    upgrade_points_awarded: int | None = None
 
 
 @dataclass
@@ -376,7 +377,8 @@ class GachaManager:
         self._set_items(items)
         return items
 
-    def _add_character(self, cid: str) -> int:
+    def _add_character(self, cid: str) -> tuple[int, int]:
+        bonus_points = 0
         with self.save.connection() as conn:
             conn.execute(
                 "INSERT OR IGNORE INTO owned_players (id) VALUES (?)",
@@ -386,12 +388,33 @@ class GachaManager:
                 "SELECT stacks FROM player_stacks WHERE id = ?", (cid,)
             )
             row = cur.fetchone()
+            duplicate = row is not None
             stacks = int(row[0]) + 1 if row else 1
             conn.execute(
                 "INSERT OR REPLACE INTO player_stacks (id, stacks) VALUES (?, ?)",
                 (cid, stacks),
             )
-        return stacks
+            if duplicate:
+                conn.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS player_upgrade_points (
+                        player_id TEXT PRIMARY KEY,
+                        points INTEGER NOT NULL DEFAULT 0
+                    )
+                    """
+                )
+                conn.execute(
+                    """
+                    INSERT OR REPLACE INTO player_upgrade_points (player_id, points)
+                    VALUES (
+                        ?,
+                        COALESCE((SELECT points FROM player_upgrade_points WHERE player_id = ?), 0) + ?
+                    )
+                    """,
+                    (cid, cid, 100),
+                )
+                bonus_points = 100
+        return stacks, bonus_points
 
     def _get_owned(self) -> set[str]:
         with self.save.connection() as conn:
@@ -455,9 +478,17 @@ class GachaManager:
                 else:
                     pool = [c for c in SIX_STAR if c not in owned]
                     cid = random.choice(pool or SIX_STAR)
-                stacks = self._add_character(cid)
+                stacks, bonus_points = self._add_character(cid)
                 owned.add(cid)
-                results.append(PullResult("character", cid, 6, stacks))
+                results.append(
+                    PullResult(
+                        "character",
+                        cid,
+                        6,
+                        stacks,
+                        bonus_points or None,
+                    )
+                )
                 pity = 0
                 continue
 
@@ -474,9 +505,17 @@ class GachaManager:
                 else:
                     pool = [c for c in FIVE_STAR if c not in owned]
                     cid = random.choice(pool or FIVE_STAR)
-                stacks = self._add_character(cid)
+                stacks, bonus_points = self._add_character(cid)
                 owned.add(cid)
-                results.append(PullResult("character", cid, 5, stacks))
+                results.append(
+                    PullResult(
+                        "character",
+                        cid,
+                        5,
+                        stacks,
+                        bonus_points or None,
+                    )
+                )
                 pity = 0
             else:
                 weights = self._rarity_weights(pity)
