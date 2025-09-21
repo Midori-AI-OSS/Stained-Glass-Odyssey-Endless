@@ -71,4 +71,4 @@ class MicroBlade(CardBase):
                             },
                         )
 
-        BUS.subscribe("damage_dealt", _on_damage_dealt)
+        self.subscribe("damage_dealt", _on_damage_dealt)

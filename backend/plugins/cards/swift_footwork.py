@@ -63,7 +63,7 @@ class SwiftFootwork(CardBase):
                     },
                 )
 
-        BUS.subscribe("battle_start", _battle_start)
+        self.subscribe("battle_start", _battle_start)
 
         async def _battle_end(*_args) -> None:
             for member in party.members:
@@ -85,8 +85,7 @@ class SwiftFootwork(CardBase):
                 if isinstance(mods_list, list):
                     mods_list[:] = [mid for mid in mods_list if mid != burst_id]
 
-            BUS.unsubscribe("battle_start", _battle_start)
-            BUS.unsubscribe("battle_end", _battle_end)
+            self.cleanup_subscriptions()
 
-        BUS.subscribe("battle_end", _battle_end)
+        self.subscribe("battle_end", _battle_end)
 

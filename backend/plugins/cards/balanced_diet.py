@@ -46,4 +46,4 @@ class BalancedDiet(CardBase):
                     "heal_amount": heal_amount
                 })
 
-        BUS.subscribe("heal_received", _on_heal_received)
+        self.subscribe("heal_received", _on_heal_received)

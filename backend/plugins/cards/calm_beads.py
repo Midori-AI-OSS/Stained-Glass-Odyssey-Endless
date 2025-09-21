@@ -58,4 +58,4 @@ class CalmBeads(CardBase):
                 payload["metadata"] = metadata
             await BUS.emit_async("card_effect", self.id, target, "resist_charge_gain", 1, payload)
 
-        BUS.subscribe("effect_resisted", _on_effect_resisted)
+        self.subscribe("effect_resisted", _on_effect_resisted)

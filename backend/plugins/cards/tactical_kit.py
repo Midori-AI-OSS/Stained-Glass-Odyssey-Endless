@@ -68,5 +68,5 @@ class TacticalKit(CardBase):
             if target in party.members:
                 conversion_used.clear()
 
-        BUS.subscribe("action_start", _on_action_about_to_start)
-        BUS.subscribe("battle_start", _on_battle_start)
+        self.subscribe("action_start", _on_action_about_to_start)
+        self.subscribe("battle_start", _on_battle_start)

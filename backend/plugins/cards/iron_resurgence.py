@@ -43,10 +43,8 @@ class IronResurgence(CardBase):
         def _battle_end(entity) -> None:
             if entity not in party.members:
                 return
-            BUS.unsubscribe("damage_taken", _damage)
-            BUS.unsubscribe("turn_start", _turn_start)
-            BUS.unsubscribe("battle_end", _battle_end)
+            self.cleanup_subscriptions()
 
-        BUS.subscribe("damage_taken", _damage)
-        BUS.subscribe("turn_start", _turn_start)
-        BUS.subscribe("battle_end", _battle_end)
+        self.subscribe("damage_taken", _damage)
+        self.subscribe("turn_start", _turn_start)
+        self.subscribe("battle_end", _battle_end)

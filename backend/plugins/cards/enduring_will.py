@@ -73,6 +73,6 @@ class EnduringWill(CardBase):
                             "trigger_event": "battle_start"
                         })
 
-        BUS.subscribe("death", _on_death)
-        BUS.subscribe("battle_end", _on_battle_end)
-        BUS.subscribe("battle_start", _on_battle_start)
+        self.subscribe("death", _on_death)
+        self.subscribe("battle_end", _on_battle_end)
+        self.subscribe("battle_start", _on_battle_start)

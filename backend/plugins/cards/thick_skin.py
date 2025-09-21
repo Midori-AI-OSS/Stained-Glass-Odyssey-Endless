@@ -39,10 +39,9 @@ class ThickSkin(CardBase):
                                     })
                                     break
 
-        BUS.subscribe("effect_applied", _on_effect_applied)
+        self.subscribe("effect_applied", _on_effect_applied)
 
         def _on_battle_end(entity) -> None:
-            BUS.unsubscribe("effect_applied", _on_effect_applied)
-            BUS.unsubscribe("battle_end", _on_battle_end)
+            self.cleanup_subscriptions()
 
-        BUS.subscribe("battle_end", _on_battle_end)
+        self.subscribe("battle_end", _on_battle_end)

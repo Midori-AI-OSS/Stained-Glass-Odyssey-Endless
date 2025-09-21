@@ -50,4 +50,4 @@ class SteadyGrip(CardBase):
                         "trigger_event": "control_applied"
                     })
 
-        BUS.subscribe("effect_applied", _on_effect_applied)
+        self.subscribe("effect_applied", _on_effect_applied)

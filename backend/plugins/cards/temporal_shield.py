@@ -46,4 +46,4 @@ class TemporalShield(CardBase):
                         {"reduction_percent": 99},
                     )
 
-        BUS.subscribe("turn_start", _turn_start)
+        self.subscribe("turn_start", _turn_start)

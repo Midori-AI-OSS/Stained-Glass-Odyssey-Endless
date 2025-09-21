@@ -1,7 +1,9 @@
 import asyncio
+from collections.abc import Callable
 from dataclasses import dataclass
 from dataclasses import field
 import logging
+from typing import Any
 
 from autofighter.effects import EffectManager
 from autofighter.effects import create_stat_buff
@@ -34,8 +36,13 @@ class CardBase:
     stars: int = 1
     effects: dict[str, float] = field(default_factory=dict)
     about: str = ""
+    _subscriptions: "SubscriptionRegistry" = field(
+        init=False,
+        repr=False,
+    )
 
     def __post_init__(self) -> None:
+        self._subscriptions = SubscriptionRegistry()
         if not self.about and self.effects:
             parts: list[str] = []
             for attr, pct in self.effects.items():
@@ -108,3 +115,89 @@ class CardBase:
                         getattr(member, "id", "member"),
                         attr,
                     )
+
+    def subscribe(
+        self,
+        event: str,
+        callback: Callable[..., Any],
+        *,
+        cleanup_event: str | None = "battle_end",
+    ) -> Callable[..., Any]:
+        """Register an event handler that automatically cleans up."""
+        self._subscriptions.subscribe(event, callback, cleanup_event=cleanup_event)
+        return callback
+
+    def unsubscribe(self, event: str, callback: Callable[..., Any]) -> None:
+        """Remove a specific event handler from the registry."""
+        self._subscriptions.unsubscribe(event, callback)
+
+    def cleanup_subscriptions(self) -> None:
+        """Remove all tracked subscriptions."""
+        self._subscriptions.clear()
+
+
+class SubscriptionRegistry:
+    """Track event bus subscriptions for a card instance."""
+
+    def __init__(self) -> None:
+        self._entries: list[tuple[str, Callable[..., Any]]] = []
+        self._cleanup_handlers: dict[str, Callable[..., Any]] = {}
+
+    def subscribe(
+        self,
+        event: str,
+        callback: Callable[..., Any],
+        cleanup_event: str | None = "battle_end",
+    ) -> None:
+        from autofighter.stats import BUS
+
+        BUS.subscribe(event, callback)
+        self._entries.append((event, callback))
+        if cleanup_event:
+            self._ensure_cleanup_handler(cleanup_event)
+
+    def unsubscribe(self, event: str, callback: Callable[..., Any]) -> None:
+        from autofighter.stats import BUS
+
+        BUS.unsubscribe(event, callback)
+        self._entries = [
+            (evt, cb)
+            for evt, cb in self._entries
+            if evt != event or cb is not callback
+        ]
+
+    def clear(self, *, remove_cleanup_handlers: bool = True) -> None:
+        from autofighter.stats import BUS
+
+        for event, callback in list(self._entries):
+            BUS.unsubscribe(event, callback)
+        self._entries.clear()
+
+        if remove_cleanup_handlers:
+            for event in list(self._cleanup_handlers):
+                self._remove_cleanup_handler(event)
+
+    def _ensure_cleanup_handler(self, event: str) -> None:
+        from autofighter.stats import BUS
+
+        if event in self._cleanup_handlers:
+            handler = self._cleanup_handlers[event]
+            BUS.unsubscribe(event, handler)
+            BUS.subscribe(event, handler)
+            return
+
+        def _cleanup_handler(*_: object) -> None:
+            self.clear(remove_cleanup_handlers=False)
+            self._remove_cleanup_handler(event)
+
+        self._cleanup_handlers[event] = _cleanup_handler
+        BUS.subscribe(event, _cleanup_handler)
+
+    def _remove_cleanup_handler(self, event: str) -> None:
+        handler = self._cleanup_handlers.pop(event, None)
+        if handler is None:
+            return
+
+        from autofighter.stats import BUS
+
+        BUS.unsubscribe(event, handler)

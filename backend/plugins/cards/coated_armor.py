@@ -59,8 +59,7 @@ class CoatedArmor(CardBase):
                         )
 
         def _on_battle_end(_entity) -> None:
-            BUS.unsubscribe("mitigation_triggered", _on_mitigation_triggered)
-            BUS.unsubscribe("battle_end", _on_battle_end)
+            self.cleanup_subscriptions()
 
-        BUS.subscribe("mitigation_triggered", _on_mitigation_triggered)
-        BUS.subscribe("battle_end", _on_battle_end)
+        self.subscribe("mitigation_triggered", _on_mitigation_triggered)
+        self.subscribe("battle_end", _on_battle_end)

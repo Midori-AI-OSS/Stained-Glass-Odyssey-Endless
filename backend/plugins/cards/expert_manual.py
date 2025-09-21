@@ -43,5 +43,5 @@ class ExpertManual(CardBase):
             if target in party.members:
                 extra_xp_used.clear()
 
-        BUS.subscribe("entity_killed", _on_kill)
-        BUS.subscribe("battle_start", _on_battle_start)
+        self.subscribe("entity_killed", _on_kill)
+        self.subscribe("battle_start", _on_battle_start)

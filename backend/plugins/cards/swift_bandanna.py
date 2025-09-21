@@ -45,4 +45,4 @@ class SwiftBandanna(CardBase):
                     "trigger_event": "dodge"
                 })
 
-        BUS.subscribe("dodge", _on_dodge)
+        self.subscribe("dodge", _on_dodge)

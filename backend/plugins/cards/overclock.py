@@ -80,4 +80,4 @@ class Overclock(CardBase):
             if entity in party.members:
                 safe_async_task(_grant_speed_boost(entity))
 
-        BUS.subscribe("battle_start", _battle_start)
+        self.subscribe("battle_start", _battle_start)

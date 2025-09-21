@@ -53,4 +53,4 @@ class InspiringBanner(CardBase):
                         "trigger_event": "battle_start"
                     })
 
-        BUS.subscribe("battle_start", _on_battle_start)
+        self.subscribe("battle_start", _on_battle_start)

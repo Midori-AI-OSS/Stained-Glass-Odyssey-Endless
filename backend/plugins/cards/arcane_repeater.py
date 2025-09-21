@@ -42,4 +42,4 @@ class ArcaneRepeater(CardBase):
             )
             safe_async_task(target.apply_damage(dmg, attacker=attacker))
 
-        BUS.subscribe("attack_used", _attack)
+        self.subscribe("attack_used", _attack)

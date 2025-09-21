@@ -50,12 +50,11 @@ class BattleMeditation(CardBase):
                             "trigger_event": "battle_start"
                         })
 
-                    BUS.unsubscribe("battle_start", _on_battle_start)
+                    self.unsubscribe("battle_start", _on_battle_start)
 
         def _on_battle_end(entity) -> None:
             self._battle_boost_applied = False
-            BUS.unsubscribe("battle_start", _on_battle_start)
-            BUS.unsubscribe("battle_end", _on_battle_end)
+            self.cleanup_subscriptions()
 
-        BUS.subscribe("battle_start", _on_battle_start)
-        BUS.subscribe("battle_end", _on_battle_end)
+        self.subscribe("battle_start", _on_battle_start)
+        self.subscribe("battle_end", _on_battle_end)

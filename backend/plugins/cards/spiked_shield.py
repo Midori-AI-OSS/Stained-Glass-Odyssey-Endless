@@ -67,4 +67,4 @@ class SpikedShield(CardBase):
 
                     safe_async_task(_retaliate())
 
-        BUS.subscribe("mitigation_triggered", _on_mitigation_triggered)
+        self.subscribe("mitigation_triggered", _on_mitigation_triggered)

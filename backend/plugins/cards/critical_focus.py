@@ -36,4 +36,4 @@ class CriticalFocus(CardBase):
                     {"stacks": effect.stacks},
                 )
 
-        BUS.subscribe("turn_start", _turn_start)
+        self.subscribe("turn_start", _turn_start)

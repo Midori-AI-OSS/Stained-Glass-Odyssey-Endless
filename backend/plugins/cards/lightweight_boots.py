@@ -51,8 +51,7 @@ class LightweightBoots(CardBase):
                         log.warning("Error applying Lightweight Boots dodge heal: %s", e)
 
         def _on_battle_end(_entity) -> None:
-            BUS.unsubscribe("dodge", _on_dodge)
-            BUS.unsubscribe("battle_end", _on_battle_end)
+            self.cleanup_subscriptions()
 
-        BUS.subscribe("dodge", _on_dodge)
-        BUS.subscribe("battle_end", _on_battle_end)
+        self.subscribe("dodge", _on_dodge)
+        self.subscribe("battle_end", _on_battle_end)

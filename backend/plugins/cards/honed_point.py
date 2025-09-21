@@ -61,5 +61,5 @@ class HonedPoint(CardBase):
             if target in party.members:
                 marked_enemies.clear()
 
-        BUS.subscribe("damage_dealt", _on_damage_dealt)
-        BUS.subscribe("battle_start", _on_battle_start)
+        self.subscribe("damage_dealt", _on_damage_dealt)
+        self.subscribe("battle_start", _on_battle_start)

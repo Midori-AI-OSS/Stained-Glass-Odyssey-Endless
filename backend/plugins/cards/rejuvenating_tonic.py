@@ -37,4 +37,4 @@ class RejuvenatingTonic(CardBase):
                     except Exception as e:
                         log.warning("Error applying Rejuvenating Tonic bonus heal: %s", e)
 
-        BUS.subscribe("heal", _on_heal)
+        self.subscribe("heal", _on_heal)

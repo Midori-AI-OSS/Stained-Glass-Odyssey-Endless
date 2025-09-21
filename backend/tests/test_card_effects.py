@@ -155,3 +155,80 @@ async def test_mindful_tassel_boosts_first_debuff():
     loop.run_until_complete(asyncio.sleep(0))
     assert poison.damage == 100
     assert poison.turns == 10
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    (
+        "card_id",
+        "event_builder",
+        "effect_key",
+        "expected_events",
+        "expected_charge",
+        "random_roll",
+    ),
+    (
+        (
+            "lucky_coin",
+            lambda party, ally, foe: ("critical_hit", (ally, foe, 100, "attack")),
+            "charge_refund",
+            1,
+            1,
+            0.0,
+        ),
+        (
+            "energizing_tea",
+            lambda party, ally, foe: ("battle_start", (ally,)),
+            "charge_bonus",
+            1,
+            1,
+            None,
+        ),
+    ),
+)
+async def test_apply_cards_cleans_up_bus_handlers(
+    card_id,
+    event_builder,
+    effect_key,
+    expected_events,
+    expected_charge,
+    random_roll,
+):
+    setup_event_loop()
+    party = Party()
+    ally = PlayerBase()
+    ally.id = "ally"
+    foe = PlayerBase()
+    foe.id = "foe"
+    party.members.append(ally)
+
+    award_card(party, card_id)
+
+    await apply_cards(party)
+    await BUS.emit_async("battle_end", None)
+    await apply_cards(party)
+
+    ally.ultimate_charge = 0
+    records: list[tuple[object, int]] = []
+
+    def _capture(card, member, effect_type, value, payload):
+        if card == card_id and effect_type == effect_key:
+            records.append((member, value))
+
+    BUS.subscribe("card_effect", _capture)
+
+    try:
+        event_name, args = event_builder(party, ally, foe)
+        if random_roll is not None:
+            with patch("random.random", return_value=random_roll):
+                await BUS.emit_async(event_name, *args)
+        else:
+            await BUS.emit_async(event_name, *args)
+        await asyncio.sleep(0)
+    finally:
+        BUS.unsubscribe("card_effect", _capture)
+
+    assert len(records) == expected_events
+    assert ally.ultimate_charge == expected_charge
+
+    await BUS.emit_async("battle_end", None)
