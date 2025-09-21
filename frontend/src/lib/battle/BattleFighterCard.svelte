@@ -9,13 +9,22 @@
     hasCharacterGallery,
     advanceCharacterImage
   } from '../systems/assetLoader.js';
+  import { motionStore } from '../systems/settingsStorage.js';
 
   export let fighter = {};
   export let position = 'bottom'; // 'top' for foes, 'bottom' for party
-  export let reducedMotion = false;
+  export let reducedMotion = false; // Legacy prop for backward compatibility
   export let size = 'normal'; // 'normal' or 'small'
   export let sizePx = 0; // optional explicit pixel size override
   export let highlight = false; // glow when referenced (e.g., hovered in action queue)
+
+  // Use granular motion settings for portrait glows
+  $: motionSettings = $motionStore || { 
+    globalReducedMotion: false, 
+    disablePortraitGlows: false 
+  };
+  $: effectiveReducedMotion = reducedMotion || motionSettings.globalReducedMotion;
+  $: disablePortraitGlows = motionSettings.disablePortraitGlows;
 
   let prevElement = fighter.element;
   let elementChanged = false;
@@ -176,7 +185,7 @@
   <div
     class="modern-fighter-card {position} {size}"
     class:dead={isDead}
-    class:highlight={highlight && !isDead}
+    class:highlight={highlight && !isDead && !disablePortraitGlows}
     style="--portrait-size: {portraitSize}; --element-color: {elColor}; --element-glow-color: {elementGlow.color}"
   >
   <div
@@ -196,8 +205,8 @@
     >
       <div
         class="portrait-image"
-        class:element-glow={!isDead && Boolean(fighter?.ultimate_ready)}
-        class:reduced={reducedMotion}
+        class:element-glow={!isDead && Boolean(fighter?.ultimate_ready) && !disablePortraitGlows}
+        class:reduced={effectiveReducedMotion}
         class:phantom={isPhantom && !isDead}
         class:fading={fading}
         class:luna-sword={showLunaSwordArt}
@@ -260,7 +269,7 @@
         {#if !fighter?.ultimate_ready}
           <div class="ult-pulse" style={`animation-duration: ${Math.max(0.4, 1.6 - 1.2 * ultRatio)}s`}></div>
         {/if}
-        {#if fighter?.ultimate_ready}
+        {#if fighter?.ultimate_ready && !disablePortraitGlows}
           <div class="ult-glow"></div>
         {/if}
       </div>

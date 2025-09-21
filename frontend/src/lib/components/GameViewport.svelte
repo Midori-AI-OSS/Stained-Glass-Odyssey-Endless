@@ -28,7 +28,7 @@
     stopGameMusic,
   } from '../systems/viewportState.js';
   import { rewardOpen as computeRewardOpen } from '../systems/viewportState.js';
-  import { getThemeSettings, THEMES } from '../systems/settingsStorage.js';
+  import { themeStore, motionStore, THEMES } from '../systems/settingsStorage.js';
   import { overlayView } from '../systems/OverlayController.js';
 
   export let runId = '';
@@ -100,15 +100,15 @@
 
   let lastMusicKey = '';
 
-  // Compute accent color based on theme settings, with fallback to level-based color
-  function getAccentColor(userLevel) {
-    const themeSettings = getThemeSettings();
-    const selectedTheme = THEMES[themeSettings.selected] || THEMES.default;
-    
+  // Compute accent color based on theme settings, with reactivity to store changes
+  $: themeSettings = $themeStore || { selected: 'default', customAccent: '#8ac' };
+  $: selectedTheme = THEMES[themeSettings.selected] || THEMES.default;
+  
+  $: accentColor = (() => {
     if (selectedTheme.accent === 'level-based') {
       // Use original level-to-hue logic for default theme
       try {
-        const lv = Math.max(1, Number(userLevel) || 1);
+        const lv = Math.max(1, Number(userState?.level) || 1);
         const hue = (lv * 12) % 360; // cycle hues as level increases
         return `hsl(${hue} 85% 55%)`;
       } catch {
@@ -119,9 +119,20 @@
     } else {
       return selectedTheme.accent || '#8ac';
     }
-  }
+  })();
   
-  $: accentColor = getAccentColor(userState?.level || 1);
+  // Handle background based on theme settings
+  $: backgroundFromTheme = (() => {
+    if (themeSettings.backgroundBehavior === 'static') {
+      // Use a static background based on theme
+      return themeSettings.customBackground || randomBg;
+    } else if (themeSettings.backgroundBehavior === 'custom') {
+      return themeSettings.customBackground || randomBg;
+    } else {
+      // Default: hourly rotation
+      return background || randomBg;
+    }
+  })();
   $: levelProgress = (() => {
     const exp = Number(userState?.exp || 0);
     const next = Number(userState?.next_level_exp || 0) || 0;
@@ -129,7 +140,7 @@
     const p = Math.max(0, Math.min(1, exp / next));
     return p;
   })();
-  $: viewportStyle = `--bg: url(${background || randomBg}); --accent: ${accentColor}; --level-progress: ${levelProgress}`;
+  $: viewportStyle = `--bg: url(${backgroundFromTheme}); --accent: ${accentColor}; --level-progress: ${levelProgress}`;
   $: {
     // Change music per room type and battle index (new fights) and
     // rerun when party/foe combatants change to trigger character themes.

@@ -76,6 +76,48 @@
     </div>
   </div>
 
+  {#if themeSettings.backgroundBehavior === 'static'}
+    <div class="control" title="Choose a static background image.">
+      <div class="control-left">
+        <span class="label"><Eye /> Static Background</span>
+      </div>
+      <div class="control-right">
+        <select bind:value={themeSettings.customBackground} on:change={(e) => updateTheme({ customBackground: e.target.value })}>
+          <option value="">Default</option>
+          <option value="/src/lib/assets/backgrounds/bg_desert.webp">Desert</option>
+          <option value="/src/lib/assets/backgrounds/bg_forest.webp">Forest</option>
+          <option value="/src/lib/assets/backgrounds/bg_mountain.webp">Mountain</option>
+          <option value="/src/lib/assets/backgrounds/bg_ocean.webp">Ocean</option>
+          <option value="/src/lib/assets/backgrounds/bg_space.webp">Space</option>
+        </select>
+      </div>
+    </div>
+  {/if}
+
+  {#if themeSettings.backgroundBehavior === 'custom'}
+    <div class="control" title="Upload a custom background image.">
+      <div class="control-left">
+        <span class="label"><Eye /> Custom Background</span>
+      </div>
+      <div class="control-right">
+        <input 
+          type="file" 
+          accept="image/*" 
+          on:change={(e) => {
+            const file = e.target.files?.[0];
+            if (file) {
+              const reader = new FileReader();
+              reader.onload = (e) => {
+                updateTheme({ customBackground: e.target.result });
+              };
+              reader.readAsDataURL(file);
+            }
+          }}
+        />
+      </div>
+    </div>
+  {/if}
+
   <div class="control" title="Master switch for reduced motion. Respects system preferences.">
     <div class="control-left">
       <span class="label"><Move /> Global Reduced Motion</span>
