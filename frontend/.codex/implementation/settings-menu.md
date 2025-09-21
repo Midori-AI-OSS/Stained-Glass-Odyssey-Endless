@@ -31,8 +31,10 @@ The System settings tab is organized into several sections:
 - **Custom Accent**: Color picker (shown only when Custom theme selected)
 - **Background Mode**: Controls background behavior:
   - `Hourly Rotation`: Changes background assets every hour
-  - `Static Pick`: Uses a fixed background
-  - `Custom Asset`: Allows custom background upload (future feature)
+  - `Static Pick`: Uses a fixed background from predefined options
+  - `Custom Asset`: Allows custom background upload via file picker
+- **Static Background**: Dropdown selector with predefined background images (shown only when Static Pick selected)
+- **Custom Background**: File picker for uploading custom background images (shown only when Custom Asset selected)
 
 The selected theme drives `GameViewport` styling instead of the level-derived hue system, providing consistent visual themes independent of player progression.
 

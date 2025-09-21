@@ -84,11 +84,10 @@
       <div class="control-right">
         <select bind:value={themeSettings.customBackground} on:change={(e) => updateTheme({ customBackground: e.target.value })}>
           <option value="">Default</option>
-          <option value="/src/lib/assets/backgrounds/bg_desert.webp">Desert</option>
-          <option value="/src/lib/assets/backgrounds/bg_forest.webp">Forest</option>
-          <option value="/src/lib/assets/backgrounds/bg_mountain.webp">Mountain</option>
-          <option value="/src/lib/assets/backgrounds/bg_ocean.webp">Ocean</option>
-          <option value="/src/lib/assets/backgrounds/bg_space.webp">Space</option>
+          <option value="/src/lib/assets/backgrounds/1bd68c8e-5053-48f8-8464-0873942ef5dc.png">Cityscape 1</option>
+          <option value="/src/lib/assets/backgrounds/31158efc-ab69-40a4-87aa-8fbaab3084d4.png">Cityscape 2</option>
+          <option value="/src/lib/assets/backgrounds/442c486c-fcdb-4a85-80c8-c1a4dc2792c4.png">Cityscape 3</option>
+          <option value="/src/lib/assets/backgrounds/57bb288c-8dbc-4656-9132-c188b55f1d6b.png">Cityscape 4</option>
         </select>
       </div>
     </div>

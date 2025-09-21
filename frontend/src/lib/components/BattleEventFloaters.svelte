@@ -252,7 +252,7 @@
     });
   }
 
-  $: if (events && events.length) {
+  $: if (events && events.length && !isFloatingDamageDisabled) {
     pushEvents(events);
   }
 
