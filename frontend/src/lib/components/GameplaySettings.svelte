@@ -1,5 +1,5 @@
 <script>
-  import { Power, Timer, Bot, ListOrdered } from 'lucide-svelte';
+  import { Power, Timer, Bot, ListOrdered, SkipForward } from 'lucide-svelte';
   import DotSelector from './DotSelector.svelte';
   import Tooltip from './Tooltip.svelte';
 
@@ -10,6 +10,7 @@
 
   export let showActionValues = false;
   export let fullIdleMode = false;
+  export let skipBattleReview = false;
   export let animationSpeed = DEFAULT_ANIMATION_SPEED;
   export let baseTurnPacing = 0.5;
   export let scheduleSave;
@@ -108,6 +109,16 @@
     </div>
     <div class="control-right">
       <input type="checkbox" bind:checked={fullIdleMode} on:change={scheduleSave} />
+    </div>
+  </div>
+  <div class="control">
+    <div class="control-left">
+      <Tooltip text="Skip the Battle Review screen and advance directly to the next room.">
+        <span class="label"><SkipForward /> Skip Battle Review</span>
+      </Tooltip>
+    </div>
+    <div class="control-right">
+      <input type="checkbox" bind:checked={skipBattleReview} on:change={scheduleSave} />
     </div>
   </div>
   <div class="control">

@@ -25,3 +25,5 @@ Audio volume controls use the `DotSelector` component to render ten selectable l
 The Gameplay tab's **End Run** button now attempts to end the current run by ID and falls back to clearing all runs when the ID is missing or the targeted request fails.
 
 The Gameplay tab also exposes an **Animation Speed** slider (0.1–2.0×). Adjusting it writes the selected multiplier to settings storage and posts the derived turn pacing (`base_turn_pacing / animationSpeed`) to `/config/turn_pacing` so backend battle pacing matches the UI setting.
+
+The **Skip Battle Review** toggle allows players to bypass the post-battle summary screen and advance directly to the next room. When enabled, the Battle Review overlay is suppressed and the game automatically progresses after battle completion, while still respecting reward handling logic. This setting defaults to `false` to preserve the existing review experience.

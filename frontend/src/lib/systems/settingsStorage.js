@@ -10,6 +10,7 @@ export function loadSettings() {
     if (data.lrmModel !== undefined) data.lrmModel = String(data.lrmModel);
     if (data.showActionValues !== undefined) data.showActionValues = Boolean(data.showActionValues);
     if (data.fullIdleMode !== undefined) data.fullIdleMode = Boolean(data.fullIdleMode);
+    if (data.skipBattleReview !== undefined) data.skipBattleReview = Boolean(data.skipBattleReview);
     if (data.animationSpeed !== undefined) {
       const numeric = Number(data.animationSpeed);
       if (Number.isFinite(numeric) && numeric > 0) {
@@ -30,6 +31,7 @@ export function saveSettings(settings) {
     const current = loadSettings();
     const merged = { ...current, ...settings };
     if (merged.fullIdleMode !== undefined) merged.fullIdleMode = Boolean(merged.fullIdleMode);
+    if (merged.skipBattleReview !== undefined) merged.skipBattleReview = Boolean(merged.skipBattleReview);
     if (merged.animationSpeed !== undefined) {
       const numeric = Number(merged.animationSpeed);
       if (Number.isFinite(numeric) && numeric > 0) {
