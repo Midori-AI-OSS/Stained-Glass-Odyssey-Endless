@@ -588,7 +588,7 @@ def _get_player_stat_upgrades(player_id: str) -> List[Dict]:
             SELECT id, stat_name, upgrade_percent, source_star, cost_spent, created_at
             FROM player_stat_upgrades
             WHERE player_id = ?
-            ORDER BY created_at DESC
+            ORDER BY created_at DESC, id DESC
         """, (player_id,))
         return [
             {
@@ -839,37 +839,101 @@ async def upgrade_player_stat(pid: str):
     data = await request.get_json(silent=True) or {}
     stat_name = data.get("stat_name")
     requested_points = data.get("points")
+    raw_repeat = data.get("repeat", data.get("repeats"))
+    raw_total_points = data.get("total_points")
 
     if stat_name not in UPGRADEABLE_STATS:
         return jsonify({"error": f"invalid stat, must be one of: {UPGRADEABLE_STATS}"}), 400
 
+    try:
+        repeat = int(raw_repeat) if raw_repeat is not None else 1
+    except (TypeError, ValueError):
+        repeat = 1
+    if repeat < 1:
+        repeat = 1
+    repeat = min(repeat, 1000)
+
+    if raw_total_points is not None:
+        try:
+            total_points_limit = int(raw_total_points)
+        except (TypeError, ValueError):
+            return jsonify({"error": "total_points must be an integer >= 1"}), 400
+        if total_points_limit < 1:
+            return jsonify({"error": "total_points must be at least 1"}), 400
+    else:
+        total_points_limit = None
+
     def spend_points():
-        cost_to_spend = _get_next_cost_for_stat(pid, stat_name)
-        if requested_points is not None and requested_points != cost_to_spend:
-            payload = _build_player_upgrade_payload(pid)
-            payload.update({
-                "error": "invalid point cost",
-                "expected_points": cost_to_spend,
-            })
-            return payload
+        validated_points = False
+        completed = 0
+        total_spent = 0
+        total_percent = 0.0
+        budget_remaining = total_points_limit
+        last_cost = None
 
-        upgrade_percent = cost_to_spend * 0.001  # 0.1% per point
-        success = _spend_player_upgrade_points(pid, cost_to_spend, stat_name, upgrade_percent)
+        while completed < repeat:
+            cost_to_spend = _get_next_cost_for_stat(pid, stat_name)
+            last_cost = cost_to_spend
+
+            if not validated_points and requested_points is not None and requested_points != cost_to_spend:
+                payload = _build_player_upgrade_payload(pid)
+                payload.update({
+                    "error": "invalid point cost",
+                    "expected_points": cost_to_spend,
+                })
+                return payload
+
+            validated_points = True
+
+            if budget_remaining is not None and cost_to_spend > budget_remaining:
+                break
+
+            upgrade_percent = cost_to_spend * 0.001  # 0.1% per point
+            success = _spend_player_upgrade_points(pid, cost_to_spend, stat_name, upgrade_percent)
+            if not success:
+                payload = _build_player_upgrade_payload(pid)
+                payload.update({
+                    "error": "insufficient upgrade points",
+                    "required_points": cost_to_spend,
+                    "attempted_upgrades": repeat,
+                    "completed_upgrades": completed,
+                    "points_spent": total_spent,
+                    "upgrade_percent": total_percent,
+                })
+                payload["remaining_points"] = payload.get("upgrade_points", 0)
+                return payload
+
+            completed += 1
+            total_spent += cost_to_spend
+            total_percent += upgrade_percent
+            if budget_remaining is not None:
+                budget_remaining = max(0, budget_remaining - cost_to_spend)
+
         payload = _build_player_upgrade_payload(pid)
-        if not success:
-            payload.update({
-                "error": "insufficient upgrade points",
-                "required_points": cost_to_spend,
-            })
-            return payload
-
         response = {
             "stat_upgraded": stat_name,
-            "points_spent": cost_to_spend,
-            "upgrade_percent": upgrade_percent,
+            "points_spent": total_spent,
+            "upgrade_percent": total_percent,
+            "completed_upgrades": completed,
+            "attempted_upgrades": repeat,
         }
         response.update(payload)
         response["remaining_points"] = payload.get("upgrade_points", 0)
+
+        if completed == 0:
+            response.update({
+                "error": "insufficient upgrade points",
+                "required_points": last_cost,
+            })
+            if budget_remaining is not None and last_cost is not None and budget_remaining < last_cost:
+                response["error"] = "insufficient total_points budget"
+            return response
+
+        if budget_remaining is not None:
+            response["budget_remaining"] = budget_remaining
+            if completed < repeat:
+                response["partial"] = True
+
         return response
 
     result = await asyncio.to_thread(spend_points)

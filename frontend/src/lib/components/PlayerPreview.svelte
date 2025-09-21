@@ -24,6 +24,8 @@
   export let reducedMotion = false;
 
   const dispatch = createEventDispatcher();
+  const REPEAT_OPTIONS = [1, 5, 10];
+  let upgradeRepeat = 1;
   const ELEMENTS = ['Light','Fire','Ice','Lightning','Wind','Dark'];
   async function chooseElement(name) {
     const s = String(name || '');
@@ -338,7 +340,7 @@
 
   function requestUpgrade(stat) {
     if (!selected || !stat || pendingAction) return;
-    dispatch('request-upgrade', { id: selected.id, stat });
+    dispatch('request-upgrade', { id: selected.id, stat, repeats: upgradeRepeat });
   }
 
   function convertFourStar() {
@@ -518,6 +520,21 @@
               {/if}
               <span class="points">Points: {formatPoints(upgradePointsValue)}</span>
             </div>
+            <div class="repeat-controls" aria-label="Upgrade repeats" on:click|stopPropagation>
+              {#each REPEAT_OPTIONS as option}
+                {#key option}
+                  <button
+                    type="button"
+                    class="repeat-btn"
+                    class:active={upgradeRepeat === option}
+                    aria-pressed={upgradeRepeat === option ? 'true' : 'false'}
+                    on:click={() => upgradeRepeat = option}
+                  >
+                    {option}×
+                  </button>
+                {/key}
+              {/each}
+            </div>
             <div class="row row2">
               <button type="button" class="convert4-btn" on:click={convertFourStar} disabled={!canConvert4}>
                 Convert 4★ into 5 points
@@ -628,6 +645,35 @@
     align-items: center;
     gap: 0.6rem;
     flex-wrap: wrap;
+  }
+  .upgrade-bottom .repeat-controls {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.4rem;
+    margin: 0.35rem 0 0.25rem;
+    padding-right: 0.2rem;
+  }
+  .upgrade-bottom .repeat-btn {
+    background: rgba(0,0,0,0.45);
+    border: 1px solid rgba(255,255,255,0.35);
+    color: #fff;
+    border-radius: 4px;
+    font-size: 0.85rem;
+    padding: 0.25rem 0.6rem;
+    cursor: pointer;
+    transition: background 140ms ease, border-color 140ms ease, color 140ms ease;
+  }
+  .upgrade-bottom .repeat-btn:hover,
+  .upgrade-bottom .repeat-btn:focus-visible {
+    background: rgba(255,255,255,0.12);
+    border-color: rgba(255,255,255,0.6);
+    outline: none;
+  }
+  .upgrade-bottom .repeat-btn.active {
+    background: rgba(255,255,255,0.22);
+    border-color: rgba(255,255,255,0.75);
+    color: #fff;
+    font-weight: 600;
   }
   .upgrade-bottom .row1 { justify-content: space-between; }
   .upgrade-bottom .row2 { justify-content: flex-start; }
