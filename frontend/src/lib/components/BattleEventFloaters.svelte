@@ -1,7 +1,7 @@
 <script>
   import { onDestroy } from 'svelte';
   import { getDamageTypeVisual } from '$lib/systems/assetLoader.js';
-  import { getMotionSettings } from '../systems/settingsStorage.js';
+  import { motionStore } from '../systems/settingsStorage.js';
 
   const RANDOM_OFFSETS = 120;
   const BASE_DURATION = 900;
@@ -17,8 +17,8 @@
   // Map of entity id -> { x: fraction(0..1), y: fraction(0..1) } relative to the battle field
   export let anchors = {};
 
-  // Check both legacy prop and new granular settings
-  $: motionSettings = getMotionSettings();
+  // Check both legacy prop and new granular settings using reactive store
+  $: motionSettings = $motionStore || { globalReducedMotion: false, disableFloatingDamage: false };
   $: isFloatingDamageDisabled = reducedMotion || motionSettings.globalReducedMotion || motionSettings.disableFloatingDamage;
 
   let floaters = [];

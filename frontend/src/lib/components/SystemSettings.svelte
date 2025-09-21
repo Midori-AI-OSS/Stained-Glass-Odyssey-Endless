@@ -1,6 +1,6 @@
 <script>
   import { Activity, Gauge, Move, Trash2, Download, Upload, Palette, Eye } from 'lucide-svelte';
-  import { THEMES, getThemeSettings, getMotionSettings, updateThemeSettings, updateMotionSettings } from '../systems/settingsStorage.js';
+  import { THEMES, getThemeSettings, getMotionSettings, updateThemeSettings, updateMotionSettings, motionStore } from '../systems/settingsStorage.js';
   
   export let framerate = 60;
   export let reducedMotion = false;
@@ -13,9 +13,9 @@
   export let healthPing = null;
   export let refreshHealth;
 
-  // Theme and motion settings
+  // Theme and motion settings - use stores for reactivity
   let themeSettings = getThemeSettings();
-  let motionSettings = getMotionSettings();
+  $: motionSettings = $motionStore || getMotionSettings();
   
   $: selectedTheme = THEMES[themeSettings.selected] || THEMES.default;
   
@@ -26,10 +26,11 @@
   }
   
   function updateMotion(updates) {
-    motionSettings = { ...motionSettings, ...updates };
     updateMotionSettings(updates);
+    
     // Update legacy reducedMotion for backward compatibility
-    scheduleSave({ reducedMotion: motionSettings.globalReducedMotion, ...updates });
+    reducedMotion = (motionSettings?.globalReducedMotion ?? false) || (updates.globalReducedMotion ?? false);
+    scheduleSave({ reducedMotion, ...updates });
   }
 </script>
 

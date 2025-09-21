@@ -1,12 +1,12 @@
 <script>
   import { getElementColor } from '../systems/assetLoader.js';
-  import { getMotionSettings } from '../systems/settingsStorage.js';
+  import { motionStore } from '../systems/settingsStorage.js';
 
   export let color = '';
   export let reducedMotion = false; // Legacy prop for backward compatibility
 
-  // Check both legacy prop and new granular settings
-  $: motionSettings = getMotionSettings();
+  // Check both legacy prop and new granular settings using reactive store
+  $: motionSettings = $motionStore || { globalReducedMotion: false, disableStarStorm: false };
   $: isStarStormDisabled = reducedMotion || motionSettings.globalReducedMotion || motionSettings.disableStarStorm;
 
   const fallbackTint = '#88a';

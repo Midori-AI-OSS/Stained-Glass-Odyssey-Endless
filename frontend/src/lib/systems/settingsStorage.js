@@ -1,5 +1,11 @@
+import { writable } from 'svelte/store';
+
 const SETTINGS_KEY = 'autofighter_settings';
 const SETTINGS_VERSION = 2;
+
+// Create reactive stores for settings
+export const motionStore = writable(null);
+export const themeStore = writable(null);
 
 // Theme definitions
 export const THEMES = {
@@ -100,7 +106,13 @@ function migrateSettings(data) {
 export function loadSettings() {
   try {
     const raw = localStorage.getItem(SETTINGS_KEY);
-    if (!raw) return getDefaultSettings();
+    if (!raw) {
+      const defaults = getDefaultSettings();
+      // Initialize stores
+      motionStore.set(defaults.motion);
+      themeStore.set(defaults.theme);
+      return defaults;
+    }
     
     let data = JSON.parse(raw);
     
@@ -134,9 +146,16 @@ export function loadSettings() {
       data.theme = getDefaultSettings().theme;
     }
     
+    // Update stores
+    motionStore.set(data.motion);
+    themeStore.set(data.theme);
+    
     return data;
   } catch {
-    return getDefaultSettings();
+    const defaults = getDefaultSettings();
+    motionStore.set(defaults.motion);
+    themeStore.set(defaults.theme);
+    return defaults;
   }
 }
 
@@ -173,6 +192,14 @@ export function saveSettings(settings) {
     }
     
     localStorage.setItem(SETTINGS_KEY, JSON.stringify(merged));
+    
+    // Update stores when settings change
+    if (merged.motion) {
+      motionStore.set(merged.motion);
+    }
+    if (merged.theme) {
+      themeStore.set(merged.theme);
+    }
   } catch {
     // ignore write errors
   }
@@ -191,16 +218,22 @@ export function getMotionSettings() {
 
 export function updateThemeSettings(themeUpdates) {
   const current = loadSettings();
+  const updatedTheme = { ...current.theme, ...themeUpdates };
   saveSettings({
-    theme: { ...current.theme, ...themeUpdates }
+    theme: updatedTheme
   });
+  themeStore.set(updatedTheme);
 }
 
 export function updateMotionSettings(motionUpdates) {
   const current = loadSettings();
+  const updatedMotion = { ...current.motion, ...motionUpdates };
   saveSettings({
-    motion: { ...current.motion, ...motionUpdates }
+    motion: updatedMotion,
+    // Keep legacy reducedMotion in sync
+    reducedMotion: updatedMotion.globalReducedMotion
   });
+  motionStore.set(updatedMotion);
 }
 
 export function clearSettings() {
