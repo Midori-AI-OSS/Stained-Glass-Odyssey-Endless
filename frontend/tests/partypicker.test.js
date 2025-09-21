@@ -85,9 +85,10 @@ describe('PartyPicker component', () => {
 
   test('wires upgrade requests to the API', () => {
     const content = readFileSync(join(import.meta.dir, '../src/lib/components/PartyPicker.svelte'), 'utf8');
-    expect(content).toContain('import { getPlayers, getUpgrade, upgradeCharacter, upgradeStat }');
-    expect(content).toContain('await upgradeStat(id, stat, { repeat: requestRepeats });');
-    expect(content).toContain('upgradeContext?.pendingStat');
+    expect(content).toContain('import { getPlayers, getUpgrade, upgradeStat }');
+    expect(content).toContain('const options = { repeat: repeats };');
+    expect(content).toContain('options.materials = expectedMaterials;');
+    expect(content).toContain('await upgradeStat(id, stat, options);');
   });
 });
 

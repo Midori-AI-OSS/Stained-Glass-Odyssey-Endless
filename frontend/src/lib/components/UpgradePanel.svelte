@@ -1,9 +1,9 @@
 <script>
   import { onMount } from 'svelte';
-  import { getUpgrade, upgradeCharacter, upgradeStat } from '../systems/api.js';
+  import { getUpgrade, upgradeStat } from '../systems/api.js';
   import { createEventDispatcher } from 'svelte';
   import { getElementColor } from '../systems/assetLoader.js';
-  import { formatPoints, formatCost, formatPercent } from '../utils/upgradeFormatting.js';
+  import { formatCost, formatPercent, formatMaterialQuantity, formatMaterialName } from '../utils/upgradeFormatting.js';
 
   export let id;
   export let element; // e.g. 'Light', 'Fire'
@@ -24,84 +24,94 @@
   }
 
   let items = {};
-  let statUpgrades = [];
   let statTotals = {};
+  let statCounts = {};
   let nextCosts = {};
-  let upgradePoints = 0;
+  let backendElement = '';
   let loading = true;
-  let starLevel = 4;
-  let itemCount = 1;
   let upgradeRepeats = 1;
   let spendStat = 'atk';
   let message = '';
+  let error = '';
+  let submitting = false;
   const dispatch = createEventDispatcher();
 
-  const isPlayer = () => String(id) === 'player';
-  const elem = () => String(element || '').toLowerCase();
+  $: resolvedElement = backendElement || element || 'Generic';
+  $: elementKey = String(resolvedElement || 'Generic').toLowerCase();
+  $: materialKey = `${elementKey}_1`;
+  $: accent = getElementColor(resolvedElement || 'Generic');
+  $: availableMaterials = Number(items?.[materialKey] ?? 0);
+  $: nextCostForStat = nextCosts?.[spendStat] || null;
+  $: levelForStat = Number(statCounts?.[spendStat] ?? 0);
+  $: totalPercentForStat = statTotals?.[spendStat] ?? 0;
+  $: levelsSummary = UPGRADEABLE_STATS.map((key) => {
+    const level = Number(statCounts?.[key] ?? 0);
+    const percent = statTotals?.[key] ?? 0;
+    return `${formatLabel(key)} L${level} (${formatPercent(percent)})`;
+  }).join(', ');
 
-  async function load() {
+  async function load({ resetStatus = false } = {}) {
     loading = true;
-    message = '';
+    if (resetStatus) {
+      message = '';
+      error = '';
+    }
     try {
       const data = await getUpgrade(id);
       items = data.items || {};
-      statUpgrades = data.stat_upgrades || [];
       statTotals = data.stat_totals || {};
+      statCounts = data.stat_counts || {};
       nextCosts = data.next_costs || {};
-      upgradePoints = Number(data.upgrade_points) || 0;
+      backendElement = data.element || backendElement;
     } finally {
       loading = false;
     }
   }
 
-  onMount(load);
+  onMount(() => {
+    load({ resetStatus: true });
+  });
 
-  $: have1 = items[`${elem()}_1`] || 0;
-  $: have2 = items[`${elem()}_2`] || 0;
-  $: have3 = items[`${elem()}_3`] || 0;
-  $: have4 = items[`${elem()}_4`] || 0;
-  $: accent = getElementColor(element || 'Generic');
-
-  // For the player, total available items at the selected star across all elements
-  $: totalAtStar = Object.entries(items)
-    .filter(([k]) => k.endsWith(`_${starLevel}`))
-    .reduce((acc, [, v]) => acc + (v || 0), 0);
-
-  $: canUse = isPlayer()
-    ? (totalAtStar >= itemCount && itemCount > 0)
-    : ((items[`${elem()}_${starLevel}`] || 0) >= itemCount && itemCount > 0);
-
-  async function useItems() {
+  async function spendMaterials() {
     message = '';
-    try {
-      await upgradeCharacter(id, Number(starLevel), Number(itemCount));
-      await load();
-      message = 'Converted to upgrade points.';
-      dispatch('upgraded', { id, starLevel: Number(starLevel), itemCount: Number(itemCount) });
-    } catch (e) {
-      message = e?.message || 'Upgrade failed';
-    }
-  }
-
-  async function spendPointsFn() {
-    message = '';
+    error = '';
     const repeats = Math.max(1, Number(upgradeRepeats) || 1);
+    submitting = true;
     try {
-      let result = null;
-      for (let i = 0; i < repeats; i += 1) {
-        result = await upgradeStat(id, String(spendStat));
+      const options = { repeat: repeats };
+      if (nextCostForStat?.count != null) {
+        options.materials = nextCostForStat.count;
       }
-      await load();
+      const result = await upgradeStat(id, String(spendStat), options);
+      await load({ resetStatus: false });
       if (result) {
-        const label = result.stat_upgraded || spendStat;
-        const bonus = formatPercent(result.upgrade_percent);
-        message = `Upgraded ${label} by ${bonus}.`;
-      } else {
-        message = `Upgraded ${spendStat}.`;
+        const label = formatLabel(result.stat_upgraded || spendStat);
+        const completed = Number(result.completed_upgrades) || 0;
+        const percent = result.upgrade_percent;
+        if (completed > 0) {
+          const percentText = percent ? formatPercent(percent) : '';
+          if (completed === 1) {
+            message = percentText ? `Upgraded ${label} by ${percentText}.` : `Upgraded ${label}.`;
+          } else {
+            message = percentText
+              ? `Upgraded ${label} ${completed}× for ${percentText} total.`
+              : `Upgraded ${label} ${completed}×.`;
+          }
+        } else {
+          message = `No upgrades applied to ${label}.`;
+        }
+        if (result.error) {
+          error = result.error;
+        }
+        if (result.materials_remaining != null) {
+          items = { ...items, [materialKey]: result.materials_remaining };
+        }
+        dispatch('upgraded', { id, stat: String(spendStat), repeats, result });
       }
-      dispatch('upgraded', { id, stat: String(spendStat), repeats });
-    } catch (e) {
-      message = e?.message || 'Spend failed';
+    } catch (err) {
+      error = err?.message || 'Upgrade failed';
+    } finally {
+      submitting = false;
     }
   }
 </script>
@@ -112,32 +122,16 @@
     <div>Loading upgrades...</div>
   {:else}
     <div class="row">
-      <div class="label">Element items</div>
-      <div class="value">{element}: 1★ {have1}, 2★ {have2}, 3★ {have3}, 4★ {have4}</div>
+      <div class="label">Material</div>
+      <div class="value">{formatMaterialName(materialKey)}</div>
     </div>
-    <div class="row"><div class="label">Upgrade points</div><div class="value">{upgradePoints}</div></div>
-
-    <div class="section">
-      <div class="label">Convert items</div>
-      <div class="controls">
-        <label>Star
-          <select bind:value={starLevel} class="themed">
-            <option value={1}>1★</option>
-            <option value={2}>2★</option>
-            <option value={3}>3★</option>
-            <option value={4}>4★</option>
-          </select>
-        </label>
-        <label>Count
-          <input type="number" min="1" bind:value={itemCount} class="themed" />
-        </label>
-        <button class="themed" on:click={useItems} disabled={!canUse}>Convert to Points</button>
-      </div>
-      <div class="hint">Player can convert any element items; others must match {element}.</div>
+    <div class="row">
+      <div class="label">Available</div>
+      <div class="value">{formatMaterialQuantity(availableMaterials, materialKey)}</div>
     </div>
 
     <div class="section">
-      <div class="label">Spend points</div>
+      <div class="label">Spend materials</div>
       <div class="controls">
         <label>Stat
           <select bind:value={spendStat} class="themed">
@@ -149,22 +143,26 @@
         <label>Times
           <input type="number" min="1" bind:value={upgradeRepeats} class="themed" />
         </label>
-        <button class="themed" on:click={spendPointsFn} disabled={!upgradePoints || upgradeRepeats < 1}>Spend</button>
+        <button
+          class="themed"
+          on:click={spendMaterials}
+          disabled={submitting || upgradeRepeats < 1 || availableMaterials <= 0}
+        >
+          {submitting ? 'Spending…' : 'Spend materials'}
+        </button>
       </div>
-      <div class="hint">Next cost for {spendStat}: {formatCost(nextCosts[spendStat])}</div>
-      {#if Object.keys(statTotals).length}
-        <div class="hint">
-          Totals:
-          {UPGRADEABLE_STATS.map((k) => {
-            const val = Number(statTotals?.[k] ?? 0);
-            return `${formatLabel(k)}: ${(val * 100).toFixed(2)}%`;
-          }).join(', ')}
-        </div>
+      <div class="hint">Level {levelForStat} • Bonus {formatPercent(totalPercentForStat)}</div>
+      <div class="hint">Next {formatLabel(spendStat)} cost: {formatCost(nextCostForStat)}</div>
+      {#if levelsSummary}
+        <div class="hint">Levels: {levelsSummary}</div>
       {/if}
     </div>
 
     {#if message}
       <div class="msg">{message}</div>
+    {/if}
+    {#if error}
+      <div class="msg error">{error}</div>
     {/if}
   {/if}
 </div>
@@ -186,4 +184,5 @@ button.themed:disabled { opacity: 0.55; cursor: not-allowed; filter: grayscale(0
 
 .hint { font-size: 0.8rem; color: #aaa; margin-top: 0.2rem; }
 .msg { margin-top: 0.3rem; color: #9fd6ff; font-size: 0.85rem; }
+.msg.error { color: #ff9f9f; }
 </style>
