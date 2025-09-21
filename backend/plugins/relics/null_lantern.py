@@ -31,7 +31,7 @@ class NullLantern(RelicBase):
                 "cleared": cleared,
                 "stacks": stacks,
             }
-
+            
 
             if not hasattr(party, "pull_tokens"):
                 party.pull_tokens = 0
@@ -99,7 +99,7 @@ class NullLantern(RelicBase):
             state["battle_start_handler"] = _battle_start
             state["battle_end_handler"] = _battle_end
             state["cleanup_handler"] = _cleanup
-
+            
             party._null_lantern_state = state
         else:
             state["stacks"] = stacks

@@ -3,6 +3,14 @@ import pytest
 from autofighter.mapgen import MapNode
 from autofighter.party import Party
 from autofighter.rooms.battle.setup import setup_battle
+import pytest
+
+from autofighter.mapgen import MapNode
+import pytest
+
+from autofighter.mapgen import MapNode
+from autofighter.party import Party
+from autofighter.rooms.battle.setup import setup_battle
 from autofighter.stats import BUS
 from autofighter.stats import Stats
 from autofighter.summons.manager import SummonManager

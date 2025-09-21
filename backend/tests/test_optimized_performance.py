@@ -1,5 +1,4 @@
 import pytest
-
 #!/usr/bin/env python3
 """
 Test script to measure performance improvements with async optimizations.

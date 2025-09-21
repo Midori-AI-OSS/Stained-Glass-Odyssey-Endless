@@ -1,5 +1,7 @@
 import asyncio
 
+import asyncio
+
 import pytest
 
 from autofighter.party import Party

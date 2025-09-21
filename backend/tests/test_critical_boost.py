@@ -2,6 +2,10 @@ from pathlib import Path
 
 import pytest
 
+from pathlib import Path
+
+import pytest
+
 from autofighter.stats import BUS
 from autofighter.stats import Stats
 from plugins.effects.critical_boost import CriticalBoost

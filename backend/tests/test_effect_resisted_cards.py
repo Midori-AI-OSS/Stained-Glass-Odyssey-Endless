@@ -5,10 +5,10 @@ from unittest.mock import patch
 from autofighter.effects import EffectManager
 from autofighter.stats import BUS
 from autofighter.stats import Stats
+import plugins.event_bus as event_bus_module
 from plugins.cards.calm_beads import CalmBeads
 from plugins.cards.polished_shield import PolishedShield
 from plugins.damage_types.fire import Fire
-import plugins.event_bus as event_bus_module
 
 
 def _setup_ally_with_card(card_cls: type) -> tuple[asyncio.AbstractEventLoop, Stats]:

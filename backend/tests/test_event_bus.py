@@ -80,6 +80,7 @@ if "tts" not in sys.modules:
 
 from autofighter.rooms.battle.pacing import YIELD_DELAY
 
+
 spec = importlib.util.spec_from_file_location(
     "event_bus", Path(__file__).resolve().parents[1] / "plugins" / "event_bus.py"
 )
