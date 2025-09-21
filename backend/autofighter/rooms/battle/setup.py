@@ -75,6 +75,11 @@ async def setup_battle(
 
     for stats in foes:
         _scale_stats(stats, node, strength)
+        rank = getattr(stats, "rank", "")
+        if isinstance(rank, str) and "boss" in rank.lower():
+            boss_scaling = getattr(stats, "apply_boss_scaling", None)
+            if callable(boss_scaling):
+                boss_scaling()
         prepare = getattr(stats, "prepare_for_battle", None)
         if callable(prepare):
             prepare(node, registry)
