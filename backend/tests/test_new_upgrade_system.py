@@ -170,6 +170,91 @@ async def test_player_spend_points_cost_curve(app_with_db):
 
 
 @pytest.mark.asyncio
+async def test_player_repeat_upgrade_batch(app_with_db):
+    """Server handles repeat upgrade requests and aggregates the results."""
+    app, _ = app_with_db
+    client = app.test_client()
+
+    await client.post(
+        "/players/player/upgrade",
+        json={"star_level": 1, "item_count": 20},
+    )
+
+    resp = await client.post(
+        "/players/player/upgrade-stat",
+        json={"stat_name": "atk", "repeat": 3},
+    )
+    data = await resp.get_json()
+
+    assert resp.status_code == 200
+    assert data["completed_upgrades"] == 3
+    assert data["attempted_upgrades"] == 3
+    assert data["points_spent"] == 9
+    assert data["upgrade_percent"] == pytest.approx(0.009)
+    assert data.get("partial") in (None, False)
+    assert data["remaining_points"] == 11
+    assert data["stat_counts"]["atk"] == 3
+    assert data["stat_totals"]["atk"] == pytest.approx(0.009)
+    assert data["next_costs"]["atk"] == 7
+
+
+@pytest.mark.asyncio
+async def test_player_repeat_upgrade_insufficient_points(app_with_db):
+    """Repeat upgrades stop when upgrade points run out."""
+    app, _ = app_with_db
+    client = app.test_client()
+
+    await client.post(
+        "/players/player/upgrade",
+        json={"star_level": 1, "item_count": 4},
+    )
+
+    resp = await client.post(
+        "/players/player/upgrade-stat",
+        json={"stat_name": "max_hp", "repeat": 3},
+    )
+    data = await resp.get_json()
+
+    assert resp.status_code == 400
+    assert data["error"] == "insufficient upgrade points"
+    assert data["completed_upgrades"] == 2
+    assert data["attempted_upgrades"] == 3
+    assert data["points_spent"] == 4
+    assert data["upgrade_percent"] == pytest.approx(0.004)
+    assert data["stat_counts"]["max_hp"] == 2
+    assert data["next_costs"]["max_hp"] == 5
+    assert data["remaining_points"] == 0
+
+
+@pytest.mark.asyncio
+async def test_repeat_upgrade_respects_total_points_budget(app_with_db):
+    """total_points parameter caps spending even if repeats remain."""
+    app, _ = app_with_db
+    client = app.test_client()
+
+    await client.post(
+        "/players/player/upgrade",
+        json={"star_level": 1, "item_count": 10},
+    )
+
+    resp = await client.post(
+        "/players/player/upgrade-stat",
+        json={"stat_name": "defense", "repeat": 5, "total_points": 4},
+    )
+    data = await resp.get_json()
+
+    assert resp.status_code == 200
+    assert data["completed_upgrades"] == 2
+    assert data["attempted_upgrades"] == 5
+    assert data["points_spent"] == 4
+    assert data["upgrade_percent"] == pytest.approx(0.004)
+    assert data.get("partial") is True
+    assert data["budget_remaining"] == 0
+    assert data["remaining_points"] == 6
+    assert data["next_costs"]["defense"] == 5
+
+
+@pytest.mark.asyncio
 async def test_ally_spend_points(app_with_db):
     """Non-player characters can also spend points."""
     app, db_path = app_with_db

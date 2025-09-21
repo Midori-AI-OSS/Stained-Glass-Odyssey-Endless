@@ -147,8 +147,20 @@ export async function upgradeCharacter(id, starLevel, itemCount = 1) {
 }
 
 // Spend upgrade points on a specific stat for the given character
-export async function upgradeStat(id, statName) {
-  return httpPost(`/players/${id}/upgrade-stat`, {
-    stat_name: statName
-  });
+export async function upgradeStat(id, statName, options = {}) {
+  const payload = { stat_name: statName };
+  if (options && typeof options === 'object') {
+    if (options.points != null) {
+      payload.points = options.points;
+    }
+    const repeatValue = options.repeat ?? options.repeats;
+    if (repeatValue != null) {
+      payload.repeat = repeatValue;
+    }
+    const totalPointsValue = options.totalPoints ?? options.total_points;
+    if (totalPointsValue != null) {
+      payload.total_points = totalPointsValue;
+    }
+  }
+  return httpPost(`/players/${id}/upgrade-stat`, payload);
 }
