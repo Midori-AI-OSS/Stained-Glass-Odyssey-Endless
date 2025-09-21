@@ -108,6 +108,59 @@ async def test_pull_five_star_duplicate(app_with_db):
 
 
 @pytest.mark.asyncio
+async def test_duplicate_pull_awards_upgrade_points(app_with_db):
+    app, db_path = app_with_db
+    client = app.test_client()
+
+    with patch(
+        "autofighter.gacha.random.random", side_effect=[0.5, 0.0]
+    ), patch("autofighter.gacha.random.choice", return_value="becca"):
+        resp = await client.post("/gacha/pull", json={"count": 1})
+
+    data = await resp.get_json()
+    char_id = data["results"][0]["id"]
+
+    from autofighter.gacha import FIVE_STAR
+
+    conn = sqlcipher3.connect(db_path)
+    try:
+        conn.execute("PRAGMA key = 'testkey'")
+        conn.execute("CREATE TABLE IF NOT EXISTS owned_players (id TEXT PRIMARY KEY)")
+        others = [cid for cid in FIVE_STAR if cid != char_id]
+        for cid in others:
+            conn.execute("INSERT OR IGNORE INTO owned_players (id) VALUES (?)", (cid,))
+        conn.execute(
+            "INSERT OR REPLACE INTO upgrade_items (id, count) VALUES (?, ?)",
+            ("ticket", 1)
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+    with patch(
+        "autofighter.gacha.random.random", side_effect=[0.5, 0.0]
+    ), patch("autofighter.gacha.random.choice", return_value=char_id):
+        resp = await client.post("/gacha/pull", json={"count": 1})
+
+    data = await resp.get_json()
+    assert data["results"][0]["upgrade_points_awarded"] == 100
+
+    conn = sqlcipher3.connect(db_path)
+    try:
+        conn.execute("PRAGMA key = 'testkey'")
+        cur = conn.execute(
+            "SELECT points FROM player_upgrade_points WHERE player_id = ?",
+            (char_id,),
+        )
+        row = cur.fetchone()
+    finally:
+        conn.close()
+
+    assert row is not None
+    assert row[0] == 100
+
+
+@pytest.mark.asyncio
 async def test_pull_six_star(app_with_db):
     app, _ = app_with_db
     client = app.test_client()
