@@ -1,7 +1,7 @@
-from math import ceil
-import random
 from dataclasses import dataclass
 from dataclasses import field
+from math import ceil
+import random
 
 from autofighter.stats import BUS
 from plugins.effects.aftertaste import Aftertaste

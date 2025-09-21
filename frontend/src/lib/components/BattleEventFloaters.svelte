@@ -1,12 +1,13 @@
 <script>
   import { onDestroy } from 'svelte';
   import { getDamageTypeVisual } from '$lib/systems/assetLoader.js';
+  import { motionStore } from '../systems/settingsStorage.js';
 
   const RANDOM_OFFSETS = 120;
   const BASE_DURATION = 900;
 
   export let events = [];
-  export let reducedMotion = false;
+  export let reducedMotion = false; // Legacy prop for backward compatibility
   export let paceMs = 1200;
   // Constant offsets (px) applied in addition to random X offset per floater
   export let baseOffsetX = 0;
@@ -15,6 +16,10 @@
   export let staggerMs = 140;
   // Map of entity id -> { x: fraction(0..1), y: fraction(0..1) } relative to the battle field
   export let anchors = {};
+
+  // Check both legacy prop and new granular settings using reactive store
+  $: motionSettings = $motionStore || { globalReducedMotion: false, disableFloatingDamage: false };
+  $: isFloatingDamageDisabled = reducedMotion || motionSettings.globalReducedMotion || motionSettings.disableFloatingDamage;
 
   let floaters = [];
   let counter = 0;
@@ -247,12 +252,12 @@
     });
   }
 
-  $: if (events && events.length) {
+  $: if (events && events.length && !isFloatingDamageDisabled) {
     pushEvents(events);
   }
 
   function handleAnimationEnd(entry) {
-    if (!reducedMotion) {
+    if (!isFloatingDamageDisabled) {
       removeFloater(entry.id);
     }
   }
@@ -267,7 +272,7 @@
   });
 </script>
 
-<div class:reduced={reducedMotion} class="floater-host" aria-hidden="true">
+<div class:reduced={isFloatingDamageDisabled} class="floater-host" aria-hidden="true">
   {#each floaters as entry (entry.id)}
     <div
       class={`floater ${entry.tone} ${entry.variant} ${entry.critical ? 'critical' : ''}`}

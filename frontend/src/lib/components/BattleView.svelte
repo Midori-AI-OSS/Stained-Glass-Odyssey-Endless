@@ -16,18 +16,27 @@
   import ActionQueue from '../battle/ActionQueue.svelte';
   import BattleEventFloaters from './BattleEventFloaters.svelte';
   import BattleTargetingOverlay from './BattleTargetingOverlay.svelte';
+  import { motionStore } from '../systems/settingsStorage.js';
 
   export let runId = '';
   export let framerate = 60;
   export let party = [];
   export let enrage = { active: false, stacks: 0, turns: 0 };
-  export let reducedMotion = false;
+  export let reducedMotion = false; // Legacy prop for backward compatibility
   export let active = true;
   export let showHud = false;
   export let showFoes = true;
   export let showActionValues = false;
   // Hide status chips (DoTs/HoTs timeline) by default
   export let showStatusTimeline = false;
+
+  // Use granular motion settings with fallback to legacy prop
+  $: motionSettings = $motionStore || { 
+    globalReducedMotion: false, 
+    disablePortraitGlows: false, 
+    simplifyOverlayTransitions: false 
+  };
+  $: effectiveReducedMotion = reducedMotion || motionSettings.globalReducedMotion;
 
   let foes = [];
   let queue = [];
@@ -210,7 +219,7 @@
 
   let effectCue = '';
   function queueEffect(name) {
-    if (!name || reducedMotion) return;
+    if (!name || effectiveReducedMotion) return;
     effectCue = name;
     tick().then(() => {
       effectCue = '';
@@ -227,7 +236,7 @@
   // Example: 30fps -> 3/s, 60fps -> 6/s, 120fps -> 12/s
   let pollDelay = 10000 / framerate;
   $: pollDelay = 10000 / framerate;
-  $: statusChipLifetime = reducedMotion ? Math.max(900, pollDelay * 6) : Math.max(1600, pollDelay * 10);
+  $: statusChipLifetime = effectiveReducedMotion ? Math.max(900, pollDelay * 6) : Math.max(1600, pollDelay * 10);
   let bg = getRandomBackground();
 
   function logToEvent(line) {
@@ -960,7 +969,7 @@
       }
 
       if (pendingDrains.length) {
-        if (!reducedMotion) {
+        if (!effectiveReducedMotion) {
           await tick();
         }
         let drained = false;
@@ -1060,12 +1069,12 @@
   data-testid="modern-battle-view"
   bind:this={rootEl}
 >
-  <EnrageIndicator active={Boolean(enrage?.active)} {reducedMotion} enrageData={enrage} />
+  <EnrageIndicator active={Boolean(enrage?.active)} reducedMotion={effectiveReducedMotion} enrageData={enrage} />
   <BattleEffects cue={effectCue} />
   <BattleEventFloaters
     class="overlay-layer"
     events={floaterFeed}
-    {reducedMotion}
+    reducedMotion={effectiveReducedMotion}
     paceMs={floaterDuration}
     anchors={anchors}
     baseOffsetX={16}
@@ -1079,10 +1088,10 @@
     anchors={anchors}
     {combatants}
     events={recentEvents}
-    {reducedMotion}
+    reducedMotion={effectiveReducedMotion}
   />
   {#if showStatusTimeline && statusTimeline.length}
-    <div class:reduced={reducedMotion} class="status-timeline overlay-layer" aria-live="polite">
+    <div class:reduced={effectiveReducedMotion} class="status-timeline overlay-layer" aria-live="polite">
       {#each statusTimeline as chip (chip.key)}
         <div class="timeline-chip" data-state={chip.state} style={`--chip-color:${chip.color};`}>
           <span class="chip-phase">{chip.label}</span>
@@ -1105,7 +1114,7 @@
   <ActionQueue
     {queue}
     {combatants}
-    {reducedMotion}
+    reducedMotion={effectiveReducedMotion}
     {activeId}
     showActionValues={displayActionValues}
     on:hover={(e) => hoveredId = e.detail?.id || null}
@@ -1127,8 +1136,8 @@
         {@const healOpacity = healWidth > 0 ? 0.9 : 0}
         <div
           class="foe-container"
-          in:fade={{ duration: reducedMotion ? 0 : 300 }}
-          out:fade={{ duration: reducedMotion ? 0 : 600 }}
+          in:fade={{ duration: effectiveReducedMotion ? 0 : 300 }}
+          out:fade={{ duration: effectiveReducedMotion ? 0 : 600 }}
         >
           <!-- Buffs at the very top -->
           <div class="foe-buffs">
@@ -1147,7 +1156,7 @@
                   style={`width: calc(${Math.max(0, Math.min(100, (Number(foe.shields || 0) / Math.max(1, Number(foe.max_hp || 0))) * 100))}% + 5px); left: -5px;`}
                 ></div>
               {/if}
-              <div class="hp-bar-container" class:reduced={reducedMotion}>
+              <div class="hp-bar-container" class:reduced={effectiveReducedMotion}>
                 <div
                   class="hp-bar-fill"
                   style="width: {hpPercent}%;
@@ -1155,11 +1164,11 @@
                 ></div>
                 <div
                   class="hp-bar-overlay damage"
-                  style={`left: ${damageLeft}%; width: ${damageWidth}%; opacity: ${damageOpacity}; --pending-duration: ${reducedMotion ? 0 : pendingEaseMs}ms; --pending-ease: ${pendingEaseCurve};`}
+                  style={`left: ${damageLeft}%; width: ${damageWidth}%; opacity: ${damageOpacity}; --pending-duration: ${effectiveReducedMotion ? 0 : pendingEaseMs}ms; --pending-ease: ${pendingEaseCurve};`}
                 ></div>
                 <div
                   class="hp-bar-overlay heal"
-                  style={`left: ${healLeft}%; width: ${healWidth}%; opacity: ${healOpacity}; --pending-duration: ${reducedMotion ? 0 : pendingEaseMs}ms; --pending-ease: ${pendingEaseCurve};`}
+                  style={`left: ${healLeft}%; width: ${healWidth}%; opacity: ${healOpacity}; --pending-duration: ${effectiveReducedMotion ? 0 : pendingEaseMs}ms; --pending-ease: ${pendingEaseCurve};`}
                 ></div>
                 {#if foe.hp < foe.max_hp}
                   <div class="hp-text" data-position="outline">{foe.hp}</div>
@@ -1170,7 +1179,7 @@
           
           <!-- Character photo/portrait -->
           <div class="fighter-anchor" use:registerAnchor={foe.id}>
-            <BattleFighterCard fighter={foe} position="top" {reducedMotion} sizePx={getFoeSizePx(foeCount)} highlight={hoveredId === foe.id} />
+            <BattleFighterCard fighter={foe} position="top" {effectiveReducedMotion} sizePx={getFoeSizePx(foeCount)} highlight={hoveredId === foe.id} />
           </div>
           
           <!-- Summons -->
@@ -1179,10 +1188,10 @@
               {#each foe.summons as summon (summon.id)}
                 <div
                   class="summon-entry"
-                  in:fade={{ duration: reducedMotion ? 0 : 200 }}
-                  out:fade={{ duration: reducedMotion ? 0 : 450 }}
+                  in:fade={{ duration: effectiveReducedMotion ? 0 : 200 }}
+                  out:fade={{ duration: effectiveReducedMotion ? 0 : 450 }}
                 >
-                  <div in:scale={{ duration: reducedMotion ? 0 : 200 }} class="summon-inner">
+                  <div in:scale={{ duration: effectiveReducedMotion ? 0 : 200 }} class="summon-inner">
                     <!-- Summon HP bar -->
                     {#if true}
                       {@const hpState = getHpState(summon.hpKey)}
@@ -1203,7 +1212,7 @@
                               style={`width: calc(${Math.max(0, Math.min(100, (Number(summon.shields || 0) / Math.max(1, Number(summon.max_hp || 0))) * 100))}% + 5px); left: -5px;`}
                             ></div>
                           {/if}
-                          <div class="hp-bar-container" class:reduced={reducedMotion}>
+                          <div class="hp-bar-container" class:reduced={effectiveReducedMotion}>
                             <div
                               class="hp-bar-fill"
                               style="width: {hpPercent}%;
@@ -1211,11 +1220,11 @@
                             ></div>
                             <div
                               class="hp-bar-overlay damage"
-                              style={`left: ${damageLeft}%; width: ${damageWidth}%; opacity: ${damageOpacity}; --pending-duration: ${reducedMotion ? 0 : pendingEaseMs}ms; --pending-ease: ${pendingEaseCurve};`}
+                              style={`left: ${damageLeft}%; width: ${damageWidth}%; opacity: ${damageOpacity}; --pending-duration: ${effectiveReducedMotion ? 0 : pendingEaseMs}ms; --pending-ease: ${pendingEaseCurve};`}
                             ></div>
                             <div
                               class="hp-bar-overlay heal"
-                              style={`left: ${healLeft}%; width: ${healWidth}%; opacity: ${healOpacity}; --pending-duration: ${reducedMotion ? 0 : pendingEaseMs}ms; --pending-ease: ${pendingEaseCurve};`}
+                              style={`left: ${healLeft}%; width: ${healWidth}%; opacity: ${healOpacity}; --pending-duration: ${effectiveReducedMotion ? 0 : pendingEaseMs}ms; --pending-ease: ${pendingEaseCurve};`}
                             ></div>
                             {#if summon.hp < summon.max_hp}
                               <div class="hp-text" data-position="outline">{summon.hp}</div>
@@ -1229,7 +1238,7 @@
                       <BattleFighterCard 
                         fighter={summon} 
                         position="top" 
-                        {reducedMotion} 
+                        {effectiveReducedMotion} 
                         size="medium" 
                         highlight={hoveredId === summon.id || (hoveredId && summon?.summoner_id && summon?.summon_type && hoveredId === `${summon.summoner_id}_${summon.summon_type}_summon`)} 
                       />
@@ -1249,8 +1258,8 @@
     {#each party as member (member.id)}
       <div
         class="party-container"
-        in:fade={{ duration: reducedMotion ? 0 : 300 }}
-        out:fade={{ duration: reducedMotion ? 0 : 600 }}
+        in:fade={{ duration: effectiveReducedMotion ? 0 : 300 }}
+        out:fade={{ duration: effectiveReducedMotion ? 0 : 600 }}
       >
         <!-- Summons (show above player portrait for party) -->
         {#if member.summons?.length}
@@ -1258,16 +1267,16 @@
             {#each member.summons as summon (summon.id)}
               <div
                 class="summon-entry"
-                in:fade={{ duration: reducedMotion ? 0 : 200 }}
-                out:fade={{ duration: reducedMotion ? 0 : 450 }}
+                in:fade={{ duration: effectiveReducedMotion ? 0 : 200 }}
+                out:fade={{ duration: effectiveReducedMotion ? 0 : 450 }}
               >
-                <div in:scale={{ duration: reducedMotion ? 0 : 200 }} class="summon-inner">
+                <div in:scale={{ duration: effectiveReducedMotion ? 0 : 200 }} class="summon-inner">
                   <!-- Summon portrait -->
                   <div class="fighter-anchor" use:registerAnchor={summon.id}>
                     <BattleFighterCard 
                       fighter={summon} 
                       position="bottom" 
-                      {reducedMotion} 
+                      {effectiveReducedMotion} 
                       size="medium" 
                       highlight={hoveredId === summon.id || (hoveredId && summon?.summoner_id && summon?.summon_type && hoveredId === `${summon.summoner_id}_${summon.summon_type}_summon`)} 
                     />
@@ -1293,7 +1302,7 @@
                             style={`width: calc(${Math.max(0, Math.min(100, (Number(summon.shields || 0) / Math.max(1, Number(summon.max_hp || 0))) * 100))}% + 5px); left: -5px;`}
                           ></div>
                         {/if}
-                        <div class="hp-bar-container" class:reduced={reducedMotion}>
+                        <div class="hp-bar-container" class:reduced={effectiveReducedMotion}>
                           <div
                             class="hp-bar-fill"
                             style="width: {hpPercent}%;
@@ -1301,11 +1310,11 @@
                           ></div>
                           <div
                             class="hp-bar-overlay damage"
-                            style={`left: ${damageLeft}%; width: ${damageWidth}%; opacity: ${damageOpacity}; --pending-duration: ${reducedMotion ? 0 : pendingEaseMs}ms; --pending-ease: ${pendingEaseCurve};`}
+                            style={`left: ${damageLeft}%; width: ${damageWidth}%; opacity: ${damageOpacity}; --pending-duration: ${effectiveReducedMotion ? 0 : pendingEaseMs}ms; --pending-ease: ${pendingEaseCurve};`}
                           ></div>
                           <div
                             class="hp-bar-overlay heal"
-                            style={`left: ${healLeft}%; width: ${healWidth}%; opacity: ${healOpacity}; --pending-duration: ${reducedMotion ? 0 : pendingEaseMs}ms; --pending-ease: ${pendingEaseCurve};`}
+                            style={`left: ${healLeft}%; width: ${healWidth}%; opacity: ${healOpacity}; --pending-duration: ${effectiveReducedMotion ? 0 : pendingEaseMs}ms; --pending-ease: ${pendingEaseCurve};`}
                           ></div>
                           {#if summon.hp < summon.max_hp}
                             <div class="hp-text" data-position="outline">{summon.hp}</div>
@@ -1329,7 +1338,7 @@
 
         <div class="party-main fighter-anchor" use:registerAnchor={member.id}>
           <!-- Character photo as base (ult & pips overlay handled inside) -->
-          <BattleFighterCard fighter={member} position="bottom" {reducedMotion} highlight={hoveredId === member.id} />
+          <BattleFighterCard fighter={member} position="bottom" {effectiveReducedMotion} highlight={hoveredId === member.id} />
         </div>
         
         <!-- HP bar under the photo -->
@@ -1352,7 +1361,7 @@
                   style={`width: calc(${Math.max(0, Math.min(100, (Number(member.shields || 0) / Math.max(1, Number(member.max_hp || 0))) * 100))}% + 5px); left: -5px;`}
                 ></div>
               {/if}
-              <div class="hp-bar-container" class:reduced={reducedMotion}>
+              <div class="hp-bar-container" class:reduced={effectiveReducedMotion}>
                 <div
                   class="hp-bar-fill"
                   style="width: {hpPercent}%;
@@ -1360,11 +1369,11 @@
                 ></div>
                 <div
                   class="hp-bar-overlay damage"
-                  style={`left: ${damageLeft}%; width: ${damageWidth}%; opacity: ${damageOpacity}; --pending-duration: ${reducedMotion ? 0 : pendingEaseMs}ms; --pending-ease: ${pendingEaseCurve};`}
+                  style={`left: ${damageLeft}%; width: ${damageWidth}%; opacity: ${damageOpacity}; --pending-duration: ${effectiveReducedMotion ? 0 : pendingEaseMs}ms; --pending-ease: ${pendingEaseCurve};`}
                 ></div>
                 <div
                   class="hp-bar-overlay heal"
-                  style={`left: ${healLeft}%; width: ${healWidth}%; opacity: ${healOpacity}; --pending-duration: ${reducedMotion ? 0 : pendingEaseMs}ms; --pending-ease: ${pendingEaseCurve};`}
+                  style={`left: ${healLeft}%; width: ${healWidth}%; opacity: ${healOpacity}; --pending-duration: ${effectiveReducedMotion ? 0 : pendingEaseMs}ms; --pending-ease: ${pendingEaseCurve};`}
                 ></div>
                 {#if member.hp < member.max_hp}
                   <div class="hp-text" data-position="outline">{member.hp}</div>

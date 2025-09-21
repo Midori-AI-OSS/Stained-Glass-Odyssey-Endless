@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import { createEventDispatcher } from 'svelte';
   import { writable } from 'svelte/store';
-  import { getPlayers, getUpgrade, upgradeCharacter, upgradeStat } from '../systems/api.js';
+  import { getPlayers, getUpgrade, upgradeStat } from '../systems/api.js';
   import { getCharacterImage, getRandomFallback, getElementColor } from '../systems/assetLoader.js';
   import MenuPanel from './MenuPanel.svelte';
   import PartyRoster from './PartyRoster.svelte';
@@ -10,6 +10,7 @@
   import StatTabs from './StatTabs.svelte';
   import { browser, dev } from '$app/environment';
   import { mergeUpgradePayload, shouldRefreshRoster } from './upgradeCacheUtils.js';
+  import { formatMaterialQuantity } from '../utils/upgradeFormatting.js';
 
   let roster = [];
   let userBuffPercent = 0;
@@ -214,7 +215,7 @@
   }
 
   async function forwardUpgradeRequest(detail) {
-    if (upgradeContext?.pendingStat || upgradeContext?.pendingConversion) return;
+    if (upgradeContext?.pendingStat) return;
 
     const char = detail?.id ? roster.find((p) => p.id === detail.id) : roster.find((p) => p.id === previewId);
     const payload = {
@@ -229,7 +230,6 @@
       repeats = 1;
     }
     repeats = Math.max(1, Math.min(Math.floor(repeats), 50));
-    const requestedRepeats = repeats;
     const isUpgradeMode = modeIsUpgrade();
 
     if (isUpgradeMode) {
@@ -239,7 +239,6 @@
         stat: stat || null,
         lastRequestedStat: stat || null,
         pendingStat: stat || null,
-        pendingConversion: false,
         message: '',
         error: ''
       };
@@ -249,129 +248,34 @@
 
     if (!id || !stat) return;
 
-    const results = [];
-    let failureError = null;
-    let remainingRepeats = repeats;
-    let partialStop = false;
-
-    while (remainingRepeats > 0) {
-      const requestRepeats = 1;
-      try {
-        const result = await upgradeStat(id, stat, { repeat: requestRepeats });
-        results.push(result);
-        const completedRaw = Number(result?.completed_upgrades ?? requestRepeats);
-        const completed = Number.isFinite(completedRaw) && completedRaw > 0 ? completedRaw : requestRepeats;
-        const clampedCompleted = Math.max(0, Math.min(completed, remainingRepeats));
-        if (clampedCompleted === 0) {
-          partialStop = true;
-          break;
-        }
-        remainingRepeats -= clampedCompleted;
-        if (completed < requestRepeats) {
-          partialStop = true;
-          break;
-        }
-      } catch (err) {
-        failureError = err;
-        break;
-      }
+    const options = { repeat: repeats };
+    const expectedMaterials = detail?.expectedMaterials ?? detail?.materials ?? null;
+    if (expectedMaterials != null) {
+      options.materials = expectedMaterials;
     }
-
-    const totalCompleted = results.reduce((acc, res) => {
-      const completedRaw = Number(res?.completed_upgrades ?? 1);
-      if (Number.isFinite(completedRaw) && completedRaw > 0) {
-        return acc + completedRaw;
-      }
-      return acc + 1;
-    }, 0);
-
-    if (totalCompleted > 0) {
-      await refreshUpgradeData(id, { force: true });
-      await refreshRoster();
-    }
-
-    const updatedChar = roster.find((p) => p.id === id) || payload.character || null;
-    const lastResult = results[results.length - 1];
-    const statKey = lastResult?.stat_upgraded || stat;
-    const totalPercent = results.reduce((acc, res) => acc + (Number(res?.upgrade_percent) || 0), 0);
-    const label = statLabel(statKey || stat || '');
-
-    let message = '';
-    if (totalCompleted > 0) {
-      const bonusText = totalPercent ? formatPercent(totalPercent) : '';
-      if (totalCompleted === 1) {
-        message = bonusText ? `Upgraded ${label} by ${bonusText}.` : `Upgraded ${label}.`;
-      } else {
-        message = bonusText
-          ? `Upgraded ${label} ${totalCompleted}× for ${bonusText} total.`
-          : `Upgraded ${label} ${totalCompleted}×.`;
-      }
-    }
-
-    const repeatsShort = Math.max(1, requestedRepeats);
-    let errorText = '';
-    if (failureError) {
-      const base = failureError?.message || `Unable to upgrade ${label}.`;
-      errorText = totalCompleted > 0
-        ? `${base} (completed ${totalCompleted}/${repeatsShort}).`
-        : base;
-    } else if (partialStop || (totalCompleted > 0 && totalCompleted < repeatsShort)) {
-      errorText = `Stopped after ${totalCompleted}/${repeatsShort} upgrades for ${label}.`;
-    }
-
-    if (isUpgradeMode) {
-      upgradeContext = {
-        id,
-        character: updatedChar,
-        stat: statKey || null,
-        lastRequestedStat: stat || null,
-        pendingStat: null,
-        pendingConversion: false,
-        message,
-        error: errorText
-      };
-    }
-  }
-
-  async function forwardConversionRequest(detail) {
-    if (upgradeContext?.pendingStat || upgradeContext?.pendingConversion) return;
-
-    const char = detail?.id ? roster.find((p) => p.id === detail.id) : roster.find((p) => p.id === previewId);
-    const payload = {
-      ...(detail || {}),
-      id: char?.id ?? previewId ?? null,
-      character: char || null
-    };
-
-    const { id } = payload;
-    const rawStar = Number(detail?.starLevel ?? detail?.star_level ?? detail?.star ?? detail?.starlevel);
-    const rawCount = Number(detail?.itemCount ?? detail?.item_count ?? detail?.count);
-    if (!id || !Number.isFinite(rawStar) || !Number.isFinite(rawCount)) return;
-    const starLevel = Math.min(4, Math.max(1, Math.floor(rawStar)));
-    const itemCount = Math.max(1, Math.floor(rawCount));
-
-    const isUpgradeMode = modeIsUpgrade();
-    const existing = upgradeContext && upgradeContext.id === id ? upgradeContext : null;
-
-    if (isUpgradeMode) {
-      upgradeContext = {
-        id,
-        character: payload.character,
-        stat: existing?.stat ?? null,
-        lastRequestedStat: existing?.lastRequestedStat ?? null,
-        pendingStat: null,
-        pendingConversion: true,
-        message: '',
-        error: ''
-      };
+    const budget = detail?.totalMaterials ?? detail?.total_materials ?? detail?.totalPoints ?? detail?.total_points ?? detail?.availableMaterials ?? null;
+    if (budget != null) {
+      options.total_materials = budget;
     }
 
     try {
-      const result = await upgradeCharacter(id, starLevel, itemCount);
+      const result = await upgradeStat(id, stat, options);
       const key = String(id);
       const previous = upgradeCache[key];
       const previousData = previous?.data || null;
-      const mergedData = mergeUpgradePayload(previousData, result);
+      let mergedData = mergeUpgradePayload(previousData, result);
+
+      const elementKey = String(result?.element || mergedData?.element || payload.character?.element || 'generic').toLowerCase();
+      if (!mergedData.items) {
+        mergedData.items = {};
+      }
+      if (result.materials_remaining != null) {
+        mergedData.items = {
+          ...mergedData.items,
+          [`${elementKey}_1`]: result.materials_remaining
+        };
+      }
+
       upgradeCache = {
         ...upgradeCache,
         [key]: {
@@ -381,43 +285,65 @@
         }
       };
 
-      const needsRosterRefresh = shouldRefreshRoster(result);
-      if (isUpgradeMode) {
-        const updatedChar = roster.find((p) => p.id === id) || payload.character || null;
-        upgradeContext = {
-          id,
-          character: updatedChar,
-          stat: existing?.stat ?? null,
-          lastRequestedStat: existing?.lastRequestedStat ?? null,
-          pendingStat: null,
-          pendingConversion: false,
-          message: `Converted ${itemCount}× ${starLevel}★ items to upgrade points.`,
-          error: ''
-        };
+      const updatedChar = roster.find((p) => p.id === id) || payload.character || null;
+      const statKey = result?.stat_upgraded || stat;
+      const totalPercent = Number(result?.upgrade_percent) || 0;
+      const completed = Number(result?.completed_upgrades) || 0;
+      const materialsSpent = Number(result?.materials_spent) || 0;
+      const label = statLabel(statKey || stat || '');
+      const percentText = totalPercent ? formatPercent(totalPercent) : '';
+      const materialLabel = materialsSpent > 0
+        ? ` (${formatMaterialQuantity(materialsSpent, `${elementKey}_1`)})`
+        : '';
+
+      let message = '';
+      if (completed > 0) {
+        if (completed === 1) {
+          message = percentText
+            ? `Upgraded ${label} by ${percentText}${materialLabel}.`
+            : `Upgraded ${label}${materialLabel}.`;
+        } else {
+          message = percentText
+            ? `Upgraded ${label} ${completed}× for ${percentText} total${materialLabel}.`
+            : `Upgraded ${label} ${completed}×${materialLabel}.`;
+        }
+      } else {
+        message = `No upgrades applied to ${label}.`;
       }
 
-      await refreshUpgradeData(id, { force: true });
+      let errorText = '';
+      if (completed < repeats) {
+        const desired = Math.max(1, repeats);
+        errorText = `Stopped after ${completed}/${desired} upgrades for ${label}.`;
+      }
+
+      const needsRosterRefresh = shouldRefreshRoster(result);
       if (needsRosterRefresh) {
         await refreshRoster();
-        if (isUpgradeMode) {
-          const updatedChar = roster.find((p) => p.id === id) || payload.character || null;
-          upgradeContext = {
-            ...upgradeContext,
-            character: updatedChar
-          };
-        }
+      }
+
+      if (isUpgradeMode) {
+        const refreshedChar = roster.find((p) => p.id === id) || updatedChar;
+        upgradeContext = {
+          id,
+          character: refreshedChar,
+          stat: statKey || null,
+          lastRequestedStat: stat || null,
+          pendingStat: null,
+          message,
+          error: errorText
+        };
       }
     } catch (err) {
       if (isUpgradeMode) {
         upgradeContext = {
           id,
           character: payload.character,
-          stat: existing?.stat ?? null,
-          lastRequestedStat: existing?.lastRequestedStat ?? null,
+          stat: stat || null,
+          lastRequestedStat: stat || null,
           pendingStat: null,
-          pendingConversion: false,
           message: '',
-          error: err?.message || 'Unable to convert items.'
+          error: err?.message || `Unable to upgrade ${statLabel(stat || '')}.`
         };
       }
     }
@@ -451,7 +377,6 @@
         on:open-upgrade={(e) => handlePreviewMode(e.detail, 'upgrade')}
         on:close-upgrade={(e) => handlePreviewMode(e.detail, 'portrait')}
         on:request-upgrade={(e) => forwardUpgradeRequest(e.detail)}
-        on:request-convert={(e) => forwardConversionRequest(e.detail)}
         on:element-change={(e) => {
           const el = e.detail?.element || '';
           previewElementOverride = el || previewElementOverride;
@@ -459,7 +384,6 @@
           try { dispatch('editorChange', { damageType: el }); } catch {}
           refreshRoster();
           if (previewId) {
-            // Refresh upgrade data so convert availability reflects new type
             refreshUpgradeData(previewId, { force: true });
           }
         }}

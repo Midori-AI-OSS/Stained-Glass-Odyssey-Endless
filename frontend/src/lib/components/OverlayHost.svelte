@@ -27,6 +27,7 @@
   import CombatViewer from './CombatViewer.svelte';
   import { rewardOpen as computeRewardOpen } from '../systems/viewportState.js';
   import { getBattleSummary } from '../systems/uiApi.js';
+  import { motionStore } from '../systems/settingsStorage.js';
 
   export let selected = [];
   export let runId = '';
@@ -38,7 +39,7 @@
   export let musicVolume = 5;
   export let voiceVolume = 5;
   export let framerate = 60;
-  export let reducedMotion = false;
+  export let reducedMotion = false; // Legacy prop for backward compatibility
   export let showActionValues = false;
   export let fullIdleMode = false;
   export let skipBattleReview = false;
@@ -46,6 +47,14 @@
   export let selectedParty = [];
   export let battleActive = false;
   export let backendFlavor = '';
+
+  // Use granular motion settings with fallback to legacy prop
+  $: motionSettings = $motionStore || { 
+    globalReducedMotion: false, 
+    simplifyOverlayTransitions: false 
+  };
+  $: effectiveReducedMotion = reducedMotion || motionSettings.globalReducedMotion;
+  $: simplifiedTransitions = motionSettings.simplifyOverlayTransitions;
 
   const dispatch = createEventDispatcher();
   // Determine whether to show rewards overlay based on raw room data.
@@ -185,7 +194,7 @@
 
 {#if $overlayView === 'party'}
   <OverlaySurface zIndex={1300}>
-    <PartyPicker bind:selected {reducedMotion}
+    <PartyPicker bind:selected reducedMotion={simplifiedTransitions ? true : effectiveReducedMotion}
       allowElementChange={false}
       on:save={() => dispatch('saveParty')}
       on:editorChange={(e) => dispatch('editorChange', e.detail)}
@@ -243,7 +252,7 @@
 
 {#if $overlayView === 'party-start'}
   <OverlaySurface>
-    <PartyPicker bind:selected {reducedMotion}
+    <PartyPicker bind:selected reducedMotion={simplifiedTransitions ? true : effectiveReducedMotion}
       allowElementChange={true}
       actionLabel="Start Run"
       on:save={(e) => dispatch('startRun', e.detail)}
@@ -412,7 +421,7 @@
       gold={roomData.gold}
       itemsBought={roomData.items_bought}
       taxSummary={roomData.tax_summary || roomData.taxSummary || null}
-      reducedMotion={reducedMotion}
+      reducedMotion={simplifiedTransitions ? true : effectiveReducedMotion}
       processing={shopProcessing}
       on:buy={(e) => dispatch('shopBuy', e.detail)}
       on:reroll={() => dispatch('shopReroll')}
@@ -429,7 +438,7 @@
       {framerate}
       {selectedParty}
       enrage={roomData?.enrage}
-      reducedMotion={reducedMotion}
+      reducedMotion={simplifiedTransitions ? true : effectiveReducedMotion}
       showActionValues={showActionValues}
       active={battleActive}
       showHud={true}

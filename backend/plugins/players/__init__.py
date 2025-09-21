@@ -13,12 +13,12 @@ from .lady_light import LadyLight
 from .lady_lightning import LadyLightning
 from .lady_of_fire import LadyOfFire
 from .lady_storm import LadyStorm
-from .persona_light_and_dark import PersonaLightAndDark
 from .lady_wind import LadyWind
 from .luna import Luna
 from .mezzy import Mezzy
 from .mimic import Mimic
 from .persona_ice import PersonaIce
+from .persona_light_and_dark import PersonaLightAndDark
 from .player import Player
 
 __all__ = [

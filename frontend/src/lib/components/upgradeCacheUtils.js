@@ -12,18 +12,37 @@ export function mergeUpgradePayload(previousData, result) {
     base.items = {};
   }
 
-  if (result && Object.prototype.hasOwnProperty.call(result, 'total_points')) {
-    base.total_points = result.total_points;
-  } else if (previousData && Object.prototype.hasOwnProperty.call(previousData, 'total_points')) {
-    base.total_points = previousData.total_points;
+  const payloadMaps = [
+    ['stat_totals', {}],
+    ['stat_counts', {}],
+    ['next_costs', {}],
+    ['stat_upgrades', []],
+  ];
+
+  for (const [key, fallback] of payloadMaps) {
+    if (result && Object.prototype.hasOwnProperty.call(result, key)) {
+      base[key] = result[key] ?? fallback;
+    } else if (previousData && Object.prototype.hasOwnProperty.call(previousData, key)) {
+      base[key] = previousData[key];
+    } else if (!Object.prototype.hasOwnProperty.call(base, key)) {
+      base[key] = Array.isArray(fallback) ? [] : { ...fallback };
+    }
   }
 
-  if (result && Object.prototype.hasOwnProperty.call(result, 'upgrade_points')) {
-    base.upgrade_points = result.upgrade_points;
-  } else if (previousData && Object.prototype.hasOwnProperty.call(previousData, 'upgrade_points')) {
-    base.upgrade_points = previousData.upgrade_points;
-  } else if (base.total_points != null && !Object.prototype.hasOwnProperty.call(base, 'upgrade_points')) {
-    base.upgrade_points = base.total_points;
+  if (result && Object.prototype.hasOwnProperty.call(result, 'element')) {
+    base.element = result.element;
+  } else if (previousData && Object.prototype.hasOwnProperty.call(previousData, 'element')) {
+    base.element = previousData.element;
+  }
+
+  if (result && Object.prototype.hasOwnProperty.call(result, 'materials_remaining')) {
+    const elementKey = String(result.element || base.element || '').toLowerCase();
+    if (elementKey) {
+      const materialKey = `${elementKey}_1`;
+      base.items = { ...(base.items || {}) };
+      base.items[materialKey] = result.materials_remaining;
+    }
+    base.materials_remaining = result.materials_remaining;
   }
 
   return base;
