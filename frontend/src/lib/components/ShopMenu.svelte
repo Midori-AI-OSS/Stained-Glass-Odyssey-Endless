@@ -154,6 +154,24 @@
     if (idx >= 0) currentIndex = idx;
   }
 
+  // Select all unsold items currently visible in the shop (cards + relics)
+  function pickAll() {
+    if (processing || isBuying) return;
+    const all = new Set(
+      combinedList
+        .filter((it) => it && it.ident && !soldIds.has(it.ident))
+        .map((it) => it.ident)
+    );
+    if (all.size === 0) return;
+    selectedIds = new Set(all);
+  }
+
+  function clearAll() {
+    if (processing || isBuying) return;
+    if (selectedIds.size === 0) return;
+    selectedIds = new Set();
+  }
+
   async function buySelected() {
     if (processing || isBuying) return;
     isBuying = true;
@@ -367,6 +385,14 @@
   $: estimatedTax = selectedList.reduce((sum, s) => sum + (s.tax || 0), 0);
   $: estimatedTotal = estimatedSubtotal + estimatedTax;
 
+  // Derived: are all selectable (unsold) items already selected?
+  $: allSelectableIdents = new Set(
+    combinedList
+      .filter((it) => it && it.ident && !soldIds.has(it.ident))
+      .map((it) => it.ident)
+  );
+  $: allSelected = allSelectableIdents.size > 0 && [...allSelectableIdents].every((id) => selectedIds.has(id));
+
   $: samplePricing = (() => {
     if (!Array.isArray(enrichedBaseList) || enrichedBaseList.length === 0) {
       return { base: 0, taxed: 0, tax: 0 };
@@ -536,6 +562,11 @@
       {/if}
     </aside>
     <div class="actions actions-under">
+      <!-- Left-side utilities: Pick All / Clear All -->
+      <div class="action-buttons-left">
+        <button class="action" disabled={processing || isBuying || allSelected || combinedList.length === 0} on:click={pickAll}>Pick All</button>
+        <button class="action" disabled={processing || isBuying || selectedIds.size === 0} on:click={clearAll}>Clear All</button>
+      </div>
       <div class="action-buttons">
         <button class="action primary" disabled={processing || isBuying || selectedIds.size === 0} on:click={buySelected}>Buy Selected</button>
         <button class="action" disabled={processing || isBuying || awaitingReroll} on:click={reroll}>
