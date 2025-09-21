@@ -705,7 +705,18 @@
       }
     } catch (err) {
       // Treat snapshot errors as transient unless run is confirmed ended.
-      if (shouldHandleRunEndError(err)) {
+      const messageCandidates = [];
+      if (typeof err === 'string') messageCandidates.push(err);
+      if (typeof err?.message === 'string') messageCandidates.push(err.message);
+      if (typeof err?.error === 'string') messageCandidates.push(err.error);
+      if (typeof err?.body?.message === 'string') messageCandidates.push(err.body.message);
+      if (typeof err?.response?.message === 'string') messageCandidates.push(err.response.message);
+
+      const hasNoActiveRunMessage = messageCandidates
+        .map((msg) => (typeof msg === 'string' ? msg.toLowerCase() : ''))
+        .some((msg) => msg.includes('no active run'));
+
+      if (shouldHandleRunEndError(err) || hasNoActiveRunMessage) {
         handleRunEnd();
         return;
       }
