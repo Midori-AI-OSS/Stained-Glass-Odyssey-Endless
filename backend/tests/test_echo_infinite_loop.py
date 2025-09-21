@@ -5,7 +5,6 @@ from __future__ import annotations
 import asyncio
 from pathlib import Path
 import sys
-from unittest.mock import AsyncMock
 
 import pytest
 
@@ -18,6 +17,9 @@ from autofighter.relics import award_relic, apply_relics  # noqa: E402
 from autofighter.stats import BUS  # noqa: E402
 from plugins.players._base import PlayerBase  # noqa: E402
 import plugins.event_bus as event_bus_module  # noqa: E402
+import plugins.relics._base as relic_base_module  # noqa: E402
+import plugins.relics.echo_bell as echo_bell_module  # noqa: E402
+import plugins.relics.echoing_drum as echoing_drum_module  # noqa: E402
 
 
 @pytest.mark.asyncio
@@ -34,13 +36,23 @@ async def test_echo_relics_infinite_loop_prevention():
     attacker.set_base_stat('atk', 100)
     target = PlayerBase()
     target.id = "target"
-    target.hp = target.set_base_stat('max_hp', 1000)
+    target.set_base_stat('max_hp', 1000)
+    target.hp = target.max_hp
+
+    async def fake_damage(amount, *_args, **_kwargs):
+        target.hp -= amount
+        return amount
+
+    target.apply_damage = fake_damage
     party.members.append(attacker)
-    
+
     # Award multiple echo relics to increase chances of infinite loop
     award_relic(party, "echoing_drum")
-    award_relic(party, "echo_bell") 
+    award_relic(party, "echo_bell")
     await apply_relics(party)
+
+    relic_events: list[tuple] = []
+    BUS.subscribe("relic_effect", lambda *args: relic_events.append(args))
     
     # Start battle
     await BUS.emit_async("battle_start")
@@ -58,23 +70,32 @@ async def test_echo_relics_infinite_loop_prevention():
         return await original_emit(event_type, *args, **kwargs)
     
     BUS.emit_async = counting_emit
-    
+
+    original_random_drum = echoing_drum_module.random.random
+    original_random_bell = echo_bell_module.random.random
+    echoing_drum_module.random.random = lambda: 0.0
+    echo_bell_module.random.random = lambda: 0.0
+
     try:
         # This should trigger echo effects but not create infinite loop
         initial_hp = target.hp
         await BUS.emit_async("action_used", attacker, target, 100)
-        
+        await asyncio.sleep(0.05)
+
         # Verify damage was applied (original + echo effects)
+        assert relic_events, "No relic_effect events recorded"
         assert target.hp < initial_hp, "No damage was applied"
-        
+
         # Verify we didn't hit the infinite loop limit
         assert event_count <= 100, f"Too many events emitted: {event_count}"
-        
+
         print(f"Event count: {event_count}")  # For debugging
-        
+
     finally:
         # Restore original emit function
         BUS.emit_async = original_emit
+        echoing_drum_module.random.random = original_random_drum
+        echo_bell_module.random.random = original_random_bell
 
 
 @pytest.mark.asyncio 
