@@ -26,7 +26,7 @@ class MicroBlade(CardBase):
     async def apply(self, party) -> None:  # type: ignore[override]
         await super().apply(party)
 
-        async def _on_damage_dealt(attacker, target, damage, damage_type, source, source_action, action_name):
+        async def _on_damage_dealt(attacker, target, damage, damage_type, source, source_action, action_name, details=None):
             # Check if attacker is one of our party members and this is an attack
             if attacker in party.members and action_name == "attack":
                 # 6% chance to deal +8% bonus damage aligned with the attacker

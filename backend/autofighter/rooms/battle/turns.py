@@ -335,18 +335,19 @@ def _on_damage_taken(
     post_damage_hp: int | None = None,
     is_critical: bool | None = None,
     action_name: str | None = None,
+    details: dict[str, Any] | None = None,
     *_: Any,
 ) -> None:
     run_id = _resolve_run_id(target, attacker)
     if not run_id:
         return
-    metadata: dict[str, Any] = {}
+    metadata: dict[str, Any] = dict(details) if isinstance(details, dict) else {}
     damage_type_id = _resolve_damage_type_id(attacker)
-    if damage_type_id:
+    if damage_type_id and "damage_type_id" not in metadata:
         metadata["damage_type_id"] = damage_type_id
-    if is_critical is not None:
+    if is_critical is not None and "is_critical" not in metadata:
         metadata["is_critical"] = bool(is_critical)
-    if action_name:
+    if action_name and "action_name" not in metadata:
         metadata["action_name"] = str(action_name)
     metadata_payload = metadata or None
     _record_event(

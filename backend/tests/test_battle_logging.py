@@ -1,3 +1,4 @@
+import asyncio
 import json
 from pathlib import Path
 import tempfile
@@ -6,6 +7,7 @@ from battle_logging.writers import BattleLogger
 from battle_logging.writers import RunLogger
 import pytest
 
+from autofighter import stats as stats_module
 from autofighter.stats import BUS
 from autofighter.stats import Stats
 
@@ -168,3 +170,67 @@ async def test_damage_dealt_defaults_to_normal_attack(temp_logs_dir):
         summary = json.load(f)
 
     assert summary["damage_by_action"]["hero"]["Normal Attack"] == 42
+
+
+@pytest.mark.asyncio
+async def test_battle_logger_records_overkill_details(temp_logs_dir):
+    stats_module.set_battle_active(True)
+    run_id = "test_run_overkill"
+    battle_index = 1
+    logger = BattleLogger(run_id, battle_index, temp_logs_dir)
+
+    attacker = Stats()
+    attacker.id = "overkill_attacker"
+    attacker._base_crit_rate = 0.0
+    attacker.vitality = 1.0
+
+    target = Stats()
+    target.id = "overkill_target"
+    target._base_max_hp = 100
+    target.hp = 100
+    target._base_defense = 1
+    target.vitality = 1.0
+    target.mitigation = 1.0
+    target._base_dodge_odds = 0.0
+    target.shields = 25
+
+    await BUS.emit_async("battle_start", attacker)
+    await BUS.emit_async("battle_start", target)
+
+    try:
+        damage_dealt = await target.apply_damage(13, attacker=attacker, action_name="attack")
+        assert damage_dealt == 100
+        assert target.hp == 0
+        assert target.last_shield_absorbed == 25
+        assert target.last_overkill == 44
+
+        await asyncio.sleep(0.05)
+        logger.finalize_battle("victory")
+        await asyncio.sleep(0.05)
+
+        summary_path = temp_logs_dir / "runs" / run_id / "battles" / "1" / "summary"
+        with open(summary_path / "battle_summary.json") as f:
+            summary = json.load(f)
+
+        assert summary["total_damage_dealt"]["overkill_attacker"] == 100
+        assert summary["total_damage_taken"]["overkill_target"] == 100
+
+        with open(summary_path / "events.json") as f:
+            events = json.load(f)
+
+        damage_event = next(e for e in events if e["event_type"] == "damage_dealt")
+        assert damage_event["amount"] == 100
+        assert damage_event["details"]["shield_absorbed"] == 25
+        assert damage_event["details"]["hp_damage"] == 100
+        assert damage_event["details"]["overkill"] == 44
+        assert damage_event["details"]["raw_amount"] == 169
+
+        taken_event = next(e for e in events if e["event_type"] == "damage_taken")
+        assert taken_event["amount"] == 100
+        assert taken_event["details"]["overkill"] == 44
+
+        kill_event = next(e for e in events if e["event_type"] == "entity_killed")
+        assert kill_event["amount"] == 100
+        assert kill_event["details"]["overkill"] == 44
+    finally:
+        stats_module.set_battle_active(False)

@@ -49,10 +49,14 @@ async def test_normal_attack_respects_defense_and_shields(bus):
     s.shields = 200
     start_hp = s.hp
     attacker = stats.Stats()
+    attacker._base_crit_rate = 0
+    s._base_dodge_odds = 0
     await s.apply_damage(150, attacker=attacker)
     assert s.hp == start_hp
     assert s.shields == 199
-    assert s.damage_taken == 1
+    assert s.damage_taken == 0
+    assert s.last_shield_absorbed == 1
+    assert s.last_overkill == 0
 
 
 @pytest.mark.asyncio
