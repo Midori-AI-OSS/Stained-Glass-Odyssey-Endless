@@ -5,6 +5,9 @@ from autofighter.stats import BUS
 from plugins.relics._base import RelicBase
 from plugins.relics._base import safe_async_task
 
+# Global flag to prevent infinite echo loops
+_echo_processing = False
+
 
 @dataclass
 class EchoingDrum(RelicBase):
@@ -29,6 +32,11 @@ class EchoingDrum(RelicBase):
                 used.clear()
 
             async def _attack(attacker, target, amount) -> None:
+                global _echo_processing
+                # Prevent infinite loops from recursive echo effects
+                if _echo_processing:
+                    return
+
                 pid = id(attacker)
                 if pid in used:
                     return
@@ -36,18 +44,24 @@ class EchoingDrum(RelicBase):
                 current_stacks = state.get("stacks", 0)
                 if current_stacks <= 0:
                     return
-                dmg = int(amount * 0.25 * current_stacks)
 
-                # Emit relic effect event for echo attack
-                await BUS.emit_async("relic_effect", "echoing_drum", attacker, "echo_attack", dmg, {
-                    "original_amount": amount,
-                    "echo_percentage": 25 * current_stacks,
-                    "target": getattr(target, 'id', str(target)),
-                    "first_attack": True,
-                    "stacks": current_stacks
-                })
+                # Set flag to prevent recursive echo effects
+                _echo_processing = True
+                try:
+                    dmg = int(amount * 0.25 * current_stacks)
 
-                safe_async_task(target.apply_damage(dmg, attacker=attacker))
+                    # Emit relic effect event for echo attack
+                    await BUS.emit_async("relic_effect", "echoing_drum", attacker, "echo_attack", dmg, {
+                        "original_amount": amount,
+                        "echo_percentage": 25 * current_stacks,
+                        "target": getattr(target, 'id', str(target)),
+                        "first_attack": True,
+                        "stacks": current_stacks
+                    })
+
+                    safe_async_task(target.apply_damage(dmg, attacker=attacker))
+                finally:
+                    _echo_processing = False
 
             def _cleanup(*_args) -> None:
                 BUS.unsubscribe("battle_start", state["battle_start_handler"])
