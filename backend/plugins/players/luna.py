@@ -6,6 +6,7 @@ import random
 from typing import TYPE_CHECKING
 from typing import ClassVar
 from typing import Collection
+from typing import Mapping
 import weakref
 
 from autofighter.character import CharacterType
@@ -209,6 +210,50 @@ class Luna(PlayerBase):
             floor = int(getattr(node, "floor", 0))
         except Exception:
             floor = 0
+
+        if boss:
+            missed = 0
+            tracker = getattr(node, "boss_spawn_tracker", None)
+            if isinstance(tracker, Mapping):
+                history = tracker.get(cls.id)
+                if isinstance(history, Mapping):
+                    def _safe_int(value: object) -> int | None:
+                        try:
+                            if value is None:
+                                return None
+                            return int(value)
+                        except Exception:
+                            return None
+
+                    current_order = _safe_int(getattr(node, "boss_floor_number", None))
+                    if current_order is None:
+                        current_order = _safe_int(floor)
+                    current_order = max(current_order or 0, 0)
+
+                    last_order = _safe_int(history.get("floor_number"))
+                    current_loop = _safe_int(getattr(node, "loop", None))
+                    last_loop = _safe_int(history.get("loop"))
+                    last_floor = _safe_int(history.get("floor"))
+                    current_floor_value = max(_safe_int(floor) or 0, 0)
+                    floors_before_current_loop = max(current_order - current_floor_value, 0)
+
+                    if last_order is None and last_floor is not None:
+                        if last_loop is None or current_loop is None:
+                            last_order = floors_before_current_loop + last_floor if floors_before_current_loop else last_floor
+                        elif last_loop == current_loop:
+                            last_order = floors_before_current_loop + last_floor
+                        else:
+                            loops_completed_before_current = max((current_loop or 1) - 1, 0)
+                            floors_per_loop = 0
+                            if loops_completed_before_current > 0:
+                                floors_per_loop = floors_before_current_loop // loops_completed_before_current
+                            if floors_per_loop > 0:
+                                last_order = max((last_loop - 1) * floors_per_loop + last_floor, 0)
+
+                    if last_order is not None and current_order >= last_order:
+                        missed = max(current_order - last_order - 1, 0)
+            if missed > 0:
+                weight *= pow(2.0, missed)
 
         if boss and floor % 3 == 0:
             return weight * 6.0

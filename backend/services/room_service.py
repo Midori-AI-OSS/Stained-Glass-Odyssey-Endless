@@ -22,11 +22,11 @@ from autofighter.rooms import BattleRoom
 from autofighter.rooms import BossRoom
 from autofighter.rooms import ChatRoom
 from autofighter.rooms import ShopRoom
-from autofighter.rooms import calculate_rank_probabilities
 from autofighter.rooms import _build_foes
 from autofighter.rooms import _choose_foe
 from autofighter.rooms import _scale_stats
 from autofighter.rooms import _serialize
+from autofighter.rooms import calculate_rank_probabilities
 from autofighter.summons.manager import SummonManager
 from plugins import foes as foe_plugins
 from plugins.damage_types import load_damage_type
@@ -425,6 +425,19 @@ async def boss_room(run_id: str, data: dict[str, Any]) -> dict[str, Any]:
     node = rooms[state["current"]]
     if node.room_type != "battle-boss-floor":
         raise ValueError("invalid room")
+    tracker_data = state.get("boss_spawn_tracker")
+    if isinstance(tracker_data, dict):
+        boss_spawn_tracker: dict[str, dict[str, int]] = tracker_data
+    else:
+        boss_spawn_tracker = {}
+        state["boss_spawn_tracker"] = boss_spawn_tracker
+    setattr(node, "boss_spawn_tracker", boss_spawn_tracker)
+    try:
+        floors_cleared = int(state.get("floors_cleared", 0))
+    except Exception:
+        floors_cleared = 0
+    current_boss_floor_number = max(floors_cleared, 0) + 1
+    setattr(node, "boss_floor_number", current_boss_floor_number)
     if state.get("awaiting_next"):
         next_type = (
             rooms[state["current"] + 1].room_type
@@ -533,6 +546,15 @@ async def boss_room(run_id: str, data: dict[str, Any]) -> dict[str, Any]:
             "enrage": {"active": False, "stacks": 0},
             "rdr": party.rdr,
         }
+        try:
+            boss_id = getattr(foe, "id", type(foe).__name__)
+            boss_spawn_tracker[boss_id] = {
+                "floor": getattr(node, "floor", 1),
+                "loop": getattr(node, "loop", 1),
+                "floor_number": current_boss_floor_number,
+            }
+        except Exception:
+            pass
         state["battle"] = False
         await asyncio.to_thread(save_map, run_id, state)
 
