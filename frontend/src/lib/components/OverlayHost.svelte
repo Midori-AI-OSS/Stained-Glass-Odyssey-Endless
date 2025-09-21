@@ -41,6 +41,7 @@
   export let reducedMotion = false;
   export let showActionValues = false;
   export let fullIdleMode = false;
+  export let skipBattleReview = false;
   export let animationSpeed = 1;
   export let selectedParty = [];
   export let battleActive = false;
@@ -104,6 +105,12 @@
     // Reset gate when review is not open
     reviewReady = false;
     reviewSummary = null;
+  }
+
+  // Auto-skip Battle Review when skipBattleReview is enabled
+  $: if (reviewOpen && !rewardOpen && reviewReady && skipBattleReview) {
+    // Battle is complete and ready for review, but user wants to skip - advance immediately
+    dispatch('nextRoom');
   }
 
   // Ensure Battle Review receives only true party members (exclude summons)
@@ -369,7 +376,7 @@
   </OverlaySurface>
 {/if}
 
-{#if reviewOpen && !rewardOpen && reviewReady}
+{#if reviewOpen && !rewardOpen && reviewReady && !skipBattleReview}
   <OverlaySurface zIndex={1100} noScroll={true}>
     <PopupWindow
       title="Battle Review"

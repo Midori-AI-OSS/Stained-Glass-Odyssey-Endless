@@ -5,11 +5,10 @@ Test to verify async optimization improvements for DOT effects.
 
 import pytest
 
-import autofighter.stats as stats
-
 from autofighter.effects import DamageOverTime
 from autofighter.effects import EffectManager
 from autofighter.effects import HealingOverTime
+import autofighter.stats as stats
 from autofighter.stats import Stats
 
 

@@ -32,6 +32,7 @@
   export let reducedMotion = false;
   export let showActionValues = false;
   export let fullIdleMode = false;
+  export let skipBattleReview = false;
   export let animationSpeed = 1;
   export let lrmModel = '';
   export let runId = '';
@@ -163,6 +164,7 @@
       reducedMotion,
       showActionValues,
       fullIdleMode,
+      skipBattleReview,
       animationSpeed: sanitizedSpeed
     };
     saveSettings(payload);
@@ -333,6 +335,7 @@
     <GameplaySettings
       bind:showActionValues
       bind:fullIdleMode
+      bind:skipBattleReview
       bind:animationSpeed
       baseTurnPacing={resolvedBaseTurnPacing()}
       {scheduleSave}

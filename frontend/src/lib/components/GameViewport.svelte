@@ -55,6 +55,7 @@
     let framerate = 60;
     let reducedMotion = false;
     let showActionValues = false;
+    let skipBattleReview = false;
   let selectedParty = [];
   let snapshotLoading = false;
 
@@ -65,7 +66,7 @@
       randomBg = getHourlyBackground();
     }
     const init = await loadInitialState();
-      ({ sfxVolume, musicVolume, voiceVolume, framerate, reducedMotion, showActionValues, fullIdleMode, animationSpeed } =
+      ({ sfxVolume, musicVolume, voiceVolume, framerate, reducedMotion, showActionValues, fullIdleMode, skipBattleReview, animationSpeed } =
         init.settings);
     roster = init.roster;
     userState = init.user;
@@ -336,6 +337,7 @@
         {reducedMotion}
         {showActionValues}
         {fullIdleMode}
+        {skipBattleReview}
         bind:animationSpeed
         {selectedParty}
         {battleActive}
