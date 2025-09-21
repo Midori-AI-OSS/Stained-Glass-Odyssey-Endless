@@ -290,7 +290,21 @@ async def advance_room(run_id: str) -> dict[str, object]:
         except Exception:
             party = None
         if party and party.members and nodes:
-            boss_choice = _choose_foe(nodes[-1], party)
+            boss_node = nodes[-1]
+            tracker_data = state.get("boss_spawn_tracker")
+            if isinstance(tracker_data, dict):
+                boss_spawn_tracker: dict[str, dict[str, int]] = tracker_data
+            else:
+                boss_spawn_tracker = {}
+                state["boss_spawn_tracker"] = boss_spawn_tracker
+            setattr(boss_node, "boss_spawn_tracker", boss_spawn_tracker)
+            try:
+                floors_cleared = int(state.get("floors_cleared", 0))
+            except Exception:
+                floors_cleared = 0
+            current_boss_floor_number = max(floors_cleared, 0) + 1
+            setattr(boss_node, "boss_floor_number", current_boss_floor_number)
+            boss_choice = _choose_foe(boss_node, party)
             state["floor_boss"] = {
                 "id": getattr(boss_choice, "id", type(boss_choice).__name__),
                 "floor": new_floor,
