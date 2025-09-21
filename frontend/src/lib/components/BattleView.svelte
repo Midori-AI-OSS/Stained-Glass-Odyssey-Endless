@@ -70,6 +70,15 @@
     return 192; // 8 or more
   }
   let timer;
+  function clearPollTimer() {
+    if (timer) {
+      clearTimeout(timer);
+      timer = null;
+    }
+  }
+  function isSyncHalted() {
+    return typeof window !== 'undefined' && Boolean(window.afHaltSync);
+  }
   let logs = [];
   let hoveredId = null;
   let floaterFeed = [];
@@ -771,10 +780,19 @@
 
   async function fetchSnapshot() {
     if (!active || !runId) return;
+    if (isSyncHalted()) {
+      clearPollTimer();
+      return;
+    }
     const start = performance.now();
     dispatch('snapshot-start');
+    let haltedDuringFetch = false;
     try {
       const snap = await roomAction(runId, 'battle', 'snapshot');
+      if (isSyncHalted()) {
+        haltedDuringFetch = true;
+        return;
+      }
       // Normalize alternate shapes for compatibility
       if (snap && !Array.isArray(snap.party) && snap.party && typeof snap.party === 'object') {
         snap.party = Object.values(snap.party);
@@ -1005,6 +1023,10 @@
       // Silently ignore errors to avoid spam during rapid polling
     } finally {
       dispatch('snapshot-end');
+      if (isSyncHalted() || haltedDuringFetch) {
+        clearPollTimer();
+        return;
+      }
       const elapsed = performance.now() - start;
       const remaining = Math.max(0, pollDelay - elapsed);
       if (active && runId) {
@@ -1020,10 +1042,7 @@
   });
 
   onDestroy(() => {
-    if (timer) {
-      clearTimeout(timer);
-      timer = null;
-    }
+    clearPollTimer();
     clearStatusTimeline();
   });
 
@@ -1031,8 +1050,7 @@
   $: if (active && runId && !timer) {
     fetchSnapshot();
   } else if (!active && timer) {
-    clearTimeout(timer);
-    timer = null;
+    clearPollTimer();
   }
 </script>
 
