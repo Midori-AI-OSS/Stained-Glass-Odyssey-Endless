@@ -338,6 +338,7 @@
       {reducedMotion}
       {showActionValues}
       {fullIdleMode}
+      {skipBattleReview}
       bind:animationSpeed
       {runId}
       {backendFlavor}

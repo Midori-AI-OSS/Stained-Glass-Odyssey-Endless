@@ -47,6 +47,9 @@ describe('Skip Battle Review setting', () => {
     // Check for auto-skip logic
     expect(content).toContain('reviewOpen && !rewardOpen && reviewReady && skipBattleReview');
     expect(content).toContain("dispatch('nextRoom')");
+    
+    // Check that it passes the prop to SettingsMenu
+    expect(content).toContain('{skipBattleReview}');
   });
 
   test('SettingsMenu includes skipBattleReview in save payload', () => {
