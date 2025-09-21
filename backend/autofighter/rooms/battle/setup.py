@@ -91,7 +91,14 @@ async def setup_battle(
         relics=party.relics,
         cards=party.cards,
         rdr=party.rdr,
+        no_shops=getattr(party, "no_shops", False),
+        no_rests=getattr(party, "no_rests", False),
     )
+
+    if hasattr(party, "pull_tokens"):
+        combat_party.pull_tokens = getattr(party, "pull_tokens", 0)
+    if hasattr(party, "_null_lantern_cleared"):
+        setattr(combat_party, "_null_lantern_cleared", getattr(party, "_null_lantern_cleared", 0))
 
     await apply_cards(combat_party)
     await _apply_relics_async(combat_party)

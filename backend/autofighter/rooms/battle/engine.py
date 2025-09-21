@@ -154,6 +154,14 @@ async def run_battle(
     party.gold = combat_party.gold
     party.relics = combat_party.relics
     party.cards = combat_party.cards
+    party.no_shops = getattr(combat_party, "no_shops", getattr(party, "no_shops", False))
+    party.no_rests = getattr(combat_party, "no_rests", getattr(party, "no_rests", False))
+
+    if hasattr(combat_party, "pull_tokens"):
+        party.pull_tokens = getattr(combat_party, "pull_tokens", getattr(party, "pull_tokens", 0))
+    if hasattr(combat_party, "_null_lantern_cleared"):
+        cleared = getattr(combat_party, "_null_lantern_cleared", 0)
+        setattr(party, "_null_lantern_cleared", cleared)
 
     if any(member.hp > 0 for member in party.members) and exp_reward > 0:
         for member in party.members:

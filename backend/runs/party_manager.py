@@ -310,9 +310,22 @@ def load_party(run_id: str) -> Party:
         relics=data.get("relics", []),
         cards=data.get("cards", []),
         rdr=stored_rdr + daily_bonus,
+        no_shops=bool(data.get("no_shops", False)),
+        no_rests=bool(data.get("no_rests", False)),
     )
     setattr(party, "login_rdr_bonus", daily_bonus)
     setattr(party, "base_rdr", stored_rdr)
+    try:
+        cleared = int(data.get("null_lantern_cleared", 0) or 0)
+    except Exception:
+        cleared = 0
+    if cleared:
+        setattr(party, "_null_lantern_cleared", cleared)
+    try:
+        tokens = int(data.get("pull_tokens", 0) or 0)
+    except Exception:
+        tokens = 0
+    setattr(party, "pull_tokens", tokens)
     return party
 
 def save_party(run_id: str, party: Party) -> None:
@@ -336,6 +349,10 @@ def save_party(run_id: str, party: Party) -> None:
             "level": {m.id: m.level for m in party.members},
             "exp_multiplier": {m.id: m.exp_multiplier for m in party.members},
             "rdr": _extract_base_rdr(party),
+            "no_shops": bool(getattr(party, "no_shops", False)),
+            "no_rests": bool(getattr(party, "no_rests", False)),
+            "null_lantern_cleared": int(getattr(party, "_null_lantern_cleared", 0) or 0),
+            "pull_tokens": int(getattr(party, "pull_tokens", 0) or 0),
             "player": snapshot,
         }
         conn.execute(

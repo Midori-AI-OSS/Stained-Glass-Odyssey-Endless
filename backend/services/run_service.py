@@ -71,9 +71,6 @@ async def start_run(
     run_id = str(uuid4())
     start_run_logging(run_id)
 
-    generator = MapGenerator(run_id, pressure=pressure)
-    nodes = generator.generate_floor()
-
     party_members: list[player_plugins._base.PlayerBase] = []
     party_info: list[dict[str, object]] = []
     for pid in members:
@@ -103,6 +100,9 @@ async def start_run(
         cards=[],
         rdr=1.0,
     )
+
+    generator = MapGenerator(run_id, pressure=pressure)
+    nodes = generator.generate_floor(party=initial_party)
 
     boss_choice = None
     if initial_party.members and nodes:
@@ -275,20 +275,21 @@ async def advance_room(run_id: str) -> dict[str, object]:
         except Exception:
             next_floor, loop, pressure = 1, 1, 0
 
+        try:
+            party = await asyncio.to_thread(load_party, run_id)
+        except Exception:
+            party = None
+
         generator = MapGenerator(
             f"{run_id}-floor-{next_floor}", floor=next_floor, loop=loop, pressure=pressure
         )
-        nodes = generator.generate_floor()
+        nodes = generator.generate_floor(party=party)
         state["rooms"] = [n.to_dict() for n in nodes]
         state["current"] = 1
         state["floors_cleared"] = int(state.get("floors_cleared", 0)) + 1
         state["current_pressure"] = int(getattr(nodes[-1], "pressure", pressure)) if nodes else int(pressure)
         new_floor = getattr(nodes[-1], "floor", next_floor) if nodes else next_floor
         new_loop = getattr(nodes[-1], "loop", loop) if nodes else loop
-        try:
-            party = await asyncio.to_thread(load_party, run_id)
-        except Exception:
-            party = None
         if party and party.members and nodes:
             boss_node = nodes[-1]
             tracker_data = state.get("boss_spawn_tracker")
