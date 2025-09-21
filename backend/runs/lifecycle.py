@@ -133,6 +133,11 @@ async def _run_battle(
 ) -> None:
     try:
         try:
+            previous_pull_tokens = 0
+            try:
+                previous_pull_tokens = int(getattr(party, "pull_tokens", 0) or 0)
+            except (TypeError, ValueError):
+                pass
             result = await room.resolve(party, data, progress, foes, run_id=run_id)
         except Exception as exc:
             state["battle"] = False
@@ -160,6 +165,16 @@ async def _run_battle(
             return
         state["battle"] = False
         try:
+            if result.get("result") != "defeat":
+                try:
+                    current_pull_tokens = int(getattr(party, "pull_tokens", 0) or 0)
+                except (TypeError, ValueError):
+                    current_pull_tokens = previous_pull_tokens
+                delta = current_pull_tokens - previous_pull_tokens
+                if delta > 0:
+                    loot_block = result.setdefault("loot", {})
+                    loot_items = loot_block.setdefault("items", [])
+                    loot_items.extend({"id": "ticket", "stars": 0} for _ in range(delta))
             loot_items = result.get("loot", {}).get("items", [])
             manager = GachaManager(get_save_manager())
             items = manager._get_items()

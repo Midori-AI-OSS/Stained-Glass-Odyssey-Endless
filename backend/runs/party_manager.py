@@ -325,8 +325,7 @@ def load_party(run_id: str) -> Party:
         tokens = int(data.get("pull_tokens", 0) or 0)
     except Exception:
         tokens = 0
-    if tokens:
-        party.pull_tokens = tokens
+    setattr(party, "pull_tokens", tokens)
     return party
 
 def save_party(run_id: str, party: Party) -> None:
