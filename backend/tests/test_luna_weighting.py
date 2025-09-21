@@ -59,6 +59,33 @@ def test_luna_boss_weight_default_other_floors(monkeypatch) -> None:
     assert weights.get("luna") == pytest.approx(1.0)
 
 
+def test_luna_boss_weight_doubles_after_missing_one_floor(monkeypatch) -> None:
+    node = MapNode(room_id=0, room_type="boss", floor=4, index=1, loop=1, pressure=0)
+    setattr(node, "boss_spawn_tracker", {"luna": {"floor": 2, "loop": 1, "floor_number": 2}})
+    setattr(node, "boss_floor_number", 4)
+    party = Party(members=[Player()])
+    weights = _capture_weights(monkeypatch, node, party)
+    assert weights.get("luna") == pytest.approx(2.0)
+
+
+def test_luna_boss_weight_quadruples_when_two_floors_missed(monkeypatch) -> None:
+    node = MapNode(room_id=0, room_type="boss", floor=5, index=1, loop=1, pressure=0)
+    setattr(node, "boss_spawn_tracker", {"luna": {"floor": 2, "loop": 1, "floor_number": 2}})
+    setattr(node, "boss_floor_number", 5)
+    party = Party(members=[Player()])
+    weights = _capture_weights(monkeypatch, node, party)
+    assert weights.get("luna") == pytest.approx(4.0)
+
+
+def test_luna_boss_weight_accounts_for_loops(monkeypatch) -> None:
+    node = MapNode(room_id=0, room_type="boss", floor=2, index=1, loop=2, pressure=0)
+    setattr(node, "boss_spawn_tracker", {"luna": {"floor": 10, "loop": 1}})
+    setattr(node, "boss_floor_number", 12)
+    party = Party(members=[Player()])
+    weights = _capture_weights(monkeypatch, node, party)
+    assert weights.get("luna") == pytest.approx(2.0)
+
+
 def test_luna_non_boss_weight_multiplier(monkeypatch) -> None:
     node = MapNode(room_id=0, room_type="normal", floor=1, index=1, loop=1, pressure=0)
     party = Party(members=[Player()])
