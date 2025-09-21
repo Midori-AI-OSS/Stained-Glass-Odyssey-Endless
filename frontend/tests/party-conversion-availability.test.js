@@ -1,43 +1,33 @@
 import { describe, expect, test } from 'bun:test';
 import { mergeUpgradePayload, shouldRefreshRoster } from '../src/lib/components/upgradeCacheUtils.js';
-
-function computeAvailableFour(items, selected, elementName) {
-  const starSuffix = '_4';
-  const elementKey = String(elementName || 'generic').toLowerCase();
-  const entries = Object.entries(items || {});
-  if (selected?.is_player) {
-    return entries
-      .filter(([key]) => key.endsWith(starSuffix))
-      .reduce((acc, [, qty]) => acc + (Number(qty) || 0), 0);
-  }
-  const key = `${elementKey}${starSuffix}`;
-  return Number(items?.[key]) || 0;
-}
+import { formatMaterialQuantity } from '../src/lib/utils/upgradeFormatting.js';
 
 describe('upgrade cache merging', () => {
-  test('immediately exposes updated four-star availability after conversion', () => {
+  test('updates stat counts and remaining materials', () => {
     const previousData = {
-      items: { light_4: 2 },
-      total_points: 5,
-      upgrade_points: 5
+      items: { light_1: 12 },
+      stat_counts: { atk: 3 },
+      next_costs: { atk: { item: 'light_1', count: 4 } },
+      element: 'light'
     };
 
     const result = {
-      items: { light_4: 1 },
-      total_points: 10,
-      upgrade_points: 10
+      stat_counts: { atk: 4 },
+      next_costs: { atk: { item: 'light_1', count: 5 } },
+      materials_remaining: 9,
+      element: 'light'
     };
 
     const merged = mergeUpgradePayload(previousData, result);
-    expect(merged.items.light_4).toBe(1);
-    expect(merged.total_points).toBe(10);
-    expect(merged.upgrade_points).toBe(10);
-    expect(shouldRefreshRoster(result)).toBe(false);
+    expect(merged.stat_counts.atk).toBe(4);
+    expect(merged.next_costs.atk.count).toBe(5);
+    expect(merged.items.light_1).toBe(9);
+    expect(merged.materials_remaining).toBe(9);
+    expect(shouldRefreshRoster(result)).toBe(true);
+  });
 
-    const selected = { is_player: true };
-    const available = computeAvailableFour(merged.items, selected, 'Light');
-    expect(available).toBe(1);
-    const canConvert = available >= 1;
-    expect(canConvert).toBe(true);
+  test('formats material quantities for hover text', () => {
+    expect(formatMaterialQuantity(3, 'fire_1')).toBe('3× Fire 1★');
+    expect(formatMaterialQuantity(0, 'light_1')).toBe('0× Light 1★');
   });
 });

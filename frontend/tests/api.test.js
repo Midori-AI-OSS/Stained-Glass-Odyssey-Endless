@@ -6,7 +6,6 @@ import {
   getGacha,
   pullGacha,
   getUpgrade,
-  upgradeCharacter,
   upgradeStat,
   wipeData,
   getLrmConfig,
@@ -152,24 +151,18 @@ describe('api calls', () => {
     expect(result).toEqual({ level: 2, items: { fire_1: 3 } });
   });
 
-  test('upgradeCharacter posts upgrade', async () => {
-    global.fetch = createFetch({ level: 1, items: {} });
-    const result = await upgradeCharacter('player');
-    expect(result).toEqual({ level: 1, items: {} });
-  });
-
-  test('upgradeStat spends points', async () => {
+  test('upgradeStat spends materials', async () => {
     const fetchMock = mock(async (url, options) => {
       expect(url).toBe('http://backend.test/players/player/upgrade-stat');
-      expect(JSON.parse(options.body)).toEqual({ stat_name: 'atk' });
+      expect(JSON.parse(options.body)).toEqual({ stat_name: 'atk', materials: 2, repeat: 3, total_materials: 12 });
       return {
         ok: true,
         status: 200,
-        json: async () => ({ stat_upgraded: 'atk', points_spent: 1 })
+        json: async () => ({ stat_upgraded: 'atk', materials_spent: 5, completed_upgrades: 3 })
       };
     });
     global.fetch = fetchMock;
-    const result = await upgradeStat('player', 'atk');
-    expect(result).toEqual({ stat_upgraded: 'atk', points_spent: 1 });
+    const result = await upgradeStat('player', 'atk', { repeat: 3, expectedMaterials: 2, totalMaterials: 12 });
+    expect(result).toEqual({ stat_upgraded: 'atk', materials_spent: 5, completed_upgrades: 3 });
   });
 });

@@ -18,14 +18,15 @@ describe('PlayerPreview component', () => {
     expect(content).toContain("dispatch('open-upgrade'");
     expect(content).toContain("dispatch('close-upgrade'");
     expect(content).toContain("dispatch('request-upgrade'");
-    expect(content).toContain('Upgrade stats');
-    expect(content).toContain('class="stat-button"');
+    expect(content).toContain('class="stat-icon-btn"');
+    expect(content).toContain("Level ${statLevel('max_hp')}");
+    expect(content).toContain('formatMaterialQuantity(availableMaterials, upgradeMaterialKey)');
   });
 
   test('renders upgrade feedback status', () => {
     const content = readFileSync(file, 'utf8');
-    expect(content).toContain('class="upgrade-feedback"');
-    expect(content).toContain('aria-busy={pendingStat ? \'true\' : undefined}');
-    expect(content).toContain('pendingStat || upgradeContext?.stat');
+    expect(content).toContain('class="upgrade-bottom"');
+    expect(content).toContain('Level {activeStatLevel}');
+    expect(content).toContain('Next {activeStatLabel || \'upgrade\'}: {formatCost(activeNextCost)}');
   });
 });
