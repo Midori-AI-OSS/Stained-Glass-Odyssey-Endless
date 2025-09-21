@@ -17,43 +17,41 @@ class HerbalCharm(RelicBase):
     about: str = "Heals all allies for 0.5% Max HP at the start of each turn per stack."
 
     async def apply(self, party) -> None:
+        await super().apply(party)
+
         state = getattr(party, "_herbal_charm_state", None)
         stacks = party.relics.count(self.id)
 
         if state is None:
-            async def _heal(*_) -> None:
-                current_stacks = state.get("stacks", 0)
-                if current_stacks <= 0:
-                    return
-                for member in party.members:
-                    heal = int(member.max_hp * 0.005 * current_stacks)
-
-                    # Emit relic effect event for healing
-                    await BUS.emit_async("relic_effect", "herbal_charm", member, "turn_start_healing", heal, {
-                        "healing_percentage": 0.5 * current_stacks,
-                        "max_hp": member.max_hp,
-                        "stacks": current_stacks
-                    })
-
-                    safe_async_task(member.apply_healing(heal))
-
-            def _cleanup(*_args) -> None:
-                BUS.unsubscribe("turn_start", state["heal_handler"])
-                BUS.unsubscribe("battle_end", state["cleanup_handler"])
-                if getattr(party, "_herbal_charm_state", None) is state:
-                    delattr(party, "_herbal_charm_state")
-
-            state = {
-                "stacks": stacks,
-                "heal_handler": _heal,
-                "cleanup_handler": _cleanup,
-            }
+            state = {"stacks": stacks}
             party._herbal_charm_state = state
-
-            BUS.subscribe("turn_start", _heal)
-            BUS.subscribe("battle_end", _cleanup)
         else:
             state["stacks"] = stacks
+
+        async def _heal(*_) -> None:
+            current_state = getattr(party, "_herbal_charm_state", {})
+            current_stacks = current_state.get("stacks", 0)
+            if current_stacks <= 0:
+                return
+            for member in party.members:
+                heal = int(member.max_hp * 0.005 * current_stacks)
+
+                # Emit relic effect event for healing
+                await BUS.emit_async("relic_effect", "herbal_charm", member, "turn_start_healing", heal, {
+                    "healing_percentage": 0.5 * current_stacks,
+                    "max_hp": member.max_hp,
+                    "stacks": current_stacks
+                })
+
+                safe_async_task(member.apply_healing(heal))
+
+        def _cleanup(*_args) -> None:
+            self.clear_subscriptions(party)
+            if getattr(party, "_herbal_charm_state", None) is state:
+                delattr(party, "_herbal_charm_state")
+
+        self.subscribe(party, "turn_start", _heal)
+        self.subscribe(party, "battle_end", _cleanup)
 
     def describe(self, stacks: int) -> str:
         pct = 0.5 * stacks

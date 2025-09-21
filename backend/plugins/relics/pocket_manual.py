@@ -43,7 +43,7 @@ class PocketManual(RelicBase):
                     effect = Aftertaste(base_pot=base)
                     safe_async_task(effect.apply(attacker, target))
 
-        BUS.subscribe("hit_landed", _hit)
+        self.subscribe(party, "hit_landed", _hit)
 
     def describe(self, stacks: int) -> str:
         if stacks == 1:

@@ -44,7 +44,7 @@ class BentDagger(RelicBase):
                     "triggered_by_kill": True
                 })
 
-        BUS.subscribe("damage_taken", _on_death)
+        self.subscribe(party, "damage_taken", _on_death)
 
     def describe(self, stacks: int) -> str:
         if stacks == 1:

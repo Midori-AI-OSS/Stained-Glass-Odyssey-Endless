@@ -82,9 +82,9 @@ class SoulPrism(RelicBase):
                     "buff_percentage": buff * 100
                 })
 
-            BUS.unsubscribe("battle_end", _battle_end)
+            self.unsubscribe(party, "battle_end", _battle_end)
 
-        BUS.subscribe("battle_end", _battle_end)
+        self.subscribe(party, "battle_end", _battle_end)
 
     def describe(self, stacks: int) -> str:
         penalty = 75 - 5 * (stacks - 1)

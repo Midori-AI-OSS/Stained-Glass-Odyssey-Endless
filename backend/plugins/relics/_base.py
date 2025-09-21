@@ -1,4 +1,5 @@
 import asyncio
+from collections.abc import Callable
 from dataclasses import dataclass
 from dataclasses import field
 import logging
@@ -38,6 +39,7 @@ class RelicBase:
     async def apply(self, party: Party) -> None:
         from autofighter.stats import BUS  # Import here to avoid circular imports
 
+        self._reset_subscriptions(party)
         log.info("Applying relic %s to party", self.id)
         mods = []
         stacks = party.relics.count(self.id)
@@ -76,3 +78,50 @@ class RelicBase:
 
     def describe(self, stacks: int) -> str:
         return self.about
+
+    def subscribe(self, party: Party, event: str, callback: Callable[..., object]) -> Callable[..., object]:
+        from autofighter.stats import BUS
+
+        store = self._ensure_subscription_store(party)
+        store.setdefault(self.id, []).append((event, callback))
+        BUS.subscribe(event, callback)
+        return callback
+
+    def unsubscribe(self, party: Party, event: str, callback: Callable[..., object]) -> None:
+        from autofighter.stats import BUS
+
+        BUS.unsubscribe(event, callback)
+        store = getattr(party, "_relic_bus_subscriptions", None)
+        if not store:
+            return
+        entries = store.get(self.id)
+        if not entries:
+            return
+        store[self.id] = [pair for pair in entries if pair != (event, callback)]
+        if not store[self.id]:
+            store.pop(self.id, None)
+
+    def clear_subscriptions(self, party: Party) -> None:
+        store = getattr(party, "_relic_bus_subscriptions", None)
+        if not store:
+            return
+        for event, callback in list(store.pop(self.id, [])):
+            self.unsubscribe(party, event, callback)
+
+    def _reset_subscriptions(self, party: Party) -> None:
+        from autofighter.stats import BUS
+
+        store = getattr(party, "_relic_bus_subscriptions", None)
+        if not store:
+            return
+        callbacks = store.pop(self.id, [])
+        for event, callback in callbacks:
+            BUS.unsubscribe(event, callback)
+
+    @staticmethod
+    def _ensure_subscription_store(party: Party) -> dict[str, list[tuple[str, Callable[..., object]]]]:
+        store = getattr(party, "_relic_bus_subscriptions", None)
+        if store is None:
+            store = {}
+            setattr(party, "_relic_bus_subscriptions", store)
+        return store
