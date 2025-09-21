@@ -1,4 +1,4 @@
-// Bun Snapshot v1, https://bun.sh/docs/test/snapshots
+// Bun Snapshot v1, https://goo.gl/fbAQLP
 
 exports[`PartyPicker component roster layout snapshot 1`] = `
 "<script>
@@ -168,8 +168,8 @@ exports[`PartyPicker component roster layout snapshot 1`] = `
         class:reduced={reducedMotion}
         animate:flip={{ duration: reducedMotion ? 0 : 300 }}
         on:click={(e) => select(char.id, e)}
-        on:dblclick={() => toggle(char.id)}
-        on:pointerdown={(e) => onPointerDown(char.id, e)}
+        on:dblclick={() => !char.is_player && toggle(char.id)}
+        on:pointerdown={(e) => !char.is_player && onPointerDown(char.id, e)}
         on:pointerup={onPointerUp}
         on:pointerleave={onPointerUp}
         on:introstart={(e) => onIntroStart(char.id, e)}
@@ -202,8 +202,8 @@ exports[`PartyPicker component roster layout snapshot 1`] = `
       class:reduced={reducedMotion}
       animate:flip={{ duration: reducedMotion ? 0 : 300 }}
       on:click={(e) => select(char.id, e)}
-      on:dblclick={() => toggle(char.id)}
-      on:pointerdown={(e) => onPointerDown(char.id, e)}
+      on:dblclick={() => !char.is_player && toggle(char.id)}
+      on:pointerdown={(e) => !char.is_player && onPointerDown(char.id, e)}
       on:pointerup={onPointerUp}
       on:pointerleave={onPointerUp}
       on:introstart={(e) => onIntroStart(char.id, e)}
@@ -245,6 +245,8 @@ exports[`PartyPicker component roster layout snapshot 1`] = `
   gap: 0.25rem;
   align-items: center;
 }
+
+/* No explicit "Required" chip; the remove button conveys it. */
 
 .sort-dir {
   background: transparent;
