@@ -48,10 +48,4 @@ class SteelBangles(CardBase):
                         "trigger_chance": 0.05
                     })
 
-        BUS.subscribe("damage_dealt", _on_damage_dealt)
-
-        def _cleanup(*_: object) -> None:
-            BUS.unsubscribe("damage_dealt", _on_damage_dealt)
-            BUS.unsubscribe("battle_end", _cleanup)
-
-        BUS.subscribe("battle_end", _cleanup)
+        self.subscribe("damage_dealt", _on_damage_dealt)

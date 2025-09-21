@@ -43,5 +43,5 @@ class FortifiedPlating(CardBase):
             # Reset first hit usage at the start of each turn
             first_hit_used.clear()
 
-        BUS.subscribe("damage_taken", _on_damage_taken)
-        BUS.subscribe("turn_start", _on_turn_start)
+        self.subscribe("damage_taken", _on_damage_taken)
+        self.subscribe("turn_start", _on_turn_start)

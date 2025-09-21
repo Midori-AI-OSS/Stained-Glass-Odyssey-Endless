@@ -88,10 +88,8 @@ class MindfulTassel(CardBase):
                 bonus_used = False
 
         def _on_battle_end(_entity) -> None:
-            BUS.unsubscribe("effect_applied", _on_effect_applied)
-            BUS.unsubscribe("battle_start", _on_battle_start)
-            BUS.unsubscribe("battle_end", _on_battle_end)
+            self.cleanup_subscriptions()
 
-        BUS.subscribe("effect_applied", _on_effect_applied)
-        BUS.subscribe("battle_start", _on_battle_start)
-        BUS.subscribe("battle_end", _on_battle_end)
+        self.subscribe("effect_applied", _on_effect_applied)
+        self.subscribe("battle_start", _on_battle_start)
+        self.subscribe("battle_end", _on_battle_end)

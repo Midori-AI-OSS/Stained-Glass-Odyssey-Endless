@@ -34,4 +34,4 @@ class LuckyCoin(CardBase):
                         "trigger_event": "critical_hit"
                     })
 
-        BUS.subscribe("critical_hit", _on_critical_hit)
+        self.subscribe("critical_hit", _on_critical_hit)

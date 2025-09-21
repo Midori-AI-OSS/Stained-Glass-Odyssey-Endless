@@ -44,4 +44,4 @@ class ReinforcedCloak(CardBase):
                                     })
                                     break
 
-        BUS.subscribe("effect_applied", _on_effect_applied)
+        self.subscribe("effect_applied", _on_effect_applied)

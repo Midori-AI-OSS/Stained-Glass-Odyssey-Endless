@@ -65,6 +65,6 @@ class VitalSurge(CardBase):
             if member in party.members:
                 _check(member)
 
-        BUS.subscribe("turn_start", _turn_start)
-        BUS.subscribe("damage_taken", _damage_taken)
-        BUS.subscribe("heal_received", _heal_received)
+        self.subscribe("turn_start", _turn_start)
+        self.subscribe("damage_taken", _damage_taken)
+        self.subscribe("heal_received", _heal_received)

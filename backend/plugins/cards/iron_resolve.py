@@ -48,5 +48,5 @@ class IronResolve(CardBase):
                 if cooldowns[pid] > 0:
                     cooldowns[pid] -= 1
 
-        BUS.subscribe("damage_taken", _damage_taken)
-        BUS.subscribe("turn_end", _turn_end)
+        self.subscribe("damage_taken", _damage_taken)
+        self.subscribe("turn_end", _turn_end)

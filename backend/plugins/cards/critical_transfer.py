@@ -56,4 +56,4 @@ class CriticalTransfer(CardBase):
                 {"stacks": total, "atk_bonus_pct": 4 * total},
             )
 
-        BUS.subscribe("ultimate_used", _ultimate_used)
+        self.subscribe("ultimate_used", _ultimate_used)

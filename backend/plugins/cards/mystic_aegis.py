@@ -31,4 +31,4 @@ class MysticAegis(CardBase):
             )
             safe_async_task(member.apply_healing(heal))
 
-        BUS.subscribe("debuff_resisted", _resisted)
+        self.subscribe("debuff_resisted", _resisted)

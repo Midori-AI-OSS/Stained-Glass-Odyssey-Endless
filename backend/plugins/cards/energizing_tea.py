@@ -41,12 +41,10 @@ class EnergizingTea(CardBase):
                         },
                     )
 
-                BUS.unsubscribe("battle_start", _on_battle_start)
-                BUS.unsubscribe("battle_end", _on_battle_end)
+                self.unsubscribe("battle_start", _on_battle_start)
 
         def _on_battle_end(entity) -> None:
-            BUS.unsubscribe("battle_start", _on_battle_start)
-            BUS.unsubscribe("battle_end", _on_battle_end)
+            self.cleanup_subscriptions()
 
-        BUS.subscribe("battle_start", _on_battle_start)
-        BUS.subscribe("battle_end", _on_battle_end)
+        self.subscribe("battle_start", _on_battle_start)
+        self.subscribe("battle_end", _on_battle_end)

@@ -45,4 +45,4 @@ class IronGuard(CardBase):
                 )
                 mgr.add_modifier(mod)
 
-        BUS.subscribe("damage_taken", _damage_taken)
+        self.subscribe("damage_taken", _damage_taken)

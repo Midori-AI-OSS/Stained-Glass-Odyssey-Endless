@@ -96,5 +96,5 @@ class SturdyVest(CardBase):
             await _check_low_hp()
 
         # Check HP at the start of each turn and after damage taken
-        BUS.subscribe("turn_start", _on_turn_start)
-        BUS.subscribe("damage_taken", _on_damage_taken)
+        self.subscribe("turn_start", _on_turn_start)
+        self.subscribe("damage_taken", _on_damage_taken)

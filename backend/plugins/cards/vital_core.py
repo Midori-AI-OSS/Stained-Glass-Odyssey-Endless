@@ -70,11 +70,5 @@ class VitalCore(CardBase):
         def _on_damage_taken(target, attacker, damage, *_: object):
             _check_low_hp()
 
-        def _cleanup(*_: object) -> None:
-            BUS.unsubscribe("turn_start", _check_low_hp)
-            BUS.unsubscribe("damage_taken", _on_damage_taken)
-            BUS.unsubscribe("battle_end", _cleanup)
-
-        BUS.subscribe("turn_start", _check_low_hp)
-        BUS.subscribe("damage_taken", _on_damage_taken)
-        BUS.subscribe("battle_end", _cleanup)
+        self.subscribe("turn_start", _check_low_hp)
+        self.subscribe("damage_taken", _on_damage_taken)

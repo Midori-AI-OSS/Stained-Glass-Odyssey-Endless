@@ -31,9 +31,7 @@ class ArcLightning(CardBase):
             if isinstance(entity, FoeBase) and entity in foes:
                 foes.remove(entity)
             if entity in party.members:
-                BUS.unsubscribe("hit_landed", _hit)
-                BUS.unsubscribe("battle_start", _battle_start)
-                BUS.unsubscribe("battle_end", _battle_end)
+                self.cleanup_subscriptions()
 
         async def _hit(attacker, target, amount, source, *_):
             if attacker not in party.members or source != "attack":
@@ -53,6 +51,6 @@ class ArcLightning(CardBase):
                 {"target": getattr(extra, "id", str(extra))},
             )
 
-        BUS.subscribe("battle_start", _battle_start)
-        BUS.subscribe("battle_end", _battle_end)
-        BUS.subscribe("hit_landed", _hit)
+        self.subscribe("battle_start", _battle_start)
+        self.subscribe("battle_end", _battle_end)
+        self.subscribe("hit_landed", _hit)

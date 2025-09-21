@@ -115,4 +115,4 @@ class BulwarkTotem(CardBase):
                 },
             )
 
-        BUS.subscribe("damage_taken", _on_damage_taken)
+        self.subscribe("damage_taken", _on_damage_taken)

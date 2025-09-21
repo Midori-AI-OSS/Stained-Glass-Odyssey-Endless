@@ -68,8 +68,7 @@ class CriticalOverdrive(CardBase):
                 if mod in entity.effect_manager.mods:
                     entity.effect_manager.mods.remove(mod)
             if not state:
-                BUS.unsubscribe("critical_boost_change", _change)
-                BUS.unsubscribe("battle_end", _battle_end)
+                self.cleanup_subscriptions()
 
-        BUS.subscribe("critical_boost_change", _change)
-        BUS.subscribe("battle_end", _battle_end)
+        self.subscribe("critical_boost_change", _change)
+        self.subscribe("battle_end", _battle_end)

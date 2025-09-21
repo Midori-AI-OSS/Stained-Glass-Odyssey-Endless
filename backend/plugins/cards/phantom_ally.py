@@ -139,6 +139,6 @@ class PhantomAlly(CardBase):
                 if not remaining_phantoms:
                     setattr(original, phantom_slot_tracker, 0)
             SummonManager.remove_summon(summon, "phantom_ally_cleanup")
-            BUS.unsubscribe("battle_end", _cleanup)
+            self.cleanup_subscriptions()
 
-        BUS.subscribe("battle_end", _cleanup)
+        self.subscribe("battle_end", _cleanup)

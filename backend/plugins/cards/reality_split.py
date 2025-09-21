@@ -35,13 +35,8 @@ class RealitySplit(CardBase):
         state: dict[str, object] = {"active": None, "foes": []}
 
         def _cleanup() -> None:
-            bundle = handlers_store.pop(self.id, None)
-            if not bundle:
-                state["foes"].clear()
-                state["active"] = None
-                return
-            for event_name, handler in bundle["handlers"].items():
-                BUS.unsubscribe(event_name, handler)
+            handlers_store.pop(self.id, None)
+            self.cleanup_subscriptions()
             state["foes"].clear()
             state["active"] = None
 
@@ -100,7 +95,7 @@ class RealitySplit(CardBase):
 
         def _register(event_name: str, handler) -> None:
             handlers[event_name] = handler
-            BUS.subscribe(event_name, handler)
+            self.subscribe(event_name, handler)
 
         handlers_store[self.id] = {"handlers": handlers}
 

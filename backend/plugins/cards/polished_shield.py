@@ -61,4 +61,4 @@ class PolishedShield(CardBase):
                 payload["metadata"] = metadata
             await BUS.emit_async("card_effect", self.id, target, "resist_def_bonus", 3, payload)
 
-        BUS.subscribe("effect_resisted", _on_effect_resisted)
+        self.subscribe("effect_resisted", _on_effect_resisted)

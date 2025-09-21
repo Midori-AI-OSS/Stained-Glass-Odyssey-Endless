@@ -64,8 +64,8 @@ class FarsightScope(CardBase):
                                 "Farsight Scope crit bonus removed from %s",
                                 getattr(attacker, "id", "attacker"),
                             )
-                            BUS.unsubscribe("action_used", _remove_bonus)
+                            self.unsubscribe("action_used", _remove_bonus)
 
-                    BUS.subscribe("action_used", _remove_bonus)
+                    self.subscribe("action_used", _remove_bonus)
 
-        BUS.subscribe("before_attack", _before_attack)
+        self.subscribe("before_attack", _before_attack)

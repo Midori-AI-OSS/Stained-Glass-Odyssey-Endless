@@ -54,6 +54,7 @@ class ElementalSpark(CardBase):
             member = chosen.get("member")
             data = chosen.get("mod")
             if member is None or data is None:
+                self.cleanup_subscriptions()
                 return
             mgr, mod = data
             mod.remove()
@@ -63,6 +64,7 @@ class ElementalSpark(CardBase):
                 member.mods.remove(mod.id)
             chosen["member"] = None
             chosen["mod"] = None
+            self.cleanup_subscriptions()
 
-        BUS.subscribe("battle_start", _battle_start)
-        BUS.subscribe("battle_end", _battle_end)
+        self.subscribe("battle_start", _battle_start)
+        self.subscribe("battle_end", _battle_end)
