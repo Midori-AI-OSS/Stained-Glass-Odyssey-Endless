@@ -65,4 +65,18 @@ describe('Skip Battle Review setting', () => {
     // Check for GameplaySettings prop
     expect(content).toContain('bind:skipBattleReview');
   });
+
+  test('GameViewport updates skipBattleReview when saveSettings is dispatched', () => {
+    const gameviewportFile = join(import.meta.dir, '../src/lib/components/GameViewport.svelte');
+    const content = readFileSync(gameviewportFile, 'utf8');
+    
+    // Check that skipBattleReview is included in the saveSettings handler destructuring
+    expect(content).toContain('on:saveSettings={(e) => ({ sfxVolume, musicVolume, voiceVolume, framerate, reducedMotion, showActionValues, fullIdleMode, skipBattleReview, animationSpeed } = e.detail)}');
+    
+    // Check that skipBattleReview is declared as a local variable
+    expect(content).toContain('let skipBattleReview = false;');
+    
+    // Check that skipBattleReview is passed to OverlayHost
+    expect(content).toContain('{skipBattleReview}');
+  });
 });

@@ -354,7 +354,7 @@
       on:editorChange={(e) => dispatch('editorChange', e.detail)}
       on:loadRun={(e) => dispatch('loadRun', e.detail)}
       on:startNewRun={() => dispatch('startNewRun')}
-      on:saveSettings={(e) => ({ sfxVolume, musicVolume, voiceVolume, framerate, reducedMotion, showActionValues, fullIdleMode, animationSpeed } = e.detail)}
+      on:saveSettings={(e) => ({ sfxVolume, musicVolume, voiceVolume, framerate, reducedMotion, showActionValues, fullIdleMode, skipBattleReview, animationSpeed } = e.detail)}
       on:endRun={() => dispatch('endRun')}
       on:shopBuy={(e) => dispatch('shopBuy', e.detail)}
       on:shopReroll={() => dispatch('shopReroll')}
