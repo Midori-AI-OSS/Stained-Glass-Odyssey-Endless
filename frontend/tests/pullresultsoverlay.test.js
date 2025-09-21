@@ -11,5 +11,7 @@ describe('PullResultsOverlay component', () => {
     expect(content).toContain('crossfade');
     expect(content).toContain('stack =');
     expect(content).toContain('dealNext');
+    expect(content).toContain('catch((error) => {');
+    expect(content).toContain('PullResultsOverlay: playback aborted');
   });
 });
