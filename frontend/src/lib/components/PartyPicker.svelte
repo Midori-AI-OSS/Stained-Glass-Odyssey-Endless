@@ -223,6 +223,13 @@
       character: char || null
     };
     const { id, stat } = payload;
+    const rawRepeats = detail?.repeats ?? detail?.repeat ?? 1;
+    let repeats = Number(rawRepeats);
+    if (!Number.isFinite(repeats) || repeats < 1) {
+      repeats = 1;
+    }
+    repeats = Math.max(1, Math.min(Math.floor(repeats), 50));
+    const requestedRepeats = repeats;
     const isUpgradeMode = modeIsUpgrade();
 
     if (isUpgradeMode) {
@@ -242,42 +249,87 @@
 
     if (!id || !stat) return;
 
-    try {
-      const result = await upgradeStat(id, stat);
+    const results = [];
+    let failureError = null;
+    let remainingRepeats = repeats;
+    let partialStop = false;
+
+    while (remainingRepeats > 0) {
+      const requestRepeats = 1;
+      try {
+        const result = await upgradeStat(id, stat, { repeat: requestRepeats });
+        results.push(result);
+        const completedRaw = Number(result?.completed_upgrades ?? requestRepeats);
+        const completed = Number.isFinite(completedRaw) && completedRaw > 0 ? completedRaw : requestRepeats;
+        const clampedCompleted = Math.max(0, Math.min(completed, remainingRepeats));
+        if (clampedCompleted === 0) {
+          partialStop = true;
+          break;
+        }
+        remainingRepeats -= clampedCompleted;
+        if (completed < requestRepeats) {
+          partialStop = true;
+          break;
+        }
+      } catch (err) {
+        failureError = err;
+        break;
+      }
+    }
+
+    const totalCompleted = results.reduce((acc, res) => {
+      const completedRaw = Number(res?.completed_upgrades ?? 1);
+      if (Number.isFinite(completedRaw) && completedRaw > 0) {
+        return acc + completedRaw;
+      }
+      return acc + 1;
+    }, 0);
+
+    if (totalCompleted > 0) {
       await refreshUpgradeData(id, { force: true });
       await refreshRoster();
-      const updatedChar = roster.find((p) => p.id === id) || payload.character || null;
-      const statKey = result?.stat_upgraded || stat;
-      const percent = result?.upgrade_percent;
-      const bonusText = percent != null ? formatPercent(percent) : '';
-      const label = statLabel(statKey);
-      const message = bonusText ? `Upgraded ${label} by ${bonusText}.` : `Upgraded ${label}.`;
-      if (isUpgradeMode) {
-        upgradeContext = {
-          id,
-          character: updatedChar,
-          stat: statKey,
-          lastRequestedStat: stat || null,
-          pendingStat: null,
-          pendingConversion: false,
-          message,
-          error: ''
-        };
+    }
+
+    const updatedChar = roster.find((p) => p.id === id) || payload.character || null;
+    const lastResult = results[results.length - 1];
+    const statKey = lastResult?.stat_upgraded || stat;
+    const totalPercent = results.reduce((acc, res) => acc + (Number(res?.upgrade_percent) || 0), 0);
+    const label = statLabel(statKey || stat || '');
+
+    let message = '';
+    if (totalCompleted > 0) {
+      const bonusText = totalPercent ? formatPercent(totalPercent) : '';
+      if (totalCompleted === 1) {
+        message = bonusText ? `Upgraded ${label} by ${bonusText}.` : `Upgraded ${label}.`;
+      } else {
+        message = bonusText
+          ? `Upgraded ${label} ${totalCompleted}× for ${bonusText} total.`
+          : `Upgraded ${label} ${totalCompleted}×.`;
       }
-    } catch (err) {
-      if (isUpgradeMode) {
-        const label = statLabel(stat || '');
-        upgradeContext = {
-          id,
-          character: payload.character,
-          stat: stat || null,
-          lastRequestedStat: stat || null,
-          pendingStat: null,
-          pendingConversion: false,
-          message: '',
-          error: err?.message || `Unable to upgrade ${label}.`
-        };
-      }
+    }
+
+    const repeatsShort = Math.max(1, requestedRepeats);
+    let errorText = '';
+    if (failureError) {
+      const base = failureError?.message || `Unable to upgrade ${label}.`;
+      errorText = totalCompleted > 0
+        ? `${base} (completed ${totalCompleted}/${repeatsShort}).`
+        : base;
+    } else if (partialStop || (totalCompleted > 0 && totalCompleted < repeatsShort)) {
+      errorText = `Stopped after ${totalCompleted}/${repeatsShort} upgrades for ${label}.`;
+    }
+
+    if (isUpgradeMode) {
+      upgradeContext = {
+        id,
+        character: updatedChar,
+        stat: statKey || null,
+        lastRequestedStat: stat || null,
+        pendingStat: null,
+        pendingConversion: false,
+        message,
+        error: errorText
+      };
     }
   }
 
