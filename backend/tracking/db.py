@@ -7,7 +7,8 @@ import hashlib
 import os
 from pathlib import Path
 import sys
-from typing import Any, Final
+from typing import Any
+from typing import Final
 
 if sys.platform == "win32":
     try:

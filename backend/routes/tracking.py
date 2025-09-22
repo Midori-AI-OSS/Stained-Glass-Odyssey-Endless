@@ -5,7 +5,6 @@ from typing import Any
 
 from quart import Blueprint
 from quart import jsonify
-
 from tracking import get_tracking_manager
 
 bp = Blueprint("tracking", __name__, url_prefix="/tracking")

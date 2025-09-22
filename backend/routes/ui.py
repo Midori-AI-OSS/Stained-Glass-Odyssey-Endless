@@ -26,7 +26,6 @@ from services.run_service import start_run
 from services.run_service import wipe_save
 from tracking import log_game_action
 from tracking import log_menu_action
-from tracking import log_overlay_action
 from tracking import log_play_session_end
 from tracking import log_run_end
 

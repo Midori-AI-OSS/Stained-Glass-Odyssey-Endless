@@ -457,9 +457,21 @@ class FoeFactory:
             )
 
         multipliers = {}
+        
+        # Add explicit scaling for main combat stats (now properties, not fields)
+        main_stats = ['atk', 'defense', 'max_hp']
+        for stat_name in main_stats:
+            if hasattr(obj, stat_name):
+                per_stat_variation = 1.0 + random.uniform(-self.config["scaling_variance"], self.config["scaling_variance"])
+                multipliers[stat_name] = base_mult * per_stat_variation
+        
+        # Add scaling for other numeric fields
         for field_info in fields(type(obj)):
             name = field_info.name
             if name in {"exp", "level", "exp_multiplier"} or name.startswith("_"):
+                continue
+            # Skip main stats as they're handled above
+            if name in main_stats:
                 continue
             value = getattr(obj, name, None)
             if isinstance(value, (int, float)):

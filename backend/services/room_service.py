@@ -16,6 +16,9 @@ from runs.lifecycle import load_map
 from runs.lifecycle import save_map
 from runs.party_manager import load_party
 from runs.party_manager import save_party
+from tracking import log_event_choice
+from tracking import log_game_action
+from tracking import log_shop_transaction
 
 from autofighter.party import Party
 from autofighter.rooms import BattleRoom
@@ -30,10 +33,6 @@ from autofighter.rooms import calculate_rank_probabilities
 from autofighter.summons.manager import SummonManager
 from plugins import foes as foe_plugins
 from plugins.damage_types import load_damage_type
-
-from tracking import log_event_choice
-from tracking import log_game_action
-from tracking import log_shop_transaction
 
 
 def _boss_matches_node(info: Any, node: Any) -> bool:

@@ -4,14 +4,14 @@ from typing import Any
 
 from quart import Blueprint
 from quart import jsonify
+from tracking import log_menu_action
+from tracking import log_overlay_action
 
 from autofighter.passives import discover as discover_passives
 from autofighter.rooms.shop import PRICE_BY_STARS
 from autofighter.rooms.shop import REROLL_COST
 from plugins.damage_types import ALL_DAMAGE_TYPES
 from plugins.damage_types import load_damage_type
-from tracking import log_menu_action
-from tracking import log_overlay_action
 
 bp = Blueprint("guidebook", __name__, url_prefix="/guidebook")
 

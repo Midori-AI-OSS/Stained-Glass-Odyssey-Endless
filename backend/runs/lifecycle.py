@@ -9,20 +9,17 @@ from collections.abc import Callable
 import gc
 import json
 import logging
-import time
 from typing import Any
 
 from battle_logging.writers import end_run_logging
+from tracking import log_play_session_end
+from tracking import log_run_end
 
 from autofighter.gacha import GachaManager
 from autofighter.mapgen import MapNode
 from autofighter.party import Party
 from autofighter.rooms import BattleRoom
 from autofighter.stats import Stats
-from tracking import log_battle_summary
-from tracking import log_game_action
-from tracking import log_play_session_end
-from tracking import log_run_end
 
 from .encryption import get_save_manager
 from .party_manager import save_party

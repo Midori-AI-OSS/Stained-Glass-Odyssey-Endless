@@ -15,10 +15,10 @@ from typing import Any
 from zoneinfo import ZoneInfo
 
 from runs.encryption import get_save_manager
+from tracking import log_login_event
 
 from autofighter.gacha import GachaManager
 from plugins.damage_types import ALL_DAMAGE_TYPES
-from tracking import log_login_event
 
 PT_ZONE = ZoneInfo("America/Los_Angeles")
 RESET_OFFSET = timedelta(hours=2)
