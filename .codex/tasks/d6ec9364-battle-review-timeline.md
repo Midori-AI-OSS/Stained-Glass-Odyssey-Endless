@@ -16,6 +16,10 @@ Coder, redesign the Battle Review into an FFLogs-style timeline analysis surface
 - Update or replace `frontend/src/lib/components/battle-review/` subcomponents with timeline-aware equivalents (graphs, tables, comparison panel) and delete obsolete files once migrated.
 - Refresh documentation (`frontend/.codex/implementation/battle-review-ui.md`, plus any new module docs) to describe the timeline system, query controls, comparison flows, and pinning UX.
 - Provide unit or component coverage for the new stores (data shaping, filtering) and interaction-heavy components (timeline syncing, comparison toggles) to keep regressions visible.
+- Expose shareable battle logs by adding a `GET /logs/<run_id>` backend route (and `GET /logs/<run_id>/battles/<index>/{summary,events}`) that mirrors the existing active-run endpoints but works for completed runs; include battle start/end timestamps, participants, and file-backed links in the response so the frontend can list available encounters and hydrate a dedicated playback view.
+- Surface the new timeline review as both the post-battle overlay and a standalone `/logs/<run_id>` route in the frontend, decoding query params for battle index, filters, comparison selections, and time window so copied links jump straight into the intended view (this frontend URL is what should be shared/bookmarked and referenced elsewhere).
+- Add a “Copy Logs Link” affordance in the overlay that serializes the current metric tab, zoom range, filters, and comparison set into query parameters compatible with the standalone logs page so users can easily revisit past battles via the frontend URL.
+- When wiring up the tracking database (task `5aa0a6dd-run-history-database`), include a `logs_url` field in run history responses that points to the frontend playback route (`/logs/<run_id>`) and defer raw combat data to the filesystem-backed log endpoints rather than duplicating it in SQLCipher.
 
 ## Notes
 - Coordinate with backend/API owners if additional data is required (e.g., positioning, timestamps, mitigations). Document interim stubs if full parity needs multiple milestones.
