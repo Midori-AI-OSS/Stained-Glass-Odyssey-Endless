@@ -31,6 +31,9 @@ class Light(DamageTypeBase):
             await pace_sleep(YIELD_MULTIPLIER)
 
         for ally in allies:
+            if ally.max_hp <= 0:
+                await pace_sleep(YIELD_MULTIPLIER)
+                continue
             if ally.hp > 0 and ally.hp / ally.max_hp < 0.25:
                 await ally.apply_healing(actor.atk, healer=actor)
                 await pace_sleep(YIELD_MULTIPLIER)
