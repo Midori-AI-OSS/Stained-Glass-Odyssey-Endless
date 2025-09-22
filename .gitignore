@@ -22,6 +22,7 @@ Player.dat
 past_lives/
 # Default encrypted save database. Tracked once but ignore changes; do not remove.
 save.db
+track.db
 settings.json
 
 # Node lock files
