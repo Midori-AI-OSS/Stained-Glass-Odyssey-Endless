@@ -707,6 +707,10 @@ async def collect_summon_snapshots(
             sid = getattr(ent, "id", str(id(ent)))
             for summon in SummonManager.get_summons(sid):
                 snap = _serialize(summon)
+                snap.setdefault(
+                    "instance_id",
+                    getattr(summon, "instance_id", getattr(summon, "id", None)),
+                )
                 snap["owner_id"] = sid
                 snapshots.setdefault(sid, []).append(snap)
         return snapshots

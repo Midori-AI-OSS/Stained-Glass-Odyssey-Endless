@@ -31,6 +31,7 @@ class Summon(Stats):
     """Represents a summoned entity with proper stat inheritance."""
 
     # Summon-specific properties
+    instance_id: str = ""
     summoner_id: str = ""
     summon_type: str = "generic"
     summon_source: str = "unknown"  # card/passive/relic that created this
@@ -43,6 +44,8 @@ class Summon(Stats):
         # Mark this as a summon for identification
         if not hasattr(self, 'id') or not self.id:
             self.id = f"{self.summoner_id}_{self.summon_type}_summon"
+        if not getattr(self, "instance_id", None):
+            self.instance_id = ""
 
     @classmethod
     def create_from_summoner(

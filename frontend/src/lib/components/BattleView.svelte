@@ -59,8 +59,23 @@
   ];
   $: combatantById = new Map(
     (combatants || [])
-      .filter(entry => entry && entry.id !== undefined && entry.id !== null)
-      .map(entry => [String(entry.id), entry])
+      .filter(entry => entry)
+      .flatMap(entry => {
+        const results = [];
+        const baseId = entry?.id;
+        if (baseId !== undefined && baseId !== null) {
+          results.push([String(baseId), entry]);
+        }
+        const instanceKey = entry?.instance_id;
+        if (
+          instanceKey !== undefined &&
+          instanceKey !== null &&
+          instanceKey !== baseId
+        ) {
+          results.push([String(instanceKey), entry]);
+        }
+        return results;
+      })
   );
   // If a combatant disappears, clear stale targeting ids
   $: if (activeId && !combatantById.has(String(activeId))) activeId = null;
@@ -477,6 +492,17 @@
     return JSON.stringify(a) !== JSON.stringify(b);
   }
 
+  function getSummonIdentifier(summon) {
+    if (!summon || typeof summon !== 'object') return '';
+    const value = summon?.instance_id ?? summon?.id;
+    if (value === undefined || value === null) return '';
+    try {
+      return String(value);
+    } catch {
+      return '';
+    }
+  }
+
   function guessElementFromId(id) {
     if (!id) return 'Generic';
     const s = String(id).toLowerCase();
@@ -493,18 +519,20 @@
     const all = new Set(knownSummons);
     for (const [, summons] of partySummons) {
       for (const s of summons) {
-        if (!all.has(s.id)) {
+        const ident = getSummonIdentifier(s);
+        if (ident && !all.has(ident)) {
           queueEffect('SummonEffect');
-          all.add(s.id);
+          all.add(ident);
           break;
         }
       }
     }
     for (const [, summons] of foeSummons) {
       for (const s of summons) {
-        if (!all.has(s.id)) {
+        const ident = getSummonIdentifier(s);
+        if (ident && !all.has(ident)) {
           queueEffect('SummonEffect');
-          all.add(s.id);
+          all.add(ident);
           break;
         }
       }
@@ -542,7 +570,10 @@
 
     const label = entry.luna_sword_label || entry.damage_type || entry.element || baseElement;
     const visual = getLightstreamSwordVisual(label, {
-      seed: entry.id || `${ownerId || ''}:${summonType || ''}:${label || ''}`
+      seed:
+        entry.instance_id ||
+        entry.id ||
+        `${ownerId || ''}:${summonType || ''}:${label || ''}`
     });
     const element = visual.element || normalizeDamageTypeId(label || baseElement);
 
@@ -831,7 +862,7 @@
 
       function prepareSummon(summon, ownerId, side) {
         if (!summon) return null;
-        let baseId = summon?.id;
+        let baseId = getSummonIdentifier(summon);
         if (!baseId) {
           const typeLabel = summon?.summon_type || summon?.type || 'summon';
           const ownerLabel = summon?.summoner_id || ownerId || 'owner';
@@ -896,7 +927,10 @@
           const set = new Set();
           try {
             for (const list of partySummons.values()) {
-              for (const s of list) if (s?.id) set.add(s.id);
+              for (const s of list) {
+                const ident = getSummonIdentifier(s);
+                if (ident) set.add(ident);
+              }
             }
           } catch {}
           return set;
@@ -1185,7 +1219,7 @@
           <!-- Summons -->
           {#if foe.summons?.length}
             <div class="summon-list">
-              {#each foe.summons as summon (summon.id)}
+              {#each foe.summons as summon (summon.instance_id || summon.id)}
                 <div
                   class="summon-entry"
                   in:fade={{ duration: effectiveReducedMotion ? 0 : 200 }}
@@ -1234,13 +1268,13 @@
                       </div>
                     {/if}
                     
-                    <div class="fighter-anchor" use:registerAnchor={summon.id}>
+                    <div class="fighter-anchor" use:registerAnchor={summon.instance_id || summon.id}>
                       <BattleFighterCard 
                         fighter={summon} 
                         position="top" 
                         {effectiveReducedMotion} 
                         size="medium" 
-                        highlight={hoveredId === summon.id || (hoveredId && summon?.summoner_id && summon?.summon_type && hoveredId === `${summon.summoner_id}_${summon.summon_type}_summon`)} 
+                        highlight={hoveredId === (summon.instance_id || summon.id) || (hoveredId && summon?.summoner_id && summon?.summon_type && hoveredId === `${summon.summoner_id}_${summon.summon_type}_summon`)}
                       />
                     </div>
                   </div>
@@ -1264,7 +1298,7 @@
         <!-- Summons (show above player portrait for party) -->
         {#if member.summons?.length}
           <div class="summon-list">
-            {#each member.summons as summon (summon.id)}
+            {#each member.summons as summon (summon.instance_id || summon.id)}
               <div
                 class="summon-entry"
                 in:fade={{ duration: effectiveReducedMotion ? 0 : 200 }}
@@ -1272,13 +1306,13 @@
               >
                 <div in:scale={{ duration: effectiveReducedMotion ? 0 : 200 }} class="summon-inner">
                   <!-- Summon portrait -->
-                  <div class="fighter-anchor" use:registerAnchor={summon.id}>
-                    <BattleFighterCard 
-                      fighter={summon} 
-                      position="bottom" 
-                      {effectiveReducedMotion} 
+                  <div class="fighter-anchor" use:registerAnchor={summon.instance_id || summon.id}>
+                    <BattleFighterCard
+                      fighter={summon}
+                      position="bottom"
+                      {effectiveReducedMotion}
                       size="medium" 
-                      highlight={hoveredId === summon.id || (hoveredId && summon?.summoner_id && summon?.summon_type && hoveredId === `${summon.summoner_id}_${summon.summon_type}_summon`)} 
+                      highlight={hoveredId === (summon.instance_id || summon.id) || (hoveredId && summon?.summoner_id && summon?.summon_type && hoveredId === `${summon.summoner_id}_${summon.summon_type}_summon`)}
                     />
                   </div>
 

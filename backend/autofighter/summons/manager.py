@@ -24,6 +24,7 @@ class SummonManager:
 
     _active_summons: ClassVar[Dict[str, List[Summon]]] = {}
     _summoner_refs: ClassVar[Dict[str, Stats]] = {}
+    _instance_counters: ClassVar[Dict[str, int]] = {}
     _initialized: ClassVar[bool] = False
 
     @classmethod
@@ -108,6 +109,9 @@ class SummonManager:
             turns_remaining,
             override_damage_type,
         )
+        counter = cls._instance_counters.get(summoner_id, 0) + 1
+        cls._instance_counters[summoner_id] = counter
+        summon.instance_id = f"{summoner_id}#{counter}"
         cls._active_summons[summoner_id].append(summon)
         BUS.emit_batched("summon_created", summoner, summon, source)
         log.info("Created %s summon for %s from %s", summon_type, summoner_id, source)
@@ -301,6 +305,7 @@ class SummonManager:
     def cleanup(cls) -> None:
         cls._active_summons.clear()
         cls._summoner_refs.clear()
+        cls._instance_counters.clear()
         log.debug("SummonManager cleaned up")
 
     @classmethod

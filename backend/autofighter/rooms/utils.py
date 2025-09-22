@@ -84,6 +84,7 @@ def _serialize(obj: Stats) -> dict[str, Any]:
     if obj is None:
         return {
             "id": "unknown",
+            "instance_id": "unknown",
             "name": "Unknown",
             "hp": 0,
             "max_hp": 0,
@@ -130,6 +131,7 @@ def _serialize(obj: Stats) -> dict[str, Any]:
         norm = _normalize_damage_type(getattr(obj, "damage_type", None))
         return {
             "id": getattr(obj, "id", "unknown"),
+            "instance_id": getattr(obj, "instance_id", getattr(obj, "id", "unknown")),
             "name": getattr(obj, "name", getattr(obj, "id", "Unknown")),
             "hp": int(getattr(obj, "hp", 0) or 0),
             "max_hp": int(getattr(obj, "max_hp", 0) or 0),
@@ -161,6 +163,7 @@ def _serialize(obj: Stats) -> dict[str, Any]:
     data["damage_type"] = norm
     data["element"] = norm
     data["id"] = obj.id
+    data["instance_id"] = getattr(obj, "instance_id", obj.id)
     if hasattr(obj, "name"):
         data["name"] = obj.name
     if hasattr(obj, "char_type"):
