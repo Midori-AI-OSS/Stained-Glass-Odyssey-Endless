@@ -69,10 +69,15 @@ async def log_run_start(
     outcome: str | None = None,
 ) -> None:
     def write(conn: Any) -> None:
-        conn.execute(
-            "INSERT OR REPLACE INTO runs (run_id, start_ts, end_ts, outcome) VALUES (?, ?, ?, ?)",
-            (run_id, start_ts, None, outcome),
+        cur = conn.execute(
+            "UPDATE runs SET start_ts = ?, end_ts = NULL, outcome = ? WHERE run_id = ?",
+            (start_ts, outcome, run_id),
         )
+        if cur.rowcount == 0:
+            conn.execute(
+                "INSERT INTO runs (run_id, start_ts, end_ts, outcome) VALUES (?, ?, ?, ?)",
+                (run_id, start_ts, None, outcome),
+            )
         conn.execute("DELETE FROM party_members WHERE run_id = ?", (run_id,))
         for member in members:
             slot = int(member.get("slot", 0))
