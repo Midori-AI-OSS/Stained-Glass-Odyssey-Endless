@@ -5,7 +5,7 @@ import { join } from 'path';
 describe('Settings functionality fixes', () => {
   const battleEventFloatersFile = join(import.meta.dir, '../src/lib/components/BattleEventFloaters.svelte');
   const overlayHostFile = join(import.meta.dir, '../src/lib/components/OverlayHost.svelte');
-  const systemSettingsFile = join(import.meta.dir, '../src/lib/components/SystemSettings.svelte');
+  const uiSettingsFile = join(import.meta.dir, '../src/lib/components/UISettings.svelte');
   const settingsMenuDocFile = join(import.meta.dir, '../.codex/implementation/settings-menu.md');
 
   test('BattleEventFloaters prevents rendering when disabled', () => {
@@ -20,8 +20,8 @@ describe('Settings functionality fixes', () => {
     expect(content).toContain('$: simplifiedTransitions = motionSettings.simplifyOverlayTransitions');
   });
 
-  test('SystemSettings uses existing background assets', () => {
-    const content = readFileSync(systemSettingsFile, 'utf8');
+  test('UISettings uses existing background assets', () => {
+    const content = readFileSync(uiSettingsFile, 'utf8');
     expect(content).toContain('Cityscape 1');
     expect(content).toContain('Cityscape 2');
     expect(content).toContain('1bd68c8e-5053-48f8-8464-0873942ef5dc.png');

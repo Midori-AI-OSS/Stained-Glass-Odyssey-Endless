@@ -4,7 +4,7 @@ import { join } from 'path';
 
 describe('Granular motion integration fixes', () => {
   const gameViewportFile = join(import.meta.dir, '../src/lib/components/GameViewport.svelte');
-  const systemSettingsFile = join(import.meta.dir, '../src/lib/components/SystemSettings.svelte');
+  const uiSettingsFile = join(import.meta.dir, '../src/lib/components/UISettings.svelte');
   const battleViewFile = join(import.meta.dir, '../src/lib/components/BattleView.svelte');
   const battleFighterCardFile = join(import.meta.dir, '../src/lib/battle/BattleFighterCard.svelte');
   const overlayHostFile = join(import.meta.dir, '../src/lib/components/OverlayHost.svelte');
@@ -16,8 +16,8 @@ describe('Granular motion integration fixes', () => {
     expect(content).toContain('backgroundFromTheme');
   });
 
-  test('SystemSettings includes background picker for static mode', () => {
-    const content = readFileSync(systemSettingsFile, 'utf8');
+  test('UISettings includes background picker for static mode', () => {
+    const content = readFileSync(uiSettingsFile, 'utf8');
     expect(content).toContain('Static Background');
     expect(content).toContain('Custom Background');
     expect(content).toContain('themeSettings.backgroundBehavior === \'static\'');

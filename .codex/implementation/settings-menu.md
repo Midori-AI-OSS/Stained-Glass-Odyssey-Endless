@@ -3,7 +3,14 @@
 `SettingsMenu.svelte` now follows the options spec. It includes Lucide icons,
 labels, and tooltips for **SFX Volume**, **Music Volume**, **Voice Volume**,
 **Framerate**, and an **Autocraft** toggle. Controls are grouped under
-**Audio**, **System**, and **Gameplay** headings for clarity.
+**Audio**, **UI**, **System**, and **Gameplay** headings, with the optional
+**LLM** tab appearing when a language-model backend is detected.
+
+`UISettings.svelte` contains all theme and motion controls, including palette
+selection, static/custom background pickers, custom accent color selection,
+and granular motion toggles. These controls call `updateThemeSettings` and
+`updateMotionSettings` so the shared stores update immediately while the
+debounced `scheduleSave()` keeps legacy options in sync.
 
 The selected framerate is saved as a number and merged with existing settings in local storage so server polling limits persist across sessions.
 `frameratePersistence.test.js` verifies the viewport loads this saved value on startup.

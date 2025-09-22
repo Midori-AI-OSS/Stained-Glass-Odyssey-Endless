@@ -5,7 +5,7 @@ import { join } from 'path';
 describe('Motion settings reactivity fixes', () => {
   const starStormFile = join(import.meta.dir, '../src/lib/components/StarStorm.svelte');
   const battleFloatersFile = join(import.meta.dir, '../src/lib/components/BattleEventFloaters.svelte');
-  const systemSettingsFile = join(import.meta.dir, '../src/lib/components/SystemSettings.svelte');
+  const uiSettingsFile = join(import.meta.dir, '../src/lib/components/UISettings.svelte');
   const settingsStorageFile = join(import.meta.dir, '../src/lib/systems/settingsStorage.js');
 
   test('StarStorm uses motionStore for reactivity', () => {
@@ -20,8 +20,8 @@ describe('Motion settings reactivity fixes', () => {
     expect(content).toContain('$: motionSettings = $motionStore');
   });
 
-  test('SystemSettings updates reducedMotion variable', () => {
-    const content = readFileSync(systemSettingsFile, 'utf8');
+  test('UISettings updates reducedMotion variable', () => {
+    const content = readFileSync(uiSettingsFile, 'utf8');
     expect(content).toContain('reducedMotion = ');
     expect(content).toContain('motionStore');
   });

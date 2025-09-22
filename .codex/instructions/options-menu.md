@@ -1,6 +1,6 @@
 # Options Menu
 
-The Options submenu lets players adjust audio levels, system behaviour, and gameplay automation. Controls appear under **Audio**, **System**, and **Gameplay** headings and use a two-column grid with labels and icons on the left and interactive controls on the right. Rows highlight on hover for clarity.
+The Options submenu lets players adjust audio levels, presentation, system behaviour, and gameplay automation. Controls appear under **Audio**, **UI**, **System**, and **Gameplay** headings and use a two-column grid with labels and icons on the left and interactive controls on the right. Rows highlight on hover for clarity.
 
 ## Controls
 
@@ -25,6 +25,66 @@ The Options submenu lets players adjust audio levels, system behaviour, and game
   - Label: `Voice Volume`
   - Tooltip: `Adjust voice volume.`
 
+- **Theme Palette**
+  - Select box for switching between predefined palettes or custom mode.
+  - Component: `UISettings`
+  - Lucide icon: `palette`
+  - Tooltip: `Choose a visual theme for the game.`
+
+- **Custom Accent** *(Custom theme only)*
+  - Native color input to set accent colour.
+  - Component: `UISettings`
+  - Lucide icon: `eye`
+  - Tooltip: `Custom accent colour for the theme.`
+
+- **Background Mode**
+  - Select box switching between rotating, static, or custom backgrounds.
+  - Component: `UISettings`
+  - Lucide icon: `eye`
+  - Tooltip: `How background images are displayed.`
+
+- **Static Background** *(Static mode only)*
+  - Select box listing curated cityscape assets.
+  - Component: `UISettings`
+  - Lucide icon: `eye`
+  - Tooltip: `Choose a static background image.`
+
+- **Custom Background** *(Custom mode only)*
+  - File picker for uploading a custom background asset.
+  - Component: `UISettings`
+  - Lucide icon: `eye`
+  - Tooltip: `Upload a custom background image.`
+
+- **Global Reduced Motion**
+  - Toggle respecting OS preferences while enabling accessibility options.
+  - Component: `UISettings`
+  - Lucide icon: `move`
+  - Tooltip: `Master switch for reduced motion.`
+
+- **Disable Floating Damage**
+  - Toggle disabling floating combat numbers and popups.
+  - Component: `UISettings`
+  - Lucide icon: `move`
+  - Tooltip: `Disable floating damage numbers.`
+
+- **Disable Portrait Glows**
+  - Toggle removing animated portrait outlines.
+  - Component: `UISettings`
+  - Lucide icon: `move`
+  - Tooltip: `Disable glowing effects around character portraits.`
+
+- **Simplify Overlay Transitions**
+  - Toggle simplifying modal and overlay animations.
+  - Component: `UISettings`
+  - Lucide icon: `move`
+  - Tooltip: `Use simpler transitions for overlays.`
+
+- **Disable Star Storm**
+  - Toggle disabling animated background particle effects.
+  - Component: `UISettings`
+  - Lucide icon: `move`
+  - Tooltip: `Disable the animated background star storm effect.`
+
 - **Backend Health**
   - Badge shows backend status with latency ping.
   - Lucide icon: `activity`
@@ -34,10 +94,10 @@ The Options submenu lets players adjust audio levels, system behaviour, and game
   - Select box limiting server polling frequency.
   - Lucide icon: `gauge`
   - Tooltip: `Limit server polling frequency.`
-- **Reduced Motion**
-  - Toggle that slows animation effects for accessibility.
+- **Reduced Motion (Legacy)**
+  - Read-only indicator mirroring the UI tab's global setting.
   - Lucide icon: `move`
-  - Tooltip: `Slow down battle animations.`
+  - Tooltip: `Use UI tab controls for motion settings.`
 - **Show Action Values**
   - Toggle that reveals numeric action values in the turn order UI.
   - Tooltip component: `Tooltip` with text `Display numeric action values in the turn order.`

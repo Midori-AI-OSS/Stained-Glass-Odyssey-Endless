@@ -1,6 +1,6 @@
 <script>
   import { createEventDispatcher, onMount } from 'svelte';
-  import { Volume2, Cog, Brain, Gamepad } from 'lucide-svelte';
+  import { Volume2, Palette, Cog, Brain, Gamepad } from 'lucide-svelte';
   import {
     endRun,
     endAllRuns,
@@ -15,6 +15,7 @@
     setTurnPacing
   } from '../systems/api.js';
   import AudioSettings from './AudioSettings.svelte';
+  import UISettings from './UISettings.svelte';
   import SystemSettings from './SystemSettings.svelte';
   import LLMSettings from './LLMSettings.svelte';
   import GameplaySettings from './GameplaySettings.svelte';
@@ -290,6 +291,9 @@
     <button class:active={activeTab === 'audio'} on:click={() => (activeTab = 'audio')} title="Audio">
       <Volume2 />
     </button>
+    <button class:active={activeTab === 'ui'} on:click={() => (activeTab = 'ui')} title="UI">
+      <Palette />
+    </button>
     <button class:active={activeTab === 'system'} on:click={() => (activeTab = 'system')} title="System">
       <Cog />
     </button>
@@ -310,10 +314,15 @@
       bind:voiceVolume
       {scheduleSave}
     />
+  {:else if activeTab === 'ui'}
+    <UISettings
+      bind:reducedMotion
+      {scheduleSave}
+    />
   {:else if activeTab === 'system'}
     <SystemSettings
       bind:framerate
-      bind:reducedMotion
+      {reducedMotion}
       {scheduleSave}
       {handleWipe}
       {wipeStatus}
