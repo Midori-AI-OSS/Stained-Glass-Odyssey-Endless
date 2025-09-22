@@ -13,20 +13,16 @@ from autofighter.stats import Stats
 # Diminishing returns configuration for buff scaling
 # Each stat has: (threshold, scaling_factor, base_offset)
 DIMINISHING_RETURNS_CONFIG = {
-    # HP: 4x reduction per 500 HP
-    'max_hp': {'threshold': 500, 'scaling_factor': 4.0, 'base_offset': 0},
-    'hp': {'threshold': 500, 'scaling_factor': 4.0, 'base_offset': 0},
+    'max_hp': {'threshold': 500, 'scaling_factor': 1.05, 'base_offset': 50000},
+    'hp': {'threshold': 500, 'scaling_factor': 1.05, 'base_offset': 50000},
 
-    # ATK/DEF: 100x reduction per 100 points
-    'atk': {'threshold': 100, 'scaling_factor': 2.0, 'base_offset': 0},
-    'defense': {'threshold': 100, 'scaling_factor': 2.0, 'base_offset': 0},
+    'atk': {'threshold': 100, 'scaling_factor': 2.0, 'base_offset': 1000},
+    'defense': {'threshold': 100, 'scaling_factor': 2.0, 'base_offset': 1000},
 
-    # Crit rate: 100x reduction per 1% over 75%
-    'crit_rate': {'threshold': 0.01, 'scaling_factor': 2.0, 'base_offset': 5},
     'mitigation': {'threshold': 0.01, 'scaling_factor': 100.0, 'base_offset': 2},
     'vitality': {'threshold': 0.01, 'scaling_factor': 100.0, 'base_offset': 2},
 
-    # Crit damage: 1000x reduction per 500% (5.0 multiplier)
+    'crit_rate': {'threshold': 0.01, 'scaling_factor': 2.0, 'base_offset': 5},
     'crit_damage': {'threshold': 5.0, 'scaling_factor': 1000.0, 'base_offset': 2.0},
 }
 
