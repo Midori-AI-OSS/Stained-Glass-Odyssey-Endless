@@ -23,7 +23,8 @@
     easing: cubicOut
   });
 
-  function toRenderable(r) {
+  // Create a stable render object with fixed key and initial stack index
+  function toRenderable(r, index) {
     if (!r || typeof r !== 'object') return r;
     if (r.type === 'character') {
       const id = String(r.id || '');
@@ -35,7 +36,9 @@
         name: id,
         stars,
         about,
-        artUrl: getCharacterImage(id)
+        artUrl: getCharacterImage(id),
+        _key: `${id}:${index}`,
+        _stackIndex: index
       };
     }
     if (r.type === 'item') {
@@ -48,14 +51,16 @@
         name: formatName(key),
         stars,
         about: 'Upgrade material',
-        artUrl
+        artUrl,
+        _key: `${key}:${index}`,
+        _stackIndex: index
       };
     }
     return r;
   }
 
   onMount(() => {
-    const mapped = Array.isArray(results) ? results.map(toRenderable) : [];
+    const mapped = Array.isArray(results) ? results.map((r, i) => toRenderable(r, i)) : [];
     isBatch = mapped.length === 5 || mapped.length === 10;
     if (isBatch) {
       stack = mapped;
@@ -91,7 +96,9 @@
 
   function dealNext() {
     if (stack.length === 0) return;
-    visible = [...visible, stack.shift()];
+    // Move the next card from the stack to the visible grid
+    visible = [...visible, stack[0]];
+    stack = stack.slice(1);
     playDeal();
     if (stack.length > 0) {
       setTimeout(dealNext, reducedMotion ? 0 : 400);
@@ -106,16 +113,16 @@
 <div class="layout">
   {#if isBatch}
     <div class="stack" aria-hidden={stack.length === 0}>
-      {#each stack as r, i (`${r.id}-${i}`)}
-        <div class="card" style={`--i: ${i}`} out:send={{ key: `${r.id}-${i}` }}>
+      {#each stack as r (r._key)}
+        <div class="card" style={`--pos: ${r._stackIndex}`} out:send={{ key: r._key }}>
           <CurioChoice entry={r} disabled={true} />
         </div>
       {/each}
     </div>
   {/if}
   <div class="choices">
-    {#each visible as r, i (`${r.id}-${i}`)}
-      <div class="card" in:receive={{ key: `${r.id}-${i}` }}>
+    {#each visible as r (r._key)}
+      <div class="card" in:receive={{ key: r._key }}>
         <CurioChoice entry={r} disabled={true} />
       </div>
     {/each}
@@ -138,6 +145,8 @@
     flex-wrap: wrap;
     gap: 0.75rem;
     justify-content: center;
+    position: relative;
+    z-index: 2;
   }
   .stack {
     position: absolute;
@@ -145,10 +154,12 @@
     left: 50%;
     width: 0;
     height: 0;
+    z-index: 1;
   }
   .stack .card {
     position: absolute;
-    transform: translate(calc(var(--i) * 4px), calc(var(--i) * 4px));
+    transform: translate(calc(var(--pos) * 4px), calc(var(--pos) * 4px));
+    pointer-events: none; /* avoid covering buttons during animation */
   }
   .done {
     padding: 0.5rem 1rem;
@@ -156,5 +167,7 @@
     color: #fff;
     border: 2px solid #fff;
     cursor: pointer;
+    position: relative;
+    z-index: 10; /* ensure visible over any lingering animations */
   }
 </style>
