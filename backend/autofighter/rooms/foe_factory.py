@@ -456,15 +456,35 @@ class FoeFactory:
                 modifier_id=f"{self.config['base_debuff_id']}_defense",
             )
 
+        base_stat_aliases = {
+            "max_hp",
+            "atk",
+            "defense",
+            "crit_rate",
+            "crit_damage",
+            "effect_hit_rate",
+            "mitigation",
+            "regain",
+            "dodge_odds",
+            "effect_resistance",
+            "vitality",
+        }
         multipliers = {}
         for field_info in fields(type(obj)):
             name = field_info.name
             if name in {"exp", "level", "exp_multiplier"} or name.startswith("_"):
                 continue
-            value = getattr(obj, name, None)
+            target_name = name
+            if target_name.startswith("base_"):
+                alias = target_name[5:]
+                if alias in base_stat_aliases:
+                    target_name = alias
+                else:
+                    continue
+            value = getattr(obj, target_name, None)
             if isinstance(value, (int, float)):
                 per_stat_variation = 1.0 + random.uniform(-self.config["scaling_variance"], self.config["scaling_variance"])
-                multipliers[name] = base_mult * per_stat_variation
+                multipliers[target_name] = base_mult * per_stat_variation
         apply_permanent_scaling(
             obj,
             multipliers=multipliers,

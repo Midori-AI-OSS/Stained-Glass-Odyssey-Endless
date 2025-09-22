@@ -297,30 +297,78 @@ class Stats:
         """Calculate runtime max HP (base + effects)."""
         return int(self._base_max_hp + self._calculate_stat_modifier('max_hp'))
 
+    @max_hp.setter
+    def max_hp(self, value: int) -> None:  # type: ignore[override]
+        try:
+            new_max = int(value)
+        except Exception:
+            return
+        self._base_max_hp = new_max
+        try:
+            if getattr(self, "hp", 0) > new_max:
+                self.hp = new_max
+        except Exception:
+            pass
+
     @property
     def atk(self) -> int:
         """Calculate runtime attack (base + effects)."""
         return int(self._base_atk + self._calculate_stat_modifier('atk'))
+
+    @atk.setter
+    def atk(self, value: int) -> None:  # type: ignore[override]
+        try:
+            self._base_atk = int(value)
+        except Exception:
+            pass
 
     @property
     def defense(self) -> int:
         """Calculate runtime defense (base + effects)."""
         return int(self._base_defense + self._calculate_stat_modifier('defense'))
 
+    @defense.setter
+    def defense(self, value: int) -> None:  # type: ignore[override]
+        try:
+            self._base_defense = int(value)
+        except Exception:
+            pass
+
     @property
     def crit_rate(self) -> float:
         """Calculate runtime crit rate (base + effects)."""
         return max(0.0, self._base_crit_rate + self._calculate_stat_modifier('crit_rate'))
+
+    @crit_rate.setter
+    def crit_rate(self, value: float) -> None:  # type: ignore[override]
+        try:
+            self._base_crit_rate = float(value)
+        except Exception:
+            pass
 
     @property
     def crit_damage(self) -> float:
         """Calculate runtime crit damage (base + effects)."""
         return max(1.0, self._base_crit_damage + self._calculate_stat_modifier('crit_damage'))
 
+    @crit_damage.setter
+    def crit_damage(self, value: float) -> None:  # type: ignore[override]
+        try:
+            self._base_crit_damage = float(value)
+        except Exception:
+            pass
+
     @property
     def effect_hit_rate(self) -> float:
         """Calculate runtime effect hit rate (base + effects)."""
         return max(0.0, self._base_effect_hit_rate + self._calculate_stat_modifier('effect_hit_rate'))
+
+    @effect_hit_rate.setter
+    def effect_hit_rate(self, value: float) -> None:  # type: ignore[override]
+        try:
+            self._base_effect_hit_rate = float(value)
+        except Exception:
+            pass
 
     @property
     def mitigation(self) -> float:
@@ -340,15 +388,36 @@ class Stats:
         """Calculate runtime regain (base + effects)."""
         return int(max(0, self._base_regain + self._calculate_stat_modifier('regain')))
 
+    @regain.setter
+    def regain(self, value: int) -> None:  # type: ignore[override]
+        try:
+            self._base_regain = int(value)
+        except Exception:
+            pass
+
     @property
     def dodge_odds(self) -> float:
         """Calculate runtime dodge odds (base + effects)."""
         return max(0.0, min(1.0, self._base_dodge_odds + self._calculate_stat_modifier('dodge_odds')))
 
+    @dodge_odds.setter
+    def dodge_odds(self, value: float) -> None:  # type: ignore[override]
+        try:
+            self._base_dodge_odds = float(value)
+        except Exception:
+            pass
+
     @property
     def effect_resistance(self) -> float:
         """Calculate runtime effect resistance (base + effects)."""
         return max(0.0, self._base_effect_resistance + self._calculate_stat_modifier('effect_resistance'))
+
+    @effect_resistance.setter
+    def effect_resistance(self, value: float) -> None:  # type: ignore[override]
+        try:
+            self._base_effect_resistance = float(value)
+        except Exception:
+            pass
 
     @property
     def vitality(self) -> float:

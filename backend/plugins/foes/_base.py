@@ -52,9 +52,18 @@ class FoeBase(Stats):
     plugin_type = "foe"
 
     hp: int = 1000
-    max_hp: int = 1000
-    atk: int = 100
-    defense: int = 50
+    base_max_hp: int = 1000
+    base_atk: int = 100
+    base_defense: int = 50
+    base_crit_rate: float = 0.05
+    base_crit_damage: float = 2.0
+    base_effect_hit_rate: float = 0.01
+    base_mitigation: float = 0.001
+    base_regain: int = 1
+    base_dodge_odds: float = 0.0
+    base_effect_resistance: float = 0.05
+    base_vitality: float = 0.001
+
     gold: int = 1
     char_type: CharacterType = CharacterType.C
     prompt: str = "Foe prompt placeholder"
@@ -67,17 +76,8 @@ class FoeBase(Stats):
     exp_multiplier: float = 1.0
     actions_per_turn: int = 1
 
-    crit_rate: float = 0.05
-    crit_damage: float = 2
-    effect_hit_rate: float = 0.01
     damage_type: DamageTypeBase = field(default_factory=random_damage_type)
 
-    mitigation: float = 0.001
-    regain: int = 1
-    dodge_odds: float = 0
-    effect_resistance: float = 0.05
-
-    vitality: float = 0.001
     action_points: int = 0
     damage_taken: int = 1
     damage_dealt: int = 1
@@ -103,6 +103,26 @@ class FoeBase(Stats):
                 CharacterType.B: "female",
                 CharacterType.C: "neutral",
             }.get(self.char_type)
+
+        # Push the configured base stats into Stats' backing fields so that the
+        # standard property accessors (used by scaling and combat systems) take
+        # effect.
+        _base_overrides: dict[str, float | int] = {
+            "max_hp": self.base_max_hp,
+            "atk": self.base_atk,
+            "defense": self.base_defense,
+            "crit_rate": self.base_crit_rate,
+            "crit_damage": self.base_crit_damage,
+            "effect_hit_rate": self.base_effect_hit_rate,
+            "mitigation": self.base_mitigation,
+            "regain": self.base_regain,
+            "dodge_odds": self.base_dodge_odds,
+            "effect_resistance": self.base_effect_resistance,
+            "vitality": self.base_vitality,
+        }
+        for stat_name, value in _base_overrides.items():
+            if isinstance(value, (int, float)):
+                self.set_base_stat(stat_name, value)
 
         super().__post_init__()
 
