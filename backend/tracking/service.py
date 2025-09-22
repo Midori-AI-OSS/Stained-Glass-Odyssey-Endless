@@ -2,12 +2,12 @@
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Callable
 import json
 import logging
 import time
-import uuid
-from collections.abc import Callable
 from typing import Any
+import uuid
 
 from .manager import get_tracking_manager
 
@@ -42,6 +42,26 @@ def _dump(details: Any) -> str:
         return json.dumps({"value": str(details)})
 
 
+def _ensure_run_logged(conn: Any, run_id: str | None, *, create_placeholder: bool = False) -> str | None:
+    if not run_id:
+        return None
+
+    cur = conn.execute("SELECT 1 FROM runs WHERE run_id = ?", (run_id,))
+    if cur.fetchone():
+        return run_id
+
+    if create_placeholder:
+        conn.execute(
+            "INSERT OR IGNORE INTO runs (run_id, start_ts, end_ts, outcome) VALUES (?, ?, NULL, NULL)",
+            (run_id, _now()),
+        )
+        cur = conn.execute("SELECT 1 FROM runs WHERE run_id = ?", (run_id,))
+        if cur.fetchone():
+            return run_id
+
+    return None
+
+
 async def log_run_start(
     run_id: str,
     start_ts: int,
@@ -49,10 +69,15 @@ async def log_run_start(
     outcome: str | None = None,
 ) -> None:
     def write(conn: Any) -> None:
-        conn.execute(
-            "INSERT OR REPLACE INTO runs (run_id, start_ts, end_ts, outcome) VALUES (?, ?, ?, ?)",
-            (run_id, start_ts, None, outcome),
+        cur = conn.execute(
+            "UPDATE runs SET start_ts = ?, end_ts = NULL, outcome = ? WHERE run_id = ?",
+            (start_ts, outcome, run_id),
         )
+        if cur.rowcount == 0:
+            conn.execute(
+                "INSERT INTO runs (run_id, start_ts, end_ts, outcome) VALUES (?, ?, ?, ?)",
+                (run_id, start_ts, None, outcome),
+            )
         conn.execute("DELETE FROM party_members WHERE run_id = ?", (run_id,))
         for member in members:
             slot = int(member.get("slot", 0))
@@ -128,11 +153,14 @@ async def log_card_acquisition(
     ts: int | None = None,
 ) -> None:
     ts = ts or _now()
+    sanitized_run_id: str | None = run_id
 
     def write(conn: Any) -> None:
+        nonlocal sanitized_run_id
+        sanitized_run_id = _ensure_run_logged(conn, run_id, create_placeholder=True)
         conn.execute(
             "INSERT INTO cards (run_id, room_id, card_id, source, ts) VALUES (?, ?, ?, ?, ?)",
-            (run_id, room_id, card_id, source, ts),
+            (sanitized_run_id, room_id, card_id, source, ts),
         )
 
     await _execute(write)
@@ -146,11 +174,14 @@ async def log_relic_acquisition(
     ts: int | None = None,
 ) -> None:
     ts = ts or _now()
+    sanitized_run_id: str | None = run_id
 
     def write(conn: Any) -> None:
+        nonlocal sanitized_run_id
+        sanitized_run_id = _ensure_run_logged(conn, run_id, create_placeholder=True)
         conn.execute(
             "INSERT INTO relics (run_id, room_id, relic_id, source, ts) VALUES (?, ?, ?, ?, ?)",
-            (run_id, room_id, relic_id, source, ts),
+            (sanitized_run_id, room_id, relic_id, source, ts),
         )
 
     await _execute(write)
@@ -166,10 +197,22 @@ async def log_battle_summary(
     ts: int | None = None,
 ) -> None:
     ts = ts or _now()
+    sanitized_run_id: str | None = run_id
+
     def write(conn: Any) -> None:
+        nonlocal sanitized_run_id
+        sanitized_run_id = _ensure_run_logged(conn, run_id, create_placeholder=True)
         conn.execute(
             "INSERT INTO battle_summaries (run_id, room_id, turns, dmg_dealt, dmg_taken, victory, ts) VALUES (?, ?, ?, ?, ?, ?, ?)",
-            (run_id, room_id, turns, dmg_dealt, dmg_taken, 1 if victory else 0, ts),
+            (
+                sanitized_run_id,
+                room_id,
+                turns,
+                dmg_dealt,
+                dmg_taken,
+                1 if victory else 0,
+                ts,
+            ),
         )
 
     await _execute(write)
@@ -197,11 +240,14 @@ async def log_game_action(
     ts: int | None = None,
 ) -> None:
     ts = ts or _now()
+    sanitized_run_id: str | None = run_id
 
     def write(conn: Any) -> None:
+        nonlocal sanitized_run_id
+        sanitized_run_id = _ensure_run_logged(conn, run_id)
         conn.execute(
             "INSERT INTO game_actions (run_id, room_id, action_type, ts, details_json) VALUES (?, ?, ?, ?, ?)",
-            (run_id, room_id, action_type, ts, _dump(details)),
+            (sanitized_run_id, room_id, action_type, ts, _dump(details)),
         )
 
     await _execute(write)
@@ -229,11 +275,14 @@ async def log_deck_change(
     ts: int | None = None,
 ) -> None:
     ts = ts or _now()
+    sanitized_run_id: str | None = run_id
 
     def write(conn: Any) -> None:
+        nonlocal sanitized_run_id
+        sanitized_run_id = _ensure_run_logged(conn, run_id)
         conn.execute(
             "INSERT INTO deck_changes (run_id, room_id, change_type, card_id, ts, details_json) VALUES (?, ?, ?, ?, ?, ?)",
-            (run_id, room_id, change_type, card_id, ts, _dump(details)),
+            (sanitized_run_id, room_id, change_type, card_id, ts, _dump(details)),
         )
 
     await _execute(write)
@@ -250,16 +299,19 @@ async def log_shop_transaction(
     ts: int | None = None,
 ) -> None:
     ts = ts or _now()
+    sanitized_run_id: str | None = run_id
 
     def write(conn: Any) -> None:
+        nonlocal sanitized_run_id
+        sanitized_run_id = _ensure_run_logged(conn, run_id)
         conn.execute(
             "INSERT INTO shop_transactions (run_id, room_id, item_type, item_id, cost, action, ts) VALUES (?, ?, ?, ?, ?, ?, ?)",
-            (run_id, room_id, item_type, item_id, cost, action, ts),
+            (sanitized_run_id, room_id, item_type, item_id, cost, action, ts),
         )
 
     await _execute(write)
     if item_type == "card" and item_id:
-        await log_deck_change(run_id, room_id, "shop_purchase", item_id, details, ts=ts)
+        await log_deck_change(sanitized_run_id, room_id, "shop_purchase", item_id, details, ts=ts)
 
 
 async def log_event_choice(
@@ -271,11 +323,14 @@ async def log_event_choice(
     ts: int | None = None,
 ) -> None:
     ts = ts or _now()
+    sanitized_run_id: str | None = run_id
 
     def write(conn: Any) -> None:
+        nonlocal sanitized_run_id
+        sanitized_run_id = _ensure_run_logged(conn, run_id)
         conn.execute(
             "INSERT INTO event_choices (run_id, room_id, event_name, choice, outcome_json, ts) VALUES (?, ?, ?, ?, ?, ?)",
-            (run_id, room_id, event_name, choice, _dump(outcome), ts),
+            (sanitized_run_id, room_id, event_name, choice, _dump(outcome), ts),
         )
 
     await _execute(write)
@@ -340,11 +395,14 @@ async def log_achievement_unlock(
     ts: int | None = None,
 ) -> None:
     ts = ts or _now()
+    sanitized_run_id: str | None = run_id
 
     def write(conn: Any) -> None:
+        nonlocal sanitized_run_id
+        sanitized_run_id = _ensure_run_logged(conn, run_id)
         conn.execute(
             "INSERT INTO achievement_unlocks (run_id, achievement_id, ts, details_json) VALUES (?, ?, ?, ?)",
-            (run_id, achievement_id, ts, _dump(details)),
+            (sanitized_run_id, achievement_id, ts, _dump(details)),
         )
 
     await _execute(write)

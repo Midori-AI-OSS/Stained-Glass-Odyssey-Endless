@@ -1,23 +1,21 @@
-import os
-import sys
 from pathlib import Path
+import sys
 
 import pytest
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
+from tracking import log_battle_summary
+from tracking import log_card_acquisition
+from tracking import log_deck_change
+from tracking import log_game_action
+from tracking import log_menu_action
+from tracking import log_play_session_end
+from tracking import log_play_session_start
+from tracking import log_relic_acquisition
+from tracking import log_run_end
+from tracking import log_run_start
 from tracking.manager import get_tracking_manager
-from tracking import (
-    log_battle_summary,
-    log_card_acquisition,
-    log_deck_change,
-    log_menu_action,
-    log_play_session_end,
-    log_play_session_start,
-    log_relic_acquisition,
-    log_run_end,
-    log_run_start,
-)
 
 
 @pytest.mark.asyncio
@@ -104,3 +102,25 @@ async def test_item_logging(tmp_path, monkeypatch):
             "SELECT menu_item, result FROM menu_actions ORDER BY ts DESC LIMIT 1"
         ).fetchone()
         assert menu[0] == "Inventory"
+
+
+@pytest.mark.asyncio
+async def test_log_game_action_without_run(tmp_path, monkeypatch):
+    track_path = tmp_path / "track.db"
+    monkeypatch.setenv("AF_TRACK_DB_PATH", str(track_path))
+    from tracking import manager as tracking_manager
+
+    tracking_manager.TRACKING_MANAGER = None
+
+    await log_game_action("turn_start", run_id="missing-run", details={"turn": 1})
+
+    manager = get_tracking_manager()
+    with manager.connection() as conn:
+        row = conn.execute(
+            "SELECT run_id, action_type, details_json FROM game_actions ORDER BY id DESC LIMIT 1"
+        ).fetchone()
+        assert row[0] is None
+        assert row[1] == "turn_start"
+        assert "turn" in row[2]
+        run_count = conn.execute("SELECT COUNT(*) FROM runs").fetchone()[0]
+        assert run_count == 0
