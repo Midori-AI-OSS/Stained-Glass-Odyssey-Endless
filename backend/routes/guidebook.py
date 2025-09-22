@@ -10,6 +10,8 @@ from autofighter.rooms.shop import PRICE_BY_STARS
 from autofighter.rooms.shop import REROLL_COST
 from plugins.damage_types import ALL_DAMAGE_TYPES
 from plugins.damage_types import load_damage_type
+from tracking import log_menu_action
+from tracking import log_overlay_action
 
 bp = Blueprint("guidebook", __name__, url_prefix="/guidebook")
 
@@ -58,7 +60,13 @@ async def damage_types() -> tuple[str, int, dict[str, Any]]:
                 "damage_mod_resist": "0.75x damage when attacking same type"
             }
         )
-    return jsonify({"damage_types": entries}), 200
+    payload = {"damage_types": entries}
+    try:
+        await log_menu_action("Guidebook", "view_damage_types", {"count": len(entries)})
+        await log_overlay_action("guidebook", {"section": "damage_types"})
+    except Exception:
+        pass
+    return jsonify(payload), 200
 
 
 @bp.get("/ultimates")
@@ -87,7 +95,13 @@ async def ultimates() -> tuple[str, int, dict[str, Any]]:
             doc = f"{name} ultimate ability."
 
         info.append({"id": getattr(inst, "id", name), "description": str(doc).strip()})
-    return jsonify({"ultimates": info}), 200
+    payload = {"ultimates": info}
+    try:
+        await log_menu_action("Guidebook", "view_ultimates", {"count": len(info)})
+        await log_overlay_action("guidebook", {"section": "ultimates"})
+    except Exception:
+        pass
+    return jsonify(payload), 200
 
 
 @bp.get("/passives")
@@ -134,7 +148,13 @@ async def passives() -> tuple[str, int, dict[str, Any]]:
                 "stack_display": stack_display
             }
         )
-    return jsonify({"passives": items}), 200
+    payload = {"passives": items}
+    try:
+        await log_menu_action("Guidebook", "view_passives", {"count": len(items)})
+        await log_overlay_action("guidebook", {"section": "passives"})
+    except Exception:
+        pass
+    return jsonify(payload), 200
 
 
 @bp.get("/shops")

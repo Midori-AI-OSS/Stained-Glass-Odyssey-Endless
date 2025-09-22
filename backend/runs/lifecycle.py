@@ -9,6 +9,7 @@ from collections.abc import Callable
 import gc
 import json
 import logging
+import time
 from typing import Any
 
 from battle_logging.writers import end_run_logging
@@ -18,6 +19,10 @@ from autofighter.mapgen import MapNode
 from autofighter.party import Party
 from autofighter.rooms import BattleRoom
 from autofighter.stats import Stats
+from tracking import log_battle_summary
+from tracking import log_game_action
+from tracking import log_play_session_end
+from tracking import log_run_end
 
 from .encryption import get_save_manager
 from .party_manager import save_party
@@ -253,6 +258,11 @@ async def _run_battle(
                         }
                     )
                     battle_snapshots[run_id] = result
+                    try:
+                        await log_run_end(run_id, "defeat")
+                        await log_play_session_end(run_id)
+                    except Exception:
+                        pass
                 finally:
                     try:
                         # End run logging when run is deleted due to defeat

@@ -19,6 +19,8 @@ from runs.party_manager import _assign_damage_type
 from runs.party_manager import _load_character_customization
 from runs.party_manager import _load_player_customization
 from services.user_level_service import get_user_state
+from tracking import log_menu_action
+from tracking import log_overlay_action
 
 from autofighter.gacha import GachaManager
 from autofighter.stats import apply_status_hooks
@@ -177,7 +179,13 @@ async def get_players() -> tuple[str, int, dict[str, str]]:
                 "stats": stats,
             }
         )
-    return jsonify({"players": roster, "user": get_user_state()})
+    payload = {"players": roster, "user": get_user_state()}
+    try:
+        await log_menu_action("Party", "view", {"count": len(roster)})
+        await log_overlay_action("party", {"count": len(roster)})
+    except Exception:
+        pass
+    return jsonify(payload)
 
 
 @bp.get("/player/stats")

@@ -21,6 +21,7 @@ from routes.performance import perf_bp as performance_bp
 from routes.players import bp as players_bp
 from routes.rewards import bp as rewards_bp
 from routes.ui import bp as ui_bp
+from routes.tracking import bp as tracking_bp
 from runs.encryption import get_fernet  # noqa: F401
 from runs.encryption import get_save_manager  # noqa: F401
 from runs.lifecycle import _run_battle  # noqa: F401
@@ -55,6 +56,7 @@ app.register_blueprint(rewards_bp)
 app.register_blueprint(config_bp)
 app.register_blueprint(catalog_bp)
 app.register_blueprint(ui_bp)
+app.register_blueprint(tracking_bp)
 app.register_blueprint(performance_bp, url_prefix='/performance')
 app.register_blueprint(guidebook_bp, url_prefix='/guidebook')
 

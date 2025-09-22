@@ -3,8 +3,10 @@ from __future__ import annotations
 import asyncio
 import hashlib
 import json
+import logging
 from pathlib import Path
 import random
+import time
 from uuid import uuid4
 
 from battle_logging.writers import start_run_logging
@@ -22,9 +24,19 @@ from runs.party_manager import load_party
 from autofighter.mapgen import MapGenerator
 from autofighter.party import Party
 from autofighter.rooms import _choose_foe
+from autofighter.rooms import _serialize
 from plugins import players as player_plugins
 from services.login_reward_service import record_room_completion
 from services.user_level_service import get_user_level
+
+from tracking import (
+    log_game_action,
+    log_menu_action,
+    log_play_session_start,
+    log_run_start,
+)
+
+log = logging.getLogger(__name__)
 
 
 async def start_run(
@@ -69,6 +81,7 @@ async def start_run(
         await asyncio.to_thread(set_damage_type)
 
     run_id = str(uuid4())
+    start_ts = int(time.time())
     start_run_logging(run_id)
 
     party_members: list[player_plugins._base.PlayerBase] = []
@@ -169,6 +182,33 @@ async def start_run(
             )
 
     await asyncio.to_thread(save_new_run)
+
+    member_snapshots: list[dict[str, object]] = []
+    for slot, member in enumerate(party_members):
+        try:
+            stats = _serialize(member)
+        except Exception:  # pragma: no cover - defensive serialization fallback
+            stats = {"id": getattr(member, "id", f"member-{slot}")}
+        member_snapshots.append(
+            {
+                "slot": slot,
+                "character_id": getattr(member, "id", f"member-{slot}"),
+                "stats": stats,
+            }
+        )
+
+    await log_run_start(run_id, start_ts, member_snapshots)
+    await log_play_session_start(run_id, "local", start_ts)
+    await log_menu_action(
+        "Run",
+        "started",
+        {
+            "members": members,
+            "damage_type": damage_type,
+            "pressure": pressure,
+            "run_id": run_id,
+        },
+    )
     return {"run_id": run_id, "map": state, "party": party_info}
 
 
@@ -243,6 +283,9 @@ async def advance_room(run_id: str) -> dict[str, object]:
     state, rooms = await asyncio.to_thread(load_map, run_id)
     if not rooms:
         raise ValueError("run not found")
+
+    current_index = int(state.get("current", 0))
+    current_room = rooms[current_index] if 0 <= current_index < len(rooms) else None
 
     if (
         state.get("awaiting_card")
@@ -328,7 +371,21 @@ async def advance_room(run_id: str) -> dict[str, object]:
         await record_room_completion()
     except Exception:
         pass
-    return {"next_room": next_type, "current_index": state["current"]}
+    payload = {"next_room": next_type, "current_index": state["current"]}
+    try:
+        await log_game_action(
+            "advance_room",
+            run_id=run_id,
+            room_id=str(getattr(current_room, "room_id", getattr(current_room, "index", ""))),
+            details={
+                "next_room": next_type,
+                "floors_cleared": state.get("floors_cleared"),
+                "total_rooms_cleared": state.get("total_rooms_cleared"),
+            },
+        )
+    except Exception:  # pragma: no cover - telemetry should not break gameplay
+        log.debug("Failed to log advance_room telemetry", exc_info=True)
+    return payload
 
 
 async def get_battle_summary(run_id: str, index: int) -> dict[str, object] | None:

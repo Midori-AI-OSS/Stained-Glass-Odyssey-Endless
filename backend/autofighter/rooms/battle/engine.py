@@ -12,6 +12,8 @@ from typing import Any
 from battle_logging.writers import end_battle_logging
 from services.user_level_service import gain_user_exp
 from services.user_level_service import get_user_level
+from tracking import log_battle_summary
+from tracking import log_game_action
 
 from autofighter.stats import set_enrage_percent
 from autofighter.summons.base import Summon
@@ -58,6 +60,7 @@ async def run_battle(
     enrage_mods = setup_data.enrage_mods
     visual_queue = setup_data.visual_queue
     battle_logger = setup_data.battle_logger
+    room_identifier = str(getattr(room.node, "room_id", getattr(room.node, "index", "battle")))
 
     if battle_snapshots is None:
         battle_snapshots = {}
@@ -150,6 +153,16 @@ async def run_battle(
     )
     end_battle_logging(battle_result)
 
+    turn_count = int(turn)
+
+    def _damage_totals() -> tuple[int, int]:
+        if battle_logger is None or getattr(battle_logger, "summary", None) is None:
+            return 0, 0
+        summary = battle_logger.summary
+        dealt = sum(int(value) for value in summary.total_damage_dealt.values())
+        taken = sum(int(value) for value in summary.total_damage_taken.values())
+        return dealt, taken
+
     party.members = combat_party.members
     party.gold = combat_party.gold
     party.relics = combat_party.relics
@@ -240,6 +253,18 @@ async def run_battle(
             "relic_choices": [],
             "items": [],
         }
+        dealt, taken = _damage_totals()
+        if run_id is not None:
+            try:
+                await log_battle_summary(run_id, room_identifier, turn_count, dealt, taken, False)
+                await log_game_action(
+                    "battle_end",
+                    run_id=run_id,
+                    room_id=room_identifier,
+                    details={"result": "defeat", "turns": turn_count},
+                )
+            except Exception:
+                pass
         return {
             "result": "defeat",
             "party": party_data,
@@ -263,6 +288,19 @@ async def run_battle(
             "action_queue": action_queue_snapshot,
             "ended": True,
         }
+
+    dealt, taken = _damage_totals()
+    if run_id is not None:
+        try:
+            await log_battle_summary(run_id, room_identifier, turn_count, dealt, taken, True)
+            await log_game_action(
+                "battle_end",
+                run_id=run_id,
+                room_id=room_identifier,
+                details={"result": battle_result, "turns": turn_count},
+            )
+        except Exception:
+            pass
 
     return await resolve_rewards(
         room=room,

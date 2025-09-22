@@ -11,6 +11,10 @@ from runs.party_manager import save_party
 
 from autofighter.cards import award_card
 from autofighter.relics import award_relic
+from tracking import log_card_acquisition
+from tracking import log_deck_change
+from tracking import log_game_action
+from tracking import log_relic_acquisition
 
 
 async def select_card(run_id: str, card_id: str) -> dict[str, Any]:
@@ -21,6 +25,9 @@ async def select_card(run_id: str, card_id: str) -> dict[str, Any]:
     if card is None:
         raise ValueError("invalid card")
     state, rooms = await asyncio.to_thread(load_map, run_id)
+    current_index = int(state.get("current", 0))
+    room = rooms[current_index] if 0 <= current_index < len(rooms) else None
+    room_identifier = str(getattr(room, "room_id", getattr(room, "index", current_index)))
     progression = state.get("reward_progression")
     if progression and progression.get("current_step") == "card":
         progression["completed"].append("card")
@@ -59,6 +66,23 @@ async def select_card(run_id: str, card_id: str) -> dict[str, Any]:
     payload = {"card": card_data, "cards": party.cards}
     if next_type is not None:
         payload["next_room"] = next_type
+    try:
+        await log_card_acquisition(run_id, room_identifier, card.id, "reward")
+        await log_deck_change(
+            run_id,
+            room_identifier,
+            "reward_add",
+            card.id,
+            {"card": card_data},
+        )
+        await log_game_action(
+            "select_card",
+            run_id=run_id,
+            room_id=room_identifier,
+            details={"card": card_data},
+        )
+    except Exception:
+        pass
     return payload
 
 
@@ -70,6 +94,9 @@ async def select_relic(run_id: str, relic_id: str) -> dict[str, Any]:
     if relic is None:
         raise ValueError("invalid relic")
     state, rooms = await asyncio.to_thread(load_map, run_id)
+    current_index = int(state.get("current", 0))
+    room = rooms[current_index] if 0 <= current_index < len(rooms) else None
+    room_identifier = str(getattr(room, "room_id", getattr(room, "index", current_index)))
     progression = state.get("reward_progression")
     if progression and progression.get("current_step") == "relic":
         progression["completed"].append("relic")
@@ -108,6 +135,16 @@ async def select_relic(run_id: str, relic_id: str) -> dict[str, Any]:
     payload = {"relic": relic_data, "relics": party.relics}
     if next_type is not None:
         payload["next_room"] = next_type
+    try:
+        await log_relic_acquisition(run_id, room_identifier, relic.id, "reward")
+        await log_game_action(
+            "select_relic",
+            run_id=run_id,
+            room_id=room_identifier,
+            details={"relic": relic_data},
+        )
+    except Exception:
+        pass
     return payload
 
 
@@ -115,6 +152,7 @@ async def acknowledge_loot(run_id: str) -> dict[str, Any]:
     state, rooms = await asyncio.to_thread(load_map, run_id)
     if not state.get("awaiting_loot"):
         raise ValueError("not awaiting loot")
+    current_index = int(state.get("current", 0))
     progression = state.get("reward_progression")
     if progression and progression.get("current_step") == "loot":
         progression["completed"].append("loot")
@@ -141,4 +179,13 @@ async def acknowledge_loot(run_id: str) -> dict[str, Any]:
     )
     await asyncio.to_thread(save_map, run_id, state)
     await asyncio.to_thread(save_party, run_id, await asyncio.to_thread(load_party, run_id))
+    try:
+        await log_game_action(
+            "acknowledge_loot",
+            run_id=run_id,
+            room_id=str(getattr(rooms[current_index], "room_id", current_index)) if rooms else str(current_index),
+            details={"next_room": next_type},
+        )
+    except Exception:
+        pass
     return {"next_room": next_type} if next_type is not None else {"next_room": None}

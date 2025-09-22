@@ -153,12 +153,22 @@ class ShopRoom(Room):
         stock = _apply_tax_to_stock(stock, self.node.pressure, items_bought)
         self.node.stock = stock
 
+        transactions: list[dict[str, Any]] = []
+
         if action == "reroll":
             if party.gold >= REROLL_COST:
                 party.gold -= REROLL_COST
                 stock = _generate_stock(party, self.node.pressure)
                 stock = _apply_tax_to_stock(stock, self.node.pressure, items_bought)
                 self.node.stock = stock
+                transactions.append(
+                    {
+                        "item_type": "reroll",
+                        "item_id": None,
+                        "cost": REROLL_COST,
+                        "action": "reroll",
+                    }
+                )
         else:
             purchases: list[dict[str, Any]] = []
             payload_items = data.get("items")
@@ -206,6 +216,14 @@ class ShopRoom(Room):
                 self.node.items_bought = items_bought
                 stock = _apply_tax_to_stock(stock, self.node.pressure, items_bought)
                 self.node.stock = stock
+                transactions.append(
+                    {
+                        "item_type": entry.get("type"),
+                        "item_id": item_id,
+                        "cost": expected_cost,
+                        "action": "purchase",
+                    }
+                )
 
             self.node.stock = stock
 
@@ -245,4 +263,5 @@ class ShopRoom(Room):
             "items_bought": items_bought,
             "card": None,
             "foes": [],
+            "transactions": transactions,
         }

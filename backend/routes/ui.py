@@ -24,6 +24,11 @@ from services.run_service import get_battle_summary
 from services.run_service import restore_save
 from services.run_service import start_run
 from services.run_service import wipe_save
+from tracking import log_game_action
+from tracking import log_menu_action
+from tracking import log_overlay_action
+from tracking import log_play_session_end
+from tracking import log_run_end
 
 bp = Blueprint("ui", __name__)
 
@@ -275,6 +280,11 @@ async def handle_ui_action() -> tuple[str, int, dict[str, Any]]:
                 result = await start_run(members, damage_type, pressure)
                 return jsonify(result)
             except ValueError as exc:
+                await log_menu_action(
+                    "Run",
+                    "error",
+                    {"members": members, "damage_type": damage_type, "pressure": pressure, "error": str(exc)},
+                )
                 return create_error_response(str(exc), 400)
 
         elif action == "room_action":
@@ -284,10 +294,28 @@ async def handle_ui_action() -> tuple[str, int, dict[str, Any]]:
             room_id = params.get("room_id", "0")
             try:
                 result = await room_action(run_id, room_id, params)
+                await log_game_action(
+                    "room_action",
+                    run_id=run_id,
+                    room_id=room_id,
+                    details={"params": params},
+                )
                 return jsonify(result)
             except LookupError as exc:
+                await log_game_action(
+                    "room_action_error",
+                    run_id=run_id,
+                    room_id=room_id,
+                    details={"params": params, "error": str(exc)},
+                )
                 return create_error_response(str(exc), 404)
             except ValueError as exc:
+                await log_game_action(
+                    "room_action_error",
+                    run_id=run_id,
+                    room_id=room_id,
+                    details={"params": params, "error": str(exc)},
+                )
                 return create_error_response(str(exc), 400)
 
         elif action == "advance_room":
@@ -350,6 +378,11 @@ async def handle_ui_action() -> tuple[str, int, dict[str, Any]]:
                 result = await advance_room(run_id)
                 return jsonify(result)
             except ValueError as exc:
+                await log_game_action(
+                    "advance_room_error",
+                    run_id=run_id,
+                    details={"error": str(exc)},
+                )
                 return create_error_response(str(exc), 400)
 
         elif action == "choose_card":
@@ -426,6 +459,11 @@ async def start_run_endpoint() -> tuple[str, int, dict[str, Any]]:
             result = await start_run(members, damage_type, pressure)
             return jsonify(result), 200
         except ValueError as exc:
+            await log_menu_action(
+                "Run",
+                "error",
+                {"members": members, "damage_type": damage_type, "pressure": pressure, "error": str(exc)},
+            )
             return jsonify({"error": str(exc)}), 400
 
     except Exception as e:
@@ -464,6 +502,10 @@ async def end_run(run_id: str) -> tuple[str, int, dict[str, Any]]:
         if run_id in battle_snapshots:
             del battle_snapshots[run_id]
 
+        await log_run_end(run_id, "aborted")
+        await log_play_session_end(run_id)
+        await log_menu_action("Run", "ended", {"run_id": run_id})
+
         return jsonify({"message": "Run ended successfully"}), 200
 
     except Exception as e:
@@ -476,12 +518,13 @@ async def end_all_runs() -> tuple[str, int, dict[str, Any]]:
     def delete_all_runs():
         with get_save_manager().connection() as conn:
             # Get count of runs before deletion
-            cur = conn.execute("SELECT COUNT(*) FROM runs")
-            count = cur.fetchone()[0]
+            cur = conn.execute("SELECT id FROM runs")
+            rows = cur.fetchall()
+            count = len(rows)
 
             # Delete all runs
             conn.execute("DELETE FROM runs")
-            return count
+            return count, [row[0] for row in rows]
 
     try:
         # End run logging
@@ -494,10 +537,15 @@ async def end_all_runs() -> tuple[str, int, dict[str, Any]]:
         battle_tasks.clear()
 
         # Delete from database
-        deleted_count = await asyncio.to_thread(delete_all_runs)
+        deleted_count, run_ids = await asyncio.to_thread(delete_all_runs)
 
         # Clean up all battle snapshots
         battle_snapshots.clear()
+
+        for run_id in run_ids:
+            await log_run_end(run_id, "aborted")
+            await log_play_session_end(run_id)
+        await log_menu_action("Run", "ended_all", {"deleted_count": deleted_count})
 
         return jsonify({
             "message": f"Ended {deleted_count} run(s) successfully",
