@@ -79,11 +79,11 @@ The Options submenu lets players adjust audio levels, presentation, system behav
   - Lucide icon: `move`
   - Tooltip: `Use simpler transitions for overlays.`
 
-- **Disable Star Storm**
+- **Disable Orb Field**
   - Toggle disabling animated background particle effects.
   - Component: `UISettings`
   - Lucide icon: `move`
-  - Tooltip: `Disable the animated background star storm effect.`
+  - Tooltip: `Disable the animated background orb field.`
 
 - **Backend Health**
   - Badge shows backend status with latency ping.

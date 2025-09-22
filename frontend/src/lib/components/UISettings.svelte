@@ -166,9 +166,9 @@
     </div>
   </div>
 
-  <div class="control" title="Disable the animated background star storm effect.">
+  <div class="control" title="Disable the animated background orb field.">
     <div class="control-left">
-      <span class="label"><Move /> Disable Star Storm</span>
+      <span class="label"><Move /> Disable Orb Field</span>
     </div>
     <div class="control-right">
       <input
