@@ -22,7 +22,6 @@ else:
     import sqlcipher3  # type: ignore[import-not-found]
 
 
-class TrackingDBManager:
     """Wrapper around SQLCipher connections for tracking telemetry."""
 
     def __init__(self, db_path: Path, key: str) -> None:
@@ -37,7 +36,13 @@ class TrackingDBManager:
         key = os.getenv("AF_DB_KEY")
         password = os.getenv("AF_DB_PASSWORD")
         if not key and password:
-            key = hashlib.sha256(password.encode()).hexdigest()
+            # Use PBKDF2 for password-based key derivation (slow hashing)
+            key = hashlib.pbkdf2_hmac(
+                "sha256",
+                password.encode(),
+                SALT_FOR_KEY_DERIVATION,
+                100_000  # Number of iterations (adjust as needed)
+            ).hex()
         return cls(base_path, key or "")
 
     @contextmanager
