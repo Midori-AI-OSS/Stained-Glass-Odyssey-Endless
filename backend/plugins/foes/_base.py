@@ -52,9 +52,6 @@ class FoeBase(Stats):
     plugin_type = "foe"
 
     hp: int = 1000
-    max_hp: int = 1000
-    atk: int = 100
-    defense: int = 50
     gold: int = 1
     char_type: CharacterType = CharacterType.C
     prompt: str = "Foe prompt placeholder"
@@ -103,6 +100,11 @@ class FoeBase(Stats):
                 CharacterType.B: "female",
                 CharacterType.C: "neutral",
             }.get(self.char_type)
+
+        # Set base stats for foes (before calling super().__post_init__)
+        self._base_max_hp = 1000
+        self._base_atk = 100
+        self._base_defense = 50
 
         super().__post_init__()
 
