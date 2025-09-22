@@ -1,6 +1,22 @@
 Coder, implement a dedicated encrypted tracking database to record every run, menu interaction, and party action for analytics.
 
-## Requirements
+## Current Status
+- SQLCipher-backed tracking database lives in `backend/tracking/` with `TrackingDBManager` helpers exposed through `tracking/service.py`.
+- Read-only `/tracking` blueprint registered in `backend/app.py` exposes analytics data for runs, pulls, menu actions, and more.
+- Instrumentation added across run lifecycle, rewards, shop, battles, guidebook/catalog/config/gacha/player endpoints, and login rewards to emit telemetry.
+- Telemetry schema created in `backend/tracking/migrations/001_init.sql`, documentation updated in `backend/.codex/implementation/save-manager.md`, and regression coverage added via `backend/tests/test_tracking_service.py`.
+- Async logging helpers in `backend/tracking/service.py` offload writes to worker threads so gameplay coroutines stay responsive while events are persisted.
+
+## Outstanding Follow-ups
+- Design frontend dashboard and reporting UX for the `/tracking` analytics endpoints.
+- Build migration utilities if legacy installations require porting historical run data into `track.db`.
+- Expand coverage for edge cases (failed gacha pulls, invalid settings changes, simultaneous battles/shops) and validate telemetry performance under load.
+
+## Validation
+- `uv run pytest tests/test_tracking_service.py`
+- `uv run pytest tests/test_gacha.py`
+
+## Requirements (fulfilled)
 - Create a separate SQLCipher-encrypted SQLite database (`track.db`) managed by a new `TrackingDBManager`.
 - Derive the encryption key using the same mechanism as `SaveManager` (env-based password or key).
 - Define normalized schema:
@@ -37,3 +53,5 @@ Coder, implement a dedicated encrypted tracking database to record every run, me
 - Do not store detailed battle logs or per-turn actions—only aggregate metrics.
 - Maintain separation from the primary save database to avoid corrupting player saves.
 - Schema should be extensible for future action types and analytics.
+
+task done

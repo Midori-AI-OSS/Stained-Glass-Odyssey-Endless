@@ -31,6 +31,10 @@ from autofighter.summons.manager import SummonManager
 from plugins import foes as foe_plugins
 from plugins.damage_types import load_damage_type
 
+from tracking import log_event_choice
+from tracking import log_game_action
+from tracking import log_shop_transaction
+
 
 def _boss_matches_node(info: Any, node: Any) -> bool:
     try:
@@ -382,6 +386,20 @@ async def shop_room(run_id: str, data: dict[str, Any]) -> dict[str, Any]:
     payload = {**result}
     if next_type is not None:
         payload["next_room"] = next_type
+    transactions = result.get("transactions", []) if isinstance(result, dict) else []
+    for tx in transactions:
+        try:
+            await log_shop_transaction(
+                run_id,
+                str(node.room_id),
+                tx.get("item_type"),
+                tx.get("item_id"),
+                tx.get("cost"),
+                tx.get("action", "purchase"),
+                details=tx,
+            )
+        except Exception:
+            pass
     return payload
 
 
@@ -403,6 +421,22 @@ async def chat_room(run_id: str, data: dict[str, Any]) -> dict[str, Any]:
     )
     await asyncio.to_thread(save_map, run_id, state)
     await asyncio.to_thread(save_party, run_id, party)
+    try:
+        await log_event_choice(
+            run_id,
+            str(node.room_id),
+            "chat",
+            data.get("message"),
+            {"response": result.get("response")},
+        )
+        await log_game_action(
+            "chat_room",
+            run_id=run_id,
+            room_id=str(node.room_id),
+            details={"message": data.get("message"), "voice": result.get("voice")},
+        )
+    except Exception:
+        pass
     return {**result, "next_room": next_type}
 
 

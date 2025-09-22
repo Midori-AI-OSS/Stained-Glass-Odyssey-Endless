@@ -6,6 +6,8 @@ from quart import jsonify
 # Import plugin registries directly to build metadata
 from autofighter.cards import _registry as card_registry
 from autofighter.relics import _registry as relic_registry
+from tracking import log_menu_action
+from tracking import log_overlay_action
 
 bp = Blueprint("catalog", __name__, url_prefix="/catalog")
 
@@ -26,7 +28,13 @@ async def list_cards():
         except Exception:
             # Skip malformed plugins rather than erroring the whole list
             continue
-    return jsonify({"cards": cards})
+    payload = {"cards": cards}
+    try:
+        await log_menu_action("Inventory", "view_cards", {"count": len(cards)})
+        await log_overlay_action("inventory", {"section": "cards", "count": len(cards)})
+    except Exception:
+        pass
+    return jsonify(payload)
 
 
 @bp.get("/relics")
@@ -45,7 +53,13 @@ async def list_relics():
             })
         except Exception:
             continue
-    return jsonify({"relics": relics})
+    payload = {"relics": relics}
+    try:
+        await log_menu_action("Inventory", "view_relics", {"count": len(relics)})
+        await log_overlay_action("inventory", {"section": "relics", "count": len(relics)})
+    except Exception:
+        pass
+    return jsonify(payload)
 
 
 @bp.get("/dots")

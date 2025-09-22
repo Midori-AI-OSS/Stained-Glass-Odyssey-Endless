@@ -9,6 +9,9 @@ from quart import request
 from runs.encryption import get_save_manager
 
 from autofighter.gacha import GachaManager
+from tracking import log_character_pull
+from tracking import log_menu_action
+from tracking import log_overlay_action
 
 bp = Blueprint("gacha", __name__)
 
@@ -20,6 +23,11 @@ async def gacha_state() -> tuple[str, int, dict[str, object]]:
         return manager.get_state()
 
     state = await asyncio.to_thread(get_gacha_state)
+    try:
+        await log_menu_action("Warp", "view", state)
+        await log_overlay_action("warp", state)
+    except Exception:
+        pass
     return jsonify(state)
 
 
@@ -48,4 +56,13 @@ async def gacha_pull() -> tuple[str, int, dict[str, object]]:
         return jsonify({"error": "banner not available"}), 400
     if error == "insufficient tickets":
         return jsonify({"error": "insufficient tickets"}), 403
+    try:
+        await log_menu_action("Warp", "pull", {"count": count, "banner": banner_id})
+        for entry in result.get("results", []):
+            cid = entry.get("id")
+            rarity = str(entry.get("rarity"))
+            if cid:
+                await log_character_pull(cid, rarity, banner_id)
+    except Exception:
+        pass
     return jsonify(result)

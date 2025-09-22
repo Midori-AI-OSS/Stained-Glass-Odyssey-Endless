@@ -1,0 +1,42 @@
+"""Convenience imports for tracking helpers."""
+from .manager import get_tracking_manager
+from .service import (
+    log_achievement_unlock,
+    log_battle_summary,
+    log_card_acquisition,
+    log_deck_change,
+    log_event_choice,
+    log_game_action,
+    log_login_event,
+    log_menu_action,
+    log_overlay_action,
+    log_play_session_end,
+    log_play_session_start,
+    log_run_end,
+    log_run_start,
+    log_settings_change,
+    log_shop_transaction,
+    log_character_pull,
+    log_relic_acquisition,
+)
+
+__all__ = [
+    "get_tracking_manager",
+    "log_achievement_unlock",
+    "log_battle_summary",
+    "log_card_acquisition",
+    "log_character_pull",
+    "log_deck_change",
+    "log_event_choice",
+    "log_game_action",
+    "log_login_event",
+    "log_menu_action",
+    "log_overlay_action",
+    "log_play_session_end",
+    "log_play_session_start",
+    "log_relic_acquisition",
+    "log_run_end",
+    "log_run_start",
+    "log_settings_change",
+    "log_shop_transaction",
+]

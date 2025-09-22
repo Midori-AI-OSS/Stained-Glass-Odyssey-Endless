@@ -18,6 +18,7 @@ from runs.encryption import get_save_manager
 
 from autofighter.gacha import GachaManager
 from plugins.damage_types import ALL_DAMAGE_TYPES
+from tracking import log_login_event
 
 PT_ZONE = ZoneInfo("America/Los_Angeles")
 RESET_OFFSET = timedelta(hours=2)
@@ -387,6 +388,10 @@ async def get_login_reward_status(now: datetime | None = None) -> dict[str, Any]
         state = await _load_state()
         current_time = _ensure_timezone(now)
         changed = _refresh_state(state, current_time, mark_login=True)
+        try:
+            await log_login_event("local", "login_reward_status", True, {"changed": changed})
+        except Exception:
+            pass
 
         reward_day = _reward_day(current_time)
         claimed_today = _parse_date(state.last_claim_day) == reward_day
@@ -416,6 +421,10 @@ async def record_room_completion(now: datetime | None = None) -> None:
         state = await _load_state()
         current_time = _ensure_timezone(now)
         changed = _refresh_state(state, current_time, mark_login=True)
+        try:
+            await log_login_event("local", "login_reward_status", True, {"changed": changed})
+        except Exception:
+            pass
 
         previous = state.rooms_completed
         state.rooms_completed = previous + 1

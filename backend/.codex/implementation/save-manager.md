@@ -25,6 +25,24 @@ setup so tests can override `AF_DB_PATH` and `AF_DB_KEY` before the first call.
   migrations so wipes rebuild them.
   `DELETE /run/<id>` removes a single active run without touching other data.
 
+## Tracking database
+- Telemetry lives in a separate SQLCipher database (`track.db`) managed by
+  `tracking.TrackingDBManager`. The encryption key is derived from the same
+  environment variables as the primary save database (`AF_DB_KEY` or the SHA-256
+  of `AF_DB_PASSWORD`).
+- `tracking/migrations` bootstrap the schema, which records run metadata,
+  battle summaries, menu interactions, deck changes, shop transactions, overlay
+  usage, gacha pulls, login events, and play session durations.
+- `tracking.service` exposes async helpers (e.g., `log_run_start`,
+  `log_battle_summary`, `log_menu_action`) that offload writes to background
+  threads so gameplay coroutines remain responsive.
+- Read-only analytics endpoints are available under `/tracking/*` for run lists,
+  run detail breakdowns, and aggregate statistics. The main `app.py`
+  registers the blueprint automatically.
+- Runs, sessions, and defeat events synchronise both databases: defeating a run
+  updates the telemetry tables before the encrypted save record is deleted, and
+  manual run ends update telemetry through the UI routes.
+
 ## Run snapshots
 - `POST /run/start` clones the player's pronouns, damage type, and stat points
   into the run record so mid-run edits to the player editor do not change the
