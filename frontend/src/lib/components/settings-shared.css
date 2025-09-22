@@ -145,6 +145,24 @@
   padding-right: 2.5rem;
 }
 
+.settings-panel select option,
+.settings-panel select optgroup {
+  background-color: rgba(12, 18, 36, 0.96);
+  color: rgba(235, 244, 255, 0.96);
+}
+
+.settings-panel select option:checked,
+.settings-panel select option:focus,
+.settings-panel select option:focus-visible {
+  background-color: color-mix(in srgb, var(--accent, #7ec8ff) 26%, rgba(12, 18, 36, 1));
+  color: rgba(255, 255, 255, 0.98);
+}
+
+.settings-panel select option:disabled {
+  color: rgba(235, 244, 255, 0.45);
+  background-color: rgba(12, 18, 36, 0.6);
+}
+
 .settings-panel select::-ms-expand {
   display: none;
 }
