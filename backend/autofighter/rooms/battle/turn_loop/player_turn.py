@@ -106,6 +106,9 @@ async def _run_player_turn_iteration(
         await pace_sleep(YIELD_MULTIPLIER)
         return PlayerTurnIterationResult(repeat=False, battle_over=False)
 
+    context.action_turn += 1
+    actor_turn_index = context.action_turn
+
     enrage_update = await update_enrage_state(
         context.turn,
         context.enrage_state,
@@ -141,7 +144,7 @@ async def _run_player_turn_iteration(
     )
     await BUS.emit_async("turn_start", member)
     log.debug("%s turn start", getattr(member, "id", member))
-    await member.maybe_regain(context.turn)
+    await member.maybe_regain(actor_turn_index)
 
     if not _any_foes_alive(context.foes):
         await finish_turn(

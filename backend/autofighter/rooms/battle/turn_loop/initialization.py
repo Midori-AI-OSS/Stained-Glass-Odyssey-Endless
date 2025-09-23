@@ -45,7 +45,8 @@ class TurnLoopContext:
     battle_tasks: dict[str, Task[Any]]
     abort: Callable[[str], None]
     credited_foe_ids: set[str]
-    turn: int
+    turn: int = 0
+    action_turn: int = 0
 
     @property
     def credit_kwargs(self) -> dict[str, Any]:
@@ -95,6 +96,7 @@ async def initialize_turn_loop(
         abort=abort,
         credited_foe_ids=set(),
         turn=0,
+        action_turn=0,
     )
 
     prepare_snapshot_overlay(
