@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-from collections import deque
 from dataclasses import dataclass
 import logging
 from typing import TYPE_CHECKING
@@ -11,11 +10,9 @@ from typing import Callable
 from typing import Iterable
 from typing import MutableMapping
 from typing import Sequence
-import weakref
 
 from autofighter.cards import _registry as _card_registry
 from autofighter.effects import create_stat_buff
-from autofighter.party import Party
 from autofighter.relics import _registry as _relic_registry
 from autofighter.stats import BUS
 from autofighter.summons.base import Summon
@@ -24,6 +21,7 @@ from autofighter.summons.manager import SummonManager
 from ...stats import Stats
 from ...stats import set_enrage_percent
 from ..utils import _serialize
+from . import snapshots as _snapshots
 from .pacing import YIELD_MULTIPLIER
 from .pacing import pace_sleep
 
@@ -32,122 +30,16 @@ if TYPE_CHECKING:
 
 log = logging.getLogger(__name__)
 
-_MISSING = object()
-_RECENT_EVENT_LIMIT = 6
-
-_entity_run_ids: dict[int, str] = {}
-_entity_refs: dict[int, weakref.ref[Stats]] = {}
-_party_run_ids: dict[int, str] = {}
-_party_refs: dict[int, weakref.ref[Party]] = {}
-_recent_events: dict[str, deque[dict[str, Any]]] = {}
-_status_phases: dict[str, dict[str, Any] | None] = {}
+register_snapshot_entities = _snapshots.register_snapshot_entities
+prepare_snapshot_overlay = _snapshots.prepare_snapshot_overlay
+mutate_snapshot_overlay = _snapshots.mutate_snapshot_overlay
 
 _card_name_cache: dict[str, str | None] = {}
 _relic_name_cache: dict[str, str | None] = {}
 
+
 def _resolve_run_id(*entities: Any) -> str | None:
-    for entity in entities:
-        if isinstance(entity, Stats):
-            run_id = _entity_run_ids.get(id(entity))
-            if run_id:
-                return run_id
-        if isinstance(entity, Party):
-            run_id = _party_run_ids.get(id(entity))
-            if run_id:
-                return run_id
-    return None
-
-
-def register_snapshot_entities(run_id: str | None, entities: Iterable[Any]) -> None:
-    """Associate combatants with a run for incremental snapshot updates."""
-
-    if not run_id:
-        return
-    for entity in entities:
-        if isinstance(entity, Stats):
-            ident = id(entity)
-
-            def _cleanup(_ref: weakref.ref[Stats], *, key: int = ident) -> None:
-                _entity_run_ids.pop(key, None)
-                _entity_refs.pop(key, None)
-
-            _entity_run_ids[ident] = run_id
-            _entity_refs[ident] = weakref.ref(entity, _cleanup)
-        elif isinstance(entity, Party):
-            ident = id(entity)
-
-            def _cleanup(_ref: weakref.ref[Party], *, key: int = ident) -> None:
-                _party_run_ids.pop(key, None)
-                _party_refs.pop(key, None)
-
-            _party_run_ids[ident] = run_id
-            _party_refs[ident] = weakref.ref(entity, _cleanup)
-
-
-def prepare_snapshot_overlay(run_id: str | None, entities: Iterable[Any]) -> None:
-    """Reset incremental snapshot state and register the supplied combatants."""
-
-    if not run_id:
-        return
-    register_snapshot_entities(run_id, entities)
-    queue = _recent_events.get(run_id)
-    if queue is None:
-        queue = deque(maxlen=_RECENT_EVENT_LIMIT)
-        _recent_events[run_id] = queue
-    else:
-        queue.clear()
-    _status_phases.pop(run_id, None)
-    snapshot = _get_snapshot(run_id)
-    snapshot.setdefault("recent_events", [])
-    snapshot.pop("status_phase", None)
-
-
-def _ensure_event_queue(run_id: str) -> deque[dict[str, Any]]:
-    queue = _recent_events.get(run_id)
-    if queue is None:
-        queue = deque(maxlen=_RECENT_EVENT_LIMIT)
-        _recent_events[run_id] = queue
-    return queue
-
-
-def _get_snapshot(run_id: str) -> dict[str, Any]:
-    from runs.lifecycle import battle_snapshots
-
-    snap = battle_snapshots.get(run_id)
-    if snap is None:
-        snap = {"result": "battle"}
-        battle_snapshots[run_id] = snap
-    return snap
-
-
-def mutate_snapshot_overlay(
-    run_id: str | None,
-    *,
-    active_id: str | None | object = _MISSING,
-    active_target_id: str | None | object = _MISSING,
-    status_phase: dict[str, Any] | None | object = _MISSING,
-    event: dict[str, Any] | None = None,
-) -> None:
-    """Mutate the stored battle snapshot for incremental UI feedback."""
-
-    if not run_id:
-        return
-    snapshot = _get_snapshot(run_id)
-    if active_id is not _MISSING:
-        snapshot["active_id"] = active_id
-    if active_target_id is not _MISSING:
-        snapshot["active_target_id"] = active_target_id
-    if status_phase is not _MISSING:
-        _status_phases[run_id] = status_phase
-        snapshot["status_phase"] = status_phase
-    elif run_id in _status_phases:
-        snapshot["status_phase"] = _status_phases[run_id]
-    if event is not None:
-        queue = _ensure_event_queue(run_id)
-        queue.append(event)
-    queue = _recent_events.get(run_id)
-    if queue is not None:
-        snapshot["recent_events"] = list(queue)
+    return _snapshots.resolve_run_id(*entities)
 
 
 def _status_payload(
@@ -320,11 +212,13 @@ def _on_hit_landed(
         metadata={k: v for k, v in metadata.items() if v is not None},
     )
     if attacker is not None or target is not None:
-        mutate_snapshot_overlay(
-            run_id,
-            active_id=getattr(attacker, "id", None) if attacker else _MISSING,
-            active_target_id=getattr(target, "id", None) if target else _MISSING,
-        )
+        kwargs: dict[str, Any] = {}
+        if attacker is not None:
+            kwargs["active_id"] = getattr(attacker, "id", None)
+        if target is not None:
+            kwargs["active_target_id"] = getattr(target, "id", None)
+        if kwargs:
+            mutate_snapshot_overlay(run_id, **kwargs)
 
 
 def _on_damage_taken(
@@ -811,10 +705,12 @@ async def build_battle_progress_payload(
         "active_target_id": active_target_id,
     }
     if run_id:
-        if run_id in _recent_events:
-            payload["recent_events"] = list(_recent_events[run_id])
-        if run_id in _status_phases:
-            payload["status_phase"] = _status_phases[run_id]
+        events = _snapshots.get_recent_events(run_id)
+        if events is not None:
+            payload["recent_events"] = events
+        status_phase = _snapshots.get_status_phase(run_id)
+        if status_phase is not None:
+            payload["status_phase"] = status_phase
     if ended is not None:
         payload["ended"] = ended
     return payload
