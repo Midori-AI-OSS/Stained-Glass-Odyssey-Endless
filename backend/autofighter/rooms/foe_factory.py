@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from dataclasses import fields
 import random
 from typing import Any
 from typing import Collection
@@ -9,13 +8,15 @@ from typing import Iterable
 from typing import Mapping
 
 from autofighter.effects import StatModifier
-from autofighter.effects import create_stat_buff
-from autofighter.effects import get_current_stat_value
-from autofighter.mapgen import MapGenerator
 from autofighter.mapgen import MapNode
 from autofighter.party import Party
 from autofighter.rooms.foes import SpawnTemplate
 from autofighter.rooms.foes.catalog import load_catalog
+from autofighter.rooms.foes.scaling import apply_attribute_scaling
+from autofighter.rooms.foes.scaling import apply_base_debuffs
+from autofighter.rooms.foes.scaling import calculate_cumulative_rooms
+from autofighter.rooms.foes.scaling import compute_base_multiplier
+from autofighter.rooms.foes.scaling import enforce_thresholds
 from autofighter.rooms.foes.selector import _choose_template
 from autofighter.rooms.foes.selector import _desired_count
 from autofighter.rooms.foes.selector import _sample_templates
@@ -53,92 +54,6 @@ ROOM_BALANCE_CONFIG: dict[str, Any] = {
     "scaling_modifier_id": "foe_room_scaling",
     "pressure_modifier_id": "foe_pressure_scaling",
 }
-
-
-def _ensure_pending(stats: Stats, modifier: StatModifier) -> None:
-    pending = getattr(stats, "_pending_mods", None)
-    if pending is None:
-        pending = []
-        setattr(stats, "_pending_mods", pending)
-    pending.append(modifier)
-
-
-def apply_permanent_scaling(
-    stats: Stats,
-    *,
-    multipliers: Mapping[str, float] | None = None,
-    deltas: Mapping[str, float] | None = None,
-    name: str,
-    modifier_id: str,
-) -> StatModifier | None:
-    """Apply a permanent stat modifier while respecting diminishing returns."""
-
-    modifiers: dict[str, float] = {}
-    if multipliers:
-        for key, value in multipliers.items():
-            if not isinstance(value, (int, float)):
-                continue
-            if not hasattr(stats, key):
-                continue
-            try:
-                current_value = float(get_current_stat_value(stats, key))
-            except Exception:
-                continue
-            multiplier = float(value)
-            target_value = current_value * multiplier
-            target_delta = 0.0
-            base_adjusted = False
-            base_value: float | None = None
-            base_attr = f"_base_{key}"
-            if (
-                hasattr(stats, "get_base_stat")
-                and hasattr(stats, "set_base_stat")
-                and hasattr(stats, base_attr)
-            ):
-                try:
-                    raw_base = stats.get_base_stat(key)
-                except Exception:
-                    raw_base = None
-                if isinstance(raw_base, (int, float)):
-                    base_value = float(raw_base)
-                    existing_effect = current_value - base_value
-                    new_base_value = target_value - existing_effect
-                    try:
-                        cast_value = type(raw_base)(new_base_value)
-                    except Exception:
-                        cast_value = new_base_value
-                    try:
-                        stats.set_base_stat(key, cast_value)
-                        base_adjusted = True
-                        current_value = float(get_current_stat_value(stats, key))
-                    except Exception:
-                        base_adjusted = False
-            if base_adjusted:
-                target_delta = target_value - current_value
-            else:
-                target_delta = target_value - current_value
-            if abs(target_delta) < 1e-9:
-                continue
-            modifiers[key] = modifiers.get(key, 0.0) + target_delta
-    if deltas:
-        for key, value in deltas.items():
-            if not isinstance(value, (int, float)):
-                continue
-            modifiers[key] = modifiers.get(key, 0.0) + float(value)
-    if not modifiers:
-        return None
-    effect = create_stat_buff(
-        stats,
-        name=name,
-        id=modifier_id,
-        turns=-1,
-        bypass_diminishing=False,
-        **modifiers,
-    )
-    _ensure_pending(stats, effect)
-    return effect
-
-
 class FoeFactory:
     """Factory responsible for foe discovery and encounter assembly."""
 
@@ -292,163 +207,26 @@ class FoeFactory:
         return chance, chance
 
     def scale_stats(self, obj: Stats, node: MapNode, strength: float = 1.0) -> None:
-        starter_int = 1.0 + random.uniform(-self.config["scaling_variance"], self.config["scaling_variance"])
-        cumulative_rooms = (node.floor - 1) * MapGenerator.rooms_per_floor + node.index
-        room_mult = starter_int + self.config["room_growth_multiplier"] * max(cumulative_rooms - 1, 0)
-        loop_mult = starter_int + self.config["loop_growth_multiplier"] * max(node.loop - 1, 0)
-        pressure_mult = self.config["pressure_multiplier"] * max(node.pressure, 1)
-        base_mult = max(strength * room_mult * loop_mult * pressure_mult, 0.5)
-
-        foe_debuff = self.config["foe_base_debuff"] if isinstance(obj, FoeBase) else 1.0
-        apply_permanent_scaling(
-            obj,
-            multipliers={"atk": foe_debuff, "max_hp": foe_debuff},
-            name="Base foe debuff",
-            modifier_id=self.config["base_debuff_id"],
+        cumulative_rooms = calculate_cumulative_rooms(node)
+        base_mult = compute_base_multiplier(
+            strength,
+            node,
+            self.config,
+            cumulative_rooms=cumulative_rooms,
         )
-        if isinstance(obj, FoeBase):
-            apply_permanent_scaling(
-                obj,
-                multipliers={"defense": min((foe_debuff * node.floor) / 4, 1.0)},
-                name="Base foe defense debuff",
-                modifier_id=f"{self.config['base_debuff_id']}_defense",
-            )
-
-        base_stat_aliases = {
-            "max_hp",
-            "atk",
-            "defense",
-            "crit_rate",
-            "crit_damage",
-            "effect_hit_rate",
-            "mitigation",
-            "regain",
-            "dodge_odds",
-            "effect_resistance",
-            "vitality",
-        }
-        multipliers = {}
-        for field_info in fields(type(obj)):
-            name = field_info.name
-            if name in {"exp", "level", "exp_multiplier"} or name.startswith("_"):
-                continue
-            target_name = name
-            if target_name.startswith("base_"):
-                alias = target_name[5:]
-                if alias in base_stat_aliases:
-                    target_name = alias
-                else:
-                    continue
-            value = getattr(obj, target_name, None)
-            if isinstance(value, (int, float)):
-                per_stat_variation = 1.0 + random.uniform(-self.config["scaling_variance"], self.config["scaling_variance"])
-                multipliers[target_name] = base_mult * per_stat_variation
-        apply_permanent_scaling(
+        foe_debuff = apply_base_debuffs(obj, node, self.config)
+        apply_attribute_scaling(
             obj,
-            multipliers=multipliers,
-            name="Room scaling",
-            modifier_id=self.config["scaling_modifier_id"],
+            base_mult,
+            self.config,
         )
-
-        try:
-            room_num = max(int(cumulative_rooms), 1)
-            desired = max(1, int(room_num / 2))
-            obj.level = int(max(getattr(obj, "level", 1), desired))
-        except Exception:
-            pass
-
-        try:
-            room_num = max(int(node.index), 1)
-            base_hp = int(15 * room_num * (foe_debuff if isinstance(obj, FoeBase) else 1.0))
-            low = int(base_hp * 0.85)
-            high = int(base_hp * 1.10)
-            target = random.randint(low, max(high, low + 1))
-            current_max = int(getattr(obj, "max_hp", 1))
-            new_max = max(current_max, target)
-            obj.set_base_stat("max_hp", new_max)
-            obj.hp = new_max
-        except Exception:
-            pass
-
-        try:
-            cd = getattr(obj, "crit_damage", None)
-            if isinstance(cd, (int, float)):
-                obj.set_base_stat("crit_damage", max(float(cd), 2.0))
-        except Exception:
-            pass
-
-        if isinstance(obj, FoeBase):
-            try:
-                er = getattr(obj, "effect_resistance", None)
-                if isinstance(er, (int, float)):
-                    obj.set_base_stat("effect_resistance", max(0.0, float(er)))
-            except Exception:
-                pass
-            try:
-                apt = getattr(obj, "actions_per_turn", None)
-                if isinstance(apt, (int, float)):
-                    obj.actions_per_turn = int(
-                        min(max(1, int(apt)), int(self.config["max_actions_per_turn"]))
-                    )
-            except Exception:
-                pass
-            try:
-                ap = getattr(obj, "action_points", None)
-                if isinstance(ap, (int, float)):
-                    obj.action_points = int(
-                        min(max(0, int(ap)), int(self.config["max_action_points"]))
-                    )
-            except Exception:
-                pass
-
-        try:
-            if isinstance(obj, FoeBase):
-                d = getattr(obj, "defense", None)
-                if isinstance(d, (int, float)):
-                    override = getattr(obj, "min_defense_override", None)
-                    if isinstance(override, (int, float)):
-                        min_def = max(int(override), 0)
-                    else:
-                        min_def = 2 + cumulative_rooms
-                    if d < min_def:
-                        obj.set_base_stat("defense", min_def)
-        except Exception:
-            pass
-
-        try:
-            if isinstance(obj, FoeBase) and node.pressure > 0:
-                d = getattr(obj, "defense", None)
-                if isinstance(d, (int, float)):
-                    base_def = node.pressure * self.config["pressure_defense_floor"]
-                    min_factor = float(self.config["pressure_defense_min_roll"])
-                    max_factor = float(self.config["pressure_defense_max_roll"])
-                    random_factor = random.uniform(min_factor, max_factor)
-                    pressure_defense = int(base_def * random_factor)
-                    if pressure_defense > d:
-                        obj.set_base_stat("defense", pressure_defense)
-        except Exception:
-            pass
-
-        for attr, thr, step, base in (
-            ("vitality", 0.5, 0.25, 5.0),
-            ("mitigation", 0.2, 0.01, 5.0),
-        ):
-            try:
-                if isinstance(obj, FoeBase):
-                    value = getattr(obj, attr, None)
-                    if isinstance(value, (int, float)):
-                        fval = float(value)
-                        if fval < thr:
-                            fval = thr
-                        else:
-                            excess = fval - thr
-                            steps = int(excess // step)
-                            factor = base + steps
-                            fval = thr + (excess / factor)
-                            fval = max(fval, thr)
-                        obj.set_base_stat(attr, fval)
-            except Exception:
-                pass
+        enforce_thresholds(
+            obj,
+            node,
+            self.config,
+            cumulative_rooms=cumulative_rooms,
+            foe_debuff=foe_debuff,
+        )
 
 
 _FACTORY: FoeFactory | None = None
