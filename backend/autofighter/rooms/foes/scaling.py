@@ -5,8 +5,7 @@ from dataclasses import fields
 import random
 from typing import Any
 
-from autofighter.effects import StatModifier
-from autofighter.effects import create_stat_buff
+from autofighter.effects import calculate_diminishing_returns
 from autofighter.effects import get_current_stat_value
 from autofighter.mapgen import MapGenerator
 from autofighter.mapgen import MapNode
@@ -21,77 +20,128 @@ def apply_permanent_scaling(
     deltas: Mapping[str, float] | None = None,
     name: str,
     modifier_id: str,
-) -> StatModifier | None:
-    """Apply a permanent stat modifier while respecting diminishing returns."""
+) -> dict[str, float]:
+    """Adjust base stats permanently according to the provided scaling.
 
-    modifiers: dict[str, float] = {}
+    The previous implementation produced a :class:`~autofighter.effects.StatModifier`
+    so the changes only applied once an :class:`~autofighter.effects.EffectManager`
+    consumed the pending modifier list.  Foes are now updated immediately by
+    writing directly to their base stat fields while respecting the
+    :func:`~autofighter.effects.calculate_diminishing_returns` soft caps used by
+    temporary buffs.  The return value contains the additive deltas applied to
+    each base attribute for observability.
+    """
+
+    deltas_applied: dict[str, float] = {}
+    if not hasattr(stats, "set_base_stat") or not hasattr(stats, "get_base_stat"):
+        return deltas_applied
+
+    def _resolve_base(key: str) -> tuple[float | None, type | None]:
+        base_attr = f"_base_{key}"
+        if not hasattr(stats, base_attr):
+            return None, None
+        try:
+            raw_base = stats.get_base_stat(key)
+        except Exception:
+            raw_base = getattr(stats, base_attr, None)
+        if isinstance(raw_base, (int, float)):
+            return float(raw_base), type(raw_base)
+        return None, None
+
+    def _resolve_current(key: str) -> float | None:
+        if not hasattr(stats, key):
+            return None
+        try:
+            return float(get_current_stat_value(stats, key))
+        except Exception:
+            value = getattr(stats, key, None)
+            if isinstance(value, (int, float)):
+                return float(value)
+        return None
+
+    def _diminishing_factor(key: str, current_value: float | None) -> float:
+        if current_value is None:
+            return 1.0
+        try:
+            factor = float(calculate_diminishing_returns(key, current_value))
+        except Exception:
+            return 1.0
+        return max(factor, 0.0)
+
     if multipliers:
         for key, value in multipliers.items():
             if not isinstance(value, (int, float)):
                 continue
-            if not hasattr(stats, key):
+            current_value = _resolve_current(key)
+            if current_value is None:
                 continue
-            try:
-                current_value = float(get_current_stat_value(stats, key))
-            except Exception:
+            base_value, base_type = _resolve_base(key)
+            if base_value is None:
+                base_value = current_value
+            if base_value is None:
                 continue
             multiplier = float(value)
-            target_value = current_value * multiplier
-            target_delta = 0.0
-            base_adjusted = False
-            base_value: float | None = None
-            base_attr = f"_base_{key}"
-            if (
-                hasattr(stats, "get_base_stat")
-                and hasattr(stats, "set_base_stat")
-                and hasattr(stats, base_attr)
-            ):
-                try:
-                    raw_base = stats.get_base_stat(key)
-                except Exception:
-                    raw_base = None
-                if isinstance(raw_base, (int, float)):
-                    base_value = float(raw_base)
-                    existing_effect = current_value - base_value
-                    new_base_value = target_value - existing_effect
-                    try:
-                        cast_value = type(raw_base)(new_base_value)
-                    except Exception:
-                        cast_value = new_base_value
-                    try:
-                        stats.set_base_stat(key, cast_value)
-                        base_adjusted = True
-                        current_value = float(get_current_stat_value(stats, key))
-                    except Exception:
-                        base_adjusted = False
-            if base_adjusted:
-                target_delta = target_value - current_value
+            additive_change = base_value * (multiplier - 1.0)
+            should_scale = additive_change > 0.0 and multiplier > 1.0
+            if should_scale:
+                scaling_factor = _diminishing_factor(key, current_value)
+                scaled_change = additive_change * scaling_factor
             else:
-                target_delta = target_value - current_value
-            if abs(target_delta) < 1e-9:
+                scaled_change = additive_change
+            if abs(scaled_change) < 1e-9:
                 continue
-            modifiers[key] = modifiers.get(key, 0.0) + target_delta
+            new_base = base_value + scaled_change
+            cast_value: float | int
+            if base_type is not None:
+                try:
+                    cast_value = base_type(new_base)
+                except Exception:
+                    cast_value = new_base
+            else:
+                cast_value = new_base
+            try:
+                stats.set_base_stat(key, cast_value)
+            except Exception:
+                continue
+            final_base, _ = _resolve_base(key)
+            applied_delta = (
+                (final_base if final_base is not None else new_base) - base_value
+            )
+            deltas_applied[key] = applied_delta
+
     if deltas:
         for key, value in deltas.items():
             if not isinstance(value, (int, float)):
                 continue
-            modifiers[key] = modifiers.get(key, 0.0) + float(value)
-    if not modifiers:
-        return None
-    effect = create_stat_buff(
-        stats,
-        name=name,
-        id=modifier_id,
-        turns=-1,
-        bypass_diminishing=False,
-        **modifiers,
-    )
-    pending = getattr(stats, "_pending_mods", None)
-    if pending is None:
-        pending = []
-        setattr(stats, "_pending_mods", pending)
-    pending.append(effect)
-    return effect
+            base_value, base_type = _resolve_base(key)
+            if base_value is None:
+                base_value = 0.0
+            current_value = _resolve_current(key)
+            change = float(value)
+            should_scale = change > 0.0
+            scaling_factor = 1.0
+            if should_scale and current_value is not None:
+                scaling_factor = _diminishing_factor(key, current_value)
+            scaled_change = change * scaling_factor if should_scale else change
+            if abs(scaled_change) < 1e-9:
+                continue
+            new_base = base_value + scaled_change
+            if abs(new_base - base_value) < 1e-9:
+                continue
+            if base_type is not None:
+                try:
+                    cast_value = base_type(new_base)
+                except Exception:
+                    cast_value = new_base
+            else:
+                cast_value = new_base
+            try:
+                stats.set_base_stat(key, cast_value)
+            except Exception:
+                continue
+            deltas_applied[key] = new_base - base_value
+
+    return deltas_applied
 
 
 def calculate_cumulative_rooms(node: MapNode) -> int:

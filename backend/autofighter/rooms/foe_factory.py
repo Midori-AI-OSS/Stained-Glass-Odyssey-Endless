@@ -4,10 +4,8 @@ from dataclasses import dataclass
 import random
 from typing import Any
 from typing import Collection
-from typing import Iterable
 from typing import Mapping
 
-from autofighter.effects import StatModifier
 from autofighter.mapgen import MapNode
 from autofighter.party import Party
 from autofighter.rooms.foes import SpawnTemplate
@@ -29,7 +27,6 @@ class SpawnResult:
     """Concrete foe instance produced by the factory."""
 
     foe: FoeBase
-    modifiers: list[StatModifier]
 
 
 ROOM_BALANCE_CONFIG: dict[str, Any] = {
@@ -78,7 +75,6 @@ class FoeFactory:
 
     def _instantiate(self, template: SpawnTemplate) -> SpawnResult:
         foe = template.cls()
-        modifiers: list[StatModifier] = []
         foe.rank = template.base_rank
         if template.apply_adjective:
             adj_cls = self._choose_adjective()
@@ -90,9 +86,7 @@ class FoeFactory:
                     foe.name = f"{adjective.name} {original_name}".strip()
                 except Exception:
                     pass
-        pending: Iterable[StatModifier] = getattr(foe, "_pending_mods", [])
-        modifiers.extend(pending)
-        return SpawnResult(foe=foe, modifiers=modifiers)
+        return SpawnResult(foe=foe)
 
     def build_encounter(
         self,
