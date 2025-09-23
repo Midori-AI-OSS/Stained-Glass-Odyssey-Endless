@@ -17,6 +17,7 @@ from autofighter.mapgen import MapNode
 from autofighter.party import Party
 from autofighter.passives import PassiveRegistry
 from autofighter.relics import apply_relics
+from autofighter.stats import GAUGE_START
 from autofighter.stats import Stats
 from autofighter.summons.manager import SummonManager
 
@@ -128,6 +129,17 @@ async def setup_battle(
 
     try:
         entities = list(combat_party.members) + list(foes)
+        turn_counter = Stats()
+        setattr(turn_counter, "id", "turn_counter")
+        setattr(turn_counter, "name", "Turn Counter")
+        turn_counter.hp = 0
+        turn_counter.actions_per_turn = 0
+        turn_counter.action_points = 0
+        turn_counter.spd = 1
+        turn_counter.action_gauge = GAUGE_START
+        turn_counter.base_action_value = float(GAUGE_START)
+        turn_counter.action_value = float(GAUGE_START)
+        entities.append(turn_counter)
         visual_queue: ActionQueue | None = ActionQueue(entities)
     except Exception:
         visual_queue = None
@@ -135,16 +147,18 @@ async def setup_battle(
     set_visual_queue(visual_queue)
 
     battle_logger = start_battle_logging()
-    try:
-        if battle_logger is not None:
+    if getattr(battle_logger, "summary", None) is None:
+        battle_logger = None
+    else:
+        try:
             battle_logger.summary.party_members = [m.id for m in combat_party.members]
             battle_logger.summary.foes = [f.id for f in foes]
             relic_counts: dict[str, int] = {}
             for relic_id in combat_party.relics:
                 relic_counts[relic_id] = relic_counts.get(relic_id, 0) + 1
             battle_logger.summary.party_relics = relic_counts
-    except Exception:
-        pass
+        except Exception:
+            pass
 
     return BattleSetupResult(
         registry=registry,

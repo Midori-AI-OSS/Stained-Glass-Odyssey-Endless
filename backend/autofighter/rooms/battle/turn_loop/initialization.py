@@ -146,5 +146,6 @@ async def _send_initial_progress(context: TurnLoopContext) -> None:
         active_id=None,
         active_target_id=None,
         include_summon_foes=True,
+        visual_queue=context.visual_queue,
     )
     await pace_sleep(3 / TURN_PACING)

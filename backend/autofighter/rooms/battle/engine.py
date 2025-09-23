@@ -140,6 +140,7 @@ async def run_battle(
                 run_id=run_id,
                 active_id=None,
                 active_target_id=None,
+                visual_queue=visual_queue,
                 ended=True,
             )
         except Exception:
@@ -237,6 +238,7 @@ async def run_battle(
         party.members,
         foes,
         _EXTRA_TURNS,
+        visual_queue=visual_queue,
     )
     SummonManager.cleanup()
 

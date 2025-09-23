@@ -106,7 +106,6 @@ async def _run_player_turn_iteration(
         await pace_sleep(YIELD_MULTIPLIER)
         return PlayerTurnIterationResult(repeat=False, battle_over=False)
 
-    context.turn += 1
     enrage_update = await update_enrage_state(
         context.turn,
         context.enrage_state,
@@ -127,6 +126,7 @@ async def _run_player_turn_iteration(
             run_id=context.run_id,
             active_id=getattr(member, "id", None),
             active_target_id=None,
+            visual_queue=context.visual_queue,
         )
         await pace_sleep(YIELD_MULTIPLIER)
     await context.registry.trigger("turn_start", member)
@@ -247,6 +247,7 @@ async def _run_player_turn_iteration(
             active_id=getattr(member, "id", None),
             active_target_id=getattr(target_foe, "id", None),
             include_summon_foes=True,
+            visual_queue=context.visual_queue,
         )
         await _pace(action_start)
         await pace_sleep(YIELD_MULTIPLIER)
@@ -357,16 +358,17 @@ async def _run_player_turn_iteration(
                 context.progress,
                 context.combat_party.members,
                 context.foes,
-                context.enrage_state,
-                context.temp_rdr,
-                _EXTRA_TURNS,
-                context.turn,
-                run_id=context.run_id,
-                active_id=getattr(member, "id", None),
-                active_target_id=getattr(target_foe, "id", None),
-                include_summon_foes=True,
-            )
-            await pace_sleep(YIELD_MULTIPLIER)
+            context.enrage_state,
+            context.temp_rdr,
+            _EXTRA_TURNS,
+            context.turn,
+            run_id=context.run_id,
+            active_id=getattr(member, "id", None),
+            active_target_id=getattr(target_foe, "id", None),
+            include_summon_foes=True,
+            visual_queue=context.visual_queue,
+        )
+        await pace_sleep(YIELD_MULTIPLIER)
     except Exception:
         pass
 

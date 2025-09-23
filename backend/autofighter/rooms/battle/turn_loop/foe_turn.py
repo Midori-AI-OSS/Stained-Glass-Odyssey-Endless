@@ -290,6 +290,7 @@ async def _run_foe_turn_iteration(
                 active_id=getattr(acting_foe, "id", None),
                 active_target_id=getattr(target, "id", None),
                 include_summon_foes=True,
+                visual_queue=context.visual_queue,
             )
             await pace_sleep(YIELD_MULTIPLIER)
     except Exception:
