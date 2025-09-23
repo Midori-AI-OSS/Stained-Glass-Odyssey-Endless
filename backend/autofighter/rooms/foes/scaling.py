@@ -59,6 +59,15 @@ def apply_permanent_scaling(
                 return float(value)
         return None
 
+    def _diminishing_factor(key: str, current_value: float | None) -> float:
+        if current_value is None:
+            return 1.0
+        try:
+            factor = float(calculate_diminishing_returns(key, current_value))
+        except Exception:
+            return 1.0
+        return max(factor, 0.0)
+
     if multipliers:
         for key, value in multipliers.items():
             if not isinstance(value, (int, float)):
@@ -73,14 +82,12 @@ def apply_permanent_scaling(
                 continue
             multiplier = float(value)
             additive_change = base_value * (multiplier - 1.0)
-            scaling_factor = 1.0
-            try:
-                scaling_factor = float(
-                    calculate_diminishing_returns(key, current_value)
-                )
-            except Exception:
-                scaling_factor = 1.0
-            scaled_change = additive_change * scaling_factor
+            should_scale = additive_change > 0.0 and multiplier > 1.0
+            if should_scale:
+                scaling_factor = _diminishing_factor(key, current_value)
+                scaled_change = additive_change * scaling_factor
+            else:
+                scaled_change = additive_change
             if abs(scaled_change) < 1e-9:
                 continue
             new_base = base_value + scaled_change
@@ -110,15 +117,12 @@ def apply_permanent_scaling(
             if base_value is None:
                 base_value = 0.0
             current_value = _resolve_current(key)
+            change = float(value)
+            should_scale = change > 0.0
             scaling_factor = 1.0
-            if current_value is not None:
-                try:
-                    scaling_factor = float(
-                        calculate_diminishing_returns(key, current_value)
-                    )
-                except Exception:
-                    scaling_factor = 1.0
-            scaled_change = float(value) * scaling_factor
+            if should_scale and current_value is not None:
+                scaling_factor = _diminishing_factor(key, current_value)
+            scaled_change = change * scaling_factor if should_scale else change
             if abs(scaled_change) < 1e-9:
                 continue
             new_base = base_value + scaled_change
