@@ -32,6 +32,8 @@
   export let framerate = 60;
   export let reducedMotion = false;
   export let showActionValues = false;
+  export let showTurnCounter = true;
+  export let flashEnrageCounter = true;
   export let fullIdleMode = false;
   export let skipBattleReview = false;
   export let animationSpeed = 1;
@@ -165,6 +167,8 @@
       reducedMotion,
       showActionValues,
       fullIdleMode,
+      showTurnCounter,
+      flashEnrageCounter,
       skipBattleReview,
       animationSpeed: sanitizedSpeed
     };
@@ -343,6 +347,8 @@
   {:else if activeTab === 'gameplay'}
     <GameplaySettings
       bind:showActionValues
+      bind:showTurnCounter
+      bind:flashEnrageCounter
       bind:fullIdleMode
       bind:skipBattleReview
       bind:animationSpeed

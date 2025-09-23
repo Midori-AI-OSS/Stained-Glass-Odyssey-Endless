@@ -285,6 +285,7 @@ async def _run_foe_turn_iteration(
                 context.enrage_state,
                 context.temp_rdr,
                 _EXTRA_TURNS,
+                context.turn,
                 run_id=context.run_id,
                 active_id=getattr(acting_foe, "id", None),
                 active_target_id=getattr(target, "id", None),

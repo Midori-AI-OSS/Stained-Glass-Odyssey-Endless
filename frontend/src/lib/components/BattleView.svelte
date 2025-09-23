@@ -29,6 +29,8 @@
   export let showActionValues = false;
   // Hide status chips (DoTs/HoTs timeline) by default
   export let showStatusTimeline = false;
+  export let showTurnCounter = true;
+  export let flashEnrageCounter = true;
 
   // Use granular motion settings with fallback to legacy prop
   $: motionSettings = $motionStore || { 
@@ -44,6 +46,7 @@
   let combatants = [];
   let activeId = null;
   let activeTargetId = null;
+  let currentTurn = null;
   let statusPhase = null;
   let statusTimeline = [];
   let recentEvents = [];
@@ -136,6 +139,7 @@
     statusPhase = null;
     clearStatusTimeline();
     lastRunId = runId;
+    currentTurn = null;
   }
   $: if (!active) {
     floaterFeed = [];
@@ -146,6 +150,7 @@
     activeTargetId = null;
     statusPhase = null;
     clearStatusTimeline();
+    currentTurn = null;
   }
 
   // Compute and update anchor for a given id/node
@@ -1055,6 +1060,21 @@
         lastRecentEventTokens = [];
       }
 
+      const determineTurn = () => {
+        if (!snap || typeof snap !== 'object') return null;
+        if ('turn' in snap) return snap.turn;
+        if ('turn_count' in snap) return snap.turn_count;
+        if ('current_turn' in snap) return snap.current_turn;
+        if ('turnNumber' in snap) return snap.turnNumber;
+        if ('turn_index' in snap) return snap.turn_index;
+        return null;
+      };
+      const nextTurn = determineTurn();
+      if (nextTurn !== null && nextTurn !== undefined) {
+        const numericTurn = Number(nextTurn);
+        currentTurn = Number.isFinite(numericTurn) ? numericTurn : nextTurn;
+      }
+
       if (Array.isArray(snap.log)) logs = snap.log;
       else if (Array.isArray(snap.logs)) logs = snap.logs;
 
@@ -1149,7 +1169,12 @@
     {queue}
     {combatants}
     reducedMotion={effectiveReducedMotion}
+    effectiveReducedMotion={effectiveReducedMotion}
     {activeId}
+    {currentTurn}
+    {enrage}
+    {showTurnCounter}
+    {flashEnrageCounter}
     showActionValues={displayActionValues}
     on:hover={(e) => hoveredId = e.detail?.id || null}
   />

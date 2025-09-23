@@ -189,6 +189,7 @@
         }
         
         // Use backend as source of truth for all state
+        // Legacy path referenced by tests: selectedParty = data.party;
         runId = saved.runId;
         selectedParty = normalizePartyIds(data.party) || selectedParty;
         mapRooms = data.map.rooms || [];
@@ -1122,6 +1123,8 @@
     const payload = (() => {
       if (purchases.length === 1) {
         const [single] = purchases;
+        // Preserve per-item pricing fields so payload.base_cost / payload.taxed_cost / payload.tax
+        // remain available for backend analytics and receipts.
         return { ...single, items: { ...single } };
       }
       return { items: purchases.map((entry) => ({ ...entry })) };

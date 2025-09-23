@@ -7,9 +7,12 @@ import { join } from 'path';
     test('renders portraits and optional action values', () => {
       expect(content).toContain('getCharacterImage');
       expect(content).toContain('showActionValues');
+      expect(content).toContain('flashEnrageCounter');
+      expect(content).toContain('showTurnCounter');
       expect(content).toContain('animate:flip');
-      expect(content).toContain('class:bonus');
-      expect(content).toContain('.entry.active');
+      expect(content).toContain('bonus-badge');
+      expect(content).toContain('queue-header');
+      expect(content).toContain('enrage-chip');
     });
   });
 
@@ -19,13 +22,21 @@ describe('Settings menu toggle', () => {
     expect(content).toContain('Show Action Values');
     expect(content).toContain('bind:checked={showActionValues}');
   });
+  test('includes Show Turn Counter control', () => {
+    expect(content).toContain('Show Turn Counter');
+    expect(content).toContain('bind:checked={showTurnCounter}');
+  });
+  test('includes Flash Enrage Counter control', () => {
+    expect(content).toContain('Flash Enrage Counter');
+    expect(content).toContain('bind:checked={flashEnrageCounter}');
+  });
   test('includes Full Idle Mode control', () => {
     expect(content).toContain('Full Idle Mode');
     expect(content).toContain('bind:checked={fullIdleMode}');
   });
   test('includes Animation Speed slider', () => {
     expect(content).toContain('Animation Speed');
-    expect(content).toContain('type="range"');
-    expect(content).toContain('value={animationSpeed}');
+    expect(content).toContain('DotSelector');
+    expect(content).toContain('bind:value={dotSpeed}');
   });
 });

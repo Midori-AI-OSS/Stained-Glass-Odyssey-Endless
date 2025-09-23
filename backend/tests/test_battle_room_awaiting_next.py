@@ -39,7 +39,7 @@ async def test_battle_room_awaiting_next_returns_snapshot(app_module):
     state["awaiting_next"] = True
     await asyncio.to_thread(save_map, run_id, state)
 
-    battle_snapshots[run_id] = {"result": "battle", "awaiting_next": True}
+    battle_snapshots[run_id] = {"result": "battle", "turn": 0, "awaiting_next": True}
 
     assert run_id not in battle_tasks
 

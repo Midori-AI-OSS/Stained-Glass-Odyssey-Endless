@@ -101,7 +101,7 @@ async def test_battle_room_passes_recent_ids(app_module, monkeypatch):
         return [foe]
 
     async def fake_run_battle(run_id_param, room, foes, party, data, state_param, rooms_param, progress):
-        battle_snapshots[run_id_param] = {"result": "battle", "ended": True}
+        battle_snapshots[run_id_param] = {"result": "battle", "turn": 0, "ended": True}
 
     monkeypatch.setattr("services.room_service._build_foes", fake_build)
     monkeypatch.setattr("services.room_service._run_battle", fake_run_battle)
