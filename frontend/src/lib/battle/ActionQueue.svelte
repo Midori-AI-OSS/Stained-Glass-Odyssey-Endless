@@ -33,9 +33,14 @@
     return combatants.find((c) => c.id === id) || null;
   }
 
+  const TURN_COUNTER_ID = 'turn_counter';
+
   // Filter queue to alive/visible entries
   $: displayQueue = queue.filter((e) => {
-    const fighter = findCombatant(e.id);
+    const id = e?.id;
+    if (!id) return false;
+    if (id === TURN_COUNTER_ID) return true;
+    const fighter = findCombatant(id);
     // Only include entries for combatants that still exist and are alive
     if (!fighter) return false; // removed/despawned
     return Number(fighter.hp ?? 0) >= 1;
@@ -44,13 +49,14 @@
   $: bonusCounts = (() => {
     const map = new Map();
     for (const e of displayQueue) {
+      if (e?.id === TURN_COUNTER_ID) continue;
       if (e?.bonus) map.set(e.id, (map.get(e.id) || 0) + 1);
     }
     return map;
   })();
 
   // Base list excludes bonus entries; we render one tile per actor
-  $: baseQueue = displayQueue.filter((e) => !e.bonus);
+  $: baseQueue = displayQueue.filter((e) => !(e?.bonus && e?.id !== TURN_COUNTER_ID));
 
   // Determine current active actor id (prefer provided activeId; otherwise first visible in queue)
   $: currentActiveId = (() => {
