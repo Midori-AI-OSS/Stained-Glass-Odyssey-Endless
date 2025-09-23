@@ -20,6 +20,8 @@ export async function loadInitialState() {
     autocraft: true,
     reducedMotion: saved.reducedMotion ?? false,
     showActionValues: saved.showActionValues ?? false,
+    showTurnCounter: saved.showTurnCounter ?? true,
+    flashEnrageCounter: saved.flashEnrageCounter ?? true,
     fullIdleMode: saved.fullIdleMode ?? false,
     skipBattleReview: saved.skipBattleReview ?? false,
     animationSpeed: (() => {

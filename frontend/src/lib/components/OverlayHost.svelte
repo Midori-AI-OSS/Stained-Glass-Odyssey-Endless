@@ -41,6 +41,8 @@
   export let framerate = 60;
   export let reducedMotion = false; // Legacy prop for backward compatibility
   export let showActionValues = false;
+  export let showTurnCounter = true;
+  export let flashEnrageCounter = true;
   export let fullIdleMode = false;
   export let skipBattleReview = false;
   export let animationSpeed = 1;
@@ -346,6 +348,8 @@
       {framerate}
       {reducedMotion}
       {showActionValues}
+      {showTurnCounter}
+      {flashEnrageCounter}
       {fullIdleMode}
       {skipBattleReview}
       bind:animationSpeed
@@ -440,6 +444,8 @@
       enrage={roomData?.enrage}
       reducedMotion={simplifiedTransitions ? true : effectiveReducedMotion}
       showActionValues={showActionValues}
+      showTurnCounter={showTurnCounter}
+      flashEnrageCounter={flashEnrageCounter}
       active={battleActive}
       showHud={true}
       showFoes={true}

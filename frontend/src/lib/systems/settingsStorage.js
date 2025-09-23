@@ -56,6 +56,8 @@ function getDefaultSettings() {
     reducedMotion: prefersReducedMotion,
     lrmModel: '',
     showActionValues: false,
+    showTurnCounter: true,
+    flashEnrageCounter: true,
     fullIdleMode: false,
     skipBattleReview: false,
     animationSpeed: 1.0
@@ -124,6 +126,8 @@ export function loadSettings() {
     if (data.reducedMotion !== undefined) data.reducedMotion = Boolean(data.reducedMotion);
     if (data.lrmModel !== undefined) data.lrmModel = String(data.lrmModel);
     if (data.showActionValues !== undefined) data.showActionValues = Boolean(data.showActionValues);
+    if (data.showTurnCounter !== undefined) data.showTurnCounter = Boolean(data.showTurnCounter);
+    if (data.flashEnrageCounter !== undefined) data.flashEnrageCounter = Boolean(data.flashEnrageCounter);
     if (data.fullIdleMode !== undefined) data.fullIdleMode = Boolean(data.fullIdleMode);
     if (data.skipBattleReview !== undefined) data.skipBattleReview = Boolean(data.skipBattleReview);
     if (data.animationSpeed !== undefined) {
@@ -137,13 +141,23 @@ export function loadSettings() {
     }
     
     // Ensure motion settings exist
+    const defaults = getDefaultSettings();
+
     if (!data.motion) {
-      data.motion = getDefaultSettings().motion;
+      data.motion = defaults.motion;
     }
-    
-    // Ensure theme settings exist  
+
+    // Ensure theme settings exist
     if (!data.theme) {
-      data.theme = getDefaultSettings().theme;
+      data.theme = defaults.theme;
+    }
+
+    if (data.showTurnCounter === undefined) {
+      data.showTurnCounter = defaults.showTurnCounter;
+    }
+
+    if (data.flashEnrageCounter === undefined) {
+      data.flashEnrageCounter = defaults.flashEnrageCounter;
     }
     
     // Update stores
@@ -169,6 +183,8 @@ export function saveSettings(settings) {
     
     // Legacy field validation
     if (merged.fullIdleMode !== undefined) merged.fullIdleMode = Boolean(merged.fullIdleMode);
+    if (merged.showTurnCounter !== undefined) merged.showTurnCounter = Boolean(merged.showTurnCounter);
+    if (merged.flashEnrageCounter !== undefined) merged.flashEnrageCounter = Boolean(merged.flashEnrageCounter);
     if (merged.skipBattleReview !== undefined) merged.skipBattleReview = Boolean(merged.skipBattleReview);
     if (merged.animationSpeed !== undefined) {
       const numeric = Number(merged.animationSpeed);
