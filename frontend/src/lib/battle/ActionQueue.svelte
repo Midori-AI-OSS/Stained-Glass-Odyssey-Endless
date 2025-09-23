@@ -26,8 +26,8 @@
     if (!Number.isFinite(parsed)) return 0;
     return Math.max(0, Math.trunc(parsed));
   })();
-  $: showEnrageChip = Boolean(enrage?.active && flashEnrageCounter);
-  $: enragePulse = showEnrageChip && !motionDisabled;
+  $: showEnrageChip = Boolean(enrage?.active);
+  $: enragePulse = showEnrageChip && !motionDisabled && flashEnrageCounter;
 
   function findCombatant(id) {
     return combatants.find((c) => c.id === id) || null;
