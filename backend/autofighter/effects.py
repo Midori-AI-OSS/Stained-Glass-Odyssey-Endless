@@ -324,11 +324,6 @@ class EffectManager:
         self.mods: list[StatModifier] = []
         self._console = Console()
         self._debug = debug
-        for eff in getattr(stats, "_pending_mods", []):
-            self.mods.append(eff)
-            self.stats.mods.append(eff.id)
-        if hasattr(stats, "_pending_mods"):
-            delattr(stats, "_pending_mods")
 
     async def _log(self, message: str) -> None:
         """Write a log message without blocking the main loop."""

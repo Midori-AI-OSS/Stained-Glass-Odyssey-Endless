@@ -17,8 +17,7 @@ def test_themed_adjectives_import_and_decorate() -> None:
 
     assert target.atk == 220
     assert target.max_hp == 1900
-    assert hasattr(target, "_pending_mods")
-    mod = target._pending_mods[0]
-    assert mod.multipliers["atk"] == 1.1
-    assert mod.multipliers["max_hp"] == 1.9
+    assert target.get_base_stat("atk") == 220
+    assert target.get_base_stat("max_hp") == 1900
+    assert not hasattr(target, "_pending_mods")
 

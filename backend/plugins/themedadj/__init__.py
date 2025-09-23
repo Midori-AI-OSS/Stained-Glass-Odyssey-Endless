@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from autofighter.effects import create_stat_buff
+from autofighter.rooms.foes.scaling import apply_permanent_scaling
 from plugins import PluginLoader
 
 
@@ -18,32 +18,36 @@ def stat_buff(cls):
 
         original(self, target)
 
-        mults = {}
+        mults: dict[str, float] = {}
+        additive: dict[str, float] = {}
+
         if base_atk is not None and target.atk != base_atk:
-            mults["atk_mult"] = target.atk / base_atk
+            if base_atk:
+                mults["atk"] = target.atk / base_atk
+            else:
+                additive["atk"] = target.atk - base_atk
             target.atk = base_atk
         if base_def is not None and target.defense != base_def:
-            mults["defense_mult"] = target.defense / base_def
+            if base_def:
+                mults["defense"] = target.defense / base_def
+            else:
+                additive["defense"] = target.defense - base_def
             target.defense = base_def
         if base_hp is not None and target.max_hp != base_hp:
-            mults["max_hp_mult"] = target.max_hp / base_hp
+            if base_hp:
+                mults["max_hp"] = target.max_hp / base_hp
+            else:
+                additive["max_hp"] = target.max_hp - base_hp
             target.max_hp = base_hp
 
-        if mults:
-            effect = create_stat_buff(
+        if mults or additive:
+            apply_permanent_scaling(
                 target,
+                multipliers=mults or None,
+                deltas=additive or None,
                 name=getattr(self, "name", "buff"),
-                id=getattr(self, "id", "stat_buff"),
-                turns=9999,
-                **mults,
+                modifier_id=getattr(self, "id", "stat_buff"),
             )
-            mgr = getattr(target, "effect_manager", None)
-            if mgr is not None:
-                mgr.add_modifier(effect)
-            else:
-                pending = getattr(target, "_pending_mods", [])
-                pending.append(effect)
-                target._pending_mods = pending
 
     cls.apply = apply
     return cls

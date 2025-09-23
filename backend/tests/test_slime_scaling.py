@@ -41,6 +41,7 @@ def test_slime_scaling_uses_reduced_base_stats() -> None:
     assert slime.max_hp == 53
     assert slime.atk == 5
     assert slime.defense == 0
+    assert not hasattr(slime, "_pending_mods")
 
 
 def test_slime_room_scaling_respects_plugin_baseline() -> None:
@@ -83,12 +84,31 @@ def test_slime_room_scaling_respects_plugin_baseline() -> None:
 def test_apply_permanent_scaling_skips_unknown_stats() -> None:
     stats = Stats()
 
-    effect = apply_permanent_scaling(
+    result = apply_permanent_scaling(
         stats,
         multipliers={"nonexistent": 2.0},
         name="Unknown stat",
         modifier_id="test_unknown_stat",
     )
 
-    assert effect is None
+    assert result == {}
+    assert not hasattr(stats, "_pending_mods")
+
+
+def test_apply_permanent_scaling_updates_base_stats() -> None:
+    stats = Stats()
+
+    outcome = apply_permanent_scaling(
+        stats,
+        multipliers={"atk": 0.5},
+        deltas={"max_hp": -100},
+        name="half_atk",
+        modifier_id="test_half_atk",
+    )
+
+    assert stats.atk == 100
+    assert stats.get_base_stat("atk") == 100
+    assert stats.max_hp == 900
+    assert stats.get_base_stat("max_hp") == 900
+    assert outcome == {"atk": -100.0, "max_hp": -100.0}
     assert not hasattr(stats, "_pending_mods")
