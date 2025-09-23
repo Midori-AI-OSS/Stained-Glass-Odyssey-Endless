@@ -252,7 +252,7 @@ async def test_status_phase_events_update_snapshot_queue(monkeypatch):
     target.passives = [STUB_PASSIVE_ID]
 
     monkeypatch.setattr(
-        "autofighter.rooms.battle.turns._RECENT_EVENT_LIMIT",
+        "autofighter.rooms.battle.snapshots._RECENT_EVENT_LIMIT",
         20,
         raising=False,
     )
