@@ -41,6 +41,7 @@ class ActionQueue:
             base = GAUGE_START / max(combatant.spd, 1)
             combatant.base_action_value = base
             combatant.action_value = base
+        self._stabilize_action_values()
 
     def grant_extra_turn(self, actor: Stats) -> None:
         """Queue ``actor`` for an immediate bonus turn."""
@@ -122,6 +123,7 @@ class ActionQueue:
                 current_value = float(getattr(combatant, "action_value", 0.0))
                 combatant.action_value = max(0.0, current_value - spent)
             actor.action_value = float(getattr(actor, "base_action_value", GAUGE_START))
+            self._stabilize_action_values()
             # Rotate actor to end to reflect moving to the back of the line
             idx = self.combatants.index(actor)
             self.combatants.append(self.combatants.pop(idx))
@@ -171,3 +173,43 @@ class ActionQueue:
             except Exception:
                 turn_counter.action_gauge = GAUGE_START
         return cycles
+
+    def _stabilize_action_values(self) -> None:
+        """Ensure non-turn counter combatants have unique action values."""
+
+        epsilon = 1e-6
+        gauge_step = 1.0
+        try:
+            ordered = sorted(
+                (
+                    combatant
+                    for combatant in self.combatants
+                    if combatant is not self.turn_counter
+                    and getattr(combatant, "id", None) != TURN_COUNTER_ID
+                ),
+                key=lambda combatant: (
+                    float(getattr(combatant, "action_value", 0.0)),
+                    getattr(combatant, "id", ""),
+                ),
+            )
+        except Exception:
+            return
+
+        seen: set[float] = set()
+        for combatant in ordered:
+            try:
+                original = float(getattr(combatant, "action_value", 0.0))
+            except Exception:
+                original = 0.0
+
+            adjustment = 0
+            current = original
+            while current in seen:
+                adjustment += 1
+                step = gauge_step if original >= gauge_step else epsilon
+                current = original - (step * adjustment)
+                if original >= gauge_step and current < 0.0:
+                    current = original - (epsilon * adjustment)
+
+            combatant.action_value = current
+            seen.add(current)

@@ -33,9 +33,14 @@
     return combatants.find((c) => c.id === id) || null;
   }
 
+  const TURN_COUNTER_ID = 'turn_counter';
+
   // Filter queue to alive/visible entries
   $: displayQueue = queue.filter((e) => {
-    const fighter = findCombatant(e.id);
+    const id = e?.id;
+    if (!id) return false;
+    if (id === TURN_COUNTER_ID) return showTurnCounter;
+    const fighter = findCombatant(id);
     // Only include entries for combatants that still exist and are alive
     if (!fighter) return false; // removed/despawned
     return Number(fighter.hp ?? 0) >= 1;
@@ -44,18 +49,20 @@
   $: bonusCounts = (() => {
     const map = new Map();
     for (const e of displayQueue) {
+      if (e?.id === TURN_COUNTER_ID) continue;
       if (e?.bonus) map.set(e.id, (map.get(e.id) || 0) + 1);
     }
     return map;
   })();
 
   // Base list excludes bonus entries; we render one tile per actor
-  $: baseQueue = displayQueue.filter((e) => !e.bonus);
+  $: baseQueue = displayQueue.filter((e) => !(e?.bonus && e?.id !== TURN_COUNTER_ID));
 
   // Determine current active actor id (prefer provided activeId; otherwise first visible in queue)
   $: currentActiveId = (() => {
-    const id = activeId ?? (displayQueue[0] && displayQueue[0].id);
-    return id;
+    if (activeId) return activeId;
+    const firstFighter = displayQueue.find((e) => e.id !== TURN_COUNTER_ID);
+    return firstFighter?.id ?? null;
   })();
 
   // Build display items with active actor pinned to top
@@ -78,45 +85,58 @@
 </script>
 
 <div class="action-queue" data-testid="action-queue">
-  {#if showTurnCounter}
-    <div class="queue-header">
-      <span class="turn-label">Turn <span class="turn-value">{displayTurn}</span></span>
-      {#if showEnrageChip}
-        <span class="enrage-chip" class:pulse={enragePulse}>Enrage: {enrageCount}</span>
-      {/if}
-    </div>
-  {/if}
   <div class="viewport" class:masked={needsFade}>
     <div class="list">
       {#each displayItems as item, i (item.key)}
         {@const entry = item.entry}
-        {@const fighter = findCombatant(entry.id)}
-        {@const elColor = getElementColor(fighter?.element || entry?.element || 'generic')}
-        <div
-          class="entry"
-          class:active={i === activeIndex}
-          style="--element-color: {elColor}"
-          animate:flip={{ duration: motionDisabled ? 0 : 220 }}
-          on:mouseenter={() => dispatch('hover', { id: fighter?.id ?? null })}
-          on:mouseleave={() => dispatch('hover', { id: null })}
-        >
-          <div class="inner">
-            {#if (bonusCounts.get(entry.id) || 0) > 0}
-              <div class="bonus-badge">x{bonusCounts.get(entry.id)}</div>
-            {/if}
-            <img 
-              src={getCharacterImage((fighter?.summon_type === 'phantom' && fighter?.summoner_id) ? fighter.summoner_id : (fighter?.summon_type || fighter?.id || entry?.id))} 
-              alt="" 
-              class="portrait {fighter?.summon_type === 'phantom' ? 'phantom' : ''}" 
-              title={(fighter?.name || fighter?.id || entry?.id || '').toString().replace(/[_-]+/g, ' ')}
-            />
-            {#if showActionValues}
-              <div class="av">{Math.round(entry.action_value)}</div>
-            {/if}
-            <!-- Hover-only name chip -->
-            <div class="name-chip">{(fighter?.name || fighter?.id || entry?.id || '').toString().replace(/[_-]+/g, ' ')}</div>
+        {#if entry.id === TURN_COUNTER_ID}
+          <div
+            class="entry turn-counter"
+            class:enraged={showEnrageChip}
+            class:motionless={motionDisabled}
+            animate:flip={{ duration: motionDisabled ? 0 : 220 }}
+          >
+            <div class="inner">
+              <div class="turn-card">
+                <div class="turn-label">
+                  <span class="label-text">Turn</span>
+                  <span class="turn-value">{displayTurn}</span>
+                </div>
+                {#if showEnrageChip}
+                  <span class="enrage-chip" class:pulse={enragePulse}>Enrage: {enrageCount}</span>
+                {/if}
+              </div>
+            </div>
           </div>
-        </div>
+        {:else}
+          {@const fighter = findCombatant(entry.id)}
+          {@const elColor = getElementColor(fighter?.element || entry?.element || 'generic')}
+          <div
+            class="entry"
+            class:active={i === activeIndex}
+            style="--element-color: {elColor}"
+            animate:flip={{ duration: motionDisabled ? 0 : 220 }}
+            on:mouseenter={() => dispatch('hover', { id: fighter?.id ?? null })}
+            on:mouseleave={() => dispatch('hover', { id: null })}
+          >
+            <div class="inner">
+              {#if (bonusCounts.get(entry.id) || 0) > 0}
+                <div class="bonus-badge">x{bonusCounts.get(entry.id)}</div>
+              {/if}
+              <img
+                src={getCharacterImage((fighter?.summon_type === 'phantom' && fighter?.summoner_id) ? fighter.summoner_id : (fighter?.summon_type || fighter?.id || entry?.id))}
+                alt=""
+                class="portrait {fighter?.summon_type === 'phantom' ? 'phantom' : ''}"
+                title={(fighter?.name || fighter?.id || entry?.id || '').toString().replace(/[_-]+/g, ' ')}
+              />
+              {#if showActionValues}
+                <div class="av">{Math.round(entry.action_value)}</div>
+              {/if}
+              <!-- Hover-only name chip -->
+              <div class="name-chip">{(fighter?.name || fighter?.id || entry?.id || '').toString().replace(/[_-]+/g, ' ')}</div>
+            </div>
+          </div>
+        {/if}
       {/each}
     </div>
   </div>
@@ -139,34 +159,6 @@
     gap: 0.4rem;
     z-index: 2;
   }
-  .queue-header {
-    width: var(--entry-w);
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 0.75rem;
-    padding: 0.45rem 0.75rem;
-    background: var(--glass-bg);
-    box-shadow: var(--glass-shadow);
-    border: var(--glass-border);
-    backdrop-filter: var(--glass-filter);
-    color: rgba(255,255,255,0.95);
-    font-weight: 700;
-    letter-spacing: 0.02em;
-    border-radius: 10px;
-  }
-  .turn-label {
-    display: flex;
-    align-items: center;
-    gap: 0.35rem;
-    font-size: 0.95rem;
-    text-transform: uppercase;
-  }
-  .turn-value {
-    font-size: 1.15rem;
-    font-weight: 800;
-    color: #fff;
-  }
   .enrage-chip {
     display: inline-flex;
     align-items: center;
@@ -185,6 +177,70 @@
   }
   .enrage-chip.pulse {
     animation: enragePulse 2.6s ease-in-out infinite;
+  }
+  .entry.turn-counter {
+    --turn-accent: color-mix(in oklab, #4c8cff 75%, white);
+    margin-bottom: var(--gap);
+  }
+  .entry.turn-counter .inner {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.75rem;
+    background: linear-gradient(
+      135deg,
+      color-mix(in oklab, rgba(20, 32, 50, 0.65) 55%, rgba(10, 12, 18, 0.8)),
+      color-mix(in oklab, var(--turn-accent) 65%, rgba(10, 12, 18, 0.85))
+    );
+    border-width: 3px;
+    border-style: solid;
+    border-color: color-mix(in oklab, var(--turn-accent) 70%, white);
+    box-shadow: 0 0 12px 2px color-mix(in oklab, var(--turn-accent) 40%, rgba(0,0,0,0.85));
+    transform: scale(0.88);
+    transition: transform 160ms ease, box-shadow 160ms ease, border-color 160ms ease, background 220ms ease;
+  }
+  .entry.turn-counter .inner::before { display: none; }
+  .entry.turn-counter.enraged { --turn-accent: color-mix(in oklab, #ff5268 85%, white); }
+  .entry.turn-counter .turn-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    width: 100%;
+    height: 100%;
+    text-align: center;
+    text-transform: uppercase;
+    letter-spacing: 0.045em;
+    color: color-mix(in oklab, var(--turn-accent) 90%, white);
+    text-shadow: 0 2px 6px rgba(0,0,0,0.75);
+  }
+  .entry.turn-counter .turn-label {
+    display: flex;
+    align-items: baseline;
+    gap: 0.45rem;
+  }
+  .entry.turn-counter .label-text {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: color-mix(in oklab, var(--turn-accent) 60%, white);
+    letter-spacing: 0.08em;
+  }
+  .entry.turn-counter .turn-value {
+    font-size: 1.6rem;
+    font-weight: 900;
+    color: #fff;
+    line-height: 1;
+    filter: drop-shadow(0 0 4px rgba(0,0,0,0.55));
+  }
+  .entry.turn-counter .enrage-chip {
+    align-self: center;
+    margin-top: 0.2rem;
+    box-shadow: 0 0 10px 2px color-mix(in oklab, var(--turn-accent) 45%, rgba(0,0,0,0.65));
+  }
+  .entry.turn-counter.motionless .inner {
+    transition-duration: 0.01ms !important;
+    box-shadow: 0 0 10px 1px color-mix(in oklab, var(--turn-accent) 35%, rgba(0,0,0,0.8));
   }
   .viewport {
     position: relative;
@@ -247,6 +303,16 @@
     transform: translateY(-50%);
     border: 8px solid transparent;
     border-right-color: var(--element-color);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .entry.turn-counter .inner {
+      transition-duration: 0.01ms !important;
+    }
+    .entry.turn-counter .enrage-chip {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+    }
   }
   /* Bonus count badge shown on the actor's tile */
   .bonus-badge {
