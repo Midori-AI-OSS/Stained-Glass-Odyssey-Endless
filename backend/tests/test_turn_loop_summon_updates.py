@@ -104,6 +104,7 @@ def _setup_common_player_patches(monkeypatch: pytest.MonkeyPatch, module) -> lis
         enrage_state,
         rdr,
         extra_turns,
+        turn,
         *,
         run_id,
         active_id,
@@ -118,6 +119,7 @@ def _setup_common_player_patches(monkeypatch: pytest.MonkeyPatch, module) -> lis
                 "include_summon_foes": include_summon_foes,
                 "active_id": active_id,
                 "active_target_id": active_target_id,
+                "turn": turn,
             }
         )
         if progress_cb is not None:

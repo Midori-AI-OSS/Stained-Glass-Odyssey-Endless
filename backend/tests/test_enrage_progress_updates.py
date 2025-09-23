@@ -153,6 +153,7 @@ async def test_player_phase_emits_snapshot_on_enrage(monkeypatch: pytest.MonkeyP
         enrage_state,
         rdr,
         extra_turns,
+        turn,
         *,
         run_id,
         active_id,
@@ -169,6 +170,7 @@ async def test_player_phase_emits_snapshot_on_enrage(monkeypatch: pytest.MonkeyP
                 "active_target_id": active_target_id,
                 "include_summon_foes": include_summon_foes,
                 "ended": ended,
+                "turn": turn,
             }
         )
 
