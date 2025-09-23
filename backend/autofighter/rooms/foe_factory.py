@@ -13,6 +13,7 @@ from typing import Mapping
 
 from autofighter.effects import StatModifier
 from autofighter.effects import create_stat_buff
+from autofighter.effects import get_current_stat_value
 from autofighter.mapgen import MapGenerator
 from autofighter.mapgen import MapNode
 from autofighter.party import Party
@@ -92,12 +93,53 @@ def apply_permanent_scaling(
         for key, value in multipliers.items():
             if not isinstance(value, (int, float)):
                 continue
-            modifiers[f"{key}_mult"] = float(value)
+            if not hasattr(stats, key):
+                continue
+            try:
+                current_value = float(get_current_stat_value(stats, key))
+            except Exception:
+                continue
+            multiplier = float(value)
+            target_value = current_value * multiplier
+            target_delta = 0.0
+            base_adjusted = False
+            base_value: float | None = None
+            base_attr = f"_base_{key}"
+            if (
+                hasattr(stats, "get_base_stat")
+                and hasattr(stats, "set_base_stat")
+                and hasattr(stats, base_attr)
+            ):
+                try:
+                    raw_base = stats.get_base_stat(key)
+                except Exception:
+                    raw_base = None
+                if isinstance(raw_base, (int, float)):
+                    base_value = float(raw_base)
+                    existing_effect = current_value - base_value
+                    new_base_value = target_value - existing_effect
+                    try:
+                        cast_value = type(raw_base)(new_base_value)
+                    except Exception:
+                        cast_value = new_base_value
+                    try:
+                        stats.set_base_stat(key, cast_value)
+                        base_adjusted = True
+                        current_value = float(get_current_stat_value(stats, key))
+                    except Exception:
+                        base_adjusted = False
+            if base_adjusted:
+                target_delta = target_value - current_value
+            else:
+                target_delta = target_value - current_value
+            if abs(target_delta) < 1e-9:
+                continue
+            modifiers[key] = modifiers.get(key, 0.0) + target_delta
     if deltas:
         for key, value in deltas.items():
             if not isinstance(value, (int, float)):
                 continue
-            modifiers[key] = float(value)
+            modifiers[key] = modifiers.get(key, 0.0) + float(value)
     if not modifiers:
         return None
     effect = create_stat_buff(
