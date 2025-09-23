@@ -537,7 +537,7 @@
     <aside class="receipt">
       <div class="receipt-head">
         <h4>Receipt</h4>
-        <div class={`tax-note ${taxNoteClass}`}>{surchargeMessage}</div>
+        <div class={`tax-note ${taxNoteClass}`} data-testid="shop-tax-note">{surchargeMessage}</div>
       </div>
       {#if processing || isBuying}
         <div class="processing-note">Processing purchases…</div>
@@ -554,10 +554,12 @@
             </li>
           {/each}
         </ul>
-        <div class="summary">
-          <div class="row"><span>Subtotal</span><span class="dots" /><span class="price"><Coins size={12} class="coin-icon" /> {estimatedSubtotal}</span></div>
-          <div class="row"><span>Tax (est.)</span><span class="dots" /><span class="price"><Coins size={12} class="coin-icon" /> {estimatedTax}</span></div>
-          <div class="row total"><span>Total</span><span class="dots" /><span class="price"><Coins size={12} class="coin-icon" /> {estimatedTotal}</span></div>
+        <div class="price-breakdown">
+          <div class="summary">
+            <div class="row"><span>Subtotal</span><span class="dots" /><span class="price"><Coins size={12} class="coin-icon" /> {estimatedSubtotal}</span></div>
+            <div class="row"><span>Tax (est.)</span><span class="dots" /><span class="price"><Coins size={12} class="coin-icon" /> {estimatedTax}</span></div>
+            <div class="row total"><span>Total</span><span class="dots" /><span class="price"><Coins size={12} class="coin-icon" /> {estimatedTotal}</span></div>
+          </div>
         </div>
       {/if}
     </aside>

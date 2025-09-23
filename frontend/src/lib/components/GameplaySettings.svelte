@@ -1,5 +1,5 @@
 <script>
-  import { Power, Timer, Bot, ListOrdered, SkipForward } from 'lucide-svelte';
+  import { Power, Timer, Bot, ListOrdered, SkipForward, Clock3, Zap } from 'lucide-svelte';
   import DotSelector from './DotSelector.svelte';
   import Tooltip from './Tooltip.svelte';
 
@@ -9,6 +9,8 @@
   const DOT_SCALE = 100;
 
   export let showActionValues = false;
+  export let showTurnCounter = true;
+  export let flashEnrageCounter = true;
   export let fullIdleMode = false;
   export let skipBattleReview = false;
   export let animationSpeed = DEFAULT_ANIMATION_SPEED;
@@ -99,6 +101,26 @@
     </div>
     <div class="control-right">
       <input type="checkbox" bind:checked={showActionValues} on:change={scheduleSave} />
+    </div>
+  </div>
+  <div class="control">
+    <div class="control-left">
+      <Tooltip text="Show the turn counter during battles.">
+        <span class="label"><Clock3 /> Show Turn Counter</span>
+      </Tooltip>
+    </div>
+    <div class="control-right">
+      <input type="checkbox" bind:checked={showTurnCounter} on:change={scheduleSave} />
+    </div>
+  </div>
+  <div class="control">
+    <div class="control-left">
+      <Tooltip text="Pulse the enrage counter when enrage builds up.">
+        <span class="label"><Zap /> Flash Enrage Counter</span>
+      </Tooltip>
+    </div>
+    <div class="control-right">
+      <input type="checkbox" bind:checked={flashEnrageCounter} on:change={scheduleSave} />
     </div>
   </div>
   <div class="control">
