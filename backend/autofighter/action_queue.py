@@ -185,6 +185,7 @@ class ActionQueue:
                     combatant
                     for combatant in self.combatants
                     if combatant is not self.turn_counter
+                    and getattr(combatant, "id", None) != TURN_COUNTER_ID
                 ),
                 key=lambda combatant: (
                     float(getattr(combatant, "action_value", 0.0)),
