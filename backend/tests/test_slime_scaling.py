@@ -8,7 +8,7 @@ import battle_logging  # noqa: F401  # Ensure package is importable for foe fact
 
 from autofighter.mapgen import MapNode
 from autofighter.rooms.foe_factory import FoeFactory
-from autofighter.rooms.foe_factory import apply_permanent_scaling
+from autofighter.rooms.foes.scaling import apply_permanent_scaling
 from autofighter.rooms.utils import _scale_stats
 from autofighter.stats import Stats
 from plugins.foes.slime import Slime

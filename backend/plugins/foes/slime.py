@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from dataclasses import field
 
-from autofighter.rooms.foe_factory import apply_permanent_scaling
+from autofighter.rooms.foes.scaling import apply_permanent_scaling
 from plugins.damage_types import random_damage_type
 from plugins.damage_types._base import DamageTypeBase
 from plugins.foes._base import FoeBase
