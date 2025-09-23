@@ -106,6 +106,9 @@ async def _run_foe_turn_iteration(
         await pace_sleep(YIELD_MULTIPLIER)
         return FoeTurnIterationResult(repeat=False, battle_over=False)
 
+    context.action_turn += 1
+    actor_turn_index = context.action_turn
+
     alive_targets = [
         (index, target)
         for index, target in enumerate(context.combat_party.members)
@@ -134,7 +137,7 @@ async def _run_foe_turn_iteration(
         getattr(acting_foe, "id", acting_foe),
         getattr(target, "id", target),
     )
-    await acting_foe.maybe_regain(context.turn)
+    await acting_foe.maybe_regain(actor_turn_index)
 
     damage_type = getattr(acting_foe, "damage_type", None)
     await foe_manager.tick(target_effect)
@@ -290,6 +293,7 @@ async def _run_foe_turn_iteration(
                 active_id=getattr(acting_foe, "id", None),
                 active_target_id=getattr(target, "id", None),
                 include_summon_foes=True,
+                visual_queue=context.visual_queue,
             )
             await pace_sleep(YIELD_MULTIPLIER)
     except Exception:

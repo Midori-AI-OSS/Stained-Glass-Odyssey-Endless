@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+from typing import TYPE_CHECKING
 from typing import Any
 from typing import Iterable
 from typing import MutableMapping
@@ -17,6 +18,9 @@ from autofighter.summons.manager import SummonManager
 from ...stats import Stats
 from ..utils import _serialize
 from . import snapshots as _snapshots
+
+if TYPE_CHECKING:
+    from autofighter.action_queue import ActionQueue
 
 
 class SupportsEnrageSnapshot(Protocol):
@@ -85,6 +89,8 @@ async def build_action_queue_snapshot(
     party_members: Sequence[Stats],
     foes: Sequence[Stats],
     extra_turns: MutableMapping[int, int],
+    *,
+    visual_queue: "ActionQueue" | None = None,
 ) -> list[ActionQueueEntry]:
     """Capture the current visual action queue ordering."""
 
@@ -115,7 +121,24 @@ async def build_action_queue_snapshot(
             }
             for combatant in ordered
         ]
-        return extras + base_entries
+        turn_counter_entry: ActionQueueEntry | None = None
+        if visual_queue is not None:
+            turn_counter = getattr(visual_queue, "turn_counter", None)
+            if turn_counter is not None:
+                turn_counter_entry = {
+                    "id": getattr(turn_counter, "id", "turn_counter"),
+                    "action_gauge": getattr(turn_counter, "action_gauge", 0),
+                    "action_value": getattr(turn_counter, "action_value", 0.0),
+                    "base_action_value": getattr(
+                        turn_counter,
+                        "base_action_value",
+                        getattr(turn_counter, "action_value", 0.0),
+                    ),
+                }
+        entries = extras + base_entries
+        if turn_counter_entry is not None:
+            entries.append(turn_counter_entry)
+        return entries
 
     return await asyncio.to_thread(_build)
 
@@ -132,6 +155,7 @@ async def build_battle_progress_payload(
     active_id: str | None,
     active_target_id: str | None,
     include_summon_foes: bool = False,
+    visual_queue: "ActionQueue" | None = None,
     ended: bool | None = None,
 ) -> BattleProgressPayload:
     """Assemble the payload dispatched to progress callbacks."""
@@ -161,6 +185,7 @@ async def build_battle_progress_payload(
         party_members,
         foes,
         extra_turns,
+        visual_queue=visual_queue,
     )
 
     payload: BattleProgressPayload = {

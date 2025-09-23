@@ -34,9 +34,10 @@ async def finish_turn(
         active_id=getattr(actor, "id", None),
         active_target_id=active_target_id,
         include_summon_foes=include_summon_foes,
+        visual_queue=context.visual_queue,
     )
     await _pace(action_start)
-    await dispatch_turn_end_snapshot(
+    cycle_count = await dispatch_turn_end_snapshot(
         context.visual_queue,
         context.progress,
         context.combat_party.members,
@@ -48,5 +49,7 @@ async def finish_turn(
         context.turn,
         context.run_id,
     )
+    if cycle_count:
+        context.turn += cycle_count
     await pace_sleep(2.2 / TURN_PACING)
     await pace_sleep(YIELD_MULTIPLIER)

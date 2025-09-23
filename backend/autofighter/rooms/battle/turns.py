@@ -14,8 +14,8 @@ from autofighter.effects import create_stat_buff
 
 from ...stats import Stats
 from ...stats import set_enrage_percent
-from . import snapshots as _snapshots
 from . import enrage as _enrage
+from . import snapshots as _snapshots
 from .events import register_event_handlers
 from .progress import build_battle_progress_payload
 
@@ -44,6 +44,7 @@ async def push_progress_update(
     active_id: str | None,
     active_target_id: str | None = None,
     include_summon_foes: bool = False,
+    visual_queue: Any | None = None,
     ended: bool | None = None,
 ) -> None:
     """Send a progress update if a callback is available."""
@@ -61,6 +62,7 @@ async def push_progress_update(
         active_id=active_id,
         active_target_id=active_target_id,
         include_summon_foes=include_summon_foes,
+        visual_queue=visual_queue,
         ended=ended,
     )
     await progress(payload)
@@ -69,13 +71,14 @@ async def push_progress_update(
 async def _advance_visual_queue(
     visual_queue: Any,
     actor: Stats | None,
-) -> None:
+) -> int:
     if visual_queue is None or actor is None:
-        return
+        return 0
     try:
-        await asyncio.to_thread(visual_queue.advance_with_actor, actor)
+        return await asyncio.to_thread(visual_queue.advance_with_actor, actor)
     except Exception:
         log.debug("Failed to advance visual queue", exc_info=True)
+    return 0
 
 
 async def dispatch_turn_end_snapshot(
@@ -89,10 +92,11 @@ async def dispatch_turn_end_snapshot(
     actor: Stats,
     turn: int,
     run_id: str | None,
-) -> None:
+) -> int:
     """Advance the visual queue and emit an updated snapshot."""
 
-    await _advance_visual_queue(visual_queue, actor)
+    cycle_count = await _advance_visual_queue(visual_queue, actor)
+    effective_turn = turn + cycle_count
     await push_progress_update(
         progress,
         party_members,
@@ -100,11 +104,13 @@ async def dispatch_turn_end_snapshot(
         enrage_state,
         rdr,
         extra_turns,
-        turn,
+        effective_turn,
         run_id=run_id,
         active_id=getattr(actor, "id", None),
         active_target_id=None,
+        visual_queue=visual_queue,
     )
+    return cycle_count
 
 
 EnrageState = _enrage.EnrageState
