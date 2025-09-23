@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import asyncio
-from dataclasses import dataclass
 import logging
 from typing import TYPE_CHECKING
 from typing import Any
@@ -10,11 +9,13 @@ from typing import Callable
 from typing import MutableMapping
 from typing import Sequence
 
+from autofighter.effects import DamageOverTime
 from autofighter.effects import create_stat_buff
 
 from ...stats import Stats
 from ...stats import set_enrage_percent
 from . import snapshots as _snapshots
+from . import enrage as _enrage
 from .events import register_event_handlers
 from .progress import build_battle_progress_payload
 
@@ -29,26 +30,6 @@ prepare_snapshot_overlay = _snapshots.prepare_snapshot_overlay
 mutate_snapshot_overlay = _snapshots.mutate_snapshot_overlay
 
 register_event_handlers()
-
-
-@dataclass(slots=True)
-class EnrageState:
-    """Track enrage progression for a battle."""
-
-    threshold: int
-    active: bool = False
-    stacks: int = 0
-    bleed_applies: int = 0
-
-    def as_payload(self) -> dict[str, Any]:
-        """Return a JSON-serializable snapshot of the current enrage state."""
-
-        return {
-            "active": self.active,
-            "stacks": self.stacks,
-            "turns": self.stacks,
-        }
-
 
 async def push_progress_update(
     progress: Callable[[dict[str, Any]], Awaitable[None]] | None,
@@ -122,6 +103,9 @@ async def dispatch_turn_end_snapshot(
     )
 
 
+EnrageState = _enrage.EnrageState
+
+
 async def update_enrage_state(
     turn: int,
     state: EnrageState,
@@ -130,57 +114,18 @@ async def update_enrage_state(
     enrage_mods: list[Any],
     party_members: Sequence[Stats],
 ) -> dict[str, Any] | None:
-    """Update enrage modifiers and catastrophic damage thresholds."""
+    """Delegate enrage updates to the helper module."""
 
-    previous_active = state.active
-    previous_stacks = state.stacks
-
-    if turn > state.threshold:
-        if not state.active:
-            state.active = True
-            for foe in foes:
-                try:
-                    foe.passives.append("Enraged")
-                except Exception:
-                    pass
-            log.info("Enrage activated")
-        new_stacks = turn - state.threshold
-        await asyncio.to_thread(set_enrage_percent, 1.35 * max(new_stacks, 0))
-        mult = 1 + 2.0 * new_stacks
-        for idx, (foe_obj, mgr) in enumerate(zip(foes, foe_effects, strict=False)):
-            existing = enrage_mods[idx]
-            if existing is not None:
-                existing.remove()
-                try:
-                    mgr.mods.remove(existing)
-                    if existing.id in foe_obj.mods:
-                        foe_obj.mods.remove(existing.id)
-                except ValueError:
-                    pass
-            mod = create_stat_buff(
-                foe_obj,
-                name="enrage_atk",
-                atk_mult=mult,
-                turns=9999,
-            )
-            mgr.add_modifier(mod)
-            enrage_mods[idx] = mod
-        state.stacks = new_stacks
-        if turn > 1000:
-            extra_damage = 100 * max(state.stacks, 0)
-            if extra_damage > 0:
-                for member in party_members:
-                    if getattr(member, "hp", 0) > 0:
-                        await member.apply_damage(extra_damage)
-                for foe_obj in foes:
-                    if getattr(foe_obj, "hp", 0) > 0:
-                        await foe_obj.apply_damage(extra_damage)
-    else:
-        await asyncio.to_thread(set_enrage_percent, 0.0)
-
-    if state.active != previous_active or state.stacks != previous_stacks:
-        return state.as_payload()
-    return None
+    return await _enrage.update_enrage_state(
+        turn,
+        state,
+        foes,
+        foe_effects,
+        enrage_mods,
+        party_members,
+        set_enrage_percent=set_enrage_percent,
+        create_stat_buff=create_stat_buff,
+    )
 
 
 async def apply_enrage_bleed(
@@ -189,28 +134,12 @@ async def apply_enrage_bleed(
     foes: Sequence[Stats],
     foe_effects: Sequence["EffectManager"],
 ) -> None:
-    """Apply stacking bleed to both sides while enrage remains active."""
+    """Delegate bleed application to the helper module."""
 
-    if not state.active:
-        return
-    turns_since_enrage = max(state.stacks, 0)
-    next_trigger = (state.bleed_applies + 1) * 10
-    if turns_since_enrage < next_trigger:
-        return
-    stacks_to_add = 1 + state.bleed_applies
-    from autofighter.effects import DamageOverTime
-
-    for member in party_members:
-        mgr = member.effect_manager
-        for _ in range(stacks_to_add):
-            dmg_per_tick = int(max(getattr(mgr.stats, "max_hp", 1), 1) * 0.5)
-            mgr.add_dot(
-                DamageOverTime("Enrage Bleed", dmg_per_tick, 10, "enrage_bleed")
-            )
-    for mgr, foe_obj in zip(foe_effects, foes, strict=False):
-        for _ in range(stacks_to_add):
-            dmg_per_tick = int(max(getattr(foe_obj, "max_hp", 1), 1) * 0.25)
-            mgr.add_dot(
-                DamageOverTime("Enrage Bleed", dmg_per_tick, 10, "enrage_bleed")
-            )
-    state.bleed_applies += 1
+    await _enrage.apply_enrage_bleed(
+        state,
+        party_members,
+        foes,
+        foe_effects,
+        damage_over_time_factory=DamageOverTime,
+    )
