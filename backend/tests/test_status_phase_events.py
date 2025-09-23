@@ -1,3 +1,5 @@
+# ruff: noqa: E402
+
 import asyncio
 from pathlib import Path
 import sys
@@ -7,16 +9,32 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+writers_module = sys.modules.get("battle_logging.writers")
+if writers_module is None:
+    battle_logging_pkg = sys.modules.setdefault(
+        "battle_logging",
+        ModuleType("battle_logging"),
+    )
+    writers_module = ModuleType("battle_logging.writers")
+    setattr(battle_logging_pkg, "writers", writers_module)
+    sys.modules["battle_logging.writers"] = writers_module
+
+writers_module.end_run_logging = lambda *args, **kwargs: None  # noqa: E731
+writers_module.end_battle_logging = lambda *args, **kwargs: None  # noqa: E731
+writers_module.start_run_logging = lambda *args, **kwargs: None  # noqa: E731
+writers_module.start_battle_logging = lambda *args, **kwargs: None  # noqa: E731
+writers_module.get_current_run_logger = lambda: None  # noqa: E731
+
+tracking_module = sys.modules.setdefault("tracking", ModuleType("tracking"))
+tracking_module.log_play_session_end = lambda *args, **kwargs: None  # noqa: E731
+tracking_module.log_run_end = lambda *args, **kwargs: None  # noqa: E731
+
 from runs.lifecycle import battle_snapshots
 
 from autofighter.effects import DamageOverTime
 from autofighter.effects import EffectManager
 from autofighter.effects import HealingOverTime
 from autofighter.rooms.battle.turns import EnrageState
-from autofighter.rooms.battle.turns import _on_damage_taken as record_damage_taken_event
-from autofighter.rooms.battle.turns import (
-    _on_heal_received as record_heal_received_event,
-)
 from autofighter.rooms.battle.turns import build_battle_progress_payload
 from autofighter.rooms.battle.turns import mutate_snapshot_overlay
 from autofighter.rooms.battle.turns import prepare_snapshot_overlay
@@ -339,7 +357,8 @@ async def test_status_phase_events_update_snapshot_queue(monkeypatch):
     assert resist_metadata.get("source_id") == attacker.id
     assert resist_metadata.get("target_id") == target.id
 
-    record_damage_taken_event(
+    await BUS.emit_async(
+        "damage_taken",
         target,
         target,
         77,
@@ -348,13 +367,15 @@ async def test_status_phase_events_update_snapshot_queue(monkeypatch):
         True,
         "test_action",
     )
-    record_heal_received_event(
+    await BUS.emit_async(
+        "heal_received",
         target,
         target,
         33,
         "test_source_type",
         "Test Source",
     )
+    await bus._process_batches_internal()
 
     final_events = list(battle_snapshots[run_id]["recent_events"])
     events_by_type = _group_by_type(final_events)

@@ -1,14 +1,37 @@
+# ruff: noqa: E402
+
 from pathlib import Path
 import sys
+import types
 
 import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+writers_module = sys.modules.get("battle_logging.writers")
+if writers_module is None:
+    battle_logging_pkg = sys.modules.setdefault(
+        "battle_logging",
+        types.ModuleType("battle_logging"),
+    )
+    writers_module = types.ModuleType("battle_logging.writers")
+    setattr(battle_logging_pkg, "writers", writers_module)
+    sys.modules["battle_logging.writers"] = writers_module
+
+writers_module.end_run_logging = lambda *args, **kwargs: None  # noqa: E731
+writers_module.end_battle_logging = lambda *args, **kwargs: None  # noqa: E731
+writers_module.start_run_logging = lambda *args, **kwargs: None  # noqa: E731
+writers_module.start_battle_logging = lambda *args, **kwargs: None  # noqa: E731
+writers_module.get_current_run_logger = lambda: None  # noqa: E731
+
+tracking_module = sys.modules.setdefault("tracking", types.ModuleType("tracking"))
+tracking_module.log_play_session_end = lambda *args, **kwargs: None  # noqa: E731
+tracking_module.log_run_end = lambda *args, **kwargs: None  # noqa: E731
+
 from runs.lifecycle import battle_snapshots
 
 from autofighter.party import Party
-from autofighter.rooms.battle import turns as battle_turns
+from autofighter.rooms.battle import events as battle_events
 from autofighter.rooms.battle.turns import prepare_snapshot_overlay
 from autofighter.rooms.battle.turns import register_snapshot_entities
 from autofighter.stats import BUS
@@ -38,8 +61,8 @@ async def test_card_and_relic_events_record_snapshot_metadata(monkeypatch):
     run_id = "card-relic-run"
     battle_snapshots.clear()
 
-    monkeypatch.setattr(battle_turns, "_card_name_cache", {})
-    monkeypatch.setattr(battle_turns, "_relic_name_cache", {})
+    monkeypatch.setattr(battle_events, "_CARD_NAME_CACHE", {})
+    monkeypatch.setattr(battle_events, "_RELIC_NAME_CACHE", {})
 
     member = Stats()
     member.id = "member"
@@ -54,20 +77,20 @@ async def test_card_and_relic_events_record_snapshot_metadata(monkeypatch):
     calls: list[float] = []
     expected_multiplier = 0.25
 
-    monkeypatch.setattr("autofighter.rooms.battle.turns.pace_sleep", fake_sleep)
+    monkeypatch.setattr("autofighter.rooms.battle.events.pace_sleep", fake_sleep)
     monkeypatch.setattr(
-        "autofighter.rooms.battle.turns.YIELD_MULTIPLIER",
+        "autofighter.rooms.battle.events.YIELD_MULTIPLIER",
         expected_multiplier,
         raising=False,
     )
 
     monkeypatch.setattr(
-        battle_turns,
+        battle_events,
         "_card_registry",
         lambda: {"stub_card": _StubCard},
     )
     monkeypatch.setattr(
-        battle_turns,
+        battle_events,
         "_relic_registry",
         lambda: {"stub_relic": _StubRelic},
     )
