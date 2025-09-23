@@ -129,12 +129,14 @@ async def test_build_battle_progress_payload_includes_snapshots_and_events():
         enrage_state,
         rdr=1.25,
         extra_turns={},
+        turn=7,
         run_id=run_id,
         active_id=party_member.id,
         active_target_id=foe.id,
         ended=True,
     )
 
+    assert payload["turn"] == 7
     assert payload["party"][0]["id"] == "hero"
     assert payload["foes"][0]["id"] == "foe"
     assert payload["party_summons"]["hero"][0]["instance_id"] == hero_summon.instance_id

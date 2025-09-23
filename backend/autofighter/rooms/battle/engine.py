@@ -136,6 +136,7 @@ async def run_battle(
                 enrage_state,
                 temp_rdr,
                 _EXTRA_TURNS,
+                int(turn),
                 run_id=run_id,
                 active_id=None,
                 active_target_id=None,

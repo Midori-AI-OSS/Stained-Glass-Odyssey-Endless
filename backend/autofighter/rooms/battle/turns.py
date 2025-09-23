@@ -57,6 +57,7 @@ async def push_progress_update(
     enrage_state: EnrageState,
     rdr: float,
     extra_turns: MutableMapping[int, int],
+    turn: int,
     *,
     run_id: str | None,
     active_id: str | None,
@@ -74,6 +75,7 @@ async def push_progress_update(
         enrage_state,
         rdr,
         extra_turns,
+        turn,
         run_id=run_id,
         active_id=active_id,
         active_target_id=active_target_id,
@@ -104,6 +106,7 @@ async def dispatch_turn_end_snapshot(
     rdr: float,
     extra_turns: MutableMapping[int, int],
     actor: Stats,
+    turn: int,
     run_id: str | None,
 ) -> None:
     """Advance the visual queue and emit an updated snapshot."""
@@ -116,6 +119,7 @@ async def dispatch_turn_end_snapshot(
         enrage_state,
         rdr,
         extra_turns,
+        turn,
         run_id=run_id,
         active_id=getattr(actor, "id", None),
         active_target_id=None,

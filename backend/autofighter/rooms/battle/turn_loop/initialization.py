@@ -141,6 +141,7 @@ async def _send_initial_progress(context: TurnLoopContext) -> None:
         context.enrage_state,
         context.temp_rdr,
         _EXTRA_TURNS,
+        context.turn,
         run_id=context.run_id,
         active_id=None,
         active_target_id=None,

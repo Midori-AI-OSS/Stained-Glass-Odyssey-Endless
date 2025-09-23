@@ -409,9 +409,11 @@ async def test_status_phase_events_update_snapshot_queue(monkeypatch):
         EnrageState(threshold=1),
         rdr=0.0,
         extra_turns={},
+        turn=0,
         run_id=run_id,
         active_id=None,
         active_target_id=None,
     )
     assert payload.get("recent_events") == final_events
     assert payload.get("status_phase") == status_phase
+    assert payload.get("turn") == 0

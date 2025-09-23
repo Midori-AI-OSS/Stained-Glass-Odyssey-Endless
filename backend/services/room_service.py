@@ -16,6 +16,9 @@ from runs.lifecycle import load_map
 from runs.lifecycle import save_map
 from runs.party_manager import load_party
 from runs.party_manager import save_party
+from tracking import log_event_choice
+from tracking import log_game_action
+from tracking import log_shop_transaction
 
 from autofighter.party import Party
 from autofighter.rooms import BattleRoom
@@ -30,10 +33,6 @@ from autofighter.rooms import calculate_rank_probabilities
 from autofighter.summons.manager import SummonManager
 from plugins import foes as foe_plugins
 from plugins.damage_types import load_damage_type
-
-from tracking import log_event_choice
-from tracking import log_game_action
-from tracking import log_shop_transaction
 
 
 def _boss_matches_node(info: Any, node: Any) -> bool:
@@ -240,6 +239,7 @@ async def battle_room(run_id: str, data: dict[str, Any]) -> dict[str, Any]:
         party_data = [_serialize(m) for m in party.members]
         payload: dict[str, Any] = {
             "result": "battle",
+            "turn": 0,
             "party": party_data,
             "foes": [],
             "gold": party.gold,
@@ -271,12 +271,12 @@ async def battle_room(run_id: str, data: dict[str, Any]) -> dict[str, Any]:
         if snap is not None:
             return snap
     if run_id in battle_tasks and not battle_tasks[run_id].done():
-        snap = battle_snapshots.get(run_id, {"result": "battle"})
+        snap = battle_snapshots.get(run_id, {"result": "battle", "turn": 0})
         return snap
     lock = battle_locks.setdefault(run_id, asyncio.Lock())
     async with lock:
         if run_id in battle_tasks and not battle_tasks[run_id].done():
-            return battle_snapshots.get(run_id, {"result": "battle"})
+            return battle_snapshots.get(run_id, {"result": "battle", "turn": 0})
         state["battle"] = True
         await asyncio.to_thread(save_map, run_id, state)
         room = BattleRoom(node)
@@ -322,6 +322,7 @@ async def battle_room(run_id: str, data: dict[str, Any]) -> dict[str, Any]:
             )
         battle_snapshots[run_id] = {
             "result": "battle",
+            "turn": 0,
             "party": [_serialize(m) for m in combat_party.members],
             "foes": [_serialize(f) for f in foes],
             "party_summons": _collect_summons(combat_party.members),
@@ -507,6 +508,7 @@ async def boss_room(run_id: str, data: dict[str, Any]) -> dict[str, Any]:
         party_data = [_serialize(m) for m in party.members]
         return {
             "result": "boss",
+            "turn": 0,
             "party": party_data,
             "foes": [],
             "gold": party.gold,
@@ -517,11 +519,11 @@ async def boss_room(run_id: str, data: dict[str, Any]) -> dict[str, Any]:
             "enrage": {"active": False, "stacks": 0},
         }
     if run_id in battle_tasks and not battle_tasks[run_id].done():
-        return battle_snapshots.get(run_id, {"result": "boss"})
+        return battle_snapshots.get(run_id, {"result": "boss", "turn": 0})
     lock = battle_locks.setdefault(run_id, asyncio.Lock())
     async with lock:
         if run_id in battle_tasks and not battle_tasks[run_id].done():
-            return battle_snapshots.get(run_id, {"result": "boss"})
+            return battle_snapshots.get(run_id, {"result": "boss", "turn": 0})
         state["battle"] = True
         await asyncio.to_thread(save_map, run_id, state)
         room = BossRoom(node)
@@ -588,6 +590,7 @@ async def boss_room(run_id: str, data: dict[str, Any]) -> dict[str, Any]:
             )
         battle_snapshots[run_id] = {
             "result": "boss",
+            "turn": 0,
             "party": [_serialize(m) for m in combat_party.members],
             "foes": [_serialize(f) for f in foes],
             "party_summons": _collect_summons(combat_party.members),

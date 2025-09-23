@@ -44,6 +44,7 @@ class BattleProgressPayload(TypedDict, total=False):
     """Payload broadcast to battle progress subscribers."""
 
     result: str
+    turn: int
     party: list[BattleEntityPayload]
     foes: list[BattleEntityPayload]
     party_summons: SummonSnapshotMap
@@ -125,6 +126,7 @@ async def build_battle_progress_payload(
     enrage_state: SupportsEnrageSnapshot,
     rdr: float,
     extra_turns: MutableMapping[int, int],
+    turn: int,
     *,
     run_id: str | None,
     active_id: str | None,
@@ -163,6 +165,7 @@ async def build_battle_progress_payload(
 
     payload: BattleProgressPayload = {
         "result": "battle",
+        "turn": int(turn),
         "party": party_data,
         "foes": foes_data,
         "party_summons": party_summons,
