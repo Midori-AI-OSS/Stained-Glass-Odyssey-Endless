@@ -16,6 +16,9 @@ from autofighter.mapgen import MapNode
 from autofighter.party import Party
 from autofighter.rooms.foes import SpawnTemplate
 from autofighter.rooms.foes.catalog import load_catalog
+from autofighter.rooms.foes.selector import _choose_template
+from autofighter.rooms.foes.selector import _desired_count
+from autofighter.rooms.foes.selector import _sample_templates
 from autofighter.stats import Stats
 from plugins.foes._base import FoeBase
 
@@ -153,30 +156,6 @@ class FoeFactory:
     def templates(self) -> Mapping[str, SpawnTemplate]:
         return self._templates
 
-    def _weight_for_template(
-        self,
-        template: SpawnTemplate,
-        *,
-        node: MapNode,
-        party_ids: Collection[str],
-        recent_ids: Collection[str] | None,
-        boss: bool,
-    ) -> float:
-        hook = template.weight_hook
-        if not callable(hook):
-            return 1.0
-        try:
-            return float(
-                hook(
-                    node=node,
-                    party_ids=party_ids,
-                    recent_ids=recent_ids,
-                    boss=boss,
-                )
-            )
-        except Exception:
-            return 1.0
-
     def _choose_adjective(self) -> type | None:
         if not self._adjectives:
             return None
@@ -229,10 +208,11 @@ class FoeFactory:
         recent_set = {str(rid) for rid in (recent_ids or []) if rid}
 
         if "boss" in room_type:
-            template = self._choose_template(
-                node,
-                party_ids,
-                recent_set,
+            template = _choose_template(
+                templates=self._templates,
+                node=node,
+                party_ids=party_ids,
+                recent_ids=recent_set,
                 boss=True,
             )
             if template is None:
@@ -250,12 +230,18 @@ class FoeFactory:
                 foe.rank = "boss"
             return [foe]
 
-        desired = self._desired_count(node, party)
-        templates = self._sample_templates(
-            desired,
+        desired = _desired_count(
             node,
-            party_ids,
-            recent_set,
+            party,
+            config=self.config,
+        )
+        templates = _sample_templates(
+            desired,
+            templates=self._templates,
+            node=node,
+            party_ids=party_ids,
+            recent_ids=recent_set,
+            config=self.config,
         )
         foes: list[FoeBase] = []
         for template in templates:
@@ -271,102 +257,6 @@ class FoeFactory:
                 foe.rank = "glitched"
             foes.append(foe)
         return foes
-
-    def _sample_templates(
-        self,
-        count: int,
-        node: MapNode,
-        party_ids: Collection[str],
-        recent_ids: Collection[str],
-    ) -> list[SpawnTemplate]:
-        pool = [
-            template
-            for template in self._templates.values()
-            if template.id not in party_ids
-        ]
-        if not pool:
-            return []
-        unique: dict[str, SpawnTemplate] = {}
-        for template in pool:
-            unique.setdefault(template.id, template)
-        candidates = list(unique.values())
-        weights: list[float] = []
-        for template in candidates:
-            weight = self._weight_for_template(
-                template,
-                node=node,
-                party_ids=party_ids,
-                recent_ids=recent_ids,
-                boss=False,
-            )
-            if template.id in recent_ids and weight > 0:
-                factor = self.config["recent_weight_factor"]
-                minimum = self.config["recent_weight_min"]
-                weight = max(weight * factor, minimum)
-            weights.append(max(weight, 0.0))
-        selected: list[SpawnTemplate] = []
-        candidate_weights = weights[:]
-        for _ in range(min(count, len(candidates))):
-            if not candidates:
-                break
-            if not any(weight > 0 for weight in candidate_weights):
-                candidate_weights = [1.0 for _ in candidates]
-            choice = random.choices(candidates, weights=candidate_weights, k=1)[0]
-            selected.append(choice)
-            idx = candidates.index(choice)
-            candidates.pop(idx)
-            candidate_weights.pop(idx)
-        return selected
-
-    def _choose_template(
-        self,
-        node: MapNode,
-        party_ids: Collection[str],
-        recent_ids: Collection[str],
-        *,
-        boss: bool,
-    ) -> SpawnTemplate | None:
-        candidates = [
-            template
-            for template in self._templates.values()
-            if template.id not in party_ids
-        ]
-        if not candidates:
-            return None
-        weights = [
-            max(
-                self._weight_for_template(
-                    template,
-                    node=node,
-                    party_ids=party_ids,
-                    recent_ids=recent_ids,
-                    boss=boss,
-                ),
-                0.0,
-            )
-            for template in candidates
-        ]
-        if not any(weight > 0 for weight in weights):
-            weights = [1.0 for _ in candidates]
-        return random.choices(candidates, weights=weights, k=1)[0]
-
-    def _desired_count(self, node: MapNode, party: Party) -> int:
-        base_cap = int(self.config["base_spawn_cap"])
-        pressure_base = int(self.config["pressure_spawn_base"])
-        pressure_step = int(self.config["pressure_spawn_step"])
-        base = min(base_cap, pressure_base + max(node.pressure, 0) // max(pressure_step, 1))
-        extras = 0
-        size = len(party.members)
-        max_extra = max(size - 1, 0)
-        if max_extra:
-            if random.random() < float(self.config["party_extra_full_chance"]):
-                extras = max_extra
-            else:
-                for tier in range(max_extra - 1, 0, -1):
-                    if random.random() < float(self.config["party_extra_step_chance"]):
-                        extras = tier
-                        break
-        return min(base_cap, base + extras)
 
     @staticmethod
     def calculate_rank_probabilities(
