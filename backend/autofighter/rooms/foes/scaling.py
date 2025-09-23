@@ -5,6 +5,7 @@ from dataclasses import fields
 import random
 from typing import Any
 
+from autofighter.effects import calculate_diminishing_returns
 from autofighter.effects import get_current_stat_value
 from autofighter.mapgen import MapGenerator
 from autofighter.mapgen import MapNode
@@ -25,8 +26,10 @@ def apply_permanent_scaling(
     The previous implementation produced a :class:`~autofighter.effects.StatModifier`
     so the changes only applied once an :class:`~autofighter.effects.EffectManager`
     consumed the pending modifier list.  Foes are now updated immediately by
-    writing directly to their base stat fields.  The return value contains the
-    additive deltas applied to each base attribute for observability.
+    writing directly to their base stat fields while respecting the
+    :func:`~autofighter.effects.calculate_diminishing_returns` soft caps used by
+    temporary buffs.  The return value contains the additive deltas applied to
+    each base attribute for observability.
     """
 
     deltas_applied: dict[str, float] = {}
@@ -66,10 +69,21 @@ def apply_permanent_scaling(
             base_value, base_type = _resolve_base(key)
             if base_value is None:
                 base_value = current_value
-            multiplier = float(value)
-            new_base = base_value * multiplier
-            if abs(new_base - base_value) < 1e-9:
+            if base_value is None:
                 continue
+            multiplier = float(value)
+            additive_change = base_value * (multiplier - 1.0)
+            scaling_factor = 1.0
+            try:
+                scaling_factor = float(
+                    calculate_diminishing_returns(key, current_value)
+                )
+            except Exception:
+                scaling_factor = 1.0
+            scaled_change = additive_change * scaling_factor
+            if abs(scaled_change) < 1e-9:
+                continue
+            new_base = base_value + scaled_change
             cast_value: float | int
             if base_type is not None:
                 try:
@@ -83,7 +97,9 @@ def apply_permanent_scaling(
             except Exception:
                 continue
             final_base, _ = _resolve_base(key)
-            applied_delta = (final_base if final_base is not None else new_base) - base_value
+            applied_delta = (
+                (final_base if final_base is not None else new_base) - base_value
+            )
             deltas_applied[key] = applied_delta
 
     if deltas:
@@ -93,7 +109,19 @@ def apply_permanent_scaling(
             base_value, base_type = _resolve_base(key)
             if base_value is None:
                 base_value = 0.0
-            new_base = base_value + float(value)
+            current_value = _resolve_current(key)
+            scaling_factor = 1.0
+            if current_value is not None:
+                try:
+                    scaling_factor = float(
+                        calculate_diminishing_returns(key, current_value)
+                    )
+                except Exception:
+                    scaling_factor = 1.0
+            scaled_change = float(value) * scaling_factor
+            if abs(scaled_change) < 1e-9:
+                continue
+            new_base = base_value + scaled_change
             if abs(new_base - base_value) < 1e-9:
                 continue
             if base_type is not None:
