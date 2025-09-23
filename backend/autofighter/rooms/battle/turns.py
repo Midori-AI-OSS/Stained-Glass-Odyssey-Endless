@@ -7,19 +7,16 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Awaitable
 from typing import Callable
-from typing import Iterable
 from typing import MutableMapping
 from typing import Sequence
 
 from autofighter.effects import create_stat_buff
-from autofighter.summons.base import Summon
-from autofighter.summons.manager import SummonManager
 
 from ...stats import Stats
 from ...stats import set_enrage_percent
-from ..utils import _serialize
 from . import snapshots as _snapshots
 from .events import register_event_handlers
+from .progress import build_battle_progress_payload
 
 if TYPE_CHECKING:
     from autofighter.effects import EffectManager
@@ -51,134 +48,6 @@ class EnrageState:
             "stacks": self.stacks,
             "turns": self.stacks,
         }
-
-
-async def collect_summon_snapshots(
-    entities: Iterable[Stats],
-) -> dict[str, list[dict[str, Any]]]:
-    """Serialize active summons for the provided combatants."""
-
-    def _collect() -> dict[str, list[dict[str, Any]]]:
-        snapshots: dict[str, list[dict[str, Any]]] = {}
-        for ent in entities:
-            if isinstance(ent, Summon):
-                continue
-            sid = getattr(ent, "id", str(id(ent)))
-            for summon in SummonManager.get_summons(sid):
-                snap = _serialize(summon)
-                snap.setdefault(
-                    "instance_id",
-                    getattr(summon, "instance_id", getattr(summon, "id", None)),
-                )
-                snap["owner_id"] = sid
-                snapshots.setdefault(sid, []).append(snap)
-        return snapshots
-
-    return await asyncio.to_thread(_collect)
-
-
-async def build_action_queue_snapshot(
-    party_members: Sequence[Stats],
-    foes: Sequence[Stats],
-    extra_turns: MutableMapping[int, int],
-) -> list[dict[str, Any]]:
-    """Capture the current visual action queue ordering."""
-
-    def _build() -> list[dict[str, Any]]:
-        ordered = sorted(
-            list(party_members) + list(foes),
-            key=lambda c: getattr(c, "action_value", 0.0),
-        )
-        extras: list[dict[str, Any]] = []
-        for ent in ordered:
-            turns = extra_turns.get(id(ent), 0)
-            for _ in range(turns):
-                extras.append(
-                    {
-                        "id": getattr(ent, "id", ""),
-                        "action_gauge": getattr(ent, "action_gauge", 0),
-                        "action_value": getattr(ent, "action_value", 0.0),
-                        "base_action_value": getattr(ent, "base_action_value", 0.0),
-                        "bonus": True,
-                    }
-                )
-        base_entries = [
-            {
-                "id": getattr(c, "id", ""),
-                "action_gauge": getattr(c, "action_gauge", 0),
-                "action_value": getattr(c, "action_value", 0.0),
-                "base_action_value": getattr(c, "base_action_value", 0.0),
-            }
-            for c in ordered
-        ]
-        return extras + base_entries
-
-    return await asyncio.to_thread(_build)
-
-
-async def build_battle_progress_payload(
-    party_members: Sequence[Stats],
-    foes: Sequence[Stats],
-    enrage_state: EnrageState,
-    rdr: float,
-    extra_turns: MutableMapping[int, int],
-    *,
-    run_id: str | None,
-    active_id: str | None,
-    active_target_id: str | None,
-    include_summon_foes: bool = False,
-    ended: bool | None = None,
-) -> dict[str, Any]:
-    """Assemble the payload dispatched to progress callbacks."""
-
-    party_data = await asyncio.to_thread(
-        lambda: [
-            _serialize(member)
-            for member in party_members
-            if not isinstance(member, Summon)
-        ]
-    )
-
-    def _serialize_foes() -> list[dict[str, Any]]:
-        serialized: list[dict[str, Any]] = []
-        for foe in foes:
-            if not include_summon_foes and isinstance(foe, Summon):
-                continue
-            serialized.append(_serialize(foe))
-        return serialized
-
-    foes_data = await asyncio.to_thread(_serialize_foes)
-    party_summons, foe_summons = await asyncio.gather(
-        collect_summon_snapshots(party_members),
-        collect_summon_snapshots(foes),
-    )
-    action_queue = await build_action_queue_snapshot(
-        party_members,
-        foes,
-        extra_turns,
-    )
-    payload: dict[str, Any] = {
-        "result": "battle",
-        "party": party_data,
-        "foes": foes_data,
-        "party_summons": party_summons,
-        "foe_summons": foe_summons,
-        "enrage": enrage_state.as_payload(),
-        "rdr": rdr,
-        "action_queue": action_queue,
-        "active_id": active_id,
-        "active_target_id": active_target_id,
-    }
-    if run_id:
-        events = _snapshots.get_recent_events(run_id)
-        if events is not None:
-            payload["recent_events"] = events
-        status_phase = _snapshots.get_status_phase(run_id)
-        if status_phase is not None:
-            payload["status_phase"] = status_phase
-    if ended is not None:
-        payload["ended"] = ended
-    return payload
 
 
 async def push_progress_update(

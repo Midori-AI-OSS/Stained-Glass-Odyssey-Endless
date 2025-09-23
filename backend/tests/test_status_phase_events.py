@@ -34,8 +34,8 @@ from runs.lifecycle import battle_snapshots
 from autofighter.effects import DamageOverTime
 from autofighter.effects import EffectManager
 from autofighter.effects import HealingOverTime
+from autofighter.rooms.battle.progress import build_battle_progress_payload
 from autofighter.rooms.battle.turns import EnrageState
-from autofighter.rooms.battle.turns import build_battle_progress_payload
 from autofighter.rooms.battle.turns import mutate_snapshot_overlay
 from autofighter.rooms.battle.turns import prepare_snapshot_overlay
 from autofighter.rooms.battle.turns import register_snapshot_entities
