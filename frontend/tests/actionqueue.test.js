@@ -8,8 +8,9 @@ import { join } from 'path';
       expect(content).toContain('getCharacterImage');
       expect(content).toContain('showActionValues');
       expect(content).toContain('animate:flip');
-      expect(content).toContain('class:bonus');
-      expect(content).toContain('.entry.active');
+      expect(content).toContain('bonus-badge');
+      expect(content).toContain('queue-header');
+      expect(content).toContain('enrage-chip');
     });
   });
 
@@ -25,7 +26,7 @@ describe('Settings menu toggle', () => {
   });
   test('includes Animation Speed slider', () => {
     expect(content).toContain('Animation Speed');
-    expect(content).toContain('type="range"');
-    expect(content).toContain('value={animationSpeed}');
+    expect(content).toContain('DotSelector');
+    expect(content).toContain('bind:value={dotSpeed}');
   });
 });

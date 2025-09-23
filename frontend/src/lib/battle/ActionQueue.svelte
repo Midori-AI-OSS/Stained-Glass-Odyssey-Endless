@@ -18,6 +18,16 @@
   const dispatch = createEventDispatcher();
 
   $: motionDisabled = reducedMotion || effectiveReducedMotion;
+  $: normalizedTurn = Number.parseInt(currentTurn ?? '', 10);
+  $: displayTurn = Number.isFinite(normalizedTurn) && normalizedTurn > 0 ? normalizedTurn : '—';
+  $: enrageCount = (() => {
+    const primary = enrage?.stacks ?? enrage?.turns ?? 0;
+    const parsed = Number(primary);
+    if (!Number.isFinite(parsed)) return 0;
+    return Math.max(0, Math.trunc(parsed));
+  })();
+  $: showEnrageChip = Boolean(enrage?.active && flashEnrageCounter);
+  $: enragePulse = showEnrageChip && !motionDisabled;
 
   function findCombatant(id) {
     return combatants.find((c) => c.id === id) || null;
@@ -68,6 +78,14 @@
 </script>
 
 <div class="action-queue" data-testid="action-queue">
+  {#if showTurnCounter}
+    <div class="queue-header">
+      <span class="turn-label">Turn <span class="turn-value">{displayTurn}</span></span>
+      {#if showEnrageChip}
+        <span class="enrage-chip" class:pulse={enragePulse}>Enrage: {enrageCount}</span>
+      {/if}
+    </div>
+  {/if}
   <div class="viewport" class:masked={needsFade}>
     <div class="list">
       {#each displayItems as item, i (item.key)}
@@ -115,11 +133,62 @@
     --gap: 0.25rem; /* baseline spacing */
     --gap-s: 0.125rem; /* compact spacing for non-active */
     --gap-l: 0.375rem; /* extra spacing after active */
-    display: block;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.4rem;
     z-index: 2;
+  }
+  .queue-header {
+    width: var(--entry-w);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    padding: 0.45rem 0.75rem;
+    background: var(--glass-bg);
+    box-shadow: var(--glass-shadow);
+    border: var(--glass-border);
+    backdrop-filter: var(--glass-filter);
+    color: rgba(255,255,255,0.95);
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    border-radius: 10px;
+  }
+  .turn-label {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.95rem;
+    text-transform: uppercase;
+  }
+  .turn-value {
+    font-size: 1.15rem;
+    font-weight: 800;
+    color: #fff;
+  }
+  .enrage-chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    padding: 0.25rem 0.6rem;
+    border-radius: 999px;
+    font-size: 0.85rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    background: color-mix(in oklab, rgba(160, 20, 36, 0.65) 80%, rgba(60, 0, 0, 0.25));
+    border: 1px solid rgba(255, 120, 140, 0.75);
+    color: #ffe8ed;
+    box-shadow: 0 0 6px 0 rgba(255, 90, 110, 0.45);
+  }
+  .enrage-chip.pulse {
+    animation: enragePulse 2.6s ease-in-out infinite;
   }
   .viewport {
     position: relative;
+    width: var(--entry-w);
     max-height: min(calc((var(--entry-h) + var(--gap)) * 8 - var(--gap)), calc(100vh - 2rem));
     overflow: hidden;
   }
@@ -250,5 +319,18 @@
     box-shadow: 0 0 16px rgba(0,0,0,0.3);
     z-index: -1;
     pointer-events: none;
+  }
+
+  @keyframes enragePulse {
+    0%, 100% {
+      background: color-mix(in oklab, rgba(160, 20, 36, 0.65) 60%, rgba(30, 0, 0, 0.25));
+      box-shadow: 0 0 6px 0 rgba(255, 90, 110, 0.45);
+      border-color: rgba(255, 120, 140, 0.75);
+    }
+    50% {
+      background: color-mix(in oklab, rgba(220, 40, 60, 0.8) 85%, rgba(60, 0, 0, 0.25));
+      box-shadow: 0 0 18px 4px rgba(255, 110, 130, 0.65);
+      border-color: rgba(255, 160, 180, 0.9);
+    }
   }
 </style>
