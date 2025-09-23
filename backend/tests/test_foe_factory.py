@@ -9,6 +9,7 @@ writers_module = types.ModuleType("battle_logging.writers")
 writers_module.start_battle_logging = lambda *_, **__: None
 writers_module.end_battle_logging = lambda *_, **__: None
 writers_module.BattleLogger = type("BattleLogger", (), {})
+writers_module.get_current_run_logger = lambda *_, **__: None
 logging_module.writers = writers_module
 sys.modules.setdefault("battle_logging", logging_module)
 sys.modules.setdefault("battle_logging.writers", writers_module)
