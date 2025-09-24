@@ -15,6 +15,9 @@ housing the element icon helpers and damage-type palette utilities.
 - Provide cache-aware accessors such as `getCharacterImage`,
   `getRandomFallback`, `getSummonArt`, `getSummonGallery`,
   `getHourlyBackground`, and `getRandomBackground`.
+- Surface card, relic, and material reward loaders via `getRewardArt`,
+  `getGlyphArt`, and `getMaterialIcon` so Svelte components share caching and
+  fallback logic.
 - Surface collection helpers including `hasCharacterGallery`,
   `advanceCharacterImage`, `getAvailableCharacterIds`, and
   `getAvailableSummonIds`.
@@ -49,6 +52,23 @@ can inspect galleries with `getSummonGallery` or resolve a single URL with
 Portrait aliases such as the Mimic or jellyfish variants are handled inside the
 registry so callers continue to request `getCharacterImage('jellyfish_alpha')`
 and receive the shared summon art.
+
+## Reward and Material Assets
+`assetRegistry.js` now owns the reward loaders that used to live in
+`rewardLoader.js` and `materialAssetLoader.js`.
+
+- `getRewardArt(type, id)` indexes card, relic, and item artwork using Vite's
+  static module maps. The helper normalizes ids (folder/id for cards and
+  relics, compact ids for items), caches lookups, and falls back to
+  `getMaterialFallbackIcon()` for unknown entries.
+- `getGlyphArt(type, entry)` performs the glyph pairing used by card/relic
+  frames. It compacts the entry id and name to locate drop-in glyph art and
+  returns an empty string when no match exists.
+- `getMaterialIcon(key)` returns the best inventory material icon based on the
+  `<element>_<rank>` key. The loader prefers element/rank specific art, then
+  generic assets for the requested rank, and finally the shared fallback icon.
+  `getMaterialFallbackIcon()` exposes the generic fallback URL, while
+  `onMaterialIconError(event)` applies it when an `<img>` fails to load.
 
 ## Metadata Injection
 `registerAssetMetadata` accepts the following keys (all optional):

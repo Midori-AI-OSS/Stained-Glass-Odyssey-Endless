@@ -4,8 +4,7 @@
   import { cubicOut } from 'svelte/easing';
   import { createDealSfx } from '../systems/sfx.js';
   import CurioChoice from './CurioChoice.svelte';
-  import { getRewardArt } from '../systems/rewardLoader.js';
-  import { getCharacterImage } from '../systems/assetLoader.js';
+  import { getCharacterImage, getRewardArt } from '../systems/assetLoader.js';
   import { formatName } from '../systems/craftingUtils.js';
 
   export let results = [];

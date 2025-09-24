@@ -7,7 +7,7 @@
   import RelicView from './inventory/RelicView.svelte';
   import MaterialsPanel from './inventory/MaterialsPanel.svelte';
   import CardArt from './CardArt.svelte';
-  import { getMaterialIcon, onIconError } from '../systems/materialAssetLoader.js';
+  import { getMaterialIcon, onMaterialIconError } from '../systems/assetLoader.js';
 
   export let cards = [];
   export let relics = [];
@@ -296,7 +296,7 @@
             }} type="relic" roundIcon={false} showTitle={false} showAbout={false} imageOnly={true} fluid={true} quiet={true} />
           {:else}
             <div style="display:flex; align-items:center; justify-content:center; width:100%; height:100%;">
-              <img src={getMaterialIcon(selectedItem.id)} alt={selectedItem.id} on:error={onIconError} style="max-width:100%; max-height:100%; object-fit:contain;" />
+              <img src={getMaterialIcon(selectedItem.id)} alt={selectedItem.id} on:error={onMaterialIconError} style="max-width:100%; max-height:100%; object-fit:contain;" />
             </div>
           {/if}
         </div>
