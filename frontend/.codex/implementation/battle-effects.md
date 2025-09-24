@@ -35,6 +35,18 @@ HP bars for party members, foes, and their summons animate their fill widths
 and overheal overlays with short transitions. When Reduced Motion is enabled,
 these transitions are removed for instant updates.
 
+## Battle Music Metadata
+
+The `/players` bootstrap payload now includes a `music.weights` object for each
+character. The map provides playlist weighting hints for the `normal`, `weak`,
+and `boss` encounter categories and always surfaces a `default` multiplier.
+Frontend helpers read these weights when constructing battle playlists so
+special cases like Luna's themed tracks are provided by backend metadata rather
+than hard-coded in the UI. When metadata is missing or invalid, the selector
+falls back to a neutral weight of `1` for all categories and relies on the
+fallback library when no character playlists are available (which also covers
+reduced-motion safe playback).
+
 ## Stained-Glass Palette
 
 Effect indicators and bar graphs should reflect the project's stained-glass

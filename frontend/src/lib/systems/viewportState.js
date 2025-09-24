@@ -10,6 +10,105 @@ import {
   shuffle,
 } from './music.js';
 
+const rosterMusicWeights = new Map();
+
+function normalizeMusicWeights(meta = null) {
+  const base = { default: 1, normal: 1, weak: 1, boss: 1 };
+  if (meta === null || meta === undefined) {
+    return { ...base };
+  }
+
+  if (typeof meta === 'number') {
+    const numeric = Number(meta);
+    if (Number.isFinite(numeric) && numeric > 0) {
+      return { default: numeric, normal: numeric, weak: numeric, boss: numeric };
+    }
+    return { ...base };
+  }
+
+  if (typeof meta === 'object') {
+    let source = meta;
+    if (meta.weights && typeof meta.weights === 'object') {
+      source = meta.weights;
+    } else if (typeof meta.weight === 'number') {
+      source = { default: meta.weight };
+    }
+
+    if (source && typeof source === 'object') {
+      const result = { ...base };
+      const applied = new Set();
+      for (const [key, raw] of Object.entries(source)) {
+        const value = Number(raw);
+        if (!Number.isFinite(value) || value <= 0) continue;
+        const normalizedKey = key.toLowerCase();
+        result[normalizedKey] = value;
+        applied.add(normalizedKey);
+      }
+      const fallback = Number.isFinite(result.default) && result.default > 0 ? result.default : 1;
+      result.default = fallback;
+      if (!applied.has('normal') || !Number.isFinite(result.normal) || result.normal <= 0) {
+        result.normal = fallback;
+      }
+      if (!applied.has('weak') || !Number.isFinite(result.weak) || result.weak <= 0) {
+        result.weak = fallback;
+      }
+      if (!applied.has('boss') || !Number.isFinite(result.boss) || result.boss <= 0) {
+        result.boss = fallback;
+      }
+      return result;
+    }
+  }
+
+  return { ...base };
+}
+
+function cloneWeights(weights) {
+  const copy = {};
+  for (const [key, value] of Object.entries(weights || {})) {
+    copy[key] = value;
+  }
+  return copy;
+}
+
+function resolveStoredWeights(id) {
+  if (!id) return null;
+  const key = String(id).toLowerCase();
+  return rosterMusicWeights.get(key) || null;
+}
+
+function getEntityMusicWeights(entity) {
+  if (!entity) return null;
+  if (typeof entity === 'object') {
+    if (entity.music && typeof entity.music === 'object') {
+      return normalizeMusicWeights(entity.music);
+    }
+    if (typeof entity.musicWeight === 'number') {
+      return normalizeMusicWeights(entity.musicWeight);
+    }
+    if (typeof entity.music_weight === 'number') {
+      return normalizeMusicWeights(entity.music_weight);
+    }
+  }
+  const id = typeof entity === 'string' ? entity : entity?.id || entity?.name;
+  if (!id) return null;
+  return resolveStoredWeights(id);
+}
+
+function getWeightForCategory(weights, category) {
+  if (!weights) return 1;
+  const key = String(category || '').toLowerCase();
+  const direct = Number(weights[key]);
+  if (Number.isFinite(direct) && direct > 0) return direct;
+  const fallback = Number(weights.default);
+  if (Number.isFinite(fallback) && fallback > 0) return fallback;
+  return 1;
+}
+
+function resolveEntityMusicWeight(entity, category) {
+  const weights = getEntityMusicWeights(entity);
+  return getWeightForCategory(weights, category);
+}
+
 export async function loadInitialState() {
   const saved = loadSettings();
   const settings = {
@@ -33,6 +132,7 @@ export async function loadInitialState() {
   };
   let roster = [];
   let user = { level: 1, exp: 0, next_level_exp: 100 };
+  rosterMusicWeights.clear();
   try {
     const data = await getPlayers();
     function resolveElement(p) {
@@ -40,9 +140,19 @@ export async function loadInitialState() {
       if (e && typeof e !== 'string') e = e.id || e.name;
       return e && !/generic/i.test(String(e)) ? e : 'Generic';
     }
-    roster = data.players.map(p => ({ id: p.id, element: resolveElement(p) }));
+    roster = data.players.map(p => {
+      const weights = normalizeMusicWeights(p?.music);
+      const idKey = String(p?.id || '').toLowerCase();
+      if (idKey) rosterMusicWeights.set(idKey, weights);
+      return {
+        id: p.id,
+        element: resolveElement(p),
+        music: { weights: cloneWeights(weights) },
+      };
+    });
     user = data.user || user;
   } catch {
+    rosterMusicWeights.clear();
     roster = [];
   }
   return { settings, roster, user };
@@ -51,7 +161,8 @@ export async function loadInitialState() {
 export function mapSelectedParty(roster, selected) {
   return selected.map(id => {
     const info = roster.find(r => r.id === id);
-    return { id, element: info?.element || 'Generic' };
+    const weights = info?.music?.weights || normalizeMusicWeights();
+    return { id, element: info?.element || 'Generic', music: { weights: cloneWeights(weights) } };
   });
 }
 
@@ -130,7 +241,7 @@ export function selectBattleMusic({ roomType, party = [], foes = [] }) {
     const id = String(name).toLowerCase();
     const list = getCharacterPlaylist(id, category);
     if (!list.length) return;
-    const weight = id === 'luna' ? 3 : 1;
+    const weight = resolveEntityMusicWeight(entity, category);
     candidates.push({ list, weight });
   }
 

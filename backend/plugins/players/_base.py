@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from dataclasses import field
 from dataclasses import fields
 import logging
+import math
 import numbers
 from typing import TYPE_CHECKING
 from typing import Callable
@@ -59,6 +60,9 @@ class PlayerBase(Stats):
     spawn_weight_multiplier: ClassVar[
         float | Mapping[str, float] | Callable[..., float | None] | None
     ] = None
+    music_weight: ClassVar[float | Mapping[str, float] | None] = None
+    music_weights: ClassVar[Mapping[str, float] | None] = None
+    music_playlist_weights: ClassVar[Mapping[str, float] | None] = None
 
     # Override Stats defaults with PlayerBase-specific values
     hp: int = 1000
@@ -187,6 +191,83 @@ class PlayerBase(Stats):
             return float(config)  # type: ignore[arg-type]
         except (TypeError, ValueError):
             return None
+
+    @classmethod
+    def get_music_metadata(cls) -> dict[str, object]:
+        """Expose normalized music weighting metadata for clients."""
+
+        return {"weights": cls._resolve_music_weights()}
+
+    @classmethod
+    def _resolve_music_weights(cls) -> dict[str, float]:
+        """Gather playlist weighting hints with sane defaults."""
+
+        merged: dict[str, float] = {"default": 1.0}
+        configs = (
+            getattr(cls, "music_playlist_weights", None),
+            getattr(cls, "music_weights", None),
+            getattr(cls, "music_weight", None),
+        )
+        for config in configs:
+            normalized = cls._normalize_music_weights(config)
+            if not normalized:
+                continue
+            merged.update(normalized)
+
+        # Ensure encounter categories are present even when not explicitly set
+        for key in ("normal", "weak", "boss"):
+            if key not in merged:
+                merged[key] = merged.get("default", 1.0)
+
+        cleaned: dict[str, float] = {}
+        for key, value in merged.items():
+            try:
+                numeric = float(value)
+            except (TypeError, ValueError):
+                continue
+            if not math.isfinite(numeric) or numeric <= 0:
+                continue
+            cleaned[str(key).lower()] = numeric
+
+        if "default" not in cleaned:
+            cleaned["default"] = 1.0
+        for key in ("normal", "weak", "boss"):
+            if key not in cleaned:
+                cleaned[key] = cleaned.get("default", 1.0)
+
+        return cleaned
+
+    @staticmethod
+    def _normalize_music_weights(config: object) -> dict[str, float] | None:
+        """Normalize class-level music weight configuration."""
+
+        if config is None:
+            return None
+
+        if isinstance(config, Mapping):
+            results: dict[str, float] = {}
+            for key, raw in config.items():
+                try:
+                    value = float(raw)
+                except (TypeError, ValueError):
+                    continue
+                if not math.isfinite(value) or value <= 0:
+                    continue
+                results[str(key).lower()] = value
+            return results or None
+
+        if isinstance(config, numbers.Real):
+            value = float(config)
+        else:
+            try:
+                value = float(config)  # type: ignore[arg-type]
+            except (TypeError, ValueError):
+                return None
+
+        if not math.isfinite(value) or value <= 0:
+            return None
+
+        return {"default": value}
 
     def __post_init__(self) -> None:
         if self.voice_gender is None:
