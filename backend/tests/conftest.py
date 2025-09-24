@@ -171,6 +171,114 @@ def _ensure_reward_service_stub() -> None:
     setattr(services_pkg, "reward_service", reward_service)
 
 
+def _ensure_run_service_stub() -> None:
+    if "services.run_service" in sys.modules:
+        return
+
+    services_pkg = sys.modules.get("services")
+    if services_pkg is None:
+        services_pkg = types.ModuleType("services")
+        sys.modules["services"] = services_pkg
+
+    run_service = types.ModuleType("services.run_service")
+
+    async def start_run(*args, **kwargs):  # pragma: no cover - simple stub
+        return {"run_id": "stub-run", "party": {}, "map": {}}
+
+    async def advance_room(*args, **kwargs):  # pragma: no cover - simple stub
+        return {"room": None, "result": None}
+
+    async def get_battle_events(*args, **kwargs):  # pragma: no cover - simple stub
+        return []
+
+    async def get_battle_summary(*args, **kwargs):  # pragma: no cover - simple stub
+        return {"summary": None}
+
+    async def restore_save(*args, **kwargs):  # pragma: no cover - simple stub
+        return {"restored": False}
+
+    async def backup_save(*args, **kwargs):  # pragma: no cover - simple stub
+        return None
+
+    async def wipe_save(*args, **kwargs):  # pragma: no cover - simple stub
+        return {"status": "wiped"}
+
+    async def get_map(*args, **kwargs):  # pragma: no cover - simple stub
+        return {"rooms": [], "current": 0}
+
+    def _choose_foe(*args, **kwargs):  # pragma: no cover - simple stub
+        return None
+
+    run_service.start_run = start_run  # type: ignore[attr-defined]
+    run_service.advance_room = advance_room  # type: ignore[attr-defined]
+    run_service.get_battle_events = get_battle_events  # type: ignore[attr-defined]
+    run_service.get_battle_summary = get_battle_summary  # type: ignore[attr-defined]
+    run_service.restore_save = restore_save  # type: ignore[attr-defined]
+    run_service.backup_save = backup_save  # type: ignore[attr-defined]
+    run_service.wipe_save = wipe_save  # type: ignore[attr-defined]
+    run_service.get_map = get_map  # type: ignore[attr-defined]
+    run_service._choose_foe = _choose_foe  # type: ignore[attr-defined]
+
+    sys.modules["services.run_service"] = run_service
+    setattr(services_pkg, "run_service", run_service)
+
+
+def _ensure_room_service_stub() -> None:
+    if "services.room_service" in sys.modules:
+        return
+
+    services_pkg = sys.modules.get("services")
+    if services_pkg is None:
+        services_pkg = types.ModuleType("services")
+        sys.modules["services"] = services_pkg
+
+    room_service = types.ModuleType("services.room_service")
+
+    async def _battle_room(*args, **kwargs):  # pragma: no cover - simple stub
+        return {"next_room": None, "result": None}
+
+    async def _boss_room(*args, **kwargs):  # pragma: no cover - simple stub
+        return {"next_room": None, "result": None}
+
+    async def _shop_room(*args, **kwargs):  # pragma: no cover - simple stub
+        return {"purchases": []}
+
+    async def room_action(*args, **kwargs):  # pragma: no cover - simple stub
+        return {"status": "ok", "result": None}
+
+    def _collect_summons(*args, **kwargs):  # pragma: no cover - simple stub
+        return []
+
+    def _choose_foe(*args, **kwargs):  # pragma: no cover - simple stub
+        return None
+
+    def _build_foes(*args, **kwargs):  # pragma: no cover - simple stub
+        return []
+
+    async def _run_battle(*args, **kwargs):  # pragma: no cover - simple stub
+        return {"outcome": None}
+
+    def _scale_stats(*args, **kwargs):  # pragma: no cover - simple stub
+        return None
+
+    def get_room(*args, **kwargs):  # pragma: no cover - simple stub
+        return None
+
+    room_service.battle_room = _battle_room  # type: ignore[attr-defined]
+    room_service.boss_room = _boss_room  # type: ignore[attr-defined]
+    room_service.shop_room = _shop_room  # type: ignore[attr-defined]
+    room_service.room_action = room_action  # type: ignore[attr-defined]
+    room_service._collect_summons = _collect_summons  # type: ignore[attr-defined]
+    room_service._choose_foe = _choose_foe  # type: ignore[attr-defined]
+    room_service._build_foes = _build_foes  # type: ignore[attr-defined]
+    room_service._run_battle = _run_battle  # type: ignore[attr-defined]
+    room_service._scale_stats = _scale_stats  # type: ignore[attr-defined]
+    room_service.get_room = get_room  # type: ignore[attr-defined]
+
+    sys.modules["services.room_service"] = room_service
+    setattr(services_pkg, "room_service", room_service)
+
+
 def _ensure_tracking_stub() -> None:
     if "tracking" in sys.modules:
         return
@@ -288,6 +396,8 @@ _ensure_battle_logging_stub()
 _ensure_user_level_stub()
 _ensure_login_reward_stub()
 _ensure_reward_service_stub()
+_ensure_run_service_stub()
+_ensure_room_service_stub()
 _ensure_tracking_stub()
 _ensure_options_stub()
 _ensure_llm_stub()
