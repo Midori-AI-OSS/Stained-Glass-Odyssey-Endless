@@ -1,5 +1,5 @@
 <script>
-  import { getMaterialIcon, onIconError } from '../../systems/materialAssetLoader.js';
+  import { getMaterialIcon, onMaterialIconError } from '../../systems/assetLoader.js';
 
   export let materials = [];
   export let select = () => {};
@@ -39,7 +39,7 @@
       style={`--accent:${getStarColorFromId(id)}`}
     >
       <div class="item-icon material">
-        <img src={getMaterialIcon(id)} alt={id} on:error={onIconError} />
+        <img src={getMaterialIcon(id)} alt={id} on:error={onMaterialIconError} />
       </div>
       <span class="material-qty">×{qty}</span>
     </button>

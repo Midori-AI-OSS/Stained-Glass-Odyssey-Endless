@@ -53,7 +53,50 @@ const summonModules = createModuleMap(
   })
 );
 
+const cardArtModules = createModuleMap(
+  import.meta.glob('../assets/cards/*/*.png', {
+    eager: true,
+    import: 'default',
+    query: '?url'
+  })
+);
+
+const relicArtModules = createModuleMap(
+  import.meta.glob('../assets/relics/*/*.png', {
+    eager: true,
+    import: 'default',
+    query: '?url'
+  })
+);
+
+const materialIconModules = createModuleMap(
+  import.meta.glob('../assets/items/*/*.png', {
+    eager: true,
+    import: 'default',
+    query: '?url'
+  })
+);
+
+const cardGlyphModules = createModuleMap(
+  import.meta.glob('../assets/cards/Art/*.png', {
+    eager: true,
+    import: 'default',
+    query: '?url'
+  })
+);
+
+const relicGlyphModules = createModuleMap(
+  import.meta.glob('../assets/relics/Art/*.png', {
+    eager: true,
+    import: 'default',
+    query: '?url'
+  })
+);
+
 const STATIC_FALLBACK = normalizeAssetUrl('../assets/midoriai-logo.png');
+const DEFAULT_CARD_FALLBACK = normalizeAssetUrl('../assets/cards/gray/bg_attack_default_gray2.png');
+const DEFAULT_RELIC_FALLBACK = normalizeAssetUrl('../assets/relics/fallback/placeholder.png');
+const DEFAULT_ITEM_FALLBACK = normalizeAssetUrl('../assets/items/generic/generic1.png');
 
 const portraitGalleries = new Map(); // normalized id -> string[] urls
 const portraitCanonicals = new Map(); // normalized id -> canonical id
@@ -435,6 +478,257 @@ export const getAvailableSummonIds = () => {
   return Array.from(ids);
 };
 
+const stripNonAlphanumeric = value => String(value ?? '').toLowerCase().replace(/[^a-z0-9]/g, '');
+
+const createRewardCollection = (modules, options = {}) => {
+  const map = new Map();
+  const urls = [];
+  Object.entries(modules).forEach(([path, url]) => {
+    if (!url) return;
+    const segments = path.split('/');
+    const file = segments.pop()?.replace(/\.png$/i, '');
+    const folder = segments.pop();
+    if (!file) return;
+    const baseKey = options.useFolderKey && folder ? `${folder}/${file}` : file;
+    const normalizedBase = normalizeKey(baseKey);
+    if (normalizedBase) {
+      map.set(normalizedBase, url);
+    }
+    if (!options.useFolderKey || !folder) {
+      const normalizedFile = normalizeKey(file);
+      if (normalizedFile) {
+        map.set(normalizedFile, url);
+      }
+    }
+    const compact = stripNonAlphanumeric(baseKey);
+    if (compact) {
+      map.set(compact, url);
+    }
+    urls.push(url);
+  });
+  const fallback = options.fallback || urls[0] || '';
+  return { map, fallback, all: urls };
+};
+
+const rewardCollections = {
+  card: createRewardCollection(cardArtModules, {
+    fallback: DEFAULT_CARD_FALLBACK,
+    useFolderKey: true
+  }),
+  relic: createRewardCollection(relicArtModules, {
+    fallback: DEFAULT_RELIC_FALLBACK,
+    useFolderKey: true
+  }),
+  item: createRewardCollection(materialIconModules, {
+    fallback: DEFAULT_ITEM_FALLBACK,
+    useFolderKey: false
+  })
+};
+
+const rewardCache = new Map();
+
+const normalizeRewardType = type => {
+  const key = normalizeKey(type);
+  if (key === 'cards') return 'card';
+  if (key === 'relics') return 'relic';
+  if (key === 'items') return 'item';
+  if (key === 'material' || key === 'materials') return 'item';
+  if (key === 'relic') return 'relic';
+  if (key === 'card') return 'card';
+  if (key === 'item') return 'item';
+  if (!key) return 'item';
+  return 'item';
+};
+
+const normalizeRewardId = (type, id) => {
+  const key = normalizeKey(id);
+  if (!key) return '';
+  if (type === 'item') {
+    return stripNonAlphanumeric(key);
+  }
+  return key;
+};
+
+const rewardCacheKey = (type, id) => `${type}:${id}`;
+
+export const getRewardArt = (type, id) => {
+  const normalizedType = normalizeRewardType(type);
+  const collection = normalizedType ? rewardCollections[normalizedType] : undefined;
+  if (!collection) {
+    return DEFAULT_ITEM_FALLBACK;
+  }
+  const normalizedId = normalizeRewardId(normalizedType, id);
+  const cacheKey = rewardCacheKey(normalizedType, normalizedId);
+  if (rewardCache.has(cacheKey)) {
+    return rewardCache.get(cacheKey);
+  }
+  let url = normalizedId ? collection.map.get(normalizedId) : null;
+  if (!url && normalizedId) {
+    const compact = stripNonAlphanumeric(normalizedId);
+    if (compact) {
+      url = collection.map.get(compact) ?? null;
+    }
+  }
+  if (!url) {
+    url = collection.fallback;
+  }
+  rewardCache.set(cacheKey, url);
+  return url;
+};
+
+const createGlyphMap = modules => {
+  const map = new Map();
+  Object.entries(modules).forEach(([path, url]) => {
+    if (!url) return;
+    const file = path.split('/').pop()?.replace(/\.png$/i, '');
+    if (!file) return;
+    const compact = stripNonAlphanumeric(file);
+    if (compact) {
+      map.set(compact, url);
+    }
+  });
+  return map;
+};
+
+const glyphCollections = {
+  card: createGlyphMap(cardGlyphModules),
+  relic: createGlyphMap(relicGlyphModules)
+};
+
+const getGlyphCandidateKeys = entry => {
+  const candidates = [];
+  const id = stripNonAlphanumeric(entry?.id);
+  const name = stripNonAlphanumeric(entry?.name);
+  if (id) candidates.push(id);
+  if (name) candidates.push(name);
+  return candidates;
+};
+
+export const getGlyphArt = (type, entry) => {
+  const normalizedType = normalizeRewardType(type);
+  if (normalizedType !== 'card' && normalizedType !== 'relic') {
+    return '';
+  }
+  const map = normalizedType === 'relic' ? glyphCollections.relic : glyphCollections.card;
+  if (!entry || typeof entry !== 'object') return '';
+  const keys = getGlyphCandidateKeys(entry);
+  for (const key of keys) {
+    if (map.has(key)) {
+      return map.get(key);
+    }
+  }
+  try {
+    if (import.meta?.env?.DEV && typeof window !== 'undefined' && keys.length) {
+      console.debug('[glyphArt] no match', { type, id: entry?.id, name: entry?.name, keys });
+    }
+  } catch {}
+  return '';
+};
+
+const ensureMaterialElement = (store, element) => {
+  if (!store.has(element)) {
+    store.set(element, {
+      first: null,
+      byRank: new Map(),
+      genericByRank: new Map()
+    });
+  }
+  return store.get(element);
+};
+
+const materialIconIndex = (() => {
+  const elements = new Map();
+  const genericByRank = new Map();
+  let genericFirst = materialIconModules['../assets/items/generic/generic1.png'] ?? null;
+
+  Object.entries(materialIconModules).forEach(([path, url]) => {
+    if (!url) return;
+    const segments = path.split('/');
+    const file = segments.pop()?.replace(/\.png$/i, '');
+    const folder = segments.pop();
+    const element = normalizeKey(folder);
+    if (!file || !element) return;
+    const entry = ensureMaterialElement(elements, element);
+    if (!entry.first) {
+      entry.first = url;
+    }
+    if (file.startsWith(element)) {
+      const rank = stripNonAlphanumeric(file.slice(element.length)) || '1';
+      entry.byRank.set(rank, url);
+    } else if (file.startsWith('generic')) {
+      const rank = stripNonAlphanumeric(file.slice('generic'.length)) || '1';
+      entry.genericByRank.set(rank, url);
+      if (element === 'generic') {
+        genericByRank.set(rank, url);
+        if (!genericFirst && file === 'generic1') {
+          genericFirst = url;
+        }
+      }
+    }
+  });
+
+  if (!genericFirst) {
+    genericFirst = DEFAULT_ITEM_FALLBACK;
+  }
+
+  return {
+    fallback: DEFAULT_ITEM_FALLBACK,
+    elements,
+    genericByRank,
+    genericFirst
+  };
+})();
+
+const materialIconCache = new Map();
+
+const parseMaterialKey = key => {
+  const [rawElement, rawRank] = String(key ?? '').split('_');
+  const element = normalizeKey(rawElement);
+  const rankDigits = stripNonAlphanumeric(rawRank || '');
+  const rank = rankDigits || '1';
+  return { element, rank };
+};
+
+export const getMaterialIcon = key => {
+  const { element, rank } = parseMaterialKey(key);
+  const cacheKey = rewardCacheKey(element || 'generic', rank);
+  if (materialIconCache.has(cacheKey)) {
+    return materialIconCache.get(cacheKey);
+  }
+  let url = null;
+  if (element) {
+    const entry = materialIconIndex.elements.get(element);
+    if (entry) {
+      if (entry.byRank.has(rank)) {
+        url = entry.byRank.get(rank);
+      } else if (entry.genericByRank.has(rank)) {
+        url = entry.genericByRank.get(rank);
+      } else if (entry.first) {
+        url = entry.first;
+      }
+    }
+  }
+  if (!url) {
+    if (materialIconIndex.genericByRank.has(rank)) {
+      url = materialIconIndex.genericByRank.get(rank);
+    } else {
+      url = materialIconIndex.genericFirst || materialIconIndex.fallback;
+    }
+  }
+  if (!url) {
+    url = materialIconIndex.fallback;
+  }
+  materialIconCache.set(cacheKey, url);
+  return url;
+};
+
+export const getMaterialFallbackIcon = () => materialIconIndex.fallback;
+
+export const onMaterialIconError = event => {
+  if (!event || !event.target) return;
+  event.target.src = materialIconIndex.fallback;
+};
+
 const asArray = value => {
   if (!value) return [];
   if (Array.isArray(value)) return value;
@@ -562,6 +856,8 @@ export const resetAssetRegistryOverrides = () => {
   metadataOverrides.summonGalleries.clear();
   metadataOverrides.summonCanonicals.clear();
   metadataOverrides.rarityFolders.clear();
+  rewardCache.clear();
+  materialIconCache.clear();
   clearCharacterImageCache();
   markRegistryUpdated();
 };
