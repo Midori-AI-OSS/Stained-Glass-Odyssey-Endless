@@ -66,20 +66,55 @@
   })();
 
   // Build display items with active actor pinned to top
+  function formatName(value) {
+    return (value ?? '').toString().replace(/[_-]+/g, ' ');
+  }
+
   $: displayItems = (() => {
     const firstIdx = baseQueue.findIndex((e) => e.id === currentActiveId);
     const ordered = firstIdx > 0
       ? [baseQueue[firstIdx], ...baseQueue.slice(0, firstIdx), ...baseQueue.slice(firstIdx + 1)]
       : baseQueue.slice();
     const counts = new Map();
-    return ordered.map((e) => {
-      const n = (counts.get(e.id) || 0) + 1;
-      counts.set(e.id, n);
-      return { entry: e, key: `${e.id}#${n}` };
+    return ordered.map((entry, index) => {
+      const occurrence = (counts.get(entry.id) || 0) + 1;
+      counts.set(entry.id, occurrence);
+      const isTurnCounter = entry.id === TURN_COUNTER_ID;
+      const fighter = isTurnCounter ? null : findCombatant(entry.id);
+      const elementId = fighter?.element || entry?.element || 'generic';
+      const elColor = isTurnCounter ? null : getElementColor(elementId);
+      const style = isTurnCounter || !elColor ? null : `--element-color: ${elColor}`;
+      const bonusCount = isTurnCounter ? 0 : bonusCounts.get(entry.id) || 0;
+      const summonType = fighter?.summon_type;
+      const isPhantom = summonType === 'phantom';
+      const portraitKey = isTurnCounter
+        ? null
+        : (isPhantom && fighter?.summoner_id)
+          ? fighter.summoner_id
+          : (summonType || fighter?.id || entry?.id || 'generic');
+      const portraitSrc = portraitKey ? getCharacterImage(portraitKey) : '';
+      const hoverId = fighter?.id ?? null;
+      const actionValueDisplay = Math.round(entry?.action_value);
+      const displayName = formatName(fighter?.name || fighter?.id || entry?.id || '');
+
+      return {
+        entry,
+        key: `${entry.id}#${occurrence}`,
+        type: isTurnCounter ? 'turn' : 'fighter',
+        fighter,
+        elColor,
+        style,
+        bonusCount,
+        portraitSrc,
+        isPhantom,
+        hoverId,
+        actionValueDisplay,
+        displayName,
+        isActive: index === 0,
+      };
     });
   })();
 
-  $: activeIndex = 0; // top item is active
   $: needsFade = (displayItems?.length || 0) > 8;
 
 </script>
@@ -87,15 +122,19 @@
 <div class="action-queue" data-testid="action-queue">
   <div class="viewport" class:masked={needsFade}>
     <div class="list">
-      {#each displayItems as item, i (item.key)}
-        {@const entry = item.entry}
-        {#if entry.id === TURN_COUNTER_ID}
-          <div
-            class="entry turn-counter"
-            class:enraged={showEnrageChip}
-            class:motionless={motionDisabled}
-            animate:flip={{ duration: motionDisabled ? 0 : 220 }}
-          >
+      {#each displayItems as item (item.key)}
+        <div
+          class="entry"
+          class:turn-counter={item.type === 'turn'}
+          class:enraged={item.type === 'turn' && showEnrageChip}
+          class:motionless={item.type === 'turn' && motionDisabled}
+          class:active={item.isActive}
+          style={item.style}
+          animate:flip={{ duration: motionDisabled ? 0 : 220 }}
+          on:mouseenter={() => item.hoverId !== null && dispatch('hover', { id: item.hoverId })}
+          on:mouseleave={() => item.hoverId !== null && dispatch('hover', { id: null })}
+        >
+          {#if item.type === 'turn'}
             <div class="inner">
               <div class="turn-card">
                 <div class="turn-label">
@@ -107,36 +146,26 @@
                 {/if}
               </div>
             </div>
-          </div>
-        {:else}
-          {@const fighter = findCombatant(entry.id)}
-          {@const elColor = getElementColor(fighter?.element || entry?.element || 'generic')}
-          <div
-            class="entry"
-            class:active={i === activeIndex}
-            style="--element-color: {elColor}"
-            animate:flip={{ duration: motionDisabled ? 0 : 220 }}
-            on:mouseenter={() => dispatch('hover', { id: fighter?.id ?? null })}
-            on:mouseleave={() => dispatch('hover', { id: null })}
-          >
+          {:else}
             <div class="inner">
-              {#if (bonusCounts.get(entry.id) || 0) > 0}
-                <div class="bonus-badge">x{bonusCounts.get(entry.id)}</div>
+              {#if item.bonusCount > 0}
+                <div class="bonus-badge">x{item.bonusCount}</div>
               {/if}
               <img
-                src={getCharacterImage((fighter?.summon_type === 'phantom' && fighter?.summoner_id) ? fighter.summoner_id : (fighter?.summon_type || fighter?.id || entry?.id))}
+                src={item.portraitSrc}
                 alt=""
-                class="portrait {fighter?.summon_type === 'phantom' ? 'phantom' : ''}"
-                title={(fighter?.name || fighter?.id || entry?.id || '').toString().replace(/[_-]+/g, ' ')}
+                class="portrait"
+                class:phantom={item.isPhantom}
+                title={item.displayName}
               />
               {#if showActionValues}
-                <div class="av">{Math.round(entry.action_value)}</div>
+                <div class="av">{item.actionValueDisplay}</div>
               {/if}
               <!-- Hover-only name chip -->
-              <div class="name-chip">{(fighter?.name || fighter?.id || entry?.id || '').toString().replace(/[_-]+/g, ' ')}</div>
+              <div class="name-chip">{item.displayName}</div>
             </div>
-          </div>
-        {/if}
+          {/if}
+        </div>
       {/each}
     </div>
   </div>
