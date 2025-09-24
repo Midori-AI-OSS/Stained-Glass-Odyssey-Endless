@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import random
 from collections.abc import Awaitable
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import Any
 
+from autofighter.cards import card_choices
 from autofighter.mapgen import MapNode
 
 from ...party import Party
@@ -16,6 +18,9 @@ from .enrage import ENRAGE_TURNS_BOSS
 from .enrage import ENRAGE_TURNS_NORMAL
 from .enrage import compute_enrage_threshold
 from .setup import setup_battle
+
+# Expose module-level random so existing tests can patch deterministic rolls.
+random = random
 
 
 @dataclass

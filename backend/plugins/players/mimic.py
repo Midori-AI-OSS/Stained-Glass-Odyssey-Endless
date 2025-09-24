@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from dataclasses import field
+from typing import ClassVar
 from random import choice
 
 from autofighter.character import CharacterType
@@ -20,3 +21,5 @@ class Mimic(PlayerBase):
         default_factory=lambda: load_damage_type(choice(ALL_DAMAGE_TYPES))
     )
     passives: list[str] = field(default_factory=lambda: ["mimic_player_copy"])
+    ui_portrait_pool: ClassVar[str] = "player_mirror"
+    ui_non_selectable: ClassVar[bool] = True

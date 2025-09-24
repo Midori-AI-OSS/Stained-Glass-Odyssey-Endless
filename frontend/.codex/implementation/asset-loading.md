@@ -87,6 +87,25 @@ maps are cleared and the registry version increments. Tests and tooling can
 reset overrides with `resetAssetRegistryOverrides()` to restore the on-disk
 state.
 
+### Character metadata hooks
+
+`getCharacterImage` now consults the lightweight registry in
+`src/lib/systems/characterMetadata.js` before resolving portraits. The registry
+is populated from backend responses (e.g. `/players`) so components can register
+additional hints without duplicating conditionals. The following metadata keys
+are respected:
+
+- `portrait_pool`: `player_mirror` mirrors the main player's gallery (used by
+  Mimic) while `player_gallery` forces the random player fallback without
+  special-casing ids such as `lady_echo`.
+- `non_selectable`: hides characters from the party picker regardless of
+  `gacha_rarity`.
+
+Callers can pass `{ metadata }` via the second argument to `getCharacterImage`
+for one-off lookups, but typical flows populate the shared registry with
+`replaceCharacterMetadata()` so roster data, summons, and pull results all share
+the same hints.
+
 ## Legacy Loader Interaction
 `assetLoader.js` now imports the typed loaders from the registry and re-exports
 them to maintain backwards compatibility. The module continues to host element

@@ -9,25 +9,38 @@ from collections.abc import Callable
 import gc
 import json
 import logging
-import time
 from typing import Any
 
 from battle_logging.writers import end_run_logging
+from tracking import log_play_session_end
+from tracking import log_run_end
 
 from autofighter.gacha import GachaManager
 from autofighter.mapgen import MapNode
 from autofighter.party import Party
 from autofighter.rooms import BattleRoom
 from autofighter.stats import Stats
-from tracking import log_battle_summary
-from tracking import log_game_action
-from tracking import log_play_session_end
-from tracking import log_run_end
 
 from .encryption import get_save_manager
 from .party_manager import save_party
 
 log = logging.getLogger(__name__)
+
+ITEM_UI_METADATA: dict[str, dict[str, object]] = {
+    "ticket": {"label": "Gacha Ticket", "type": "pull_ticket"},
+}
+
+
+def _apply_item_ui_metadata(entry: dict[str, object]) -> None:
+    metadata = ITEM_UI_METADATA.get(str(entry.get("id")))
+    if not metadata:
+        return
+    ui_block = entry.setdefault("ui", {})
+    if not isinstance(ui_block, dict):
+        ui_block = {}
+        entry["ui"] = ui_block
+    for key, value in metadata.items():
+        ui_block.setdefault(key, value)
 
 battle_tasks: dict[str, asyncio.Task] = {}
 battle_snapshots: dict[str, dict[str, Any]] = {}
@@ -184,10 +197,19 @@ async def _run_battle(
             manager = GachaManager(get_save_manager())
             items = manager._get_items()
             for entry in loot_items:
-                if entry.get("id") == "ticket":
+                if not isinstance(entry, dict):
+                    continue
+                _apply_item_ui_metadata(entry)
+                item_id = entry.get("id")
+                if item_id == "ticket":
                     items["ticket"] = items.get("ticket", 0) + 1
                 else:
-                    key = f"{entry['id']}_{entry['stars']}"
+                    stars = entry.get("stars", 0)
+                    try:
+                        stars_value = int(stars)
+                    except (TypeError, ValueError):
+                        stars_value = 0
+                    key = f"{item_id}_{stars_value}"
                     items[key] = items.get(key, 0) + 1
             manager._auto_craft(items)
             manager._set_items(items)
