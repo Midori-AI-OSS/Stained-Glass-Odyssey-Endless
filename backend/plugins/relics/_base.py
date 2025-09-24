@@ -84,6 +84,12 @@ class RelicBase:
 
         store = self._ensure_subscription_store(party)
         entries = store.setdefault(self.id, [])
+        for existing_event, existing_callback, is_cleanup in entries:
+            if is_cleanup:
+                continue
+            if existing_event == event and existing_callback is callback:
+                self._ensure_cleanup_subscription(party, entries, BUS)
+                return callback
         entries.append((event, callback, False))
         BUS.subscribe(event, callback)
         self._ensure_cleanup_subscription(party, entries, BUS)
