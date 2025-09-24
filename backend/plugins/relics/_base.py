@@ -83,8 +83,16 @@ class RelicBase:
         from autofighter.stats import BUS
 
         store = self._ensure_subscription_store(party)
-        store.setdefault(self.id, []).append((event, callback))
+        entries = store.setdefault(self.id, [])
+        for existing_event, existing_callback, is_cleanup in entries:
+            if is_cleanup:
+                continue
+            if existing_event == event and existing_callback is callback:
+                self._ensure_cleanup_subscription(party, entries, BUS)
+                return callback
+        entries.append((event, callback, False))
         BUS.subscribe(event, callback)
+        self._ensure_cleanup_subscription(party, entries, BUS)
         return callback
 
     def unsubscribe(self, party: Party, event: str, callback: Callable[..., object]) -> None:
@@ -97,16 +105,19 @@ class RelicBase:
         entries = store.get(self.id)
         if not entries:
             return
-        store[self.id] = [pair for pair in entries if pair != (event, callback)]
+        store[self.id] = [pair for pair in entries if pair[:2] != (event, callback)]
         if not store[self.id]:
             store.pop(self.id, None)
 
     def clear_subscriptions(self, party: Party) -> None:
+        from autofighter.stats import BUS
+
         store = getattr(party, "_relic_bus_subscriptions", None)
         if not store:
             return
-        for event, callback in list(store.pop(self.id, [])):
-            self.unsubscribe(party, event, callback)
+        entries = store.pop(self.id, [])
+        for event, callback, _ in entries:
+            BUS.unsubscribe(event, callback)
 
     def _reset_subscriptions(self, party: Party) -> None:
         from autofighter.stats import BUS
@@ -115,13 +126,30 @@ class RelicBase:
         if not store:
             return
         callbacks = store.pop(self.id, [])
-        for event, callback in callbacks:
+        for event, callback, _ in callbacks:
             BUS.unsubscribe(event, callback)
 
     @staticmethod
-    def _ensure_subscription_store(party: Party) -> dict[str, list[tuple[str, Callable[..., object]]]]:
+    def _ensure_subscription_store(
+        party: Party,
+    ) -> dict[str, list[tuple[str, Callable[..., object], bool]]]:
         store = getattr(party, "_relic_bus_subscriptions", None)
         if store is None:
             store = {}
             setattr(party, "_relic_bus_subscriptions", store)
         return store
+
+    def _ensure_cleanup_subscription(
+        self,
+        party: Party,
+        entries: list[tuple[str, Callable[..., object], bool]],
+        bus: object,
+    ) -> None:
+        if any(entry[2] for entry in entries):
+            return
+
+        def _cleanup(*_args: object, **_kwargs: object) -> None:
+            self.clear_subscriptions(party)
+
+        entries.append(("battle_end", _cleanup, True))
+        bus.subscribe("battle_end", _cleanup)
