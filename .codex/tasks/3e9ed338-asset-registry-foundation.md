@@ -14,3 +14,5 @@ Coder, establish the central asset registry for character portraits, summons, an
 
 ## Notes
 - Coordinate with the alias pipeline task to ensure the registry can accept metadata-driven alias descriptors once they land.
+
+ready to review
