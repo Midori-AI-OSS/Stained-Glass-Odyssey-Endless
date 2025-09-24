@@ -12,12 +12,9 @@ documentation:
 - changed-files:
   - any-glob-to-any-file:
     - .codex/**
+    - '**/*.md'
     - docs/**
     - guides/**
-
-documentation:
-- changed-files:
-  - any-glob-to-any-file: '**/*.md'
 
 backend:
 - all:
