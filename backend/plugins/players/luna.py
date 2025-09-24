@@ -182,6 +182,7 @@ class Luna(PlayerBase):
     # UI hint: show numeric actions indicator
     actions_display: str = "number"
     spawn_weight_multiplier: ClassVar[dict[str, float]] = {"non_boss": 5.0}
+    music_playlist_weights: ClassVar[dict[str, float]] = {"default": 3.0, "boss": 1.0}
 
     @classmethod
     def get_spawn_weight(

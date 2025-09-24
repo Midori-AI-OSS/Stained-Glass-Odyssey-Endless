@@ -177,6 +177,7 @@ async def get_players() -> tuple[str, int, dict[str, str]]:
                 "is_player": inst.id == "player",
                 "element": inst.element_id,
                 "stats": stats,
+                "music": cls.get_music_metadata(),
             }
         )
     payload = {"players": roster, "user": get_user_state()}
