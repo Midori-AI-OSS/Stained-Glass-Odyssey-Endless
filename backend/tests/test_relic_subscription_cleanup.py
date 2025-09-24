@@ -10,6 +10,7 @@ from autofighter.relics import award_relic
 from autofighter.stats import BUS
 from autofighter.stats import Stats
 from plugins import event_bus as event_bus_module
+from plugins.relics._base import RelicBase
 
 
 def _collect_events(relic_id: str, effect_key: str, events: list[tuple]) -> list[tuple]:
@@ -89,6 +90,52 @@ async def test_omega_core_single_battle_start_subscription() -> None:
 
     assert len(event_bus_module.bus._subs.get("battle_start", [])) == 1
     assert len(event_bus_module.bus._subs.get("turn_start", [])) == 1
-    assert len(event_bus_module.bus._subs.get("battle_end", [])) == 1
+    battle_end_subs = event_bus_module.bus._subs.get("battle_end", [])
+    assert len(battle_end_subs) == 2
+    store = getattr(party, "_relic_bus_subscriptions", {})
+    entries = store.get("omega_core", [])
+    assert sum(1 for _, _, is_cleanup in entries if is_cleanup) == 1
+
+    event_bus_module.bus._subs.clear()
+
+
+class _DummyRelic(RelicBase):
+    id = "dummy_relic"
+
+
+def test_subscribe_deduplicates_identical_callback() -> None:
+    event_bus_module.bus._subs.clear()
+
+    party = Party()
+    relic = _DummyRelic()
+
+    def _handler(*_args: object, **_kwargs: object) -> None:
+        pass
+
+    relic.subscribe(party, "hit_landed", _handler)
+    relic.subscribe(party, "hit_landed", _handler)
+
+    assert len(event_bus_module.bus._subs.get("hit_landed", [])) == 1
+    store = getattr(party, "_relic_bus_subscriptions", {})
+    assert len(store.get(relic.id, [])) == 2  # event + cleanup
+
+    event_bus_module.bus._subs.clear()
+
+
+@pytest.mark.asyncio
+async def test_handlers_cleanup_across_battle_cycles() -> None:
+    event_bus_module.bus._subs.clear()
+
+    party = Party()
+    member = Stats()
+    party.members.append(member)
+
+    award_relic(party, "pocket_manual")
+
+    for _ in range(5):
+        await apply_relics(party)
+        assert len(event_bus_module.bus._subs.get("hit_landed", [])) == 1
+        await BUS.emit_async("battle_end", None)
+        assert len(event_bus_module.bus._subs.get("hit_landed", [])) == 0
 
     event_bus_module.bus._subs.clear()
