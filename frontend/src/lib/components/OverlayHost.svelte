@@ -19,7 +19,7 @@
   import Guidebook from './Guidebook.svelte';
   import RunChooser from './RunChooser.svelte';
   import ShopMenu from './ShopMenu.svelte';
-    import BattleView from './BattleView.svelte';
+  import BattleView from './BattleView.svelte';
   import ErrorOverlay from './ErrorOverlay.svelte';
   import BackendNotReady from './BackendNotReady.svelte';
   import BackendShutdownOverlay from './BackendShutdownOverlay.svelte';
@@ -161,8 +161,12 @@
 
   function titleForItem(item) {
     if (!item) return '';
+    const uiMeta = item.ui && typeof item.ui === 'object' ? item.ui : null;
+    if (uiMeta) {
+      const label = uiMeta.label || uiMeta.title;
+      if (label) return label;
+    }
     if (item.name) return item.name;
-    if (item.id === 'ticket') return 'Gacha Ticket';
     const id = String(item.id || '').toLowerCase();
     const cap = id.charAt(0).toUpperCase() + id.slice(1);
     const stars = Number.isFinite(item.stars) ? String(item.stars) : '';

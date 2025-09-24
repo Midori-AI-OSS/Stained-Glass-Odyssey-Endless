@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import copy
+from collections.abc import Iterable
 from dataclasses import dataclass
 from dataclasses import field
 from dataclasses import fields
@@ -93,6 +94,10 @@ class PlayerBase(Stats):
     stat_gain_map: dict[str, str] = field(default_factory=dict)
     stat_loss_map: dict[str, str] = field(default_factory=dict)
     lrm_memory: object | None = field(default=None, init=False, repr=False)
+    ui_flags: ClassVar[Iterable[str] | str | None] = None
+    ui_non_selectable: ClassVar[bool] = False
+    ui_portrait_pool: ClassVar[str | None] = None
+    ui_metadata: ClassVar[dict[str, object] | None] = None
 
     @classmethod
     def get_spawn_weight(
@@ -197,6 +202,53 @@ class PlayerBase(Stats):
         """Expose normalized music weighting metadata for clients."""
 
         return {"weights": cls._resolve_music_weights()}
+
+    @classmethod
+    def get_ui_metadata(cls) -> dict[str, object]:
+        """Return metadata that helps the WebUI decide conditional behavior."""
+
+        metadata: dict[str, object] = {}
+        explicit = getattr(cls, "ui_metadata", None)
+        if isinstance(explicit, dict):
+            metadata.update(explicit)
+
+        portrait_pool = getattr(cls, "ui_portrait_pool", None)
+        if portrait_pool:
+            metadata.setdefault("portrait_pool", str(portrait_pool))
+
+        flags: set[str] = set()
+
+        configured_flags = getattr(cls, "ui_flags", None)
+        if isinstance(configured_flags, str):
+            flags.add(configured_flags)
+        elif isinstance(configured_flags, Iterable):
+            for flag in configured_flags:
+                if not flag:
+                    continue
+                flags.add(str(flag))
+
+        existing_flags = metadata.get("flags")
+        if isinstance(existing_flags, str):
+            flags.add(existing_flags)
+        elif isinstance(existing_flags, Iterable):
+            for flag in existing_flags:
+                if not flag:
+                    continue
+                flags.add(str(flag))
+
+        if metadata.get("non_selectable") is None:
+            if getattr(cls, "ui_non_selectable", False):
+                metadata["non_selectable"] = True
+            elif getattr(cls, "gacha_rarity", None) == 0 and getattr(cls, "id", "") != "player":
+                metadata["non_selectable"] = True
+
+        if metadata.get("non_selectable"):
+            flags.add("non_selectable")
+
+        if flags:
+            metadata["flags"] = sorted(flags)
+
+        return metadata
 
     @classmethod
     def _resolve_music_weights(cls) -> dict[str, float]:

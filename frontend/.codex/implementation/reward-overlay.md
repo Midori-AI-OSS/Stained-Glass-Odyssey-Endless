@@ -7,6 +7,11 @@ Assets are resolved by star folder and id through the centralized registry
 re-exported from `assetLoader.js`, so card, relic, and material lookups share
 the same caching and fallback logic as the rest of the UI.
 
+Loot items now surface backend-provided `ui` metadata. `RewardOverlay.svelte`
+and the overlay host both prefer `item.ui.label` over hard-coded ids when
+announcing drops so gacha tickets, seasonal items, or future upgrade bundles can
+define their own copy without frontend updates.
+
 Ambient effects from `EnrageIndicator.svelte` continue to render while the
 rewards overlay is shown and fade out gracefully, so the transition from
 combat to rewards remains smooth.

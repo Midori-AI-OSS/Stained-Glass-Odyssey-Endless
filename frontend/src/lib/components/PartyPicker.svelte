@@ -4,6 +4,7 @@
   import { writable } from 'svelte/store';
   import { getPlayers, getUpgrade, upgradeStat } from '../systems/api.js';
   import { getCharacterImage, getRandomFallback, getElementColor } from '../systems/assetLoader.js';
+  import { replaceCharacterMetadata } from '../systems/characterMetadata.js';
   import MenuPanel from './MenuPanel.svelte';
   import PartyRoster from './PartyRoster.svelte';
   import PlayerPreview from './PlayerPreview.svelte';
@@ -114,14 +115,18 @@
       const oldPreview = previewId;
       const oldSelected = [...selected];
       function isNonPlayable(entry) {
+        const meta = entry?.ui && typeof entry.ui === 'object' ? entry.ui : {};
+        if (meta.non_selectable === true) {
+          return true;
+        }
         const gr = Number(entry?.stats?.gacha_rarity);
         if (!Number.isNaN(gr)) {
-          return gr === 0;
+          return gr === 0 && meta.allow_select !== true;
         }
-        // Fallback: explicitly hide known non-playables if rarity not provided
-        return entry.id === 'mimic';
+        return false;
       }
 
+      replaceCharacterMetadata(data.players || []);
       roster = data.players
         .map((p) => ({
           id: p.id,
@@ -131,7 +136,8 @@
           owned: p.owned,
           is_player: p.is_player,
           element: resolveElement(p),
-          stats: p.stats ?? { hp: 0, atk: 0, defense: 0, level: 1 }
+          stats: p.stats ?? { hp: 0, atk: 0, defense: 0, level: 1 },
+          ui: p.ui || {}
         }))
         // Only show characters the user can actually use
         .filter((p) => (p.owned || p.is_player) && !isNonPlayable(p))

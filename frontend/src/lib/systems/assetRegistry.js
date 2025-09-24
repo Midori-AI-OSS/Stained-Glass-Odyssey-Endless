@@ -2,6 +2,8 @@
 // This module normalizes asset URLs, manages caches, and exposes hooks so
 // metadata payloads can override on-disk resources without touching callers.
 
+import { getCharacterMetadata } from './characterMetadata.js';
+
 const normalizeAssetUrl = src => {
   if (!src) return '';
   if (
@@ -322,10 +324,6 @@ export const getCharacterImage = (characterId, options = {}) => {
   const id = String(characterId);
   if (!id.trim()) return STATIC_FALLBACK;
 
-  if (id === 'mimic') {
-    return resolveMimicPortrait();
-  }
-
   const cached = getCachedPortrait(id);
   if (cached) return cached;
 
@@ -338,9 +336,32 @@ export const getCharacterImage = (characterId, options = {}) => {
     return url;
   };
 
-  const isPlayer = options === true || (options && options.isPlayer === true);
+  const optionsObj = options && typeof options === 'object' ? options : null;
+  let metadata = null;
+  if (optionsObj && optionsObj.metadata && typeof optionsObj.metadata === 'object') {
+    metadata = optionsObj.metadata;
+  }
+  if (!metadata) {
+    metadata = getCharacterMetadata(id);
+  }
 
-  if (isPlayer || id === 'lady_echo') {
+  const portraitPoolRaw = metadata && (metadata.portrait_pool ?? metadata.portraitPool);
+  const portraitPool = portraitPoolRaw ? String(portraitPoolRaw).toLowerCase() : null;
+
+  if (portraitPool === 'player_mirror') {
+    return resolveMimicPortrait();
+  }
+
+  const metadataFlags = Array.isArray(metadata?.flags) ? metadata.flags : [];
+  const isPlayer = options === true || (optionsObj && optionsObj.isPlayer === true);
+  const treatAsPlayer =
+    isPlayer ||
+    portraitPool === 'player_gallery' ||
+    portraitPool === 'player' ||
+    metadata?.treat_as_player === true ||
+    metadataFlags.includes('player_gallery');
+
+  if (treatAsPlayer) {
     if (gallery.length) {
       const chosen = chooseRandom(gallery) ?? gallery[0];
       return persist(chosen);

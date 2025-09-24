@@ -4,8 +4,10 @@
   import { PackageOpen, Star, Users, RotateCcw, Info } from 'lucide-svelte';
   import MenuPanel from './MenuPanel.svelte';
   import { getGacha, pullGacha } from '../systems/api.js';
+  import { registerCharacterMetadata } from '../systems/characterMetadata.js';
   import { browser, dev } from '$app/environment';
   import { openOverlay } from '../systems/OverlayController.js';
+  import { getCharacterImage as resolveCharacterPortrait } from '$lib/systems/assetLoader.js';
   
   const dispatch = createEventDispatcher();
   export let reducedMotion = false;
@@ -49,6 +51,7 @@
       items = data.items;
       banners = data.banners || [];
       featuredCharacters = data.featured_characters || [];
+      registerCharacterMetadata(featuredCharacters);
       
       ensureActiveTabValid();
     } catch (err) {
@@ -164,7 +167,6 @@
   // Example paths supported:
   // - $lib/assets/characters/kboshi.png
   // - $lib/assets/characters/kboshi/kboshi.png
-  import { getCharacterImage as resolveCharacterPortrait } from '$lib/systems/assetLoader.js';
   function getCharacterImage(characterId) {
     // Delegate to shared loader which supports nested folders and fallbacks
     return resolveCharacterPortrait(String(characterId || '').toLowerCase());
