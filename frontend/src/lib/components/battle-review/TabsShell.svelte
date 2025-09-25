@@ -1,7 +1,7 @@
 <script>
   import { getContext } from 'svelte';
   import { Swords, User } from 'lucide-svelte';
-  import LegacyFighterPortrait from '../battle/LegacyFighterPortrait.svelte';
+  import BattleReviewFighterChip from './BattleReviewFighterChip.svelte';
   import TimelineRegion from './TimelineRegion.svelte';
   import EntityTableContainer from './EntityTableContainer.svelte';
   import { BATTLE_REVIEW_CONTEXT_KEY } from '../../systems/battleReview/state.js';
@@ -28,10 +28,13 @@
           <Swords size={18} />
         {:else if tab.entity}
           <div class="portrait-chip">
-            <LegacyFighterPortrait
+            <BattleReviewFighterChip
               fighter={tab.entity}
               rankTag={tab.rank ?? tab.entity.rank}
               reducedMotion={$reducedMotion}
+              highlight={$activeTab === tab.id}
+              position={tab.type === 'foe' ? 'top' : 'bottom'}
+              sizePx={44}
             />
           </div>
         {:else}
@@ -98,9 +101,10 @@
     justify-content: center;
   }
 
-  .portrait-chip :global(.portrait-wrap) {
-    border-radius: 8px;
-    overflow: hidden;
+  .portrait-chip :global(.review-fighter-chip) {
+    --portrait-size: var(--portrait-size);
+    width: var(--portrait-size);
+    height: var(--portrait-size);
   }
 
   .tab-label {

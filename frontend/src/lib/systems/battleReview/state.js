@@ -286,7 +286,7 @@ export function createBattleReviewState(initialProps = {}) {
       const data = await getBattleEvents(battleIndex);
       events.set(Array.isArray(data) ? data : []);
       eventsStatus.set('ready');
-    } catch (err) {
+    } catch {
       eventsStatus.set('error');
     }
   }
