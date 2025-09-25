@@ -13,6 +13,13 @@ The Battle Review overlay is now organized around a timeline-first layout backed
 
 The timeline-first grid places metric tabs across the top, the timeline viewport on the left, and entity metrics/side panels on the right. The layout collapses gracefully for smaller viewports.
 
+## Shareable Logs Routing
+
+- The Battle Review shell is also exposed as a standalone route at `/logs/[run_id]`. The page hydrates the review by parsing URL parameters (battle index, active tab, timeline filters, comparison selections, pins, and zoom window) with the helpers in `battleReview/urlState.js` and passing them to the shared stores.
+- The route keeps the query string in sync with in-app changes by listening for the `statechange` event emitted from `BattleReview.svelte`. Navigation is performed with `goto(..., { replaceState: true })` so browser history stays tidy when filters change.
+- The overlay now includes a **Copy Logs Link** button that serializes the current state into URL-safe params via `buildBattleReviewLink`. Links always target `/logs/[run_id]` and encode the tab, filters, comparison set, pins, and zoom range so the standalone page restores the same view.
+- Reduced-motion and accessibility behavior match the in-game overlay by reusing settings from `motionStore` when the standalone route mounts and by mirroring the overlay header semantics.
+
 ## Reduced Motion Handling
 
 - The store exposes a `reducedMotion` derived store based on incoming props. Components consult this store when handing off reduced-motion preferences to portrait subcomponents or transitions.

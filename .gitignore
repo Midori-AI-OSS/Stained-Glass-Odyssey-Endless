@@ -32,3 +32,4 @@ package-lock.json
 logs/
 backend/logs/
 frontend/logs/
+!frontend/src/routes/logs/

@@ -83,7 +83,7 @@
       // If another request superseded this one, stop
       if (tokenRef.value !== reviewLoadingToken) return;
       try {
-        const res = await getBattleSummary(battleIndex);
+        const res = await getBattleSummary(battleIndex, runId);
         if (tokenRef.value !== reviewLoadingToken) return;
         reviewSummary = res || { damage_by_type: {} };
         reviewReady = true;
