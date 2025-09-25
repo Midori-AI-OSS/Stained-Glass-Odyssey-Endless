@@ -46,11 +46,6 @@
     min-height: var(--portrait-size);
   }
 
-  .review-fighter-chip :global(.fighter-portrait) {
-    border-radius: 50%;
-    box-shadow: none;
-  }
-
   .review-fighter-chip :global(.overlay-ui),
   .review-fighter-chip :global(.name-chip) {
     display: none !important;

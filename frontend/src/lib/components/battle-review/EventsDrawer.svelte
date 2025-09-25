@@ -47,9 +47,11 @@
 
 <style>
   .events-drawer {
-    background: rgba(15, 23, 42, 0.7);
-    border-radius: 12px;
-    border: 1px solid rgba(148, 163, 184, 0.3);
+    background: linear-gradient(0deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.04)), var(--glass-bg);
+    border: var(--glass-border);
+    box-shadow: var(--glass-shadow);
+    backdrop-filter: var(--glass-filter);
+    border-radius: 0;
     padding: 1rem;
     display: flex;
     flex-direction: column;
@@ -72,17 +74,26 @@
   .close-btn {
     margin-left: auto;
     appearance: none;
-    border: 1px solid rgba(248, 250, 252, 0.35);
-    background: rgba(15, 23, 42, 0.8);
+    border: 1px solid rgba(148, 163, 184, 0.55);
+    background: color-mix(in oklab, var(--glass-bg) 82%, rgba(148, 163, 184, 0.35) 18%);
     color: #f8fafc;
     font-size: 0.75rem;
-    padding: 0.2rem 0.6rem;
-    border-radius: 4px;
+    padding: 0.25rem 0.7rem;
+    border-radius: 0;
     cursor: pointer;
+    transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease;
   }
 
-  .close-btn:hover {
-    background: rgba(59, 130, 246, 0.25);
+  .close-btn:hover,
+  .close-btn:focus-visible {
+    background: color-mix(in oklab, rgba(56, 189, 248, 0.22) 45%, var(--glass-bg) 55%);
+    border-color: rgba(125, 211, 252, 0.6);
+    color: #e0f2fe;
+  }
+
+  .close-btn:focus-visible {
+    outline: 2px solid rgba(125, 211, 252, 0.75);
+    outline-offset: 2px;
   }
 
   .drawer-body {
@@ -112,6 +123,10 @@
     gap: 0.5rem;
     font-size: 0.76rem;
     color: rgba(226, 232, 240, 0.9);
+    padding: 0.35rem 0.4rem;
+    background: color-mix(in oklab, rgba(15, 23, 42, 0.75) 75%, transparent 25%);
+    border: 1px solid rgba(148, 163, 184, 0.18);
+    border-radius: 0;
   }
 
   .event-type {
