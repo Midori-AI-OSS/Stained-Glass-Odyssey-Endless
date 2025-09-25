@@ -1,7 +1,7 @@
 <script>
   import { getContext } from 'svelte';
   import { Swords } from 'lucide-svelte';
-  import LegacyFighterPortrait from '../battle/LegacyFighterPortrait.svelte';
+  import BattleReviewFighterChip from './BattleReviewFighterChip.svelte';
   import { BATTLE_REVIEW_CONTEXT_KEY } from '../../systems/battleReview/state.js';
   import { fmt, getElementBarColor } from './utils.js';
 
@@ -13,10 +13,12 @@
     <div class="entity-header">
       {#if $currentTab.entity}
         <div class="portrait-large">
-          <LegacyFighterPortrait
+          <BattleReviewFighterChip
             fighter={$currentTab.entity}
             rankTag={$currentTab.rank ?? $currentTab.entity.rank}
             reducedMotion={$reducedMotion}
+            position={$currentTab.type === 'foe' ? 'top' : 'bottom'}
+            sizePx={104}
           />
         </div>
       {/if}
@@ -94,6 +96,13 @@
 
   .portrait-large {
     --portrait-size: 6.5rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .portrait-large :global(.review-fighter-chip) {
+    --portrait-size: var(--portrait-size);
   }
 
   .rank-inline {
