@@ -45,6 +45,7 @@ CREATE TABLE IF NOT EXISTS battle_summaries (
     dmg_dealt INTEGER,
     dmg_taken INTEGER,
     victory INTEGER NOT NULL,
+    logs_url TEXT,
     ts INTEGER NOT NULL,
     FOREIGN KEY (run_id) REFERENCES runs(run_id) ON DELETE CASCADE
 );

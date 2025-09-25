@@ -182,11 +182,25 @@ Total Events: 45
 
 ## Battle Review API
 
-The latest battle summary can be fetched using:
+Completed runs expose shareable log endpoints that mirror the structures used
+by the live UI:
 
 ```
-GET /run/<run_id>/battles/<index>/summary
+GET /logs/<run_id>
+GET /logs/<run_id>/battles/<index>/summary
+GET /logs/<run_id>/battles/<index>/events
 ```
 
-This endpoint returns the `battle_summary.json` data, enabling clients to
-render post-battle review screens with per-element damage breakdowns.
+- `GET /logs/<run_id>` lists every recorded battle with its parsed
+  `battle_summary.json` payload plus convenience links to the summary and event
+  files.
+- `GET /logs/<run_id>/battles/<index>/summary` streams the JSON summary for a
+  specific battle, including timestamps, participants, damage totals, relic
+  state, and per-element breakdowns.
+- `GET /logs/<run_id>/battles/<index>/events` streams the raw
+  `events.json` payload so large combat logs can be reviewed without loading
+  them into memory.
+
+The in-progress run API continues to expose `GET /battles/<index>/summary` for
+the active session so the UI can hydrate battle review overlays without
+specifying a run identifier.

@@ -60,6 +60,14 @@ async def run_battle(
     enrage_mods = setup_data.enrage_mods
     visual_queue = setup_data.visual_queue
     battle_logger = setup_data.battle_logger
+    logs_url: str | None = None
+    if run_id is not None and battle_logger is not None:
+        try:
+            index = getattr(battle_logger, "battle_index", None)
+            if index is not None:
+                logs_url = f"/logs/{run_id}/battles/{int(index)}/summary"
+        except Exception:
+            logs_url = None
     room_identifier = str(getattr(room.node, "room_id", getattr(room.node, "index", "battle")))
 
     if battle_snapshots is None:
@@ -259,7 +267,15 @@ async def run_battle(
         dealt, taken = _damage_totals()
         if run_id is not None:
             try:
-                await log_battle_summary(run_id, room_identifier, turn_count, dealt, taken, False)
+                await log_battle_summary(
+                    run_id,
+                    room_identifier,
+                    turn_count,
+                    dealt,
+                    taken,
+                    False,
+                    logs_url=logs_url,
+                )
                 await log_game_action(
                     "battle_end",
                     run_id=run_id,
@@ -295,7 +311,15 @@ async def run_battle(
     dealt, taken = _damage_totals()
     if run_id is not None:
         try:
-            await log_battle_summary(run_id, room_identifier, turn_count, dealt, taken, True)
+            await log_battle_summary(
+                run_id,
+                room_identifier,
+                turn_count,
+                dealt,
+                taken,
+                True,
+                logs_url=logs_url,
+            )
             await log_game_action(
                 "battle_end",
                 run_id=run_id,

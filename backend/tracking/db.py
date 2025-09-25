@@ -7,7 +7,8 @@ import hashlib
 import os
 from pathlib import Path
 import sys
-from typing import Any, Final
+from typing import Any
+from typing import Final
 
 if sys.platform == "win32":
     try:
@@ -76,6 +77,13 @@ class TrackingDBManager:
                 version = int(prefix)
                 if version <= current:
                     continue
+                if version == 2:
+                    has_logs_url = conn.execute(
+                        "SELECT 1 FROM pragma_table_info('battle_summaries') WHERE name = 'logs_url'"
+                    ).fetchone()
+                    if has_logs_url:
+                        conn.execute(f"PRAGMA user_version = {version}")
+                        continue
                 conn.executescript(path.read_text())
                 conn.execute(f"PRAGMA user_version = {version}")
 
