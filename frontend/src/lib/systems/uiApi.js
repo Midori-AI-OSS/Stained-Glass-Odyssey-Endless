@@ -138,7 +138,7 @@ export async function getBattleSummary(battleIndex, runId = '') {
   if (!Number.isFinite(index) || index <= 0) {
     throw new Error('Invalid battle index');
   }
-  const base = runId ? `/runs/${encodeURIComponent(runId)}` : '';
+  const base = runId ? `/logs/${encodeURIComponent(runId)}` : '';
   const path = `${base}/battles/${Math.floor(index)}/summary`;
   return httpGet(path, { cache: 'no-store' });
 }
@@ -152,7 +152,7 @@ export async function getBattleEvents(battleIndex, runId = '') {
   if (!Number.isFinite(index) || index <= 0) {
     throw new Error('Invalid battle index');
   }
-  const base = runId ? `/runs/${encodeURIComponent(runId)}` : '';
+  const base = runId ? `/logs/${encodeURIComponent(runId)}` : '';
   const path = `${base}/battles/${Math.floor(index)}/events`;
   return httpGet(path, { cache: 'no-store' });
 }
