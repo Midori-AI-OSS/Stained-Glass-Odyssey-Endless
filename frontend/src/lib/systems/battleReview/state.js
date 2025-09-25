@@ -318,7 +318,9 @@ export function createBattleReviewState(initialProps = {}) {
     $tabs.find((tab) => tab.id === $active) || $tabs[0]
   );
 
-  const entityMetrics = derived([summary, activeTab], ([$summary, $active]) => computeEntityMetrics($summary, $active));
+  const entityMetrics = derived([summary, currentTab], ([$summary, $current]) =>
+    computeEntityMetrics($summary, $current?.id ?? 'overview')
+  );
   const overviewTotals = derived(summary, ($summary) => aggregateDamageByType($summary));
   const overviewGrand = derived(overviewTotals, ($totals) => Object.values($totals || {}).reduce((acc, cur) => acc + (cur || 0), 0));
 
