@@ -71,10 +71,12 @@
     display: flex;
     flex-direction: column;
     gap: 1rem;
-    background: rgba(15, 23, 42, 0.35);
-    border-radius: 12px;
+    background: linear-gradient(0deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.04)), var(--glass-bg);
+    border: var(--glass-border);
+    box-shadow: var(--glass-shadow);
+    backdrop-filter: var(--glass-filter);
+    border-radius: 0;
     padding: 1rem;
-    border: 1px solid rgba(148, 163, 184, 0.2);
   }
 
   .entity-header {
@@ -135,13 +137,13 @@
     position: relative;
     height: 16px;
     background: rgba(255, 255, 255, 0.08);
-    border-radius: 4px;
+    border-radius: 0;
     overflow: hidden;
   }
 
   .damage-bar-fill {
     height: 100%;
-    border-radius: 4px;
+    border-radius: 0;
     transition: width 0.3s ease;
   }
 
@@ -174,9 +176,9 @@
     display: flex;
     justify-content: space-between;
     padding: 0.5rem;
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 6px;
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: color-mix(in oklab, rgba(255, 255, 255, 0.08) 45%, var(--glass-bg) 55%);
+    border-radius: 0;
+    border: 1px solid rgba(148, 163, 184, 0.28);
     font-size: 0.78rem;
   }
 </style>

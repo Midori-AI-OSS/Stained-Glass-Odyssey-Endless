@@ -56,10 +56,12 @@
     display: flex;
     flex-direction: column;
     gap: 1rem;
-    background: rgba(15, 23, 42, 0.45);
-    border-radius: 12px;
     padding: 1rem;
-    border: 1px solid rgba(148, 163, 184, 0.2);
+    background: linear-gradient(0deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.04)), var(--glass-bg);
+    border: var(--glass-border);
+    box-shadow: var(--glass-shadow);
+    backdrop-filter: var(--glass-filter);
+    border-radius: 0;
   }
 
   .metric-tabs {
@@ -73,25 +75,33 @@
     display: inline-flex;
     align-items: center;
     gap: 0.5rem;
-    padding: 0.45rem 0.75rem;
-    border-radius: 999px;
-    border: 1px solid rgba(148, 163, 184, 0.4);
-    background: rgba(15, 23, 42, 0.7);
+    padding: 0.45rem 0.85rem;
+    border-radius: 0;
+    border: 1px solid rgba(148, 163, 184, 0.45);
+    background: color-mix(in oklab, var(--glass-bg) 82%, rgba(148, 163, 184, 0.35) 18%);
     color: #cbd5f5;
     cursor: pointer;
     font-size: 0.82rem;
-    transition: transform 0.2s ease, background 0.2s ease, border-color 0.2s ease;
+    transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, color 0.2s ease;
   }
 
   .tab-chip:hover,
-  .tab-chip.active {
-    background: rgba(56, 189, 248, 0.18);
+  .tab-chip:focus-visible {
+    background: color-mix(in oklab, rgba(56, 189, 248, 0.22) 45%, var(--glass-bg) 55%);
     border-color: rgba(125, 211, 252, 0.65);
     color: #e0f2fe;
   }
 
+  .tab-chip:focus-visible {
+    outline: 2px solid rgba(125, 211, 252, 0.75);
+    outline-offset: 2px;
+  }
+
   .tab-chip.active {
-    transform: translateY(-2px);
+    background: color-mix(in oklab, rgba(56, 189, 248, 0.3) 55%, var(--glass-bg) 45%);
+    border-color: rgba(125, 211, 252, 0.75);
+    box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.35);
+    color: #e0f2fe;
   }
 
   .portrait-chip {
