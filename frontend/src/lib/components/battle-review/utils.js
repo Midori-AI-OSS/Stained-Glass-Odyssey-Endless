@@ -14,7 +14,7 @@ export const effectTooltips = {
 export function fmt(n) {
   try {
     return Number(n).toLocaleString();
-  } catch (err) {
+  } catch {
     return String(n ?? 0);
   }
 }
