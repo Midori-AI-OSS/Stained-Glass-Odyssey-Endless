@@ -1,12 +1,18 @@
 <script>
   import RewardCard from '../RewardCard.svelte';
   import CurioChoice from '../CurioChoice.svelte';
-  import { createEventDispatcher } from 'svelte';
+  import { createEventDispatcher, getContext } from 'svelte';
+  import { BATTLE_REVIEW_CONTEXT_KEY } from '../../systems/battleReview/state.js';
   export let cards = [];
   export let relics = [];
   const dispatch = createEventDispatcher();
+  const reviewContext = getContext(BATTLE_REVIEW_CONTEXT_KEY);
+  const dispatchSelect = reviewContext?.dispatchSelect;
   function forward(e) {
     dispatch('select', e.detail);
+    if (dispatchSelect) {
+      dispatchSelect(e.detail);
+    }
   }
 </script>
 
