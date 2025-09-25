@@ -12,7 +12,7 @@ documentation:
 - changed-files:
   - any-glob-to-any-file:
     - .codex/**
-    - '**/*.md'
+    - **/*.md
     - docs/**
     - guides/**
 
