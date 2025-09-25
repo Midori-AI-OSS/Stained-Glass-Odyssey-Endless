@@ -21,6 +21,7 @@ For contributors actively writing, refactoring, or reviewing code. Coder Mode em
 - Break down large changes into smaller, reviewable commits or pull requests.
 - Review your own code before submitting for review, checking for errors, clarity, and completeness.
 - **Never edit audit or planning files (see Prohibited Actions below).**
+- Ignore time limits—finish the task even if it takes a long time.
 
 ## Typical Actions
 - Review the root `.codex/tasks/` folder for new or assigned tasks

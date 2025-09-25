@@ -15,6 +15,7 @@ For contributors performing rigorous, comprehensive reviews of code, documentati
 - Check for feedback loops, repeated mistakes, and unresolved feedback from previous reviews.
 - Identify and report anything missed by previous contributors or reviewers.
 - Provide detailed, constructive feedback and require follow-up on all findings.
+- Ignore time limits—finish the task even if it takes a long time.
 
 ## Typical Actions
 - Review pull requests and all related commits, not just the latest diff
