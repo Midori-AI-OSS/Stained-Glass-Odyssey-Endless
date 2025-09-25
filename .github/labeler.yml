@@ -12,7 +12,6 @@ documentation:
 - changed-files:
   - any-glob-to-any-file:
     - .codex/**
-    - **/*.md
     - docs/**
     - guides/**
 
