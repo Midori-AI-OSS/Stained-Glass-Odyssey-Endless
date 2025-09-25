@@ -1,9 +1,11 @@
 <script>
   import { createEventDispatcher, onDestroy, setContext } from 'svelte';
+  import { get } from 'svelte/store';
   import {
     BATTLE_REVIEW_CONTEXT_KEY,
     createBattleReviewState
   } from '../systems/battleReview/state.js';
+  import { buildBattleReviewLink } from '../systems/battleReview/urlState.js';
   import TabsShell from './battle-review/TabsShell.svelte';
   import EventsDrawer from './battle-review/EventsDrawer.svelte';
 
@@ -17,6 +19,7 @@
   export let foeData = [];
   export let reducedMotion = false;
   export let prefetchedSummary = null;
+  export let initialState = null;
 
   const dispatch = createEventDispatcher();
 
@@ -39,6 +42,8 @@
     eventsOpen,
     eventsStatus,
     toggleEvents,
+    shareableState,
+    applyViewState,
     updateProps
   } = state;
 
@@ -60,8 +65,25 @@
     prefetchedSummary
   });
 
+  let lastInitialSignature = '';
+  $: initialSignature = initialState ? JSON.stringify(initialState) : '';
+  $: if (initialSignature && initialSignature !== lastInitialSignature) {
+    applyViewState(initialState);
+    lastInitialSignature = initialSignature;
+  }
+
+  let copyState = 'idle';
+  let copyTimer = null;
+  let shareSnapshot = null;
+
+  $: shareSnapshot = $shareableState;
+  $: if (shareSnapshot) {
+    dispatch('statechange', shareSnapshot);
+  }
+
   onDestroy(() => {
     state.destroy();
+    if (copyTimer) clearTimeout(copyTimer);
   });
 
   function fmt(n) {
@@ -70,6 +92,61 @@
     } catch (err) {
       return String(n ?? '—');
     }
+  }
+
+  function scheduleCopyReset() {
+    if (copyTimer) clearTimeout(copyTimer);
+    copyTimer = setTimeout(() => {
+      copyState = 'idle';
+    }, 2200);
+  }
+
+  function fallbackCopy(text) {
+    try {
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.setAttribute('readonly', '');
+      textarea.style.position = 'absolute';
+      textarea.style.left = '-9999px';
+      document.body.appendChild(textarea);
+      textarea.select();
+      const success = document.execCommand('copy');
+      document.body.removeChild(textarea);
+      return success;
+    } catch {
+      return false;
+    }
+  }
+
+  async function copyLogsLink() {
+    if (typeof window === 'undefined') return;
+    const shareState = get(shareableState);
+    const origin = window.location.origin;
+    const link = buildBattleReviewLink(shareState.runId || runId, shareState, { origin });
+
+    const writeClipboard = async () => {
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(link);
+        return true;
+      }
+      return fallbackCopy(link);
+    };
+
+    try {
+      const success = await writeClipboard();
+      copyState = success ? 'copied' : 'error';
+      if (!success) {
+        console.error('copyLogsLink: navigator.clipboard unavailable');
+      }
+    } catch (error) {
+      const success = fallbackCopy(link);
+      copyState = success ? 'copied' : 'error';
+      if (!success) {
+        console.error('Failed to copy logs link:', error);
+      }
+    }
+
+    scheduleCopyReset();
   }
 </script>
 
@@ -91,6 +168,20 @@
       type="button"
     >
       {$eventsOpen ? 'Hide' : 'Show'} Event Log
+    </button>
+    <button
+      class="copy-link"
+      type="button"
+      on:click={copyLogsLink}
+      aria-live="polite"
+    >
+      {#if copyState === 'copied'}
+        Link copied!
+      {:else if copyState === 'error'}
+        Copy failed
+      {:else}
+        Copy Logs Link
+      {/if}
     </button>
   </header>
 
@@ -148,5 +239,27 @@
   .events-toggle.busy {
     opacity: 0.7;
     cursor: progress;
+  }
+
+  .copy-link {
+    appearance: none;
+    border: 1px solid rgba(148, 163, 184, 0.6);
+    background: rgba(30, 41, 59, 0.95);
+    color: #bae6fd;
+    font-size: 0.78rem;
+    padding: 0.35rem 0.85rem;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background 0.2s ease, color 0.2s ease;
+  }
+
+  .copy-link:hover {
+    background: rgba(56, 189, 248, 0.2);
+    color: #f0f9ff;
+  }
+
+  .copy-link:focus-visible {
+    outline: 2px solid rgba(125, 211, 252, 0.9);
+    outline-offset: 2px;
   }
 </style>

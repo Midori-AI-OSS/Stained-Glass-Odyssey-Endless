@@ -133,16 +133,28 @@ export async function claimLoginReward(suppressOverlay = true) {
  * Retrieve a battle summary for the current run.
  * @param {number} battleIndex - Index of the battle to fetch
  */
-export async function getBattleSummary(battleIndex) {
-  return httpGet(`/battles/${battleIndex}/summary`, { cache: 'no-store' });
+export async function getBattleSummary(battleIndex, runId = '') {
+  const index = Number(battleIndex);
+  if (!Number.isFinite(index) || index <= 0) {
+    throw new Error('Invalid battle index');
+  }
+  const base = runId ? `/runs/${encodeURIComponent(runId)}` : '';
+  const path = `${base}/battles/${Math.floor(index)}/summary`;
+  return httpGet(path, { cache: 'no-store' });
 }
 
 /**
  * Retrieve detailed battle events for the current run.
  * @param {number} battleIndex - Index of the battle to fetch
  */
-export async function getBattleEvents(battleIndex) {
-  return httpGet(`/battles/${battleIndex}/events`, { cache: 'no-store' });
+export async function getBattleEvents(battleIndex, runId = '') {
+  const index = Number(battleIndex);
+  if (!Number.isFinite(index) || index <= 0) {
+    throw new Error('Invalid battle index');
+  }
+  const base = runId ? `/runs/${encodeURIComponent(runId)}` : '';
+  const path = `${base}/battles/${Math.floor(index)}/events`;
+  return httpGet(path, { cache: 'no-store' });
 }
 
 /**

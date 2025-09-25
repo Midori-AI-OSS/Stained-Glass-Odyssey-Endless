@@ -1,5 +1,6 @@
 import { derived, writable, get } from 'svelte/store';
 import { getBattleSummary, getBattleEvents } from '../uiApi.js';
+import { buildBattleReviewSearchParams } from './urlState.js';
 
 export const BATTLE_REVIEW_CONTEXT_KEY = Symbol('battle-review-context');
 
@@ -221,17 +222,21 @@ export function createBattleReviewState(initialProps = {}) {
   const events = writable([]);
   const eventsStatus = writable('idle');
   const eventsOpen = writable(false);
+  const timelineFilters = writable([]);
+  const comparisonSet = writable([]);
+  const pinnedEvents = writable([]);
+  const timeWindow = writable(null);
 
   let lastKey = '';
   let currentToken = 0;
 
-  async function loadSummary(battleIndex) {
+  async function loadSummary(battleIndex, runId) {
     const token = ++currentToken;
     summaryStatus.set('loading');
     const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
     for (let attempt = 0; attempt < 10; attempt++) {
       try {
-        const res = await getBattleSummary(battleIndex);
+        const res = await getBattleSummary(battleIndex, runId);
         if (currentToken !== token) {
           return;
         }
@@ -251,12 +256,21 @@ export function createBattleReviewState(initialProps = {}) {
     }
   }
 
+  function resetViewState() {
+    activeTab.set('overview');
+    timelineFilters.set([]);
+    comparisonSet.set([]);
+    pinnedEvents.set([]);
+    timeWindow.set(null);
+  }
+
   function handlePropsChange(value) {
     const key = value.runId && value.battleIndex > 0 ? `${value.runId}|${value.battleIndex}` : '';
     if (!key) {
       lastKey = '';
       summary.set(emptySummary);
       summaryStatus.set('idle');
+      resetViewState();
       return;
     }
     if (value.prefetchedSummary) {
@@ -268,7 +282,8 @@ export function createBattleReviewState(initialProps = {}) {
     if (key !== lastKey) {
       lastKey = key;
       summary.set(emptySummary);
-      loadSummary(value.battleIndex);
+      resetViewState();
+      loadSummary(value.battleIndex, value.runId);
     }
   }
 
@@ -279,11 +294,11 @@ export function createBattleReviewState(initialProps = {}) {
   }
 
   async function loadEvents() {
-    const { battleIndex } = get(props);
+    const { battleIndex, runId } = get(props);
     if (!battleIndex) return;
     eventsStatus.set('loading');
     try {
-      const data = await getBattleEvents(battleIndex);
+      const data = await getBattleEvents(battleIndex, runId);
       events.set(Array.isArray(data) ? data : []);
       eventsStatus.set('ready');
     } catch {
@@ -335,6 +350,66 @@ export function createBattleReviewState(initialProps = {}) {
     eventCount: $summary?.event_count || ($summary?.events?.length || 0)
   }));
 
+  function setTimelineFilters(value = []) {
+    timelineFilters.set(Array.isArray(value) ? [...value] : []);
+  }
+
+  function setComparisonSet(value = []) {
+    comparisonSet.set(Array.isArray(value) ? [...value] : []);
+  }
+
+  function setPinnedEvents(value = []) {
+    pinnedEvents.set(Array.isArray(value) ? [...value] : []);
+  }
+
+  function setTimeWindow(value = null) {
+    if (value && typeof value === 'object') {
+      const start = Number(value.start);
+      const end = Number(value.end);
+      if (Number.isFinite(start) && Number.isFinite(end)) {
+        timeWindow.set({ start, end });
+        return;
+      }
+    }
+    timeWindow.set(null);
+  }
+
+  function applyViewState(state = {}) {
+    if (!state || typeof state !== 'object') return;
+    if (state.tab) {
+      activeTab.set(state.tab);
+    }
+    if (Array.isArray(state.filters)) {
+      setTimelineFilters(state.filters);
+    }
+    if (Array.isArray(state.comparison)) {
+      setComparisonSet(state.comparison);
+    }
+    if (Array.isArray(state.pins)) {
+      setPinnedEvents(state.pins);
+    }
+    if (state.window) {
+      setTimeWindow(state.window);
+    }
+  }
+
+  const shareableState = derived(
+    [props, activeTab, timelineFilters, comparisonSet, pinnedEvents, timeWindow],
+    ([$props, $activeTab, $filters, $comparison, $pins, $window]) => ({
+      runId: $props.runId || '',
+      battleIndex: Number.isFinite($props.battleIndex) ? $props.battleIndex : 0,
+      tab: $activeTab || 'overview',
+      filters: Array.isArray($filters) ? [...$filters] : [],
+      comparison: Array.isArray($comparison) ? [...$comparison] : [],
+      pins: Array.isArray($pins) ? [...$pins] : [],
+      window: $window && typeof $window === 'object' ? { ...$window } : null
+    })
+  );
+
+  function toSearchParams() {
+    return buildBattleReviewSearchParams(get(shareableState));
+  }
+
   function destroy() {
     stop?.();
     events.set([]);
@@ -347,6 +422,10 @@ export function createBattleReviewState(initialProps = {}) {
     events,
     eventsStatus,
     eventsOpen,
+    timelineFilters,
+    comparisonSet,
+    pinnedEvents,
+    timeWindow,
     reducedMotion,
     displayParty,
     displayFoes,
@@ -359,10 +438,17 @@ export function createBattleReviewState(initialProps = {}) {
     overviewGrand,
     timeline,
     resultSummary,
+    shareableState,
     updateProps,
     loadEvents,
     toggleEvents,
     setEventsOpen,
+    setTimelineFilters,
+    setComparisonSet,
+    setPinnedEvents,
+    setTimeWindow,
+    applyViewState,
+    toSearchParams,
     destroy
   };
 }
