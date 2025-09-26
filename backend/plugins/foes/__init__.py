@@ -6,7 +6,6 @@ from plugins import players as player_plugins
 from plugins import themedadj as adj_plugins
 
 from ._base import FoeBase
-from .slime import Slime
 
 ADJ_CLASSES = [
     getattr(adj_plugins, name)
@@ -42,5 +41,5 @@ for name in getattr(player_plugins, "__all__", []):
     globals()[foe_cls.__name__] = foe_cls
 
 
-__all__ = ["Slime", *[cls.__name__ for cls in PLAYER_FOES.values()]]
+__all__ = [cls.__name__ for cls in PLAYER_FOES.values()]
 

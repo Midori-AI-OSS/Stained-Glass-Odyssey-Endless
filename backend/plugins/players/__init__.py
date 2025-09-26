@@ -20,6 +20,7 @@ from .mimic import Mimic
 from .persona_ice import PersonaIce
 from .persona_light_and_dark import PersonaLightAndDark
 from .player import Player
+from .slime import Slime
 
 __all__ = [
     "Ally",
@@ -44,4 +45,5 @@ __all__ = [
     "Mimic",
     "PersonaIce",
     "Player",
+    "Slime",
 ]
