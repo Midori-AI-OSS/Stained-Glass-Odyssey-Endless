@@ -12,9 +12,9 @@ from autofighter.party import Party
 from autofighter.passives import PassiveRegistry
 from autofighter.stats import Stats
 from autofighter.stats import apply_status_hooks
-from plugins import players as player_plugins
+from plugins import characters as player_plugins
 from plugins.damage_types import load_damage_type
-from plugins.players._base import PlayerBase
+from plugins.characters._base import PlayerBase
 
 from .encryption import get_save_manager
 

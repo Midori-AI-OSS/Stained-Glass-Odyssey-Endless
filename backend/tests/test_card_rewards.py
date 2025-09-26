@@ -17,7 +17,7 @@ sys.path.append(str(Path(__file__).resolve().parents[1]))
 from autofighter.stats import BUS
 from autofighter.stats import Stats
 from plugins.effects.critical_boost import CriticalBoost
-from plugins.players._base import PlayerBase
+from plugins.characters._base import PlayerBase
 
 NEW_CARDS: list[tuple[str, dict[str, float]]] = [
     ("lightweight_boots", {"dodge_odds": 0.03}),

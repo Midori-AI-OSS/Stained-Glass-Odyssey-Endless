@@ -29,7 +29,7 @@ class ParadoxHourglass(RelicBase):
         state: dict[str, dict] = {"buffs": {}, "foe": {}}
 
         async def _battle_start(entity) -> None:
-            from plugins.foes._base import FoeBase
+            from plugins.characters.foe_base import FoeBase
 
             if isinstance(entity, FoeBase):
                 base_def = entity.defense
@@ -115,7 +115,7 @@ class ParadoxHourglass(RelicBase):
                 })
 
         def _battle_end(entity) -> None:
-            from plugins.foes._base import FoeBase
+            from plugins.characters.foe_base import FoeBase
 
             if isinstance(entity, FoeBase):
                 mod = state["foe"].pop(id(entity), None)

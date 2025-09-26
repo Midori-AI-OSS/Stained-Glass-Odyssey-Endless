@@ -17,7 +17,7 @@ from autofighter.summons.manager import SummonManager
 from plugins.damage_types import ALL_DAMAGE_TYPES
 from plugins.damage_types import load_damage_type
 from plugins.damage_types._base import DamageTypeBase
-from plugins.players._base import PlayerBase
+from plugins.characters._base import PlayerBase
 
 if TYPE_CHECKING:
     from autofighter.passives import PassiveRegistry

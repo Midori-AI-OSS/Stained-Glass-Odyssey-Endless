@@ -6,7 +6,7 @@ from autofighter.cards import apply_cards
 from autofighter.cards import award_card
 from autofighter.party import Party
 from autofighter.stats import BUS
-from plugins.players._base import PlayerBase
+from plugins.characters._base import PlayerBase
 
 
 def setup_event_loop():

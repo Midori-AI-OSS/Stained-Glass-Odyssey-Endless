@@ -7,7 +7,7 @@ from autofighter.stats import BUS
 from autofighter.stats import Stats
 from autofighter.summons.manager import SummonManager
 from plugins.passives.normal.luna_lunar_reservoir import LunaLunarReservoir
-from plugins.players.luna import Luna
+from plugins.characters.luna import Luna
 
 
 @pytest.fixture(autouse=True)

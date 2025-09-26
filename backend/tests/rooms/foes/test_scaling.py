@@ -15,7 +15,7 @@ from autofighter.rooms.foes.scaling import calculate_cumulative_rooms
 from autofighter.rooms.foes.scaling import compute_base_multiplier
 from autofighter.rooms.foes.scaling import enforce_thresholds
 from autofighter.stats import Stats
-from plugins.foes._base import FoeBase
+from plugins.characters.foe_base import FoeBase
 
 
 @dataclass

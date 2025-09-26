@@ -7,7 +7,7 @@ sys.modules.setdefault("llms.torch_checker", types.SimpleNamespace(is_torch_avai
 
 from autofighter.mapgen import MapNode  # noqa: E402
 from autofighter.party import Party  # noqa: E402
-from plugins.players import Player  # noqa: E402
+from plugins.characters import Player  # noqa: E402
 
 sys.modules.setdefault("autofighter.rooms", types.ModuleType("autofighter.rooms"))
 

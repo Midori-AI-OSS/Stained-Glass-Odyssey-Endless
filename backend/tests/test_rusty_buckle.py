@@ -8,8 +8,8 @@ from autofighter.party import Party
 import autofighter.stats as stats
 from plugins.effects.aftertaste import Aftertaste
 import plugins.event_bus as event_bus_module
-from plugins.foes._base import FoeBase
-from plugins.players._base import PlayerBase
+from plugins.characters.foe_base import FoeBase
+from plugins.characters._base import PlayerBase
 import plugins.relics.rusty_buckle as rb
 from plugins.relics.rusty_buckle import RustyBuckle
 

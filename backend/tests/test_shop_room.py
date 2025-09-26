@@ -19,7 +19,7 @@ from autofighter.rooms.shop import PRICE_BY_STARS
 from autofighter.rooms.shop import REROLL_COST
 from autofighter.rooms.shop import ShopRoom
 from autofighter.rooms.shop import _taxed_price
-from plugins.players._base import PlayerBase
+from plugins.characters._base import PlayerBase
 
 
 @pytest.mark.asyncio

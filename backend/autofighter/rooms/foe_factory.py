@@ -19,7 +19,7 @@ from autofighter.rooms.foes.selector import _choose_template
 from autofighter.rooms.foes.selector import _desired_count
 from autofighter.rooms.foes.selector import _sample_templates
 from autofighter.stats import Stats
-from plugins.foes._base import FoeBase
+from plugins.characters.foe_base import FoeBase
 
 
 @dataclass

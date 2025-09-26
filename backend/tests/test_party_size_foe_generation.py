@@ -7,7 +7,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # noqa: E402
 from autofighter.mapgen import MapNode
 from autofighter.party import Party
 from autofighter.rooms import utils
-from plugins.players import Player
+from plugins.characters import Player
 
 
 class DummyFoe:

@@ -4,8 +4,8 @@ import pytest
 from autofighter.stats import BUS
 from autofighter.stats import Stats
 from plugins.damage_types.generic import Generic
-from plugins.foes._base import FoeBase
-from plugins.players._base import PlayerBase
+from plugins.characters.foe_base import FoeBase
+from plugins.characters._base import PlayerBase
 
 
 @pytest.mark.asyncio
@@ -16,7 +16,7 @@ async def test_foe_ultimate_charge_consumption():
     foe.plugin_type = "foe"
 
     # Manually add the use_ultimate method from FoeBase
-    from plugins.foes._base import FoeBase
+    from plugins.characters.foe_base import FoeBase
     foe.use_ultimate = FoeBase.use_ultimate.__get__(foe, Stats)
 
     # Initially no charge

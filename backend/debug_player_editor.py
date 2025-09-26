@@ -27,7 +27,7 @@ def test_customization_calculation():
         "defense_mult": 1 + test_settings.get("defense", 0) * 0.01,
     }
 
-    # Base player stats (from plugins/players/_base.py)
+    # Base player stats (from plugins/characters/_base.py)
     base_stats = {
         "max_hp": 1000,
         "atk": 100,
