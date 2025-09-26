@@ -19,7 +19,7 @@ const normalizeAssetUrl = src => {
 };
 
 const globOrEmpty = (factory, fallbackFactory) => {
-  if (typeof import.meta?.glob === 'function') {
+  if (typeof factory === 'function') {
     try {
       return factory();
     } catch {}
