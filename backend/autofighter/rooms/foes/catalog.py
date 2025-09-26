@@ -95,20 +95,25 @@ def load_catalog() -> tuple[dict[str, SpawnTemplate], dict[str, SpawnTemplate], 
             base_rank=getattr(foe_cls, "rank", "normal"),
         )
 
+    character_wrappers = getattr(character_plugins, "CHARACTER_FOES", {})
+
     for player_cls in players.values():
         if _is_base_class(player_cls):
             continue
         ident = getattr(player_cls, "id", player_cls.__name__)
-        if ident in templates:
-            continue
-        wrapper = _wrap_player(player_cls)
+        wrapper = character_wrappers.get(ident) or _wrap_player(player_cls)
         hook = getattr(player_cls, "get_spawn_weight", None)
+        existing = templates.get(ident)
+        tags = set(getattr(wrapper, "spawn_tags", ()) or ())
+        if existing is not None:
+            tags.update(existing.tags)
+        tags.add("player_template")
         template = SpawnTemplate(
             id=ident,
             cls=wrapper,
-            tags=frozenset({"player_template"}),
-            weight_hook=hook,
-            base_rank=getattr(wrapper, "rank", "normal"),
+            tags=frozenset(tags),
+            weight_hook=hook or (existing.weight_hook if existing else None),
+            base_rank=getattr(wrapper, "rank", getattr(player_cls, "rank", "normal")),
             apply_adjective=True,
         )
         templates[ident] = template
