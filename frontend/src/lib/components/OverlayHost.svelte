@@ -28,6 +28,7 @@
   import { rewardOpen as computeRewardOpen } from '../systems/viewportState.js';
   import { getBattleSummary } from '../systems/uiApi.js';
   import { motionStore } from '../systems/settingsStorage.js';
+  import { setRewardOverlayOpen, setReviewOverlayState } from '../systems/overlayState.js';
 
   export let selected = [];
   export let runId = '';
@@ -146,18 +147,9 @@
     return filterPartyEntities(src);
   })();
 
-  // Hint to pause battle snapshot polling globally while rewards are open
-  $: {
-    try {
-      if (typeof window !== 'undefined') window.afRewardOpen = Boolean(rewardOpen);
-    } catch {}
-  }
-  // Hint to pause state polling while the Battle Review overlay is open
-  $: {
-    try {
-      if (typeof window !== 'undefined') window.afReviewOpen = Boolean(reviewOpen && reviewReady);
-    } catch {}
-  }
+  // Surface overlay gating through shared overlay state helpers
+  $: setRewardOverlayOpen(rewardOpen);
+  $: setReviewOverlayState({ open: reviewOpen, ready: reviewReady });
 
   function titleForItem(item) {
     if (!item) return '';
