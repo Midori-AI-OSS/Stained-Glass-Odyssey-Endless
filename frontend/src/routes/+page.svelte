@@ -119,7 +119,6 @@
     }
   }
 
-  $: setBattleActive($runState.battleActive);
   $: setManualSyncHalt(haltSync);
 
   // Convert backend-provided party lists into a flat array of player IDs.
