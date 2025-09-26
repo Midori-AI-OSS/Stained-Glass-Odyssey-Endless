@@ -7,8 +7,7 @@ imports Python modules with plugin classes.
 ## Directory Layout
 ```
 plugins/
-├── players/       # Player implementations
-├── foes/          # Enemy implementations
+├── characters/    # Playable and hostile combatants
 ├── passives/      # Passive abilities
 ├── dots/          # Damage-over-time effects
 ├── hots/          # Healing-over-time effects
@@ -38,14 +37,14 @@ discovery process.
 > `if plugin.id == "luna"` style branches to shared managers.
 
 - **Spawn weighting:** Override
-  [`PlayerBase.get_spawn_weight`](../../backend/plugins/players/_base.py) or the
+  [`PlayerBase.get_spawn_weight`](../../backend/plugins/characters/_base.py) or the
   equivalent foe hook instead of touching `foe_factory`. For example,
-  [`backend/plugins/players/luna.py`](../../backend/plugins/players/luna.py)
+  [`backend/plugins/characters/luna.py`](../../backend/plugins/characters/luna.py)
   adjusts Luna's odds so her boss variant is six times more likely on every
   third floor, all without editing the room generator.
 - **Battle preparation:** Use
-  [`PlayerBase.prepare_for_battle`](../../backend/plugins/players/_base.py) or
-  [`PlayerBase.apply_boss_scaling`](../../backend/plugins/players/_base.py) to
+  [`PlayerBase.prepare_for_battle`](../../backend/plugins/characters/_base.py) or
+  [`PlayerBase.apply_boss_scaling`](../../backend/plugins/characters/_base.py) to
   expose special behaviour. Luna's plugin pre-allocates her astral swords from
   `prepare_for_battle` and raises their stats through `apply_boss_scaling` so
   bosses feel unique while the encounter runner stays generic.

@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 from typing import ClassVar
 
-from plugins.players._base import PlayerBase
+from plugins.characters._base import PlayerBase
 
 
 @dataclass

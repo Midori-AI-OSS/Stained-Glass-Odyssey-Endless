@@ -10,7 +10,7 @@ from autofighter.stats import BUS
 from autofighter.stats import Stats
 from plugins.effects.aftertaste import Aftertaste
 import plugins.event_bus as event_bus_module
-from plugins.players._base import PlayerBase
+from plugins.characters._base import PlayerBase
 import plugins.relics._base as relic_base_module
 import plugins.relics.echo_bell as echo_bell_module
 

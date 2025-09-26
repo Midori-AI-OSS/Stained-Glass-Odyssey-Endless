@@ -10,7 +10,7 @@ from autofighter.passives import PassiveRegistry
 from autofighter.stats import BUS
 from autofighter.stats import set_enrage_percent
 from plugins import PluginLoader
-from plugins.players.player import Player
+from plugins.characters.player import Player
 
 
 def test_passive_discovery():

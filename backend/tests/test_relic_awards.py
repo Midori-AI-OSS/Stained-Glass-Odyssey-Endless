@@ -3,7 +3,7 @@ import pytest
 from autofighter.party import Party
 from autofighter.relics import apply_relics
 from autofighter.relics import award_relic
-from plugins.players._base import PlayerBase
+from plugins.characters._base import PlayerBase
 
 
 @pytest.mark.asyncio

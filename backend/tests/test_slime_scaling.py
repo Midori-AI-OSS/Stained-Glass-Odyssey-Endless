@@ -12,8 +12,8 @@ from autofighter.rooms.foe_factory import FoeFactory
 from autofighter.rooms.foes.scaling import apply_permanent_scaling
 from autofighter.rooms.utils import _scale_stats
 from autofighter.stats import Stats
-from plugins.foes import PLAYER_FOES
-from plugins.players.slime import Slime
+from plugins.characters import CHARACTER_FOES
+from plugins.characters.slime import Slime
 
 
 def test_slime_player_uses_default_base_stats() -> None:
@@ -49,9 +49,9 @@ def test_slime_player_uses_default_base_stats() -> None:
 def test_slime_room_scaling_respects_player_baseline(monkeypatch) -> None:
     random.seed(0)
 
-    monkeypatch.setattr("plugins.foes.ADJ_CLASSES", [], raising=False)
+    monkeypatch.setattr("plugins.characters.ADJ_CLASSES", [], raising=False)
 
-    slime_cls = PLAYER_FOES[Slime.id]
+    slime_cls = CHARACTER_FOES[Slime.id]
     slime = slime_cls()
 
     baseline_hp = slime.base_max_hp

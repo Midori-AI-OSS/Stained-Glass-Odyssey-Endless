@@ -7,7 +7,7 @@ from autofighter.effects import create_stat_buff
 from autofighter.stats import BUS
 from plugins.cards._base import CardBase
 from plugins.cards._base import safe_async_task
-from plugins.foes._base import FoeBase
+from plugins.characters.foe_base import FoeBase
 
 
 @dataclass

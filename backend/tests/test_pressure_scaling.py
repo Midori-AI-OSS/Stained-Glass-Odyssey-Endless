@@ -6,7 +6,7 @@ from autofighter.rooms.battle.core import BattleRoom
 from autofighter.rooms.utils import _build_foes
 from autofighter.rooms.utils import _scale_stats
 from autofighter.stats import Stats
-from plugins.foes._base import FoeBase
+from plugins.characters.foe_base import FoeBase
 
 
 @pytest.mark.parametrize(

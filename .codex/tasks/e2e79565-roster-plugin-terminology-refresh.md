@@ -15,3 +15,5 @@ Coder, consolidate combatant plugins under a neutral "characters" namespace and 
 
 ## Notes
 - Coordinate with any in-flight tasks touching asset registry or battle review features so terminology changes stay consistent across docs and UI strings.
+
+Status: Ready for review.

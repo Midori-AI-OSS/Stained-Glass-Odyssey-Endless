@@ -5,7 +5,7 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from autofighter.party import Party
-from plugins.players.player import Player
+from plugins.characters.player import Player
 from plugins.relics.fallback_essence import FallbackEssence
 
 
@@ -57,7 +57,7 @@ def test_fallback_relic_logic():
     # Import the battle module and check the logic directly
     from autofighter.cards import card_choices
     from autofighter.party import Party
-    from plugins.players.player import Player
+    from plugins.characters.player import Player
     from plugins.relics.fallback_essence import FallbackEssence
 
     # Create a party
@@ -85,7 +85,7 @@ def test_fallback_relic_not_in_normal_drops():
     """Test that fallback relic does not appear in normal relic drops."""
     from autofighter.party import Party
     from autofighter.relics import relic_choices
-    from plugins.players.player import Player
+    from plugins.characters.player import Player
 
     # Create a party with no relics
     party = Party(members=[Player()], gold=100, relics=[], cards=[], rdr=1.0)

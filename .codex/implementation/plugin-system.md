@@ -3,16 +3,15 @@
 Describes how plugins are discovered, categorized, and connected to the event bus.
 
 ## Loader Flow
-- `PluginLoader` scans each directory recursively for Python files, skipping `__init__.py` and importing the rest【F:plugins/plugin_loader.py†L24-L38】
+- `PluginLoader` scans each directory recursively for Python files, skipping `__init__.py` and importing the rest【F:backend/plugins/plugin_loader.py†L24-L38】
 - After loading, any categories listed as required but missing raise a runtime error【F:plugins/plugin_loader.py†L40-L48】
 - Classes defining `plugin_type` are registered under that category and assigned the event bus when provided【F:plugins/plugin_loader.py†L67-L74】
-- Imported base classes are ignored so only concrete plugin implementations appear in the registry【F:plugins/plugin_loader.py†L73-L81】
+- Base classes are registered alongside concrete plugins; discovery code such as the foe catalog filters them out when building spawn templates【F:backend/autofighter/rooms/foes/catalog.py†L50-L98】
 
 ## Plugin Categories
 The following categories are bundled:
 
-- **Players** – controllable characters such as `Player`【F:backend/plugins/players/player.py†L1-L15】
-- **Foes** – enemy combatants such as `Slime`【F:backend/plugins/foes/slime.py†L1-L16】
+- **Characters** – controllable and hostile combatants such as `Player` or `SlimeFoe`【F:backend/plugins/characters/player.py†L1-L24】【F:backend/plugins/characters/__init__.py†L66-L101】
 - **Passives** – always-on effects like `AttackUp`【F:backend/plugins/passives/attack_up.py†L1-L16】
 - **DoTs** – damage-over-time effects such as `Bleed`【F:plugins/dots/bleed.py†L4-L15】
 - **HoTs** – healing-over-time effects such as `Regeneration`【F:plugins/hots/regeneration.py†L4-L9】

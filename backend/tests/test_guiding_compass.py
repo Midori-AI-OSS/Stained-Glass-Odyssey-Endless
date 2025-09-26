@@ -17,7 +17,7 @@ from autofighter.party import Party
 from autofighter.stats import BUS
 from plugins.cards.guiding_compass import GuidingCompass
 import plugins.event_bus as event_bus_module
-from plugins.players._base import PlayerBase
+from plugins.characters._base import PlayerBase
 
 
 @pytest.mark.asyncio

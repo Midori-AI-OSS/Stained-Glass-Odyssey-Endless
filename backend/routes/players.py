@@ -24,7 +24,7 @@ from tracking import log_overlay_action
 
 from autofighter.gacha import GachaManager
 from autofighter.stats import apply_status_hooks
-from plugins import players as player_plugins
+from plugins import characters as player_plugins
 
 bp = Blueprint("players", __name__)
 log = logging.getLogger(__name__)

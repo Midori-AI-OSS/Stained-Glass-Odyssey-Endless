@@ -7,7 +7,7 @@ from autofighter.mapgen import MapNode
 from autofighter.party import Party
 from autofighter.rooms import BattleRoom
 from autofighter.stats import Stats
-from plugins.players.player import Player
+from plugins.characters.player import Player
 
 
 @pytest.mark.asyncio

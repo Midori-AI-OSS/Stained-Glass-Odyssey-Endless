@@ -8,7 +8,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from autofighter.mapgen import MapGenerator
 from autofighter.mapgen import MapNode
 from autofighter.rooms.utils import _scale_stats
-from plugins.foes._base import FoeBase
+from plugins.characters.foe_base import FoeBase
 
 
 def test_foe_scaling_cumulative_rooms():
