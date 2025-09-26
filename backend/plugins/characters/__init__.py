@@ -75,7 +75,6 @@ for _character in _CHARACTER_EXPORTS:
     CHARACTER_FOES[_character.id] = foe_cls
     globals()[foe_cls.__name__] = foe_cls
 
-
 _PLAYABLE_EXPORTS = tuple(cls.__name__ for cls in _CHARACTER_EXPORTS)
 _FOE_EXPORTS = tuple(foe_cls.__name__ for foe_cls in CHARACTER_FOES.values())
 

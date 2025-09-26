@@ -51,13 +51,6 @@ def _instantiate_boss(foe_id: str | None):
     if not foe_id:
         return None
     try:
-        for name in getattr(foe_plugins, "__all__", []):
-            cls = getattr(foe_plugins, name, None)
-            if cls is not None and getattr(cls, "id", None) == foe_id:
-                return cls()
-    except Exception:
-        pass
-    try:
         foe_cls = foe_plugins.CHARACTER_FOES.get(foe_id)
         if foe_cls is not None:
             return foe_cls()
