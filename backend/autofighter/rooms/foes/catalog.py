@@ -101,6 +101,9 @@ def load_catalog() -> tuple[dict[str, SpawnTemplate], dict[str, SpawnTemplate], 
         if _is_base_class(player_cls):
             continue
         ident = getattr(player_cls, "id", player_cls.__name__)
+        if ident in templates:
+            continue
+        ident = getattr(player_cls, "id", player_cls.__name__)
         wrapper = character_wrappers.get(ident) or _wrap_player(player_cls)
         hook = getattr(player_cls, "get_spawn_weight", None)
         existing = templates.get(ident)
