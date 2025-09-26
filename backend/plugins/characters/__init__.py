@@ -76,11 +76,8 @@ for _character in _CHARACTER_EXPORTS:
     globals()[foe_cls.__name__] = foe_cls
 
 
-__all__ = [
-    "ADJ_CLASSES",
-    "CHARACTER_FOES",
-    "FoeBase",
-    "PlayerBase",
-] + [cls.__name__ for cls in _CHARACTER_EXPORTS] + [
-    foe_cls.__name__ for foe_cls in CHARACTER_FOES.values()
-]
+_PLAYABLE_EXPORTS = tuple(cls.__name__ for cls in _CHARACTER_EXPORTS)
+_FOE_EXPORTS = tuple(foe_cls.__name__ for foe_cls in CHARACTER_FOES.values())
+
+
+__all__ = list(_PLAYABLE_EXPORTS + _FOE_EXPORTS)
