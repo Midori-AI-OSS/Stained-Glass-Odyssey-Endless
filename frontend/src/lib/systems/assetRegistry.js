@@ -4,6 +4,55 @@
 
 import { getCharacterMetadata } from './characterMetadata.js';
 
+const TELEMETRY_EVENT_NAME = 'autofighter:asset-registry';
+let telemetryListener = null;
+const telemetryCache = new Set();
+
+export const setAssetRegistryTelemetry = handler => {
+  telemetryListener = typeof handler === 'function' ? handler : null;
+};
+
+export const resetAssetRegistryTelemetry = () => {
+  telemetryCache.clear();
+};
+
+const emitTelemetry = (kind, detail = {}, options = {}) => {
+  const payload = {
+    kind,
+    detail: { ...detail },
+    timestamp: Date.now()
+  };
+  const defaultKeyParts = [kind, detail?.id ?? detail?.key ?? detail?.type ?? '', detail?.reason ?? ''];
+  const onceKey = options.onceKey === false ? null : options.onceKey || defaultKeyParts.join(':');
+  if (onceKey) {
+    if (telemetryCache.has(onceKey)) {
+      return;
+    }
+    telemetryCache.add(onceKey);
+  }
+  if (telemetryListener) {
+    try {
+      telemetryListener(payload);
+    } catch (error) {
+      try {
+        console.error('[assetRegistry] telemetry handler failed', error);
+      } catch {}
+    }
+  }
+  try {
+    if (
+      typeof window !== 'undefined' &&
+      typeof window.dispatchEvent === 'function' &&
+      typeof window.CustomEvent === 'function'
+    ) {
+      window.dispatchEvent(new window.CustomEvent(TELEMETRY_EVENT_NAME, { detail: payload }));
+    }
+  } catch {}
+  try {
+    console.warn(`[assetRegistry] ${kind}`, payload);
+  } catch {}
+};
+
 const normalizeAssetUrl = src => {
   if (!src) return '';
   if (
@@ -156,6 +205,40 @@ const materialIconModules = createModuleMap(
   )
 );
 
+const dotModules = createModuleMap(
+  globOrEmpty(
+    () =>
+      import.meta.glob('../assets/dots/*/*.png', {
+        eager: true,
+        import: 'default',
+        query: '?url'
+      }),
+    glob =>
+      glob('../assets/dots/*/*.png', {
+        eager: true,
+        import: 'default',
+        query: '?url'
+      })
+  )
+);
+
+const effectModules = createModuleMap(
+  globOrEmpty(
+    () =>
+      import.meta.glob('../assets/effects/*/*.png', {
+        eager: true,
+        import: 'default',
+        query: '?url'
+      }),
+    glob =>
+      glob('../assets/effects/*/*.png', {
+        eager: true,
+        import: 'default',
+        query: '?url'
+      })
+  )
+);
+
 const cardGlyphModules = createModuleMap(
   globOrEmpty(
     () =>
@@ -230,6 +313,9 @@ const STATIC_FALLBACK = normalizeAssetUrl('../assets/midoriai-logo.png');
 const DEFAULT_CARD_FALLBACK = normalizeAssetUrl('../assets/cards/gray/bg_attack_default_gray2.png');
 const DEFAULT_RELIC_FALLBACK = normalizeAssetUrl('../assets/relics/fallback/placeholder.png');
 const DEFAULT_ITEM_FALLBACK = normalizeAssetUrl('../assets/items/generic/generic1.png');
+const DEFAULT_DOT_FALLBACK = normalizeAssetUrl('../assets/dots/generic/generic1.png');
+const DEFAULT_EFFECT_BUFF_FALLBACK = normalizeAssetUrl('../assets/effects/buffs/generic_buff.png');
+const DEFAULT_EFFECT_DEBUFF_FALLBACK = normalizeAssetUrl('../assets/effects/debuffs/generic_debuff.png');
 
 const portraitGalleries = new Map(); // normalized id -> string[] urls
 const portraitCanonicals = new Map(); // normalized id -> canonical id
@@ -295,6 +381,91 @@ const normalizeKey = value => {
   return key;
 };
 
+const normalizeDotElement = value => normalizeKey(value) || 'generic';
+
+const dotIndex = (() => {
+  const elements = new Map();
+  let fallback = DEFAULT_DOT_FALLBACK || STATIC_FALLBACK;
+  Object.entries(dotModules).forEach(([path, url]) => {
+    if (!url) return;
+    const match = path.match(/assets\/dots\/([^/]+)/i);
+    const element = normalizeDotElement(match?.[1]);
+    if (!elements.has(element)) {
+      elements.set(element, []);
+    }
+    elements.get(element).push(url);
+    if (element === 'generic' && (!fallback || fallback === STATIC_FALLBACK)) {
+      fallback = url;
+    }
+  });
+  if (!fallback) {
+    fallback = STATIC_FALLBACK;
+  }
+  return { elements, fallback };
+})();
+
+export const getDotVariantPool = element => {
+  const key = normalizeDotElement(element);
+  const pool = dotIndex.elements.get(key) ?? [];
+  return [...pool];
+};
+
+export const getDotFallback = () => dotIndex.fallback || STATIC_FALLBACK;
+
+const normalizeEffectType = value => {
+  const key = normalizeKey(value);
+  if (!key) return 'buffs';
+  if (key === 'debuff' || key === 'debuffs' || key === 'negative') return 'debuffs';
+  return 'buffs';
+};
+
+const effectIndex = (() => {
+  const types = new Map();
+  const fallback = {
+    buffs: DEFAULT_EFFECT_BUFF_FALLBACK || STATIC_FALLBACK,
+    debuffs: DEFAULT_EFFECT_DEBUFF_FALLBACK || DEFAULT_EFFECT_BUFF_FALLBACK || STATIC_FALLBACK
+  };
+  Object.entries(effectModules).forEach(([path, url]) => {
+    if (!url) return;
+    const match = path.match(/assets\/effects\/([^/]+)\/([^/]+)\.png$/i);
+    if (!match) return;
+    const [, rawType, rawName] = match;
+    const type = normalizeEffectType(rawType);
+    const name = normalizeKey(rawName);
+    if (!types.has(type)) {
+      types.set(type, new Map());
+    }
+    types.get(type).set(name, url);
+    if (type === 'buffs' && name === 'generic_buff') {
+      fallback.buffs = url;
+    }
+    if (type === 'debuffs' && name === 'generic_debuff') {
+      fallback.debuffs = url;
+    }
+  });
+  if (!fallback.buffs) {
+    fallback.buffs = DEFAULT_EFFECT_BUFF_FALLBACK || STATIC_FALLBACK;
+  }
+  if (!fallback.debuffs) {
+    fallback.debuffs = DEFAULT_EFFECT_DEBUFF_FALLBACK || fallback.buffs;
+  }
+  return { types, fallback };
+})();
+
+export const getEffectIconUrl = (type, name) => {
+  const normalizedType = normalizeEffectType(type);
+  const normalizedName = normalizeKey(name);
+  if (!normalizedName) return null;
+  const bucket = effectIndex.types.get(normalizedType);
+  if (!bucket) return null;
+  return bucket.get(normalizedName) ?? null;
+};
+
+export const getEffectFallback = type => {
+  const normalizedType = normalizeEffectType(type);
+  return effectIndex.fallback[normalizedType] ?? effectIndex.fallback.buffs;
+};
+
 const normalizeMusicCategory = (category, fallback = 'other') => {
   const normalized = normalizeKey(category);
   if (!normalized) return fallback;
@@ -321,6 +492,28 @@ const ensureMusicLibrary = (library, key) => {
 const musicLibrary = new Map();
 const fallbackMusicLibrary = new Map();
 const fallbackMusicPool = [];
+const musicTrackMetadataDisk = new Map();
+const musicTrackMetadataOverrides = new Map();
+
+const recordDiskMusicMetadata = (url, metadata = {}) => {
+  if (!url) return;
+  const key = String(url);
+  if (!key) return;
+  const existing = musicTrackMetadataDisk.get(key) || {};
+  musicTrackMetadataDisk.set(key, { ...existing, ...metadata, origin: 'disk' });
+};
+
+const recordOverrideMusicMetadata = (url, metadata = {}) => {
+  if (!url) return;
+  const key = String(url);
+  if (!key) return;
+  const existing = musicTrackMetadataOverrides.get(key) || {};
+  musicTrackMetadataOverrides.set(key, { ...existing, ...metadata, origin: 'metadata' });
+};
+
+const clearOverrideMusicMetadata = () => {
+  musicTrackMetadataOverrides.clear();
+};
 
 Object.entries(musicModules).forEach(([path, url]) => {
   const segments = path.replace(/..\/assets\/music\//, '').split('/');
@@ -335,6 +528,11 @@ Object.entries(musicModules).forEach(([path, url]) => {
     }
     fallbackMusicLibrary.get(category).push(url);
     fallbackMusicPool.push(url);
+    recordDiskMusicMetadata(url, {
+      category,
+      scope: 'fallback',
+      path
+    });
     return;
   }
   const category = normalizeMusicCategory(fileCategory, 'other');
@@ -346,6 +544,11 @@ Object.entries(musicModules).forEach(([path, url]) => {
   if (category !== 'other') {
     entry.defaultCategory = category;
   }
+  recordDiskMusicMetadata(url, {
+    character,
+    category,
+    path
+  });
 });
 
 const sfxClips = new Map();
@@ -408,7 +611,11 @@ const metadataOverrides = {
   summonAliases: new Map(),
   summonGalleries: new Map(),
   summonCanonicals: new Map(),
-  rarityFolders: new Map()
+  rarityFolders: new Map(),
+  rewardArt: new Map(),
+  rewardMetadata: new Map(),
+  musicTracks: new Map(),
+  musicFallbacks: new Map()
 };
 
 const manifestState = {
@@ -482,10 +689,23 @@ const shouldMuteAudio = options => {
 const getMusicEntry = characterId => {
   const key = normalizeKey(characterId);
   if (!key) return null;
-  if (musicLibrary.has(key)) {
-    return musicLibrary.get(key);
+  const base = musicLibrary.get(key) || null;
+  const override = metadataOverrides.musicTracks.get(key) || null;
+  if (!base && !override) return null;
+  const categories = new Map();
+  if (base) {
+    base.categories.forEach((tracks, category) => {
+      categories.set(category, [...tracks]);
+    });
   }
-  return null;
+  if (override) {
+    override.categories.forEach((tracks, category) => {
+      const existing = categories.get(category) ?? [];
+      categories.set(category, [...existing, ...tracks]);
+    });
+  }
+  const defaultCategory = override?.defaultCategory || base?.defaultCategory || 'normal';
+  return { categories, defaultCategory };
 };
 
 const pickMusicPlaylist = (entry, category) => {
@@ -520,13 +740,18 @@ export const getMusicPlaylist = (characterId, category = 'normal', options = {})
 export const getMusicFallbackPlaylist = (category = 'normal', options = {}) => {
   if (shouldMuteAudio(options)) return [];
   const normalized = normalizeMusicCategory(category, 'normal');
+  const overrideTracks = metadataOverrides.musicFallbacks.get(normalized) ?? [];
   const tracks = fallbackMusicLibrary.get(normalized) ?? [];
-  return [...tracks];
+  return [...overrideTracks, ...tracks];
 };
 
 export const getAllMusicTracks = (options = {}) => {
   if (shouldMuteAudio(options)) return [];
-  return [...fallbackMusicPool];
+  const overrides = [];
+  metadataOverrides.musicFallbacks.forEach(urls => {
+    overrides.push(...urls);
+  });
+  return [...overrides, ...fallbackMusicPool];
 };
 
 export const getRandomMusicTrack = (characterId, category = 'normal', options = {}) => {
@@ -536,10 +761,25 @@ export const getRandomMusicTrack = (characterId, category = 'normal', options = 
     ? getMusicPlaylist(id, category, options)
     : getAllMusicTracks(options);
   if (!Array.isArray(playlist) || playlist.length === 0) {
+    emitTelemetry('music-fallback', {
+      id,
+      category: normalizeMusicCategory(category, 'normal'),
+      reason: id ? 'empty-playlist' : 'no-tracks'
+    });
     return '';
   }
   const index = Math.floor(Math.random() * playlist.length);
   return playlist[index] ?? '';
+};
+
+export const getMusicTrackMetadata = url => {
+  if (!url) return null;
+  const key = String(url);
+  if (!key) return null;
+  const base = musicTrackMetadataDisk.get(key) || null;
+  const override = musicTrackMetadataOverrides.get(key) || null;
+  if (!base && !override) return null;
+  return { ...(base || {}), ...(override || {}) };
 };
 
 const expandSfxCandidates = input => {
@@ -570,8 +810,17 @@ export const getSfxClip = (input, options = {}) => {
     return getSfxClip(opts.fallback, { ...opts, fallback: false });
   }
   if (opts.fallback === true && defaultSfxClip) {
+    emitTelemetry('sfx-fallback', {
+      key: candidates[0] ?? '',
+      reason: 'default',
+      fallback: defaultSfxClip
+    });
     return defaultSfxClip;
   }
+  emitTelemetry('sfx-fallback', {
+    key: candidates[0] ?? '',
+    reason: 'missing'
+  });
   return '';
 };
 
@@ -674,9 +923,21 @@ const resolveMirroredPortrait = (mirrorId, metadata) => {
   if (pool.length) {
     const chosen = chooseRandom(pool) ?? pool[0];
     setCachedPortrait(cacheKey, chosen);
+    emitTelemetry('portrait-fallback', {
+      id: mirrorId,
+      key: cacheKey,
+      reason: 'mirror-pool',
+      portraitPool: 'player_mirror'
+    });
     return chosen;
   }
   setCachedPortrait(cacheKey, STATIC_FALLBACK);
+  emitTelemetry('portrait-fallback', {
+    id: mirrorId,
+    key: cacheKey,
+    reason: 'mirror-static',
+    portraitPool: 'player_mirror'
+  });
   return STATIC_FALLBACK;
 };
 
@@ -722,6 +983,17 @@ export const getCharacterImage = (characterId, options = {}) => {
     metadata?.treat_as_player === true ||
     metadataFlags.includes('player_gallery');
 
+  const logPortraitFallback = reason => {
+    emitTelemetry('portrait-fallback', {
+      id,
+      key,
+      reason,
+      portraitPool,
+      treatAsPlayer,
+      metadataFlags
+    });
+  };
+
   if (treatAsPlayer) {
     if (gallery.length) {
       const chosen = chooseRandom(gallery) ?? gallery[0];
@@ -729,8 +1001,10 @@ export const getCharacterImage = (characterId, options = {}) => {
     }
     if (pool.length) {
       const chosen = chooseRandom(pool) ?? pool[0];
+      logPortraitFallback('player-pool');
       return persist(chosen);
     }
+    logPortraitFallback('player-static');
     return persist(STATIC_FALLBACK);
   }
 
@@ -744,9 +1018,11 @@ export const getCharacterImage = (characterId, options = {}) => {
 
   if (pool.length) {
     const fallback = getDeterministicFallback(id);
+    logPortraitFallback('pool-fallback');
     return persist(fallback);
   }
 
+  logPortraitFallback('static-fallback');
   return persist(STATIC_FALLBACK);
 };
 
@@ -837,7 +1113,14 @@ export const getSummonGallery = summonId => {
 
 export const getSummonArt = (summonId, options = {}) => {
   const entries = getSummonGallery(summonId);
-  if (!entries.length) return STATIC_FALLBACK;
+  const key = normalizeKey(summonId);
+  if (!entries.length) {
+    emitTelemetry('summon-fallback', {
+      id: key,
+      reason: 'empty-gallery'
+    });
+    return STATIC_FALLBACK;
+  }
   let pool = entries;
   if (typeof options.filter === 'function') {
     const filtered = entries.filter(entry => options.filter(entry));
@@ -845,7 +1128,13 @@ export const getSummonArt = (summonId, options = {}) => {
       pool = filtered;
     }
   }
-  if (!pool.length) return STATIC_FALLBACK;
+  if (!pool.length) {
+    emitTelemetry('summon-fallback', {
+      id: key,
+      reason: 'filtered-empty'
+    });
+    return STATIC_FALLBACK;
+  }
   if (options.seed != null) {
     const index = stringHashIndex(`${summonId}:${options.seed}`, pool.length);
     return pool[index]?.url ?? pool[0].url;
@@ -955,6 +1244,13 @@ export const getRewardArt = (type, id) => {
   if (rewardCache.has(cacheKey)) {
     return rewardCache.get(cacheKey);
   }
+  if (metadataOverrides.rewardArt.has(cacheKey)) {
+    const overrideUrl = metadataOverrides.rewardArt.get(cacheKey);
+    if (overrideUrl) {
+      rewardCache.set(cacheKey, overrideUrl);
+      return overrideUrl;
+    }
+  }
   let url = normalizedId ? collection.map.get(normalizedId) : null;
   if (!url && normalizedId) {
     const compact = stripNonAlphanumeric(normalizedId);
@@ -963,10 +1259,25 @@ export const getRewardArt = (type, id) => {
     }
   }
   if (!url) {
+    emitTelemetry('reward-fallback', {
+      type: normalizedType,
+      id: normalizedId,
+      reason: metadataOverrides.rewardArt.has(cacheKey) ? 'override-missing' : 'missing-art'
+    });
     url = collection.fallback;
   }
   rewardCache.set(cacheKey, url);
   return url;
+};
+
+export const getRewardMetadata = (type, id) => {
+  const normalizedType = normalizeRewardType(type);
+  const normalizedId = normalizeRewardId(normalizedType, id);
+  const key = rewardCacheKey(normalizedType, normalizedId);
+  if (!metadataOverrides.rewardMetadata.has(key)) {
+    return null;
+  }
+  return { ...metadataOverrides.rewardMetadata.get(key) };
 };
 
 const createGlyphMap = modules => {
@@ -1110,6 +1421,12 @@ export const getMaterialIcon = key => {
   }
   if (!url) {
     url = materialIconIndex.fallback;
+    emitTelemetry('material-fallback', {
+      id: String(key ?? ''),
+      element: element || 'generic',
+      rank,
+      reason: 'missing-icon'
+    });
   }
   materialIconCache.set(cacheKey, url);
   return url;
@@ -1126,6 +1443,61 @@ const asArray = value => {
   if (!value) return [];
   if (Array.isArray(value)) return value;
   return [value];
+};
+
+const cloneMetadata = value => {
+  if (!value || typeof value !== 'object') {
+    return {};
+  }
+  return { ...value };
+};
+
+const sanitizeRewardOverrideEntry = entry => {
+  if (!entry) {
+    return { url: null, metadata: null };
+  }
+  if (typeof entry === 'string') {
+    return { url: normalizeInjectedUrl(entry), metadata: null };
+  }
+  if (typeof entry === 'object') {
+    const url = normalizeInjectedUrl(entry.url || entry.href || entry.src || '');
+    const metadata = entry.metadata && typeof entry.metadata === 'object' ? cloneMetadata(entry.metadata) : null;
+    return { url, metadata };
+  }
+  return { url: null, metadata: null };
+};
+
+const pickRewardOverride = value => {
+  const candidates = asArray(value);
+  for (const candidate of candidates) {
+    const sanitized = sanitizeRewardOverrideEntry(candidate);
+    if (sanitized.url) {
+      return sanitized;
+    }
+  }
+  return { url: null, metadata: null };
+};
+
+const parseMusicTrackItems = (input, context) => {
+  const urls = [];
+  asArray(input).forEach(item => {
+    if (!item) return;
+    if (typeof item === 'string') {
+      const url = normalizeInjectedUrl(item);
+      if (!url) return;
+      recordOverrideMusicMetadata(url, { ...context });
+      urls.push(url);
+      return;
+    }
+    if (typeof item === 'object') {
+      const url = normalizeInjectedUrl(item.url || item.href || item.src || '');
+      if (!url) return;
+      const metadata = item.metadata && typeof item.metadata === 'object' ? cloneMetadata(item.metadata) : {};
+      recordOverrideMusicMetadata(url, { ...context, ...metadata });
+      urls.push(url);
+    }
+  });
+  return urls;
 };
 
 const normalizeManifestKey = value => normalizeKey(value);
@@ -1319,6 +1691,104 @@ export const registerAssetMetadata = metadata => {
     }
   }
 
+  if (metadata.rewardOverrides && typeof metadata.rewardOverrides === 'object') {
+    metadataOverrides.rewardArt.clear();
+    metadataOverrides.rewardMetadata.clear();
+    for (const [type, entries] of Object.entries(metadata.rewardOverrides)) {
+      const normalizedType = normalizeRewardType(type);
+      if (!entries || typeof entries !== 'object') continue;
+      for (const [id, value] of Object.entries(entries)) {
+        const normalizedId = normalizeRewardId(normalizedType, id);
+        if (!normalizedId) continue;
+        const { url, metadata: rewardMeta } = pickRewardOverride(value);
+        if (!url) continue;
+        const key = rewardCacheKey(normalizedType, normalizedId);
+        metadataOverrides.rewardArt.set(key, url);
+        if (rewardMeta) {
+          metadataOverrides.rewardMetadata.set(key, rewardMeta);
+        } else {
+          metadataOverrides.rewardMetadata.delete(key);
+        }
+        touched = true;
+      }
+    }
+    rewardCache.clear();
+  }
+
+  let musicTouched = false;
+  let musicCleared = false;
+  const resetMusicOverrides = () => {
+    if (!musicCleared) {
+      metadataOverrides.musicTracks.clear();
+      metadataOverrides.musicFallbacks.clear();
+      clearOverrideMusicMetadata();
+      musicCleared = true;
+    }
+  };
+
+  if (metadata.musicOverrides && typeof metadata.musicOverrides === 'object') {
+    resetMusicOverrides();
+    for (const [id, config] of Object.entries(metadata.musicOverrides)) {
+      const key = normalizeKey(id);
+      if (!key) continue;
+      const source = config && typeof config === 'object' ? config : {};
+      const container =
+        (source.tracks && typeof source.tracks === 'object' ? source.tracks : null) ||
+        (source.categories && typeof source.categories === 'object' ? source.categories : null) ||
+        source;
+      if (!container || typeof container !== 'object') continue;
+      const categories = new Map();
+      Object.entries(container).forEach(([categoryName, entries]) => {
+        if (categoryName === 'default' || categoryName === 'defaultCategory' || categoryName === 'tracks' || categoryName === 'categories') {
+          return;
+        }
+        const category = normalizeMusicCategory(categoryName, 'normal');
+        const urls = parseMusicTrackItems(entries, {
+          character: key,
+          category,
+          scope: 'character'
+        });
+        if (urls.length) {
+          categories.set(category, urls);
+        }
+      });
+      if (!categories.size) continue;
+      const defaultCategoryRaw = source.defaultCategory ?? source.default ?? null;
+      const defaultCategory = defaultCategoryRaw
+        ? normalizeMusicCategory(defaultCategoryRaw, 'normal')
+        : null;
+      metadataOverrides.musicTracks.set(key, {
+        categories,
+        defaultCategory
+      });
+      musicTouched = true;
+    }
+  }
+
+  if (metadata.musicFallbacks && typeof metadata.musicFallbacks === 'object') {
+    resetMusicOverrides();
+    for (const [categoryName, entries] of Object.entries(metadata.musicFallbacks)) {
+      const category = normalizeMusicCategory(categoryName, 'normal');
+      const urls = parseMusicTrackItems(entries, {
+        category,
+        scope: 'fallback'
+      });
+      if (!urls.length) continue;
+      metadataOverrides.musicFallbacks.set(category, urls);
+      musicTouched = true;
+    }
+  }
+
+  if (metadata.musicAnnotations && typeof metadata.musicAnnotations === 'object') {
+    for (const [rawUrl, meta] of Object.entries(metadata.musicAnnotations)) {
+      const url = normalizeInjectedUrl(rawUrl);
+      if (!url) continue;
+      const annotations = cloneMetadata(meta);
+      recordOverrideMusicMetadata(url, { ...annotations, scope: 'annotation' });
+      musicTouched = true;
+    }
+  }
+
   if (metadata.rarityFolders) {
     for (const [id, folders] of Object.entries(metadata.rarityFolders)) {
       const key = normalizeKey(id);
@@ -1328,6 +1798,10 @@ export const registerAssetMetadata = metadata => {
       metadataOverrides.portraitCanonicals.set(key, id);
       touched = true;
     }
+  }
+
+  if (musicTouched) {
+    touched = true;
   }
 
   if (touched) {
@@ -1346,6 +1820,12 @@ export const resetAssetRegistryOverrides = () => {
   metadataOverrides.summonGalleries.clear();
   metadataOverrides.summonCanonicals.clear();
   metadataOverrides.rarityFolders.clear();
+  metadataOverrides.rewardArt.clear();
+  metadataOverrides.rewardMetadata.clear();
+  metadataOverrides.musicTracks.clear();
+  metadataOverrides.musicFallbacks.clear();
+  clearOverrideMusicMetadata();
+  resetAssetRegistryTelemetry();
   rewardCache.clear();
   materialIconCache.clear();
   clearCharacterImageCache();

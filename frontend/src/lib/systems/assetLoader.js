@@ -20,8 +20,11 @@ import {
   getGlyphArt,
   getMaterialFallbackIcon,
   getMaterialIcon,
+  getDotVariantPool,
+  getDotFallback,
+  getEffectIconUrl,
+  getEffectFallback,
   hasCharacterGallery as registryHasCharacterGallery,
-  normalizeAssetUrl,
   onMaterialIconError,
   registerAssetManifest,
   registerAssetMetadata,
@@ -52,28 +55,6 @@ export {
   getSummonGallery,
   getAvailableSummonIds
 };
-
-// Load DoT icons by element folder (e.g., ./assets/dots/fire/*.png)
-const dotModules = Object.fromEntries(
-  Object.entries(
-    import.meta.glob('../assets/dots/*/*.png', {
-      eager: true,
-      import: 'default',
-      query: '?url'
-    })
-  ).map(([p, src]) => [p, normalizeAssetUrl(src)])
-);
-
-// Load effect icons by type folder (e.g., ./assets/effects/buffs/*.png)
-const effectModules = Object.fromEntries(
-  Object.entries(
-    import.meta.glob('../assets/effects/*/*.png', {
-      eager: true,
-      import: 'default',
-      query: '?url'
-    })
-  ).map(([p, src]) => [p, normalizeAssetUrl(src)])
-);
 
 const ELEMENT_ICONS = {
   fire: Flame,
@@ -195,9 +176,6 @@ function shiftColor(hex, ratio) {
 }
 
 const defaultFallback = getDefaultFallback();
-const DOT_DEFAULT = normalizeAssetUrl('../assets/dots/generic/generic1.png');
-const EFFECT_DEFAULT = normalizeAssetUrl('../assets/effects/buffs/generic_buff.png');
-
 export function getElementIcon(element) {
   return ELEMENT_ICONS[(element || '').toLowerCase()] || Circle;
 }
@@ -230,26 +208,6 @@ export function getDamageTypeVisual(typeId, options = {}) {
     color: getDamageTypeColor(typeId, options)
   };
 }
-
-// Build DoT assets map: { fire: [urls...], ice: [...], ... }
-const dotAssets = (() => {
-  const map = {
-    fire: [],
-    ice: [],
-    lightning: [],
-    light: [],
-    dark: [],
-    wind: [],
-    generic: []
-  };
-  for (const [p, url] of Object.entries(dotModules)) {
-    const m = p.match(/assets\/dots\/(\w+)\//);
-    const key = (m?.[1] || 'generic').toLowerCase();
-    if (!map[key]) map[key] = [];
-    map[key].push(url);
-  }
-  return map;
-})();
 
 function tokenizeSwordPath(path) {
   const tokens = [];
@@ -364,25 +322,6 @@ export function getLightstreamSwordVisual(typeId, options = {}) {
   };
 }
 
-// Build Effect assets map: { buffs: {name: url, ...}, debuffs: {name: url, ...} }
-const effectAssets = (() => {
-  const map = {
-    buffs: {},
-    debuffs: {}
-  };
-  for (const [p, url] of Object.entries(effectModules)) {
-    const m = p.match(/assets\/effects\/(\w+)\/(\w+)\.png$/);
-    if (m) {
-      const [, type, name] = m;
-      const effectType = type.toLowerCase();
-      const effectName = name.toLowerCase();
-      if (!map[effectType]) map[effectType] = {};
-      map[effectType][effectName] = url;
-    }
-  }
-  return map;
-})();
-
 // Internal helper to infer an element from a DoT id/name
 function inferElementFromKey(key) {
   const k = String(key || '').toLowerCase();
@@ -418,10 +357,11 @@ export function getDotImage(effect) {
     }
   } catch {}
   if (!element) element = inferElementFromKey(key);
-  const list = dotAssets[element] || dotAssets.generic || [];
-  if (list.length === 0) return DOT_DEFAULT || defaultFallback;
+  const list = getDotVariantPool(element);
+  const fallback = getDotFallback() || defaultFallback;
+  if (list.length === 0) return fallback;
   const idx = stringHashIndex(key || element, list.length);
-  return list[idx] || DOT_DEFAULT || defaultFallback;
+  return list[idx] || fallback;
 }
 
 // Internal helper to infer effect type (buff vs debuff) from modifiers
@@ -485,23 +425,22 @@ function getEffectIconName(effect) {
 // Falls back to generic buff/debuff if no specific icon is found.
 export function getEffectImage(effect) {
   if (!effect || typeof effect !== 'object') {
-    return EFFECT_DEFAULT || defaultFallback;
+    return getEffectFallback('buffs') || defaultFallback;
   }
-  
+
   const effectType = inferEffectType(effect);
   const iconName = getEffectIconName(effect);
-  
+
   // Try to find the specific icon
-  const iconUrl = effectAssets[effectType]?.[iconName];
+  const iconUrl = getEffectIconUrl(effectType, iconName);
   if (iconUrl) return iconUrl;
-  
+
   // Fall back to generic for this effect type
   const genericIcon = effectType === 'debuffs' ? 'generic_debuff' : 'generic_buff';
-  const genericUrl = effectAssets[effectType]?.[genericIcon];
+  const genericUrl = getEffectIconUrl(effectType, genericIcon);
   if (genericUrl) return genericUrl;
-  
-  // Final fallback
-  return EFFECT_DEFAULT || defaultFallback;
-}
 
-export { effectAssets };
+  // Final fallback
+  const fallback = getEffectFallback(effectType) || getEffectFallback('buffs');
+  return fallback || defaultFallback;
+}
