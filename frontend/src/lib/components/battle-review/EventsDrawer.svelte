@@ -69,6 +69,7 @@
       {:else}
         <ul class="events-list">
           {#each filteredEvents as event (event.id)}
+            {@const amount = eventAmount(event)}
             <li>
               <button
                 type="button"
@@ -77,7 +78,6 @@
               >
                 <span class="event-time">T+{formatSeconds(event.time)}</span>
                 <span class="event-text">{formatEventLabel(event)}</span>
-                {@const amount = eventAmount(event)}
                 {#if amount}
                   <span class="event-amount">{amount}</span>
                 {/if}
