@@ -108,13 +108,17 @@ def load_catalog() -> tuple[dict[str, SpawnTemplate], dict[str, SpawnTemplate], 
         if existing is not None:
             tags.update(existing.tags)
         tags.add("player_template")
+        # Character-derived foes already apply a themed adjective in their
+        # wrapper ``__post_init__``; skip the factory's extra adjective pass to
+        # avoid double-stacking buffs.
+        has_character_wrapper = ident in character_wrappers
         template = SpawnTemplate(
             id=ident,
             cls=wrapper,
             tags=frozenset(tags),
             weight_hook=hook or (existing.weight_hook if existing else None),
             base_rank=getattr(wrapper, "rank", getattr(player_cls, "rank", "normal")),
-            apply_adjective=True,
+            apply_adjective=not has_character_wrapper,
         )
         templates[ident] = template
         player_templates[ident] = template
