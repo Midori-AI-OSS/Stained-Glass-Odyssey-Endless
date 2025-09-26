@@ -205,7 +205,8 @@ export function rewardOpen(roomData, _battleActive) {
   return Boolean(hasCards || hasRelics);
 }
 
-export function selectBattleMusic({ roomType, party = [], foes = [] }) {
+export function selectBattleMusic({ roomType, party = [], foes = [], preferences = {} }) {
+  const audioPreferences = preferences && typeof preferences === 'object' ? { ...preferences } : {};
   const type = String(roomType || '');
   const category =
     type === 'battle-weak'
@@ -217,18 +218,18 @@ export function selectBattleMusic({ roomType, party = [], foes = [] }) {
   if (type === 'battle-boss-floor') {
     const boss = foes?.[0];
     const name = typeof boss === 'string' ? boss : boss?.id || boss?.name;
-    const playlist = getCharacterPlaylist(String(name || '').toLowerCase(), 'boss');
+    const playlist = getCharacterPlaylist(String(name || '').toLowerCase(), 'boss', audioPreferences);
     if (playlist.length) return playlist;
     // Fallback: use fallback library (boss first, then normal)
-    const fbBoss = getFallbackPlaylist('boss');
+    const fbBoss = getFallbackPlaylist('boss', audioPreferences);
     if (fbBoss.length) return fbBoss;
-    return getFallbackPlaylist('normal');
+    return getFallbackPlaylist('normal', audioPreferences);
   }
 
   if (type.startsWith('battle')) {
     const ready = (party?.length || 0) > 0 && (foes?.length || 0) > 0;
     if (!ready) {
-      const fb = getFallbackPlaylist(category);
+      const fb = getFallbackPlaylist(category, audioPreferences);
       return fb.length ? fb : [];
     }
   }
@@ -239,7 +240,7 @@ export function selectBattleMusic({ roomType, party = [], foes = [] }) {
     const name = typeof entity === 'string' ? entity : entity?.id || entity?.name;
     if (!name) return;
     const id = String(name).toLowerCase();
-    const list = getCharacterPlaylist(id, category);
+    const list = getCharacterPlaylist(id, category, audioPreferences);
     if (!list.length) return;
     const weight = resolveEntityMusicWeight(entity, category);
     candidates.push({ list, weight });
@@ -249,7 +250,7 @@ export function selectBattleMusic({ roomType, party = [], foes = [] }) {
   foes.forEach(addCandidate);
 
   if (candidates.length === 0) {
-    const fb = getFallbackPlaylist(category);
+    const fb = getFallbackPlaylist(category, audioPreferences);
     return fb.length ? fb : [];
   }
 
@@ -275,6 +276,7 @@ let currentPlaylist = [];
 let originalPlaylist = [];
 let playlistIndex = 0;
 let playlistLoop = true;
+let currentAudioPreferences = {};
 // No cross-context reuse to avoid mismatched character music between fights
 
 // Session guard to prevent overlapping music instances when playlists change
@@ -318,11 +320,11 @@ function playNextTrack(session = playSession) {
     src = currentPlaylist[playlistIndex];
   } else {
     // Prefer fallback normal category; if empty, any fallback track
-    const fb = getFallbackPlaylist('normal');
+    const fb = getFallbackPlaylist('normal', currentAudioPreferences);
     if (fb.length) {
       src = fb[Math.floor(Math.random() * fb.length)];
     } else {
-      const any = getMusicTracks();
+      const any = getMusicTracks(currentAudioPreferences);
       src = any.length ? any[Math.floor(Math.random() * any.length)] : '';
     }
   }
@@ -370,8 +372,9 @@ function playNextTrack(session = playSession) {
   }
 }
 
-export function startGameMusic(volume, playlist = [], loop = true) {
+export function startGameMusic(volume, playlist = [], loop = true, preferences = {}) {
   if (typeof volume === 'number') currentMusicVolume = volume;
+  currentAudioPreferences = preferences && typeof preferences === 'object' ? { ...preferences } : {};
   const newSource = Array.isArray(playlist) ? playlist.slice() : [];
   const samePlaylist =
     newSource.length === originalPlaylist.length &&
@@ -449,7 +452,7 @@ export function resumeGameMusic() {
         gameAudio.play().catch(() => {});
       }
     } else {
-      startGameMusic(currentMusicVolume, currentPlaylist, playlistLoop);
+      startGameMusic(currentMusicVolume, currentPlaylist, playlistLoop, currentAudioPreferences);
     }
   } catch {}
 }

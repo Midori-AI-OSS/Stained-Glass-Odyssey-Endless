@@ -68,7 +68,7 @@
     if (isBatch) {
       stack = mapped;
       if (!reducedMotion) {
-        dealSfx = createDealSfx(sfxVolume);
+        dealSfx = createDealSfx(sfxVolume, { reducedMotion });
       }
       dealNext();
     } else {

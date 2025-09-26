@@ -116,6 +116,32 @@ and receive the shared summon art.
   `getMaterialFallbackIcon()` exposes the generic fallback URL, while
   `onMaterialIconError(event)` applies it when an `<img>` fails to load.
 
+## Audio Assets
+
+Audio discovery now lives inside the registry so background music and SFX share
+normalisation, caching, and accessibility guards.
+
+- `getMusicPlaylist(characterId, category, options?)` resolves a playlist for a
+  combatant. Categories are inferred from the on-disk folder structure (`normal`,
+  `weak`, `boss`, etc.). Passing `{ reducedMotion: true }` or `{ muted: true }`
+  returns an empty list so the caller can skip playback entirely.
+- `getMusicFallbackPlaylist(category, options?)` and
+  `getAllMusicTracks(options?)` expose the shared soundtrack library and obey the
+  same accessibility flags.
+- `getRandomMusicTrack(characterId, category, options?)` mirrors the previous
+  helper while respecting registry preferences and returning `''` when audio is
+  muted.
+- `getSfxClip(key, options?)` resolves UI sound cues via canonical ids or
+  friendly aliases such as `ui/pull/deal`. Options support `{ fallback: true }`
+  to return the default UI clip when a key is missing, and `{ reducedMotion: true }`
+  to silence the response.
+- `getAvailableSfxKeys()` returns a deduplicated list of canonical clip ids and
+  aliases so tooling can validate configuration.
+
+`createDealSfx` now calls `getSfxClip('ui/pull/deal')` and forwards the overlay's
+reduced-motion flag, preventing the dealing animation from triggering audio for
+players who opt out of motion effects.
+
 ## Metadata Injection
 `registerAssetMetadata` accepts the following keys (all optional):
 
