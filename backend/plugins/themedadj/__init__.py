@@ -1,9 +1,17 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import TYPE_CHECKING
 
-from autofighter.rooms.foes.scaling import apply_permanent_scaling
 from plugins import PluginLoader
+
+if TYPE_CHECKING:
+    from autofighter.rooms.foes.scaling import (
+        apply_permanent_scaling as ApplyPermanentScaling,
+    )
+
+
+_apply_permanent_scaling: "ApplyPermanentScaling | None" = None
 
 
 def stat_buff(cls):
@@ -41,7 +49,16 @@ def stat_buff(cls):
             target.max_hp = base_hp
 
         if mults or additive:
-            apply_permanent_scaling(
+            global _apply_permanent_scaling
+
+            if _apply_permanent_scaling is None:
+                from autofighter.rooms.foes.scaling import (
+                    apply_permanent_scaling as _imported_apply_permanent_scaling,
+                )
+
+                _apply_permanent_scaling = _imported_apply_permanent_scaling
+
+            _apply_permanent_scaling(
                 target,
                 multipliers=mults or None,
                 deltas=additive or None,
