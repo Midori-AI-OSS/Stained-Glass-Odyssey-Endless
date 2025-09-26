@@ -1,5 +1,6 @@
 <script>
   import { onMount, onDestroy, createEventDispatcher, tick } from 'svelte';
+  import { get } from 'svelte/store';
   import { scale, fade } from 'svelte/transition';
   import { roomAction } from '$lib';
   import {
@@ -17,6 +18,7 @@
   import BattleEventFloaters from './BattleEventFloaters.svelte';
   import BattleTargetingOverlay from './BattleTargetingOverlay.svelte';
   import { motionStore } from '../systems/settingsStorage.js';
+  import { haltSync } from '../systems/overlayState.js';
 
   export let runId = '';
   export let framerate = 60;
@@ -104,7 +106,7 @@
     }
   }
   function isSyncHalted() {
-    return typeof window !== 'undefined' && Boolean(window.afHaltSync);
+    return get(haltSync);
   }
   let logs = [];
   let hoveredId = null;

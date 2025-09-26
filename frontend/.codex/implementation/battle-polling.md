@@ -1,47 +1,59 @@
 # Battle polling
 
-The `pollBattle` routine in `routes/+page.svelte` continuously polls the backend
-for combat snapshots. It now tracks consecutive polls where combat has ended but
-no rewards or completion flags have arrived. After roughly three seconds of
-such stalled polling, the function stops the battle, records an error on the
-snapshot, and logs a warning so the reward overlay or reset flow can proceed.
+Battle cadence is now orchestrated by
+`frontend/src/lib/systems/pollingOrchestrator.js`. The root controller exposes
+three coordinated loops:
 
-If the UI reports an active battle but provides no snapshot data, `pollBattle`
-polls a dedicated snapshot endpoint until a snapshot is returned. After the
-same three‑second timeout without a snapshot, polling halts and an error overlay
-prompts the player to reconnect rather than silently starting a new battle.
+1. **UI state polling** — mirrors `/ui` responses, applies them to
+   `runStateStore`, and notifies registered handlers. This loop pauses whenever
+   `overlayBlocking`, `haltSync`, or a non-main overlay view is active.
+2. **Battle snapshot polling** — automatically starts when
+   `runStateStore.battleActive` flips to `true` and a run id is present. The
+   controller fetches `room_action(snapshot)` payloads, normalizes fighter
+   statuses, pushes results through `runStateStore`, and invokes configured
+   callbacks so `+page.svelte` can surface overlays or auto-advance rooms.
+3. **Map fallback polling** — resumes on non-battle ticks to keep map metadata
+   current. If `/ui` bootstrap fails or rewards flows clear `roomData`, this
+   loop falls back to `getMap` to rehydrate party, room, and snapshot state.
 
-Battle snapshot polling halts any time the rewards or battle review overlays are
-visible. `window.afRewardOpen` and `window.afReviewOpen` flags stop the poller,
-clear its timer, and prevent rescheduling until the "Next Room" action closes
-the overlay and explicitly restarts polling via `startBattlePoll()`.
+### Snapshot lifecycle
 
-If a snapshot includes an `error` field, polling halts immediately and the
-error state is surfaced without waiting for combat-over indicators.
+* On each tick the battle poller enforces the same three-second timeout window
+  used previously. Consecutive `snapshot_missing` responses increment a counter;
+  exceeding the threshold clears `battleActive`, emits an error overlay through
+  the configured handler, and immediately schedules a map refresh.
+* Snapshot payloads with an `error` field halt polling, persist the data via
+  `runStateStore`, and allow the root page to surface error overlays.
+* Rewards and completion flags (`awaiting_next`, `next_room`, or
+  `result: 'defeat'`) stop the battle loop. The controller updates current/next
+  room metadata in the store, invokes the completion callback (for defeat or
+  reward overlays), and triggers the map poller so the UI can resume normal
+  cadence.
+* Stalled combat where both sides are defeated but no rewards arrive still
+  yields a synthetic error snapshot after the timeout, matching the legacy
+  behavior.
 
-Snapshots reporting `result: 'defeat'` are treated as complete even if an
-`ended` flag is missing. The poller stops immediately and the defeat overlay
-is shown.
+### Integration points
 
-Unexpected network errors are logged and retried. `handleRunEnd()` now fires
-only when `pollBattle` or `pollState` receive an error with a `404` status, a
-`400` accompanied by a `"no active run"` message, an `ERR_NO_ACTIVE_RUN` code,
-or a message containing `"run ended"`; other errors allow the poll to
-continue.
-`handleLootAcknowledge` and `handleNextRoom` call `stopBattlePoll()` before
-acknowledging loot to prevent lingering timers from racing ahead and flagging
-the run as ended.
+`routes/+page.svelte` configures the orchestrator via
+`configureBattlePollingHandlers` and `configureMapPollingHandlers`:
 
-All pollers (`pollState`, `pollBattle`, and `pollUIState`) also check the
-overlay flags and refrain from starting or rescheduling while either overlay is
-active. Additionally, UI state polling no longer reschedules itself when
-`uiState.mode === 'menu'` to reduce network traffic while in the main menu.
+* `onBattleComplete`, `onAutoAdvance`, and `onDefeat` delegate to the existing
+  room advancement helpers and defeat overlay.
+* `onBattleError` and `onMissingSnapshotTimeout` surface lightweight error
+  overlays while forcing a map refresh.
+* `onRunEnd` tears down local state, mirroring the legacy
+  `shouldHandleRunEndError` guard.
+* The map handler’s `onBattleDetected` callback ensures the battle poller runs
+  immediately after `getMap` detects a combat room without waiting for the next
+  UI state tick.
 
-Additionally, ending a run from Settings now immediately sets a global
-`window.afHaltSync = true` flag and clears timers to prevent any further
-`snapshot` polls during teardown. The same flag is set again in
-`handleRunEnd()` before clearing run state and returning home.
+Manual halts (`setManualSyncHalt(true)`) still pause all pollers. When a run is
+ended from Settings or defeat handling, the root page calls
+`stopBattlePolling()`, `stopMapPolling()`, and `stopUIPolling()` before clearing
+`runStateStore` so no timers survive the teardown.
 
-When a battle completes with no rewards or choices (no cards/relics/loot) and
-the backend marks `awaiting_next = true`, the UI now auto‑advances to the next
-room without requiring the rewards overlay.
+Rooms that return `awaiting_next = true` without rewards continue to auto-advance
+through `handleNextRoom()`. Because the battle controller now owns the cadence,
+the map poller resumes immediately after advancement, keeping room headers and
+map metadata synchronized for subsequent actions.

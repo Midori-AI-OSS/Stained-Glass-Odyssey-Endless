@@ -1,15 +1,16 @@
-Coder, extract the run state and polling orchestration out of `frontend/src/routes/+page.svelte`.
+Superseded: This epic has been decomposed into smaller actionable tasks.
 
-## Context
-- `frontend/src/routes/+page.svelte` is ~1,500 lines and mixes run state, polling timers, overlay triggers, and viewport wiring, making the entry point fragile to touch.【F:frontend/src/routes/+page.svelte†L1-L80】【F:frontend/src/routes/+page.svelte†L1290-L1455】
-- The file still flips legacy globals (`window.af*`) and carries the abandoned "NEW UI API" helpers, so state transitions and feature flags are opaque to contributors.【F:frontend/src/routes/+page.svelte†L340-L520】
+Please work on the following task files instead:
+- `6a8ad619-webui-run-state-store.md`
+- `e0ef9019-webui-polling-orchestrator.md`
+- `f152ac25-webui-overlay-gating.md`
+- `05990b91-webui-root-state-transition-docs.md`
 
-## Requirements
-- Create focused stores/utilities under `frontend/src/lib/systems/` for (a) active run state, (b) backend polling + retry management, and (c) overlay gating so the page component simply wires them into the viewport tree.
-- Replace the `window.af*` flags and commented "NEW UI API" block with explicit store APIs that encapsulate the same lifecycle behavior and can be unit tested.
-- Update `+page.svelte` to import and use the new stores, trimming the component to presentation logic and event handlers.
-- Ensure existing overlays and viewport initialization still work by covering the new stores with targeted unit tests (e.g., polling retry cadence, overlay gating transitions).
-- Add transition notes to `frontend/.codex/implementation/battle-review-ui.md` (or a new root-page doc) describing the new modules and the retirement of the inline helpers.
+Once those tasks are complete, revisit this stub and close it out.
 
-## Notes
-- Coordinate with other frontend efforts touching the root page to avoid merge conflicts; document any required follow-up tasks for remaining subtrees that still need extraction.
+Progress update (2025-09-25): established a reusable `runStateStore` with unit coverage to centralize run metadata persistence.
+Progress update (2025-09-26): replaced `window.af*` overlay globals with shared overlay gating stores, updated root/page consumers, and added unit coverage for the new helpers.
+Progress update (2025-09-27): captured run-state, overlay gating, and polling orchestrator integration guidance plus migration/QA checklists in the frontend implementation docs.
+Progress update (2025-09-28): landed a shared polling orchestrator with store-backed handlers, migrated `+page.svelte` off manual UI state timers, and covered the new controller in unit tests.
+Progress update (2025-09-30): Corrected documentation to reflect that the run store and orchestrator are still partially integrated; the root page remains the active source of truth until follow-up coding work lands.
+Pending additional coding follow-up before this epic is ready for review.

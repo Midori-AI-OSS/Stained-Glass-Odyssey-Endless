@@ -1,7 +1,9 @@
 <script>
   import { onMount, onDestroy } from 'svelte';
+  import { get } from 'svelte/store';
   import { browser } from '$app/environment';
   import { getApiBase } from '$lib/systems/backendDiscovery.js';
+  import { battleActive } from '../systems/overlayState.js';
 
   let pingStatus = 'unknown'; // 'healthy', 'degraded', 'error', 'unknown'
   let pingTime = null;
@@ -13,9 +15,10 @@
 
   // Check if we're in combat by looking for battle-related elements or state
   function checkCombatState() {
+    // Prefer the shared battleActive store, fall back to DOM hints when needed
+    isInCombat = get(battleActive);
+
     if (typeof window !== 'undefined') {
-      // Check if battle is active from global state
-      isInCombat = window.afBattleActive || false;
       
       // Also check for battle-related DOM elements as fallback
       const battleElements = document.querySelectorAll('[data-battle-active], .battle-view, .battle-snapshot');
