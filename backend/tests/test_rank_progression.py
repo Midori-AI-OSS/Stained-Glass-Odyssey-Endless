@@ -10,7 +10,7 @@ sys.modules.setdefault("llms.torch_checker", types.SimpleNamespace(is_torch_avai
 
 from autofighter.mapgen import MapNode
 from autofighter.party import Party
-from plugins.players import Player
+from plugins.characters import Player
 
 spec = importlib.util.spec_from_file_location(
     "autofighter.rooms.utils",

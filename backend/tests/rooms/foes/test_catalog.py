@@ -22,9 +22,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 
 from autofighter.rooms.foes import SpawnTemplate  # noqa: E402
 from autofighter.rooms.foes import load_catalog  # noqa: E402
-from plugins.foes._base import FoeBase  # noqa: E402
-from plugins.players.player import Player  # noqa: E402
-from plugins.players.slime import Slime  # noqa: E402
+from plugins.characters.foe_base import FoeBase  # noqa: E402
+from plugins.characters.player import Player  # noqa: E402
+from plugins.characters.slime import Slime  # noqa: E402
 
 
 def test_catalog_exposes_spawn_templates_for_foes_and_players() -> None:

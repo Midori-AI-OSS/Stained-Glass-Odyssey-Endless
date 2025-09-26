@@ -31,7 +31,7 @@ class OmegaCore(RelicBase):
         state = {"mods": {}, "turn": 0}
 
         async def _battle_start(entity) -> None:
-            from plugins.foes._base import FoeBase
+            from plugins.characters.foe_base import FoeBase
 
             if isinstance(entity, FoeBase) or state["mods"]:
                 return
@@ -85,7 +85,7 @@ class OmegaCore(RelicBase):
                 safe_async_task(member.apply_cost_damage(dmg))
 
         def _battle_end(entity) -> None:
-            from plugins.foes._base import FoeBase
+            from plugins.characters.foe_base import FoeBase
 
             if not isinstance(entity, FoeBase):
                 return

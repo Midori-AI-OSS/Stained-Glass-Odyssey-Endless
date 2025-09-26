@@ -167,7 +167,7 @@ Across the broader interface, aim for a stained-glass aesthetic. Bar graphs and 
 
 ## Playable Characters
 
-The roster in `plugins/players/` currently includes and each entry lists its `CharacterType`. All players start with 1000 HP, 100 attack, 50 defense, a 5% crit rate, 2x crit damage, 1% effect hit rate, 100 mitigation, 0 dodge, and 1 in all other stats. Listed damage types use the classic naming from the Pygame version:
+The roster in `plugins/characters/` currently includes and each entry lists its `CharacterType`. All characters start with 1000 HP, 100 attack, 50 defense, a 5% crit rate, 2x crit damage, 1% effect hit rate, 100 mitigation, 0 dodge, and 1 in all other stats. Listed damage types use the classic naming from the Pygame version:
 
 - Ally (B, random damage type)
 - Becca (B, random damage type)

@@ -6,7 +6,7 @@ from autofighter.party import Party
 from plugins.cards.critical_overdrive import CriticalOverdrive
 from plugins.effects.critical_boost import CriticalBoost
 import plugins.event_bus as event_bus_module
-from plugins.players._base import PlayerBase
+from plugins.characters._base import PlayerBase
 
 
 @pytest.mark.asyncio

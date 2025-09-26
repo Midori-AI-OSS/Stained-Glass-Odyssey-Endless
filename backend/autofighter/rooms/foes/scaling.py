@@ -10,7 +10,7 @@ from autofighter.effects import get_current_stat_value
 from autofighter.mapgen import MapGenerator
 from autofighter.mapgen import MapNode
 from autofighter.stats import Stats
-from plugins.foes._base import FoeBase
+from plugins.characters.foe_base import FoeBase
 
 
 def apply_permanent_scaling(

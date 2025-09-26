@@ -7,16 +7,18 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from autofighter.mapgen import MapNode
 from autofighter.party import Party
 from autofighter.rooms.utils import _choose_foe
-from plugins import players
+from plugins import characters
 from plugins import themedadj
-from plugins.players import Player
+from plugins.characters import Player
 
 
 def test_random_player_foes() -> None:
     random.seed(0)
     party = Party(members=[Player()])
     player_ids = {
-        getattr(players, name).id for name in getattr(players, "__all__", [])
+        getattr(characters, name).id
+        for name in getattr(characters, "__all__", [])
+        if hasattr(getattr(characters, name), "id")
     }
     node = MapNode(room_id=0, room_type="boss", floor=1, index=1, loop=1, pressure=0)
     seen = [_choose_foe(node, party) for _ in range(20)]

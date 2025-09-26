@@ -12,7 +12,7 @@ import llms.torch_checker as torch_checker
 
 from autofighter.summons.base import Summon
 from autofighter.summons.manager import SummonManager
-from plugins.players.ally import Ally
+from plugins.characters.ally import Ally
 
 
 @pytest.mark.asyncio

@@ -12,7 +12,7 @@ from autofighter.party import Party
 from autofighter.rooms import battle as battle_module
 from autofighter.stats import BUS
 from autofighter.stats import GAUGE_START
-from plugins.players._base import PlayerBase
+from plugins.characters._base import PlayerBase
 
 
 def setup_event_loop():

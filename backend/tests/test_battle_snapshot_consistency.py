@@ -6,7 +6,7 @@ import pytest
 
 from plugins.damage_types.fire import Fire
 from plugins.damage_types.ice import Ice
-from plugins.foes._base import FoeBase
+from plugins.characters.foe_base import FoeBase
 
 
 @pytest.fixture()

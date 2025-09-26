@@ -4,7 +4,7 @@ from autofighter.stats import BUS
 from autofighter.stats import Stats
 from plugins.damage_types.generic import Generic
 from plugins.damage_types.ice import Ice
-from plugins.players._base import PlayerBase
+from plugins.characters._base import PlayerBase
 
 
 def test_charge_accumulates_and_caps():

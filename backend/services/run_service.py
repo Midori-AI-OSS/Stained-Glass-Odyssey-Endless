@@ -25,7 +25,7 @@ from autofighter.mapgen import MapGenerator
 from autofighter.party import Party
 from autofighter.rooms import _choose_foe
 from autofighter.rooms import _serialize
-from plugins import players as player_plugins
+from plugins import characters as player_plugins
 from services.login_reward_service import record_room_completion
 from services.user_level_service import get_user_level
 

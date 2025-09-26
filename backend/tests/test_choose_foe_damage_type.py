@@ -8,7 +8,7 @@ from autofighter.mapgen import MapNode
 from autofighter.party import Party
 from autofighter.rooms.utils import _choose_foe
 from plugins.damage_types._base import DamageTypeBase
-from plugins.players import Player
+from plugins.characters import Player
 
 
 def test_choose_foe_instantiates_damage_type() -> None:

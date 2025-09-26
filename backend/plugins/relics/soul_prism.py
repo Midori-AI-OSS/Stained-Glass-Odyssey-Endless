@@ -27,7 +27,7 @@ class SoulPrism(RelicBase):
         buff = 0.05 + 0.02 * (stacks - 1)
 
         async def _battle_end(entity) -> None:
-            from plugins.foes._base import FoeBase
+            from plugins.characters.foe_base import FoeBase
 
             if not isinstance(entity, FoeBase):
                 return

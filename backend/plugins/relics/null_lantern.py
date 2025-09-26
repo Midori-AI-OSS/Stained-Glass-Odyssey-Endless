@@ -40,7 +40,7 @@ class NullLantern(RelicBase):
             party.pull_tokens = 0
 
         async def _battle_start(entity) -> None:
-            from plugins.foes._base import FoeBase
+            from plugins.characters.foe_base import FoeBase
 
             current_state = getattr(party, "_null_lantern_state", state)
             if isinstance(entity, FoeBase):
@@ -76,7 +76,7 @@ class NullLantern(RelicBase):
                 )
 
         async def _battle_end(entity) -> None:
-            from plugins.foes._base import FoeBase
+            from plugins.characters.foe_base import FoeBase
 
             current_state = getattr(party, "_null_lantern_state", state)
             if isinstance(entity, FoeBase):
@@ -108,7 +108,7 @@ class NullLantern(RelicBase):
                 )
 
         def _cleanup(entity) -> None:
-            from plugins.foes._base import FoeBase
+            from plugins.characters.foe_base import FoeBase
 
             if not isinstance(entity, FoeBase):
                 return

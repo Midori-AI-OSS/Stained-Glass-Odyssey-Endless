@@ -10,8 +10,8 @@ from autofighter.party import Party
 from autofighter.rooms import foe_factory
 from autofighter.rooms import utils
 from autofighter.rooms.battle import setup as battle_setup
-from plugins.players import Player
-from plugins.players.luna import Luna
+from plugins.characters import Player
+from plugins.characters.luna import Luna
 
 
 def _capture_weights(monkeypatch, node: MapNode, party: Party) -> dict[str, float]:

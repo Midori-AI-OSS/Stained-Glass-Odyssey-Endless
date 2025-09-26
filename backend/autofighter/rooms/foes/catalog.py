@@ -10,7 +10,8 @@ from typing import Callable
 from typing import Collection
 from typing import Iterable
 
-from plugins.foes._base import FoeBase
+from plugins import characters as character_plugins
+from plugins.characters.foe_base import FoeBase
 from plugins.plugin_loader import PluginLoader
 
 if TYPE_CHECKING:
@@ -56,22 +57,33 @@ def _wrap_player(cls: type) -> type[FoeBase]:
     return Wrapped
 
 
+def _is_base_class(cls: type) -> bool:
+    module_name = getattr(cls, "__module__", "")
+    return module_name.endswith("._base") or module_name.endswith(".foe_base")
+
+
 def load_catalog() -> tuple[dict[str, SpawnTemplate], dict[str, SpawnTemplate], list[type]]:
-    """Discover foe, player, and adjective plugins and build spawn templates."""
+    """Discover combatant plugins and build spawn templates."""
 
     loader = PluginLoader()
     root = _plugin_root()
-    for category in ("foes", "players", "themedadj"):
+    for category in ("characters", "themedadj"):
         loader.discover(str(root / category))
 
     foes = _safe_get_plugins(loader, "foe")
     players = _safe_get_plugins(loader, "player")
     adjectives = _safe_get_plugins(loader, "themedadj")
 
+    # Ensure dynamically wrapped character foes are visible to the registry
+    for ident, foe_cls in getattr(character_plugins, "CHARACTER_FOES", {}).items():
+        foes.setdefault(ident, foe_cls)
+
     templates: dict[str, SpawnTemplate] = {}
     player_templates: dict[str, SpawnTemplate] = {}
 
     for foe_cls in foes.values():
+        if _is_base_class(foe_cls):
+            continue
         ident = getattr(foe_cls, "id", foe_cls.__name__)
         tags: Iterable[str] = getattr(foe_cls, "spawn_tags", ()) or ()
         hook = getattr(foe_cls, "get_spawn_weight", None)
@@ -84,6 +96,8 @@ def load_catalog() -> tuple[dict[str, SpawnTemplate], dict[str, SpawnTemplate], 
         )
 
     for player_cls in players.values():
+        if _is_base_class(player_cls):
+            continue
         ident = getattr(player_cls, "id", player_cls.__name__)
         if ident in templates:
             continue

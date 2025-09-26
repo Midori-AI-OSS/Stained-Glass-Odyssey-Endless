@@ -19,10 +19,10 @@ from autofighter.summons.base import Summon
 from autofighter.summons.manager import SummonManager
 from plugins.cards.phantom_ally import PhantomAlly
 from plugins.damage_types.lightning import Lightning
-from plugins.foes._base import FoeBase
+from plugins.characters.foe_base import FoeBase
 from plugins.passives.normal.becca_menagerie_bond import BeccaMenagerieBond
-from plugins.players.ally import Ally
-from plugins.players.becca import Becca
+from plugins.characters.ally import Ally
+from plugins.characters.becca import Becca
 
 
 @pytest.mark.asyncio
