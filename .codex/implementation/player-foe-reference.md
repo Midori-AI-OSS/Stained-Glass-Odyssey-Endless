@@ -60,6 +60,7 @@ Passives generally shouldn't be capped unless a designer explicitly specifies a 
 - **Mezzy** (B, random) – raises Max HP, takes less damage, and siphons stats from healthy allies each turn.
 - **PersonaIce** (A, Ice) – 5★ cryo tank who shields his sisters with Cryo Cycle, layering mitigation and thawing the stored frost into end-of-turn healing barriers for the party.
 - **Player** (C, chosen) – avatar representing the user and may select any non-Generic damage type.
+- **Slime** (C, random) – an adorable gooey buddy kept as a non-selectable roster entry. Shares the default player stat line and still steps in as the fallback foe template when no bespoke plugins are available.
 
 Characters marked as "random" roll one of the six elements when first loaded
 and reuse that element in future sessions.
@@ -96,8 +97,10 @@ Example: **Atrocious Luna** applies the adjective's stat bonuses to the base
 player stats and prefixes the foe's name, yielding a combatant whose title
 reflects its enhanced abilities.
 
-Development builds include a `Slime` foe plugin that reduces all baseline stats
-by 90% for simple battle testing. Standard battles may also spawn random player
-characters that are not currently in the party. These player foes are wrapped in
-`FoeBase` at load time, granting them foe-specific behaviors such as periodic
-HP regeneration via `maybe_regain`.
+Standard battles may also spawn random player characters that are not currently
+in the party. These player foes are wrapped in `FoeBase` at load time, granting
+them foe-specific behaviors such as periodic HP regeneration via `maybe_regain`.
+The legacy standalone `Slime` foe has been retired; instead, the non-selectable
+`Slime` player template now shows up as the same cute little blob in battle,
+acting as the fallback encounter with the same baseline stats as other
+player-derived foes.
