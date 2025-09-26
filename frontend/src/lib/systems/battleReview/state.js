@@ -1,10 +1,142 @@
-import { derived, writable, get } from 'svelte/store';
+import { derived, get, readable, writable } from 'svelte/store';
 import { getBattleSummary, getBattleEvents } from '../uiApi.js';
 import { buildBattleReviewSearchParams } from './urlState.js';
 
 export const BATTLE_REVIEW_CONTEXT_KEY = Symbol('battle-review-context');
 
 export const emptySummary = { damage_by_type: {} };
+
+export const TIMELINE_METRICS = Object.freeze([
+  {
+    id: 'damageDone',
+    label: 'Damage Done',
+    color: '#f97316',
+    eventTypes: new Set(['damage_dealt', 'dot_tick', 'critical_hit']),
+    role: 'attacker'
+  },
+  {
+    id: 'damageTaken',
+    label: 'Damage Taken',
+    color: '#38bdf8',
+    eventTypes: new Set(['damage_taken']),
+    role: 'target'
+  },
+  {
+    id: 'healing',
+    label: 'Healing',
+    color: '#22c55e',
+    eventTypes: new Set(['heal', 'hot_tick']),
+    role: 'attacker'
+  },
+  {
+    id: 'mitigation',
+    label: 'Mitigation',
+    color: '#c084fc',
+    eventTypes: new Set(['shield_absorbed', 'temporary_hp_granted', 'healing_prevented']),
+    role: 'target'
+  }
+]);
+
+const TIMELINE_METRIC_LOOKUP = new Map(TIMELINE_METRICS.map((metric) => [metric.id, metric]));
+const FILTER_ID_PATTERN = /[^a-z0-9._:-]/gi;
+
+export function createDefaultTimelineFilters(respectReducedMotion = true) {
+  return {
+    metric: 'damageDone',
+    entities: [],
+    sourceTypes: [],
+    eventTypes: [],
+    respectMotion: Boolean(respectReducedMotion)
+  };
+}
+
+function sanitizeFilterId(value) {
+  if (value == null) return '';
+  return String(value).replace(FILTER_ID_PATTERN, '').slice(0, 64);
+}
+
+function uniqueFilterList(values = []) {
+  const seen = new Set();
+  const out = [];
+  const list = Array.isArray(values) ? values : [values];
+  for (const value of list) {
+    const id = sanitizeFilterId(value);
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    out.push(id);
+  }
+  return out;
+}
+
+function normalizeTimelineFilters(filters = {}, respectReducedMotion = true) {
+  const defaults = createDefaultTimelineFilters(respectReducedMotion);
+  const metricId = sanitizeFilterId(filters.metric);
+  const metric = TIMELINE_METRIC_LOOKUP.has(metricId) ? metricId : defaults.metric;
+  return {
+    metric,
+    entities: uniqueFilterList(filters.entities),
+    sourceTypes: uniqueFilterList(filters.sourceTypes),
+    eventTypes: uniqueFilterList(filters.eventTypes),
+    respectMotion: filters.respectMotion === false ? false : defaults.respectMotion
+  };
+}
+
+function encodeTimelineFilters(filters = createDefaultTimelineFilters(), { includeDefaults = false } = {}) {
+  const normalized = normalizeTimelineFilters(filters, filters?.respectMotion ?? true);
+  const tokens = [];
+  if (includeDefaults || normalized.metric !== 'damageDone') {
+    tokens.push(`metric:${sanitizeFilterId(normalized.metric)}`);
+  }
+  for (const id of normalized.entities) {
+    tokens.push(`entity:${sanitizeFilterId(id)}`);
+  }
+  for (const id of normalized.sourceTypes) {
+    tokens.push(`source:${sanitizeFilterId(id)}`);
+  }
+  for (const id of normalized.eventTypes) {
+    tokens.push(`event:${sanitizeFilterId(id)}`);
+  }
+  if (!normalized.respectMotion) {
+    tokens.push('motion:allow');
+  } else if (includeDefaults) {
+    tokens.push('motion:respect');
+  }
+  return tokens;
+}
+
+function decodeTimelineFilters(tokens, respectReducedMotion = true) {
+  const defaults = createDefaultTimelineFilters(respectReducedMotion);
+  if (!Array.isArray(tokens)) {
+    return defaults;
+  }
+  const next = {
+    metric: defaults.metric,
+    entities: [],
+    sourceTypes: [],
+    eventTypes: [],
+    respectMotion: defaults.respectMotion
+  };
+  for (const token of tokens) {
+    if (typeof token !== 'string') continue;
+    const [prefix, rawValue] = token.split(':', 2);
+    if (prefix === 'motion') {
+      next.respectMotion = rawValue === 'allow' ? false : true;
+      continue;
+    }
+    const value = sanitizeFilterId(rawValue);
+    if (!value) continue;
+    if (prefix === 'metric' && TIMELINE_METRIC_LOOKUP.has(value)) {
+      next.metric = value;
+    } else if (prefix === 'entity') {
+      next.entities.push(value);
+    } else if (prefix === 'source') {
+      next.sourceTypes.push(value);
+    } else if (prefix === 'event') {
+      next.eventTypes.push(value);
+    }
+  }
+  return normalizeTimelineFilters(next, next.respectMotion);
+}
 
 const defaultProps = {
   runId: '',
@@ -116,6 +248,206 @@ function aggregateNestedTotals(obj) {
   }, {});
 }
 
+function parseEventSeconds(event, index, ref) {
+  if (!event) return index;
+  const explicit = Number(event.time_seconds ?? event.timestamp ?? event.time);
+  if (Number.isFinite(explicit)) {
+    return explicit;
+  }
+  const rawTimestamp = event.timestamp || event.time;
+  if (typeof rawTimestamp === 'string') {
+    const ms = Date.parse(rawTimestamp);
+    if (!Number.isNaN(ms)) {
+      if (ref.base == null) {
+        ref.base = ms;
+      }
+      return (ms - ref.base) / 1000;
+    }
+  }
+  return index;
+}
+
+function resolveAbilityName(event) {
+  if (!event) return 'event';
+  const candidates = [
+    event.source_name,
+    event?.details?.action_name,
+    event?.details?.name,
+    event?.effect_details?.name,
+    event.event_type
+  ];
+  for (const candidate of candidates) {
+    if (typeof candidate === 'string' && candidate.trim()) {
+      return candidate.trim();
+    }
+  }
+  return 'event';
+}
+
+function buildMetricSlices(eventType, amount, attackerId, targetId) {
+  const numericAmount = Number(amount);
+  if (!Number.isFinite(numericAmount)) {
+    return [];
+  }
+  const slices = [];
+  for (const metric of TIMELINE_METRICS) {
+    if (!metric.eventTypes.has(eventType)) continue;
+    const entityId = metric.role === 'attacker' ? attackerId : metric.role === 'target' ? targetId : null;
+    slices.push({
+      metric: metric.id,
+      amount: Math.max(0, numericAmount),
+      entityId: entityId || null
+    });
+  }
+  return slices;
+}
+
+function shapeTimelineEvents(list = []) {
+  if (!Array.isArray(list) || !list.length) {
+    return {
+      events: [],
+      domain: { start: 0, end: 0, span: 0 },
+      catalog: { sourceTypes: [], eventTypes: [], abilityNames: [] }
+    };
+  }
+
+  const baseRef = { base: null };
+  const sourceTypes = new Set();
+  const eventTypes = new Set();
+  const abilityNames = new Set();
+
+  const events = list
+    .map((event, index) => {
+      if (!event) return null;
+      const eventType = typeof event.event_type === 'string' ? event.event_type : 'event';
+      eventTypes.add(eventType);
+      const attackerId = event.attacker_id || null;
+      const targetId = event.target_id || null;
+      const abilityName = resolveAbilityName(event);
+      abilityNames.add(abilityName);
+      const sourceType = event?.source_type || event?.details?.source_type || '';
+      if (sourceType) {
+        sourceTypes.add(String(sourceType));
+      }
+      const time = parseEventSeconds(event, index, baseRef);
+      const slices = buildMetricSlices(eventType, event.amount, attackerId, targetId);
+      const amount = Number(event.amount);
+      return {
+        id: `${event?.event_id ?? `${eventType}-${index}`}`,
+        order: index,
+        time: Number.isFinite(time) ? time : index,
+        eventType,
+        eventKey: sanitizeFilterId(eventType).toLowerCase(),
+        amount: Number.isFinite(amount) ? amount : null,
+        attacker: attackerId,
+        target: targetId,
+        sourceType: sourceType ? String(sourceType) : '',
+        sourceKey: sanitizeFilterId(sourceType).toLowerCase(),
+        abilityName,
+        metricSlices: slices,
+        raw: event
+      };
+    })
+    .filter(Boolean)
+    .sort((a, b) => (a.time - b.time) || (a.order - b.order));
+
+  const start = events.length ? events[0].time : 0;
+  const end = events.length ? events[events.length - 1].time : start;
+  const span = Math.max(0, end - start);
+
+  return {
+    events,
+    domain: { start, end, span },
+    catalog: {
+      sourceTypes: Array.from(sourceTypes).sort((a, b) => a.localeCompare(b)),
+      eventTypes: Array.from(eventTypes).sort((a, b) => a.localeCompare(b)),
+      abilityNames: Array.from(abilityNames).sort((a, b) => a.localeCompare(b))
+    }
+  };
+}
+
+function buildTimelineProjection(data, filters, window, currentTabId) {
+  const domainStart = Number.isFinite(data?.domain?.start) ? data.domain.start : 0;
+  const domainEnd = Number.isFinite(data?.domain?.end) ? data.domain.end : domainStart;
+  const metric = TIMELINE_METRIC_LOOKUP.get(filters.metric) || TIMELINE_METRICS[0];
+  const focusId = currentTabId && currentTabId !== 'overview' ? currentTabId : null;
+
+  let rangeStart = Number.isFinite(window?.start) ? Math.max(window.start, domainStart) : domainStart;
+  let rangeEnd = Number.isFinite(window?.end) ? Math.min(window.end, domainEnd) : domainEnd;
+  if (rangeEnd <= rangeStart) {
+    const fallbackSpan = Math.max(data?.domain?.span ?? 0, 1);
+    rangeEnd = rangeStart + fallbackSpan;
+  }
+  const rangeSpan = Math.max(rangeEnd - rangeStart, 0);
+  const spanForBuckets = rangeSpan > 0 ? rangeSpan : 1;
+  const bucketCount = Math.max(1, Math.min(240, Math.ceil(spanForBuckets / 0.5)));
+  const bucketWidth = spanForBuckets / bucketCount;
+  const buckets = Array.from({ length: bucketCount }, (_, index) => ({
+    time: rangeStart + bucketWidth * index,
+    total: 0,
+    focus: 0
+  }));
+
+  const entityFilter = new Set((filters.entities || []).map((id) => sanitizeFilterId(id)));
+  const sourceFilter = new Set((filters.sourceTypes || []).map((id) => sanitizeFilterId(id).toLowerCase()));
+  const eventTypeFilter = new Set((filters.eventTypes || []).map((id) => sanitizeFilterId(id).toLowerCase()));
+
+  const filteredEvents = [];
+  const highlight = [];
+  let maxValue = 0;
+  let totalAmount = 0;
+
+  for (const event of data.events || []) {
+    if (event.time < rangeStart || event.time > rangeEnd) continue;
+    if (eventTypeFilter.size && !eventTypeFilter.has(event.eventKey)) continue;
+    if (sourceFilter.size && !sourceFilter.has(event.sourceKey)) continue;
+    if (entityFilter.size) {
+      const involved = (event.attacker && entityFilter.has(sanitizeFilterId(event.attacker)))
+        || (event.target && entityFilter.has(sanitizeFilterId(event.target)));
+      if (!involved) continue;
+    }
+    const slice = event.metricSlices.find((entry) => entry.metric === metric.id);
+    if (!slice) continue;
+    filteredEvents.push(event);
+    const position = event.time - rangeStart;
+    const index = bucketWidth > 0 ? Math.min(bucketCount - 1, Math.max(0, Math.floor(position / bucketWidth))) : 0;
+    const amount = Math.max(0, Number(slice.amount) || 0);
+    buckets[index].total += amount;
+    if (focusId && slice.entityId === focusId) {
+      buckets[index].focus += amount;
+      highlight.push({
+        id: event.id,
+        time: event.time,
+        amount,
+        label: event.abilityName,
+        sourceType: event.sourceType || '',
+        eventType: event.eventType
+      });
+    }
+    maxValue = Math.max(maxValue, buckets[index].total, buckets[index].focus);
+    totalAmount += amount;
+  }
+
+  highlight.sort((a, b) => (a.time - b.time) || a.id.localeCompare(b.id));
+
+  return {
+    metric,
+    focusId,
+    start: rangeStart,
+    end: rangeEnd,
+    span: rangeEnd - rangeStart,
+    bucketWidth,
+    buckets,
+    maxValue,
+    totalAmount,
+    filteredEvents,
+    highlightEvents: highlight.slice(0, 80),
+    hasData: filteredEvents.length > 0,
+    catalog: data.catalog || { sourceTypes: [], eventTypes: [], abilityNames: [] },
+    domain: data.domain || { start: 0, end: 0, span: 0 }
+  };
+}
+
 export function computeEntityMetrics(summary = emptySummary, entityId = 'overview') {
   if (entityId === 'overview') {
     return {
@@ -202,19 +534,6 @@ function computeOutgoingMap(list) {
   return map;
 }
 
-function toTimelineEvent(event, index) {
-  return {
-    id: `${event?.event_id ?? index}`,
-    label: event?.event_type || 'event',
-    attacker: event?.attacker_id || null,
-    target: event?.target_id || null,
-    amount: event?.amount ?? null,
-    damageType: event?.damage_type || null,
-    sourceType: event?.source_type || null,
-    time: event?.timestamp ?? event?.time_seconds ?? index
-  };
-}
-
 export function createBattleReviewState(initialProps = {}) {
   const props = writable({ ...defaultProps, ...initialProps });
   const summary = writable(initialProps.prefetchedSummary || emptySummary);
@@ -222,10 +541,16 @@ export function createBattleReviewState(initialProps = {}) {
   const events = writable([]);
   const eventsStatus = writable('idle');
   const eventsOpen = writable(false);
-  const timelineFilters = writable([]);
+  const timelineFilters = writable(
+    normalizeTimelineFilters(
+      initialProps.timelineFilters || createDefaultTimelineFilters(Boolean(initialProps.reducedMotion)),
+      Boolean(initialProps.reducedMotion)
+    )
+  );
   const comparisonSet = writable([]);
   const pinnedEvents = writable([]);
   const timeWindow = writable(null);
+  const timelineCursor = writable({ time: 0, eventId: null });
 
   let lastKey = '';
   let currentToken = 0;
@@ -258,10 +583,15 @@ export function createBattleReviewState(initialProps = {}) {
 
   function resetViewState() {
     activeTab.set('overview');
-    timelineFilters.set([]);
+    const defaultFilters = normalizeTimelineFilters(
+      createDefaultTimelineFilters(Boolean(get(reducedMotion))),
+      Boolean(get(reducedMotion))
+    );
+    timelineFilters.set(defaultFilters);
     comparisonSet.set([]);
     pinnedEvents.set([]);
     timeWindow.set(null);
+    timelineCursor.set({ time: 0, eventId: null });
   }
 
   function handlePropsChange(value) {
@@ -339,10 +669,47 @@ export function createBattleReviewState(initialProps = {}) {
   const overviewTotals = derived(summary, ($summary) => aggregateDamageByType($summary));
   const overviewGrand = derived(overviewTotals, ($totals) => Object.values($totals || {}).reduce((acc, cur) => acc + (cur || 0), 0));
 
-  const timeline = derived(events, ($events) => {
-    if (!Array.isArray($events) || !$events.length) return [];
-    return $events.slice(-200).map(toTimelineEvent);
+  const timelineData = derived(events, ($events) => shapeTimelineEvents($events));
+  const timelineMetrics = readable(
+    TIMELINE_METRICS.map((metric) => ({ id: metric.id, label: metric.label, color: metric.color }))
+  );
+
+  const timeline = derived(
+    [timelineData, timelineFilters, timeWindow, currentTab],
+    ([$data, $filters, $window, $current]) => buildTimelineProjection($data, $filters, $window, $current?.id ?? null)
+  );
+
+  const stopTimelineClamp = timeline.subscribe(($timeline) => {
+    const start = Number.isFinite($timeline?.start) ? $timeline.start : 0;
+    const end = Number.isFinite($timeline?.end) ? $timeline.end : start;
+    timelineCursor.update((cursor) => {
+      const nextTime = Number(cursor?.time);
+      const clamped = Number.isFinite(nextTime) ? Math.min(Math.max(nextTime, start), end) : start;
+      const eventId = cursor?.eventId != null && cursor.eventId !== '' ? String(cursor.eventId) : null;
+      if (cursor && cursor.time === clamped && cursor.eventId === eventId) {
+        return cursor;
+      }
+      return { time: clamped, eventId };
+    });
   });
+
+  function clampCursorTarget(target = {}) {
+    const snapshot = get(timeline);
+    const start = Number.isFinite(snapshot?.start) ? snapshot.start : 0;
+    const end = Number.isFinite(snapshot?.end) ? snapshot.end : start;
+    const nextTime = Number(target?.time);
+    const clamped = Number.isFinite(nextTime) ? Math.min(Math.max(nextTime, start), end) : start;
+    const eventId = target?.eventId != null && target.eventId !== '' ? String(target.eventId) : null;
+    return { time: clamped, eventId };
+  }
+
+  function setTimelineCursor(value) {
+    if (typeof value === 'function') {
+      timelineCursor.update((prev) => clampCursorTarget(value(prev)));
+      return;
+    }
+    timelineCursor.set(clampCursorTarget(value));
+  }
 
   const resultSummary = derived(summary, ($summary) => ({
     result: $summary?.result || '—',
@@ -350,8 +717,16 @@ export function createBattleReviewState(initialProps = {}) {
     eventCount: $summary?.event_count || ($summary?.events?.length || 0)
   }));
 
-  function setTimelineFilters(value = []) {
-    timelineFilters.set(Array.isArray(value) ? [...value] : []);
+  function setTimelineFilters(value = {}) {
+    if (typeof value === 'function') {
+      timelineFilters.update((prev) => normalizeTimelineFilters(value(prev), Boolean(get(reducedMotion))));
+      return;
+    }
+    if (Array.isArray(value)) {
+      timelineFilters.set(decodeTimelineFilters(value, Boolean(get(reducedMotion))));
+      return;
+    }
+    timelineFilters.set(normalizeTimelineFilters(value, Boolean(get(reducedMotion))));
   }
 
   function setComparisonSet(value = []) {
@@ -399,7 +774,7 @@ export function createBattleReviewState(initialProps = {}) {
       runId: $props.runId || '',
       battleIndex: Number.isFinite($props.battleIndex) ? $props.battleIndex : 0,
       tab: $activeTab || 'overview',
-      filters: Array.isArray($filters) ? [...$filters] : [],
+      filters: encodeTimelineFilters($filters),
       comparison: Array.isArray($comparison) ? [...$comparison] : [],
       pins: Array.isArray($pins) ? [...$pins] : [],
       window: $window && typeof $window === 'object' ? { ...$window } : null
@@ -412,6 +787,7 @@ export function createBattleReviewState(initialProps = {}) {
 
   function destroy() {
     stop?.();
+    stopTimelineClamp?.();
     events.set([]);
   }
 
@@ -423,9 +799,11 @@ export function createBattleReviewState(initialProps = {}) {
     eventsStatus,
     eventsOpen,
     timelineFilters,
+    timelineMetrics,
     comparisonSet,
     pinnedEvents,
     timeWindow,
+    timelineCursor,
     reducedMotion,
     displayParty,
     displayFoes,
@@ -447,6 +825,7 @@ export function createBattleReviewState(initialProps = {}) {
     setComparisonSet,
     setPinnedEvents,
     setTimeWindow,
+    setTimelineCursor,
     applyViewState,
     toSearchParams,
     destroy
