@@ -8,6 +8,52 @@ where portraits, summons, or fallbacks are stored on disk. `assetLoader.js`
 re-exports the registry APIs to preserve the existing import surface while still
 housing the element icon helpers and damage-type palette utilities.
 
+### Backend-driven manifest
+`GET /ui` now includes an `asset_manifest` payload that the frontend passes to
+`registerAssetManifest` before rendering any portrait-bound components. The
+descriptor lists canonical ids, alias arrays, the relative asset folder, and an
+optional `mimic` object for entries that mirror another gallery. Summons can set
+`portrait: true` to expose their gallery through the portrait helpers.
+
+Example snippet:
+
+```json
+{
+  "portraits": [
+    {
+      "id": "echo",
+      "folder": "characters/echo",
+      "aliases": ["lady_echo"]
+    },
+    {
+      "id": "mimic",
+      "folder": null,
+      "aliases": [],
+      "mimic": { "mode": "player_mirror", "target": "player" }
+    }
+  ],
+  "summons": [
+    {
+      "id": "jellyfish",
+      "folder": "summons/jellyfish",
+      "aliases": [
+        "jellyfish_healing",
+        "jellyfish_electric",
+        "jellyfish_poison",
+        "jellyfish_shielding"
+      ],
+      "portrait": true
+    }
+  ]
+}
+```
+
+The registry normalises this descriptor, caches a digest to avoid redundant
+cache invalidation, and exposes mirror rules to the mimic resolver so
+`portrait_pool: player_mirror` derives its base id from metadata rather than a
+hard-coded `player` check. Passing `null` clears the manifest and exercises the
+fallback behaviour in tests.
+
 ### Responsibilities
 - Normalize all asset URLs via `normalizeAssetUrl`.
 - Track portrait galleries, fallback pools, summon galleries, and background

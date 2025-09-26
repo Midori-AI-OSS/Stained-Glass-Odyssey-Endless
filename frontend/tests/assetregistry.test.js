@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, test } from 'bun:test';
+import { afterEach, beforeAll, describe, expect, test } from 'bun:test';
 
 if (typeof import.meta.glob !== 'function') {
   test('asset registry unsupported', () => {});
@@ -14,11 +14,43 @@ if (typeof import.meta.glob !== 'function') {
     getMaterialIcon,
     getMaterialFallbackIcon,
     onMaterialIconError,
+    registerAssetManifest,
     registerAssetMetadata,
     resetAssetRegistryOverrides
   } = await import('../src/lib/systems/assetRegistry.js');
 
   describe('asset registry', () => {
+    beforeAll(() => {
+      registerAssetManifest({
+        portraits: [
+          {
+            id: 'echo',
+            folder: 'characters/echo',
+            aliases: ['lady_echo']
+          },
+          {
+            id: 'mimic',
+            folder: null,
+            aliases: [],
+            mimic: { mode: 'player_mirror', target: 'player' }
+          }
+        ],
+        summons: [
+          {
+            id: 'jellyfish',
+            folder: 'summons/jellyfish',
+            aliases: ['jellyfish_healing', 'jellyfish_electric', 'jellyfish_poison', 'jellyfish_shielding'],
+            portrait: true
+          },
+          {
+            id: 'lightstreamswords',
+            folder: 'summons/lightstreamswords',
+            aliases: ['lightstreamsword']
+          }
+        ]
+      });
+    });
+
     afterEach(() => {
       resetAssetRegistryOverrides();
     });
@@ -27,6 +59,11 @@ if (typeof import.meta.glob !== 'function') {
       const url = getCharacterImage('becca');
       expect(typeof url).toBe('string');
       expect(url.includes('becca')).toBe(true);
+    });
+
+    test('derives mimic portraits using manifest mirror rule', () => {
+      const url = getCharacterImage('mimic', { metadata: { portrait_pool: 'player_mirror' } });
+      expect(typeof url).toBe('string');
     });
 
     test('provides fallback assets for unknown ids', () => {

@@ -1,4 +1,5 @@
 import importlib.util
+import importlib
 import sys
 import types
 from pathlib import Path
@@ -12,6 +13,9 @@ def app_with_db(tmp_path, monkeypatch):
     monkeypatch.setenv("AF_DB_PATH", str(db_path))
     monkeypatch.setenv("AF_DB_KEY", "testkey")
     monkeypatch.syspath_prepend(Path(__file__).resolve().parents[1])
+    sys.modules.pop("services", None)
+    sys.modules.pop("services.asset_service", None)
+    asset_service_module = importlib.import_module("services.asset_service")
     class _TrackingStub:
         def __getattr__(self, _name):
             return lambda *args, **kwargs: None
@@ -71,12 +75,14 @@ def app_with_db(tmp_path, monkeypatch):
     services_module.reward_service = reward_service_stub
     services_module.room_service = room_service_stub
     services_module.run_service = run_service_stub
+    services_module.asset_service = asset_service_module
     monkeypatch.setitem(sys.modules, "services", services_module)
     monkeypatch.setitem(sys.modules, "services.user_level_service", user_level_stub)
     monkeypatch.setitem(sys.modules, "services.login_reward_service", login_reward_stub)
     monkeypatch.setitem(sys.modules, "services.reward_service", reward_service_stub)
     monkeypatch.setitem(sys.modules, "services.room_service", room_service_stub)
     monkeypatch.setitem(sys.modules, "services.run_service", run_service_stub)
+    monkeypatch.setitem(sys.modules, "services.asset_service", asset_service_module)
     torch_checker = types.SimpleNamespace(
         is_torch_available=lambda: False,
         get_torch_import_error=lambda: None,
@@ -114,3 +120,36 @@ async def test_players_expose_ui_metadata(app_with_db):
     echo_meta = roster["lady_echo"].get("ui") or {}
     assert echo_meta.get("portrait_pool") == "player_gallery"
     assert echo_meta.get("non_selectable") is not True
+
+
+@pytest.mark.asyncio
+async def test_ui_bootstrap_includes_asset_manifest(app_with_db):
+    app, _ = app_with_db
+    client = app.test_client()
+
+    response = await client.get("/ui")
+    assert response.status_code == 200
+
+    payload = await response.get_json()
+    manifest = payload.get("asset_manifest")
+
+    assert isinstance(manifest, dict)
+
+    portraits = {entry["id"]: entry for entry in manifest.get("portraits", []) if isinstance(entry, dict) and entry.get("id")}
+    assert "echo" in portraits
+    assert "mimic" in portraits
+
+    echo_entry = portraits["echo"]
+    assert "lady_echo" in (echo_entry.get("aliases") or [])
+
+    mimic_entry = portraits["mimic"]
+    mimic_descriptor = mimic_entry.get("mimic") or {}
+    assert mimic_descriptor.get("mode") == "player_mirror"
+    assert mimic_descriptor.get("target") == "player"
+
+    summons = {entry["id"]: entry for entry in manifest.get("summons", []) if isinstance(entry, dict) and entry.get("id")}
+    assert "jellyfish" in summons
+    jellyfish_entry = summons["jellyfish"]
+    aliases = jellyfish_entry.get("aliases") or []
+    assert "jellyfish_electric" in aliases
+    assert jellyfish_entry.get("portrait") is True
