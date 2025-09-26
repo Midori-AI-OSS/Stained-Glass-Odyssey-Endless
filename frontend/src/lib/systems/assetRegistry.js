@@ -18,13 +18,25 @@ const normalizeAssetUrl = src => {
   return new URL(src, import.meta.url).href;
 };
 
+const globOrEmpty = (pattern, options) => {
+  try {
+    if (typeof import.meta?.glob === 'function') {
+      return import.meta.glob(pattern, options);
+    }
+    if (typeof globalThis.__assetRegistryGlob === 'function') {
+      return globalThis.__assetRegistryGlob(pattern, options) || {};
+    }
+  } catch {}
+  return {};
+};
+
 const createModuleMap = modules =>
   Object.fromEntries(
     Object.entries(modules).map(([path, value]) => [path, normalizeAssetUrl(value)])
   );
 
 const characterModules = createModuleMap(
-  import.meta.glob('../assets/characters/**/*.png', {
+  globOrEmpty('../assets/characters/**/*.png', {
     eager: true,
     import: 'default',
     query: '?url'
@@ -32,7 +44,7 @@ const characterModules = createModuleMap(
 );
 
 const fallbackModules = createModuleMap(
-  import.meta.glob('../assets/characters/fallbacks/*.png', {
+  globOrEmpty('../assets/characters/fallbacks/*.png', {
     eager: true,
     import: 'default',
     query: '?url'
@@ -40,7 +52,7 @@ const fallbackModules = createModuleMap(
 );
 
 const backgroundModules = createModuleMap(
-  import.meta.glob('../assets/backgrounds/*.png', {
+  globOrEmpty('../assets/backgrounds/*.png', {
     eager: true,
     import: 'default',
     query: '?url'
@@ -48,7 +60,7 @@ const backgroundModules = createModuleMap(
 );
 
 const summonModules = createModuleMap(
-  import.meta.glob('../assets/summons/**/*.png', {
+  globOrEmpty('../assets/summons/**/*.png', {
     eager: true,
     import: 'default',
     query: '?url'
@@ -56,7 +68,7 @@ const summonModules = createModuleMap(
 );
 
 const cardArtModules = createModuleMap(
-  import.meta.glob('../assets/cards/*/*.png', {
+  globOrEmpty('../assets/cards/*/*.png', {
     eager: true,
     import: 'default',
     query: '?url'
@@ -64,7 +76,7 @@ const cardArtModules = createModuleMap(
 );
 
 const relicArtModules = createModuleMap(
-  import.meta.glob('../assets/relics/*/*.png', {
+  globOrEmpty('../assets/relics/*/*.png', {
     eager: true,
     import: 'default',
     query: '?url'
@@ -72,7 +84,7 @@ const relicArtModules = createModuleMap(
 );
 
 const materialIconModules = createModuleMap(
-  import.meta.glob('../assets/items/*/*.png', {
+  globOrEmpty('../assets/items/*/*.png', {
     eager: true,
     import: 'default',
     query: '?url'
@@ -80,7 +92,7 @@ const materialIconModules = createModuleMap(
 );
 
 const cardGlyphModules = createModuleMap(
-  import.meta.glob('../assets/cards/Art/*.png', {
+  globOrEmpty('../assets/cards/Art/*.png', {
     eager: true,
     import: 'default',
     query: '?url'
@@ -88,12 +100,32 @@ const cardGlyphModules = createModuleMap(
 );
 
 const relicGlyphModules = createModuleMap(
-  import.meta.glob('../assets/relics/Art/*.png', {
+  globOrEmpty('../assets/relics/Art/*.png', {
     eager: true,
     import: 'default',
     query: '?url'
   })
 );
+
+const musicModules = Object.entries(
+  globOrEmpty('../assets/music/**/*.{mp3,ogg,wav}', {
+    eager: true,
+    as: 'url'
+  })
+).reduce((acc, [path, url]) => {
+  acc[path] = normalizeAssetUrl(url);
+  return acc;
+}, {});
+
+const sfxModules = Object.entries(
+  globOrEmpty('../assets/sfx/**/*.{mp3,ogg,wav}', {
+    eager: true,
+    as: 'url'
+  })
+).reduce((acc, [path, url]) => {
+  acc[path] = normalizeAssetUrl(url);
+  return acc;
+}, {});
 
 const STATIC_FALLBACK = normalizeAssetUrl('../assets/midoriai-logo.png');
 const DEFAULT_CARD_FALLBACK = normalizeAssetUrl('../assets/cards/gray/bg_attack_default_gray2.png');
@@ -158,6 +190,116 @@ Object.entries(summonModules).forEach(([path, url]) => {
   });
 });
 
+const normalizeKey = value => {
+  if (value == null) return '';
+  const key = String(value).trim().toLowerCase();
+  return key;
+};
+
+const normalizeMusicCategory = (category, fallback = 'other') => {
+  const normalized = normalizeKey(category);
+  if (!normalized) return fallback;
+  switch (normalized) {
+    case 'fallback':
+      return fallback;
+    case 'default':
+      return 'normal';
+    default:
+      return normalized;
+  }
+};
+
+const ensureMusicLibrary = (library, key) => {
+  if (!library.has(key)) {
+    library.set(key, {
+      categories: new Map(),
+      defaultCategory: 'normal'
+    });
+  }
+  return library.get(key);
+};
+
+const musicLibrary = new Map();
+const fallbackMusicLibrary = new Map();
+const fallbackMusicPool = [];
+
+Object.entries(musicModules).forEach(([path, url]) => {
+  const segments = path.replace(/..\/assets\/music\//, '').split('/');
+  if (segments.length === 0) return;
+  const character = normalizeKey(segments[0]);
+  if (!character) return;
+  const fileCategory = segments.length > 2 ? segments[1] : null;
+  if (character === 'fallback') {
+    const category = normalizeMusicCategory(fileCategory, 'normal');
+    if (!fallbackMusicLibrary.has(category)) {
+      fallbackMusicLibrary.set(category, []);
+    }
+    fallbackMusicLibrary.get(category).push(url);
+    fallbackMusicPool.push(url);
+    return;
+  }
+  const category = normalizeMusicCategory(fileCategory, 'other');
+  const entry = ensureMusicLibrary(musicLibrary, character);
+  if (!entry.categories.has(category)) {
+    entry.categories.set(category, []);
+  }
+  entry.categories.get(category).push(url);
+  if (category !== 'other') {
+    entry.defaultCategory = category;
+  }
+});
+
+const sfxClips = new Map();
+const sfxAliases = new Map();
+let defaultSfxClip = '';
+
+const registerSfxClip = (key, url) => {
+  const normalized = normalizeKey(key);
+  if (!normalized || sfxClips.has(normalized)) return;
+  sfxClips.set(normalized, url);
+  if (!defaultSfxClip) {
+    defaultSfxClip = url;
+  }
+};
+
+const registerSfxAlias = (alias, targets) => {
+  const normalized = normalizeKey(alias);
+  if (!normalized) return;
+  const entries = Array.isArray(targets) ? targets : [targets];
+  const resolved = entries
+    .map(target => normalizeKey(target))
+    .filter(Boolean);
+  if (!resolved.length) return;
+  sfxAliases.set(normalized, resolved);
+};
+
+Object.entries(sfxModules).forEach(([path, url]) => {
+  const relative = path.replace(/..\/assets\/sfx\//, '');
+  const parts = relative.split('/');
+  if (!parts.length) return;
+  const filename = parts.pop();
+  if (!filename) return;
+  const stem = filename.replace(/\.[^.]+$/, '');
+  const folder = parts.join('/');
+  if (folder) {
+    registerSfxClip(`${folder}/${stem}`, url);
+  }
+  registerSfxClip(stem, url);
+});
+
+registerSfxAlias('ui/pull/deal', [
+  'kenney_audio/bookflip1',
+  'kenney_audio/bookflip2',
+  'kenney_audio/bookflip3',
+  'kenney_audio/switch22'
+]);
+
+registerSfxAlias('ui/default', [
+  'kenney_audio/click1',
+  'kenney_audio/click2',
+  'kenney_audio/click3'
+]);
+
 const metadataOverrides = {
   portraitAliases: new Map(),
   portraitGalleries: new Map(),
@@ -202,12 +344,6 @@ export const stringHashIndex = (value, modulo) => {
   return Math.abs(hash) % safeModulo;
 };
 
-const normalizeKey = value => {
-  if (value == null) return '';
-  const key = String(value).trim().toLowerCase();
-  return key;
-};
-
 const normalizeAliasTarget = value => {
   const key = normalizeKey(value);
   return key || '';
@@ -230,6 +366,124 @@ const cloneEntry = entry => ({
   origin: entry.origin ?? 'disk',
   metadata: entry.metadata ? { ...entry.metadata } : {}
 });
+
+const coerceAudioOptions = options => (options && typeof options === 'object' ? options : {});
+
+const shouldMuteAudio = options => {
+  const opts = coerceAudioOptions(options);
+  if (opts.disabled === true || opts.disable === true) return true;
+  if (opts.allowAudio === false) return true;
+  if (opts.muted === true) return true;
+  if (opts.sound === false) return true;
+  if (opts.volume != null && Number(opts.volume) <= 0) return true;
+  if (opts.respectReducedMotion !== false && opts.reducedMotion === true) return true;
+  return false;
+};
+
+const getMusicEntry = characterId => {
+  const key = normalizeKey(characterId);
+  if (!key) return null;
+  if (musicLibrary.has(key)) {
+    return musicLibrary.get(key);
+  }
+  return null;
+};
+
+const pickMusicPlaylist = (entry, category) => {
+  if (!entry) return [];
+  const normalized = normalizeMusicCategory(category, 'normal');
+  const candidates = [normalized];
+  if (entry.defaultCategory && !candidates.includes(entry.defaultCategory)) {
+    candidates.push(entry.defaultCategory);
+  }
+  if (!candidates.includes('normal')) {
+    candidates.push('normal');
+  }
+  if (!candidates.includes('other')) {
+    candidates.push('other');
+  }
+  for (const cat of candidates) {
+    const bucket = entry.categories.get(cat);
+    if (Array.isArray(bucket) && bucket.length) {
+      return [...bucket];
+    }
+  }
+  return [];
+};
+
+export const getMusicPlaylist = (characterId, category = 'normal', options = {}) => {
+  if (shouldMuteAudio(options)) return [];
+  const entry = getMusicEntry(characterId);
+  if (!entry) return [];
+  return pickMusicPlaylist(entry, category);
+};
+
+export const getMusicFallbackPlaylist = (category = 'normal', options = {}) => {
+  if (shouldMuteAudio(options)) return [];
+  const normalized = normalizeMusicCategory(category, 'normal');
+  const tracks = fallbackMusicLibrary.get(normalized) ?? [];
+  return [...tracks];
+};
+
+export const getAllMusicTracks = (options = {}) => {
+  if (shouldMuteAudio(options)) return [];
+  return [...fallbackMusicPool];
+};
+
+export const getRandomMusicTrack = (characterId, category = 'normal', options = {}) => {
+  if (shouldMuteAudio(options)) return '';
+  const id = normalizeKey(characterId);
+  const playlist = id
+    ? getMusicPlaylist(id, category, options)
+    : getAllMusicTracks(options);
+  if (!Array.isArray(playlist) || playlist.length === 0) {
+    return '';
+  }
+  const index = Math.floor(Math.random() * playlist.length);
+  return playlist[index] ?? '';
+};
+
+const expandSfxCandidates = input => {
+  const values = Array.isArray(input) ? input : [input];
+  const candidates = [];
+  values.forEach(value => {
+    if (typeof value !== 'string') return;
+    const normalized = normalizeKey(value);
+    if (!normalized) return;
+    if (sfxAliases.has(normalized)) {
+      candidates.push(...sfxAliases.get(normalized));
+    }
+    candidates.push(normalized);
+  });
+  return candidates;
+};
+
+export const getSfxClip = (input, options = {}) => {
+  if (shouldMuteAudio(options)) return '';
+  const candidates = expandSfxCandidates(input);
+  for (const key of candidates) {
+    if (sfxClips.has(key)) {
+      return sfxClips.get(key) ?? '';
+    }
+  }
+  const opts = coerceAudioOptions(options);
+  if (typeof opts.fallback === 'string') {
+    return getSfxClip(opts.fallback, { ...opts, fallback: false });
+  }
+  if (opts.fallback === true && defaultSfxClip) {
+    return defaultSfxClip;
+  }
+  return '';
+};
+
+export const getDefaultSfxClip = () => defaultSfxClip;
+
+export const getAvailableSfxKeys = () => {
+  const keys = new Set();
+  sfxClips.forEach((_value, key) => keys.add(key));
+  sfxAliases.forEach((_value, key) => keys.add(key));
+  return Array.from(keys);
+};
 
 const resolvePortraitKey = id => {
   const normalized = normalizeKey(id);
