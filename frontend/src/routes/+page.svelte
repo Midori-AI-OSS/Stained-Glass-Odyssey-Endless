@@ -1,6 +1,7 @@
 <script>
   import GameViewport from '$lib/components/GameViewport.svelte';
-  import { get, onMount, onDestroy } from 'svelte';
+  import { onMount, onDestroy } from 'svelte';
+  import { get } from 'svelte/store';
   import {
     getPlayerConfig,
     savePlayerConfig,
