@@ -18,15 +18,17 @@ const normalizeAssetUrl = src => {
   return new URL(src, import.meta.url).href;
 };
 
-const globOrEmpty = (pattern, options) => {
-  try {
-    if (typeof import.meta?.glob === 'function') {
-      return import.meta.glob(pattern, options);
-    }
-    if (typeof globalThis.__assetRegistryGlob === 'function') {
-      return globalThis.__assetRegistryGlob(pattern, options) || {};
-    }
-  } catch {}
+const globOrEmpty = (factory, fallbackFactory) => {
+  if (typeof factory === 'function') {
+    try {
+      return factory();
+    } catch {}
+  }
+  if (typeof globalThis.__assetRegistryGlob === 'function' && typeof fallbackFactory === 'function') {
+    try {
+      return fallbackFactory(globalThis.__assetRegistryGlob) || {};
+    } catch {}
+  }
   return {};
 };
 
@@ -36,92 +38,189 @@ const createModuleMap = modules =>
   );
 
 const characterModules = createModuleMap(
-  globOrEmpty('../assets/characters/**/*.png', {
-    eager: true,
-    import: 'default',
-    query: '?url'
-  })
+  globOrEmpty(
+    () =>
+      import.meta.glob('../assets/characters/**/*.png', {
+        eager: true,
+        import: 'default',
+        query: '?url'
+      }),
+    glob =>
+      glob('../assets/characters/**/*.png', {
+        eager: true,
+        import: 'default',
+        query: '?url'
+      })
+  )
 );
 
 const fallbackModules = createModuleMap(
-  globOrEmpty('../assets/characters/fallbacks/*.png', {
-    eager: true,
-    import: 'default',
-    query: '?url'
-  })
+  globOrEmpty(
+    () =>
+      import.meta.glob('../assets/characters/fallbacks/*.png', {
+        eager: true,
+        import: 'default',
+        query: '?url'
+      }),
+    glob =>
+      glob('../assets/characters/fallbacks/*.png', {
+        eager: true,
+        import: 'default',
+        query: '?url'
+      })
+  )
 );
 
 const backgroundModules = createModuleMap(
-  globOrEmpty('../assets/backgrounds/*.png', {
-    eager: true,
-    import: 'default',
-    query: '?url'
-  })
+  globOrEmpty(
+    () =>
+      import.meta.glob('../assets/backgrounds/*.png', {
+        eager: true,
+        import: 'default',
+        query: '?url'
+      }),
+    glob =>
+      glob('../assets/backgrounds/*.png', {
+        eager: true,
+        import: 'default',
+        query: '?url'
+      })
+  )
 );
 
 const summonModules = createModuleMap(
-  globOrEmpty('../assets/summons/**/*.png', {
-    eager: true,
-    import: 'default',
-    query: '?url'
-  })
+  globOrEmpty(
+    () =>
+      import.meta.glob('../assets/summons/**/*.png', {
+        eager: true,
+        import: 'default',
+        query: '?url'
+      }),
+    glob =>
+      glob('../assets/summons/**/*.png', {
+        eager: true,
+        import: 'default',
+        query: '?url'
+      })
+  )
 );
 
 const cardArtModules = createModuleMap(
-  globOrEmpty('../assets/cards/*/*.png', {
-    eager: true,
-    import: 'default',
-    query: '?url'
-  })
+  globOrEmpty(
+    () =>
+      import.meta.glob('../assets/cards/*/*.png', {
+        eager: true,
+        import: 'default',
+        query: '?url'
+      }),
+    glob =>
+      glob('../assets/cards/*/*.png', {
+        eager: true,
+        import: 'default',
+        query: '?url'
+      })
+  )
 );
 
 const relicArtModules = createModuleMap(
-  globOrEmpty('../assets/relics/*/*.png', {
-    eager: true,
-    import: 'default',
-    query: '?url'
-  })
+  globOrEmpty(
+    () =>
+      import.meta.glob('../assets/relics/*/*.png', {
+        eager: true,
+        import: 'default',
+        query: '?url'
+      }),
+    glob =>
+      glob('../assets/relics/*/*.png', {
+        eager: true,
+        import: 'default',
+        query: '?url'
+      })
+  )
 );
 
 const materialIconModules = createModuleMap(
-  globOrEmpty('../assets/items/*/*.png', {
-    eager: true,
-    import: 'default',
-    query: '?url'
-  })
+  globOrEmpty(
+    () =>
+      import.meta.glob('../assets/items/*/*.png', {
+        eager: true,
+        import: 'default',
+        query: '?url'
+      }),
+    glob =>
+      glob('../assets/items/*/*.png', {
+        eager: true,
+        import: 'default',
+        query: '?url'
+      })
+  )
 );
 
 const cardGlyphModules = createModuleMap(
-  globOrEmpty('../assets/cards/Art/*.png', {
-    eager: true,
-    import: 'default',
-    query: '?url'
-  })
+  globOrEmpty(
+    () =>
+      import.meta.glob('../assets/cards/Art/*.png', {
+        eager: true,
+        import: 'default',
+        query: '?url'
+      }),
+    glob =>
+      glob('../assets/cards/Art/*.png', {
+        eager: true,
+        import: 'default',
+        query: '?url'
+      })
+  )
 );
 
 const relicGlyphModules = createModuleMap(
-  globOrEmpty('../assets/relics/Art/*.png', {
-    eager: true,
-    import: 'default',
-    query: '?url'
-  })
+  globOrEmpty(
+    () =>
+      import.meta.glob('../assets/relics/Art/*.png', {
+        eager: true,
+        import: 'default',
+        query: '?url'
+      }),
+    glob =>
+      glob('../assets/relics/Art/*.png', {
+        eager: true,
+        import: 'default',
+        query: '?url'
+      })
+  )
 );
 
 const musicModules = Object.entries(
-  globOrEmpty('../assets/music/**/*.{mp3,ogg,wav}', {
-    eager: true,
-    as: 'url'
-  })
+  globOrEmpty(
+    () =>
+      import.meta.glob('../assets/music/**/*.{mp3,ogg,wav}', {
+        eager: true,
+        as: 'url'
+      }),
+    glob =>
+      glob('../assets/music/**/*.{mp3,ogg,wav}', {
+        eager: true,
+        as: 'url'
+      })
+  )
 ).reduce((acc, [path, url]) => {
   acc[path] = normalizeAssetUrl(url);
   return acc;
 }, {});
 
 const sfxModules = Object.entries(
-  globOrEmpty('../assets/sfx/**/*.{mp3,ogg,wav}', {
-    eager: true,
-    as: 'url'
-  })
+  globOrEmpty(
+    () =>
+      import.meta.glob('../assets/sfx/**/*.{mp3,ogg,wav}', {
+        eager: true,
+        as: 'url'
+      }),
+    glob =>
+      glob('../assets/sfx/**/*.{mp3,ogg,wav}', {
+        eager: true,
+        as: 'url'
+      })
+  )
 ).reduce((acc, [path, url]) => {
   acc[path] = normalizeAssetUrl(url);
   return acc;
