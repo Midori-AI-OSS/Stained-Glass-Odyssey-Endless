@@ -155,9 +155,16 @@ async def get_players() -> tuple[str, int, dict[str, str]]:
             return {row[0] for row in cur.fetchall()}
 
     owned = await asyncio.to_thread(get_owned_players)
-    roster = []
-    for name in player_plugins.__all__:
-        cls = getattr(player_plugins, name)
+    roster: dict[str, dict[str, object]] = {}
+    export_names = getattr(
+        player_plugins, "_PLAYABLE_EXPORTS", tuple(player_plugins.__all__)
+    )
+    for name in export_names:
+        cls = getattr(player_plugins, name, None)
+        if cls is None:
+            continue
+        if getattr(cls, "plugin_type", "player") != "player":
+            continue
         inst = cls()
         await asyncio.to_thread(_assign_damage_type, inst)
         await asyncio.to_thread(_apply_character_customization, inst, inst.id)
@@ -168,23 +175,25 @@ async def get_players() -> tuple[str, int, dict[str, str]]:
         if inst_about == "Player description placeholder":
             inst_about = getattr(type(inst), "about", inst_about)
 
-        roster.append(
-            {
-                "id": inst.id,
-                "name": inst.name,
-                "about": inst_about,
-                "owned": inst.id in owned,
-                "is_player": inst.id == "player",
-                "element": inst.element_id,
-                "stats": stats,
-                "ui": cls.get_ui_metadata() or {},
-                "music": cls.get_music_metadata(),
-            }
-        )
-    payload = {"players": roster, "user": get_user_state()}
+        if inst.id in roster:
+            continue
+
+        roster[inst.id] = {
+            "id": inst.id,
+            "name": inst.name,
+            "about": inst_about,
+            "owned": inst.id in owned,
+            "is_player": inst.id == "player",
+            "element": inst.element_id,
+            "stats": stats,
+            "ui": cls.get_ui_metadata() or {},
+            "music": cls.get_music_metadata(),
+        }
+    players = list(roster.values())
+    payload = {"players": players, "user": get_user_state()}
     try:
-        await log_menu_action("Party", "view", {"count": len(roster)})
-        await log_overlay_action("party", {"count": len(roster)})
+        await log_menu_action("Party", "view", {"count": len(players)})
+        await log_overlay_action("party", {"count": len(players)})
     except Exception:
         pass
     return jsonify(payload)
