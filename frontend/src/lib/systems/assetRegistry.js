@@ -170,9 +170,17 @@ const metadataOverrides = {
   rarityFolders: new Map()
 };
 
-const defaultPortraitAliases = new Map([
-  ['lady_echo', 'echo']
-]);
+const manifestState = {
+  digest: '',
+  portraitAliases: new Map(),
+  portraitCanonicals: new Set(),
+  portraitMirrorRules: new Map(),
+  summonAliases: new Map(),
+  summonCanonicals: new Set(),
+  summonPortraitKeys: new Set()
+};
+
+const defaultSummonPortraitKeys = new Set(['jellyfish']);
 
 const portraitCache = new Map();
 let registryVersion = 0;
@@ -226,14 +234,12 @@ const cloneEntry = entry => ({
 const resolvePortraitKey = id => {
   const normalized = normalizeKey(id);
   if (!normalized) return '';
-  if (normalized === 'mimic') return 'mimic';
   if (metadataOverrides.portraitAliases.has(normalized)) {
     return metadataOverrides.portraitAliases.get(normalized);
   }
-  if (defaultPortraitAliases.has(normalized)) {
-    return defaultPortraitAliases.get(normalized);
+  if (manifestState.portraitAliases.has(normalized)) {
+    return manifestState.portraitAliases.get(normalized);
   }
-  if (normalized.startsWith('jellyfish_')) return 'jellyfish';
   return normalized;
 };
 
@@ -243,8 +249,9 @@ const resolveSummonKey = id => {
   if (metadataOverrides.summonAliases.has(normalized)) {
     return metadataOverrides.summonAliases.get(normalized);
   }
-  if (normalized.startsWith('jellyfish_')) return 'jellyfish';
-  if (normalized === 'lightstreamsword') return 'lightstreamswords';
+  if (manifestState.summonAliases.has(normalized)) {
+    return manifestState.summonAliases.get(normalized);
+  }
   return normalized;
 };
 
@@ -265,8 +272,6 @@ const getPortraitGalleryByKey = key => {
   }
   return [];
 };
-
-const summonPortraitKeys = new Set(['jellyfish']);
 
 const getFallbackPool = () => {
   if (metadataOverrides.fallbackUrls.length) {
@@ -300,22 +305,25 @@ const getDeterministicFallback = id => {
   return pool[index] || pool[0];
 };
 
-const resolveMimicPortrait = () => {
-  const cached = getCachedPortrait('player');
+const resolveMirroredPortrait = (mirrorId, metadata) => {
+  const rule = manifestState.portraitMirrorRules.get(normalizeKey(mirrorId)) || null;
+  const targetId = (metadata && normalizeKey(metadata.portrait_base)) || rule?.target || 'player';
+  const cacheKey = targetId || 'player';
+  const cached = getCachedPortrait(cacheKey);
   if (cached) return cached;
-  const playerList = getPortraitGalleryByKey('player');
-  if (playerList.length) {
-    const chosen = chooseRandom(playerList) ?? playerList[0];
-    setCachedPortrait('player', chosen);
+  const mirrorGallery = getPortraitGalleryByKey(cacheKey);
+  if (mirrorGallery.length) {
+    const chosen = chooseRandom(mirrorGallery) ?? mirrorGallery[0];
+    setCachedPortrait(cacheKey, chosen);
     return chosen;
   }
   const pool = getFallbackPool();
   if (pool.length) {
     const chosen = chooseRandom(pool) ?? pool[0];
-    setCachedPortrait('player', chosen);
+    setCachedPortrait(cacheKey, chosen);
     return chosen;
   }
-  setCachedPortrait('player', STATIC_FALLBACK);
+  setCachedPortrait(cacheKey, STATIC_FALLBACK);
   return STATIC_FALLBACK;
 };
 
@@ -349,7 +357,7 @@ export const getCharacterImage = (characterId, options = {}) => {
   const portraitPool = portraitPoolRaw ? String(portraitPoolRaw).toLowerCase() : null;
 
   if (portraitPool === 'player_mirror') {
-    return resolveMimicPortrait();
+    return resolveMirroredPortrait(id, metadata || {});
   }
 
   const metadataFlags = Array.isArray(metadata?.flags) ? metadata.flags : [];
@@ -393,9 +401,19 @@ export const getAvailableCharacterIds = () => {
   const ids = new Set();
   portraitCanonicals.forEach(value => ids.add(value));
   metadataOverrides.portraitCanonicals.forEach(value => ids.add(value));
-  summonPortraitKeys.forEach(key => {
-    if (summonCanonicals.has(key)) ids.add(summonCanonicals.get(key));
-  });
+  manifestState.portraitCanonicals.forEach(value => ids.add(value));
+  const applySummonKey = key => {
+    if (!key) return;
+    if (summonCanonicals.has(key)) {
+      ids.add(summonCanonicals.get(key));
+      return;
+    }
+    if (manifestState.summonCanonicals.has(key)) {
+      ids.add(key);
+    }
+  };
+  defaultSummonPortraitKeys.forEach(applySummonKey);
+  manifestState.summonPortraitKeys.forEach(applySummonKey);
   return Array.from(ids);
 };
 
@@ -496,6 +514,7 @@ export const getAvailableSummonIds = () => {
   const ids = new Set();
   summonCanonicals.forEach(value => ids.add(value));
   metadataOverrides.summonCanonicals.forEach(value => ids.add(value));
+  manifestState.summonCanonicals.forEach(value => ids.add(value));
   return Array.from(ids);
 };
 
@@ -754,6 +773,103 @@ const asArray = value => {
   if (!value) return [];
   if (Array.isArray(value)) return value;
   return [value];
+};
+
+const normalizeManifestKey = value => normalizeKey(value);
+
+const sanitizeAliasList = aliases => {
+  if (!Array.isArray(aliases)) return [];
+  const normalized = aliases
+    .map(alias => normalizeManifestKey(alias))
+    .filter(Boolean);
+  return Array.from(new Set(normalized)).sort();
+};
+
+const sanitizePortraitEntry = entry => {
+  if (!entry || typeof entry !== 'object') return null;
+  const id = normalizeManifestKey(entry.id || entry.canonical || entry.name);
+  if (!id) return null;
+  const aliases = sanitizeAliasList(entry.aliases);
+  const folder = typeof entry.folder === 'string' ? entry.folder : null;
+  let mimic = null;
+  if (entry.mimic && typeof entry.mimic === 'object') {
+    const target = normalizeManifestKey(entry.mimic.target || entry.mimic.base || entry.mimic.mirror);
+    const mode = entry.mimic.mode ? String(entry.mimic.mode).trim() : '';
+    if (target || mode) {
+      mimic = {
+        mode,
+        target
+      };
+    }
+  }
+  return { id, aliases, folder, mimic };
+};
+
+const sanitizeSummonEntry = entry => {
+  if (!entry || typeof entry !== 'object') return null;
+  const id = normalizeManifestKey(entry.id || entry.name);
+  if (!id) return null;
+  const aliases = sanitizeAliasList(entry.aliases);
+  const folder = typeof entry.folder === 'string' ? entry.folder : null;
+  const portrait = entry.portrait === true;
+  return { id, aliases, folder, portrait };
+};
+
+const normalizeManifest = manifest => {
+  if (!manifest || typeof manifest !== 'object') {
+    return { portraits: [], summons: [] };
+  }
+  const portraits = Array.isArray(manifest.portraits)
+    ? manifest.portraits
+        .map(sanitizePortraitEntry)
+        .filter(Boolean)
+        .sort((a, b) => a.id.localeCompare(b.id))
+    : [];
+  const summons = Array.isArray(manifest.summons)
+    ? manifest.summons
+        .map(sanitizeSummonEntry)
+        .filter(Boolean)
+        .sort((a, b) => a.id.localeCompare(b.id))
+    : [];
+  return { portraits, summons };
+};
+
+export const registerAssetManifest = manifest => {
+  const normalized = normalizeManifest(manifest);
+  const digest = JSON.stringify(normalized);
+  if (digest === manifestState.digest) {
+    return;
+  }
+
+  manifestState.digest = digest;
+  manifestState.portraitAliases.clear();
+  manifestState.portraitCanonicals.clear();
+  manifestState.portraitMirrorRules.clear();
+  manifestState.summonAliases.clear();
+  manifestState.summonCanonicals.clear();
+  manifestState.summonPortraitKeys.clear();
+
+  normalized.portraits.forEach(entry => {
+    manifestState.portraitCanonicals.add(entry.id);
+    entry.aliases.forEach(alias => manifestState.portraitAliases.set(alias, entry.id));
+    if (entry.mimic) {
+      manifestState.portraitMirrorRules.set(entry.id, {
+        mode: entry.mimic.mode || '',
+        target: entry.mimic.target || ''
+      });
+    }
+  });
+
+  normalized.summons.forEach(entry => {
+    manifestState.summonCanonicals.add(entry.id);
+    entry.aliases.forEach(alias => manifestState.summonAliases.set(alias, entry.id));
+    if (entry.portrait) {
+      manifestState.summonPortraitKeys.add(entry.id);
+    }
+  });
+
+  clearCharacterImageCache();
+  markRegistryUpdated();
 };
 
 const toSummonEntries = (key, payload) =>

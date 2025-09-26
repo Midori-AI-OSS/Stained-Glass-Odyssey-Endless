@@ -14,6 +14,7 @@ from runs.lifecycle import battle_snapshots
 from runs.lifecycle import battle_tasks
 from runs.lifecycle import load_map
 from runs.lifecycle import save_map
+from services.asset_service import get_asset_manifest
 from services.reward_service import select_card
 from services.reward_service import select_relic
 from services.room_service import room_action
@@ -142,13 +143,15 @@ def get_available_actions(mode: str, game_state: dict[str, Any]) -> list[str]:
 async def get_ui_state() -> tuple[str, int, dict[str, Any]]:
     """Get complete UI state for the active run."""
     run_id = get_default_active_run()
+    asset_manifest = get_asset_manifest()
 
     if not run_id:
         return jsonify({
             "mode": "menu",
             "active_run": None,
             "game_state": None,
-            "available_actions": ["start_run"]
+            "available_actions": ["start_run"],
+            "asset_manifest": asset_manifest,
         })
 
     try:
@@ -159,7 +162,8 @@ async def get_ui_state() -> tuple[str, int, dict[str, Any]]:
                 "mode": "menu",
                 "active_run": None,
                 "game_state": None,
-                "available_actions": ["start_run"]
+                "available_actions": ["start_run"],
+                "asset_manifest": asset_manifest,
             })
 
         def get_party_data():
@@ -237,7 +241,8 @@ async def get_ui_state() -> tuple[str, int, dict[str, Any]]:
             "mode": mode,
             "active_run": run_id,
             "game_state": game_state,
-            "available_actions": get_available_actions(mode, game_state)
+            "available_actions": get_available_actions(mode, game_state),
+            "asset_manifest": asset_manifest,
         })
 
     except Exception as e:
@@ -247,7 +252,8 @@ async def get_ui_state() -> tuple[str, int, dict[str, Any]]:
             "active_run": None,
             "game_state": None,
             "available_actions": ["start_run"],
-            "error": str(e)
+            "error": str(e),
+            "asset_manifest": asset_manifest,
         })
 
 

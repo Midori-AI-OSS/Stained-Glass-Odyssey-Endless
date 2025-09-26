@@ -23,6 +23,7 @@ import {
   hasCharacterGallery as registryHasCharacterGallery,
   normalizeAssetUrl,
   onMaterialIconError,
+  registerAssetManifest,
   registerAssetMetadata,
   resetAssetRegistryOverrides,
   stringHashIndex
@@ -44,6 +45,7 @@ export {
   registryHasCharacterGallery as hasCharacterGallery,
   registryGetSummonArt as getSummonArt,
   getPortraitRarityFolders,
+  registerAssetManifest,
   registerAssetMetadata,
   resetAssetRegistryOverrides,
   getDefaultFallback,

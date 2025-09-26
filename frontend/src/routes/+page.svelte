@@ -41,6 +41,7 @@
   } from '$lib';
   import { updateParty, acknowledgeLoot } from '$lib/systems/uiApi.js';
   import { buildRunMenu } from '$lib/components/RunButtons.svelte';
+  import { registerAssetManifest } from '$lib/systems/assetLoader.js';
   import { browser, dev } from '$app/environment';
 
   const runState = runStateStore;
@@ -1284,6 +1285,15 @@
   let uiState = null;
 
   function applyUIStatePayload(newUIState) {
+    if (newUIState?.asset_manifest) {
+      try {
+        registerAssetManifest(newUIState.asset_manifest);
+      } catch (error) {
+        if (dev) {
+          console.warn('Failed to register asset manifest:', error);
+        }
+      }
+    }
     uiState = newUIState;
     let summary;
     try {
