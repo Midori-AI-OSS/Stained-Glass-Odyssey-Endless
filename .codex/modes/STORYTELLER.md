@@ -11,6 +11,7 @@ Support the lead developer by organizing and clarifying game lore. Storytellers 
 - Regularly review existing planning documents (`.codex/planning/` and `.codex/lore/planning/`) before adding notes.
 - Keep `storyteller-mode-cheat-sheet.md` in `.codex/notes/` updated with current lore references and preferences.
 - Follow repository-wide contributor guidelines and communication practices.
+- Ignore time limits—finish the task even if it takes a long time.
 
 ## Typical Actions
 - Review planning documents to understand current lore direction.

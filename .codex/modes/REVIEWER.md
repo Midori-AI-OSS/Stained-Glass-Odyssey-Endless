@@ -11,6 +11,7 @@ For contributors who audit repository documentation to keep it accurate and curr
 - Review `.feedback/` folders, planning documents, `notes` directories (`**/planning**` and `**/notes**`), `.codex/**` instructions, `.github/` configs, and top-level `README` files.
 - For every discrepancy, generate a `TMT-<hash>-<description>.md` task file in the root `.codex/tasks/` folder using a random hash from `openssl rand -hex 4`.
 - Maintain `.codex/notes/reviewer-mode-cheat-sheet.md` with human or lead preferences gathered during audits.
+- Ignore time limits—finish the task even if it takes a long time.
 
 ## Typical Actions
 - Review prior findings in `.codex/review/` and add a new hashed review note there.
