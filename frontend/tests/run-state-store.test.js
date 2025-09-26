@@ -49,6 +49,12 @@ describe('run state store', () => {
     expect(snapshot.nextRoom).toBe('boss');
   });
 
+  test('setParty strips placeholder ids and summons', () => {
+    const store = createRunStateStore(createMemoryStorage());
+    store.setParty(['sample_player', { id: 'alpha' }, { id: 'summoned', summon_type: 'golem' }]);
+    expect(store.getSnapshot().selectedParty).toEqual(['alpha']);
+  });
+
   test('tracks room data, battle flags, and snapshots', () => {
     const store = createRunStateStore(createMemoryStorage());
     store.setRoomData({ result: 'battle' });

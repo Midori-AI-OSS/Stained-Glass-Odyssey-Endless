@@ -1,4 +1,5 @@
 import { get, writable } from 'svelte/store';
+import { sanitizePartyIds } from './partySeed.js';
 
 const STORAGE_KEY = 'runState';
 
@@ -17,7 +18,7 @@ const STORAGE_KEY = 'runState';
 
 const defaultState = Object.freeze({
   runId: '',
-  selectedParty: ['sample_player'],
+  selectedParty: [],
   mapRooms: [],
   currentIndex: 0,
   currentRoomType: '',
@@ -45,18 +46,7 @@ function getBrowserStorage() {
 }
 
 export function normalizePartyIds(party) {
-  if (!Array.isArray(party)) return defaultState.selectedParty;
-  const seen = new Set();
-  const normalized = [];
-  for (const entry of party) {
-    const id = typeof entry === 'string' ? entry : entry?.id || entry?.name;
-    if (!id) continue;
-    const key = String(id);
-    if (seen.has(key)) continue;
-    seen.add(key);
-    normalized.push(key);
-  }
-  return normalized.length ? normalized : defaultState.selectedParty;
+  return sanitizePartyIds(party);
 }
 
 function normalizeRooms(rooms) {
