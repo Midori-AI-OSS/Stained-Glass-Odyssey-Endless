@@ -46,3 +46,14 @@ Implementation details:
   exposes `open-upgrade`, `close-upgrade`, and `request-upgrade` events for the
   picker to handle.
 
+## Party seeding and hydration
+
+- The root page now waits for `/players` roster metadata before seeding
+  `selectedParty`. When metadata is available, the store keeps any persisted
+  selections (with placeholder ids stripped) or falls back to the first
+  selectable roster entry (preferring the main player).
+- Placeholder ids such as `sample_player` are removed during hydration so saved
+  runs created before this change still load cleanly. If no playable roster
+  entries are returned, the UI leaves the party empty until the user chooses a
+  lineup.
+

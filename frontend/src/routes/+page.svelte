@@ -41,6 +41,8 @@
     syncMapPolling
   } from '$lib';
   import { updateParty, acknowledgeLoot } from '$lib/systems/uiApi.js';
+  import { getPlayers } from '$lib/systems/api.js';
+  import { deriveSeedParty, sanitizePartyIds } from '$lib/systems/partySeed.js';
   import { buildRunMenu } from '$lib/components/RunButtons.svelte';
   import { registerAssetManifest } from '$lib/systems/assetLoader.js';
   import { browser, dev } from '$app/environment';
@@ -112,6 +114,57 @@
   let shopProcessing = false;
   let shopProcessingCount = 0;
   let detachUIPoll = null;
+  let partySeedReady = false;
+  let partySeedTask = null;
+
+  function sanitizeCurrentParty() {
+    const snapshot = getRunSnapshot();
+    const sanitized = sanitizePartyIds(snapshot.selectedParty);
+    if (!partiesEqual(snapshot.selectedParty, sanitized)) {
+      runState.setParty(sanitized);
+    }
+    return sanitized;
+  }
+
+  async function primePartySeed() {
+    sanitizeCurrentParty();
+    if (!browser) {
+      return;
+    }
+    if (partySeedReady) {
+      return;
+    }
+    if (partySeedTask) {
+      try {
+        await partySeedTask;
+      } catch {
+        // Ignore errors from an in-flight attempt; allow retries below.
+      }
+      return;
+    }
+
+    partySeedTask = (async () => {
+      const data = await getPlayers();
+      const players = Array.isArray(data?.players) ? data.players : [];
+      const current = sanitizeCurrentParty();
+      const seeded = deriveSeedParty(current, players);
+      if (!partiesEqual(current, seeded)) {
+        runState.setParty(seeded);
+      }
+    })().finally(() => {
+      partySeedTask = null;
+    });
+
+    try {
+      await partySeedTask;
+      partySeedReady = true;
+    } catch (error) {
+      partySeedReady = false;
+      if (dev) {
+        console.warn('Failed to seed party from roster metadata:', error);
+      }
+    }
+  }
 
   function overlayIsBlocking() {
     try {
@@ -126,15 +179,7 @@
   // Convert backend-provided party lists into a flat array of player IDs.
   // Filters out summons and de-duplicates entries.
   function normalizePartyIds(list) {
-    if (!Array.isArray(list)) return null;
-    const ids = [];
-    for (const item of list) {
-      const isSummon = typeof item === 'object' && (item?.summon_type || item?.type === 'summon' || item?.is_summon);
-      if (isSummon) continue;
-      const id = typeof item === 'string' ? item : (item?.id || item?.name || '');
-      if (id) ids.push(String(id));
-    }
-    return Array.from(new Set(ids));
+    return sanitizePartyIds(list);
   }
 
   // Normalize status fields so downstream components can rely on
@@ -235,7 +280,7 @@
     // Always attempt to restore run state from localStorage, regardless of backend status
     const saved = loadRunState();
 
-    await syncPlayerConfig().catch(() => {});
+    await Promise.all([syncPlayerConfig().catch(() => {}), primePartySeed()]);
     
     async function syncWithBackend() {
       if (!saved?.runId) return;
@@ -427,6 +472,12 @@
   async function handleStart(event) {
     const pressure = event?.detail?.pressure || 0;
     haltSync = false;
+    await primePartySeed();
+    const seededParty = normalizePartyIds(selectedParty);
+    if (!partiesEqual(selectedParty, seededParty)) {
+      selectedParty = [...seededParty];
+    }
+    runState.setParty(seededParty);
 
     // Stop any existing polling when starting a new run
     stopMapPolling();
@@ -477,7 +528,7 @@
     await syncPlayerConfig();
 
     const dmgType = editorConfigs.player?.damageType || editorState.damageType;
-    const data = await startRun(selectedParty, dmgType, pressure);
+    const data = await startRun(seededParty, dmgType, pressure);
     runState.setRunId(data.run_id);
     runState.setMapRooms(data.map?.rooms || []);
     runState.setCurrentRoom({
@@ -529,11 +580,13 @@
   async function handleStartNewRun() {
     // Ensure we truly start fresh: end any active runs first
     try { await endAllRuns(); } catch {}
+    await primePartySeed();
     openOverlay('party-start');
   }
 
   async function handleParty() {
     if (inBattle()) return;
+    await primePartySeed();
     openOverlay('party');
   }
 
