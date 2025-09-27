@@ -154,6 +154,7 @@ export function createPollingController({
 
   let timer = null;
   let destroyed = false;
+  let stopped = false;
 
   function notifyUI(payload) {
     for (const handler of Array.from(uiSubscribers)) {
@@ -182,7 +183,7 @@ export function createPollingController({
   }
 
   function schedule(delay) {
-    if (destroyed) return;
+    if (destroyed || stopped) return;
     clearTimer();
     timer = setTimeout(() => {
       timer = null;
@@ -191,11 +192,18 @@ export function createPollingController({
   }
 
   async function tick() {
-    if (destroyed) return;
+    if (destroyed || stopped) return;
 
-    if (!(await shouldPoll())) {
+    const canPoll = await shouldPoll();
+    if (destroyed || stopped) {
+      return;
+    }
+
+    if (!canPoll) {
       setStatus({ active: false, paused: true });
-      schedule(successDelayMs);
+      if (!destroyed && !stopped) {
+        schedule(successDelayMs);
+      }
       return;
     }
 
@@ -203,6 +211,9 @@ export function createPollingController({
 
     try {
       const payload = await getUIStateFn();
+      if (destroyed || stopped) {
+        return;
+      }
       notifyUI(payload);
       setStatus({
         active: false,
@@ -223,30 +234,39 @@ export function createPollingController({
           lastError: error
         };
       });
-      const delay = calculateBackoff(retryBaseDelayMs, maxRetryDelayMs, get(statusStore).consecutiveFailures);
-      schedule(delay);
+      if (!destroyed && !stopped) {
+        const delay = calculateBackoff(
+          retryBaseDelayMs,
+          maxRetryDelayMs,
+          get(statusStore).consecutiveFailures
+        );
+        schedule(delay);
+      }
     }
   }
 
   function start() {
     destroyed = false;
+    stopped = false;
     if (!timer) {
       schedule(0);
     }
   }
 
   function stop() {
+    stopped = true;
     clearTimer();
-    setStatus({ active: false });
+    setStatus({ active: false, paused: false });
   }
 
   function syncNow() {
-    if (destroyed) return;
+    if (destroyed || stopped) return;
     schedule(0);
   }
 
   function destroy() {
     destroyed = true;
+    stopped = true;
     clearTimer();
     uiSubscribers.clear();
   }

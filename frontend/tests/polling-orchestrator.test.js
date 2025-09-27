@@ -50,6 +50,38 @@ describe('polling orchestrator', () => {
     unsubscribe();
   });
 
+  test('stopping controller prevents rescheduling after in-flight request', async () => {
+    const halt = writable(false);
+    const overlay = writable(false);
+    let resolveRequest;
+    let calls = 0;
+
+    const controller = createPollingController({
+      getUIStateFn: () => {
+        calls += 1;
+        return new Promise((resolve) => {
+          resolveRequest = () => resolve({ mode: 'menu' });
+        });
+      },
+      haltStore: { subscribe: halt.subscribe },
+      overlayStore: { subscribe: overlay.subscribe },
+      getOverlayView: () => 'main',
+      successDelayMs: 5,
+      retryBaseDelayMs: 5,
+      maxRetryDelayMs: 20
+    });
+
+    controller.start();
+    await delay(5);
+    controller.stop();
+
+    expect(typeof resolveRequest).toBe('function');
+    resolveRequest();
+    await delay(20);
+
+    expect(calls).toBe(1);
+  });
+
   test('pauses polling while halt or overlay blocking is active', async () => {
     const halt = writable(true);
     const overlay = writable(false);
