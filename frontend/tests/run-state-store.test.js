@@ -133,4 +133,39 @@ describe('run state store', () => {
     });
     expect(storage.snapshot()).toEqual({ runState: '{"runId":"run-007"}' });
   });
+
+  test('applyUIState preserves existing room data when summary omits payload', () => {
+    const store = createRunStateStore(createMemoryStorage());
+    const shopPayload = {
+      mode: 'map',
+      active_run: 'run-008',
+      game_state: {
+        current_state: {
+          current_index: 2,
+          current_room_type: 'shop',
+          room_data: {
+            wares: ['heal_potion'],
+            discount: 0.1
+          }
+        }
+      }
+    };
+
+    store.applyUIState(shopPayload);
+    expect(store.getSnapshot().roomData).toEqual({ wares: ['heal_potion'], discount: 0.1 });
+
+    const summaryWithoutRoom = {
+      mode: 'map',
+      active_run: 'run-008',
+      game_state: {
+        current_state: {
+          current_index: 2,
+          current_room_type: 'shop'
+        }
+      }
+    };
+
+    store.applyUIState(summaryWithoutRoom);
+    expect(store.getSnapshot().roomData).toEqual({ wares: ['heal_potion'], discount: 0.1 });
+  });
 });

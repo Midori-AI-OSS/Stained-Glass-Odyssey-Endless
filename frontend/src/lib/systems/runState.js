@@ -137,13 +137,14 @@ export function createRunStateStore(storageCandidate) {
         updates.nextRoom = currentState.next_room_type;
       }
 
-      if (currentState?.room_data) {
-        updates.roomData = { ...currentState.room_data };
-        if (mode === 'battle' && !currentState.room_data?.snapshot_missing) {
-          updates.lastBattleSnapshot = { ...currentState.room_data };
+      if (currentState && Object.prototype.hasOwnProperty.call(currentState, 'room_data')) {
+        const roomDataPayload = currentState.room_data;
+        if (roomDataPayload != null) {
+          updates.roomData = { ...roomDataPayload };
+          if (mode === 'battle' && !roomDataPayload?.snapshot_missing) {
+            updates.lastBattleSnapshot = { ...roomDataPayload };
+          }
         }
-      } else {
-        updates.roomData = null;
       }
 
       const inBattle = mode === 'battle';
