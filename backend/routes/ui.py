@@ -10,9 +10,12 @@ from quart import Blueprint
 from quart import jsonify
 from quart import request
 from runs.encryption import get_save_manager
+from runs.lifecycle import battle_locks
 from runs.lifecycle import battle_snapshots
 from runs.lifecycle import battle_tasks
 from runs.lifecycle import load_map
+from runs.lifecycle import purge_all_run_state
+from runs.lifecycle import purge_run_state
 from runs.lifecycle import save_map
 from runs.party_manager import load_party
 from services.asset_service import get_asset_manifest
@@ -540,19 +543,12 @@ async def end_run(run_id: str) -> tuple[str, int, dict[str, Any]]:
         # End run logging
         end_run_logging()
 
-        # Cancel battle task if it exists (same pattern as advance_room)
-        task = battle_tasks.pop(run_id, None)
-        if task and not task.done():
-            task.cancel()
-
         # Delete from database
         existed = await asyncio.to_thread(delete_run)
         if not existed:
             return jsonify({"error": "Run not found"}), 404
 
-        # Clean up battle snapshots if they exist
-        if run_id in battle_snapshots:
-            del battle_snapshots[run_id]
+        purge_run_state(run_id)
 
         await log_run_end(run_id, "aborted")
         await log_play_session_end(run_id)
@@ -582,17 +578,19 @@ async def end_all_runs() -> tuple[str, int, dict[str, Any]]:
         # End run logging
         end_run_logging()
 
-        # Cancel all battle tasks (same pattern as advance_room)
-        for run_id, task in list(battle_tasks.items()):
-            if task and not task.done():
-                task.cancel()
-        battle_tasks.clear()
+        # Cancel all active battle tasks and clear per-run state
+        purge_all_run_state()
 
         # Delete from database
         deleted_count, run_ids = await asyncio.to_thread(delete_all_runs)
 
-        # Clean up all battle snapshots
+        for run_id in run_ids:
+            purge_run_state(run_id, cancel_task=False)
+
+        # Ensure no lingering state after bulk deletion
         battle_snapshots.clear()
+        battle_locks.clear()
+        battle_tasks.clear()
 
         for run_id in run_ids:
             await log_run_end(run_id, "aborted")

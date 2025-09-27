@@ -46,6 +46,28 @@ battle_tasks: dict[str, asyncio.Task] = {}
 battle_snapshots: dict[str, dict[str, Any]] = {}
 battle_locks: dict[str, asyncio.Lock] = {}
 
+
+def purge_run_state(run_id: str, *, cancel_task: bool = True) -> None:
+    """Remove in-memory battle state for a single run."""
+
+    task = battle_tasks.pop(run_id, None)
+    if cancel_task and task and not task.done():
+        task.cancel()
+
+    battle_snapshots.pop(run_id, None)
+    battle_locks.pop(run_id, None)
+
+
+def purge_all_run_state(*, cancel_tasks: bool = True) -> None:
+    """Remove battle state for all known runs."""
+
+    run_ids = set(battle_tasks)
+    run_ids.update(battle_snapshots)
+    run_ids.update(battle_locks)
+
+    for run_id in list(run_ids):
+        purge_run_state(run_id, cancel_task=cancel_tasks)
+
 RECENT_FOE_COOLDOWN: int = 3
 
 
@@ -279,7 +301,7 @@ async def _run_battle(
                             "ended": True,
                         }
                     )
-                    battle_snapshots[run_id] = result
+                    await progress(result)
                     try:
                         await log_run_end(run_id, "defeat")
                         await log_play_session_end(run_id)
@@ -293,6 +315,7 @@ async def _run_battle(
                             conn.execute("DELETE FROM runs WHERE id = ?", (run_id,))
                     except Exception:
                         pass
+                purge_run_state(run_id, cancel_task=False)
                 return
             has_card_choices = bool(result.get("card_choices"))
             has_relic_choices = bool(result.get("relic_choices"))
@@ -391,6 +414,8 @@ __all__ = [
     "battle_tasks",
     "battle_snapshots",
     "battle_locks",
+    "purge_run_state",
+    "purge_all_run_state",
     "RECENT_FOE_COOLDOWN",
     "_run_battle",
 ]

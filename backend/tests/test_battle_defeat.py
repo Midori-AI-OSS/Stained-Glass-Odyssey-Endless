@@ -2,6 +2,7 @@ import importlib.util
 from pathlib import Path
 
 import pytest
+from runs.lifecycle import battle_locks
 
 from autofighter.mapgen import MapNode
 from autofighter.party import Party
@@ -72,4 +73,5 @@ async def test_run_battle_handles_defeat_cleanup(app_with_db, monkeypatch):
     with app_module.get_save_manager().connection() as conn:
         row = conn.execute("SELECT id FROM runs WHERE id = ?", (run_id,)).fetchone()
     assert row is None
-    assert app_module.battle_snapshots[run_id]["ended"] is True
+    assert run_id not in app_module.battle_snapshots
+    assert run_id not in battle_locks
