@@ -5,6 +5,7 @@ if (typeof import.meta.glob !== 'function') {
 } else {
   const {
     getCharacterImage,
+    getDefaultFallback,
     getRandomFallback,
     getSummonArt,
     getSummonGallery,
@@ -59,6 +60,17 @@ if (typeof import.meta.glob !== 'function') {
       const url = getCharacterImage('becca');
       expect(typeof url).toBe('string');
       expect(url.includes('becca')).toBe(true);
+    });
+
+    test('resolves summon alias portraits from canonical gallery', () => {
+      const aliasUrl = getCharacterImage('jellyfish_electric');
+      expect(typeof aliasUrl).toBe('string');
+      expect(aliasUrl).not.toBe(getDefaultFallback());
+
+      const galleryUrls = getSummonGallery('jellyfish').map(entry => entry.url);
+      expect(Array.isArray(galleryUrls)).toBe(true);
+      expect(galleryUrls.length).toBeGreaterThan(0);
+      expect(galleryUrls).toContain(aliasUrl);
     });
 
     test('derives mimic portraits using manifest mirror rule', () => {

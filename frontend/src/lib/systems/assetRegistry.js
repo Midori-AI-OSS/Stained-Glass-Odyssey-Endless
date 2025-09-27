@@ -833,6 +833,14 @@ export const getAvailableSfxKeys = () => {
   return Array.from(keys);
 };
 
+const isSummonPortraitKey = key => {
+  const normalized = normalizeKey(key);
+  if (!normalized) return false;
+  if (manifestState.summonPortraitKeys.has(normalized)) return true;
+  if (defaultSummonPortraitKeys.has(normalized)) return true;
+  return false;
+};
+
 const resolvePortraitKey = id => {
   const normalized = normalizeKey(id);
   if (!normalized) return '';
@@ -841,6 +849,18 @@ const resolvePortraitKey = id => {
   }
   if (manifestState.portraitAliases.has(normalized)) {
     return manifestState.portraitAliases.get(normalized);
+  }
+  if (metadataOverrides.summonAliases.has(normalized)) {
+    const target = metadataOverrides.summonAliases.get(normalized);
+    if (isSummonPortraitKey(target)) {
+      return target;
+    }
+  }
+  if (manifestState.summonAliases.has(normalized)) {
+    const target = manifestState.summonAliases.get(normalized);
+    if (isSummonPortraitKey(target)) {
+      return target;
+    }
   }
   return normalized;
 };
@@ -1590,6 +1610,12 @@ export const registerAssetManifest = manifest => {
     entry.aliases.forEach(alias => manifestState.summonAliases.set(alias, entry.id));
     if (entry.portrait) {
       manifestState.summonPortraitKeys.add(entry.id);
+      manifestState.portraitCanonicals.add(entry.id);
+      entry.aliases.forEach(alias => {
+        if (!manifestState.portraitAliases.has(alias)) {
+          manifestState.portraitAliases.set(alias, entry.id);
+        }
+      });
     }
   });
 
