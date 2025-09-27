@@ -53,6 +53,57 @@ def _apply_tax_to_stock(
     return repriced
 
 
+def serialize_shop_payload(
+    party: Party,
+    stock: list[dict[str, Any]] | None,
+    pressure: int,
+    items_bought: int,
+    transactions: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    """Serialize a shop state without mutating the underlying room."""
+
+    repriced_stock = _apply_tax_to_stock(stock or [], pressure, items_bought)
+
+    try:
+        registry_map = relic_registry()
+    except Exception:
+        registry_map = {}
+
+    enriched_stock: list[dict[str, Any]] = []
+    for entry in repriced_stock:
+        enriched = dict(entry)
+        if enriched.get("type") == "relic":
+            rid = enriched.get("id")
+            stacks = party.relics.count(rid)
+            enriched["stacks"] = stacks
+            about = None
+            try:
+                cls = registry_map.get(rid)
+                if cls is not None:
+                    about = cls().describe(stacks + 1)
+            except Exception:
+                about = None
+            if about:
+                enriched["about"] = about
+        enriched_stock.append(enriched)
+
+    party_data = [_serialize(member) for member in party.members]
+
+    return {
+        "result": "shop",
+        "party": party_data,
+        "gold": party.gold,
+        "relics": party.relics,
+        "cards": party.cards,
+        "rdr": party.rdr,
+        "stock": enriched_stock,
+        "items_bought": items_bought,
+        "card": None,
+        "foes": [],
+        "transactions": transactions or [],
+    }
+
+
 def _apply_rdr_to_stars(stars: int, rdr: float) -> int:
     for threshold in (10.0, 10000.0):
         if stars >= 5 or rdr < threshold:
@@ -227,41 +278,12 @@ class ShopRoom(Room):
 
             self.node.stock = stock
 
-        # Enrich stock entries with stacking-aware descriptions for relics
-        enriched_stock: list[dict[str, Any]] = []
-        try:
-            registry_map = relic_registry()
-        except Exception:
-            registry_map = {}
-        for s in stock:
-            if s.get("type") == "relic":
-                rid = s.get("id")
-                stacks = party.relics.count(rid)
-                about = None
-                try:
-                    cls = registry_map.get(rid)
-                    if cls is not None:
-                        about = cls().describe(stacks + 1)
-                except Exception:
-                    about = None
-                enriched = {**s, "stacks": stacks}
-                if about:
-                    enriched["about"] = about
-                enriched_stock.append(enriched)
-            else:
-                enriched_stock.append(dict(s))
-
-        party_data = [_serialize(p) for p in party.members]
-        return {
-            "result": "shop",
-            "party": party_data,
-            "gold": party.gold,
-            "relics": party.relics,
-            "cards": party.cards,
-            "rdr": party.rdr,
-            "stock": enriched_stock,
-            "items_bought": items_bought,
-            "card": None,
-            "foes": [],
-            "transactions": transactions,
-        }
+        payload = serialize_shop_payload(
+            party,
+            stock,
+            self.node.pressure,
+            items_bought,
+            transactions=transactions,
+        )
+        self.node.stock = payload["stock"]
+        return payload

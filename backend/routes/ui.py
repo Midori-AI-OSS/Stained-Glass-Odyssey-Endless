@@ -14,6 +14,7 @@ from runs.lifecycle import battle_snapshots
 from runs.lifecycle import battle_tasks
 from runs.lifecycle import load_map
 from runs.lifecycle import save_map
+from runs.party_manager import load_party
 from services.asset_service import get_asset_manifest
 from services.reward_service import select_card
 from services.reward_service import select_relic
@@ -28,9 +29,10 @@ from services.run_service import update_party
 from services.run_service import wipe_save
 from tracking import log_game_action
 from tracking import log_menu_action
-from tracking import log_overlay_action
 from tracking import log_play_session_end
 from tracking import log_run_end
+
+from autofighter.rooms.shop import serialize_shop_payload
 
 bp = Blueprint("ui", __name__)
 
@@ -209,6 +211,32 @@ async def get_ui_state() -> tuple[str, int, dict[str, Any]]:
                     "current_room": current_room_type,
                     "next_room": next_room_type,
                 }
+            elif current_room_type == "shop" and not state.get("awaiting_next"):
+                stock_state = state.get("shop_stock", {})
+                stored_stock: list[dict[str, Any]] = []
+                if isinstance(stock_state, dict):
+                    stored_stock = stock_state.get(str(current_node.room_id), []) or []
+
+                try:
+                    items_bought = int(state.get("shop_items_bought", 0) or 0)
+                except (TypeError, ValueError):
+                    items_bought = 0
+
+                party_snapshot = await asyncio.to_thread(load_party, run_id)
+                shop_view = serialize_shop_payload(
+                    party_snapshot,
+                    stored_stock,
+                    getattr(current_node, "pressure", 0),
+                    items_bought,
+                )
+                shop_view.update(
+                    {
+                        "current_index": current_index,
+                        "current_room": current_room_type,
+                        "next_room": next_room_type,
+                    }
+                )
+                current_room_data = shop_view
             elif state.get("awaiting_next"):
                 # Provide basic state when awaiting next room
                 current_room_data = {
