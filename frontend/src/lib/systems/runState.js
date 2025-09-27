@@ -139,7 +139,9 @@ export function createRunStateStore(storageCandidate) {
 
       if (currentState && Object.prototype.hasOwnProperty.call(currentState, 'room_data')) {
         const roomDataPayload = currentState.room_data;
-        if (roomDataPayload != null) {
+        if (roomDataPayload == null) {
+          updates.roomData = null;
+        } else {
           updates.roomData = { ...roomDataPayload };
           if (mode === 'battle' && !roomDataPayload?.snapshot_missing) {
             updates.lastBattleSnapshot = { ...roomDataPayload };
