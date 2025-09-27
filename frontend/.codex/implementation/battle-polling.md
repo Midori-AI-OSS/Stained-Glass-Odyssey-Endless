@@ -6,7 +6,10 @@ three coordinated loops:
 
 1. **UI state polling** — mirrors `/ui` responses, applies them to
    `runStateStore`, and notifies registered handlers. This loop pauses whenever
-   `overlayBlocking`, `haltSync`, or a non-main overlay view is active.
+   `overlayBlocking`, `haltSync`, or a non-main overlay view is active. Shops now
+   return their full payloads on every `/ui` poll so `roomData` survives
+   repeated refreshes and the overlay stays mounted while players browse stock
+   or pending purchases.
 2. **Battle snapshot polling** — automatically starts when
    `runStateStore.battleActive` flips to `true` and a run id is present. The
    controller fetches `room_action(snapshot)` payloads, normalizes fighter

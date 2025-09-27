@@ -18,6 +18,7 @@ from services.asset_service import get_asset_manifest
 from services.reward_service import select_card
 from services.reward_service import select_relic
 from services.room_service import room_action
+from services.room_service import snapshot_shop_room
 from services.run_service import advance_room
 from services.run_service import backup_save
 from services.run_service import get_battle_events
@@ -28,7 +29,6 @@ from services.run_service import update_party
 from services.run_service import wipe_save
 from tracking import log_game_action
 from tracking import log_menu_action
-from tracking import log_overlay_action
 from tracking import log_play_session_end
 from tracking import log_run_end
 
@@ -191,7 +191,12 @@ async def get_ui_state() -> tuple[str, int, dict[str, Any]]:
 
             # Check if there's an active battle snapshot
             snap = battle_snapshots.get(run_id)
-            if snap is not None and current_room_type in {"battle-weak", "battle-normal", "battle-boss-floor"}:
+            if current_room_type == "shop" and not state.get("awaiting_next"):
+                try:
+                    current_room_data = await snapshot_shop_room(run_id)
+                except Exception:
+                    current_room_data = None
+            elif snap is not None and current_room_type in {"battle-weak", "battle-normal", "battle-boss-floor"}:
                 current_room_data = snap
             elif (
                 current_room_type in {"battle-weak", "battle-normal", "battle-boss-floor"}

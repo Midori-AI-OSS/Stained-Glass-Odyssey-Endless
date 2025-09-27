@@ -135,3 +135,63 @@ async def test_room_images(app_with_db):
         "battle-boss-floor",
         "shop",
     } <= data["images"].keys()
+
+
+@pytest.mark.asyncio
+async def test_ui_shop_state_persists(app_with_db):
+    app, db_path = app_with_db
+    client = app.test_client()
+
+    start_resp = await client.post(
+        "/ui/action",
+        json={"action": "start_run", "params": {"party": ["player"]}},
+    )
+    assert start_resp.status_code == 200
+    start_data = await start_resp.get_json()
+    run_id = start_data["run_id"]
+
+    conn = sqlcipher3.connect(db_path)
+    conn.execute("PRAGMA key = 'testkey'")
+    cur = conn.execute("SELECT map FROM runs WHERE id = ?", (run_id,))
+    row = cur.fetchone()
+    assert row is not None
+    state = json.loads(row[0])
+    rooms = state.get("rooms", [])
+    current_index = int(state.get("current", 0))
+    assert rooms and 0 <= current_index < len(rooms)
+    rooms[current_index]["room_type"] = "shop"
+    rooms[current_index]["pressure"] = rooms[current_index].get("pressure", 0) or 0
+    conn.execute("UPDATE runs SET map = ? WHERE id = ?", (json.dumps(state), run_id))
+    conn.commit()
+    conn.close()
+
+    room_resp = await client.post(
+        "/ui/action",
+        json={"action": "room_action", "params": {"room_id": "0", "action": ""}},
+    )
+    assert room_resp.status_code == 200
+    room_payload = await room_resp.get_json()
+    assert room_payload["result"] == "shop"
+
+    first_ui = await client.get("/ui")
+    assert first_ui.status_code == 200
+    first_data = await first_ui.get_json()
+    game_state = first_data.get("game_state") or {}
+    current_state = game_state.get("current_state") or {}
+    room_data = current_state.get("room_data")
+    assert room_data is not None
+    assert room_data.get("result") == "shop"
+    assert "gold" in room_data
+    assert isinstance(room_data.get("stock"), list)
+
+    second_ui = await client.get("/ui")
+    assert second_ui.status_code == 200
+    second_data = await second_ui.get_json()
+    second_room = (
+        (second_data.get("game_state") or {})
+        .get("current_state", {})
+        .get("room_data")
+    )
+    assert second_room is not None
+    assert second_room.get("result") == "shop"
+    assert second_room.get("stock") == room_data.get("stock")

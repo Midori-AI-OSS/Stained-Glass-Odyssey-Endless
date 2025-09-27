@@ -32,6 +32,7 @@ def _ensure_battle_logging_stub() -> None:
 
     writers.BattleLogger = BattleLogger  # type: ignore[attr-defined]
     writers.start_battle_logging = lambda *args, **kwargs: BattleLogger()  # noqa: E731
+    writers.start_run_logging = lambda *args, **kwargs: None  # noqa: E731
     writers.get_current_run_logger = lambda: BattleLogger()  # noqa: E731
     sys.modules["battle_logging.writers"] = writers
     setattr(battle_logging, "writers", writers)
@@ -41,14 +42,22 @@ def _ensure_user_level_stub() -> None:
     if "services.user_level_service" in sys.modules:
         return
 
-    services_pkg = sys.modules.get("services")
-    if services_pkg is None:
+    import importlib
+
+    try:
+        services_pkg = importlib.import_module("services")
+    except ModuleNotFoundError:
         services_pkg = types.ModuleType("services")
         sys.modules["services"] = services_pkg
 
     user_level = types.ModuleType("services.user_level_service")
     user_level.gain_user_exp = lambda *args, **kwargs: None  # noqa: E731
     user_level.get_user_level = lambda *args, **kwargs: 1  # noqa: E731
+    user_level.get_user_state = lambda *args, **kwargs: {  # noqa: E731
+        "level": 1,
+        "exp": 0,
+        "next_level_exp": 100,
+    }
     sys.modules["services.user_level_service"] = user_level
     setattr(services_pkg, "user_level_service", user_level)
 
@@ -58,12 +67,50 @@ def _ensure_tracking_stub() -> None:
         return
 
     tracking = types.ModuleType("tracking")
-    tracking.log_battle_summary = lambda *args, **kwargs: None  # noqa: E731
-    tracking.log_game_action = lambda *args, **kwargs: None  # noqa: E731
-    tracking.log_play_session_end = lambda *args, **kwargs: None  # noqa: E731
-    tracking.log_run_end = lambda *args, **kwargs: None  # noqa: E731
-    tracking.log_menu_action = lambda *args, **kwargs: None  # noqa: E731
-    tracking.log_overlay_action = lambda *args, **kwargs: None  # noqa: E731
+    async def _async_noop(*args, **kwargs):  # noqa: ANN001, D401
+        return None
+
+    tracking.log_battle_summary = _async_noop
+    tracking.log_game_action = _async_noop
+    tracking.log_play_session_end = _async_noop
+    tracking.log_play_session_start = _async_noop
+    tracking.log_run_end = _async_noop
+    tracking.log_run_start = _async_noop
+    tracking.log_menu_action = _async_noop
+    tracking.log_overlay_action = _async_noop
+    tracking.log_settings_change = _async_noop
+    tracking.log_shop_transaction = _async_noop
+    tracking.log_character_pull = _async_noop
+    tracking.log_login_event = _async_noop
+    tracking.log_card_acquisition = _async_noop
+    tracking.log_deck_change = _async_noop
+    tracking.log_relic_acquisition = _async_noop
+    tracking.log_event_choice = _async_noop
+
+    class _DummyTrackingConnection:
+        def __enter__(self):  # noqa: D401
+            return self
+
+        def __exit__(self, exc_type, exc, tb):  # noqa: ANN001, D401
+            return False
+
+        def execute(self, *_args, **_kwargs):  # noqa: ANN001, D401
+            class _DummyCursor:
+                description: list[tuple[str, ...]] = []
+
+                def fetchall(self) -> list[tuple[object, ...]]:  # noqa: D401
+                    return []
+
+                def fetchone(self):  # noqa: D401, ANN001
+                    return (0,)
+
+            return _DummyCursor()
+
+    class _DummyTrackingManager:
+        def connection(self):  # noqa: D401
+            return _DummyTrackingConnection()
+
+    tracking.get_tracking_manager = lambda: _DummyTrackingManager()  # noqa: E731
     sys.modules["tracking"] = tracking
 
 
@@ -79,8 +126,12 @@ def _ensure_options_stub() -> None:
     def get_option(*_args, default=None, **_kwargs):  # noqa: ANN001, D401 - simple stub
         return default
 
+    def set_option(*_args, **_kwargs):  # noqa: ANN001, D401 - simple stub
+        return None
+
     options.OptionKey = OptionKey  # type: ignore[attr-defined]
     options.get_option = get_option  # type: ignore[attr-defined]
+    options.set_option = set_option  # type: ignore[attr-defined]
     sys.modules["options"] = options
 
 

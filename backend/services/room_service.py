@@ -342,7 +342,12 @@ async def battle_room(run_id: str, data: dict[str, Any]) -> dict[str, Any]:
     return result
 
 
-async def shop_room(run_id: str, data: dict[str, Any]) -> dict[str, Any]:
+async def _run_shop_room(
+    run_id: str,
+    data: dict[str, Any],
+    *,
+    persist: bool,
+) -> dict[str, Any]:
     state, rooms = await asyncio.to_thread(load_map, run_id)
     if not rooms or not (0 <= int(state.get("current", 0)) < len(rooms)):
         snap = battle_snapshots.get(run_id)
@@ -352,7 +357,10 @@ async def shop_room(run_id: str, data: dict[str, Any]) -> dict[str, Any]:
     node = rooms[state["current"]]
     if node.room_type != "shop":
         raise ValueError("invalid room")
-    stock_state = state.setdefault("shop_stock", {})
+    if persist:
+        stock_state = state.setdefault("shop_stock", {})
+    else:
+        stock_state = state.get("shop_stock", {}) or {}
     node_stock = stock_state.get(str(node.room_id))
     if node_stock is not None:
         setattr(node, "stock", node_stock)
@@ -361,40 +369,51 @@ async def shop_room(run_id: str, data: dict[str, Any]) -> dict[str, Any]:
     room = ShopRoom(node)
     party = await asyncio.to_thread(load_party, run_id)
     result = await room.resolve(party, data)
-    stock_state[str(node.room_id)] = getattr(node, "stock", [])
-    state["shop_stock"] = stock_state
-    state["shop_items_bought"] = int(getattr(node, "items_bought", items_bought))
     action = data.get("action", "")
     next_type = None
     if action == "leave":
-        state["awaiting_next"] = True
         next_type = (
             rooms[state["current"] + 1].room_type
             if state["current"] + 1 < len(rooms)
             else None
         )
-    else:
+        if persist:
+            state["awaiting_next"] = True
+    elif persist:
         state["awaiting_next"] = False
-    await asyncio.to_thread(save_map, run_id, state)
-    await asyncio.to_thread(save_party, run_id, party)
+    if persist:
+        stock_state[str(node.room_id)] = getattr(node, "stock", [])
+        state["shop_stock"] = stock_state
+        state["shop_items_bought"] = int(getattr(node, "items_bought", items_bought))
+        await asyncio.to_thread(save_map, run_id, state)
+        await asyncio.to_thread(save_party, run_id, party)
     payload = {**result}
     if next_type is not None:
         payload["next_room"] = next_type
     transactions = result.get("transactions", []) if isinstance(result, dict) else []
-    for tx in transactions:
-        try:
-            await log_shop_transaction(
-                run_id,
-                str(node.room_id),
-                tx.get("item_type"),
-                tx.get("item_id"),
-                tx.get("cost"),
-                tx.get("action", "purchase"),
-                details=tx,
-            )
-        except Exception:
-            pass
+    if persist:
+        for tx in transactions:
+            try:
+                await log_shop_transaction(
+                    run_id,
+                    str(node.room_id),
+                    tx.get("item_type"),
+                    tx.get("item_id"),
+                    tx.get("cost"),
+                    tx.get("action", "purchase"),
+                    details=tx,
+                )
+            except Exception:
+                pass
     return payload
+
+
+async def shop_room(run_id: str, data: dict[str, Any]) -> dict[str, Any]:
+    return await _run_shop_room(run_id, data, persist=True)
+
+
+async def snapshot_shop_room(run_id: str) -> dict[str, Any]:
+    return await _run_shop_room(run_id, {"action": ""}, persist=False)
 
 
 async def chat_room(run_id: str, data: dict[str, Any]) -> dict[str, Any]:
