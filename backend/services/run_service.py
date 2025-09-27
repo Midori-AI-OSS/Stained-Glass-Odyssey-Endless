@@ -13,8 +13,9 @@ from battle_logging.writers import start_run_logging
 from runs.encryption import get_fernet
 from runs.encryption import get_save_manager
 from runs.lifecycle import battle_snapshots
-from runs.lifecycle import battle_tasks
 from runs.lifecycle import load_map
+from runs.lifecycle import purge_all_run_state
+from runs.lifecycle import purge_run_state
 from runs.lifecycle import save_map
 from runs.party_manager import _assign_damage_type
 from runs.party_manager import _describe_passives
@@ -344,10 +345,7 @@ async def advance_room(run_id: str) -> dict[str, object]:
         raise ValueError("pending rewards must be collected before advancing")
 
     # Reset live battle state when advancing
-    battle_snapshots.pop(run_id, None)
-    task = battle_tasks.pop(run_id, None)
-    if task and not task.done():
-        task.cancel()
+    purge_run_state(run_id)
 
     previous_index = int(state.get("current", 0))
     total_rooms_cleared = int(state.get("total_rooms_cleared", 0))
@@ -476,6 +474,7 @@ async def wipe_save() -> None:
                 "CREATE TABLE IF NOT EXISTS damage_types (id TEXT PRIMARY KEY, type TEXT)"
             )
 
+    purge_all_run_state()
     await asyncio.to_thread(do_wipe)
 
 
@@ -534,4 +533,5 @@ async def restore_save(blob: bytes) -> None:
                 "INSERT INTO damage_types (id, type) VALUES (?, ?)", payload["damage_types"]
             )
 
+    purge_all_run_state()
     await asyncio.to_thread(restore_data)
