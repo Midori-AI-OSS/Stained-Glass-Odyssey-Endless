@@ -6,10 +6,11 @@ from autofighter.mapgen import MapNode
 from autofighter.party import Party
 from autofighter.rooms.battle.core import BattleRoom
 from plugins.damage_types._base import DamageTypeBase
-from plugins.foes._base import FoeBase
-from plugins.foes.slime import Slime
-from plugins.players._base import PlayerBase
-from plugins.players.carly import Carly
+from plugins.characters import CHARACTER_FOES
+from plugins.characters.foe_base import FoeBase
+from plugins.characters._base import PlayerBase
+from plugins.characters.carly import Carly
+from plugins.characters.slime import Slime
 
 
 def test_base_classes_assign_damage_type() -> None:
@@ -37,7 +38,8 @@ async def test_battle_uses_preset_damage_types() -> None:
     )
     room = BattleRoom(node)
     player = Carly()
-    foe = Slime()
+    foe_cls = CHARACTER_FOES[Slime.id]
+    foe = foe_cls()
     party = Party(members=[player])
     await room.resolve(party, {}, foe=foe)
     assert player.damage_type.id == "Light"

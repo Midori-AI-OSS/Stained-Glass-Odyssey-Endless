@@ -20,6 +20,7 @@
   import LLMSettings from './LLMSettings.svelte';
   import GameplaySettings from './GameplaySettings.svelte';
   import { saveSettings, clearSettings, clearAllClientData } from '../systems/settingsStorage.js';
+  import { setManualSyncHalt } from '../systems/overlayState.js';
 
   const MIN_ANIMATION_SPEED = 0.1;
   const MAX_ANIMATION_SPEED = 2;
@@ -210,7 +211,7 @@
     endingRun = true;
     endRunStatus = runId ? 'Ending run and cleaning up…' : 'Ending all runs…';
     // Immediately halt any battle snapshot polling while ending the run
-    try { if (typeof window !== 'undefined') window.afHaltSync = true; } catch {}
+    setManualSyncHalt(true);
 
     let cleaned = false;
     if (runId) {

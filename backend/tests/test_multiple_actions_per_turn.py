@@ -6,7 +6,7 @@ from autofighter.cards import apply_cards
 from autofighter.cards import award_card
 from autofighter.party import Party
 from autofighter.stats import BUS
-from plugins.players import player as player_mod
+from plugins.characters import player as player_mod
 
 
 @pytest.mark.asyncio

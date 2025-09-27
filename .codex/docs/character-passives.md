@@ -26,7 +26,7 @@ Passives follow the plugin architecture pattern:
    - Each passive is a self-contained plugin class
    - Standard interface with `apply()` method
 
-3. **Character Integration** (`backend/plugins/players/`)
+3. **Character Integration** (`backend/plugins/characters/`)
    - Characters declare their passives via `passives: list[str]` field
    - Automatic passive loading during character initialization
 
@@ -88,7 +88,7 @@ class CharacterPassiveName:
         target.add_effect(effect)
 ```
 
-2. **Link to Character** (`backend/plugins/players/character.py`)
+2. **Link to Character** (`backend/plugins/characters/character.py`)
 
 ```python
 @dataclass
@@ -138,7 +138,7 @@ class CarlyLightGuardian:
             )
             target.add_effect(effect)
 
-# backend/plugins/players/carly.py
+# backend/plugins/characters/carly.py
 @dataclass
 class Carly(PlayerBase):
     id = "carly"

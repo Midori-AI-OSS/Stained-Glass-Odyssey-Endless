@@ -6,7 +6,7 @@ import random
 import time
 from typing import Any
 
-from plugins import players as player_plugins
+from plugins import characters as player_plugins
 from plugins.damage_types import ALL_DAMAGE_TYPES
 
 from .save_manager import SaveManager

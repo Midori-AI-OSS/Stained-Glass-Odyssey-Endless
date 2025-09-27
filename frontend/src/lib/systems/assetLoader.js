@@ -2,83 +2,59 @@
 
 import { Flame, Snowflake, Zap, Sun, Moon, Wind, Circle } from 'lucide-svelte';
 
-// Safely normalize a URL string coming from Vite globs
-function normalizeUrl(src) {
-  if (!src) return '';
-  // If Vite already gave us an absolute or root-relative path, use it as-is.
-  if (
-    typeof src === 'string' &&
-    (src.startsWith('http') || src.startsWith('blob:') || src.startsWith('data:') || src.startsWith('/'))
-  ) {
-    return src;
-  }
-  return new URL(src, import.meta.url).href;
-}
+import {
+  advanceCharacterImage as registryAdvanceCharacterImage,
+  clearCharacterImageCache as registryClearCharacterImageCache,
+  getAssetRegistryVersion,
+  getAvailableCharacterIds as registryGetAvailableCharacterIds,
+  getAvailableSummonIds,
+  getCharacterImage as registryGetCharacterImage,
+  getDefaultFallback,
+  getHourlyBackground as registryGetHourlyBackground,
+  getPortraitRarityFolders,
+  getRandomBackground as registryGetRandomBackground,
+  getRandomFallback as registryGetRandomFallback,
+  getRewardArt,
+  getSummonArt as registryGetSummonArt,
+  getSummonGallery,
+  getGlyphArt,
+  getMaterialFallbackIcon,
+  getMaterialIcon,
+  getDotVariantPool,
+  getDotFallback,
+  getEffectIconUrl,
+  getEffectFallback,
+  hasCharacterGallery as registryHasCharacterGallery,
+  onMaterialIconError,
+  registerAssetManifest,
+  registerAssetMetadata,
+  resetAssetRegistryOverrides,
+  stringHashIndex
+} from './assetRegistry.js';
 
-// Load all character images (including folders and fallbacks)
-// Note: do NOT guard import.meta.glob with typeof checks — Vite must
-// statically analyze these calls to inline the module map at build time.
-const characterModules = Object.fromEntries(
-  Object.entries(
-    import.meta.glob('../assets/characters/**/*.png', {
-      eager: true,
-      import: 'default',
-      query: '?url'
-    })
-  ).map(([p, src]) => [p, normalizeUrl(src)])
-);
-
-const fallbackModules = Object.fromEntries(
-  Object.entries(
-    import.meta.glob('../assets/characters/fallbacks/*.png', {
-      eager: true,
-      import: 'default',
-      query: '?url'
-    })
-  ).map(([p, src]) => [p, normalizeUrl(src)])
-);
-
-const backgroundModules = Object.fromEntries(
-  Object.entries(
-    import.meta.glob('../assets/backgrounds/*.png', {
-      eager: true,
-      import: 'default',
-      query: '?url'
-    })
-  ).map(([p, src]) => [p, normalizeUrl(src)])
-);
-
-const lightstreamSwordModules = Object.fromEntries(
-  Object.entries(
-    import.meta.glob('../assets/**/lightstreamswords/**/*.png', {
-      eager: true,
-      import: 'default',
-      query: '?url'
-    })
-  ).map(([p, src]) => [p, normalizeUrl(src)])
-);
-
-// Load DoT icons by element folder (e.g., ./assets/dots/fire/*.png)
-const dotModules = Object.fromEntries(
-  Object.entries(
-    import.meta.glob('../assets/dots/*/*.png', {
-      eager: true,
-      import: 'default',
-      query: '?url'
-    })
-  ).map(([p, src]) => [p, normalizeUrl(src)])
-);
-
-// Load effect icons by type folder (e.g., ./assets/effects/buffs/*.png)
-const effectModules = Object.fromEntries(
-  Object.entries(
-    import.meta.glob('../assets/effects/*/*.png', {
-      eager: true,
-      import: 'default',
-      query: '?url'
-    })
-  ).map(([p, src]) => [p, normalizeUrl(src)])
-);
+export {
+  registryAdvanceCharacterImage as advanceCharacterImage,
+  registryClearCharacterImageCache as clearCharacterImageCache,
+  registryGetAvailableCharacterIds as getAvailableCharacterIds,
+  registryGetCharacterImage as getCharacterImage,
+  registryGetHourlyBackground as getHourlyBackground,
+  registryGetRandomBackground as getRandomBackground,
+  registryGetRandomFallback as getRandomFallback,
+  getRewardArt,
+  getGlyphArt,
+  getMaterialIcon,
+  getMaterialFallbackIcon,
+  onMaterialIconError,
+  registryHasCharacterGallery as hasCharacterGallery,
+  registryGetSummonArt as getSummonArt,
+  getPortraitRarityFolders,
+  registerAssetManifest,
+  registerAssetMetadata,
+  resetAssetRegistryOverrides,
+  getDefaultFallback,
+  getSummonGallery,
+  getAvailableSummonIds
+};
 
 const ELEMENT_ICONS = {
   fire: Flame,
@@ -199,170 +175,7 @@ function shiftColor(hex, ratio) {
   return `#${combined.toString(16).padStart(6, '0')}`;
 }
 
-// Parse character assets into organized structure
-const characterAssets = {};
-const fallbackAssets = Object.values(fallbackModules);
-const backgroundAssets = Object.values(backgroundModules);
-const defaultFallback = normalizeUrl('../assets/midoriai-logo.png');
-const DOT_DEFAULT = normalizeUrl('../assets/dots/generic/generic1.png');
-const EFFECT_DEFAULT = normalizeUrl('../assets/effects/buffs/generic_buff.png');
-
-// Organize character assets by character ID (folder or single file)
-Object.keys(characterModules).forEach(p => {
-  const match = p.match(/assets\/characters\/(.+?)\/(.+?)\.png$/) ||
-                p.match(/assets\/characters\/(.+?)\.png$/);
-  
-  if (match) {
-    const [, charId, fileName] = match;
-    const actualCharId = fileName ? charId : charId.replace('.png', '');
-    
-    if (!characterAssets[actualCharId]) {
-      characterAssets[actualCharId] = [];
-    }
-
-    // Skip fallbacks folder
-    if (actualCharId !== 'fallbacks') {
-      characterAssets[actualCharId].push(characterModules[p]);
-    }
-  }
-});
-
-// Seeded random function for consistent hourly backgrounds
-function seededRandom(seed) {
-  const x = Math.sin(seed) * 10000;
-  return x - Math.floor(x);
-}
-
-// Get current hour seed (changes every hour)
-function getHourSeed() {
-  const now = new Date();
-  return now.getFullYear() * 1000000 + 
-         now.getMonth() * 10000 + 
-         now.getDate() * 100 + 
-         now.getHours();
-}
-
-// Known folder aliases when the on-disk folder name differs from character id
-const CHARACTER_ASSET_ALIASES = {
-  lady_echo: 'echo'
-};
-
-// Helper: resolve asset key for a given character id (handles aliases/patterns)
-function resolveCharacterKey(characterId) {
-  let key = CHARACTER_ASSET_ALIASES[characterId] || characterId;
-  if (typeof key === 'string' && key.startsWith('jellyfish_')) key = 'jellyfish';
-  return key;
-}
-
-// Get image from character folder or fallback
-export function getCharacterImage(characterId, _isPlayer = false) {
-  if (!characterId) return defaultFallback;
-
-  // Resolve folder alias when id differs from asset folder
-  let key = resolveCharacterKey(characterId);
-
-  // If this is the Mimic, always mirror the Player's chosen image for this session
-  if (characterId === 'mimic') {
-    // Return cached player image if present
-    const cachedPlayer = characterImageCache.get('player');
-    if (cachedPlayer) return cachedPlayer;
-    // Otherwise, choose and cache the player's image using the same rules
-    const playerList = characterAssets['player'];
-    if (Array.isArray(playerList) && playerList.length > 0) {
-      const rnd = Math.floor(Math.random() * playerList.length);
-      const chosen = playerList[rnd];
-      characterImageCache.set('player', chosen);
-      return chosen;
-    }
-    if (fallbackAssets.length > 0) {
-      const rnd = Math.floor(Math.random() * fallbackAssets.length);
-      const chosen = fallbackAssets[rnd];
-      characterImageCache.set('player', chosen);
-      return chosen;
-    }
-    characterImageCache.set('player', defaultFallback);
-    return defaultFallback;
-  }
-
-  // First, return any cached image (prevents reload flicker on re-renders)
-  const cached = characterImageCache.get(characterId);
-  if (cached) return cached;
-
-  // Player/Lady Echo: random-once-per-page-load (session-cached)
-  if (_isPlayer === true || characterId === 'lady_echo') {
-    const list = characterAssets[key];
-    if (Array.isArray(list) && list.length > 0) {
-      const rnd = Math.floor(Math.random() * list.length);
-      const chosen = list[rnd];
-      characterImageCache.set(characterId, chosen);
-      return chosen;
-    }
-    if (fallbackAssets.length > 0) {
-      const rnd = Math.floor(Math.random() * fallbackAssets.length);
-      const chosen = fallbackAssets[rnd];
-      characterImageCache.set(characterId, chosen);
-      return chosen;
-    }
-    characterImageCache.set(characterId, defaultFallback);
-    return defaultFallback;
-  }
-
-  // Any character with a folder/gallery: random-once-per-page-load (session-cached)
-  if (characterAssets[key] && characterAssets[key].length > 0) {
-    const images = characterAssets[key];
-    if (images.length > 1) {
-      const rnd = Math.floor(Math.random() * images.length);
-      const chosen = images[rnd];
-      characterImageCache.set(characterId, chosen);
-      return chosen;
-    }
-    // Single image in folder — just use it
-    const chosen = images[0];
-    characterImageCache.set(characterId, chosen);
-    return chosen;
-  }
-
-  if (fallbackAssets.length > 0) {
-    const idx = stringHashIndex(characterId, fallbackAssets.length);
-    const chosen = fallbackAssets[idx];
-    characterImageCache.set(characterId, chosen);
-    return chosen;
-  }
-
-  characterImageCache.set(characterId, defaultFallback);
-  return defaultFallback;
-}
-
-// Get background with hourly consistency
-export function getHourlyBackground() {
-  if (backgroundAssets.length === 0) return defaultFallback;
-  
-  const seed = getHourSeed();
-  const randomIndex = Math.floor(seededRandom(seed) * backgroundAssets.length);
-  return backgroundAssets[randomIndex];
-}
-
-// Get random background (for immediate random needs)
-export function getRandomBackground() {
-  if (backgroundAssets.length === 0) return defaultFallback;
-
-  const randomIndex = Math.floor(Math.random() * backgroundAssets.length);
-  return backgroundAssets[randomIndex];
-}
-
-// Get all available character IDs
-export function getAvailableCharacterIds() {
-  return Object.keys(characterAssets);
-}
-
-// Get random fallback image
-export function getRandomFallback() {
-  if (fallbackAssets.length === 0) return defaultFallback;
-
-  const randomIndex = Math.floor(Math.random() * fallbackAssets.length);
-  return fallbackAssets[randomIndex];
-}
-
+const defaultFallback = getDefaultFallback();
 export function getElementIcon(element) {
   return ELEMENT_ICONS[(element || '').toLowerCase()] || Circle;
 }
@@ -395,26 +208,6 @@ export function getDamageTypeVisual(typeId, options = {}) {
     color: getDamageTypeColor(typeId, options)
   };
 }
-
-// Build DoT assets map: { fire: [urls...], ice: [...], ... }
-const dotAssets = (() => {
-  const map = {
-    fire: [],
-    ice: [],
-    lightning: [],
-    light: [],
-    dark: [],
-    wind: [],
-    generic: []
-  };
-  for (const [p, url] of Object.entries(dotModules)) {
-    const m = p.match(/assets\/dots\/(\w+)\//);
-    const key = (m?.[1] || 'generic').toLowerCase();
-    if (!map[key]) map[key] = [];
-    map[key].push(url);
-  }
-  return map;
-})();
 
 function tokenizeSwordPath(path) {
   const tokens = [];
@@ -454,7 +247,14 @@ function inferSwordElementFromPath(path) {
   return 'generic';
 }
 
-const lightstreamSwordAssets = (() => {
+let cachedSwordAssets;
+let cachedSwordVersion = -1;
+
+function buildLightstreamSwordAssets() {
+  const version = getAssetRegistryVersion();
+  if (cachedSwordAssets && cachedSwordVersion === version) {
+    return cachedSwordAssets;
+  }
   const map = {
     fire: [],
     ice: [],
@@ -464,19 +264,28 @@ const lightstreamSwordAssets = (() => {
     wind: [],
     generic: []
   };
-  for (const [p, url] of Object.entries(lightstreamSwordModules)) {
-    const element = inferSwordElementFromPath(p);
+  const entries = getSummonGallery('lightstreamswords');
+  for (const entry of entries) {
+    let element = entry?.metadata?.element
+      ? normalizeDamageTypeId(entry.metadata.element)
+      : inferSwordElementFromPath(entry.path || entry.url);
+    if (!LIGHTSTREAM_SWORD_ELEMENTS.has(element)) {
+      element = 'generic';
+    }
     if (!map[element]) map[element] = [];
-    map[element].push(url);
+    map[element].push(entry.url);
   }
+  cachedSwordAssets = map;
+  cachedSwordVersion = version;
   return map;
-})();
+}
 
 function ensureSwordList(element) {
+  const map = buildLightstreamSwordAssets();
   const key = normalizeDamageTypeId(element);
-  const list = lightstreamSwordAssets[key];
+  const list = map[key];
   if (Array.isArray(list) && list.length) return list;
-  const generic = lightstreamSwordAssets.generic || [];
+  const generic = map.generic || [];
   return generic.length ? generic : [];
 }
 
@@ -513,25 +322,6 @@ export function getLightstreamSwordVisual(typeId, options = {}) {
   };
 }
 
-// Build Effect assets map: { buffs: {name: url, ...}, debuffs: {name: url, ...} }
-const effectAssets = (() => {
-  const map = {
-    buffs: {},
-    debuffs: {}
-  };
-  for (const [p, url] of Object.entries(effectModules)) {
-    const m = p.match(/assets\/effects\/(\w+)\/(\w+)\.png$/);
-    if (m) {
-      const [, type, name] = m;
-      const effectType = type.toLowerCase();
-      const effectName = name.toLowerCase();
-      if (!map[effectType]) map[effectType] = {};
-      map[effectType][effectName] = url;
-    }
-  }
-  return map;
-})();
-
 // Internal helper to infer an element from a DoT id/name
 function inferElementFromKey(key) {
   const k = String(key || '').toLowerCase();
@@ -567,10 +357,11 @@ export function getDotImage(effect) {
     }
   } catch {}
   if (!element) element = inferElementFromKey(key);
-  const list = dotAssets[element] || dotAssets.generic || [];
-  if (list.length === 0) return DOT_DEFAULT || defaultFallback;
+  const list = getDotVariantPool(element);
+  const fallback = getDotFallback() || defaultFallback;
+  if (list.length === 0) return fallback;
   const idx = stringHashIndex(key || element, list.length);
-  return list[idx] || DOT_DEFAULT || defaultFallback;
+  return list[idx] || fallback;
 }
 
 // Internal helper to infer effect type (buff vs debuff) from modifiers
@@ -634,68 +425,22 @@ function getEffectIconName(effect) {
 // Falls back to generic buff/debuff if no specific icon is found.
 export function getEffectImage(effect) {
   if (!effect || typeof effect !== 'object') {
-    return EFFECT_DEFAULT || defaultFallback;
+    return getEffectFallback('buffs') || defaultFallback;
   }
-  
+
   const effectType = inferEffectType(effect);
   const iconName = getEffectIconName(effect);
-  
+
   // Try to find the specific icon
-  const iconUrl = effectAssets[effectType]?.[iconName];
+  const iconUrl = getEffectIconUrl(effectType, iconName);
   if (iconUrl) return iconUrl;
-  
+
   // Fall back to generic for this effect type
   const genericIcon = effectType === 'debuffs' ? 'generic_debuff' : 'generic_buff';
-  const genericUrl = effectAssets[effectType]?.[genericIcon];
+  const genericUrl = getEffectIconUrl(effectType, genericIcon);
   if (genericUrl) return genericUrl;
-  
+
   // Final fallback
-  return EFFECT_DEFAULT || defaultFallback;
-}
-
-// Export assets for debugging
-export { characterAssets, fallbackAssets, backgroundAssets, effectAssets };
-
-// Internal: cache and helpers for stable image selection
-const characterImageCache = new Map();
-
-function stringHashIndex(str, modulo) {
-  let h = 0;
-  for (let i = 0; i < str.length; i++) {
-    h = (h << 5) - h + str.charCodeAt(i);
-    h |= 0;
-  }
-  const idx = Math.abs(h) % Math.max(modulo, 1);
-  return idx;
-}
-
-export function clearCharacterImageCache() {
-  characterImageCache.clear();
-}
-
-// Public: whether a character has a gallery (more than one image) available
-export function hasCharacterGallery(characterId) {
-  if (!characterId) return false;
-  const key = resolveCharacterKey(characterId);
-  const list = characterAssets[key];
-  return Array.isArray(list) && list.length > 1;
-}
-
-// Public: advance cached character image to the next one in its gallery
-// Returns the chosen image url (or current one if no change)
-export function advanceCharacterImage(characterId) {
-  if (!characterId) return defaultFallback;
-  const key = resolveCharacterKey(characterId);
-  const list = characterAssets[key];
-  if (!Array.isArray(list) || list.length === 0) {
-    return characterImageCache.get(characterId) || getCharacterImage(characterId);
-  }
-  // Determine current index by cache or selection rule
-  const current = characterImageCache.get(characterId) || getCharacterImage(characterId);
-  let idx = list.indexOf(current);
-  if (idx < 0) idx = 0;
-  const nextIdx = (idx + 1) % list.length;
-  const next = list[nextIdx];
-  characterImageCache.set(characterId, next);
-  return next;
+  const fallback = getEffectFallback(effectType) || getEffectFallback('buffs');
+  return fallback || defaultFallback;
 }

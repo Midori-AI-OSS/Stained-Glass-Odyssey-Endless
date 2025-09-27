@@ -16,6 +16,10 @@ Implementation details:
   `--el-5darker`, and `--el-5lighter` for a smooth gradient. The animated
   background is applied via `::before` and transitions opacity on selection to
   avoid abrupt starts.
+- `PartyPicker.svelte` loads `/players` metadata into
+  `replaceCharacterMetadata()` so roster filtering and portrait rendering can
+  rely on backend-provided `ui` flags (e.g., `non_selectable`, `portrait_pool`)
+  instead of comparing raw ids.
 - `PartyRoster.svelte` adds a header showing the number of selected party
   members (`X / 5`) and provides sorting controls for name, element, or id with
   an ascending/descending toggle. Selected members are always grouped at the
@@ -41,4 +45,15 @@ Implementation details:
   upgrade sheet reuses damage-type colors/icons, respects Reduced Motion, and
   exposes `open-upgrade`, `close-upgrade`, and `request-upgrade` events for the
   picker to handle.
+
+## Party seeding and hydration
+
+- The root page now waits for `/players` roster metadata before seeding
+  `selectedParty`. When metadata is available, the store keeps any persisted
+  selections (with placeholder ids stripped) or falls back to the first
+  selectable roster entry (preferring the main player).
+- Placeholder ids such as `sample_player` are removed during hydration so saved
+  runs created before this change still load cleanly. If no playable roster
+  entries are returned, the UI leaves the party empty until the user chooses a
+  lineup.
 

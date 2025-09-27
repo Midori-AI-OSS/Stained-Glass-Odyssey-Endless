@@ -1,43 +1,48 @@
-# Player and Foe Reference
+# Character Roster Reference
 
-Player and Foe base classes assign a random damage type when one is not
-provided, and battle rooms respect these preset elements without selecting new
-types.
+The `plugins/characters/` package now hosts every combatant plugin, regardless
+of allegiance. Playable roster members inherit from `PlayerBase`, while AI
+opponents share `FoeBase`; both base classes reside in the same package so the
+shared logic for stats, memory, and voice metadata stays centralized.
 
-Each instance initializes its own LangChain ChromaDB memory tied to the current
-run. Use `send_lrm_message` to interact with the LRM and `receive_lrm_message`
-to log replies. Conversations remain isolated between combatants and reset for
-new runs.
+When a character does not define a damage type the base classes assign one
+randomly. Battle generation respects this element so characters remain consistent
+between runs.
 
-Each plugin may optionally define a `voice_sample`. `voice_gender` defaults to
-an appropriate value based on the character's `char_type` but can be
-overridden. When dialogue is generated, `generate_voice()` uses these hints and
-writes the resulting audio to `assets/voices/<id>.wav`.
+Each instance initializes LangChain-backed memory storage tied to the current
+run. Use `send_lrm_message` to interact with the memory system and
+`receive_lrm_message` to log responses. Conversations remain isolated per
+combatant and reset for new runs. Both bases also accept optional `voice_sample`
+and `voice_gender` metadata. When dialogue is generated the TTS pipeline writes
+audio assets to `assets/voices/<id>.wav` using those hints.
 
 ## LLM Integration
 
-Both players and foes support LLM interactions through their `lrm_memory` system:
+All characters support LLM interactions through their `lrm_memory` system:
 
-- **Memory System**: Uses ChromaDB vector storage with HuggingFace embeddings when LLM dependencies are available, falls back to simple in-memory conversation history otherwise
-- **Async LLM Loading**: The `send_lrm_message()` method now loads LLMs using `asyncio.to_thread()` to prevent blocking the event loop during model downloads/initialization
-- **Torch Dependencies**: Uses the centralized torch availability checker to gracefully handle missing LLM dependencies
-- **Fallback Behavior**: When LLM dependencies are unavailable, returns empty responses without errors
+- **Memory System**: ChromaDB vector storage with HuggingFace embeddings when
+  dependencies are available, otherwise a lightweight in-memory history.
+- **Async Loading**: `send_lrm_message()` uses `asyncio.to_thread()` so model
+  initialization never blocks the event loop.
+- **Torch Detection**: The centralized torch checker gracefully handles missing
+  GPU dependencies.
+- **Fallback Behavior**: When dependencies are unavailable, calls resolve to
+  empty responses instead of raising errors.
 
-The LLM system is fully optional - players and foes function normally without LLM dependencies installed.
+The LLM stack remains optional—the combat loop operates normally without it.
 
-## Player Roster
-All legacy characters from the Pygame version have been ported as plugins.
-Each entry notes the character's `CharacterType` and starting damage type.
-Players currently share placeholder stats of 1000 HP, 100 attack, 50 defense,
-5% crit rate, 2× crit damage, 1% effect hit, 100 mitigation, 0 dodge, 0.1 aggro,
-and 1 for remaining values. Aggro defaults to `0.1` for both players and foes.
+## Character Roster
 
-Player plugins also include a `gacha_rarity` field so the gacha system can
-automatically discover 5★ and 6★ recruits.
-Each player and foe defines `prompt` and `about` strings with placeholder text
-to support future character-specific prompts.
+All legacy combatants have been ported into `plugins/characters/`. The gacha
+system reads each plugin's `gacha_rarity` flag to seed five- and six-star pulls.
+Every entry also defines `prompt` and `about` strings for future narrative work.
 
-Passives generally shouldn't be capped unless a designer explicitly specifies a limit.
+Roster members share placeholder stats: 1000 HP, 100 attack, 50 defense, 5%
+crit chance, 2× crit damage, 1% effect hit, 100 mitigation, 0 dodge, and 1 for
+remaining values. Aggro defaults to `0.1` for both playable and hostile
+variants. Characters marked as "random" roll one of the six elements on first
+spawn and reuse it for future sessions. Passives should remain uncapped unless
+design calls out a limit explicitly.
 
 - **Ally** (B, random) – applies `ally_passive` on load to grant ally-specific bonuses.
 - **Becca** (B, random) – builds high attack but takes more damage from lower defense.
@@ -54,50 +59,38 @@ Passives generally shouldn't be capped unless a designer explicitly specifies a 
 - **Lady Lightning** (B, Lightning) – 5★ gacha recruit whose Stormsurge stacks add +3 Speed and +5% effect hit per action, then discharge into two-turn shocks that slow foes and cut 3% effect resistance while granting her a brief attack overload.
 - **Lady of Fire** (B, Fire) – baseline fighter themed around fire.
 - **Lady Storm** (B, Wind or Lightning, 6★) – rotates between slipstreaming allies and overcharging lightning. Supercell Convergence grants permanent tailwinds, alternating action buffs that haste the party or stack charges, and detonates charged hits for bonus damage and mitigation shred.
-- **Persona Light and Dark** (B, Light or Dark) – 6★ dual-persona duelist. `persona_light_and_dark_duality` flips her element after every action, bathing allies in Light-form mitigation pulses and heals before pivoting into Dark-form crit bursts that strip foe defenses.
 - **Lady Wind** (B, Wind) – 5★ aeromancer and twin of Lady Lightning whose manic, wind-lashed experiments leave her workspace in constant disarray. Tempest Guard wraps her in a permanent slipstream of dodge and mitigation, bleeds off stacks at the start of her turn, then adds one for every foe she critically strikes to fuel gust boosts and siphon a slice of incoming damage into healing.
 - **Luna** (B, Generic) – applies `luna_passive`; boss-ranked variants pre-summon astral swords that inherit her stats, mirror her action cadence, and funnel their hits into Lunar Reservoir charge.
 - **Mezzy** (B, random) – raises Max HP, takes less damage, and siphons stats from healthy allies each turn.
-- **PersonaIce** (A, Ice) – 5★ cryo tank who shields his sisters with Cryo Cycle, layering mitigation and thawing the stored frost into end-of-turn healing barriers for the party.
+- **Mimic** (B, random) – copies allied passives and mimics stat gains earned during battle.
+- **Persona Ice** (A, Ice) – 5★ cryo tank who shields his sisters with Cryo Cycle, layering mitigation and thawing the stored frost into end-of-turn healing barriers for the party.
+- **Persona Light and Dark** (B, Light or Dark) – 6★ dual-persona duelist. `persona_light_and_dark_duality` flips her element after every action, bathing allies in Light-form mitigation pulses and heals before pivoting into Dark-form crit bursts that strip foe defenses.
 - **Player** (C, chosen) – avatar representing the user and may select any non-Generic damage type.
+- **Slime** (C, random) – non-selectable training dummy that mirrors the baseline stat line and supplies fallback foes.
 
-Characters marked as "random" roll one of the six elements when first loaded
-and reuse that element in future sessions.
+## Hostile Variants
 
-## Foe Generation
-Foe plugins inherit from `FoeBase`, which mirrors `PlayerBase` stats but begins
-with minimal mitigation and vitality (0.001 each) that grow by 0.0001 on
-level-up. To keep encounters from stalling, foes regain health at one hundredth
-the player rate. Base battles spawn one foe plus one more for every five
-Pressure, capped at ten. Party size can add bonus foes using descending
-probability rolls: parties of two have a 35% chance at one extra; parties of
-three roll 35% for two extras and, if that fails, 75% for one. Larger parties
-continue this sequence, and the total foe count never exceeds ten.
-Each foe defeated during a battle temporarily raises the party's rare drop rate
-by 55% for that room, increasing gold rewards and element-based item drops.
+The package exposes a `CHARACTER_FOES` dictionary that maps roster IDs to
+automatically wrapped foe subclasses. When `plugins.characters` loads, each
+`PlayerBase` subclass receives a matching foe variant that mixes in `FoeBase`
+and applies a random adjective from the `themedadj` plugins. These wrappers are
+exported beside their player counterparts (for example, `AllyFoe`).
 
-Luna's foe variant is weighted to appear more often than other characters,
-including in boss encounters when she isn't already in the party.
+Encounter generation supplements any dedicated foe plugins with these wrapped
+variants. `autofighter.rooms.foes.catalog.load_catalog()` scans the
+`plugins/characters/` directory via the `PluginLoader`, filters out base classes,
+and merges in `CHARACTER_FOES` so the spawn table always contains a hostile form
+for every roster member.
 
-Foes also expose a `rank` field to describe encounter tier. Supported ranks are
-`normal`, `prime`, `glitched prime`, `boss`, and `glitched boss`. Battle and
-boss room responses include this field for every foe so the frontend can render
-appropriate tags or behaviors.
- 
-They are procedurally named by prefixing a randomly selected adjective plugin
-from `plugins/themedadj` to a player name. Adjective plugins are
-auto-discovered based on files in that directory, so adding a new adjective
-requires only dropping a file into the folder. Each adjective class applies its own
-stat changes derived from the legacy project—for example, **Atrocious** boosts
-max HP by 90% and attack by 10%. These adjustments are applied as persistent
-`StatModifier` buffs so base stats return to normal once the foe is defeated.
+`FoeBase` mirrors `PlayerBase` stats but starts with minimal mitigation and
+vitality to keep fights brisk. Supported `rank` values remain `normal`, `prime`,
+`glitched prime`, `boss`, and `glitched boss`. Battle and boss room responses
+include this field so the frontend can render appropriate tags. Adjective
+plugins still prefix foe names and apply stat modifiers through
+`StatModifier` buffs, ensuring those adjustments fall away once an encounter
+ends.
 
-Example: **Atrocious Luna** applies the adjective's stat bonuses to the base
-player stats and prefixes the foe's name, yielding a combatant whose title
-reflects its enhanced abilities.
-
-Development builds include a `Slime` foe plugin that reduces all baseline stats
-by 90% for simple battle testing. Standard battles may also spawn random player
-characters that are not currently in the party. These player foes are wrapped in
-`FoeBase` at load time, granting them foe-specific behaviors such as periodic
-HP regeneration via `maybe_regain`.
+Standard battles may also spawn characters that are not currently in the party.
+Because foe wrappers reuse the player implementations, they benefit from
+character-specific passives, customization hooks, and scaling logic without
+duplicating code.

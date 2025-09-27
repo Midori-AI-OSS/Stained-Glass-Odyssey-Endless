@@ -164,7 +164,7 @@
         party: roomData?.party || [],
         foes: roomData?.foes || [],
       });
-      startGameMusic(musicVolume, playlist);
+      startGameMusic(musicVolume, playlist, true, { reducedMotion });
     }
   }
 </script>

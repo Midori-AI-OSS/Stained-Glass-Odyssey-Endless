@@ -20,15 +20,16 @@ user_level_module.get_user_level = lambda *_, **__: 1
 sys.modules.setdefault("services.user_level_service", user_level_module)
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-import pytest
+import pytest  # noqa: E402
 
-from autofighter.mapgen import MapNode
-from autofighter.party import Party
-from autofighter.rooms import _build_foes
-from autofighter.rooms.foe_factory import SpawnTemplate
-from autofighter.rooms.foe_factory import get_foe_factory
-from plugins.foes.slime import Slime
-from plugins.players import Player
+from autofighter.mapgen import MapNode  # noqa: E402
+from autofighter.party import Party  # noqa: E402
+from autofighter.rooms import _build_foes  # noqa: E402
+from autofighter.rooms.foe_factory import SpawnTemplate  # noqa: E402
+from autofighter.rooms.foe_factory import get_foe_factory  # noqa: E402
+from plugins.characters import CHARACTER_FOES  # noqa: E402
+from plugins.characters import Player  # noqa: E402
+from plugins.characters.slime import Slime  # noqa: E402
 
 
 @pytest.fixture(autouse=True)
@@ -45,7 +46,9 @@ def test_high_stat_scaling_obeys_diminishing_returns(monkeypatch):
     monkeypatch.setattr("autofighter.rooms.foe_factory.random.random", lambda: 0.0)
 
     node = MapNode(room_id=1, room_type="battle-normal", floor=5, index=10, loop=3, pressure=12)
-    slime = Slime()
+    monkeypatch.setattr("plugins.characters.ADJ_CLASSES", [], raising=False)
+    slime_cls = CHARACTER_FOES[Slime.id]
+    slime = slime_cls()
     slime.set_base_stat("atk", 5000)
     baseline = slime.atk
 
@@ -62,7 +65,8 @@ def test_build_foes_respects_recent_weights_and_exclusions(monkeypatch):
     slime_template = factory.templates.get("slime")
     template_id = "slime"
     if slime_template is None:
-        slime_template = SpawnTemplate(id="dummy", cls=Slime)
+        slime_cls = CHARACTER_FOES[Slime.id]
+        slime_template = SpawnTemplate(id="dummy", cls=slime_cls)
         template_id = "dummy"
         monkeypatch.setattr(factory, "_templates", {template_id: slime_template}, raising=False)
     else:

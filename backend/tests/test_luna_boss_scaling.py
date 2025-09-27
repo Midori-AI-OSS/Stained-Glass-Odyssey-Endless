@@ -8,8 +8,8 @@ if str(_PROJECT_ROOT) not in sys.path:
 
 from autofighter.mapgen import MapNode  # noqa: E402
 from autofighter.rooms.utils import _scale_stats  # noqa: E402
-from plugins.players.bubbles import Bubbles  # noqa: E402
-from plugins.players.luna import Luna  # noqa: E402
+from plugins.characters.bubbles import Bubbles  # noqa: E402
+from plugins.characters.luna import Luna  # noqa: E402
 
 
 def _scale_player(cls, rank: str, seed: int):

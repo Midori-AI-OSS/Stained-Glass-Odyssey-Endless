@@ -1,7 +1,7 @@
 import pytest
 
 from autofighter.stats import Stats
-from plugins.foes._base import FoeBase
+from plugins.characters.foe_base import FoeBase
 
 
 def test_level_up_increases_mitigation_and_vitality(monkeypatch):

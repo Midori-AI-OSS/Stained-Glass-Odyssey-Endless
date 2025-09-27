@@ -8,7 +8,7 @@
   - Multi pulls list all items.
 - Allow skipping at any point to jump directly to the results menu.
 
-Adds a basic character pull system seeded from `plugins/players`.
+Adds a basic character pull system seeded from `plugins/characters`.
 Player plugins declare a `gacha_rarity` (5★ or 6★), and the manager builds
 its pools dynamically so new recruits become pullable without code changes.
 

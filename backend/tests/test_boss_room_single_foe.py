@@ -8,7 +8,7 @@ import pytest
 from autofighter.mapgen import MapNode
 from autofighter.party import Party
 from autofighter.rooms import utils
-from plugins.players import Player
+from plugins.characters import Player
 
 
 def _make_party(size: int) -> Party:

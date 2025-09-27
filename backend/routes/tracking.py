@@ -5,7 +5,6 @@ from typing import Any
 
 from quart import Blueprint
 from quart import jsonify
-
 from tracking import get_tracking_manager
 
 bp = Blueprint("tracking", __name__, url_prefix="/tracking")
@@ -50,7 +49,7 @@ async def run_detail(run_id: str):
             )
             members = _rows_to_dict(member_cur.description, member_cur.fetchall())
             battle_cur = conn.execute(
-                "SELECT room_id, turns, dmg_dealt, dmg_taken, victory, ts FROM battle_summaries WHERE run_id = ? ORDER BY ts",
+                "SELECT room_id, turns, dmg_dealt, dmg_taken, victory, logs_url, ts FROM battle_summaries WHERE run_id = ? ORDER BY ts",
                 (run_id,),
             )
             battles = _rows_to_dict(battle_cur.description, battle_cur.fetchall())

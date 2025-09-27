@@ -32,7 +32,13 @@ setup so tests can override `AF_DB_PATH` and `AF_DB_KEY` before the first call.
   of `AF_DB_PASSWORD`).
 - `tracking/migrations` bootstrap the schema, which records run metadata,
   battle summaries, menu interactions, deck changes, shop transactions, overlay
-  usage, gacha pulls, login events, and play session durations.
+  usage, gacha pulls, login events, and play session durations. Battle summary
+  rows include a `logs_url` pointer so downstream analytics can reference the
+  `/logs/<run_id>/battles/<index>` endpoints rather than storing duplicate
+  combat payloads.
+- Migration `002_add_logs_url_to_battle_summaries.sql` backfills the pointer on
+  existing telemetry databases and automatically skips if the column already
+  exists so fresh installs do not error when updating to the new schema.
 - `tracking.service` exposes async helpers (e.g., `log_run_start`,
   `log_battle_summary`, `log_menu_action`) that offload writes to background
   threads so gameplay coroutines remain responsive.

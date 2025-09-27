@@ -4,7 +4,7 @@ from battle_logging.writers import start_battle_logging
 import pytest
 
 from autofighter.stats import Stats
-from plugins.players.carly import Carly
+from plugins.characters.carly import Carly
 
 
 @pytest.mark.asyncio

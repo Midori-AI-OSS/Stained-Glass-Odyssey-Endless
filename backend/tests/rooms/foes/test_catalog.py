@@ -22,9 +22,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 
 from autofighter.rooms.foes import SpawnTemplate  # noqa: E402
 from autofighter.rooms.foes import load_catalog  # noqa: E402
-from plugins.foes._base import FoeBase  # noqa: E402
-from plugins.foes.slime import Slime  # noqa: E402
-from plugins.players.player import Player  # noqa: E402
+from plugins.characters.foe_base import FoeBase  # noqa: E402
+from plugins.characters.player import Player  # noqa: E402
+from plugins.characters.slime import Slime  # noqa: E402
 
 
 def test_catalog_exposes_spawn_templates_for_foes_and_players() -> None:
@@ -34,9 +34,11 @@ def test_catalog_exposes_spawn_templates_for_foes_and_players() -> None:
     slime_template = templates["slime"]
     assert isinstance(slime_template, SpawnTemplate)
     assert issubclass(slime_template.cls, FoeBase)
-    assert slime_template.cls.__name__ == Slime.__name__
-    assert slime_template.tags == frozenset(getattr(Slime, "spawn_tags", ()) or ())
-    assert slime_template.apply_adjective is False
+    assert slime_template.cls.__name__ == f"{Slime.__name__}Foe"
+    assert slime_template.tags == frozenset({"player_template"})
+    assert slime_template.apply_adjective is True
+
+    assert player_templates["slime"] is slime_template
 
     assert "player" in player_templates
     player_template = player_templates["player"]

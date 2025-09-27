@@ -1,7 +1,10 @@
 """Test configuration for backend suite."""
 
+from pathlib import Path
 import sys
 import types
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 
 def _ensure_battle_logging_stub() -> None:
@@ -15,6 +18,7 @@ def _ensure_battle_logging_stub() -> None:
 
     writers = types.ModuleType("battle_logging.writers")
     writers.end_battle_logging = lambda *args, **kwargs: None  # noqa: E731
+    writers.end_run_logging = lambda *args, **kwargs: None  # noqa: E731
 
     class BattleLogger:  # pragma: no cover - simple stub
         def __init__(self, *args, **kwargs) -> None:  # noqa: D401, ANN001
@@ -56,6 +60,10 @@ def _ensure_tracking_stub() -> None:
     tracking = types.ModuleType("tracking")
     tracking.log_battle_summary = lambda *args, **kwargs: None  # noqa: E731
     tracking.log_game_action = lambda *args, **kwargs: None  # noqa: E731
+    tracking.log_play_session_end = lambda *args, **kwargs: None  # noqa: E731
+    tracking.log_run_end = lambda *args, **kwargs: None  # noqa: E731
+    tracking.log_menu_action = lambda *args, **kwargs: None  # noqa: E731
+    tracking.log_overlay_action = lambda *args, **kwargs: None  # noqa: E731
     sys.modules["tracking"] = tracking
 
 
@@ -96,6 +104,13 @@ def _ensure_llm_stub() -> None:
     sys.modules["llms.loader"] = loader
     setattr(llms, "loader", loader)
 
+    torch_checker = types.ModuleType("llms.torch_checker")
+    torch_checker.is_torch_available = lambda: False  # noqa: E731
+    torch_checker.get_torch_import_error = lambda: "missing"  # noqa: E731
+    torch_checker.require_torch = lambda: None  # noqa: E731
+    sys.modules["llms.torch_checker"] = torch_checker
+    setattr(llms, "torch_checker", torch_checker)
+
 
 def _ensure_tts_stub() -> None:
     if "tts" in sys.modules:
@@ -112,3 +127,15 @@ _ensure_tracking_stub()
 _ensure_options_stub()
 _ensure_llm_stub()
 _ensure_tts_stub()
+
+
+def _ensure_runs_module() -> None:
+    if "runs" in sys.modules:
+        return
+
+    import importlib
+
+    importlib.import_module("runs")
+
+
+_ensure_runs_module()

@@ -42,6 +42,18 @@ export {
   homeOverlay
 } from './systems/OverlayController.js';
 export {
+  overlayState,
+  overlayStateStore,
+  overlayBlocking,
+  haltSync,
+  battleActive,
+  setRewardOverlayOpen,
+  setReviewOverlayState,
+  setManualSyncHalt,
+  resetOverlayState,
+  setBattleActive
+} from './systems/overlayState.js';
+export {
   loadInitialState,
   mapSelectedParty,
   roomLabel,
@@ -61,10 +73,26 @@ export {
 
 // Export state management functions
 export {
+  runState,
+  runStateStore,
   loadRunState,
   saveRunState,
   clearRunState
 } from './systems/runState.js';
+
+export {
+  rootPollingController,
+  uiPollingStatus,
+  startUIPolling,
+  stopUIPolling,
+  syncUIPolling,
+  battlePollingController,
+  mapPollingController,
+  configureBattlePollingHandlers,
+  configureMapPollingHandlers,
+  syncBattlePolling,
+  syncMapPolling
+} from './systems/pollingOrchestrator.js';
 
 // Export constants
 export {

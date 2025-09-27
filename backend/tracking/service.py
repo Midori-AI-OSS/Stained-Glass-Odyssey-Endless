@@ -194,6 +194,8 @@ async def log_battle_summary(
     dmg_dealt: int,
     dmg_taken: int,
     victory: bool,
+    *,
+    logs_url: str | None = None,
     ts: int | None = None,
 ) -> None:
     ts = ts or _now()
@@ -203,7 +205,7 @@ async def log_battle_summary(
         nonlocal sanitized_run_id
         sanitized_run_id = _ensure_run_logged(conn, run_id, create_placeholder=True)
         conn.execute(
-            "INSERT INTO battle_summaries (run_id, room_id, turns, dmg_dealt, dmg_taken, victory, ts) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            "INSERT INTO battle_summaries (run_id, room_id, turns, dmg_dealt, dmg_taken, victory, logs_url, ts) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
             (
                 sanitized_run_id,
                 room_id,
@@ -211,6 +213,7 @@ async def log_battle_summary(
                 dmg_dealt,
                 dmg_taken,
                 1 if victory else 0,
+                logs_url if sanitized_run_id else None,
                 ts,
             ),
         )

@@ -20,33 +20,23 @@ from runs.party_manager import _assign_damage_type
 from runs.party_manager import _describe_passives
 from runs.party_manager import _load_player_customization
 from runs.party_manager import load_party
+from tracking import log_game_action
+from tracking import log_menu_action
+from tracking import log_play_session_start
+from tracking import log_run_start
 
 from autofighter.mapgen import MapGenerator
 from autofighter.party import Party
 from autofighter.rooms import _choose_foe
 from autofighter.rooms import _serialize
-from plugins import players as player_plugins
+from plugins import characters as player_plugins
 from services.login_reward_service import record_room_completion
 from services.user_level_service import get_user_level
-
-from tracking import (
-    log_game_action,
-    log_menu_action,
-    log_play_session_start,
-    log_run_start,
-)
 
 log = logging.getLogger(__name__)
 
 
-async def start_run(
-    members: list[str],
-    damage_type: str = "",
-    pressure: int = 0,
-) -> dict[str, object]:
-    """Create a new run and return its initial state."""
-    damage_type = (damage_type or "").capitalize()
-
+async def _validate_party_members(members: list[str]) -> None:
     if (
         "player" not in members
         or not 1 <= len(members) <= 5
@@ -65,6 +55,17 @@ async def start_run(
             raise ValueError("invalid party")
         if mid != "player" and mid not in owned:
             raise ValueError("unowned character")
+
+
+async def start_run(
+    members: list[str],
+    damage_type: str = "",
+    pressure: int = 0,
+) -> dict[str, object]:
+    """Create a new run and return its initial state."""
+    damage_type = (damage_type or "").capitalize()
+
+    await _validate_party_members(members)
 
     if damage_type:
         allowed = {"Light", "Dark", "Wind", "Lightning", "Fire", "Ice"}
@@ -210,6 +211,54 @@ async def start_run(
         },
     )
     return {"run_id": run_id, "map": state, "party": party_info}
+
+
+async def update_party(run_id: str, members: list[str]) -> dict[str, object]:
+    """Update an existing run's party roster after validating membership."""
+
+    await _validate_party_members(members)
+
+    def update_roster() -> dict[str, object]:
+        with get_save_manager().connection() as conn:
+            cur = conn.execute("SELECT party FROM runs WHERE id = ?", (run_id,))
+            row = cur.fetchone()
+            if not row:
+                raise LookupError("run not found")
+
+            party_blob = json.loads(row[0]) if row[0] else {}
+            snapshot = party_blob.get("player", {})
+            exp_source = party_blob.get("exp", {})
+            level_source = party_blob.get("level", {})
+            multiplier_source = party_blob.get("exp_multiplier", {})
+
+            exp = {mid: exp_source.get(mid, 0) for mid in members}
+            level = {mid: level_source.get(mid, 1) for mid in members}
+            exp_multiplier = {mid: multiplier_source.get(mid, 1.0) for mid in members}
+
+            party_blob.update(
+                {
+                    "members": members,
+                    "exp": exp,
+                    "level": level,
+                    "exp_multiplier": exp_multiplier,
+                    "player": snapshot,
+                }
+            )
+
+            conn.execute(
+                "UPDATE runs SET party = ? WHERE id = ?",
+                (json.dumps(party_blob), run_id),
+            )
+
+            return party_blob
+
+    updated = await asyncio.to_thread(update_roster)
+    await log_menu_action(
+        "Run",
+        "party_updated",
+        {"run_id": run_id, "members": members},
+    )
+    return updated
 
 
 async def get_map(run_id: str) -> dict[str, object]:

@@ -8,20 +8,22 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from runs.lifecycle import RECENT_FOE_COOLDOWN
-from runs.lifecycle import battle_snapshots
-from runs.lifecycle import battle_tasks
-from runs.lifecycle import load_map
-from runs.lifecycle import save_map
-from services.room_service import battle_room
-from services.run_service import start_run
+sys.modules.pop("services", None)
+import services  # noqa: E402
+from runs.lifecycle import RECENT_FOE_COOLDOWN  # noqa: E402
+from runs.lifecycle import battle_snapshots  # noqa: E402
+from runs.lifecycle import battle_tasks  # noqa: E402
+from runs.lifecycle import load_map  # noqa: E402
+from runs.lifecycle import save_map  # noqa: E402
+from services.room_service import battle_room  # noqa: E402
+from services.run_service import start_run  # noqa: E402
 
 from autofighter.mapgen import MapNode
 from autofighter.party import Party
 from autofighter.rooms import BattleRoom
 from autofighter.rooms import utils
 from autofighter.stats import Stats
-from plugins.players import Player
+from plugins.characters import Player
 
 
 @pytest.fixture()
@@ -52,11 +54,11 @@ def test_build_foes_reduces_recent_weights(monkeypatch):
         def __init__(self):
             self.id = "beta"
 
-    monkeypatch.setattr("plugins.foes.__all__", ["FakeFoeA", "FakeFoeB"], raising=False)
-    monkeypatch.setattr("plugins.foes.FakeFoeA", FakeFoeA, raising=False)
-    monkeypatch.setattr("plugins.foes.FakeFoeB", FakeFoeB, raising=False)
-    monkeypatch.setattr("plugins.foes.Slime", FakeFoeB, raising=False)
-    monkeypatch.setattr("plugins.foes.PLAYER_FOES", {}, raising=False)
+    monkeypatch.setattr("plugins.characters.__all__", ["FakeFoeA", "FakeFoeB"], raising=False)
+    monkeypatch.setattr("plugins.characters.FakeFoeA", FakeFoeA, raising=False)
+    monkeypatch.setattr("plugins.characters.FakeFoeB", FakeFoeB, raising=False)
+    monkeypatch.setattr("plugins.characters.SlimeFoe", FakeFoeB, raising=False)
+    monkeypatch.setattr("plugins.characters.CHARACTER_FOES", {}, raising=False)
 
     captured_weights: list[list[float]] = []
 

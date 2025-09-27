@@ -14,6 +14,8 @@ from runs.lifecycle import battle_snapshots
 from runs.lifecycle import battle_tasks
 from runs.lifecycle import load_map
 from runs.lifecycle import save_map
+from runs.party_manager import load_party
+from services.asset_service import get_asset_manifest
 from services.reward_service import select_card
 from services.reward_service import select_relic
 from services.room_service import room_action
@@ -23,12 +25,14 @@ from services.run_service import get_battle_events
 from services.run_service import get_battle_summary
 from services.run_service import restore_save
 from services.run_service import start_run
+from services.run_service import update_party
 from services.run_service import wipe_save
 from tracking import log_game_action
 from tracking import log_menu_action
-from tracking import log_overlay_action
 from tracking import log_play_session_end
 from tracking import log_run_end
+
+from autofighter.rooms.shop import serialize_shop_payload
 
 bp = Blueprint("ui", __name__)
 
@@ -142,13 +146,15 @@ def get_available_actions(mode: str, game_state: dict[str, Any]) -> list[str]:
 async def get_ui_state() -> tuple[str, int, dict[str, Any]]:
     """Get complete UI state for the active run."""
     run_id = get_default_active_run()
+    asset_manifest = get_asset_manifest()
 
     if not run_id:
         return jsonify({
             "mode": "menu",
             "active_run": None,
             "game_state": None,
-            "available_actions": ["start_run"]
+            "available_actions": ["start_run"],
+            "asset_manifest": asset_manifest,
         })
 
     try:
@@ -159,7 +165,8 @@ async def get_ui_state() -> tuple[str, int, dict[str, Any]]:
                 "mode": "menu",
                 "active_run": None,
                 "game_state": None,
-                "available_actions": ["start_run"]
+                "available_actions": ["start_run"],
+                "asset_manifest": asset_manifest,
             })
 
         def get_party_data():
@@ -204,6 +211,32 @@ async def get_ui_state() -> tuple[str, int, dict[str, Any]]:
                     "current_room": current_room_type,
                     "next_room": next_room_type,
                 }
+            elif current_room_type == "shop" and not state.get("awaiting_next"):
+                stock_state = state.get("shop_stock", {})
+                stored_stock: list[dict[str, Any]] = []
+                if isinstance(stock_state, dict):
+                    stored_stock = stock_state.get(str(current_node.room_id), []) or []
+
+                try:
+                    items_bought = int(state.get("shop_items_bought", 0) or 0)
+                except (TypeError, ValueError):
+                    items_bought = 0
+
+                party_snapshot = await asyncio.to_thread(load_party, run_id)
+                shop_view = serialize_shop_payload(
+                    party_snapshot,
+                    stored_stock,
+                    getattr(current_node, "pressure", 0),
+                    items_bought,
+                )
+                shop_view.update(
+                    {
+                        "current_index": current_index,
+                        "current_room": current_room_type,
+                        "next_room": next_room_type,
+                    }
+                )
+                current_room_data = shop_view
             elif state.get("awaiting_next"):
                 # Provide basic state when awaiting next room
                 current_room_data = {
@@ -237,7 +270,8 @@ async def get_ui_state() -> tuple[str, int, dict[str, Any]]:
             "mode": mode,
             "active_run": run_id,
             "game_state": game_state,
-            "available_actions": get_available_actions(mode, game_state)
+            "available_actions": get_available_actions(mode, game_state),
+            "asset_manifest": asset_manifest,
         })
 
     except Exception as e:
@@ -247,7 +281,8 @@ async def get_ui_state() -> tuple[str, int, dict[str, Any]]:
             "active_run": None,
             "game_state": None,
             "available_actions": ["start_run"],
-            "error": str(e)
+            "error": str(e),
+            "asset_manifest": asset_manifest,
         })
 
 
@@ -285,6 +320,23 @@ async def handle_ui_action() -> tuple[str, int, dict[str, Any]]:
                     "error",
                     {"members": members, "damage_type": damage_type, "pressure": pressure, "error": str(exc)},
                 )
+                return create_error_response(str(exc), 400)
+
+        elif action == "update_party":
+            target_run_id = params.get("run_id") or run_id
+            if not target_run_id:
+                return create_error_response("No active run", 400)
+
+            members = params.get("party") or params.get("members")
+            if not isinstance(members, list):
+                return create_error_response("Party must be a list of member IDs", 400)
+
+            try:
+                updated = await update_party(target_run_id, members)
+                return jsonify({"party": updated})
+            except LookupError:
+                return create_error_response("Run not found", 404)
+            except ValueError as exc:
                 return create_error_response(str(exc), 400)
 
         elif action == "room_action":

@@ -31,7 +31,7 @@ from autofighter.rooms import _scale_stats
 from autofighter.rooms import _serialize
 from autofighter.rooms import calculate_rank_probabilities
 from autofighter.summons.manager import SummonManager
-from plugins import foes as foe_plugins
+from plugins import characters as foe_plugins
 from plugins.damage_types import load_damage_type
 
 
@@ -51,14 +51,7 @@ def _instantiate_boss(foe_id: str | None):
     if not foe_id:
         return None
     try:
-        for name in getattr(foe_plugins, "__all__", []):
-            cls = getattr(foe_plugins, name, None)
-            if cls is not None and getattr(cls, "id", None) == foe_id:
-                return cls()
-    except Exception:
-        pass
-    try:
-        foe_cls = foe_plugins.PLAYER_FOES.get(foe_id)
+        foe_cls = foe_plugins.CHARACTER_FOES.get(foe_id)
         if foe_cls is not None:
             return foe_cls()
     except Exception:

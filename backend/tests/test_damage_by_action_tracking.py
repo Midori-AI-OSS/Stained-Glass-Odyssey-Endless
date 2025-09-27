@@ -12,8 +12,8 @@ from battle_logging.writers import start_battle_logging
 from autofighter.mapgen import MapNode
 from autofighter.party import Party
 from autofighter.stats import Stats
-from plugins.foes.slime import Slime
-from plugins.players.carly import Carly
+from plugins.characters.carly import Carly
+from plugins.characters.slime import Slime
 
 
 @pytest.mark.asyncio

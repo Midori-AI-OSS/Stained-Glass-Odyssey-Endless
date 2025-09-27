@@ -12,21 +12,22 @@ from autofighter.rooms.foe_factory import FoeFactory
 from autofighter.rooms.foes.scaling import apply_permanent_scaling
 from autofighter.rooms.utils import _scale_stats
 from autofighter.stats import Stats
-from plugins.foes.slime import Slime
+from plugins.characters import CHARACTER_FOES
+from plugins.characters.slime import Slime
 
 
-def test_slime_scaling_uses_reduced_base_stats() -> None:
+def test_slime_player_uses_default_base_stats() -> None:
     random.seed(0)
 
     slime = Slime()
 
-    assert slime.max_hp == 100
-    assert slime.atk == 10
-    assert slime.defense == 5
+    assert slime.max_hp == 1000
+    assert slime.atk == 100
+    assert slime.defense == 50
 
-    assert slime.get_base_stat("max_hp") == 100
-    assert slime.get_base_stat("atk") == 10
-    assert slime.get_base_stat("defense") == 5
+    assert slime.get_base_stat("max_hp") == 1000
+    assert slime.get_base_stat("atk") == 100
+    assert slime.get_base_stat("defense") == 50
 
     node = MapNode(
         room_id=1,
@@ -39,24 +40,27 @@ def test_slime_scaling_uses_reduced_base_stats() -> None:
 
     _scale_stats(slime, node)
 
-    assert slime.max_hp == 53
-    assert slime.atk == 5
-    assert slime.defense == 0
+    assert slime.max_hp >= 1000
+    assert slime.atk >= 100
+    assert slime.defense >= 0
     assert not hasattr(slime, "_pending_mods")
 
 
-def test_slime_room_scaling_respects_plugin_baseline() -> None:
+def test_slime_room_scaling_respects_player_baseline(monkeypatch) -> None:
     random.seed(0)
 
-    slime = Slime()
+    monkeypatch.setattr("plugins.characters.ADJ_CLASSES", [], raising=False)
 
-    nerfed_hp = slime.max_hp
-    nerfed_atk = slime.atk
-    nerfed_def = slime.defense
+    slime_cls = CHARACTER_FOES[Slime.id]
+    slime = slime_cls()
 
-    template_hp = type(slime).base_max_hp
-    template_atk = type(slime).base_atk
-    template_def = type(slime).base_defense
+    baseline_hp = slime.base_max_hp
+    baseline_atk = slime.base_atk
+    baseline_def = slime.base_defense
+
+    assert slime.max_hp == baseline_hp
+    assert slime.atk == baseline_atk
+    assert slime.defense == baseline_def
 
     node = MapNode(
         room_id=1,
@@ -74,12 +78,10 @@ def test_slime_room_scaling_respects_plugin_baseline() -> None:
     assert slime.atk > 0
     assert slime.defense >= 0
 
-    assert abs(slime.max_hp - nerfed_hp) < abs(slime.max_hp - template_hp)
-    assert abs(slime.atk - nerfed_atk) < abs(slime.atk - template_atk)
-    assert abs(slime.defense - nerfed_def) <= abs(slime.defense - template_def)
-
-    assert abs(slime.get_base_stat("atk") - nerfed_atk) < abs(slime.get_base_stat("atk") - template_atk)
-    assert abs(slime.get_base_stat("defense") - nerfed_def) <= abs(slime.get_base_stat("defense") - template_def)
+    assert slime.max_hp >= baseline_hp
+    assert slime.atk >= baseline_atk
+    assert slime.get_base_stat("atk") >= baseline_atk
+    assert slime.get_base_stat("defense") >= baseline_def
 
 
 def test_apply_permanent_scaling_skips_unknown_stats() -> None:

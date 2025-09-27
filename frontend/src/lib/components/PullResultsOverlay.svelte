@@ -4,8 +4,8 @@
   import { cubicOut } from 'svelte/easing';
   import { createDealSfx } from '../systems/sfx.js';
   import CurioChoice from './CurioChoice.svelte';
-  import { getRewardArt } from '../systems/rewardLoader.js';
-  import { getCharacterImage } from '../systems/assetLoader.js';
+  import { getCharacterImage, getRewardArt } from '../systems/assetLoader.js';
+  import { registerCharacterMetadata } from '../systems/characterMetadata.js';
   import { formatName } from '../systems/craftingUtils.js';
 
   export let results = [];
@@ -60,12 +60,15 @@
   }
 
   onMount(() => {
+    if (Array.isArray(results)) {
+      registerCharacterMetadata(results.filter((r) => r && r.type === 'character'));
+    }
     const mapped = Array.isArray(results) ? results.map((r, i) => toRenderable(r, i)) : [];
     isBatch = mapped.length === 5 || mapped.length === 10;
     if (isBatch) {
       stack = mapped;
       if (!reducedMotion) {
-        dealSfx = createDealSfx(sfxVolume);
+        dealSfx = createDealSfx(sfxVolume, { reducedMotion });
       }
       dealNext();
     } else {

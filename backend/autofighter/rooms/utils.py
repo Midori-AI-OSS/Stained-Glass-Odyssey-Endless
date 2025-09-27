@@ -5,7 +5,7 @@ from typing import Any
 from typing import Collection
 from typing import Mapping
 
-from plugins.foes._base import FoeBase
+from plugins.characters.foe_base import FoeBase
 
 from ..mapgen import MapNode
 from ..party import Party

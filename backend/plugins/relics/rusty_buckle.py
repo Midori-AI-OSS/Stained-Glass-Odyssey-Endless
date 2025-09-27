@@ -44,7 +44,7 @@ class RustyBuckle(RelicBase):
                 state["prev_hp"][id(ally)] = ally.hp
 
         async def _turn_start(entity) -> None:
-            from plugins.foes._base import FoeBase
+            from plugins.characters.foe_base import FoeBase
 
             current_state = getattr(party, "_rusty_buckle_state", state)
             if isinstance(entity, FoeBase):

@@ -19,7 +19,7 @@
   import Guidebook from './Guidebook.svelte';
   import RunChooser from './RunChooser.svelte';
   import ShopMenu from './ShopMenu.svelte';
-    import BattleView from './BattleView.svelte';
+  import BattleView from './BattleView.svelte';
   import ErrorOverlay from './ErrorOverlay.svelte';
   import BackendNotReady from './BackendNotReady.svelte';
   import BackendShutdownOverlay from './BackendShutdownOverlay.svelte';
@@ -28,6 +28,7 @@
   import { rewardOpen as computeRewardOpen } from '../systems/viewportState.js';
   import { getBattleSummary } from '../systems/uiApi.js';
   import { motionStore } from '../systems/settingsStorage.js';
+  import { setRewardOverlayOpen, setReviewOverlayState } from '../systems/overlayState.js';
 
   export let selected = [];
   export let runId = '';
@@ -59,6 +60,12 @@
   $: simplifiedTransitions = motionSettings.simplifyOverlayTransitions;
 
   const dispatch = createEventDispatcher();
+  const now = () => new Date().toISOString();
+  function logOverlay(msg, extra = {}) {
+    try {
+      console.log(`[OverlayHost] ${now()} ${msg}`, { runId, result: roomData?.result, battle_index: roomData?.battle_index, ...extra });
+    } catch (e) {}
+  }
   // Determine whether to show rewards overlay based on raw room data.
   // Floating loot messages are suppressed after first display via `lootConsumed`,
   // but the overlay should remain visible until the player advances.
@@ -83,7 +90,7 @@
       // If another request superseded this one, stop
       if (tokenRef.value !== reviewLoadingToken) return;
       try {
-        const res = await getBattleSummary(battleIndex);
+        const res = await getBattleSummary(battleIndex, runId);
         if (tokenRef.value !== reviewLoadingToken) return;
         reviewSummary = res || { damage_by_type: {} };
         reviewReady = true;
@@ -109,6 +116,7 @@
     reviewReady = false;
     reviewSummary = null;
     const tokenRef = { value: ++reviewLoadingToken };
+    logOverlay('reviewOpen true - starting waitForReview', { token: tokenRef.value });
     if (roomData?.battle_index > 0) {
       waitForReview(roomData.battle_index, tokenRef);
     }
@@ -121,6 +129,7 @@
   // Auto-skip Battle Review when skipBattleReview is enabled
   $: if (reviewOpen && !rewardOpen && reviewReady && skipBattleReview) {
     // Battle is complete and ready for review, but user wants to skip - advance immediately
+    logOverlay('auto-skip review -> dispatch nextRoom');
     dispatch('nextRoom');
   }
 
@@ -146,23 +155,18 @@
     return filterPartyEntities(src);
   })();
 
-  // Hint to pause battle snapshot polling globally while rewards are open
-  $: {
-    try {
-      if (typeof window !== 'undefined') window.afRewardOpen = Boolean(rewardOpen);
-    } catch {}
-  }
-  // Hint to pause state polling while the Battle Review overlay is open
-  $: {
-    try {
-      if (typeof window !== 'undefined') window.afReviewOpen = Boolean(reviewOpen && reviewReady);
-    } catch {}
-  }
+  // Surface overlay gating through shared overlay state helpers
+  $: setRewardOverlayOpen(rewardOpen);
+  $: setReviewOverlayState({ open: reviewOpen, ready: reviewReady });
 
   function titleForItem(item) {
     if (!item) return '';
+    const uiMeta = item.ui && typeof item.ui === 'object' ? item.ui : null;
+    if (uiMeta) {
+      const label = uiMeta.label || uiMeta.title;
+      if (label) return label;
+    }
     if (item.name) return item.name;
-    if (item.id === 'ticket') return 'Gacha Ticket';
     const id = String(item.id || '').toLowerCase();
     const cap = id.charAt(0).toUpperCase() + id.slice(1);
     const stars = Number.isFinite(item.stars) ? String(item.stars) : '';
@@ -182,6 +186,8 @@
   $: if (roomData !== lastRoom) {
     lootConsumed = false;
     lastRoom = roomData;
+    // Log room changes for debug tracing
+    try { console.log(`[OverlayHost] ${now()} roomData changed`, { runId, result: roomData?.result, battle_index: roomData?.battle_index, roomId: roomData?.id || roomData?.room_id || null }); } catch(e) {}
   }
   $: if (!lootConsumed && roomData?.loot) {
     if (roomData.loot.gold) pushLoot(`Gold +${roomData.loot.gold}`);
