@@ -24,6 +24,7 @@ from services.run_service import get_battle_events
 from services.run_service import get_battle_summary
 from services.run_service import restore_save
 from services.run_service import start_run
+from services.run_service import update_party
 from services.run_service import wipe_save
 from tracking import log_game_action
 from tracking import log_menu_action
@@ -291,6 +292,23 @@ async def handle_ui_action() -> tuple[str, int, dict[str, Any]]:
                     "error",
                     {"members": members, "damage_type": damage_type, "pressure": pressure, "error": str(exc)},
                 )
+                return create_error_response(str(exc), 400)
+
+        elif action == "update_party":
+            target_run_id = params.get("run_id") or run_id
+            if not target_run_id:
+                return create_error_response("No active run", 400)
+
+            members = params.get("party") or params.get("members")
+            if not isinstance(members, list):
+                return create_error_response("Party must be a list of member IDs", 400)
+
+            try:
+                updated = await update_party(target_run_id, members)
+                return jsonify({"party": updated})
+            except LookupError:
+                return create_error_response("Run not found", 404)
+            except ValueError as exc:
                 return create_error_response(str(exc), 400)
 
         elif action == "room_action":
