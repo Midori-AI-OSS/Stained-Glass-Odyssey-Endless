@@ -13,6 +13,7 @@ from runs.encryption import get_save_manager
 from runs.lifecycle import battle_locks
 from runs.lifecycle import battle_snapshots
 from runs.lifecycle import battle_tasks
+from runs.lifecycle import emit_battle_end_for_runs
 from runs.lifecycle import load_map
 from runs.lifecycle import purge_all_run_state
 from runs.lifecycle import purge_run_state
@@ -36,7 +37,6 @@ from tracking import log_play_session_end
 from tracking import log_run_end
 
 from autofighter.rooms.shop import serialize_shop_payload
-from autofighter.stats import BUS
 
 bp = Blueprint("ui", __name__)
 
@@ -544,7 +544,7 @@ async def end_run(run_id: str) -> tuple[str, int, dict[str, Any]]:
         # End run logging
         end_run_logging()
 
-        await BUS.emit_async("battle_end", None)
+        await emit_battle_end_for_runs([run_id])
 
         # Delete from database
         existed = await asyncio.to_thread(delete_run)
@@ -581,7 +581,7 @@ async def end_all_runs() -> tuple[str, int, dict[str, Any]]:
         # End run logging
         end_run_logging()
 
-        await BUS.emit_async("battle_end", None)
+        await emit_battle_end_for_runs()
 
         # Cancel all active battle tasks and clear per-run state
         purge_all_run_state()

@@ -13,6 +13,7 @@ from battle_logging.writers import start_run_logging
 from runs.encryption import get_fernet
 from runs.encryption import get_save_manager
 from runs.lifecycle import battle_snapshots
+from runs.lifecycle import emit_battle_end_for_runs
 from runs.lifecycle import load_map
 from runs.lifecycle import purge_all_run_state
 from runs.lifecycle import purge_run_state
@@ -30,7 +31,6 @@ from autofighter.mapgen import MapGenerator
 from autofighter.party import Party
 from autofighter.rooms import _choose_foe
 from autofighter.rooms import _serialize
-from autofighter.stats import BUS
 from plugins import characters as player_plugins
 from services.login_reward_service import record_room_completion
 from services.user_level_service import get_user_level
@@ -475,7 +475,7 @@ async def wipe_save() -> None:
                 "CREATE TABLE IF NOT EXISTS damage_types (id TEXT PRIMARY KEY, type TEXT)"
             )
 
-    await BUS.emit_async("battle_end", None)
+    await emit_battle_end_for_runs()
     purge_all_run_state()
     await asyncio.to_thread(do_wipe)
 
@@ -535,6 +535,6 @@ async def restore_save(blob: bytes) -> None:
                 "INSERT INTO damage_types (id, type) VALUES (?, ?)", payload["damage_types"]
             )
 
-    await BUS.emit_async("battle_end", None)
+    await emit_battle_end_for_runs()
     purge_all_run_state()
     await asyncio.to_thread(restore_data)

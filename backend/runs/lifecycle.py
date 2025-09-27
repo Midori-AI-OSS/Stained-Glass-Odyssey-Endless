@@ -6,6 +6,7 @@ import asyncio
 from collections import OrderedDict
 from collections.abc import Awaitable
 from collections.abc import Callable
+from collections.abc import Iterable
 import gc
 import json
 import logging
@@ -67,6 +68,40 @@ def purge_all_run_state(*, cancel_tasks: bool = True) -> None:
 
     for run_id in list(run_ids):
         purge_run_state(run_id, cancel_task=cancel_tasks)
+
+
+async def emit_battle_end_for_runs(run_ids: Iterable[str] | None = None) -> None:
+    """Emit battle_end for known entities in the provided runs."""
+
+    from autofighter.rooms.battle import snapshots as battle_snapshots_module
+    from autofighter.stats import BUS
+
+    if run_ids is None:
+        run_id_candidates: set[str] = set(battle_tasks)
+        run_id_candidates.update(battle_snapshots)
+        run_id_candidates.update(battle_locks)
+        run_id_candidates.update(battle_snapshots_module.get_registered_run_ids())
+    else:
+        run_id_candidates = {run_id for run_id in run_ids if run_id}
+
+    if not run_id_candidates:
+        await BUS.emit_async("battle_end", None)
+        return
+
+    for run_id in run_id_candidates:
+        targets = battle_snapshots_module.get_registered_entities(run_id)
+        emitted = False
+        for target in targets:
+            if target is None:
+                continue
+            try:
+                await BUS.emit_async("battle_end", target)
+            except Exception:
+                continue
+            emitted = True
+        if not emitted:
+            await BUS.emit_async("battle_end", None)
+
 
 RECENT_FOE_COOLDOWN: int = 3
 
@@ -416,6 +451,7 @@ __all__ = [
     "battle_locks",
     "purge_run_state",
     "purge_all_run_state",
+    "emit_battle_end_for_runs",
     "RECENT_FOE_COOLDOWN",
     "_run_battle",
 ]
