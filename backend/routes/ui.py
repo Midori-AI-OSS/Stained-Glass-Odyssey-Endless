@@ -36,6 +36,7 @@ from tracking import log_play_session_end
 from tracking import log_run_end
 
 from autofighter.rooms.shop import serialize_shop_payload
+from autofighter.stats import BUS
 
 bp = Blueprint("ui", __name__)
 
@@ -543,6 +544,8 @@ async def end_run(run_id: str) -> tuple[str, int, dict[str, Any]]:
         # End run logging
         end_run_logging()
 
+        await BUS.emit_async("battle_end", None)
+
         # Delete from database
         existed = await asyncio.to_thread(delete_run)
         if not existed:
@@ -577,6 +580,8 @@ async def end_all_runs() -> tuple[str, int, dict[str, Any]]:
     try:
         # End run logging
         end_run_logging()
+
+        await BUS.emit_async("battle_end", None)
 
         # Cancel all active battle tasks and clear per-run state
         purge_all_run_state()
