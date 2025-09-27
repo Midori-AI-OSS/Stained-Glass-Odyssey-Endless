@@ -86,8 +86,16 @@
     return true;
   }
 
-  $: if (!partiesEqual(selectedParty, runSnapshot.selectedParty)) {
-    selectedParty = [...runSnapshot.selectedParty];
+  let lastSnapshotParty = [...(runSnapshot.selectedParty || [])];
+
+  $: {
+    const snapshotParty = runSnapshot.selectedParty || [];
+    if (!partiesEqual(snapshotParty, lastSnapshotParty)) {
+      lastSnapshotParty = [...snapshotParty];
+      if (!partiesEqual(selectedParty, snapshotParty)) {
+        selectedParty = [...snapshotParty];
+      }
+    }
   }
 
   $: if (!partiesEqual(runSnapshot.selectedParty, selectedParty)) {
