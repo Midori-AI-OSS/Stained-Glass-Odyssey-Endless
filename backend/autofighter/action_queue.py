@@ -37,10 +37,12 @@ class ActionQueue:
                 base = float(GAUGE_START)
                 combatant.base_action_value = base
                 combatant.action_value = base
+                self._sync_action_gauge(combatant, base)
                 continue
             base = GAUGE_START / max(combatant.spd, 1)
             combatant.base_action_value = base
             combatant.action_value = base
+            self._sync_action_gauge(combatant, base)
         self._stabilize_action_values()
 
     def grant_extra_turn(self, actor: Stats) -> None:
@@ -116,13 +118,29 @@ class ActionQueue:
             if spent <= 0:
                 self.last_cycle_count = 0
                 return 0
-            cycle_count = self._update_turn_counter(spent)
-            for combatant in self.combatants:
-                if combatant is actor or combatant is self.turn_counter:
-                    continue
-                current_value = float(getattr(combatant, "action_value", 0.0))
-                combatant.action_value = max(0.0, current_value - spent)
-            actor.action_value = float(getattr(actor, "base_action_value", GAUGE_START))
+            gauge_step = 1.0
+            remaining = float(spent)
+            cycle_count = 0
+            others = [
+                combatant
+                for combatant in self.combatants
+                if combatant is not actor and combatant is not self.turn_counter
+            ]
+            while remaining > 1e-9:
+                step = gauge_step if remaining >= gauge_step else remaining
+                for combatant in others:
+                    current_value = float(getattr(combatant, "action_value", 0.0))
+                    new_value = current_value - step
+                    if new_value < 0.0:
+                        new_value = 0.0
+                    combatant.action_value = new_value
+                    self._sync_action_gauge(combatant, new_value)
+                cycle_count += self._update_turn_counter(step)
+                remaining -= step
+
+            base_value = float(getattr(actor, "base_action_value", GAUGE_START))
+            actor.action_value = base_value
+            self._sync_action_gauge(actor, base_value)
             self._stabilize_action_values()
             # Rotate actor to end to reflect moving to the back of the line
             idx = self.combatants.index(actor)
@@ -146,33 +164,24 @@ class ActionQueue:
         except Exception:
             current_value = float(GAUGE_START)
 
+        if spent <= 0:
+            return 0
+
         new_value = current_value - spent
         if new_value > 0:
             turn_counter.action_value = new_value
-            try:
-                turn_counter.action_gauge = int(max(new_value, 0.0))
-            except Exception:
-                turn_counter.action_gauge = GAUGE_START
+            self._sync_action_gauge(turn_counter, new_value)
             return 0
 
         overspend = -new_value
-        try:
-            cycles = int(overspend // GAUGE_START) + 1
-        except Exception:
-            cycles = 1
+        reset_value = float(GAUGE_START)
+        turn_counter.base_action_value = reset_value
+        turn_counter.action_value = reset_value
+        self._sync_action_gauge(turn_counter, reset_value)
 
-        leftover = overspend % GAUGE_START
-        turn_counter.action_value = float(GAUGE_START)
-        turn_counter.base_action_value = float(GAUGE_START)
-        turn_counter.action_gauge = GAUGE_START
-        if leftover > 0:
-            remaining = GAUGE_START - leftover
-            turn_counter.action_value = float(remaining)
-            try:
-                turn_counter.action_gauge = int(max(remaining, 0))
-            except Exception:
-                turn_counter.action_gauge = GAUGE_START
-        return cycles
+        if overspend > 0:
+            return 1 + self._update_turn_counter(overspend)
+        return 1
 
     def _stabilize_action_values(self) -> None:
         """Ensure non-turn counter combatants have unique action values."""
@@ -213,3 +222,15 @@ class ActionQueue:
 
             combatant.action_value = current
             seen.add(current)
+            self._sync_action_gauge(combatant, current)
+
+    def _sync_action_gauge(self, combatant: Stats, new_value: float) -> None:
+        """Mirror ``action_value`` changes onto the combatant's gauge field."""
+
+        try:
+            combatant.action_gauge = float(max(new_value, 0.0))
+        except Exception:
+            try:
+                combatant.action_gauge = GAUGE_START
+            except Exception:
+                pass
