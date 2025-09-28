@@ -35,12 +35,14 @@ describe('battle review timeline projection', () => {
 
     state.setTimelineFilters({ metric: 'damageDone', entities: ['hero'] });
     const damageTimeline = get(state.timeline);
-    expect(damageTimeline.filteredEvents.map((event) => event.attacker)).toEqual(['hero']);
+    expect(
+      damageTimeline.events.filter((event) => event.matchesMetric).map((event) => event.attacker)
+    ).toEqual(['hero']);
 
     state.setTimelineFilters({ metric: 'healing', sourceTypes: ['skill'] });
     const healingTimeline = get(state.timeline);
-    expect(healingTimeline.filteredEvents).toHaveLength(1);
-    expect(healingTimeline.filteredEvents[0].eventType).toBe('heal');
+    expect(healingTimeline.events).toHaveLength(1);
+    expect(healingTimeline.events[0].eventType).toBe('heal');
 
     state.destroy();
   });
@@ -58,6 +60,8 @@ describe('battle review timeline projection', () => {
     const projection = get(state.timeline);
     expect(projection.focusId).toBe('hero');
     expect(projection.highlightEvents).toHaveLength(1);
+    expect(projection.highlightEvents[0].kind).toBe('ultimate');
+    expect(projection.highlightEvents[0].eventType).toBe('damage_dealt');
 
     state.setTimelineFilters({ metric: 'mitigation', eventTypes: ['shield_absorbed'], respectMotion: false });
     const shareable = get(state.shareableState);
@@ -81,6 +85,39 @@ describe('battle review timeline projection', () => {
 
     state.setTimelineCursor({ time: -5 });
     expect(get(state.timelineCursor).time).toBeCloseTo(0.5, 5);
+
+    state.destroy();
+  });
+
+  test('card and relic events surface action metadata', () => {
+    const state = buildState();
+    state.events.set([
+      {
+        event_id: 30,
+        event_type: 'damage_dealt',
+        attacker_id: 'hero',
+        target_id: 'foe',
+        amount: 420,
+        timestamp: 0.6,
+        details: { action_name: 'Flame Burst', card_id: 'card-7', card_name: 'Flame Burst', source_type: 'card' }
+      },
+      {
+        event_id: 31,
+        event_type: 'relic_trigger',
+        attacker_id: 'hero',
+        target_id: 'foe',
+        amount: 0,
+        timestamp: 1.2,
+        details: { relic_id: 'relic-1', relic_name: 'Sun Core', trigger: 'On Hit' }
+      }
+    ]);
+
+    const projection = get(state.timeline);
+    const cardEvent = projection.events.find((event) => event.action?.kind === 'card');
+    const relicEvent = projection.events.find((event) => event.action?.kind === 'relic');
+
+    expect(cardEvent?.action?.card?.name).toBe('Flame Burst');
+    expect(relicEvent?.action?.relic?.name).toBe('Sun Core');
 
     state.destroy();
   });

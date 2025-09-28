@@ -284,6 +284,118 @@ function resolveAbilityName(event) {
   return 'event';
 }
 
+function buildActionMetadata(event, abilityName) {
+  if (!event) {
+    return null;
+  }
+
+  const details = (event && typeof event.details === 'object' && event.details) || {};
+  const effectDetails = (event && typeof event.effect_details === 'object' && event.effect_details) || {};
+  const metadata = (event && typeof event.metadata === 'object' && event.metadata) || {};
+
+  const stringCandidates = [
+    details.action_type,
+    details.source_type,
+    effectDetails.source_type,
+    event.source_type,
+    metadata.source_type
+  ];
+  const sourceType = stringCandidates
+    .map((value) => (typeof value === 'string' ? value.trim() : ''))
+    .find((value) => value) || '';
+
+  const cardId = details.card_id ?? details.cardId ?? effectDetails.card_id ?? metadata.card_id ?? null;
+  const cardName = details.card_name ?? effectDetails.card_name ?? metadata.card_name ?? null;
+  const relicId = details.relic_id ?? effectDetails.relic_id ?? metadata.relic_id ?? null;
+  const relicName = details.relic_name ?? effectDetails.relic_name ?? metadata.relic_name ?? null;
+  const abilityId = details.ability_id ?? effectDetails.ability_id ?? metadata.ability_id ?? null;
+
+  const tagSet = new Set();
+  if (
+    cardId != null
+    || (cardName && !relicName)
+    || (typeof sourceType === 'string' && sourceType.toLowerCase().includes('card'))
+  ) {
+    tagSet.add('card');
+  }
+  if (
+    relicId != null
+    || (relicName && !cardName)
+    || (typeof sourceType === 'string' && sourceType.toLowerCase().includes('relic'))
+  ) {
+    tagSet.add('relic');
+  }
+  if (details.trigger || details.trigger_type) {
+    tagSet.add('trigger');
+  }
+
+  let kind = 'ability';
+  if (tagSet.has('card')) {
+    kind = 'card';
+  } else if (tagSet.has('relic')) {
+    kind = 'relic';
+  } else if (sourceType) {
+    kind = sourceType.toLowerCase();
+  }
+
+  const summaryParts = [];
+  if (kind === 'card') {
+    summaryParts.push(cardName || abilityName);
+  } else if (kind === 'relic') {
+    summaryParts.push(relicName || abilityName);
+  } else if (abilityName) {
+    summaryParts.push(abilityName);
+  }
+  if (details.trigger || details.trigger_type) {
+    summaryParts.push(details.trigger || details.trigger_type);
+  }
+  if (details.status_name) {
+    summaryParts.push(details.status_name);
+  }
+
+  const summary = summaryParts.filter(Boolean).join(' • ') || abilityName || '';
+  const eventTypeName = typeof event.event_type === 'string' ? event.event_type.trim() : '';
+  const normalizedSummary = summary.toLowerCase();
+  const normalizedEventType = eventTypeName.toLowerCase();
+  const isGenericSummary =
+    !summary || normalizedSummary === 'event' || (normalizedEventType && normalizedSummary === normalizedEventType);
+  const keySource = cardId ?? relicId ?? abilityId ?? summary;
+  const actionKey = sanitizeFilterId(keySource).toLowerCase();
+
+  const hasUsefulMetadata = Boolean(
+    (sourceType && sourceType.toLowerCase() !== 'ability')
+    || tagSet.size
+    || cardId != null
+    || cardName
+    || relicId != null
+    || relicName
+    || abilityId != null
+    || !isGenericSummary
+  );
+
+  if (!hasUsefulMetadata) {
+    return null;
+  }
+
+  return {
+    name: abilityName,
+    kind,
+    sourceType: sourceType || '',
+    summary,
+    card:
+      cardId != null || cardName
+        ? { id: cardId != null ? String(cardId) : null, name: cardName || abilityName }
+        : null,
+    relic:
+      relicId != null || relicName
+        ? { id: relicId != null ? String(relicId) : null, name: relicName || abilityName }
+        : null,
+    abilityId: abilityId != null ? String(abilityId) : null,
+    tags: Array.from(tagSet),
+    key: actionKey
+  };
+}
+
 function buildMetricSlices(eventType, amount, attackerId, targetId) {
   const numericAmount = Number(amount);
   if (!Number.isFinite(numericAmount)) {
@@ -332,6 +444,14 @@ function shapeTimelineEvents(list = []) {
       const time = parseEventSeconds(event, index, baseRef);
       const slices = buildMetricSlices(eventType, event.amount, attackerId, targetId);
       const amount = Number(event.amount);
+      const metricTotals = slices.reduce((acc, slice) => {
+        if (!slice?.metric) return acc;
+        const metricId = slice.metric;
+        acc[metricId] = (acc[metricId] || 0) + (Number(slice.amount) || 0);
+        return acc;
+      }, {});
+      const metrics = Object.keys(metricTotals);
+      const action = buildActionMetadata(event, abilityName);
       return {
         id: `${event?.event_id ?? `${eventType}-${index}`}`,
         order: index,
@@ -344,7 +464,10 @@ function shapeTimelineEvents(list = []) {
         sourceType: sourceType ? String(sourceType) : '',
         sourceKey: sanitizeFilterId(sourceType).toLowerCase(),
         abilityName,
+        action,
         metricSlices: slices,
+        metricTotals,
+        metrics,
         raw: event
       };
     })
@@ -378,23 +501,13 @@ function buildTimelineProjection(data, filters, window, currentTabId) {
     const fallbackSpan = Math.max(data?.domain?.span ?? 0, 1);
     rangeEnd = rangeStart + fallbackSpan;
   }
-  const rangeSpan = Math.max(rangeEnd - rangeStart, 0);
-  const spanForBuckets = rangeSpan > 0 ? rangeSpan : 1;
-  const bucketCount = Math.max(1, Math.min(240, Math.ceil(spanForBuckets / 0.5)));
-  const bucketWidth = spanForBuckets / bucketCount;
-  const buckets = Array.from({ length: bucketCount }, (_, index) => ({
-    time: rangeStart + bucketWidth * index,
-    total: 0,
-    focus: 0
-  }));
 
   const entityFilter = new Set((filters.entities || []).map((id) => sanitizeFilterId(id)));
   const sourceFilter = new Set((filters.sourceTypes || []).map((id) => sanitizeFilterId(id).toLowerCase()));
   const eventTypeFilter = new Set((filters.eventTypes || []).map((id) => sanitizeFilterId(id).toLowerCase()));
 
-  const filteredEvents = [];
+  const visibleEvents = [];
   const highlight = [];
-  let maxValue = 0;
   let totalAmount = 0;
 
   for (const event of data.events || []) {
@@ -406,26 +519,41 @@ function buildTimelineProjection(data, filters, window, currentTabId) {
         || (event.target && entityFilter.has(sanitizeFilterId(event.target)));
       if (!involved) continue;
     }
-    const slice = event.metricSlices.find((entry) => entry.metric === metric.id);
-    if (!slice) continue;
-    filteredEvents.push(event);
-    const position = event.time - rangeStart;
-    const index = bucketWidth > 0 ? Math.min(bucketCount - 1, Math.max(0, Math.floor(position / bucketWidth))) : 0;
-    const amount = Math.max(0, Number(slice.amount) || 0);
-    buckets[index].total += amount;
-    if (focusId && slice.entityId === focusId) {
-      buckets[index].focus += amount;
-      highlight.push({
-        id: event.id,
-        time: event.time,
-        amount,
-        label: event.abilityName,
-        sourceType: event.sourceType || '',
-        eventType: event.eventType
-      });
+    const metricAmount = Math.max(0, Number(event.metricTotals?.[metric.id] ?? 0));
+    const matchesMetric = metricAmount > 0;
+
+    const enhancedEvent = {
+      ...event,
+      matchesMetric,
+      metricAmount
+    };
+
+    visibleEvents.push(enhancedEvent);
+
+    if (matchesMetric) {
+      totalAmount += metricAmount;
     }
-    maxValue = Math.max(maxValue, buckets[index].total, buckets[index].focus);
-    totalAmount += amount;
+
+    if (focusId) {
+      const focusMatch = event.metricSlices.some(
+        (slice) => slice.metric === metric.id && slice.entityId === focusId
+      );
+      const actionMatch =
+        Boolean(event.action?.kind && event.action.kind !== 'ability')
+        && Boolean(event.attacker === focusId || event.target === focusId);
+      if (focusMatch || actionMatch) {
+        highlight.push({
+          id: `${event.id}-${focusId}-${highlight.length}`,
+          eventId: event.id,
+          time: event.time,
+          amount: metricAmount > 0 ? metricAmount : Number(event.amount) || 0,
+          label: event.action?.summary || event.abilityName,
+          sourceType: event.sourceType || event.action?.sourceType || '',
+          eventType: event.eventType,
+          kind: event.action?.kind || (matchesMetric ? 'metric' : 'event')
+        });
+      }
+    }
   }
 
   highlight.sort((a, b) => (a.time - b.time) || a.id.localeCompare(b.id));
@@ -436,13 +564,12 @@ function buildTimelineProjection(data, filters, window, currentTabId) {
     start: rangeStart,
     end: rangeEnd,
     span: rangeEnd - rangeStart,
-    bucketWidth,
-    buckets,
-    maxValue,
     totalAmount,
-    filteredEvents,
+    events: visibleEvents,
+    filteredEvents: visibleEvents,
     highlightEvents: highlight.slice(0, 80),
-    hasData: filteredEvents.length > 0,
+    hasData: visibleEvents.length > 0,
+    eventCount: visibleEvents.length,
     catalog: data.catalog || { sourceTypes: [], eventTypes: [], abilityNames: [] },
     domain: data.domain || { start: 0, end: 0, span: 0 }
   };
