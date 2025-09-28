@@ -28,6 +28,9 @@ Implementation details:
   slide smoothly when their order changes. Choosing a character slides it out
   and back in from the left with an element‑colored sparkle trail that is
   skipped entirely when Reduced Motion is enabled.
+- `PartyRoster.svelte` arms roster rows on the first tap/click. A follow-up tap
+  (or a long-press) toggles party membership so players no longer have to
+  perform three clicks to add/remove someone.
 - `PartyPicker.svelte` propagates `reducedMotion` to the roster so the effect
   can be disabled via Settings.
 - `StatTabs.svelte` uses flexible sizing so the panel fills its side and now
@@ -56,4 +59,3 @@ Implementation details:
   runs created before this change still load cleanly. If no playable roster
   entries are returned, the UI leaves the party empty until the user chooses a
   lineup.
-

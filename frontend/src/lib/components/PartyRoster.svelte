@@ -44,29 +44,16 @@
     return [...selectedChars, ...unselectedChars];
   })();
 
-  const TOGGLE_ARM_WINDOW_MS = 2000;
   let pendingToggleId = null;
-  let pendingToggleTimer = null;
 
   function clearPendingToggle(id = null) {
-    if (pendingToggleTimer) {
-      clearTimeout(pendingToggleTimer);
-      pendingToggleTimer = null;
-    }
     if (id == null || id === pendingToggleId) {
       pendingToggleId = null;
     }
   }
 
   function armToggle(id) {
-    clearPendingToggle();
     pendingToggleId = id;
-    if (TOGGLE_ARM_WINDOW_MS > 0) {
-      pendingToggleTimer = setTimeout(() => {
-        pendingToggleId = null;
-        pendingToggleTimer = null;
-      }, TOGGLE_ARM_WINDOW_MS);
-    }
   }
 
   function select(char, e) {
