@@ -13,6 +13,7 @@ from battle_logging.writers import start_run_logging
 from runs.encryption import get_fernet
 from runs.encryption import get_save_manager
 from runs.lifecycle import battle_snapshots
+from runs.lifecycle import emit_battle_end_for_runs
 from runs.lifecycle import load_map
 from runs.lifecycle import purge_all_run_state
 from runs.lifecycle import purge_run_state
@@ -474,6 +475,7 @@ async def wipe_save() -> None:
                 "CREATE TABLE IF NOT EXISTS damage_types (id TEXT PRIMARY KEY, type TEXT)"
             )
 
+    await emit_battle_end_for_runs()
     purge_all_run_state()
     await asyncio.to_thread(do_wipe)
 
@@ -533,5 +535,6 @@ async def restore_save(blob: bytes) -> None:
                 "INSERT INTO damage_types (id, type) VALUES (?, ?)", payload["damage_types"]
             )
 
+    await emit_battle_end_for_runs()
     purge_all_run_state()
     await asyncio.to_thread(restore_data)

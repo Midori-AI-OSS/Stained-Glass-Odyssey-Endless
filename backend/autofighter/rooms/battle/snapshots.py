@@ -16,6 +16,8 @@ __all__ = [
     "resolve_run_id",
     "get_recent_events",
     "get_status_phase",
+    "get_registered_entities",
+    "get_registered_run_ids",
 ]
 
 _MISSING = object()
@@ -64,6 +66,52 @@ def register_snapshot_entities(run_id: str | None, entities: Iterable[Any]) -> N
 
             _party_run_ids[ident] = run_id
             _party_refs[ident] = weakref.ref(entity, _cleanup)
+
+
+def get_registered_entities(run_id: str | None) -> list[Any]:
+    """Return active entities registered for a given run id."""
+
+    if not run_id:
+        return []
+
+    seen: set[int] = set()
+    entities: list[Any] = []
+
+    for mapping, refs in (
+        (_party_run_ids, _party_refs),
+        (_entity_run_ids, _entity_refs),
+    ):
+        for ident, stored_run_id in list(mapping.items()):
+            if stored_run_id != run_id:
+                continue
+
+            ref = refs.get(ident)
+            obj = ref() if ref else None
+            if obj is None:
+                mapping.pop(ident, None)
+                refs.pop(ident, None)
+                continue
+
+            key = id(obj)
+            if key in seen:
+                continue
+            seen.add(key)
+            entities.append(obj)
+
+    return entities
+
+
+def get_registered_run_ids() -> set[str]:
+    """Return all run ids tracked by snapshot registries."""
+
+    run_ids: set[str] = set()
+
+    run_ids.update(rid for rid in _entity_run_ids.values() if rid)
+    run_ids.update(rid for rid in _party_run_ids.values() if rid)
+    run_ids.update(rid for rid in _recent_events if rid)
+    run_ids.update(rid for rid in _status_phases if rid)
+
+    return run_ids
 
 
 def prepare_snapshot_overlay(run_id: str | None, entities: Iterable[Any]) -> None:
