@@ -66,20 +66,37 @@ describe('battle review store architecture', () => {
 
     // Loading events should update the timeline projection.
     state.events.set([
-      { event_id: 1, event_type: 'Damage', attacker_id: 'hero', target_id: 'boss', amount: 500, timestamp: 1.2 },
-      { event_id: 2, event_type: 'Ultimate', attacker_id: 'hero', target_id: 'boss', amount: 700, timestamp: 6.8 }
+      {
+        event_id: 1,
+        event_type: 'damage_dealt',
+        attacker_id: 'hero',
+        target_id: 'boss',
+        amount: 500,
+        timestamp: 1.2,
+        details: { action_name: 'Normal Attack' }
+      },
+      {
+        event_id: 2,
+        event_type: 'damage_dealt',
+        attacker_id: 'hero',
+        target_id: 'boss',
+        amount: 700,
+        timestamp: 6.8,
+        details: { action_name: 'Ultimate' }
+      }
     ]);
     const timeline = get(state.timeline);
-    expect(timeline).toHaveLength(2);
-    expect(timeline[1].label).toBe('Ultimate');
+    expect(timeline.filteredEvents).toHaveLength(2);
+    expect(timeline.filteredEvents[1].abilityName).toBe('Ultimate');
 
     state.destroy();
   });
 });
 
 describe('battle review shell layout', () => {
-  test('tabs shell wires timeline-first grid', () => {
-    expect(tabsShell).toContain('timeline-first-grid');
+  test('tabs shell stacks timeline below metrics', () => {
+    expect(tabsShell).toContain('content-stack');
+    expect(tabsShell).toContain('timeline-wrapper');
     expect(tabsShell).toContain('<TimelineRegion />');
     expect(tabsShell).toContain('<EntityTableContainer />');
   });
