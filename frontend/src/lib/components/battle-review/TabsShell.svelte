@@ -45,9 +45,11 @@
     {/each}
   </nav>
 
-  <section class="timeline-first-grid">
-    <TimelineRegion />
+  <section class="content-stack">
     <EntityTableContainer />
+    <div class="timeline-wrapper">
+      <TimelineRegion />
+    </div>
   </section>
 </div>
 
@@ -121,16 +123,20 @@
     white-space: nowrap;
   }
 
-  .timeline-first-grid {
+  .content-stack {
     display: grid;
-    grid-template-columns: minmax(0, 2.2fr) minmax(0, 3fr);
-    gap: 1.25rem;
-    align-items: stretch;
+    grid-template-columns: minmax(0, 1fr);
+    grid-auto-rows: minmax(0, max-content);
+    gap: 1.5rem;
   }
 
-  @media (max-width: 1200px) {
-    .timeline-first-grid {
-      grid-template-columns: 1fr;
+  .timeline-wrapper {
+    min-width: 0;
+  }
+
+  @media (max-width: 720px) {
+    .content-stack {
+      gap: 1.25rem;
     }
   }
 </style>
