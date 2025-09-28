@@ -11,13 +11,15 @@
   export let maxWidth = '820px';
   export let maxHeight = '85vh';
   export let zIndex = 1000;
+  export let bareSurface = false;
+  export let surfaceNoScroll = false;
 
   function close() {
     dispatch('close');
   }
 </script>
 
-<OverlaySurface {zIndex}>
+{#if bareSurface}
   <div class="box" style={`--max-w: ${maxWidth}; --max-h: ${maxHeight}` }>
     <div class="inner">
       <div class="content-wrap">
@@ -36,7 +38,28 @@
       </div>
     </div>
   </div>
-</OverlaySurface>
+{:else}
+  <OverlaySurface {zIndex} noScroll={surfaceNoScroll}>
+    <div class="box" style={`--max-w: ${maxWidth}; --max-h: ${maxHeight}` }>
+      <div class="inner">
+        <div class="content-wrap">
+          <MenuPanel class="panel-body" {padding}>
+            {#if title}
+              <header class="head">
+                <h3>{title}</h3>
+                <button class="mini" title="Close" on:click={close}>✕</button>
+              </header>
+            {/if}
+            <slot />
+          </MenuPanel>
+          <div class="panel-footer">
+            <slot name="footer" />
+          </div>
+        </div>
+      </div>
+    </div>
+  </OverlaySurface>
+{/if}
 
 <style>
   .head {

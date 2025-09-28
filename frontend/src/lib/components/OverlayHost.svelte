@@ -277,36 +277,34 @@
 {/if}
 
 {#if $overlayView === 'warp-info'}
-  <OverlaySurface zIndex={1350}>
-    <PopupWindow
-      title="Warp Mechanics"
-      maxWidth="640px"
-      zIndex={1350}
-      on:close={() => dispatch('back')}
-    >
-      <div class="warp-info-body">
-        <p>
-          Warps spend gacha tickets to roll from the current banner. Each pull advances pity,
-          steadily improving the odds of 5★ and 6★ rewards until a top rarity is found.
-        </p>
-        <ul class="warp-info-list">
-          <li>Single pulls cost 1 ticket, while ×5 and ×10 options spend 5 or 10 at once.</li>
-          <li>
-            Pity carries across all banners and resets after any 5★ or 6★ reward, whichever comes
-            first.
-          </li>
-          <li>Duplicate characters grant upgrade materials instead of extra copies.</li>
-        </ul>
-        <p class="warp-info-note">
-          Tip: Saving up for larger batches guarantees the animation plays once per session while still
-          honoring your current pity level.
-        </p>
-        <div class="stained-glass-row" style="justify-content: flex-end; margin-top: 0.75rem;">
-          <button class="icon-btn" on:click={() => dispatch('back')}>Back to pulls</button>
-        </div>
+  <PopupWindow
+    title="Warp Mechanics"
+    maxWidth="640px"
+    zIndex={1350}
+    on:close={() => dispatch('back')}
+  >
+    <div class="warp-info-body">
+      <p>
+        Warps spend gacha tickets to roll from the current banner. Each pull advances pity,
+        steadily improving the odds of 5★ and 6★ rewards until a top rarity is found.
+      </p>
+      <ul class="warp-info-list">
+        <li>Single pulls cost 1 ticket, while ×5 and ×10 options spend 5 or 10 at once.</li>
+        <li>
+          Pity carries across all banners and resets after any 5★ or 6★ reward, whichever comes
+          first.
+        </li>
+        <li>Duplicate characters grant upgrade materials instead of extra copies.</li>
+      </ul>
+      <p class="warp-info-note">
+        Tip: Saving up for larger batches guarantees the animation plays once per session while still
+        honoring your current pity level.
+      </p>
+      <div class="stained-glass-row" style="justify-content: flex-end; margin-top: 0.75rem;">
+        <button class="icon-btn" on:click={() => dispatch('back')}>Back to pulls</button>
       </div>
-    </PopupWindow>
-  </OverlaySurface>
+    </div>
+  </PopupWindow>
 {/if}
 
   {#if $overlayView === 'pull-results'}
@@ -374,54 +372,52 @@
 {/if}
 
 {#if rewardOpen}
-  <OverlaySurface zIndex={1100} noScroll={true}>
-    <PopupWindow
-      title={(roomData?.card_choices?.length || 0) > 0 ? 'Choose a Card' : 'Choose a Relic'}
-      maxWidth="880px"
-      maxHeight="100%"
-      zIndex={1100}
-      on:close={() => { /* block closing while choices remain */ }}
-    >
-      <RewardOverlay
-        cards={roomData.card_choices || []}
-        relics={roomData.relic_choices || []}
-        items={roomData.loot?.items || []}
-        gold={roomData.loot?.gold || 0}
-        {fullIdleMode}
-        on:select={(e) => dispatch('rewardSelect', e.detail)}
-        on:next={() => dispatch('nextRoom')}
-        on:lootAcknowledge={() => dispatch('lootAcknowledge')}
-      />
-    </PopupWindow>
-  </OverlaySurface>
+  <PopupWindow
+    title={(roomData?.card_choices?.length || 0) > 0 ? 'Choose a Card' : 'Choose a Relic'}
+    maxWidth="880px"
+    maxHeight="100%"
+    zIndex={1100}
+    surfaceNoScroll={true}
+    on:close={() => { /* block closing while choices remain */ }}
+  >
+    <RewardOverlay
+      cards={roomData.card_choices || []}
+      relics={roomData.relic_choices || []}
+      items={roomData.loot?.items || []}
+      gold={roomData.loot?.gold || 0}
+      {fullIdleMode}
+      on:select={(e) => dispatch('rewardSelect', e.detail)}
+      on:next={() => dispatch('nextRoom')}
+      on:lootAcknowledge={() => dispatch('lootAcknowledge')}
+    />
+  </PopupWindow>
 {/if}
 
 {#if reviewOpen && !rewardOpen && reviewReady && !skipBattleReview}
-  <OverlaySurface zIndex={1100} noScroll={true}>
-    <PopupWindow
-      title="Battle Review"
-      maxWidth="1200px"
-      maxHeight="100%"
-      zIndex={1100}
-      on:close={() => dispatch('nextRoom')}
-    >
-      {#key reviewKey}
-        <BattleReview
-          runId={runId}
-          battleIndex={roomData?.battle_index || 0}
-          prefetchedSummary={reviewSummary}
-          partyData={reviewPartyData}
-          foeData={(battleSnapshot?.foes && battleSnapshot?.foes.length) ? battleSnapshot.foes : (roomData?.foes || [])}
-          cards={[]}
-          relics={[]}
-          {reducedMotion}
-        />
-      {/key}
-      <div slot="footer" class="stained-glass-row" style="justify-content: flex-end; margin-top: 0.75rem;">
-        <button class="icon-btn" on:click={() => dispatch('nextRoom')}>Next Room</button>
-      </div>
-    </PopupWindow>
-  </OverlaySurface>
+  <PopupWindow
+    title="Battle Review"
+    maxWidth="1200px"
+    maxHeight="100%"
+    zIndex={1100}
+    surfaceNoScroll={true}
+    on:close={() => dispatch('nextRoom')}
+  >
+    {#key reviewKey}
+      <BattleReview
+        runId={runId}
+        battleIndex={roomData?.battle_index || 0}
+        prefetchedSummary={reviewSummary}
+        partyData={reviewPartyData}
+        foeData={(battleSnapshot?.foes && battleSnapshot?.foes.length) ? battleSnapshot.foes : (roomData?.foes || [])}
+        cards={[]}
+        relics={[]}
+        {reducedMotion}
+      />
+    {/key}
+    <div slot="footer" class="stained-glass-row" style="justify-content: flex-end; margin-top: 0.75rem;">
+      <button class="icon-btn" on:click={() => dispatch('nextRoom')}>Next Room</button>
+    </div>
+  </PopupWindow>
 {/if}
 
 {#if roomData && roomData.result === 'shop'}
