@@ -16,7 +16,6 @@
     setTimeWindow,
     timelineCursor,
     setTimelineCursor,
-    reducedMotion,
     displayParty,
     displayFoes,
     currentTab,
@@ -26,29 +25,40 @@
 
   const FILTER_ID_PATTERN = /[^a-z0-9._:-]/gi;
   const MIN_ZOOM = 5;
+  const CARD_LANE_COLOR = '#fb7185';
+  const RELIC_LANE_COLOR = '#facc15';
+  const OTHER_LANE_COLOR = '#94a3b8';
 
-  let chartEl;
-  let chartWidth = 0;
-  const chartHeight = 220;
+  const LANE_DEFINITIONS = [
+    { id: 'damageDone', label: 'Damage Dealt', metric: 'damageDone' },
+    { id: 'damageTaken', label: 'Damage Taken', metric: 'damageTaken' },
+    { id: 'healing', label: 'Healing', metric: 'healing' },
+    { id: 'mitigation', label: 'Mitigation', metric: 'mitigation' },
+    { id: 'card', label: 'Card Plays', predicate: (event) => event?.action?.kind === 'card' },
+    { id: 'relic', label: 'Relic Triggers', predicate: (event) => event?.action?.kind === 'relic' },
+    { id: 'other', label: 'Other Events', fallback: true }
+  ];
+
+  let timelineEl;
 
   onMount(() => {
     if (get(eventsStatus) === 'idle') {
       loadEvents();
     }
-    if (!chartEl) return undefined;
-    chartWidth = chartEl.clientWidth;
-    const observer = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        chartWidth = entry.contentRect.width;
-      }
+    if (!timelineEl) return undefined;
+    const observer = new ResizeObserver(() => {
+      // The cursor indicator relies on updated width for pointer interactions.
+      // We do not need explicit assignments because we compute ratios, but the
+      // observer keeps layout reactive when the panel size changes.
     });
-    observer.observe(chartEl);
+    observer.observe(timelineEl);
     return () => observer.disconnect();
   });
 
   $: filters = $timelineFilters;
   $: projection = $timeline;
   $: metricsOptions = $timelineMetrics;
+  $: metricColorMap = new Map(metricsOptions.map((option) => [option.id, option.color]));
   $: entityOptions = buildEntityOptions($displayParty, $displayFoes);
   $: sourceTypeOptions = buildValueOptions(projection?.catalog?.sourceTypes ?? []);
   $: eventTypeOptions = buildValueOptions(projection?.catalog?.eventTypes ?? []);
@@ -64,13 +74,21 @@
   $: offsetPercent = domainSpan > 0 ? Math.round(((windowStart - domainStart) / domainSpan) * 100) : 0;
   $: clampedOffset = Math.min(Math.max(offsetPercent || 0, 0), 100);
   $: offsetMax = Math.max(0, 100 - clampedZoom);
-  $: reducedAnimations = (filters?.respectMotion ?? true) && $reducedMotion;
-  $: areaPath = buildAreaPath(projection?.buckets ?? [], projection?.maxValue ?? 0, chartWidth, chartHeight, 'total');
-  $: focusPath = buildLinePath(projection?.buckets ?? [], projection?.maxValue ?? 0, chartWidth, chartHeight, 'focus');
-  $: cursorX = computeCursorX($timelineCursor?.time, projection?.start, projection?.end, chartWidth);
   $: summaryMetric = metricsOptions.find((option) => option.id === filters.metric) || metricsOptions[0];
   $: summaryTotal = formatAmount(projection?.totalAmount ?? 0);
-  $: cursorLabel = formatSeconds($timelineCursor?.time ?? projection?.start ?? 0);
+  $: eventCount = projection?.eventCount ?? projection?.events?.length ?? 0;
+  $: cursorPercent = computePercent($timelineCursor?.time, projection?.start, projection?.end);
+  $: cursorLeft = `${cursorPercent}%`;
+  $: axisTicks = buildAxisTicks(projection?.start, projection?.end);
+  $: lanePalette = { card: CARD_LANE_COLOR, relic: RELIC_LANE_COLOR, other: OTHER_LANE_COLOR };
+  $: lanes = buildTimelineLanes(
+    projection?.events ?? [],
+    projection?.start,
+    projection?.end,
+    filters.metric,
+    metricColorMap,
+    lanePalette
+  );
 
   function filterKey(value) {
     if (value == null) return '';
@@ -102,49 +120,93 @@
     return list.map((entry) => ({ value: filterKey(entry), label: entry || '—' }));
   }
 
-  function buildAreaPath(buckets, maxValue, width, height, key) {
-    if (!Array.isArray(buckets) || !buckets.length || !width || !height) return '';
-    const safeMax = maxValue > 0 ? maxValue : 1;
-    if (buckets.every((bucket) => !bucket || !bucket[key])) {
-      return `M0,${height} L${width},${height} L${width},${height} Z`;
+  function buildTimelineLanes(events, start, end, activeMetricId, metricColors, laneColors) {
+    const defs = LANE_DEFINITIONS.map((def) => ({ ...def, events: [] }));
+    const byId = new Map(defs.map((def) => [def.id, def]));
+    if (!Array.isArray(events) || !events.length || !Number.isFinite(start) || !Number.isFinite(end) || end <= start) {
+      return defs;
     }
-    const step = buckets.length > 1 ? width / (buckets.length - 1) : 0;
-    let path = '';
-    for (let index = 0; index < buckets.length; index += 1) {
-      const value = Math.max(0, Number(buckets[index]?.[key] ?? 0));
-      const x = step * index;
-      const y = height - (value / safeMax) * height;
-      path += `${index === 0 ? 'M' : 'L'}${x.toFixed(2)},${y.toFixed(2)} `;
-    }
-    path += `L${width.toFixed(2)},${height.toFixed(2)} L0,${height.toFixed(2)} Z`;
-    return path;
-  }
-
-  function buildLinePath(buckets, maxValue, width, height, key) {
-    if (!Array.isArray(buckets) || !buckets.length || !width || !height) return '';
-    const safeMax = maxValue > 0 ? maxValue : 1;
-    if (safeMax <= 0) return '';
-    const step = buckets.length > 1 ? width / (buckets.length - 1) : 0;
-    let path = '';
-    let hasValue = false;
-    for (let index = 0; index < buckets.length; index += 1) {
-      const value = Math.max(0, Number(buckets[index]?.[key] ?? 0));
-      if (value > 0) {
-        hasValue = true;
+    const span = Math.max(end - start, 0.0001);
+    for (const event of events) {
+      let placed = false;
+      for (const def of LANE_DEFINITIONS) {
+        let matches = false;
+        if (def.metric) {
+          matches = Array.isArray(event.metrics) && event.metrics.includes(def.metric);
+        } else if (typeof def.predicate === 'function') {
+          matches = def.predicate(event);
+        }
+        if (!matches) continue;
+        placed = true;
+        const lane = byId.get(def.id);
+        if (!lane) continue;
+        lane.events.push(
+          makeLaneEvent(event, start, span, def.id, def.metric, activeMetricId, metricColors, laneColors)
+        );
       }
-      const x = step * index;
-      const y = height - (value / safeMax) * height;
-      path += `${index === 0 ? 'M' : 'L'}${x.toFixed(2)},${y.toFixed(2)} `;
+      if (!placed) {
+        const fallbackLane = byId.get('other');
+        if (fallbackLane) {
+          fallbackLane.events.push(
+            makeLaneEvent(event, start, span, 'other', null, activeMetricId, metricColors, laneColors)
+          );
+        }
+      }
     }
-    return hasValue ? path : '';
+    return defs;
   }
 
-  function computeCursorX(time, start, end, width) {
-    if (!Number.isFinite(time) || !Number.isFinite(start) || !Number.isFinite(end) || width <= 0 || end <= start) {
+  function makeLaneEvent(event, start, span, laneId, laneMetricId, activeMetricId, metricColors, laneColors) {
+    const ratio = Math.min(Math.max((event.time - start) / span, 0), 1);
+    const color =
+      (laneMetricId && metricColors.get(laneMetricId))
+      || laneColors[laneId]
+      || OTHER_LANE_COLOR;
+    const amount = laneMetricId
+      ? Number(event.metricTotals?.[laneMetricId] ?? 0)
+      : Number(event.metricAmount ?? event.amount ?? 0);
+    const hasAmount = Number.isFinite(amount) && amount !== 0;
+    const primary = laneMetricId
+      ? laneMetricId === activeMetricId && Number(event.metricTotals?.[laneMetricId] ?? 0) > 0
+      : Boolean(activeMetricId && Number(event.metricTotals?.[activeMetricId] ?? 0) > 0);
+    return {
+      id: `${laneId}-${event.id}-${event.order}`,
+      event,
+      laneId,
+      metricId: laneMetricId,
+      position: ratio * 100,
+      color,
+      label: event.action?.summary || event.abilityName,
+      amount: hasAmount ? amount : null,
+      primary,
+      kind: event.action?.kind || (laneMetricId ? 'metric' : 'event')
+    };
+  }
+
+  function buildAxisTicks(start, end) {
+    if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) {
+      return [];
+    }
+    const span = end - start;
+    const divisions = span < 6 ? 4 : 6;
+    const step = span / divisions;
+    const ticks = [];
+    for (let index = 0; index <= divisions; index += 1) {
+      const time = start + step * index;
+      ticks.push({
+        time,
+        position: computePercent(time, start, end),
+        label: formatSeconds(time)
+      });
+    }
+    return ticks;
+  }
+
+  function computePercent(value, start, end) {
+    if (!Number.isFinite(value) || !Number.isFinite(start) || !Number.isFinite(end) || end <= start) {
       return 0;
     }
-    const ratio = Math.min(Math.max((time - start) / (end - start), 0), 1);
-    return ratio * width;
+    return Math.min(Math.max((value - start) / (end - start), 0), 1) * 100;
   }
 
   function formatSeconds(value) {
@@ -224,24 +286,47 @@
   function resetWindow() {
     setTimeWindow(null);
     if (Number.isFinite(projection?.start)) {
-      setTimelineCursor({ time: projection.start });
+      setTimelineCursor({ time: projection.start, eventId: null });
     }
   }
 
-  function handleChartPointer(event) {
-    if (!projection || !chartEl) return;
-    const rect = chartEl.getBoundingClientRect();
+  function handleTrackPointer(event) {
+    if (!projection || !$timelineCursor || !event.currentTarget) return;
+    const rect = event.currentTarget.getBoundingClientRect();
     if (rect.width <= 0 || !Number.isFinite(projection.start) || !Number.isFinite(projection.end)) {
       return;
     }
     const ratio = Math.min(Math.max((event.clientX - rect.left) / rect.width, 0), 1);
     const time = projection.start + (projection.end - projection.start) * ratio;
-    setTimelineCursor({ time });
+    setTimelineCursor({ time, eventId: null });
+  }
+
+  function handleEventFocus(item) {
+    if (!item?.event) return;
+    setTimelineCursor({ time: item.event.time, eventId: item.event.id });
   }
 
   function handleHighlightSelect(item) {
     if (!item) return;
-    setTimelineCursor({ time: item.time, eventId: item.id });
+    setTimelineCursor({ time: item.time, eventId: item.eventId ?? item.id });
+  }
+
+  function describeLaneEvent(item) {
+    if (!item?.event) return 'Combat event';
+    const pieces = [`T+${formatSeconds(item.event.time)}`];
+    if (item.label) {
+      pieces.push(item.label);
+    }
+    if (item.event.eventType) {
+      pieces.push(item.event.eventType.replace(/_/g, ' '));
+    }
+    if (item.amount != null) {
+      pieces.push(`${formatAmount(item.amount)} value`);
+    }
+    if (item.event.action?.kind) {
+      pieces.push(item.event.action.kind);
+    }
+    return pieces.filter(Boolean).join(' • ');
   }
 
   function isFiltersPristine() {
@@ -315,7 +400,7 @@
     </div>
   </header>
 
-  <div class="window-controls" aria-label="Timeline zoom controls">
+  <div class="window-controls" aria-label="Timeline window controls">
     <div class="control-group">
       <label for="timeline-zoom">Zoom</label>
       <input
@@ -354,43 +439,83 @@
   </div>
 
   {#if projection?.hasData}
-  <div
-      class="chart-wrapper"
-      class:reduced-motion={reducedAnimations}
-      bind:this={chartEl}
-      on:pointermove={handleChartPointer}
-      on:pointerdown={handleChartPointer}
-    >
-      <svg viewBox={`0 0 ${Math.max(chartWidth, 1)} ${chartHeight}`} preserveAspectRatio="none" role="img" aria-label="Timeline graph">
-        {#if areaPath}
-          <path class="series-total" d={areaPath} />
-        {/if}
-        {#if focusPath}
-          <path class="series-focus" d={focusPath} />
-        {/if}
-        <line class="cursor-line" x1={cursorX} x2={cursorX} y1="0" y2={chartHeight} />
-      </svg>
-      <div class="chart-meta">
-        <span>T+{cursorLabel}</span>
-        <span>{summaryMetric?.label ?? 'Total'}: {summaryTotal}</span>
+    <div class="timeline-summary">
+      <div class="summary-chip">
+        <span>{summaryMetric?.label ?? 'Total'}</span>
+        <strong>{summaryTotal}</strong>
+      </div>
+      <div class="summary-chip">
+        <span>Events visible</span>
+        <strong>{eventCount}</strong>
+      </div>
+      <div class="summary-chip">
+        <span>Cursor</span>
+        <strong>T+{formatSeconds($timelineCursor?.time ?? projection.start ?? 0)}</strong>
+      </div>
+    </div>
+
+    <div class="timeline-surface" bind:this={timelineEl} role="group" aria-label="Timeline lanes">
+      <div class="cursor-line" style={`left: ${cursorLeft};`} aria-hidden="true"></div>
+      <div class="timeline-axis" aria-hidden="true">
+        {#each axisTicks as tick (tick.time)}
+          <span class="axis-tick" style={`left: ${tick.position}%`}>{tick.label}</span>
+        {/each}
+      </div>
+      <div class="timeline-lanes">
+        {#each lanes as lane (lane.id)}
+          <div class="lane" data-lane={lane.id}>
+            <span class="lane-label">{lane.label}</span>
+            <div
+              class="lane-track"
+              data-empty={!lane.events.length}
+              on:pointerdown={handleTrackPointer}
+              on:click={handleTrackPointer}
+            >
+              {#if lane.events.length}
+                {#each lane.events as item (item.id)}
+                  <button
+                    type="button"
+                    class="lane-event"
+                    class:primary={item.primary}
+                    class:card={item.kind === 'card'}
+                    class:relic={item.kind === 'relic'}
+                    style={`left: ${item.position}%;`}
+                    on:click|stopPropagation={() => handleEventFocus(item)}
+                    aria-label={describeLaneEvent(item)}
+                  >
+                    <span class="marker" style={`background:${item.color};`}></span>
+                    <span class="event-time">T+{formatSeconds(item.event.time)}</span>
+                    <span class="event-label">{item.label}</span>
+                    {#if item.amount != null}
+                      <span class="event-amount">{formatAmount(item.amount)}</span>
+                    {/if}
+                  </button>
+                {/each}
+              {:else}
+                <span class="lane-empty">No events</span>
+              {/if}
+            </div>
+          </div>
+        {/each}
       </div>
     </div>
 
     <div class="timeline-highlights" aria-live="polite">
       {#if projection.focusId}
-        <h4>{focusLabel} ability highlights</h4>
+        <h4>{focusLabel} highlights</h4>
         {#if projection.highlightEvents.length}
           <ul>
             {#each projection.highlightEvents as item (item.id)}
               <li>
                 <button
                   type="button"
-                  class:active={item.id === $timelineCursor?.eventId}
+                  class:active={item.eventId === $timelineCursor?.eventId}
                   on:click={() => handleHighlightSelect(item)}
                 >
                   <span class="highlight-time">T+{formatSeconds(item.time)}</span>
                   <span class="highlight-label">{item.label}</span>
-                  <span class="highlight-amount">{formatAmount(item.amount)}</span>
+                  <span class="highlight-kind">{item.kind ?? 'event'}</span>
+                  <span class="highlight-amount">{formatAmount(item.amount ?? 0)}</span>
                 </button>
               </li>
             {/each}
@@ -519,26 +644,24 @@
   }
 
   .control-group label {
-    font-size: 0.72rem;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: rgba(148, 163, 184, 0.85);
+    font-size: 0.75rem;
+    color: rgba(203, 213, 225, 0.85);
   }
 
   .control-group input[type='range'] {
-    width: 160px;
+    accent-color: rgba(56, 189, 248, 0.75);
   }
 
   .control-value {
-    font-weight: 600;
-    color: #f8fafc;
+    font-variant-numeric: tabular-nums;
+    color: rgba(148, 163, 184, 0.85);
   }
 
   .reset-window {
-    padding: 0.35rem 0.65rem;
+    padding: 0.45rem 0.75rem;
     border: 1px solid rgba(148, 163, 184, 0.45);
-    background: rgba(15, 23, 42, 0.5);
-    color: #e2e8f0;
+    background: rgba(15, 23, 42, 0.65);
+    color: #e0f2fe;
     font-size: 0.75rem;
     cursor: pointer;
   }
@@ -548,52 +671,166 @@
     cursor: not-allowed;
   }
 
-  .reset-window:not(:disabled):hover,
-  .reset-window:not(:disabled):focus-visible {
-    background: rgba(56, 189, 248, 0.25);
-    border-color: rgba(125, 211, 252, 0.65);
+  .timeline-summary {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
   }
 
-  .chart-wrapper {
+  .summary-chip {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    padding: 0.5rem 0.75rem;
+    background: rgba(15, 23, 42, 0.55);
+    border: 1px solid rgba(56, 189, 248, 0.35);
+    min-width: 120px;
+  }
+
+  .summary-chip span {
+    font-size: 0.68rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: rgba(148, 163, 184, 0.85);
+  }
+
+  .summary-chip strong {
+    font-size: 0.95rem;
+    color: #f8fafc;
+  }
+
+  .timeline-surface {
     position: relative;
     border: 1px solid rgba(30, 64, 175, 0.45);
     background: rgba(15, 23, 42, 0.45);
-    padding: 0.75rem;
-  }
-
-  .chart-wrapper svg {
-    width: 100%;
-    height: 220px;
-  }
-
-  .chart-wrapper.reduced-motion svg {
-    transition: none;
-  }
-
-  .series-total {
-    fill: rgba(56, 189, 248, 0.28);
-    stroke: rgba(56, 189, 248, 0.55);
-    stroke-width: 1.5;
-  }
-
-  .series-focus {
-    fill: none;
-    stroke: rgba(249, 115, 22, 0.9);
-    stroke-width: 2;
+    padding: 1rem 1rem 0.75rem;
+    overflow: hidden;
   }
 
   .cursor-line {
-    stroke: rgba(226, 232, 240, 0.65);
-    stroke-width: 1;
-    stroke-dasharray: 3 4;
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: rgba(241, 245, 249, 0.6);
+    pointer-events: none;
   }
 
-  .chart-meta {
-    margin-top: 0.5rem;
+  .timeline-axis {
+    position: relative;
+    height: 1.5rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .axis-tick {
+    position: absolute;
+    top: 0;
+    transform: translateX(-50%);
+    font-size: 0.7rem;
+    color: rgba(148, 163, 184, 0.85);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .timeline-lanes {
     display: flex;
-    justify-content: space-between;
-    font-size: 0.78rem;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .lane {
+    display: grid;
+    grid-template-columns: 110px minmax(0, 1fr);
+    gap: 0.75rem;
+    align-items: center;
+  }
+
+  .lane-label {
+    font-size: 0.75rem;
     color: rgba(226, 232, 240, 0.85);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .lane-track {
+    position: relative;
+    min-height: 52px;
+    border: 1px dashed rgba(51, 65, 85, 0.65);
+    background: rgba(15, 23, 42, 0.35);
+    display: flex;
+    align-items: center;
+    padding: 0.4rem 0;
+  }
+
+  .lane-track[data-empty='true'] {
+    justify-content: center;
+    color: rgba(100, 116, 139, 0.8);
+    font-size: 0.75rem;
+  }
+
+  .lane-empty {
+    font-size: 0.75rem;
+    color: rgba(100, 116, 139, 0.85);
+  }
+
+  .lane-event {
+    position: absolute;
+    transform: translateX(-50%);
+    min-width: 160px;
+    max-width: 220px;
+    display: grid;
+    grid-template-columns: 14px 70px minmax(0, 1fr) auto;
+    gap: 0.4rem;
+    align-items: center;
+    padding: 0.35rem 0.45rem;
+    border: 1px solid rgba(148, 163, 184, 0.45);
+    background: rgba(15, 23, 42, 0.75);
+    color: rgba(226, 232, 240, 0.9);
+    font-size: 0.72rem;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.4);
+  }
+
+  .lane-event.primary {
+    border-color: rgba(56, 189, 248, 0.85);
+    background: rgba(56, 189, 248, 0.2);
+  }
+
+  .lane-event.card {
+    border-color: rgba(251, 113, 133, 0.85);
+  }
+
+  .lane-event.relic {
+    border-color: rgba(250, 204, 21, 0.8);
+  }
+
+  .lane-event:focus-visible,
+  .lane-event:hover {
+    border-color: rgba(125, 211, 252, 0.9);
+    background: rgba(30, 64, 175, 0.55);
+  }
+
+  .marker {
+    width: 10px;
+    height: 10px;
+    border-radius: 9999px;
+    background: rgba(148, 163, 184, 0.8);
+  }
+
+  .event-time {
+    font-variant-numeric: tabular-nums;
+    color: rgba(148, 163, 184, 0.85);
+  }
+
+  .event-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .event-amount {
+    justify-self: end;
+    font-weight: 600;
+    color: #f8fafc;
   }
 
   .timeline-highlights {
@@ -622,7 +859,7 @@
   .timeline-highlights button {
     width: 100%;
     display: grid;
-    grid-template-columns: 80px minmax(0, 1fr) 80px;
+    grid-template-columns: 80px minmax(0, 1fr) 80px 70px;
     align-items: center;
     gap: 0.5rem;
     padding: 0.4rem 0.5rem;
@@ -653,6 +890,11 @@
     white-space: nowrap;
   }
 
+  .highlight-kind {
+    text-transform: capitalize;
+    color: rgba(226, 232, 240, 0.85);
+  }
+
   .highlight-amount {
     justify-self: end;
     font-weight: 600;
@@ -676,6 +918,20 @@
   @media (max-width: 960px) {
     .filters-row {
       grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    }
+
+    .lane {
+      grid-template-columns: 1fr;
+    }
+
+    .lane-label {
+      order: -1;
+    }
+
+    .lane-event {
+      min-width: 140px;
+      max-width: 180px;
+      grid-template-columns: 12px 64px minmax(0, 1fr) auto;
     }
   }
 </style>

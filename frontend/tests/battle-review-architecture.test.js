@@ -86,8 +86,9 @@ describe('battle review store architecture', () => {
       }
     ]);
     const timeline = get(state.timeline);
-    expect(timeline.filteredEvents).toHaveLength(2);
-    expect(timeline.filteredEvents[1].abilityName).toBe('Ultimate');
+    expect(timeline.events).toHaveLength(2);
+    expect(timeline.events[1].abilityName).toBe('Ultimate');
+    expect(timeline.events[1].action.summary).toBe('Ultimate');
 
     state.destroy();
   });
