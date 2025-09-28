@@ -6,9 +6,8 @@
     createBattleReviewState
   } from '../systems/battleReview/state.js';
   import { buildBattleReviewLink } from '../systems/battleReview/urlState.js';
-import TabsShell from './battle-review/TabsShell.svelte';
-import EventsDrawer from './battle-review/EventsDrawer.svelte';
-import MenuPanel from './MenuPanel.svelte';
+  import TabsShell from './battle-review/TabsShell.svelte';
+  import EventsDrawer from './battle-review/EventsDrawer.svelte';
 
   export let runId = '';
   export let battleIndex = 0;
@@ -153,7 +152,7 @@ import MenuPanel from './MenuPanel.svelte';
 
 <svelte:options accessors={true} />
 
-<MenuPanel class="battle-review-panel" padding="1.25rem" {reducedMotion}>
+<div class="battle-review-panel">
   <div class="battle-review-layout">
     <header class="review-header">
       <div class="header-metric">Result: {$resultSummary.result}</div>
@@ -190,9 +189,17 @@ import MenuPanel from './MenuPanel.svelte';
     <TabsShell />
     <EventsDrawer />
   </div>
-</MenuPanel>
+</div>
 
 <style>
+  .battle-review-panel {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+    width: 100%;
+  }
+
   .battle-review-layout {
     display: flex;
     flex-direction: column;

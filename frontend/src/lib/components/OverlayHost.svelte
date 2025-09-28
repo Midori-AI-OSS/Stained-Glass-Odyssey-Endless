@@ -58,6 +58,7 @@
   };
   $: effectiveReducedMotion = reducedMotion || motionSettings.globalReducedMotion;
   $: simplifiedTransitions = motionSettings.simplifyOverlayTransitions;
+  $: overlayReducedMotion = simplifiedTransitions ? true : effectiveReducedMotion;
 
   const dispatch = createEventDispatcher();
   const now = () => new Date().toISOString();
@@ -399,6 +400,8 @@
     maxWidth="1200px"
     maxHeight="100%"
     zIndex={1100}
+    padding="1.25rem"
+    reducedMotion={overlayReducedMotion}
     surfaceNoScroll={true}
     on:close={() => dispatch('nextRoom')}
   >
@@ -411,7 +414,7 @@
         foeData={(battleSnapshot?.foes && battleSnapshot?.foes.length) ? battleSnapshot.foes : (roomData?.foes || [])}
         cards={[]}
         relics={[]}
-        {reducedMotion}
+        reducedMotion={overlayReducedMotion}
       />
     {/key}
     <div slot="footer" class="stained-glass-row" style="justify-content: flex-end; margin-top: 0.75rem;">
