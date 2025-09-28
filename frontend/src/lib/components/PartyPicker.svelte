@@ -62,6 +62,16 @@
   }
   $: previewUpgradeState = readUpgradeState(previewId, upgradeCache);
 
+  function partiesEqual(a, b) {
+    if (a === b) return true;
+    if (!Array.isArray(a) || !Array.isArray(b)) return false;
+    if (a.length !== b.length) return false;
+    for (let i = 0; i < a.length; i += 1) {
+      if (a[i] !== b[i]) return false;
+    }
+    return true;
+  }
+
   function readUpgradeState(id, cache = upgradeCache) {
     const key = id == null ? null : String(id);
     return key && cache[key] ? cache[key] : EMPTY_UPGRADE_STATE;
@@ -112,8 +122,6 @@
         if (e && typeof e !== 'string') e = e.id || e.name;
         return e && !/generic/i.test(String(e)) ? e : 'Generic';
       }
-      const oldPreview = previewId;
-      const oldSelected = [...selected];
       function isNonPlayable(entry) {
         const meta = entry?.ui && typeof entry.ui === 'object' ? entry.ui : {};
         if (meta.non_selectable === true) {
@@ -142,22 +150,33 @@
         // Only show characters the user can actually use
         .filter((p) => (p.owned || p.is_player) && !isNonPlayable(p))
         .sort((a, b) => (a.is_player ? -1 : b.is_player ? 1 : 0));
-      // Restore selection and preview where possible
-      selected = oldSelected.filter((id) => roster.some((c) => c.id === id));
+
       const player = roster.find((p) => p.is_player);
-      // Ensure the player is always in party; if party is full, replace the last non-player
-      if (player && !selected.includes(player.id)) {
-        if (selected.length >= 5) {
-          // Remove the last non-player entry to make room
-          const withoutPlayer = selected.filter((id) => id !== player.id);
+
+      const currentSelection = Array.isArray(selected) ? [...selected] : [];
+      const filteredSelection = currentSelection.filter((id) => roster.some((c) => c.id === id));
+
+      let ensuredSelection = filteredSelection;
+      if (player && !ensuredSelection.includes(player.id)) {
+        if (ensuredSelection.length >= 5) {
+          const withoutPlayer = ensuredSelection.filter((id) => id !== player.id);
           withoutPlayer.pop();
-          selected = [...withoutPlayer, player.id];
+          ensuredSelection = [...withoutPlayer, player.id];
         } else {
-          selected = [...selected, player.id];
+          ensuredSelection = [...ensuredSelection, player.id];
         }
       }
+
+      if (!partiesEqual(ensuredSelection, currentSelection)) {
+        selected = [...ensuredSelection];
+      } else {
+        selected = [...currentSelection];
+      }
+
       const defaultPreview = player ? player.id : (roster[0]?.id || null);
-      previewId = oldPreview ?? selected[0] ?? defaultPreview;
+      const rosterHasPreview = roster.some((r) => r.id === previewId);
+      const nextPreview = rosterHasPreview ? previewId : (selected[0] ?? defaultPreview ?? null);
+      previewId = nextPreview;
 
       if (player) {
         const savedElement = player.element || '';
@@ -192,15 +211,62 @@
     return `${sign}${formatted}%`;
   }
 
-  function toggleMember(id) {
+  function resolveRemovableCandidate(preferredId, currentSelected, player) {
+    function candidateInfo(candidate) {
+      if (!candidate) return null;
+      const index = currentSelected.indexOf(candidate);
+      if (index === -1) return null;
+      if (player && candidate === player.id) return null;
+      const entry = roster.find((p) => p.id === candidate);
+      if (!entry || entry.is_player) return null;
+      return { id: candidate, index };
+    }
+
+    const preferredInfo = candidateInfo(preferredId);
+    if (preferredInfo) {
+      return preferredInfo;
+    }
+
+    for (let i = 0; i < currentSelected.length; i += 1) {
+      const info = candidateInfo(currentSelected[i]);
+      if (info) {
+        return info;
+      }
+    }
+
+    return null;
+  }
+
+  function toggleMember(detail) {
+    if (detail == null) return;
+    const isObject = typeof detail === 'object';
+    const id = isObject ? detail.id ?? null : detail;
+    const replaceId = isObject ? detail.replaceId ?? null : null;
     if (!id) return;
     // The player cannot be removed from the party
     const player = roster.find((p) => p.is_player);
     if (player && id === player.id) return;
+
     if (selected.includes(id)) {
       selected = selected.filter((c) => c !== id);
-    } else if (selected.length < 5) {
-      selected = [...selected, id];
+      return;
+    }
+
+    const nextSelected = [...selected];
+
+    if (nextSelected.length >= 5) {
+      const removableInfo = resolveRemovableCandidate(replaceId, nextSelected, player);
+      if (!removableInfo) {
+        return;
+      }
+      const updated = [...nextSelected];
+      updated.splice(removableInfo.index, 1, id);
+      selected = updated;
+      return;
+    }
+
+    if (!nextSelected.includes(id)) {
+      selected = [...nextSelected, id];
     }
   }
 

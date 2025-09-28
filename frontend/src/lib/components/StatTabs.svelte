@@ -19,7 +19,7 @@
 
   function toggleMember() {
     if (!previewId) return;
-    dispatch('toggle', previewId);
+    dispatch('toggle', { id: previewId });
   }
 
   function openUpgrade() {

@@ -44,61 +44,108 @@
     return [...selectedChars, ...unselectedChars];
   })();
 
-  let pendingToggleId = null;
+  let stagedToggleId = null;
+  let stagedReplaceId = null;
 
-  function clearPendingToggle(id = null) {
-    if (id == null || id === pendingToggleId) {
-      pendingToggleId = null;
+  function clearStaged(id = null) {
+    if (id == null || stagedToggleId === id) {
+      stagedToggleId = null;
+      stagedReplaceId = null;
     }
   }
 
-  function armToggle(id) {
-    pendingToggleId = id;
+  function rosterEntry(id) {
+    return roster.find((c) => c.id === id);
+  }
+
+  function isRemovable(candidateId) {
+    if (candidateId == null) return false;
+    if (!selected.includes(candidateId)) return false;
+    const entry = rosterEntry(candidateId);
+    if (!entry) return false;
+    return entry.is_player !== true;
+  }
+
+  function computeReplaceTarget(targetId, priorPreviewId = null) {
+    if (selected.includes(targetId)) return null;
+    if (selected.length < 5) return null;
+
+    const order = [];
+    if (priorPreviewId != null && priorPreviewId !== targetId) {
+      order.push(priorPreviewId);
+    }
+    for (const id of selected) {
+      if (id !== targetId && !order.includes(id)) {
+        order.push(id);
+      }
+    }
+
+    for (const candidate of order) {
+      if (isRemovable(candidate)) {
+        return candidate;
+      }
+    }
+
+    return null;
+  }
+
+  function dispatchToggle(id, { replaceId = null, reason = 'click' } = {}) {
+    dispatch('toggle', { id, replaceId, reason });
+  }
+
+  function armToggle(char, priorPreviewId = null) {
+    stagedToggleId = char?.id ?? null;
+    stagedReplaceId = stagedToggleId ? computeReplaceTarget(stagedToggleId, priorPreviewId) : null;
   }
 
   function select(char, e) {
     const id = char?.id;
-    // Suppress the single-click select if a long-press just toggled
+    if (id == null) return;
+
     if (suppressClick) {
       suppressClick = false;
-      clearPendingToggle(id);
+      clearStaged(id);
       e && e.stopPropagation();
       e && e.preventDefault();
       return;
     }
-    if (id == null) return;
 
-    const wasArmed = pendingToggleId === id;
+    const priorPreview = previewId;
+    const wasStaged = stagedToggleId === id;
+
     previewId = id;
 
-    if (wasArmed && !char?.is_player) {
-      clearPendingToggle(id);
+    if (wasStaged && !char?.is_player) {
+      const replaceId = stagedReplaceId ?? computeReplaceTarget(id, priorPreview);
+      dispatchToggle(id, { replaceId, reason: 'second-click' });
+      clearStaged(id);
       e && e.preventDefault();
-      toggle(id);
       return;
     }
 
     if (!char?.is_player) {
-      armToggle(id);
+      armToggle(char, priorPreview);
     } else {
-      clearPendingToggle(id);
+      clearStaged();
     }
-  }
-
-  function toggle(id) {
-    dispatch('toggle', id);
   }
 
   // Long-press detection
   let longTimer = null;
   let suppressClick = false;
-  function onPointerDown(id, e) {
+  const LONG_PRESS_MS = 500;
+
+  function onPointerDown(char) {
+    if (!char || char.is_player) return;
     clearTimeout(longTimer);
+    armToggle(char, previewId);
     longTimer = setTimeout(() => {
       suppressClick = true;
-      clearPendingToggle(id);
-      toggle(id);
-    }, 500);
+      previewId = char.id;
+      const replaceId = stagedReplaceId ?? computeReplaceTarget(char.id, previewId);
+      dispatchToggle(char.id, { replaceId, reason: 'long-press' });
+      clearStaged(char.id);
+    }, LONG_PRESS_MS);
   }
   function onPointerUp() {
     clearTimeout(longTimer);
@@ -106,7 +153,7 @@
 
   onDestroy(() => {
     clearTimeout(longTimer);
-    clearPendingToggle();
+    clearStaged();
   });
 
   // Deterministic pseudo-random from an id string
@@ -151,9 +198,9 @@
     <button
       data-testid={`choice-${char.id}`}
       class="char-btn"
-      class:armed={pendingToggleId === char.id}
+      class:armed={stagedToggleId === char.id}
       on:click={(e) => select(char, e)}
-      on:pointerdown={(e) => onPointerDown(char.id, e)}
+      on:pointerdown={() => onPointerDown(char)}
       on:pointerup={onPointerUp}
       on:pointerleave={onPointerUp}>
       <img src={char.img} alt={char.name} class="compact-img" />
@@ -196,11 +243,11 @@
         data-testid={`choice-${char.id}`}
         class="char-row"
         class:selected={selected.includes(char.id)}
-        class:armed={pendingToggleId === char.id}
+        class:armed={stagedToggleId === char.id}
         class:reduced={reducedMotion}
         animate:flip={{ duration: reducedMotion ? 0 : 300 }}
         on:click={(e) => select(char, e)}
-        on:pointerdown={(e) => !char.is_player && onPointerDown(char.id, e)}
+        on:pointerdown={() => !char.is_player && onPointerDown(char)}
         on:pointerup={onPointerUp}
         on:pointerleave={onPointerUp}
         on:introstart={(e) => onIntroStart(char.id, e)}
@@ -230,11 +277,11 @@
       data-testid={`choice-${char.id}`}
       class="char-row"
       class:selected={selected.includes(char.id)}
-      class:armed={pendingToggleId === char.id}
+      class:armed={stagedToggleId === char.id}
       class:reduced={reducedMotion}
       animate:flip={{ duration: reducedMotion ? 0 : 300 }}
       on:click={(e) => select(char, e)}
-      on:pointerdown={(e) => !char.is_player && onPointerDown(char.id, e)}
+      on:pointerdown={() => !char.is_player && onPointerDown(char)}
       on:pointerup={onPointerUp}
       on:pointerleave={onPointerUp}
       on:introstart={(e) => onIntroStart(char.id, e)}
