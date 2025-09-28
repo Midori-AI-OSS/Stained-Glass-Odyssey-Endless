@@ -1,8 +1,8 @@
 import asyncio
+import math
 
 import pytest
 
-from autofighter.action_queue import GAUGE_START
 from autofighter.action_queue import TURN_COUNTER_ID
 from autofighter.action_queue import ActionQueue
 from autofighter.rooms.battle.progress import build_action_queue_snapshot
@@ -20,20 +20,25 @@ def test_speed_ordering_and_reset():
 
     first = q.next_actor()
     assert first is a
-    assert a.action_value == a.base_action_value
+    assert a.action_value == pytest.approx(a.base_action_value, abs=1e-6)
+    assert a.action_gauge == pytest.approx(a.action_value, abs=1e-6)
     assert b.action_value == pytest.approx(
         b.base_action_value - a.base_action_value,
         abs=1.0,
     )
+    assert b.action_gauge == pytest.approx(b.action_value, abs=1e-6)
 
     second = q.next_actor()
     assert second is b
     assert b.action_value == pytest.approx(b.base_action_value, abs=1.0)
+    assert b.action_gauge == pytest.approx(b.action_value, abs=1e-6)
     assert a.action_value == pytest.approx(0.0, abs=1.0)
+    assert a.action_gauge == pytest.approx(a.action_value, abs=1e-6)
 
     snap = q.snapshot()
     assert [e["id"] for e in snap] == ["a", "b"]
-    assert all(e["action_gauge"] == GAUGE_START for e in snap)
+    for entry in snap:
+        assert entry["action_gauge"] == pytest.approx(entry["action_value"], abs=1e-6)
 
 
 def test_bonus_turn():
@@ -88,6 +93,89 @@ def test_snapshot_initial_order_unique():
 
     assert action_values == sorted(action_values)
     assert len(action_values) == len(set(action_values))
+
+
+class RecordingStats(Stats):
+    def __post_init__(self):
+        super().__post_init__()
+        object.__setattr__(self, "action_value_updates", [])
+        object.__setattr__(self, "action_gauge_updates", [])
+
+    def __setattr__(self, name, value):
+        if name in {"action_value", "action_gauge"}:
+            history = self.__dict__.get(f"{name}_updates")
+            if history is not None:
+                history.append(value)
+        super().__setattr__(name, value)
+
+
+def _diff_sequence(values: list[float], starting_value: float) -> list[float]:
+    previous = starting_value
+    deltas = []
+    for value in values:
+        deltas.append(previous - value)
+        previous = value
+    return deltas
+
+
+def test_queue_advances_one_point_at_a_time():
+    first = RecordingStats()
+    first.id = "alpha"
+    first.spd = 200
+
+    second = RecordingStats()
+    second.id = "beta"
+    second.spd = 150
+
+    third = RecordingStats()
+    third.id = "gamma"
+    third.spd = 100
+
+    queue = ActionQueue([first, second, third])
+
+    members = (first, second, third)
+
+    for _ in range(3):
+        for member in members:
+            member.action_value_updates.clear()
+            member.action_gauge_updates.clear()
+
+        initial_values = {id(member): member.action_value for member in members}
+        initial_gauges = {
+            id(member): getattr(member, "action_gauge", 0.0) for member in members
+        }
+
+        actor = queue.next_actor()
+        spent = float(initial_values[id(actor)])
+        expected_steps = math.ceil(spent) if spent > 0 else 0
+
+        for member in members:
+            if member is actor:
+                continue
+            value_history = member.action_value_updates
+            gauge_history = member.action_gauge_updates
+            assert len(value_history) >= expected_steps
+            assert len(gauge_history) >= expected_steps
+
+            start_value = float(initial_values[id(member)])
+            start_gauge = float(initial_gauges[id(member)])
+
+            deltas = _diff_sequence(value_history[:expected_steps], start_value)
+            for delta in deltas:
+                assert delta <= 1.0 + 1e-6
+                assert delta >= -1e-6
+
+            gauge_deltas = _diff_sequence(gauge_history[:expected_steps], start_gauge)
+            for delta in gauge_deltas:
+                assert delta <= 1.0 + 1e-6
+                assert delta >= -1e-6
+
+            assert value_history[-1] == pytest.approx(member.action_value, abs=1e-6)
+            assert gauge_history[-1] == pytest.approx(member.action_gauge, abs=1e-6)
+
+        snapshot = queue.snapshot()
+        values = [entry["action_value"] for entry in snapshot]
+        assert len(values) == len(set(values))
 
 
 def test_same_speed_combatants_have_deterministic_snapshots():
