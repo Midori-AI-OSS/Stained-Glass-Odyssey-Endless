@@ -1,6 +1,7 @@
 <script>
   import { getElementIcon, getElementColor } from '../systems/assetLoader.js';
   import { createEventDispatcher } from 'svelte';
+  import { onDestroy } from 'svelte';
   import { fly } from 'svelte/transition';
   import { flip } from 'svelte/animate';
 
@@ -43,15 +44,58 @@
     return [...selectedChars, ...unselectedChars];
   })();
 
-  function select(id, e) {
+  const TOGGLE_ARM_WINDOW_MS = 2000;
+  let pendingToggleId = null;
+  let pendingToggleTimer = null;
+
+  function clearPendingToggle(id = null) {
+    if (pendingToggleTimer) {
+      clearTimeout(pendingToggleTimer);
+      pendingToggleTimer = null;
+    }
+    if (id == null || id === pendingToggleId) {
+      pendingToggleId = null;
+    }
+  }
+
+  function armToggle(id) {
+    clearPendingToggle();
+    pendingToggleId = id;
+    if (TOGGLE_ARM_WINDOW_MS > 0) {
+      pendingToggleTimer = setTimeout(() => {
+        pendingToggleId = null;
+        pendingToggleTimer = null;
+      }, TOGGLE_ARM_WINDOW_MS);
+    }
+  }
+
+  function select(char, e) {
+    const id = char?.id;
     // Suppress the single-click select if a long-press just toggled
     if (suppressClick) {
       suppressClick = false;
+      clearPendingToggle(id);
       e && e.stopPropagation();
       e && e.preventDefault();
       return;
     }
+    if (id == null) return;
+
+    const wasArmed = pendingToggleId === id;
     previewId = id;
+
+    if (wasArmed && !char?.is_player) {
+      clearPendingToggle(id);
+      e && e.preventDefault();
+      toggle(id);
+      return;
+    }
+
+    if (!char?.is_player) {
+      armToggle(id);
+    } else {
+      clearPendingToggle(id);
+    }
   }
 
   function toggle(id) {
@@ -60,20 +104,23 @@
 
   // Long-press detection
   let longTimer = null;
-  let longTriggered = false;
   let suppressClick = false;
   function onPointerDown(id, e) {
-    longTriggered = false;
     clearTimeout(longTimer);
     longTimer = setTimeout(() => {
-      longTriggered = true;
       suppressClick = true;
+      clearPendingToggle(id);
       toggle(id);
     }, 500);
   }
   function onPointerUp() {
     clearTimeout(longTimer);
   }
+
+  onDestroy(() => {
+    clearTimeout(longTimer);
+    clearPendingToggle();
+  });
 
   // Deterministic pseudo-random from an id string
   function hashId(id) {
@@ -117,8 +164,8 @@
     <button
       data-testid={`choice-${char.id}`}
       class="char-btn"
-      on:click={(e) => select(char.id, e)}
-      on:dblclick={() => toggle(char.id)}
+      class:armed={pendingToggleId === char.id}
+      on:click={(e) => select(char, e)}
       on:pointerdown={(e) => onPointerDown(char.id, e)}
       on:pointerup={onPointerUp}
       on:pointerleave={onPointerUp}>
@@ -162,10 +209,10 @@
         data-testid={`choice-${char.id}`}
         class="char-row"
         class:selected={selected.includes(char.id)}
+        class:armed={pendingToggleId === char.id}
         class:reduced={reducedMotion}
         animate:flip={{ duration: reducedMotion ? 0 : 300 }}
-        on:click={(e) => select(char.id, e)}
-        on:dblclick={() => !char.is_player && toggle(char.id)}
+        on:click={(e) => select(char, e)}
         on:pointerdown={(e) => !char.is_player && onPointerDown(char.id, e)}
         on:pointerup={onPointerUp}
         on:pointerleave={onPointerUp}
@@ -196,10 +243,10 @@
       data-testid={`choice-${char.id}`}
       class="char-row"
       class:selected={selected.includes(char.id)}
+      class:armed={pendingToggleId === char.id}
       class:reduced={reducedMotion}
       animate:flip={{ duration: reducedMotion ? 0 : 300 }}
-      on:click={(e) => select(char.id, e)}
-      on:dblclick={() => !char.is_player && toggle(char.id)}
+      on:click={(e) => select(char, e)}
       on:pointerdown={(e) => !char.is_player && onPointerDown(char.id, e)}
       on:pointerup={onPointerUp}
       on:pointerleave={onPointerUp}
@@ -306,6 +353,10 @@
   border-color: #ffd700;
   box-shadow: 0 0 8px rgba(255,215,0,0.5);
 }
+.char-row.armed:not(.selected) {
+  border-color: rgba(255,215,0,0.45);
+  box-shadow: 0 0 6px rgba(255,215,0,0.35);
+}
 /* Animated element-color sweep base (paused by default) */
 .char-row::before {
   content: '';
@@ -398,6 +449,10 @@
   border: none;
   min-height: 32px;
   height: auto;
+}
+.char-btn.armed {
+  outline: 2px solid rgba(255,215,0,0.45);
+  outline-offset: 2px;
 }
 .roster.list.compact .char-btn {
   border: none;
