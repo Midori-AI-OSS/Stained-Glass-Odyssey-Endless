@@ -13,6 +13,7 @@
   export let zIndex = 1000;
   export let bareSurface = false;
   export let surfaceNoScroll = false;
+  export let reducedMotion = false;
 
   function close() {
     dispatch('close');
@@ -23,7 +24,7 @@
   <div class="box" style={`--max-w: ${maxWidth}; --max-h: ${maxHeight}` }>
     <div class="inner">
       <div class="content-wrap">
-        <MenuPanel class="panel-body" {padding}>
+        <MenuPanel class="panel-body" {padding} {reducedMotion}>
           {#if title}
             <header class="head">
               <h3>{title}</h3>
@@ -43,7 +44,7 @@
     <div class="box" style={`--max-w: ${maxWidth}; --max-h: ${maxHeight}` }>
       <div class="inner">
         <div class="content-wrap">
-          <MenuPanel class="panel-body" {padding}>
+          <MenuPanel class="panel-body" {padding} {reducedMotion}>
             {#if title}
               <header class="head">
                 <h3>{title}</h3>
