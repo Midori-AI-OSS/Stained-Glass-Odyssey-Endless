@@ -265,4 +265,124 @@ describe('BattleView turn phase handling', () => {
     component.$set({ active: false });
     await settle();
   });
+
+  it('plays elemental effects on start and drains HP overlays at resolve', async () => {
+    const startSnapshot = buildSnapshot({
+      turnPhase: { state: 'start', attacker_id: 'hero', target_id: 'goblin' },
+    });
+    startSnapshot.foes = startSnapshot.foes.map((foe) => ({ ...foe, hp: 40 }));
+    startSnapshot.recent_events = [
+      {
+        type: 'damage_taken',
+        source_id: 'hero',
+        target_id: 'goblin',
+        amount: 40,
+        metadata: { damage_type_id: 'fire' },
+      },
+    ];
+
+    const resolveSnapshot = buildSnapshot({
+      turnPhase: { state: 'resolve', attacker_id: 'hero', target_id: 'goblin' },
+      includeActiveIds: false,
+    });
+    resolveSnapshot.foes = resolveSnapshot.foes.map((foe) => ({ ...foe, hp: 40 }));
+    resolveSnapshot.recent_events = startSnapshot.recent_events.map((evt) => clone(evt));
+
+    const endSnapshot = buildSnapshot({
+      turnPhase: { state: 'end' },
+      includeActiveIds: false,
+    });
+    endSnapshot.foes = endSnapshot.foes.map((foe) => ({ ...foe, hp: 40 }));
+    endSnapshot.recent_events = [];
+
+    const sequence = [startSnapshot, resolveSnapshot, endSnapshot];
+    roomAction.mockImplementation(() =>
+      Promise.resolve(clone(sequence.length ? sequence.shift() : endSnapshot)),
+    );
+
+    const { container, component } = render(BattleView, {
+      props: {
+        runId: 'elemental-effect-test',
+        active: true,
+        framerate: 10000,
+        showStatusTimeline: false,
+        showHud: false,
+        showFoes: true,
+      },
+    });
+
+    await settle();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('effects-probe').dataset.lastCue).toBe('FireOne1');
+    });
+
+    const initialOverlay = container.querySelector('.foe-hp-bar .hp-bar-overlay.damage');
+    expect(initialOverlay).not.toBeNull();
+    expect(parseFloat(initialOverlay.style.width)).toBeGreaterThan(40);
+
+    await vi.advanceTimersByTimeAsync(1);
+    await settle();
+
+    await waitFor(() => {
+      const overlay = container.querySelector('.foe-hp-bar .hp-bar-overlay.damage');
+      expect(overlay).not.toBeNull();
+      expect(parseFloat(overlay.style.width)).toBeCloseTo(0, 3);
+    });
+
+    await vi.advanceTimersByTimeAsync(1);
+    await settle();
+
+    component.$set({ active: false });
+    await settle();
+  });
+
+  it('releases pending drains when turn_phase metadata is absent', async () => {
+    const firstSnapshot = buildSnapshot();
+    firstSnapshot.foes = firstSnapshot.foes.map((foe) => ({ ...foe, hp: 40 }));
+    firstSnapshot.recent_events = [
+      {
+        type: 'damage_taken',
+        source_id: 'hero',
+        target_id: 'goblin',
+        amount: 40,
+        metadata: { damage_type_id: 'fire' },
+      },
+    ];
+
+    const steadySnapshot = buildSnapshot({ includeActiveIds: false });
+    steadySnapshot.foes = steadySnapshot.foes.map((foe) => ({ ...foe, hp: 40 }));
+    steadySnapshot.recent_events = [];
+
+    const snapshots = [firstSnapshot, steadySnapshot];
+    roomAction.mockImplementation(() =>
+      Promise.resolve(clone(snapshots.length ? snapshots.shift() : steadySnapshot)),
+    );
+
+    const { container, component } = render(BattleView, {
+      props: {
+        runId: 'fallback-turn-phase',
+        active: true,
+        framerate: 10000,
+        showStatusTimeline: false,
+        showHud: false,
+        showFoes: true,
+      },
+    });
+
+    await settle();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('effects-probe').dataset.lastCue).toBe('FireOne1');
+    });
+
+    await waitFor(() => {
+      const overlay = container.querySelector('.foe-hp-bar .hp-bar-overlay.damage');
+      expect(overlay).not.toBeNull();
+      expect(parseFloat(overlay.style.width)).toBeCloseTo(0, 3);
+    });
+
+    component.$set({ active: false });
+    await settle();
+  });
 });
