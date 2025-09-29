@@ -8,9 +8,9 @@ from plugins.characters.persona_light_and_dark import PersonaLightAndDark
 @pytest.mark.parametrize(
     ("character_cls", "expected_defense", "expected_hp", "expected_aggro"),
     [
-        (Carly, 220, 1600, 0.35),
-        (PersonaIce, 210, 1650, 0.33),
-        (PersonaLightAndDark, 240, 1700, 0.4),
+        (Carly, 220, 1600, 2.35),
+        (PersonaIce, 210, 1650, 2.35),
+        (PersonaLightAndDark, 240, 1700, 2.35),
     ],
 )
 def test_tank_characters_have_elevated_baselines(

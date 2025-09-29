@@ -167,14 +167,14 @@ Across the broader interface, aim for a stained-glass aesthetic. Bar graphs and 
 
 ## Playable Characters
 
-The roster in `backend/plugins/characters/` defines every playable combatant. All fighters inherit the same baseline stat line (1000 HP, 100 ATK, 50 DEF, 5% crit rate, 2× crit damage, 110% effect hit, 1.0 mitigation, 0 dodge, neutral regen/vitality) and then layer in passives, UI hints, and spawn weighting through their plugins. A handful of guardian-first recruits—Carly, PersonaIce, and PersonaLightAndDark—override that template with reinforced tank baselines (4.0 mitigation, heavier defense and HP, and higher base aggro) so they reliably anchor incoming damage. Damage types listed as "Any" are randomly selected the first time the character appears in a save slot and remain fixed thereafter.
+The roster in `backend/plugins/characters/` defines every playable combatant. All fighters inherit the same baseline stat line and then layer in passives, UI hints, and spawn weighting through their plugins. A handful of guardian-first recruits—Carly, PersonaIce, and PersonaLightAndDark—override that template with reinforced tank baselines featuring heightened mitigation, defense, HP, and base aggro so they reliably anchor incoming damage. Damage types listed as "Any" are randomly selected the first time the character appears in a save slot and remain fixed thereafter.
 
 | Character | Rank | Rarity | Element(s) | Signature traits | Availability |
 | --- | --- | --- | --- | --- | --- |
 | Ally | B | 5★ | Any (randomized) | `ally_overload` grants adaptive support bonuses, manipulating elements to dismantle enemy defenses. | Standard gacha recruit. |
 | Becca | B | 5★ | Any (randomized) | `becca_menagerie_bond` reorganizes elemental pairings, pushing her attack growth at the cost of lowered defenses. | Standard gacha recruit. |
 | Bubbles | A | 5★ | Any (randomized) | `bubbles_bubble_burst` rotates elements each turn, building chain reactions that detonate after repeated hits. | Standard gacha recruit. |
-| Carly | B | 5★ | Light | `carly_guardians_aegis` heals the most injured ally, converts attack gains into defense, stacks mitigation, and shares shields on her ultimate. Starts with reinforced tank stats (1600 HP, 220 DEF, 4× mitigation, elevated aggro). | Standard gacha recruit. |
+| Carly | B | 5★ | Light | `carly_guardians_aegis` heals the most injured ally, converts attack gains into defense, stacks mitigation, and shares shields on her ultimate. Starts with reinforced tank stats featuring fortified HP, defense, mitigation, and elevated aggro. | Standard gacha recruit. |
 | Graygray | B | 5★ | Any (randomized) | `graygray_counter_maestro` retaliates when struck and periodically releases max-HP bursts after stacking counters. | Standard gacha recruit. |
 | Hilander | A | 5★ | Any (randomized) | `hilander_critical_ferment` builds crit rate and crit damage with diminishing odds after 20 stacks, unleashing Aftertaste on crits. | Standard gacha recruit. |
 | Ixia | A | 5★ | Lightning | `ixia_tiny_titan` quadruples Vitality scaling, turning the small-statured brawler into a lightning bruiser. | Standard gacha recruit. |
@@ -190,8 +190,8 @@ The roster in `backend/plugins/characters/` defines every playable combatant. Al
 | Luna | B | Story | Generic | `luna_lunar_reservoir` charges astral swords; boss-ranked variants pre-summon blades that mirror her actions. | Story antagonist only; cannot be unlocked or recruited. |
 | Mezzy | B | 5★ | Any (randomized) | `mezzy_gluttonous_bulwark` devours incoming attacks, siphoning stats and reducing damage taken. | Standard gacha recruit. |
 | Mimic | C | 0★ | Any (randomized) | `mimic_player_copy` mirrors allied passives and stat gains. | Mirrors an active party member during scripted mirror fights; non-selectable. |
-| PersonaIce | A | 5★ | Ice | `persona_ice_cryo_cycle` layers mitigation and thaws stored frost into end-of-turn healing barriers. Opens battles with fortified tank stats (1650 HP, 210 DEF, 4× mitigation, higher aggro). | Standard gacha recruit. |
-| PersonaLightAndDark | A | 6★ | Light / Dark (alternating) | `persona_light_and_dark_duality` flips elements every action, pulsing Light-form heals before Dark-form crit bursts that strip defenses. Begins with elite guardian baselines (1700 HP, 240 DEF, 4× mitigation, high aggro). | 6★ gacha headliner. |
+| PersonaIce | A | 5★ | Ice | `persona_ice_cryo_cycle` layers mitigation and thaws stored frost into end-of-turn healing barriers. Opens battles with fortified tank stats emphasizing reinforced HP, defense, mitigation, and higher aggro. | Standard gacha recruit. |
+| PersonaLightAndDark | A | 6★ | Light / Dark (alternating) | `persona_light_and_dark_duality` flips elements every action, pulsing Light-form heals before Dark-form crit bursts that strip defenses. Begins with elite guardian baselines highlighted by elevated HP, defense, mitigation, and aggro. | 6★ gacha headliner. |
 | Player | C | Story | Chosen (player-selected) | `player_level_up_bonus` scales with run progress, representing the customizable avatar. | Always available starter. |
 | Slime | C | 0★ | Any (randomized) | Baseline stat template that tags in as a helper for foe lineups, including boss slots. | Non-selectable foe support unit that appears when encounters need a fallback combatant. |
 
