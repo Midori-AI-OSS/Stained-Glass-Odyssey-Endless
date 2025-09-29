@@ -193,6 +193,13 @@
     resetTurnPhaseState();
     statusPhase = null;
     clearStatusTimeline();
+    queuedHpDrains = [];
+    waitingForResolve = false;
+    lastPhaseToken = '';
+    lastEffectSignature = '';
+    phaseSequenceCounter = 0;
+    pendingLayers = new Map();
+    hpHistory = new Map();
     lastRunId = runId;
     currentTurn = null;
   }
@@ -208,6 +215,13 @@
     resetTurnPhaseState();
     statusPhase = null;
     clearStatusTimeline();
+    queuedHpDrains = [];
+    waitingForResolve = false;
+    lastPhaseToken = '';
+    lastEffectSignature = '';
+    phaseSequenceCounter = 0;
+    pendingLayers = new Map();
+    hpHistory = new Map();
     currentTurn = null;
   }
 
@@ -288,13 +302,6 @@
     };
   }
   
-  const logAnimations = {
-    damage: 'HitEffect',
-    burn: 'Fire1',
-    poison: 'Poison',
-    heal: 'HealOne1'
-  };
-
   let effectCue = '';
   function queueEffect(name) {
     if (!name || effectiveReducedMotion) return;
@@ -304,10 +311,182 @@
     });
   }
 
+  const ELEMENTAL_EFFECT_TABLE = {
+    fire: ['FireOne1', 'FireOne2', 'Fire2', 'Fire3'],
+    ice: ['IceOne1', 'IceOne2', 'Ice3', 'Ice4'],
+    lightning: ['ThunderOne1', 'ThunderOne2', 'Thunder2', 'Thunder3'],
+    wind: ['WindOne1', 'WindOne2', 'Wind2', 'Wind3'],
+    light: ['LightOne1', 'LightOne2', 'Light2', 'Light3'],
+    dark: ['Darkness1', 'Darkness2', 'Darkness3', 'Darkness4'],
+    earth: ['EarthOne1', 'EarthOne2', 'Earth2', 'Earth3'],
+    poison: ['Poison', 'PoisonAll', 'PoisonAll', 'PoisonAll'],
+    heal: ['HealOne1', 'HealOne2', 'CureOne1', 'CureOne2'],
+    generic: ['HitEffect', 'HitSP1', 'HitSP2', 'HitSpecial1'],
+  };
+
+  function effectIntensityFromAmount(amount) {
+    const value = Math.abs(Number(amount) || 0);
+    if (value >= 1200) return 3;
+    if (value >= 700) return 2;
+    if (value >= 300) return 1;
+    return 0;
+  }
+
+  function resolveEffectNameForKey(typeId, amount, eventType) {
+    let key = normalizeDamageTypeId(typeId);
+    if (!key || key === 'none') key = 'generic';
+    if (key === 'water') key = 'ice';
+    if (key === 'holy') key = 'light';
+    if (key === 'shadow') key = 'dark';
+    const normalizedType = normalizePhaseState(eventType);
+    if (normalizedType === 'heal_received' || normalizedType === 'hot_tick') {
+      key = 'heal';
+    } else if (normalizedType === 'dot_tick' && (!key || key === 'generic')) {
+      key = 'poison';
+    }
+    const options = ELEMENTAL_EFFECT_TABLE[key] || ELEMENTAL_EFFECT_TABLE.generic;
+    const index = Math.min(effectIntensityFromAmount(amount), options.length - 1);
+    return options[index] || ELEMENTAL_EFFECT_TABLE.generic[0];
+  }
+
+  function findLast(array, predicate) {
+    if (!Array.isArray(array)) return null;
+    for (let i = array.length - 1; i >= 0; i -= 1) {
+      const item = array[i];
+      try {
+        if (predicate(item)) return item;
+      } catch {
+        // Ignore predicate failures when matching events
+      }
+    }
+    return null;
+  }
+
+  function selectCandidateEvent(events, attackerId, targetId) {
+    if (!Array.isArray(events) || !events.length) {
+      return { event: null, signature: '' };
+    }
+    const attackerKey = normalizeId(attackerId);
+    const targetKey = normalizeId(targetId);
+    const filtered = [];
+    for (const evt of events) {
+      if (!evt || typeof evt !== 'object') continue;
+      const eventSource = normalizeId(evt.source_id ?? evt.sourceId);
+      const eventTarget = normalizeId(evt.target_id ?? evt.targetId);
+      if (attackerKey && eventSource && eventSource !== attackerKey) continue;
+      if (targetKey && eventTarget && eventTarget !== targetKey) continue;
+      filtered.push(evt);
+    }
+    const pool = filtered.length ? filtered : events;
+    const priorities = ['damage_taken', 'dot_tick', 'heal_received', 'hot_tick', 'card_effect', 'relic_effect'];
+    let selected = null;
+    for (const type of priorities) {
+      selected = findLast(pool, (evt) => normalizePhaseState(evt?.type) === type);
+      if (selected) break;
+    }
+    if (!selected) {
+      selected = pool[pool.length - 1];
+    }
+    return {
+      event: selected || null,
+      signature: selected ? eventToken(selected) : '',
+    };
+  }
+
+  function queueElementalEffect({
+    events,
+    attackerId,
+    targetId,
+    phaseToken,
+    fallbackElement,
+    force = false,
+  }) {
+    const { event: candidate, signature } = selectCandidateEvent(events, attackerId, targetId);
+    const normalizedPhaseToken = phaseToken ? String(phaseToken) : '';
+    let amount = 0;
+    let key = fallbackElement || 'generic';
+    let eventType = '';
+    if (candidate) {
+      amount = Number(candidate.amount ?? candidate.value ?? 0);
+      eventType = candidate.type ?? '';
+      if (candidate.damageTypeId) {
+        key = candidate.damageTypeId;
+      } else if (candidate.metadata) {
+        const meta = candidate.metadata;
+        const candidateKey =
+          meta.damage_type_id ??
+          meta.element ??
+          meta.damage_type ??
+          meta.effect_type ??
+          meta.effect ??
+          meta.type;
+        if (candidateKey) {
+          key = candidateKey;
+        }
+      }
+      const normalizedType = normalizePhaseState(candidate.type);
+      if (normalizedType === 'heal_received' || normalizedType === 'hot_tick') {
+        key = 'heal';
+      } else if (normalizedType === 'dot_tick' && (!key || key === 'generic')) {
+        key = 'poison';
+      }
+    }
+    const effectName = resolveEffectNameForKey(key, amount, eventType);
+    if (!effectName) return null;
+    const compositeSignature = [
+      normalizedPhaseToken,
+      signature || '',
+      effectName,
+      normalizeId(attackerId),
+      normalizeId(targetId),
+    ].join('::');
+    if (!force && compositeSignature === lastEffectSignature) {
+      return effectName;
+    }
+    lastEffectSignature = compositeSignature;
+    queueEffect(effectName);
+    return effectName;
+  }
+
+  function enqueueHpDrains(entries) {
+    if (!Array.isArray(entries) || !entries.length) return;
+    queuedHpDrains = [...queuedHpDrains, ...entries];
+  }
+
+  async function releaseHpDrains({ force = false } = {}) {
+    if (!force && waitingForResolve) return;
+    if (!queuedHpDrains.length) return;
+    const drains = queuedHpDrains;
+    queuedHpDrains = [];
+    if (!effectiveReducedMotion) {
+      await tick();
+    }
+    let drained = false;
+    for (const entry of drains) {
+      const state = pendingLayers.get(entry.key);
+      if (!state) continue;
+      if (entry.kind === 'damage' && state.damageKey === entry.version && state.damage > 0) {
+        pendingLayers.set(entry.key, { ...state, damage: 0 });
+        drained = true;
+      } else if (entry.kind === 'heal' && state.healKey === entry.version && state.heal > 0) {
+        pendingLayers.set(entry.key, { ...state, heal: 0 });
+        drained = true;
+      }
+    }
+    if (drained) {
+      pendingLayers = new Map(pendingLayers);
+    }
+  }
+
   let knownSummons = new Set();
   const pendingEaseCurve = 'cubic-bezier(0.25, 0.9, 0.3, 1)';
   let hpHistory = new Map();
   let pendingLayers = new Map();
+  let queuedHpDrains = [];
+  let waitingForResolve = false;
+  let lastPhaseToken = '';
+  let lastEffectSignature = '';
+  let phaseSequenceCounter = 0;
   $: pendingEaseMs = Math.max(240, pollDelay * 1.5);
   const dispatch = createEventDispatcher();
   // Poll battle snapshots at (framerate / 10) times per second.
@@ -316,16 +495,6 @@
   $: pollDelay = 10000 / framerate;
   $: statusChipLifetime = effectiveReducedMotion ? Math.max(900, pollDelay * 6) : Math.max(1600, pollDelay * 10);
   let bg = getRandomBackground();
-
-  function logToEvent(line) {
-    if (typeof line !== 'string') return null;
-    const l = line.toLowerCase();
-    if (l.includes('burn')) return 'burn';
-    if (l.includes('poison')) return 'poison';
-    if (l.includes('heal')) return 'heal';
-    if (l.includes('damage')) return 'damage';
-    return null;
-  }
 
   // Combine passives, dots, and hots into a single list (cap will be applied in template)
   function combineStatuses(unit) {
@@ -544,13 +713,6 @@
     return newOnes;
   }
 
-  $: if (logs.length) {
-    const evt = logToEvent(logs[logs.length - 1]);
-    if (evt && logAnimations[evt]) {
-      queueEffect(logAnimations[evt]);
-    }
-  }
-
   function differs(a, b) {
     return JSON.stringify(a) !== JSON.stringify(b);
   }
@@ -692,6 +854,17 @@
     }
   }
 
+  function normalizePhasePayload(value) {
+    if (value === undefined || value === null) return null;
+    if (typeof value === 'string') return { state: value };
+    if (typeof value === 'object') return { ...value };
+    try {
+      return { state: String(value) };
+    } catch {
+      return null;
+    }
+  }
+
   function extractPhaseId(phase, keys) {
     if (!phase || typeof phase !== 'object') return undefined;
     for (const key of keys) {
@@ -700,6 +873,40 @@
       }
     }
     return undefined;
+  }
+
+  function resolvePhaseToken(phase) {
+    if (!phase || typeof phase !== 'object') return '';
+    const keys = [
+      'phase_token',
+      'phaseToken',
+      'token',
+      'id',
+      'turn_id',
+      'turnId',
+      'action_id',
+      'actionId',
+      'sequence',
+      'queue_index',
+      'queueIndex',
+      'step',
+      'order',
+      'turn',
+      'turn_number',
+      'turnNumber',
+    ];
+    for (const key of keys) {
+      if (!Object.prototype.hasOwnProperty.call(phase, key)) continue;
+      const value = phase[key];
+      if (value === undefined || value === null) continue;
+      try {
+        const str = String(value).trim();
+        if (str) return str;
+      } catch {
+        // ignore invalid token shapes
+      }
+    }
+    return '';
   }
 
   function resetTurnPhaseState() {
@@ -721,7 +928,12 @@
       turnPhaseState = '';
       turnPhaseAttackerId = null;
       turnPhaseTargetId = null;
-      return;
+      return {
+        state: '',
+        attackerId: null,
+        targetId: null,
+        token: null,
+      };
     }
     rawTurnPhase = { ...phase };
     turnPhaseState = normalizePhaseState(
@@ -750,6 +962,78 @@
       turnPhaseAttackerId = null;
       turnPhaseTargetId = null;
     }
+    const token = resolvePhaseToken(phase) || null;
+    return {
+      state: turnPhaseState,
+      attackerId: turnPhaseAttackerId ?? null,
+      targetId: turnPhaseTargetId ?? null,
+      token,
+    };
+  }
+
+  function handlePhaseTransition(info, events) {
+    const normalizedEvents = Array.isArray(events) ? events : [];
+    if (!info || !info.state) {
+      if (normalizedEvents.length) {
+        const fallbackAttacker = normalizeId(
+          turnPhaseAttackerId ?? snapshotActiveId ?? activeId ?? null,
+        );
+        const fallbackTarget = normalizeId(
+          turnPhaseTargetId ?? snapshotActiveTargetId ?? activeTargetId ?? null,
+        );
+        const attackerEntity = combatantById.get(fallbackAttacker);
+        const fallbackElement = resolveDamageTypeFromEntity(attackerEntity, 'generic');
+        const { signature } = selectCandidateEvent(normalizedEvents, fallbackAttacker, fallbackTarget);
+        phaseSequenceCounter += 1;
+        queueElementalEffect({
+          events: normalizedEvents,
+          attackerId: fallbackAttacker,
+          targetId: fallbackTarget,
+          phaseToken: `fallback::${signature || phaseSequenceCounter}`,
+          fallbackElement,
+          force: false,
+        });
+      }
+      waitingForResolve = false;
+      lastPhaseToken = '';
+      return true;
+    }
+
+    const state = normalizePhaseState(info.state);
+    const attackerId = normalizeId(info.attackerId ?? turnPhaseAttackerId ?? snapshotActiveId ?? activeId ?? null);
+    const targetId = normalizeId(info.targetId ?? turnPhaseTargetId ?? snapshotActiveTargetId ?? activeTargetId ?? null);
+    const attackerEntity = combatantById.get(attackerId);
+    const fallbackElement = resolveDamageTypeFromEntity(attackerEntity, 'generic');
+
+    let tokenBase = info.token ? String(info.token) : '';
+    if (!tokenBase) {
+      phaseSequenceCounter += 1;
+      tokenBase = `${attackerId || 'unknown'}::${targetId || 'unknown'}::${phaseSequenceCounter}`;
+    }
+
+    if (state === 'start') {
+      waitingForResolve = true;
+      const phaseSignature = `${state}:${tokenBase}`;
+      if (phaseSignature !== lastPhaseToken) {
+        queueElementalEffect({
+          events: normalizedEvents,
+          attackerId,
+          targetId,
+          phaseToken: phaseSignature,
+          fallbackElement,
+          force: true,
+        });
+        lastPhaseToken = phaseSignature;
+      }
+      return false;
+    }
+
+    waitingForResolve = false;
+    lastPhaseToken = '';
+    if (!state || state === 'resolve' || state === 'end') {
+      return true;
+    }
+    return true;
   }
 
   function resolveCombatantNameById(id) {
@@ -1134,26 +1418,7 @@
         pendingLayers = new Map(pendingLayers);
       }
 
-      if (pendingDrains.length) {
-        if (!effectiveReducedMotion) {
-          await tick();
-        }
-        let drained = false;
-        for (const entry of pendingDrains) {
-          const state = pendingLayers.get(entry.key);
-          if (!state) continue;
-          if (entry.kind === 'damage' && state.damageKey === entry.version && state.damage > 0) {
-            pendingLayers.set(entry.key, { ...state, damage: 0 });
-            drained = true;
-          } else if (entry.kind === 'heal' && state.healKey === entry.version && state.heal > 0) {
-            pendingLayers.set(entry.key, { ...state, heal: 0 });
-            drained = true;
-          }
-        }
-        if (drained) {
-          pendingLayers = new Map(pendingLayers);
-        }
-      }
+      enqueueHpDrains(pendingDrains);
 
       if (Array.isArray(snap.queue || snap.action_queue)) {
         queue = snap.queue || snap.action_queue;
@@ -1168,17 +1433,25 @@
       if ('active_target_id' in snap) {
         snapshotActiveTargetId = snap.active_target_id ?? null;
       }
+      let phaseInfo = null;
       if ('turn_phase' in snap) {
-        const rawTurnPhase = snap.turn_phase;
-        if (rawTurnPhase === null || rawTurnPhase === undefined) {
+        const normalizedPhase = normalizePhasePayload(snap.turn_phase);
+        if (!normalizedPhase) {
           resetTurnPhaseState();
+          phaseInfo = { state: '', attackerId: null, targetId: null, token: null };
         } else {
-          const nextTurnPhase =
-            typeof rawTurnPhase === 'object' ? { ...rawTurnPhase } : rawTurnPhase;
-          applyTurnPhaseSnapshot(nextTurnPhase);
+          phaseInfo = applyTurnPhaseSnapshot(normalizedPhase);
         }
       } else if (!turnPhaseSeen) {
         resetTurnPhaseState();
+        phaseInfo = { state: '', attackerId: null, targetId: null, token: null };
+      } else {
+        phaseInfo = {
+          state: '',
+          attackerId: turnPhaseAttackerId ?? null,
+          targetId: turnPhaseTargetId ?? null,
+          token: null,
+        };
       }
       if ('status_phase' in snap) {
         const nextPhase = snap.status_phase && typeof snap.status_phase === 'object' ? { ...snap.status_phase } : null;
@@ -1186,10 +1459,16 @@
         if (nextPhase) updateStatusTimeline(nextPhase);
       }
 
+      let normalizedEvents = [];
       if (Array.isArray(snap.recent_events)) {
-        const normalizedEvents = snap.recent_events
+        normalizedEvents = snap.recent_events
           .map(event => normalizeRecentEvent(event))
           .filter(Boolean);
+      }
+
+      const shouldForceRelease = handlePhaseTransition(phaseInfo, normalizedEvents);
+
+      if (Array.isArray(snap.recent_events)) {
         recentEvents = normalizedEvents;
         floaterFeed = processRecentEvents(snap.recent_events);
       } else {
@@ -1198,6 +1477,8 @@
         recentEventCounts = new Map();
         lastRecentEventTokens = [];
       }
+
+      await releaseHpDrains({ force: shouldForceRelease || !waitingForResolve });
 
       const determineTurn = () => {
         if (!snap || typeof snap !== 'object') return null;
