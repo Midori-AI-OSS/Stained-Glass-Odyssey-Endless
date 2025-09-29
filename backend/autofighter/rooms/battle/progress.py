@@ -49,6 +49,7 @@ class BattleProgressPayload(TypedDict, total=False):
 
     result: str
     turn: int
+    turn_phase: str
     party: list[BattleEntityPayload]
     foes: list[BattleEntityPayload]
     party_summons: SummonSnapshotMap
@@ -157,6 +158,7 @@ async def build_battle_progress_payload(
     include_summon_foes: bool = False,
     visual_queue: "ActionQueue" | None = None,
     ended: bool | None = None,
+    turn_phase: str | None = None,
 ) -> BattleProgressPayload:
     """Assemble the payload dispatched to progress callbacks."""
 
@@ -201,6 +203,9 @@ async def build_battle_progress_payload(
         "active_id": active_id,
         "active_target_id": active_target_id,
     }
+
+    if turn_phase is not None:
+        payload["turn_phase"] = turn_phase
 
     if run_id:
         events = _snapshots.get_recent_events(run_id)
