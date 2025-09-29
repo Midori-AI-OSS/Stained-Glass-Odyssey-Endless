@@ -46,6 +46,7 @@ async def push_progress_update(
     include_summon_foes: bool = False,
     visual_queue: Any | None = None,
     ended: bool | None = None,
+    turn_phase: str | None = None,
 ) -> None:
     """Send a progress update if a callback is available."""
 
@@ -64,6 +65,7 @@ async def push_progress_update(
         include_summon_foes=include_summon_foes,
         visual_queue=visual_queue,
         ended=ended,
+        turn_phase=turn_phase,
     )
     await progress(payload)
 
@@ -92,6 +94,8 @@ async def dispatch_turn_end_snapshot(
     actor: Stats,
     turn: int,
     run_id: str | None,
+    *,
+    turn_phase: str | None = "turn_end",
 ) -> int:
     """Advance the visual queue and emit an updated snapshot."""
 
@@ -109,6 +113,7 @@ async def dispatch_turn_end_snapshot(
         active_id=getattr(actor, "id", None),
         active_target_id=None,
         visual_queue=visual_queue,
+        turn_phase=turn_phase,
     )
     return cycle_count
 

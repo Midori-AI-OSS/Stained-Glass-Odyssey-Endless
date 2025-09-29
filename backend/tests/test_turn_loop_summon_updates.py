@@ -111,6 +111,8 @@ def _setup_common_player_patches(monkeypatch: pytest.MonkeyPatch, module) -> lis
         active_target_id=None,
         include_summon_foes=False,
         ended=None,
+        visual_queue=None,
+        turn_phase=None,
     ):
         updates.append(
             {
@@ -120,6 +122,7 @@ def _setup_common_player_patches(monkeypatch: pytest.MonkeyPatch, module) -> lis
                 "active_id": active_id,
                 "active_target_id": active_target_id,
                 "turn": turn,
+                "turn_phase": turn_phase,
             }
         )
         if progress_cb is not None:
