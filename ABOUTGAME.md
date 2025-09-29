@@ -167,26 +167,35 @@ Across the broader interface, aim for a stained-glass aesthetic. Bar graphs and 
 
 ## Playable Characters
 
-The roster in `plugins/characters/` currently includes and each entry lists its `CharacterType`. All characters start with 1000 HP, 100 attack, 50 defense, a 5% crit rate, 2x crit damage, 1% effect hit rate, 100 mitigation, 0 dodge, and 1 in all other stats. Listed damage types use the classic naming from the Pygame version:
+The roster in `backend/plugins/characters/` defines every playable combatant. All fighters inherit the same baseline stat line (1000 HP, 100 ATK, 50 DEF, 5% crit rate, 2× crit damage, 1% effect hit, 100 mitigation, 0 dodge, 1 in other values) and then layer in passives, UI hints, and spawn weighting through their plugins. Damage types listed as "Any" are randomly selected the first time the character appears in a save slot and remain fixed thereafter.
 
-- Ally (B, random damage type)
-- Becca (B, random damage type)
-- Bubbles (A, random damage type)
-- Carly (B, Light) – Guardian's Aegis heals the most injured ally, converts attack growth into defense, builds mitigation stacks that can overcharge to add defense to attack while stacks decay each turn, and shares mitigation on ultimate
-- Ixia (A, Lightning)
-- Graygray (B, random damage type) – retaliates with Counter Maestro after taking damage
-- Hilander (A, random damage type) – builds crit rate and damage, unleashing Aftertaste on crit; stack gain odds drop 5% per stack past 20, floored at 1%
-- Kboshi (A, random damage type)
-- Lady Darkness (B, Dark)
-- Lady Echo (B, Lightning)
-- Lady Fire and Ice (B, Fire or Ice)
-- Lady Light (B, Light)
-- Lady of Fire (B, Fire)
-- Luna (B, Generic)
-- Mezzy (B, random damage type)
-- Player (C, chosen damage type)
+| Character | Rank | Rarity | Element(s) | Signature traits | Availability |
+| --- | --- | --- | --- | --- | --- |
+| Ally | B | 5★ | Any (randomized) | `ally_overload` grants adaptive support bonuses, manipulating elements to dismantle enemy defenses. | Standard gacha recruit. |
+| Becca | B | 5★ | Any (randomized) | `becca_menagerie_bond` reorganizes elemental pairings, pushing her attack growth at the cost of lowered defenses. | Standard gacha recruit. |
+| Bubbles | A | 5★ | Any (randomized) | `bubbles_bubble_burst` rotates elements each turn, building chain reactions that detonate after repeated hits. | Standard gacha recruit. |
+| Carly | B | 5★ | Light | `carly_guardians_aegis` heals the most injured ally, converts attack gains into defense, stacks mitigation, and shares shields on her ultimate. | Standard gacha recruit. |
+| Graygray | B | 5★ | Any (randomized) | `graygray_counter_maestro` retaliates when struck and periodically releases max-HP bursts after stacking counters. | Standard gacha recruit. |
+| Hilander | A | 5★ | Any (randomized) | `hilander_critical_ferment` builds crit rate and crit damage with diminishing odds after 20 stacks, unleashing Aftertaste on crits. | Standard gacha recruit. |
+| Ixia | A | 5★ | Lightning | `ixia_tiny_titan` quadruples Vitality scaling, turning the small-statured brawler into a lightning bruiser. | Standard gacha recruit. |
+| Kboshi | A | 5★ | Dark | `kboshi_flux_cycle` channels dark energy, banking power in flux stacks and expending them to debuff foes. | Standard gacha recruit. |
+| LadyDarkness | B | 5★ | Dark | `lady_darkness_eclipsing_veil` wraps the field in despair-laced shadows that sap enemy resolve. | Standard gacha recruit. |
+| LadyEcho | B | 5★ | Lightning | `lady_echo_resonant_static` weaponizes echoed lightning at the cost of de-aging, driving her inventive combat style. | Standard gacha recruit. |
+| LadyFireAndIce | B | 6★ | Fire / Ice (persona swap) | `lady_fire_and_ice_duality_engine` alternates between fire and ice personas, building Flux and shredding mitigation when repeating an element. | 6★ gacha headliner. |
+| LadyLight | B | 5★ | Light | `lady_light_radiant_aegis` projects barriers that shield allies despite her Cotard's Syndrome limitations. | Standard gacha recruit. |
+| LadyLightning | B | 5★ | Lightning | `lady_lightning_stormsurge` stacks speed and effect hit before discharging shocks that slow and weaken foes. | Standard gacha recruit. |
+| LadyOfFire | B | 5★ | Fire | `lady_of_fire_infernal_momentum` converts defeated foes into escalating heat-wave stacks for overwhelming fire damage. | Standard gacha recruit. |
+| LadyStorm | B | 6★ | Wind / Lightning (randomized) | `lady_storm_supercell` weaves slipstreams into charge detonations that grant tailwinds and shred mitigation. | 6★ gacha headliner. |
+| LadyWind | B | 5★ | Wind | `lady_wind_tempest_guard` sustains a permanent slipstream of dodge and mitigation, feeding on critical hits. | Standard gacha recruit. |
+| Luna | B | Story | Generic | `luna_lunar_reservoir` charges astral swords; boss-ranked variants pre-summon blades that mirror her actions. | Story antagonist only; cannot be unlocked or recruited. |
+| Mezzy | B | 5★ | Any (randomized) | `mezzy_gluttonous_bulwark` devours incoming attacks, siphoning stats and reducing damage taken. | Standard gacha recruit. |
+| Mimic | C | 0★ | Any (randomized) | `mimic_player_copy` mirrors allied passives and stat gains. | Mirrors an active party member during scripted mirror fights; non-selectable. |
+| PersonaIce | A | 5★ | Ice | `persona_ice_cryo_cycle` layers mitigation and thaws stored frost into end-of-turn healing barriers. | Standard gacha recruit. |
+| PersonaLightAndDark | A | 6★ | Light / Dark (alternating) | `persona_light_and_dark_duality` flips elements every action, pulsing Light-form heals before Dark-form crit bursts that strip defenses. | 6★ gacha headliner. |
+| Player | C | Story | Chosen (player-selected) | `player_level_up_bonus` scales with run progress, representing the customizable avatar. | Always available starter. |
+| Slime | C | 0★ | Any (randomized) | Baseline stat template that tags in as a helper for foe lineups, including boss slots. | Non-selectable foe support unit that appears when encounters need a fallback combatant. |
 
-Characters with a "random damage type" roll their element on first load and reuse that result in future sessions.
+Characters flagged as non-selectable (Mimic, Slime) surface in mirrored or fallback encounters—Mimic copies an active party member, while Slime reinforces enemy teams as needed—but neither can join the active party. Story characters like Luna and the Player bypass the gacha pool; the Player is available from the start, whereas Luna remains an encounter-only boss.
 
 ## Technical Information
 
