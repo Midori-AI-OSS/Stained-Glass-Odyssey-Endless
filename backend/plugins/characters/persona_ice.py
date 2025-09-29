@@ -2,9 +2,9 @@ from dataclasses import dataclass
 from dataclasses import field
 
 from autofighter.character import CharacterType
+from plugins.characters._base import PlayerBase
 from plugins.damage_types._base import DamageTypeBase
 from plugins.damage_types.ice import Ice
-from plugins.characters._base import PlayerBase
 
 
 @dataclass
@@ -24,3 +24,10 @@ class PersonaIce(PlayerBase):
     gacha_rarity = 5
     damage_type: DamageTypeBase = field(default_factory=Ice)
     passives: list[str] = field(default_factory=lambda: ["persona_ice_cryo_cycle"])
+
+    def __post_init__(self) -> None:
+        super().__post_init__()
+        self.set_base_stat("mitigation", 4.0)
+        self.set_base_stat("defense", 210)
+        self.set_base_stat("max_hp", 1650)
+        self.base_aggro = 0.33
