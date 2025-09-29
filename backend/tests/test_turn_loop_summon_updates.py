@@ -12,8 +12,8 @@ _PROJECT_ROOT = str(Path(__file__).resolve().parents[1])
 if _PROJECT_ROOT not in sys.path:
     sys.path.append(_PROJECT_ROOT)
 
-from autofighter.rooms.battle.turn_loop import foe_turn
-from autofighter.rooms.battle.turn_loop import player_turn
+from autofighter.rooms.battle.turn_loop import foe_turn  # noqa: E402
+from autofighter.rooms.battle.turn_loop import player_turn  # noqa: E402
 
 
 class DummyEffectManager:
@@ -92,7 +92,12 @@ class _Party:
         self.members = list(members)
 
 
-def _setup_common_player_patches(monkeypatch: pytest.MonkeyPatch, module) -> list[dict]:
+def _setup_common_player_patches(
+    monkeypatch: pytest.MonkeyPatch,
+    module,
+    *,
+    patch_finish_turn: bool = True,
+) -> list[dict]:
     """Patch expensive collaborators with light stubs and capture updates."""
 
     updates: list[dict] = []
@@ -123,12 +128,21 @@ def _setup_common_player_patches(monkeypatch: pytest.MonkeyPatch, module) -> lis
                 "active_target_id": active_target_id,
                 "turn": turn,
                 "turn_phase": turn_phase,
+                "party_hp": [getattr(member, "hp", None) for member in party_members],
+                "foe_hp": [getattr(foe, "hp", None) for foe in foes],
             }
         )
         if progress_cb is not None:
             await progress_cb({})
 
     monkeypatch.setattr(module, "push_progress_update", record_progress)
+    from autofighter.rooms.battle import turns as _turns
+    from autofighter.rooms.battle.turn_loop import turn_end as _turn_end
+
+    monkeypatch.setattr(_turn_end, "push_progress_update", record_progress)
+    monkeypatch.setattr(_turns, "push_progress_update", record_progress)
+    monkeypatch.setattr(_turn_end, "pace_sleep", _noop_async)
+    monkeypatch.setattr(_turn_end, "_pace", _noop_async)
     monkeypatch.setattr(module, "pace_sleep", _noop_async)
     monkeypatch.setattr(module, "impact_pause", _noop_async)
     monkeypatch.setattr(module, "_pace", _noop_async)
@@ -144,7 +158,8 @@ def _setup_common_player_patches(monkeypatch: pytest.MonkeyPatch, module) -> lis
         monkeypatch.setattr(module, "apply_enrage_bleed", _noop_async)
     if hasattr(module, "update_enrage_state"):
         monkeypatch.setattr(module, "update_enrage_state", _noop_async)
-    monkeypatch.setattr(module, "finish_turn", _noop_async)
+    if patch_finish_turn:
+        monkeypatch.setattr(module, "finish_turn", _noop_async)
     monkeypatch.setattr(module, "register_snapshot_entities", _noop)
     monkeypatch.setattr(module, "mutate_snapshot_overlay", _noop)
     monkeypatch.setattr(module, "BUS", SimpleNamespace(emit_async=_noop_async))
@@ -210,6 +225,71 @@ async def test_player_phase_pushes_update_for_new_summons(monkeypatch):
     assert summon_update["include_summon_foes"] is True
     assert "ally_summon" in summon_update["party"]
     assert "foe_summon" in summon_update["foes"]
+
+
+@pytest.mark.asyncio
+async def test_player_turn_emits_start_before_damage(monkeypatch):
+    updates = _setup_common_player_patches(
+        monkeypatch,
+        player_turn,
+        patch_finish_turn=False,
+    )
+
+    party_member = SimpleEntity("ally")
+    foe = SimpleEntity("foe")
+    foe.effect_manager = DummyEffectManager(foe)
+
+    context = player_turn.TurnLoopContext(
+        room=SimpleNamespace(),
+        party=_Party([party_member]),
+        combat_party=_Party([party_member]),
+        registry=_RegistryStub(),
+        foes=[foe],
+        foe_effects=[foe.effect_manager],
+        enrage_mods=[None],
+        enrage_state=SimpleNamespace(active=False),
+        progress=_noop_async,
+        visual_queue=None,
+        temp_rdr=0.0,
+        exp_reward=0,
+        run_id="run",
+        battle_tasks={},
+        abort=lambda _: None,
+        credited_foe_ids=set(),
+        turn=0,
+    )
+
+    initial_hp = foe.hp
+
+    result = await player_turn.execute_player_phase(context)
+
+    assert result is True
+    assert updates, "Expected at least one progress update call"
+
+    start_index = next(
+        (idx for idx, update in enumerate(updates) if update["turn_phase"] == "start"),
+        None,
+    )
+    assert start_index is not None, "Missing start phase update"
+
+    damage_index = next(
+        (
+            idx
+            for idx, update in enumerate(updates)
+            if update["foe_hp"] and any(hp != initial_hp for hp in update["foe_hp"])
+        ),
+        None,
+    )
+    assert damage_index is not None, "No update captured HP change"
+    assert start_index < damage_index, "Start update should precede damage resolution"
+    assert updates[damage_index]["turn_phase"] == "resolve"
+
+    end_index = next(
+        (idx for idx, update in enumerate(updates) if update["turn_phase"] == "turn_end"),
+        None,
+    )
+    assert end_index is not None, "Missing turn end update"
+    assert damage_index < end_index, "Turn end should follow damage resolution"
 
 
 @pytest.mark.asyncio
