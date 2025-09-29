@@ -7,20 +7,38 @@ import time
 from typing import Any
 
 from plugins import characters as player_plugins
+from plugins.characters._base import PlayerBase
+from plugins.characters.foe_base import FoeBase
 from plugins.damage_types import ALL_DAMAGE_TYPES
 
 from .save_manager import SaveManager
+
+_EXCLUDED_CHARACTER_IDS = {"player", "luna", "mimic"}
+
+
+def _iter_playable_character_classes() -> list[type[PlayerBase]]:
+    seen_ids: set[str] = set()
+    classes: list[type[PlayerBase]] = []
+    for name in getattr(player_plugins, "__all__", []):
+        cls = getattr(player_plugins, name, None)
+        if not isinstance(cls, type) or not issubclass(cls, PlayerBase):
+            continue
+        if issubclass(cls, FoeBase):
+            continue
+        cid = getattr(cls, "id", name)
+        if cid in _EXCLUDED_CHARACTER_IDS or cid in seen_ids:
+            continue
+        seen_ids.add(cid)
+        classes.append(cls)
+    return classes
 
 
 def _build_pools() -> tuple[list[str], list[str]]:
     five: list[str] = []
     six: list[str] = []
-    for name in getattr(player_plugins, "__all__", []):
-        cls = getattr(player_plugins, name)
+    for cls in _iter_playable_character_classes():
         rarity = getattr(cls, "gacha_rarity", 0)
-        cid = getattr(cls, "id", name)
-        if cid in {"player", "luna", "mimic"}:
-            continue
+        cid = getattr(cls, "id", cls.__name__)
         if rarity == 5:
             five.append(cid)
         elif rarity == 6:
@@ -103,13 +121,11 @@ class GachaManager:
     def _create_banner_rotation(self, start_time: float) -> None:
         """Create a rotating set of banners."""
         # Get all available 5★ and 6★ characters for rotation
-        featured_pool = []
-        for name in getattr(player_plugins, "__all__", []):
-            cls = getattr(player_plugins, name)
-            rarity = getattr(cls, "gacha_rarity", 0)
-            cid = getattr(cls, "id", name)
-            if cid not in {"player", "luna", "mimic"} and rarity >= 5:
-                featured_pool.append(cid)
+        featured_pool = [
+            getattr(cls, "id", cls.__name__)
+            for cls in _iter_playable_character_classes()
+            if getattr(cls, "gacha_rarity", 0) >= 5
+        ]
 
         if not featured_pool:
             featured_pool = ["becca", "ally"]  # Fallback
@@ -175,13 +191,11 @@ class GachaManager:
         current_time = time.time()
 
         # Get all available characters for rotation
-        featured_pool = []
-        for name in getattr(player_plugins, "__all__", []):
-            cls = getattr(player_plugins, name)
-            rarity = getattr(cls, "gacha_rarity", 0)
-            cid = getattr(cls, "id", name)
-            if cid not in {"player", "luna", "mimic"} and rarity >= 5:
-                featured_pool.append(cid)
+        featured_pool = [
+            getattr(cls, "id", cls.__name__)
+            for cls in _iter_playable_character_classes()
+            if getattr(cls, "gacha_rarity", 0) >= 5
+        ]
 
         if not featured_pool:
             return  # No characters to rotate
@@ -318,9 +332,8 @@ class GachaManager:
         for banner in banners:
             if banner.featured_character:
                 # Get character info
-                for name in getattr(player_plugins, "__all__", []):
-                    cls = getattr(player_plugins, name)
-                    if getattr(cls, "id", name) == banner.featured_character:
+                for cls in _iter_playable_character_classes():
+                    if getattr(cls, "id", cls.__name__) == banner.featured_character:
                         featured_chars.append({
                             "id": banner.featured_character,
                             "name": getattr(cls, "name", banner.featured_character),
