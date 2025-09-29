@@ -150,7 +150,7 @@ async def run_battle(
                 active_target_id=None,
                 visual_queue=visual_queue,
                 ended=True,
-                turn_phase="battle_teardown",
+                turn_phase="end",
             )
         except Exception:
             pass

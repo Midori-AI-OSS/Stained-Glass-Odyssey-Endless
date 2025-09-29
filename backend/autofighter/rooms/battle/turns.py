@@ -95,7 +95,7 @@ async def dispatch_turn_end_snapshot(
     turn: int,
     run_id: str | None,
     *,
-    turn_phase: str | None = "turn_end",
+    turn_phase: str | None = "end",
 ) -> int:
     """Advance the visual queue and emit an updated snapshot."""
 
