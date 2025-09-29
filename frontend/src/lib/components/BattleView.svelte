@@ -1204,24 +1204,32 @@
       currentFraction,
     };
 
-    const next = {
-      prevFraction,
-      currentFraction,
-      damage: pendingDamage > 0 ? pendingDamage : 0,
-      heal: pendingHeal > 0 ? pendingHeal : 0,
-      damageKey: existing.damageKey || 0,
-      healKey: existing.healKey || 0,
-    };
+    let damage = existing.damage || 0;
+    let heal = existing.heal || 0;
+    let damageKey = existing.damageKey || 0;
+    let healKey = existing.healKey || 0;
 
     const drains = [];
-    if (next.damage > 0) {
-      next.damageKey += 1;
-      drains.push({ key, kind: 'damage', version: next.damageKey });
+    if (pendingDamage > 0) {
+      damageKey += 1;
+      damage = pendingDamage;
+      heal = 0;
+      drains.push({ key, kind: 'damage', version: damageKey });
+    } else if (pendingHeal > 0) {
+      healKey += 1;
+      heal = pendingHeal;
+      damage = 0;
+      drains.push({ key, kind: 'heal', version: healKey });
     }
-    if (next.heal > 0) {
-      next.healKey += 1;
-      drains.push({ key, kind: 'heal', version: next.healKey });
-    }
+
+    const next = {
+      prevFraction: pendingDamage > 0 || pendingHeal > 0 ? prevFraction : existing.prevFraction ?? prevFraction,
+      currentFraction,
+      damage,
+      heal,
+      damageKey,
+      healKey,
+    };
 
     pendingLayers.set(key, next);
     hpHistory.set(key, current);
