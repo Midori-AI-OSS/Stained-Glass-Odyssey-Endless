@@ -286,7 +286,7 @@ async def test_player_turn_emits_start_before_damage(monkeypatch):
     assert updates[damage_index]["turn_phase"] == "resolve"
 
     end_index = next(
-        (idx for idx, update in enumerate(updates) if update["turn_phase"] == "turn_end"),
+        (idx for idx, update in enumerate(updates) if update["turn_phase"] == "end"),
         None,
     )
     assert end_index is not None, "Missing turn end update"
@@ -357,7 +357,7 @@ async def test_foe_turn_emits_start_before_damage(monkeypatch):
     assert updates[damage_index]["turn_phase"] == "resolve"
 
     end_index = next(
-        (idx for idx, update in enumerate(updates) if update["turn_phase"] == "turn_end"),
+        (idx for idx, update in enumerate(updates) if update["turn_phase"] == "end"),
         None,
     )
     assert end_index is not None, "Missing turn end update"

@@ -49,7 +49,7 @@ async def finish_turn(
         actor,
         context.turn,
         context.run_id,
-        turn_phase="turn_end",
+        turn_phase="end",
     )
     if cycle_count:
         context.turn += cycle_count
