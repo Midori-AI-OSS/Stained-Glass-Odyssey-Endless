@@ -270,7 +270,6 @@ describe('BattleView turn phase handling', () => {
     const startSnapshot = buildSnapshot({
       turnPhase: { state: 'start', attacker_id: 'hero', target_id: 'goblin' },
     });
-    startSnapshot.foes = startSnapshot.foes.map((foe) => ({ ...foe, hp: 40 }));
     startSnapshot.recent_events = [
       {
         type: 'damage_taken',
@@ -286,7 +285,7 @@ describe('BattleView turn phase handling', () => {
       includeActiveIds: false,
     });
     resolveSnapshot.foes = resolveSnapshot.foes.map((foe) => ({ ...foe, hp: 40 }));
-    resolveSnapshot.recent_events = startSnapshot.recent_events.map((evt) => clone(evt));
+    resolveSnapshot.recent_events = [];
 
     const endSnapshot = buildSnapshot({
       turnPhase: { state: 'end' },
@@ -317,21 +316,214 @@ describe('BattleView turn phase handling', () => {
       expect(screen.getByTestId('effects-probe').dataset.lastCue).toBe('FireOne1');
     });
 
-    const initialOverlay = container.querySelector('.foe-hp-bar .hp-bar-overlay.damage');
-    expect(initialOverlay).not.toBeNull();
-    expect(parseFloat(initialOverlay.style.width)).toBeGreaterThan(40);
+    expect(screen.getByTestId('floaters-probe').dataset.count).toBe('0');
+    const hpFill = container.querySelector('.foe-hp-bar .hp-bar-fill');
+    expect(hpFill).not.toBeNull();
+    expect(parseFloat(hpFill.style.width)).toBeCloseTo(100, 3);
 
     await vi.advanceTimersByTimeAsync(1);
     await settle();
 
     await waitFor(() => {
-      const overlay = container.querySelector('.foe-hp-bar .hp-bar-overlay.damage');
-      expect(overlay).not.toBeNull();
-      expect(parseFloat(overlay.style.width)).toBeCloseTo(0, 3);
+      expect(screen.getByTestId('floaters-probe').dataset.count).toBe('1');
     });
+    const resolvedFill = container.querySelector('.foe-hp-bar .hp-bar-fill');
+    expect(parseFloat(resolvedFill.style.width)).toBeCloseTo(50, 1);
+    const overlay = container.querySelector('.foe-hp-bar .hp-bar-overlay.damage');
+    expect(overlay).not.toBeNull();
+    expect(parseFloat(overlay.style.width)).toBeCloseTo(0, 3);
 
     await vi.advanceTimersByTimeAsync(1);
     await settle();
+
+    component.$set({ active: false });
+    await settle();
+  });
+
+  it('queues a cinematic for damage-type ultimates before resolve', async () => {
+    const startSnapshot = buildSnapshot({
+      turnPhase: { state: 'start', attacker_id: 'hero', target_id: 'goblin' },
+    });
+    startSnapshot.recent_events = [
+      {
+        type: 'ultimate_used',
+        source_id: 'hero',
+        metadata: { ultimate_type: 'fire', damage_type_id: 'fire' },
+      },
+      {
+        type: 'damage_taken',
+        source_id: 'hero',
+        target_id: 'goblin',
+        amount: 60,
+        metadata: { damage_type_id: 'fire' },
+      },
+    ];
+
+    const resolveSnapshot = buildSnapshot({
+      turnPhase: { state: 'resolve', attacker_id: 'hero', target_id: 'goblin' },
+      includeActiveIds: false,
+    });
+    resolveSnapshot.foes = resolveSnapshot.foes.map((foe) => ({ ...foe, hp: 20 }));
+    resolveSnapshot.recent_events = [];
+
+    const steadySnapshot = buildSnapshot({
+      turnPhase: { state: 'end' },
+      includeActiveIds: false,
+    });
+    steadySnapshot.foes = steadySnapshot.foes.map((foe) => ({ ...foe, hp: 20 }));
+    steadySnapshot.recent_events = [];
+
+    const sequence = [startSnapshot, resolveSnapshot, steadySnapshot];
+    roomAction.mockImplementation(() =>
+      Promise.resolve(clone(sequence.length ? sequence.shift() : steadySnapshot)),
+    );
+
+    const { component } = render(BattleView, {
+      props: {
+        runId: 'ultimate-animation-test',
+        active: true,
+        framerate: 10000,
+        showStatusTimeline: false,
+        showHud: false,
+        showFoes: true,
+      },
+    });
+
+    await settle();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('effects-probe').dataset.lastCue).toBe('FireAll3');
+    });
+    expect(screen.getByTestId('floaters-probe').dataset.count).toBe('0');
+
+    await vi.advanceTimersByTimeAsync(1);
+    await settle();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('floaters-probe').dataset.count).toBe('2');
+    });
+
+    component.$set({ active: false });
+    await settle();
+  });
+
+  it('queues healing auras and applies HP after resolve', async () => {
+    const startSnapshot = buildSnapshot({
+      turnPhase: { state: 'start', attacker_id: 'hero', target_id: 'hero' },
+    });
+    startSnapshot.party = startSnapshot.party.map((member) => ({ ...member, hp: 60 }));
+    startSnapshot.recent_events = [
+      {
+        type: 'heal_received',
+        source_id: 'hero',
+        target_id: 'hero',
+        amount: 20,
+        metadata: { damage_type_id: 'light' },
+      },
+    ];
+
+    const resolveSnapshot = buildSnapshot({
+      turnPhase: { state: 'resolve', attacker_id: 'hero', target_id: 'hero' },
+      includeActiveIds: false,
+    });
+    resolveSnapshot.party = resolveSnapshot.party.map((member) => ({ ...member, hp: 80 }));
+    resolveSnapshot.recent_events = [];
+
+    const endSnapshot = buildSnapshot({
+      turnPhase: { state: 'end' },
+      includeActiveIds: false,
+    });
+    endSnapshot.party = endSnapshot.party.map((member) => ({ ...member, hp: 80 }));
+    endSnapshot.recent_events = [];
+
+    const sequence = [startSnapshot, resolveSnapshot, endSnapshot];
+    roomAction.mockImplementation(() =>
+      Promise.resolve(clone(sequence.length ? sequence.shift() : endSnapshot)),
+    );
+
+    const { container, component } = render(BattleView, {
+      props: {
+        runId: 'healing-aura-test',
+        active: true,
+        framerate: 10000,
+        showStatusTimeline: false,
+        showHud: true,
+        showFoes: true,
+      },
+    });
+
+    await settle();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('effects-probe').dataset.lastCue).toBe('HealAll2');
+    });
+    expect(screen.getByTestId('floaters-probe').dataset.count).toBe('0');
+    const partyFill = container.querySelector('.party-row .hp-bar-fill');
+    expect(parseFloat(partyFill.style.width)).toBeCloseTo(60, 1);
+
+    await vi.advanceTimersByTimeAsync(1);
+    await settle();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('floaters-probe').dataset.count).toBe('1');
+    });
+    const resolvedPartyFill = container.querySelector('.party-row .hp-bar-fill');
+    expect(parseFloat(resolvedPartyFill.style.width)).toBeCloseTo(80, 1);
+
+    component.$set({ active: false });
+    await settle();
+  });
+
+  it('queues DoT pulses before damage resolves', async () => {
+    const startSnapshot = buildSnapshot({
+      turnPhase: { state: 'start', attacker_id: 'goblin', target_id: 'hero' },
+    });
+    startSnapshot.recent_events = [
+      {
+        type: 'dot_tick',
+        source_id: 'goblin',
+        target_id: 'hero',
+        amount: 12,
+        metadata: { damage_type_id: 'poison', effects: [{ id: 'venom', type: 'dot' }] },
+      },
+    ];
+
+    const resolveSnapshot = buildSnapshot({
+      turnPhase: { state: 'resolve', attacker_id: 'goblin', target_id: 'hero' },
+      includeActiveIds: false,
+    });
+    resolveSnapshot.party = resolveSnapshot.party.map((member) => ({ ...member, hp: 88 }));
+    resolveSnapshot.recent_events = [];
+
+    const sequence = [startSnapshot, resolveSnapshot];
+    roomAction.mockImplementation(() =>
+      Promise.resolve(clone(sequence.length ? sequence.shift() : resolveSnapshot)),
+    );
+
+    const { component } = render(BattleView, {
+      props: {
+        runId: 'dot-pulse-test',
+        active: true,
+        framerate: 10000,
+        showStatusTimeline: false,
+        showHud: true,
+        showFoes: true,
+      },
+    });
+
+    await settle();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('effects-probe').dataset.lastCue).toBe('PoisonAll');
+    });
+    expect(screen.getByTestId('floaters-probe').dataset.count).toBe('0');
+
+    await vi.advanceTimersByTimeAsync(1);
+    await settle();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('floaters-probe').dataset.count).toBe('1');
+    });
 
     component.$set({ active: false });
     await settle();
