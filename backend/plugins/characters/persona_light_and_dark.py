@@ -3,9 +3,9 @@ from dataclasses import field
 from random import choice
 
 from autofighter.character import CharacterType
+from plugins.characters._base import PlayerBase
 from plugins.damage_types import load_damage_type
 from plugins.damage_types._base import DamageTypeBase
-from plugins.characters._base import PlayerBase
 
 
 @dataclass
@@ -26,3 +26,11 @@ class PersonaLightAndDark(PlayerBase):
     passives: list[str] = field(
         default_factory=lambda: ["persona_light_and_dark_duality"]
     )
+
+    def __post_init__(self) -> None:
+        super().__post_init__()
+        self.set_base_stat("mitigation", 4.0)
+        self.set_base_stat("defense", 240)
+        self.set_base_stat("max_hp", 1700)
+        self.base_aggro = 2.35
+        self.hp = self.max_hp

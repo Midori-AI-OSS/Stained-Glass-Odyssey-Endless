@@ -2,9 +2,9 @@ from dataclasses import dataclass
 from dataclasses import field
 
 from autofighter.character import CharacterType
+from plugins.characters._base import PlayerBase
 from plugins.damage_types._base import DamageTypeBase
 from plugins.damage_types.light import Light
-from plugins.characters._base import PlayerBase
 
 
 @dataclass
@@ -21,3 +21,11 @@ class Carly(PlayerBase):
     passives: list[str] = field(default_factory=lambda: ["carly_guardians_aegis"])
     # UI hint: show numeric actions indicator
     actions_display: str = "number"
+
+    def __post_init__(self) -> None:
+        super().__post_init__()
+        self.set_base_stat("mitigation", 4.0)
+        self.set_base_stat("defense", 220)
+        self.set_base_stat("max_hp", 1600)
+        self.base_aggro = 2.35
+        self.hp = self.max_hp
