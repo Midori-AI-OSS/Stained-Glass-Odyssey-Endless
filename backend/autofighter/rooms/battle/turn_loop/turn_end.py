@@ -35,6 +35,7 @@ async def finish_turn(
         active_target_id=active_target_id,
         include_summon_foes=include_summon_foes,
         visual_queue=context.visual_queue,
+        turn_phase="resolve",
     )
     await _pace(action_start)
     cycle_count = await dispatch_turn_end_snapshot(
