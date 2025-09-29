@@ -1169,11 +1169,14 @@
         snapshotActiveTargetId = snap.active_target_id ?? null;
       }
       if ('turn_phase' in snap) {
-        const nextTurnPhase =
-          snap.turn_phase && typeof snap.turn_phase === 'object'
-            ? { ...snap.turn_phase }
-            : snap.turn_phase;
-        applyTurnPhaseSnapshot(nextTurnPhase);
+        const rawTurnPhase = snap.turn_phase;
+        if (rawTurnPhase === null || rawTurnPhase === undefined) {
+          resetTurnPhaseState();
+        } else {
+          const nextTurnPhase =
+            typeof rawTurnPhase === 'object' ? { ...rawTurnPhase } : rawTurnPhase;
+          applyTurnPhaseSnapshot(nextTurnPhase);
+        }
       } else if (!turnPhaseSeen) {
         resetTurnPhaseState();
       }
