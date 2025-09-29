@@ -31,3 +31,4 @@ class PersonaIce(PlayerBase):
         self.set_base_stat("defense", 210)
         self.set_base_stat("max_hp", 1650)
         self.base_aggro = 2.35
+        self.hp = self.max_hp
