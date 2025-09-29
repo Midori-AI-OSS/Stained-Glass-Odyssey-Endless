@@ -183,6 +183,11 @@
     if (!entry || isEntrySold(entry) || isEntryDisabled(entry)) {
       return;
     }
+    const ident = entry.ident || identOf(entry);
+    if (ident && selectedIds.has(ident)) {
+      selectedIds.delete(ident);
+      selectedIds = new Set(selectedIds);
+    }
     buy(entry);
   }
 
