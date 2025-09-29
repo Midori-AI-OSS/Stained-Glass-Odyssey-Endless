@@ -23,8 +23,8 @@ class PersonaLightAndDarkDuality:
     id = "persona_light_and_dark_duality"
     name = "Twin Bastion Cycle"
     trigger = ["turn_start", "action_taken"]
-    max_stacks = 1
-    stack_display = "toggle"
+    max_stacks = 5
+    stack_display = "pips"
 
     _persona_state: ClassVar[dict[int, str]] = {}
     _stance_rank: ClassVar[dict[int, int]] = {}
@@ -335,6 +335,18 @@ class PersonaLightAndDarkDuality:
             return float(fallback)
         except Exception:
             return 0.0
+
+    @classmethod
+    def get_stacks(cls, target: "Stats") -> dict[str, int | str | None]:
+        entity_id = id(target)
+        rank = cls._stance_rank.get(entity_id, 1)
+        persona = cls._persona_state.get(entity_id)
+        return {
+            "count": min(rank, 3),
+            "rank": rank,
+            "persona": persona,
+            "flips": cls._flip_counts.get(entity_id, 0),
+        }
 
     @classmethod
     def get_persona(cls, target: "Stats") -> str | None:
