@@ -149,6 +149,43 @@
     dispatch('buy', payload);
   }
 
+  function isEntrySold(entry) {
+    if (!entry) {
+      return true;
+    }
+    if (entry.sold || entry.isSold || entry.is_sold) {
+      return true;
+    }
+    if (entry.availability && (entry.availability.sold || entry.availability.isSold)) {
+      return true;
+    }
+    const ident = entry.ident || identOf(entry);
+    return ident ? soldIds.has(ident) : false;
+  }
+
+  function isEntryDisabled(entry) {
+    if (!entry) {
+      return true;
+    }
+    if (entry.disabled || entry.isDisabled || entry.is_disabled) {
+      return true;
+    }
+    if (entry.availability && entry.availability.disabled) {
+      return true;
+    }
+    return false;
+  }
+
+  function handleItemDoubleClick(entry) {
+    if (processing || isBuying) {
+      return;
+    }
+    if (!entry || isEntrySold(entry) || isEntryDisabled(entry)) {
+      return;
+    }
+    buy(entry);
+  }
+
   function toggleSelect(item) {
     if (processing || isBuying) return;
     const k = item?.ident || identOf(item);
@@ -521,7 +558,8 @@
           {#each visibleItems as { item, pos } (item.key)}
             {@const isCard = item.type === 'card'}
             <div class={`slot pos${pos} ${soldIds.has(item.ident) ? 'sold' : ''} ${selectedIds.has(item.ident) ? 'selected' : ''}`}
-                 title={`${item.name} (${item.stars}★ ${isCard ? 'card' : 'relic'})`}>
+                 title={`${item.name} (${item.stars}★ ${isCard ? 'card' : 'relic'})`}
+                 on:dblclick|stopPropagation={() => handleItemDoubleClick(item)}>
             {#if isCard}
               <RewardCard entry={item} type="card" fluid={true} disabled={soldIds.has(item.ident)} />
             {:else}
