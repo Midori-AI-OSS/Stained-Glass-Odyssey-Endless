@@ -27,4 +27,4 @@ class Carly(PlayerBase):
         self.set_base_stat("mitigation", 4.0)
         self.set_base_stat("defense", 220)
         self.set_base_stat("max_hp", 1600)
-        self.base_aggro = 0.35
+        self.base_aggro = 2.35
