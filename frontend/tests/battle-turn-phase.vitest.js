@@ -227,4 +227,42 @@ describe('BattleView turn phase handling', () => {
     component.$set({ active: false });
     await settle();
   });
+
+  it('treats null turn_phase values as absent snapshots', async () => {
+    const snapshots = [
+      buildSnapshot({ turnPhase: null }),
+      buildSnapshot({}),
+    ];
+
+    roomAction.mockImplementation(() =>
+      Promise.resolve(clone(snapshots.length ? snapshots.shift() : snapshots[0]))
+    );
+
+    const { component } = render(BattleView, {
+      props: {
+        runId: 'null-turn-phase',
+        active: true,
+        framerate: 10000,
+        showStatusTimeline: true,
+        showHud: false,
+        showFoes: true,
+      },
+    });
+
+    await settle();
+
+    const overlay = await screen.findByTestId('overlay-probe');
+    expect(overlay.dataset.phasePresent).toBe('no');
+    expect(overlay.dataset.attacker).toBe('hero');
+    expect(screen.getByTestId('queue-probe').dataset.activeId).toBe('hero');
+
+    await vi.advanceTimersByTimeAsync(1);
+    await settle();
+
+    expect(screen.getByTestId('overlay-probe').dataset.attacker).toBe('hero');
+    expect(screen.getByTestId('queue-probe').dataset.activeId).toBe('hero');
+
+    component.$set({ active: false });
+    await settle();
+  });
 });
