@@ -46,6 +46,7 @@
   import { buildRunMenu } from '$lib/components/RunButtons.svelte';
   import { registerAssetManifest } from '$lib/systems/assetLoader.js';
   import { browser, dev } from '$app/environment';
+  import { normalizeShopPurchase, processSequentialPurchases } from '$lib/systems/shopPurchases.js';
 
   const runState = runStateStore;
 
@@ -968,87 +969,6 @@
   }
 
   $: fullIdleMode && roomData && maybeAutoHandle();
-  function readFiniteNumber(value) {
-    const num = Number(value);
-    return Number.isFinite(num) ? num : null;
-  }
-
-  function extractShopPricing(entry) {
-    if (!entry || typeof entry !== 'object') {
-      return { base: null, taxed: null, tax: null };
-    }
-    const base = (() => {
-      const candidates = [
-        entry.base_cost,
-        entry.base_price,
-        entry.pricing?.base,
-        entry.price,
-        entry.cost
-      ];
-      for (const candidate of candidates) {
-        const resolved = readFiniteNumber(candidate);
-        if (resolved !== null) return resolved;
-      }
-      return null;
-    })();
-    const taxed = (() => {
-      const candidates = [
-        entry.taxed_cost,
-        entry.pricing?.taxed,
-        entry.price,
-        entry.cost,
-        base
-      ];
-      for (const candidate of candidates) {
-        const resolved = readFiniteNumber(candidate);
-        if (resolved !== null) return resolved;
-      }
-      return base;
-    })();
-    const tax = (() => {
-      const candidates = [
-        entry.tax,
-        entry.pricing?.tax,
-        (taxed !== null && base !== null) ? taxed - base : null
-      ];
-      for (const candidate of candidates) {
-        const resolved = readFiniteNumber(candidate);
-        if (resolved !== null) return resolved < 0 ? 0 : resolved;
-      }
-      if (taxed !== null && base !== null) {
-        const diff = taxed - base;
-        return Number.isFinite(diff) && diff > 0 ? diff : 0;
-      }
-      return null;
-    })();
-    return { base, taxed, tax };
-  }
-
-  function normalizeShopPurchase(entry) {
-    if (!entry || typeof entry !== 'object') {
-      return null;
-    }
-    const id = entry.id ?? entry.item ?? null;
-    if (!id) {
-      return null;
-    }
-    const { base, taxed, tax } = extractShopPricing(entry);
-    const normalized = { id };
-    if (base !== null) {
-      normalized.base_cost = base;
-      normalized.base_price = base;
-    }
-    if (taxed !== null) {
-      normalized.cost = taxed;
-      normalized.price = taxed;
-      normalized.taxed_cost = taxed;
-    }
-    if (tax !== null) {
-      normalized.tax = tax;
-    }
-    return normalized;
-  }
-
   async function handleShopBuy(item) {
     if (!runId) return;
     const rawEntries = (() => {
@@ -1075,16 +995,6 @@
       return;
     }
 
-    const payload = (() => {
-      if (purchases.length === 1) {
-        const [single] = purchases;
-        // Preserve per-item pricing fields so payload.base_cost / payload.taxed_cost / payload.tax
-        // remain available for backend analytics and receipts.
-        return { ...single, items: { ...single } };
-      }
-      return { items: purchases.map((entry) => ({ ...entry })) };
-    })();
-
     // Begin processing gate: first active purchase halts UI polling and shows indicator
     shopProcessingCount += 1;
     if (shopProcessingCount === 1) {
@@ -1098,13 +1008,23 @@
 
     try {
       // Queue shop purchases to ensure backend requests run one at a time
-      // and add a brief pacing delay between purchases for clarity.
       shopBuyQueue = shopBuyQueue
         .then(async () => {
-          const result = await roomAction('0', payload);
-          runState.setRoomData(result);
-          // Slow down between sequential purchases
-          await new Promise((r) => setTimeout(r, 750));
+          const snapshot = getRunSnapshot();
+          const initialRoomData = snapshot?.roomData ?? null;
+          await processSequentialPurchases(purchases, {
+            initialRoomData,
+            submit: async (payload) => {
+              const result = await roomAction('0', payload);
+              runState.setRoomData(result);
+              return result;
+            },
+            waitBetween: async (index, total) => {
+              if (index < total - 1) {
+                await new Promise((resolve) => setTimeout(resolve, 750));
+              }
+            }
+          });
         })
         .catch((err) => {
           console.error('Shop buy error', err);
