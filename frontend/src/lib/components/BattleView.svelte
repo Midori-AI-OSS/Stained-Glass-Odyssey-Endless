@@ -349,6 +349,78 @@
     return options[index] || ELEMENTAL_EFFECT_TABLE.generic[0];
   }
 
+  const ULTIMATE_EFFECT_MAP = {
+    fire: 'FireAll3',
+    ice: 'Ice4',
+    lightning: 'Thunder4',
+    wind: 'Wind4',
+    light: 'Light4',
+    dark: 'Darkness4',
+    generic: 'Neutral4',
+  };
+
+  const HEAL_AURA_EFFECT = 'HealAll2';
+  const HOT_AURA_EFFECT = 'HealAll1';
+  const DOT_PULSE_EFFECT = 'PoisonAll';
+
+  function extractUltimateType(event, fallbackElement) {
+    if (!event || typeof event !== 'object') {
+      return normalizeDamageTypeId(fallbackElement);
+    }
+    const metadata = event.metadata || {};
+    const details =
+      metadata.details || metadata.detail || metadata.effect_details || metadata.effects || {};
+    const rawType =
+      metadata.ultimate_type ||
+      metadata.damage_type_id ||
+      metadata.damage_type ||
+      details.ultimate_type ||
+      details.damage_type_id ||
+      details.damage_type ||
+      fallbackElement;
+    return normalizeDamageTypeId(rawType || fallbackElement || 'generic');
+  }
+
+  function resolveUltimateEffect(events, fallbackElement) {
+    if (!Array.isArray(events) || !events.length) {
+      return null;
+    }
+    const ultimate = findLast(
+      events,
+      evt => normalizePhaseState(evt?.type) === 'ultimate_used',
+    );
+    if (!ultimate) {
+      return null;
+    }
+    const element = extractUltimateType(ultimate, fallbackElement);
+    const effectName = ULTIMATE_EFFECT_MAP[element] || ULTIMATE_EFFECT_MAP.generic;
+    return { name: effectName, signature: `ultimate::${element}` };
+  }
+
+  function resolvePulseEffect(events) {
+    if (!Array.isArray(events) || !events.length) {
+      return null;
+    }
+    const healEvent = findLast(
+      events,
+      evt => ['heal_received', 'hot_tick'].includes(normalizePhaseState(evt?.type)),
+    );
+    if (healEvent) {
+      const normalized = normalizePhaseState(healEvent.type);
+      const signature = `aura::${normalized}`;
+      const effectName = normalized === 'hot_tick' ? HOT_AURA_EFFECT : HEAL_AURA_EFFECT;
+      return { name: effectName, signature };
+    }
+    const dotEvent = findLast(
+      events,
+      evt => normalizePhaseState(evt?.type) === 'dot_tick',
+    );
+    if (dotEvent) {
+      return { name: DOT_PULSE_EFFECT, signature: 'dot::pulse' };
+    }
+    return null;
+  }
+
   function findLast(array, predicate) {
     if (!Array.isArray(array)) return null;
     for (let i = array.length - 1; i >= 0; i -= 1) {
@@ -401,38 +473,61 @@
     fallbackElement,
     force = false,
   }) {
-    const { event: candidate, signature } = selectCandidateEvent(events, attackerId, targetId);
     const normalizedPhaseToken = phaseToken ? String(phaseToken) : '';
-    let amount = 0;
-    let key = fallbackElement || 'generic';
-    let eventType = '';
-    if (candidate) {
-      amount = Number(candidate.amount ?? candidate.value ?? 0);
-      eventType = candidate.type ?? '';
-      if (candidate.damageTypeId) {
-        key = candidate.damageTypeId;
-      } else if (candidate.metadata) {
-        const meta = candidate.metadata;
-        const candidateKey =
-          meta.damage_type_id ??
-          meta.element ??
-          meta.damage_type ??
-          meta.effect_type ??
-          meta.effect ??
-          meta.type;
-        if (candidateKey) {
-          key = candidateKey;
-        }
-      }
-      const normalizedType = normalizePhaseState(candidate.type);
-      if (normalizedType === 'heal_received' || normalizedType === 'hot_tick') {
-        key = 'heal';
-      } else if (normalizedType === 'dot_tick' && (!key || key === 'generic')) {
-        key = 'poison';
+    const ultimate = resolveUltimateEffect(events, fallbackElement);
+    let effectName = ultimate?.name ?? null;
+    let signature = ultimate?.signature ?? '';
+
+    if (!effectName) {
+      const pulse = resolvePulseEffect(events);
+      if (pulse) {
+        effectName = pulse.name;
+        signature = pulse.signature;
       }
     }
-    const effectName = resolveEffectNameForKey(key, amount, eventType);
-    if (!effectName) return null;
+
+    if (!effectName) {
+      const { event: candidate, signature: candidateSignature } = selectCandidateEvent(
+        events,
+        attackerId,
+        targetId,
+      );
+      let amount = 0;
+      let key = fallbackElement || 'generic';
+      let eventType = '';
+      if (candidate) {
+        amount = Number(candidate.amount ?? candidate.value ?? 0);
+        eventType = candidate.type ?? '';
+        if (candidate.damageTypeId) {
+          key = candidate.damageTypeId;
+        } else if (candidate.metadata) {
+          const meta = candidate.metadata;
+          const candidateKey =
+            meta.damage_type_id ??
+            meta.element ??
+            meta.damage_type ??
+            meta.effect_type ??
+            meta.effect ??
+            meta.type;
+          if (candidateKey) {
+            key = candidateKey;
+          }
+        }
+        const normalizedType = normalizePhaseState(candidate.type);
+        if (normalizedType === 'heal_received' || normalizedType === 'hot_tick') {
+          key = 'heal';
+        } else if (normalizedType === 'dot_tick' && (!key || key === 'generic')) {
+          key = 'poison';
+        }
+      }
+      effectName = resolveEffectNameForKey(key, amount, eventType);
+      signature = candidateSignature || '';
+    }
+
+    if (!effectName) {
+      return null;
+    }
+
     const compositeSignature = [
       normalizedPhaseToken,
       signature || '',
@@ -466,16 +561,62 @@
       const state = pendingLayers.get(entry.key);
       if (!state) continue;
       if (entry.kind === 'damage' && state.damageKey === entry.version && state.damage > 0) {
-        pendingLayers.set(entry.key, { ...state, damage: 0 });
+        pendingLayers.set(entry.key, {
+          ...state,
+          damage: 0,
+          prevFraction: state.targetFraction,
+          currentFraction: state.targetFraction,
+        });
         drained = true;
       } else if (entry.kind === 'heal' && state.healKey === entry.version && state.heal > 0) {
-        pendingLayers.set(entry.key, { ...state, heal: 0 });
+        pendingLayers.set(entry.key, {
+          ...state,
+          heal: 0,
+          prevFraction: state.targetFraction,
+          currentFraction: state.targetFraction,
+        });
         drained = true;
       }
     }
     if (drained) {
       pendingLayers = new Map(pendingLayers);
     }
+  }
+
+  function takePendingFloaterBatch({ token, normalizedEvents, rawEvents }) {
+    const storedToken = pendingFloaterToken;
+    const hasPending = Array.isArray(pendingFloaterRawEvents) && pendingFloaterRawEvents.length > 0;
+    const shouldUsePending =
+      hasPending && (!token || !storedToken || storedToken === token || !normalizedEvents?.length);
+    const effectiveNormalized = shouldUsePending
+      ? pendingFloaterNormalizedEvents
+      : normalizedEvents || [];
+    const effectiveRaw = shouldUsePending ? pendingFloaterRawEvents : rawEvents || [];
+    if (shouldUsePending) {
+      pendingFloaterToken = '';
+      pendingFloaterRawEvents = [];
+      pendingFloaterNormalizedEvents = [];
+    }
+    return {
+      normalizedEvents: Array.isArray(effectiveNormalized) ? effectiveNormalized : [],
+      floaterFeed: processRecentEvents(effectiveRaw),
+    };
+  }
+
+  function storeFloaterBatch(token, normalizedEvents, rawEvents) {
+    pendingFloaterToken = token || '';
+    pendingFloaterNormalizedEvents = Array.isArray(normalizedEvents)
+      ? normalizedEvents.map(evt => ({ ...evt }))
+      : [];
+    pendingFloaterRawEvents = Array.isArray(rawEvents)
+      ? rawEvents.map(evt => ({ ...evt }))
+      : [];
+  }
+
+  function clearFloaterBatch() {
+    pendingFloaterToken = '';
+    pendingFloaterRawEvents = [];
+    pendingFloaterNormalizedEvents = [];
   }
 
   let knownSummons = new Set();
@@ -487,6 +628,9 @@
   let lastPhaseToken = '';
   let lastEffectSignature = '';
   let phaseSequenceCounter = 0;
+  let pendingFloaterToken = '';
+  let pendingFloaterRawEvents = [];
+  let pendingFloaterNormalizedEvents = [];
   $: pendingEaseMs = Math.max(240, pollDelay * 1.5);
   const dispatch = createEventDispatcher();
   // Poll battle snapshots at (framerate / 10) times per second.
@@ -971,8 +1115,11 @@
     };
   }
 
-  function handlePhaseTransition(info, events) {
+  function handlePhaseTransition(info, events, rawEvents = []) {
     const normalizedEvents = Array.isArray(events) ? events : [];
+    const rawList = Array.isArray(rawEvents) ? rawEvents : [];
+    let overlayEvents = normalizedEvents;
+
     if (!info || !info.state) {
       if (normalizedEvents.length) {
         const fallbackAttacker = normalizeId(
@@ -996,7 +1143,10 @@
       }
       waitingForResolve = false;
       lastPhaseToken = '';
-      return true;
+      const batch = takePendingFloaterBatch({ token: '', normalizedEvents, rawEvents: rawList });
+      overlayEvents = batch.normalizedEvents;
+      floaterFeed = batch.floaterFeed;
+      return { shouldRelease: true, overlayEvents };
     }
 
     const state = normalizePhaseState(info.state);
@@ -1012,6 +1162,17 @@
     }
 
     if (state === 'start') {
+      if (pendingFloaterRawEvents.length) {
+        const pending = takePendingFloaterBatch({
+          token: pendingFloaterToken,
+          normalizedEvents: pendingFloaterNormalizedEvents,
+          rawEvents: pendingFloaterRawEvents,
+        });
+        if (pending.floaterFeed?.length) {
+          floaterFeed = pending.floaterFeed;
+          overlayEvents = pending.normalizedEvents;
+        }
+      }
       waitingForResolve = true;
       const phaseSignature = `${state}:${tokenBase}`;
       if (phaseSignature !== lastPhaseToken) {
@@ -1025,15 +1186,16 @@
         });
         lastPhaseToken = phaseSignature;
       }
-      return false;
+      storeFloaterBatch(tokenBase, normalizedEvents, rawList);
+      return { shouldRelease: false, overlayEvents };
     }
 
     waitingForResolve = false;
     lastPhaseToken = '';
-    if (!state || state === 'resolve' || state === 'end') {
-      return true;
-    }
-    return true;
+    const batch = takePendingFloaterBatch({ token: tokenBase, normalizedEvents, rawEvents: rawList });
+    overlayEvents = batch.normalizedEvents;
+    floaterFeed = batch.floaterFeed;
+    return { shouldRelease: true, overlayEvents };
   }
 
   function resolveCombatantNameById(id) {
@@ -1201,30 +1363,39 @@
       damage: 0,
       heal: 0,
       prevFraction,
-      currentFraction,
+      currentFraction: prevFraction,
+      targetFraction: prevFraction,
     };
 
     let damage = existing.damage || 0;
     let heal = existing.heal || 0;
     let damageKey = existing.damageKey || 0;
     let healKey = existing.healKey || 0;
+    let displayFraction = existing.currentFraction ?? prevFraction;
+    let targetFraction = existing.targetFraction ?? prevFraction;
 
     const drains = [];
     if (pendingDamage > 0) {
       damageKey += 1;
       damage = pendingDamage;
       heal = 0;
+      targetFraction = currentFraction;
       drains.push({ key, kind: 'damage', version: damageKey });
     } else if (pendingHeal > 0) {
       healKey += 1;
       heal = pendingHeal;
       damage = 0;
+      targetFraction = currentFraction;
       drains.push({ key, kind: 'heal', version: healKey });
+    } else {
+      displayFraction = currentFraction;
+      targetFraction = currentFraction;
     }
 
     const next = {
       prevFraction: pendingDamage > 0 || pendingHeal > 0 ? prevFraction : existing.prevFraction ?? prevFraction,
-      currentFraction,
+      currentFraction: displayFraction,
+      targetFraction,
       damage,
       heal,
       damageKey,
@@ -1474,18 +1645,22 @@
           .filter(Boolean);
       }
 
-      const shouldForceRelease = handlePhaseTransition(phaseInfo, normalizedEvents);
+      const phaseOutcome = handlePhaseTransition(phaseInfo, normalizedEvents, snap.recent_events || []);
 
-      if (Array.isArray(snap.recent_events)) {
-        recentEvents = normalizedEvents;
-        floaterFeed = processRecentEvents(snap.recent_events);
-      } else {
+      if (phaseOutcome && 'overlayEvents' in phaseOutcome) {
+        recentEvents = phaseOutcome.overlayEvents || [];
+      } else if (!Array.isArray(snap.recent_events)) {
         recentEvents = [];
+      }
+
+      if (!Array.isArray(snap.recent_events)) {
         floaterFeed = [];
         recentEventCounts = new Map();
         lastRecentEventTokens = [];
+        clearFloaterBatch();
       }
 
+      const shouldForceRelease = phaseOutcome?.shouldRelease ?? true;
       await releaseHpDrains({ force: shouldForceRelease || !waitingForResolve });
 
       const determineTurn = () => {
