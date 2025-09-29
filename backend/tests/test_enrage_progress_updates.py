@@ -160,6 +160,7 @@ async def test_player_phase_emits_snapshot_on_enrage(monkeypatch: pytest.MonkeyP
         active_target_id=None,
         include_summon_foes=False,
         ended=None,
+        turn_phase: str | None = None,
     ) -> None:
         updates.append(
             {
@@ -171,6 +172,7 @@ async def test_player_phase_emits_snapshot_on_enrage(monkeypatch: pytest.MonkeyP
                 "include_summon_foes": include_summon_foes,
                 "ended": ended,
                 "turn": turn,
+                "turn_phase": turn_phase,
             }
         )
 
