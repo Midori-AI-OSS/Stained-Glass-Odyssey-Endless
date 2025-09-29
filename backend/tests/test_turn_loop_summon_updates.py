@@ -117,7 +117,7 @@ def _setup_common_player_patches(
         include_summon_foes=False,
         ended=None,
         visual_queue=None,
-        turn_phase=None,
+        turn_phase: str | None = None,
     ):
         updates.append(
             {
@@ -292,6 +292,17 @@ async def test_player_turn_emits_start_before_damage(monkeypatch):
     assert end_index is not None, "Missing turn end update"
     assert damage_index < end_index, "Turn end should follow damage resolution"
 
+    phases = [
+        update["turn_phase"]
+        for update in updates
+        if update["turn_phase"] is not None
+    ]
+    assert phases, "Expected at least one phase-tagged update"
+    assert phases[0] == "start"
+    assert phases[-1] == "turn_end"
+    assert any(phase == "resolve" for phase in phases[1:-1])
+    assert all(phase == "resolve" for phase in phases[1:-1])
+
 
 @pytest.mark.asyncio
 async def test_foe_turn_emits_start_before_damage(monkeypatch):
@@ -362,6 +373,17 @@ async def test_foe_turn_emits_start_before_damage(monkeypatch):
     )
     assert end_index is not None, "Missing turn end update"
     assert damage_index < end_index, "Turn end should follow damage resolution"
+
+    phases = [
+        update["turn_phase"]
+        for update in updates
+        if update["turn_phase"] is not None
+    ]
+    assert phases, "Expected at least one phase-tagged update"
+    assert phases[0] == "start"
+    assert phases[-1] == "turn_end"
+    assert any(phase == "resolve" for phase in phases[1:-1])
+    assert all(phase == "resolve" for phase in phases[1:-1])
 
 
 @pytest.mark.asyncio

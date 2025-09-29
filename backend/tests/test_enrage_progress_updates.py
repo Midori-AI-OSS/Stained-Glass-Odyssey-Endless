@@ -160,6 +160,7 @@ async def test_player_phase_emits_snapshot_on_enrage(monkeypatch: pytest.MonkeyP
         active_target_id=None,
         include_summon_foes=False,
         ended=None,
+        visual_queue=None,
         turn_phase: str | None = None,
     ) -> None:
         updates.append(
@@ -172,6 +173,7 @@ async def test_player_phase_emits_snapshot_on_enrage(monkeypatch: pytest.MonkeyP
                 "include_summon_foes": include_summon_foes,
                 "ended": ended,
                 "turn": turn,
+                "visual_queue": visual_queue,
                 "turn_phase": turn_phase,
             }
         )
@@ -194,6 +196,22 @@ async def test_player_phase_emits_snapshot_on_enrage(monkeypatch: pytest.MonkeyP
     monkeypatch.setattr(player_turn, "BUS", SimpleNamespace(emit_async=_noop_async))
     monkeypatch.setattr(player_turn, "calc_animation_time", lambda *_, **__: 0)
     monkeypatch.setattr(player_turn, "_any_foes_alive", lambda *_: False)
+
+    async def fake_update_enrage_state(*args, **kwargs):
+        state = kwargs.get("state")
+        if state is None and len(args) > 1:
+            state = args[1]
+        enrage_mods = kwargs.get("enrage_mods")
+        if enrage_mods is None and len(args) > 4:
+            enrage_mods = args[4]
+        if state is not None:
+            state.active = True
+            state.stacks = max(1, getattr(state, "stacks", 0))
+        if enrage_mods:
+            enrage_mods[0] = DummyMod()
+        return state.as_payload() if state is not None else None
+
+    monkeypatch.setattr(player_turn, "update_enrage_state", fake_update_enrage_state)
 
     member = DummyMember()
     foe = DummyFoe()
@@ -227,5 +245,6 @@ async def test_player_phase_emits_snapshot_on_enrage(monkeypatch: pytest.MonkeyP
     assert snapshot["enrage"]["stacks"] == 1
     assert snapshot["active_id"] == member.id
     assert snapshot["active_target_id"] is None
+    assert snapshot["turn_phase"] is None
     assert pace_calls == [player_turn.YIELD_MULTIPLIER]
     assert context.enrage_mods[0] is not None
