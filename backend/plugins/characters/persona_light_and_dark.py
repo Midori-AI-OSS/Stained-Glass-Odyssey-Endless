@@ -33,3 +33,4 @@ class PersonaLightAndDark(PlayerBase):
         self.set_base_stat("defense", 240)
         self.set_base_stat("max_hp", 1700)
         self.base_aggro = 2.35
+        self.hp = self.max_hp
