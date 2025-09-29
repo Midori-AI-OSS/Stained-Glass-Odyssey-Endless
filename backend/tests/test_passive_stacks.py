@@ -122,6 +122,47 @@ async def test_graygray_counter_stack_display():
 
 
 @pytest.mark.asyncio
+async def test_persona_duality_pip_display_and_cap():
+    """Persona Light and Dark Duality should show pip display with capped count."""
+    registry = PassiveRegistry()
+
+    persona = Stats(hp=1000, damage_type=Generic())
+    persona.passives = ["persona_light_and_dark_duality"]
+
+    await registry.trigger("turn_start", persona, party=[persona], foes=[])
+
+    description = registry.describe(persona)
+    duality_passive = next(
+        (p for p in description if p["id"] == "persona_light_and_dark_duality"),
+        None,
+    )
+    assert duality_passive is not None
+    assert duality_passive["display"] == "pips"
+    assert duality_passive["max_stacks"] == 5
+    assert duality_passive["stacks"]["count"] == 1
+    assert duality_passive["stacks"]["rank"] == 1
+    assert duality_passive["stacks"]["persona"] == "light"
+    assert duality_passive["stacks"]["flips"] == 0
+
+    # Trigger several persona flips so the rank exceeds the pip cap
+    for _ in range(5):
+        await registry.trigger("action_taken", persona, party=[persona], foes=[])
+
+    description = registry.describe(persona)
+    duality_passive = next(
+        (p for p in description if p["id"] == "persona_light_and_dark_duality"),
+        None,
+    )
+    assert duality_passive is not None
+    assert duality_passive["display"] == "pips"
+    assert duality_passive["max_stacks"] == 5
+    assert duality_passive["stacks"]["count"] == 3
+    assert duality_passive["stacks"]["rank"] >= 4
+    assert duality_passive["stacks"]["persona"] in {"light", "dark"}
+    assert duality_passive["stacks"]["flips"] >= 1
+
+
+@pytest.mark.asyncio
 async def test_carly_guardian_stack_display():
     """Test that Carly Guardian's Aegis correctly reports mitigation stacks for the UI."""
     registry = PassiveRegistry()
