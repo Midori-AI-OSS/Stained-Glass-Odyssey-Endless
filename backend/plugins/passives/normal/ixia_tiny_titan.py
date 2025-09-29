@@ -100,7 +100,12 @@ class IxiaTinyTitan:
             # Minor HoT based on Vitality bonus
             hot_amount = int(vitality_bonus * target.max_hp * 0.02)  # 2% of max HP per 0.01 Vitality
             if hot_amount > 0:
-                target.hp = min(target.max_hp, target.hp + hot_amount)
+                await target.apply_healing(
+                    hot_amount,
+                    healer=target,
+                    source_type="hot",
+                    source_name=self.id,
+                )
 
     @classmethod
     def get_vitality_bonus(cls, target: "Stats") -> float:
