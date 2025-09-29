@@ -7,6 +7,11 @@
   export let combatants = [];
   export let events = [];
   export let reducedMotion = false;
+  export let turnPhase = null;
+
+  let phaseState = '';
+  let phaseContextAvailable = false;
+  let phaseAllowsArrow = true;
 
   const markerId = `target-arrow-${Math.random().toString(36).slice(2, 8)}`;
   const CANVAS_SIZE = 1000;
@@ -22,6 +27,15 @@
     if (value === undefined || value === null) return '';
     try {
       return String(value);
+    } catch {
+      return '';
+    }
+  }
+
+  function normalizePhaseState(value) {
+    if (value === undefined || value === null) return '';
+    try {
+      return String(value).trim().toLowerCase();
     } catch {
       return '';
     }
@@ -96,6 +110,9 @@
   $: targetPoint = toPoint(targetAnchor);
   $: attackerCanvas = toCanvas(attackerPoint);
   $: targetCanvas = toCanvas(targetPoint);
+  $: phaseState = normalizePhaseState(turnPhase?.state);
+  $: phaseContextAvailable = turnPhase !== null && turnPhase !== undefined;
+  $: phaseAllowsArrow = phaseContextAvailable ? ['start', 'resolve'].includes(phaseState) : true;
 
   $: arrowEvent = findColorSource();
   $: arrowColor = (() => {
@@ -111,12 +128,13 @@
   })();
 
   $: arrowVisible =
+    phaseAllowsArrow &&
     attackerCanvas &&
     targetCanvas &&
     (Math.abs(attackerCanvas.x - targetCanvas.x) > 1 || Math.abs(attackerCanvas.y - targetCanvas.y) > 1);
 
-  $: showAttackerPulse = Boolean(attackerCanvas);
-  $: showTargetPulse = Boolean(targetCanvas);
+  $: showAttackerPulse = phaseAllowsArrow && Boolean(attackerCanvas);
+  $: showTargetPulse = phaseAllowsArrow && Boolean(targetCanvas);
 </script>
 
 {#if showAttackerPulse || showTargetPulse}
