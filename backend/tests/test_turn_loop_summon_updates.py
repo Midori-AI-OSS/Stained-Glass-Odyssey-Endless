@@ -225,6 +225,7 @@ async def test_player_phase_pushes_update_for_new_summons(monkeypatch):
     assert summon_update["include_summon_foes"] is True
     assert "ally_summon" in summon_update["party"]
     assert "foe_summon" in summon_update["foes"]
+    assert summon_update["turn_phase"] == "resolve"
 
 
 @pytest.mark.asyncio
@@ -277,6 +278,77 @@ async def test_player_turn_emits_start_before_damage(monkeypatch):
             idx
             for idx, update in enumerate(updates)
             if update["foe_hp"] and any(hp != initial_hp for hp in update["foe_hp"])
+        ),
+        None,
+    )
+    assert damage_index is not None, "No update captured HP change"
+    assert start_index < damage_index, "Start update should precede damage resolution"
+    assert updates[damage_index]["turn_phase"] == "resolve"
+
+    end_index = next(
+        (idx for idx, update in enumerate(updates) if update["turn_phase"] == "turn_end"),
+        None,
+    )
+    assert end_index is not None, "Missing turn end update"
+    assert damage_index < end_index, "Turn end should follow damage resolution"
+
+
+@pytest.mark.asyncio
+async def test_foe_turn_emits_start_before_damage(monkeypatch):
+    updates = _setup_common_player_patches(
+        monkeypatch,
+        foe_turn,
+        patch_finish_turn=False,
+    )
+
+    acting_foe = SimpleEntity("foe")
+    target = SimpleEntity("ally")
+    target.effect_manager = DummyEffectManager(target)
+
+    context = foe_turn.TurnLoopContext(
+        room=SimpleNamespace(),
+        party=_Party([target]),
+        combat_party=_Party([target]),
+        registry=_RegistryStub(),
+        foes=[acting_foe],
+        foe_effects=[acting_foe.effect_manager],
+        enrage_mods=[None],
+        enrage_state=SimpleNamespace(active=False),
+        progress=_noop_async,
+        visual_queue=None,
+        temp_rdr=0.0,
+        exp_reward=0,
+        run_id="run",
+        battle_tasks={},
+        abort=lambda _: None,
+        credited_foe_ids=set(),
+        turn=0,
+    )
+
+    initial_hp = target.hp
+
+    result = await foe_turn._run_foe_turn_iteration(
+        context,
+        0,
+        acting_foe,
+    )
+
+    assert result.repeat is False
+    assert result.battle_over is False
+    assert updates, "Expected progress updates during foe action"
+
+    start_index = next(
+        (idx for idx, update in enumerate(updates) if update["turn_phase"] == "start"),
+        None,
+    )
+    assert start_index is not None, "Missing start phase update"
+
+    damage_index = next(
+        (
+            idx
+            for idx, update in enumerate(updates)
+            if update["party_hp"]
+            and any(hp != initial_hp for hp in update["party_hp"])
         ),
         None,
     )
@@ -346,3 +418,4 @@ async def test_foe_phase_pushes_update_for_new_summons(monkeypatch):
     assert summon_update["include_summon_foes"] is True
     assert "ally_summon" in summon_update["party"]
     assert "foe_summon" in summon_update["foes"]
+    assert summon_update["turn_phase"] == "resolve"

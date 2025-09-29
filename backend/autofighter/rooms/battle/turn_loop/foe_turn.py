@@ -124,6 +124,21 @@ async def _run_foe_turn_iteration(
         active_id=getattr(acting_foe, "id", None),
         active_target_id=getattr(target, "id", None),
     )
+    await push_progress_update(
+        context.progress,
+        context.combat_party.members,
+        context.foes,
+        context.enrage_state,
+        context.temp_rdr,
+        _EXTRA_TURNS,
+        context.turn,
+        run_id=context.run_id,
+        active_id=getattr(acting_foe, "id", None),
+        active_target_id=getattr(target, "id", None),
+        include_summon_foes=True,
+        visual_queue=context.visual_queue,
+        turn_phase="start",
+    )
     await pace_sleep(YIELD_MULTIPLIER)
 
     target_effect = target.effect_manager
@@ -198,6 +213,21 @@ async def _run_foe_turn_iteration(
             and acting_foe.hp > 0
             and not battle_over
         ):
+            await push_progress_update(
+                context.progress,
+                context.combat_party.members,
+                context.foes,
+                context.enrage_state,
+                context.temp_rdr,
+                _EXTRA_TURNS,
+                context.turn,
+                run_id=context.run_id,
+                active_id=getattr(acting_foe, "id", None),
+                active_target_id=getattr(target, "id", None),
+                include_summon_foes=True,
+                visual_queue=context.visual_queue,
+                turn_phase="resolve",
+            )
             _EXTRA_TURNS[id(acting_foe)] -= 1
             await _pace(action_start)
             return FoeTurnIterationResult(repeat=True, battle_over=False)
@@ -294,6 +324,7 @@ async def _run_foe_turn_iteration(
                 active_target_id=getattr(target, "id", None),
                 include_summon_foes=True,
                 visual_queue=context.visual_queue,
+                turn_phase="resolve",
             )
             await pace_sleep(YIELD_MULTIPLIER)
     except Exception:
@@ -318,6 +349,21 @@ async def _run_foe_turn_iteration(
         and acting_foe.hp > 0
         and not battle_over
     ):
+        await push_progress_update(
+            context.progress,
+            context.combat_party.members,
+            context.foes,
+            context.enrage_state,
+            context.temp_rdr,
+            _EXTRA_TURNS,
+            context.turn,
+            run_id=context.run_id,
+            active_id=getattr(acting_foe, "id", None),
+            active_target_id=getattr(target, "id", None),
+            include_summon_foes=True,
+            visual_queue=context.visual_queue,
+            turn_phase="resolve",
+        )
         _EXTRA_TURNS[id(acting_foe)] -= 1
         await _pace(action_start)
         await pace_sleep(YIELD_MULTIPLIER)
