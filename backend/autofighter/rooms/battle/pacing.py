@@ -13,7 +13,7 @@ from autofighter.stats import BUS
 from autofighter.stats import Stats
 from autofighter.stats import calc_animation_time
 
-DEFAULT_TURN_PACING = 0.5
+DEFAULT_TURN_PACING = 0.2
 _MIN_TURN_PACING = 0.05
 
 TURN_PACING = DEFAULT_TURN_PACING
@@ -120,12 +120,6 @@ async def _pace(start_time: float) -> None:
             raise
         except Exception:
             pass
-    try:
-        await pace_sleep()
-    except asyncio.CancelledError:
-        raise
-    except Exception:
-        pass
 
 
 async def pace_sleep(multiplier: float = 1.0) -> None:
