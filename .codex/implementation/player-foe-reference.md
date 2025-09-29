@@ -44,14 +44,14 @@ variants. Characters marked as "random" roll one of the six elements on first
 spawn and reuse it for future sessions. Passives should remain uncapped unless
 design calls out a limit explicitly.
 
-- **Ally** (B, random) – applies `ally_passive` on load to grant ally-specific bonuses.
+- **Ally** (B, random) – applies `ally_overload` on load to grant ally-specific bonuses.
 - **Becca** (B, random) – builds high attack but takes more damage from lower defense.
 - **Bubbles** (A, random) – starts with a default item and applies `bubbles_bubble_burst`, switching elements each turn and bursting after three hits per foe.
 - **Carly** (B, Light) – Guardian's Aegis heals the most injured ally, converts attack growth into defense, builds mitigation stacks that can overcharge to add defense to attack while stacks decay each turn, and shares mitigation on ultimate.
 - **Ixia** (A, Lightning) – gains four times the normal benefit from Vitality.
 - **Graygray** (B, random) – applies `graygray_counter_maestro`, counterattacking when hit and unleashing a max-HP burst every 50 stacks.
 - **Hilander** (A, random) – builds increased crit rate and crit damage, unleashing Aftertaste on crit; stack gain odds drop 5% per stack past 20, but never below 1%.
-- **Kboshi** (A, random) – randomly changes damage type; failed switches grant stacking bonuses. Switching elements consumes stacks and inflicts a brief mitigation debuff on all foes.
+- **Kboshi** (A, Dark) – channels his `kboshi_flux_cycle` from a Dark baseline, cycling stored power into stacking bonuses and expending those stacks to debuff foes when he forces a flux shift.
 - **Lady Darkness** (B, Dark) – baseline fighter themed around darkness.
 - **Lady Echo** (B, Lightning) – baseline fighter themed around echoes.
 - **Lady Fire and Ice** (B, Fire or Ice) – baseline fighter themed around fire and ice. Duality Engine alternates elements to build Flux and reduces foe mitigation when repeating an element.
@@ -62,9 +62,9 @@ design calls out a limit explicitly.
 - **Lady Wind** (B, Wind) – 5★ aeromancer and twin of Lady Lightning whose manic, wind-lashed experiments leave her workspace in constant disarray. Tempest Guard wraps her in a permanent slipstream of dodge and mitigation, bleeds off stacks at the start of her turn, then adds one for every foe she critically strikes to fuel gust boosts and siphon a slice of incoming damage into healing.
 - **Luna** (B, Generic) – applies `luna_passive`; boss-ranked variants pre-summon astral swords that inherit her stats, mirror her action cadence, and funnel their hits into Lunar Reservoir charge.
 - **Mezzy** (B, random) – raises Max HP, takes less damage, and siphons stats from healthy allies each turn.
-- **Mimic** (B, random) – copies allied passives and mimics stat gains earned during battle.
+- **Mimic** (C, random) – copies allied passives and mimics stat gains earned during battle.
 - **Persona Ice** (A, Ice) – 5★ cryo tank who shields his sisters with Cryo Cycle, layering mitigation and thawing the stored frost into end-of-turn healing barriers for the party.
-- **Persona Light and Dark** (B, Light or Dark) – 6★ dual-persona duelist. `persona_light_and_dark_duality` flips her element after every action, bathing allies in Light-form mitigation pulses and heals before pivoting into Dark-form crit bursts that strip foe defenses.
+- **Persona Light and Dark** (A, Light or Dark) – 6★ dual-persona duelist. `persona_light_and_dark_duality` flips her element after every action, bathing allies in Light-form mitigation pulses and heals before pivoting into Dark-form crit bursts that strip foe defenses.
 - **Player** (C, chosen) – avatar representing the user and may select any non-Generic damage type.
 - **Slime** (C, random) – non-selectable training dummy that mirrors the baseline stat line and supplies fallback foes.
 
