@@ -29,6 +29,7 @@ class PersonaLightAndDark(PlayerBase):
 
     def __post_init__(self) -> None:
         super().__post_init__()
+        self.damage_reduction_passes = 2
         self.set_base_stat("mitigation", 4.0)
         self.set_base_stat("defense", 240)
         self.set_base_stat("max_hp", 1700)

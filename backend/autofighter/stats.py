@@ -141,6 +141,7 @@ class Stats:
     _base_effect_resistance: float = field(default=0.05, init=False)
     _base_vitality: float = field(default=1.0, init=False)
     _base_spd: int = field(default=10, init=False)
+    damage_reduction_passes: int = 1
 
     # Damage type and other permanent attributes
     damage_type: DamageTypeBase = field(default_factory=Generic)
@@ -747,7 +748,16 @@ class Stats:
         vit = vit if vit > EPS else EPS
         mit = mit if mit > EPS else EPS
         denom = defense_term * vit * mit
-        amount = ((amount ** 2) * src_vit) / denom
+        passes = getattr(self, "damage_reduction_passes", 1)
+        try:
+            passes = int(passes)
+        except Exception:
+            passes = 1
+        passes = max(1, passes)
+        mitigated_amount = amount
+        for _ in range(passes):
+            mitigated_amount = ((mitigated_amount ** 2) * src_vit) / denom
+        amount = mitigated_amount
         # Enrage: increase damage taken globally by N% per enrage stack
         enr = get_enrage_percent()
         if enr > 0:
