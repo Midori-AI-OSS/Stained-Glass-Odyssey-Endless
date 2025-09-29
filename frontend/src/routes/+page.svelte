@@ -1347,6 +1347,11 @@
   let uiState = null;
 
   function applyUIStatePayload(newUIState) {
+    const incomingMode = typeof newUIState?.mode === 'string' ? newUIState.mode : undefined;
+    if (haltSync && incomingMode !== 'menu') {
+      return;
+    }
+
     if (newUIState?.asset_manifest) {
       try {
         registerAssetManifest(newUIState.asset_manifest);
