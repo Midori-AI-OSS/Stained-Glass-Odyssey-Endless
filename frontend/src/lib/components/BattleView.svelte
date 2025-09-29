@@ -48,6 +48,17 @@
   let combatants = [];
   let activeId = null;
   let activeTargetId = null;
+  let snapshotActiveId = null;
+  let snapshotActiveTargetId = null;
+  let turnPhaseSeen = false;
+  let rawTurnPhase = null;
+  let turnPhaseState = '';
+  let turnPhaseAttackerId = null;
+  let turnPhaseTargetId = null;
+  let storedTurnPhase = null;
+  let normalizedTurnPhaseState = '';
+  let turnPhaseIsActive = false;
+  let phaseAllowsOverlays = true;
   let currentTurn = null;
   let statusPhase = null;
   let statusTimeline = [];
@@ -85,6 +96,45 @@
   // If a combatant disappears, clear stale targeting ids
   $: if (activeId && !combatantById.has(String(activeId))) activeId = null;
   $: if (activeTargetId && !combatantById.has(String(activeTargetId))) activeTargetId = null;
+  $: if (snapshotActiveId && !combatantById.has(String(snapshotActiveId))) {
+    snapshotActiveId = null;
+  }
+  $: if (snapshotActiveTargetId && !combatantById.has(String(snapshotActiveTargetId))) {
+    snapshotActiveTargetId = null;
+  }
+  $: if (turnPhaseSeen && turnPhaseAttackerId && !combatantById.has(String(turnPhaseAttackerId))) {
+    turnPhaseAttackerId = null;
+  }
+  $: if (turnPhaseSeen && turnPhaseTargetId && !combatantById.has(String(turnPhaseTargetId))) {
+    turnPhaseTargetId = null;
+  }
+
+  $: normalizedTurnPhaseState = normalizePhaseState(turnPhaseState);
+  $: turnPhaseIsActive = turnPhaseSeen && (normalizedTurnPhaseState === 'start' || normalizedTurnPhaseState === 'resolve');
+  $: storedTurnPhase = turnPhaseSeen
+    ? {
+      ...(rawTurnPhase || {}),
+      state: normalizedTurnPhaseState,
+      attacker_id: turnPhaseAttackerId ?? null,
+      target_id: turnPhaseTargetId ?? null,
+    }
+    : null;
+  $: phaseAllowsOverlays = turnPhaseSeen ? turnPhaseIsActive : true;
+  $: {
+    const nextActive = turnPhaseIsActive
+      ? (turnPhaseAttackerId ?? snapshotActiveId ?? null)
+      : turnPhaseSeen
+        ? null
+        : snapshotActiveId ?? null;
+    if (activeId !== nextActive) activeId = nextActive;
+
+    const nextTarget = turnPhaseIsActive
+      ? (turnPhaseTargetId ?? snapshotActiveTargetId ?? null)
+      : turnPhaseSeen
+        ? null
+        : snapshotActiveTargetId ?? null;
+    if (activeTargetId !== nextTarget) activeTargetId = nextTarget;
+  }
   $: foeCount = (foes || []).length;
   $: displayActionValues = Boolean(showActionValues || serverShowActionValues);
   function getFoeSizePx(count) {
@@ -138,6 +188,9 @@
     recentEvents = [];
     activeId = null;
     activeTargetId = null;
+    snapshotActiveId = null;
+    snapshotActiveTargetId = null;
+    resetTurnPhaseState();
     statusPhase = null;
     clearStatusTimeline();
     lastRunId = runId;
@@ -150,6 +203,9 @@
     recentEvents = [];
     activeId = null;
     activeTargetId = null;
+    snapshotActiveId = null;
+    snapshotActiveTargetId = null;
+    resetTurnPhaseState();
     statusPhase = null;
     clearStatusTimeline();
     currentTurn = null;
@@ -627,6 +683,75 @@
     }
   }
 
+  function normalizePhaseState(value) {
+    if (value === undefined || value === null) return '';
+    try {
+      return String(value).trim().toLowerCase();
+    } catch {
+      return '';
+    }
+  }
+
+  function extractPhaseId(phase, keys) {
+    if (!phase || typeof phase !== 'object') return undefined;
+    for (const key of keys) {
+      if (Object.prototype.hasOwnProperty.call(phase, key)) {
+        return phase[key];
+      }
+    }
+    return undefined;
+  }
+
+  function resetTurnPhaseState() {
+    turnPhaseSeen = false;
+    rawTurnPhase = null;
+    turnPhaseState = '';
+    turnPhaseAttackerId = null;
+    turnPhaseTargetId = null;
+    storedTurnPhase = null;
+    normalizedTurnPhaseState = '';
+    turnPhaseIsActive = false;
+    phaseAllowsOverlays = true;
+  }
+
+  function applyTurnPhaseSnapshot(phase) {
+    turnPhaseSeen = true;
+    if (!phase || typeof phase !== 'object') {
+      rawTurnPhase = null;
+      turnPhaseState = '';
+      turnPhaseAttackerId = null;
+      turnPhaseTargetId = null;
+      return;
+    }
+    rawTurnPhase = { ...phase };
+    turnPhaseState = normalizePhaseState(
+      phase.state ?? phase.phase_state ?? phase.phase ?? phase.status,
+    );
+    const attacker = extractPhaseId(phase, [
+      'attacker_id',
+      'attackerId',
+      'source_id',
+      'actor_id',
+      'active_id',
+    ]);
+    if (attacker !== undefined) {
+      turnPhaseAttackerId = attacker ?? null;
+    }
+    const target = extractPhaseId(phase, [
+      'target_id',
+      'targetId',
+      'defender_id',
+      'target',
+    ]);
+    if (target !== undefined) {
+      turnPhaseTargetId = target ?? null;
+    }
+    if (turnPhaseState === 'end') {
+      turnPhaseAttackerId = null;
+      turnPhaseTargetId = null;
+    }
+  }
+
   function resolveCombatantNameById(id) {
     const key = normalizeId(id);
     if (!key) return '';
@@ -1038,10 +1163,22 @@
       }
 
       if ('active_id' in snap) {
-        activeId = snap.active_id ?? null;
+        snapshotActiveId = snap.active_id ?? null;
       }
       if ('active_target_id' in snap) {
-        activeTargetId = snap.active_target_id ?? null;
+        snapshotActiveTargetId = snap.active_target_id ?? null;
+      }
+      if ('turn_phase' in snap) {
+        const rawTurnPhase = snap.turn_phase;
+        if (rawTurnPhase === null || rawTurnPhase === undefined) {
+          resetTurnPhaseState();
+        } else {
+          const nextTurnPhase =
+            typeof rawTurnPhase === 'object' ? { ...rawTurnPhase } : rawTurnPhase;
+          applyTurnPhaseSnapshot(nextTurnPhase);
+        }
+      } else if (!turnPhaseSeen) {
+        resetTurnPhaseState();
       }
       if ('status_phase' in snap) {
         const nextPhase = snap.status_phase && typeof snap.status_phase === 'object' ? { ...snap.status_phase } : null;
@@ -1145,8 +1282,9 @@
     {combatants}
     events={recentEvents}
     reducedMotion={effectiveReducedMotion}
+    turnPhase={storedTurnPhase}
   />
-  {#if showStatusTimeline && statusTimeline.length}
+  {#if showStatusTimeline && statusTimeline.length && phaseAllowsOverlays}
     <div class:reduced={effectiveReducedMotion} class="status-timeline overlay-layer" aria-live="polite">
       {#each statusTimeline as chip (chip.key)}
         <div class="timeline-chip" data-state={chip.state} style={`--chip-color:${chip.color};`}>
