@@ -44,13 +44,10 @@ class LadyLightRadiantAegis:
         # Grant one-turn shield to the healed ally
         shield_amount = int(hot_amount * 0.5)  # Shield equal to 50% of HoT amount
 
-        shield_effect = StatEffect(
-            name=f"{self.id}_hot_shield",
-            stat_modifiers={"hp": shield_amount},  # Temporary HP boost
-            duration=1,  # One turn shield
-            source=self.id,
-        )
-        healed_ally.add_effect(shield_effect)
+        if shield_amount > 0:
+            if not healed_ally.overheal_enabled:
+                healed_ally.enable_overheal()
+            healed_ally.shields += shield_amount
 
         # Grant +5% effect resistance for one turn
         resistance_effect = StatEffect(
@@ -67,7 +64,13 @@ class LadyLightRadiantAegis:
 
         # Heal ally for additional 5% of their max HP
         additional_healing = int(cleansed_ally.max_hp * 0.05)
-        cleansed_ally.hp = min(cleansed_ally.max_hp, cleansed_ally.hp + additional_healing)
+        if additional_healing > 0:
+            await cleansed_ally.apply_healing(
+                additional_healing,
+                healer=target,
+                source_type="cleanse",
+                source_name=self.id,
+            )
 
         # Grant Lady Light +2% attack (stacking with no cap)
         attack_increase = int(target.atk * 0.02)
