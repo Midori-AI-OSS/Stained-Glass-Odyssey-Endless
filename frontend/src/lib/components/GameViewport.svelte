@@ -101,6 +101,42 @@
   $: reviewOpen = Boolean(roomData && (roomData.result === 'battle' || roomData.result === 'boss') && !battleActive);
 
   let lastMusicKey = '';
+  let lastBattleId = '';
+  let battlePartySnapshot = [];
+  let battleFoeSnapshot = [];
+
+  const cloneRosterEntities = (list) => {
+    if (!Array.isArray(list)) return [];
+    if (typeof structuredClone === 'function') {
+      try {
+        return structuredClone(list);
+      } catch {}
+    }
+    return list.map((entry) => {
+      if (!entry || typeof entry !== 'object') return entry;
+      return { ...entry };
+    });
+  };
+
+  const combatantKey = (entity) => {
+    if (!entity) return '';
+    if (typeof entity === 'string') return entity;
+    return entity.id || entity.name || '';
+  };
+
+  const buildRosterKey = (partyList, foeList) => {
+    const partyKey = (partyList || [])
+      .map(combatantKey)
+      .filter(Boolean)
+      .sort()
+      .join(',');
+    const foeKey = (foeList || [])
+      .map(combatantKey)
+      .filter(Boolean)
+      .sort()
+      .join(',');
+    return `${partyKey}|${foeKey}`;
+  };
 
   // Compute accent color based on theme settings, with reactivity to store changes
   $: themeSettings = $themeStore || { selected: 'default', customAccent: '#8ac' };
@@ -147,22 +183,26 @@
     // Change music per room type and battle index (new fights) and
     // rerun when party/foe combatants change to trigger character themes.
     const typeKey = String(currentRoomType || roomData?.current_room || '');
-    const battleKey = String(roomData?.battle_index || 0);
-    const partyKey = (roomData?.party || [])
-      .map((p) => (typeof p === 'string' ? p : p.id || p.name))
-      .sort()
-      .join(',');
-    const foeKey = (roomData?.foes || [])
-      .map((f) => (typeof f === 'string' ? f : f.id || f.name))
-      .sort()
-      .join(',');
-    const key = `${typeKey}|${battleKey}|${partyKey}|${foeKey}`;
+    const battleKey = String(roomData?.battle_index ?? '');
+    const battleId = `${typeKey}|${battleKey}`;
+    const nextParty = Array.isArray(roomData?.party) ? roomData.party : [];
+    const nextFoes = Array.isArray(roomData?.foes) ? roomData.foes : [];
+
+    const shouldRefreshSnapshot = !battleActive || battleId !== lastBattleId;
+    if (shouldRefreshSnapshot) {
+      battlePartySnapshot = cloneRosterEntities(nextParty);
+      battleFoeSnapshot = cloneRosterEntities(nextFoes);
+      lastBattleId = battleId;
+    }
+
+    const rosterKey = buildRosterKey(battlePartySnapshot, battleFoeSnapshot);
+    const key = `${battleId}|${rosterKey}`;
     if (key !== lastMusicKey) {
       lastMusicKey = key;
       const playlist = selectBattleMusic({
         roomType: typeKey,
-        party: roomData?.party || [],
-        foes: roomData?.foes || [],
+        party: battlePartySnapshot,
+        foes: battleFoeSnapshot,
       });
       startGameMusic(musicVolume, playlist, true, { reducedMotion });
     }
