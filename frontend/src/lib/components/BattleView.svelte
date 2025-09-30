@@ -1675,8 +1675,35 @@
       }
 
       if (snap.foes) {
+        const foeSummonIds = (() => {
+          const set = new Set();
+          try {
+            for (const list of foeSummons.values()) {
+              for (const s of list) {
+                const ident = getSummonIdentifier(s);
+                if (ident) set.add(ident);
+                if (Array.isArray(s?.anchorIds)) {
+                  for (const anchor of s.anchorIds) {
+                    if (anchor === undefined || anchor === null) continue;
+                    try {
+                      const str = String(anchor);
+                      if (str) set.add(str);
+                    } catch {}
+                  }
+                }
+              }
+            }
+          } catch {}
+          return set;
+        })();
+
         const prevById = new Map((foes || []).map(f => [f.id, f]));
-        const enrichedFoes = (snap.foes || []).map(f => {
+        const baseFoes = (snap.foes || []).filter(f => {
+          const id = (typeof f === 'object' ? f?.id : f) || '';
+          const isSummon = typeof f === 'object' && (f?.summon_type || f?.type === 'summon' || f?.is_summon);
+          return id && !isSummon && !foeSummonIds.has(id);
+        });
+        const enrichedFoes = baseFoes.map(f => {
           const hpKey = combatantKey('foe', f?.id);
           trackHp(hpKey, f?.hp, f?.max_hp);
           let elem =
