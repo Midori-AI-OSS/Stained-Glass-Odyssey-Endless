@@ -53,5 +53,5 @@ async def finish_turn(
     )
     if cycle_count:
         context.turn += cycle_count
-    await pace_sleep(2.2 / TURN_PACING)
+    await pace_sleep(2.2 * TURN_PACING)
     await pace_sleep(YIELD_MULTIPLIER)
