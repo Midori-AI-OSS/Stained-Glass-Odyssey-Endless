@@ -147,7 +147,13 @@
     if (c === 5) return 256; // match player size
     if (c === 6) return 224;
     if (c === 7) return 208;
-    return 192; // 8 or more
+    if (c === 8) return 144;
+    if (c === 9) return 136;
+    if (c === 10) return 128;
+    if (c === 11) return 120;
+    if (c === 12) return 112;
+    if (c === 13) return 104;
+    return 96; // 14 or more
   }
   let timer;
   function clearPollTimer() {
@@ -2202,10 +2208,14 @@
   .foe-row {
     display: flex;
     justify-content: center;
-    gap: 1rem;
+    gap: clamp(0.35rem, 1.6vw, 1rem);
+    row-gap: clamp(0.5rem, 2.2vw, 1.5rem);
     flex-wrap: wrap;
     align-items: flex-start;
-    margin-top: 10vh;
+    margin-top: clamp(6vh, 8vh + 2vw, 10vh);
+    padding-inline: clamp(0.5rem, 4vw, 2.5rem);
+    max-width: min(100%, 1150px);
+    margin-inline: auto;
   }
 
   .foe-container {
@@ -2213,6 +2223,8 @@
     flex-direction: column;
     align-items: center;
     gap: 0.25rem;
+    padding-inline: clamp(0.25rem, 1vw, 0.75rem);
+    flex: 0 1 auto;
   }
 
   .foe-buffs {
