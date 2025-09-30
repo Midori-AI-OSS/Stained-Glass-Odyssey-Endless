@@ -20,7 +20,8 @@
     MessageCircle,
     Globe,
     Package,
-    Book
+    Book,
+    BarChart3
   } from 'lucide-svelte';
 
   // Build the run menu items array. Handlers are functions for each action.
@@ -31,6 +32,7 @@
       // Player Editor removed from main menu per design
       { icon: PackageOpen, label: 'Warp', action: handlers.openPulls, disabled: battleActive },
       { icon: Package, label: 'Inventory', action: handlers.openInventory, disabled: false },
+      { icon: BarChart3, label: 'Battle Review', action: handlers.openBattleReview, disabled: false },
       { icon: Book, label: 'Guidebook', action: handlers.openGuidebook, disabled: false },
       { icon: Settings, label: 'Settings', action: handlers.openSettings, disabled: false }
     ];

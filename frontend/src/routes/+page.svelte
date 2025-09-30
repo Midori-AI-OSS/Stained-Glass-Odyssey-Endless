@@ -665,6 +665,10 @@
     openOverlay('inventory');
   }
 
+  function openBattleReview() {
+    openOverlay('battle-review-menu');
+  }
+
   function openCombatViewer() {
     if (!inBattle()) return;
     openOverlay('combat-viewer');
@@ -1258,6 +1262,7 @@
       openDiscord,
       openWebsite,
       openInventory,
+      openBattleReview,
       openSettings: () => openOverlay('settings'),
       openGuidebook: () => openOverlay('guidebook')
     },
