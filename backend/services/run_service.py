@@ -9,6 +9,7 @@ import random
 import time
 from uuid import uuid4
 
+from battle_logging.writers import end_run_logging
 from battle_logging.writers import start_run_logging
 from runs.encryption import get_fernet
 from runs.encryption import get_save_manager
@@ -24,7 +25,9 @@ from runs.party_manager import _load_player_customization
 from runs.party_manager import load_party
 from tracking import log_game_action
 from tracking import log_menu_action
+from tracking import log_play_session_end
 from tracking import log_play_session_start
+from tracking import log_run_end
 from tracking import log_run_start
 
 from autofighter.mapgen import MapGenerator
@@ -458,6 +461,39 @@ async def get_battle_events(run_id: str, index: int) -> dict[str, object] | None
         return None
     data = await asyncio.to_thread(events_path.read_text)
     return json.loads(data)
+
+
+async def shutdown_run(run_id: str) -> bool:
+    """Terminate a run and clear associated state.
+
+    Returns True when the run existed and was removed; False when the run could not
+    be found. Any other exception bubbles up to the caller.
+    """
+
+    def delete_run() -> bool:
+        with get_save_manager().connection() as conn:
+            cur = conn.execute("SELECT id FROM runs WHERE id = ?", (run_id,))
+            if not cur.fetchone():
+                return False
+
+            conn.execute("DELETE FROM runs WHERE id = ?", (run_id,))
+            return True
+
+    end_run_logging()
+
+    await emit_battle_end_for_runs([run_id])
+
+    existed = await asyncio.to_thread(delete_run)
+    if not existed:
+        return False
+
+    purge_run_state(run_id)
+
+    await log_run_end(run_id, "aborted")
+    await log_play_session_end(run_id)
+    await log_menu_action("Run", "ended", {"run_id": run_id})
+
+    return True
 
 
 async def wipe_save() -> None:
