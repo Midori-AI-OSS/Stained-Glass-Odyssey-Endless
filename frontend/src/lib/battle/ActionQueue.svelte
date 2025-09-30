@@ -93,7 +93,7 @@
           ? fighter.summoner_id
           : (summonType || fighter?.id || entry?.id || 'generic');
       const portraitSrc = portraitKey ? getCharacterImage(portraitKey) : '';
-      const hoverId = fighter?.id ?? null;
+      const hoverId = fighter?.renderKey ?? fighter?.id ?? null;
       const actionValueDisplay = Math.round(entry?.action_value);
       const displayName = formatName(fighter?.name || fighter?.id || entry?.id || '');
 
