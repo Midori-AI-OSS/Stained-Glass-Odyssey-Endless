@@ -118,9 +118,13 @@
 
   $: if (selectedRunId) {
     loadRunDetails(selectedRunId);
-  } else {
+  }
+
+  $: if (!selectedRunId) {
     runDetails = null;
-    runStatus = runsStatus === 'ready' ? 'idle' : runStatus;
+    if (runsStatus === 'ready') {
+      runStatus = 'idle';
+    }
   }
 
   $: floors = groupBattleSummariesByFloor(
