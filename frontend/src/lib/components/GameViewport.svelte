@@ -188,14 +188,18 @@
     const nextParty = Array.isArray(roomData?.party) ? roomData.party : [];
     const nextFoes = Array.isArray(roomData?.foes) ? roomData.foes : [];
 
-    const shouldRefreshSnapshot = !battleActive || battleId !== lastBattleId;
-    if (shouldRefreshSnapshot) {
+    const currentRosterKey = buildRosterKey(battlePartySnapshot, battleFoeSnapshot);
+    const nextRosterKey = buildRosterKey(nextParty, nextFoes);
+    const shouldRefreshBattleId = battleId !== lastBattleId;
+    const shouldRefreshIdleRoster = !battleActive && nextRosterKey !== currentRosterKey;
+
+    if (shouldRefreshBattleId || shouldRefreshIdleRoster) {
       battlePartySnapshot = cloneRosterEntities(nextParty);
       battleFoeSnapshot = cloneRosterEntities(nextFoes);
       lastBattleId = battleId;
     }
 
-    const rosterKey = buildRosterKey(battlePartySnapshot, battleFoeSnapshot);
+    const rosterKey = shouldRefreshBattleId || shouldRefreshIdleRoster ? nextRosterKey : currentRosterKey;
     const key = `${battleId}|${rosterKey}`;
     if (key !== lastMusicKey) {
       lastMusicKey = key;
