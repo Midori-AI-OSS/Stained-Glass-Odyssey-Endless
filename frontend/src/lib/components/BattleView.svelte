@@ -66,6 +66,7 @@
   let statusChipLifetime = 1800;
   const statusEntryMap = new Map();
   const statusRemovalTimers = new Map();
+  const summonRenderState = new Map();
   let combatantById = new Map();
   $: combatants = [
     ...(party || []),
@@ -198,6 +199,7 @@
     lastPhaseToken = '';
     lastEffectSignature = '';
     phaseSequenceCounter = 0;
+    summonRenderState.clear();
     pendingLayers = new Map();
     hpHistory = new Map();
     lastRunId = runId;
@@ -253,16 +255,69 @@
 
   // Svelte action: register a DOM node as an anchor for a given id
   function registerAnchor(node, params) {
-    const extractId = (p) => {
-      if (p && typeof p === 'object' && 'id' in p) return String(p.id);
-      if (p === 0 || p) return String(p);
-      return '';
+    const normalize = (value) => {
+      if (value === undefined || value === null) return '';
+      try {
+        const str = String(value);
+        return str.trim();
+      } catch {
+        return '';
+      }
     };
-    let id = extractId(params);
-    if (!id || !node) return { update: () => {}, destroy: () => {} };
-    const compute = () => computeAnchorFor(id, node);
-    // Track this node for global recomputes
-    if (id) anchorNodes.set(id, node);
+    const extractIds = (input) => {
+      if (Array.isArray(input)) {
+        return Array.from(new Set(input.map(normalize).filter(Boolean)));
+      }
+      if (input && typeof input === 'object') {
+        const list = [];
+        if ('id' in input) list.push(normalize(input.id));
+        if (Array.isArray(input.ids)) {
+          for (const candidate of input.ids) {
+            list.push(normalize(candidate));
+          }
+        }
+        if (Array.isArray(input.aliases)) {
+          for (const candidate of input.aliases) {
+            list.push(normalize(candidate));
+          }
+        }
+        if ('alias' in input) list.push(normalize(input.alias));
+        if ('legacy' in input) list.push(normalize(input.legacy));
+        return Array.from(new Set(list.filter(Boolean)));
+      }
+      const single = normalize(input);
+      return single ? [single] : [];
+    };
+
+    if (!node) return { update: () => {}, destroy: () => {} };
+
+    let ids = extractIds(params);
+    if (!ids.length) return { update: () => {}, destroy: () => {} };
+
+    const registerIds = (list) => {
+      for (const id of list) {
+        if (!id) continue;
+        anchorNodes.set(id, node);
+      }
+    };
+    const unregisterIds = (list) => {
+      for (const id of list) {
+        if (!id) continue;
+        if (anchors[id]) {
+          const copy = { ...anchors };
+          delete copy[id];
+          anchors = copy;
+        }
+        anchorNodes.delete(id);
+      }
+    };
+    const compute = () => {
+      for (const id of ids) {
+        computeAnchorFor(id, node);
+      }
+    };
+
+    registerIds(ids);
     compute();
     const ro = new ResizeObserver(() => compute());
     ro.observe(node);
@@ -270,34 +325,19 @@
     window.addEventListener('resize', onWinResize);
     return {
       update(next) {
-        const nextId = extractId(next);
-        if (nextId !== id) {
-          if (id && anchors[id]) {
-            const copy = { ...anchors };
-            delete copy[id];
-            anchors = copy;
-          }
-          if (id) {
-            anchorNodes.delete(id);
-          }
-          id = nextId;
-          if (id) {
-            anchorNodes.set(id, node);
-          }
-        }
+        const nextIds = extractIds(next);
+        const removed = ids.filter((id) => !nextIds.includes(id));
+        const added = nextIds.filter((id) => !ids.includes(id));
+        if (removed.length) unregisterIds(removed);
+        if (added.length) registerIds(added);
+        ids = nextIds;
+        if (!ids.length) return;
         compute();
       },
       destroy() {
         try { ro.disconnect(); } catch {}
         window.removeEventListener('resize', onWinResize);
-        if (id && anchors[id]) {
-          const copy = { ...anchors };
-          delete copy[id];
-          anchors = copy;
-        }
-        if (id) {
-          anchorNodes.delete(id);
-        }
+        unregisterIds(ids);
       }
     };
   }
@@ -1445,6 +1485,7 @@
       const seenHpKeys = new Set();
       const pendingDrains = [];
       const summonCounters = new Map();
+      const seenSummonSlots = new Map();
 
       function trackHp(key, hpValue, maxValue) {
         if (!key) return;
@@ -1470,8 +1511,63 @@
         if (key) {
           trackHp(key, summon.hp, summon.max_hp);
         }
+        const ownerKey = normalizeId(ownerId) || 'owner';
+        const signatureSource = baseId || summon?.summon_type || summon?.type || 'summon';
+        const signature = `${side}:${ownerKey}:${signatureSource}`;
+        const slotIndex = seenSummonSlots.get(signature) || 0;
+        seenSummonSlots.set(signature, slotIndex + 1);
+
+        let stored = summonRenderState.get(signature);
+        if (!stored) {
+          stored = [];
+          summonRenderState.set(signature, stored);
+        }
+
+        let renderKey = '';
+        const instanceKey = summon?.instance_id;
+        if (instanceKey !== undefined && instanceKey !== null && instanceKey !== '') {
+          try {
+            renderKey = String(instanceKey);
+          } catch {
+            renderKey = '';
+          }
+        }
+        if (!renderKey && summon?.renderKey) {
+          try {
+            renderKey = String(summon.renderKey);
+          } catch {
+            renderKey = '';
+          }
+        }
+        if (!renderKey && stored[slotIndex]) {
+          renderKey = stored[slotIndex];
+        }
+        if (!renderKey) {
+          const baseKey = key || signature;
+          renderKey = `${String(baseKey)}#${slotIndex}`;
+        }
+        if (!renderKey) {
+          renderKey = `${signature}#${slotIndex}`;
+        }
+        if (stored[slotIndex] !== renderKey) {
+          stored[slotIndex] = renderKey;
+        }
+
+        const aliasSet = new Set();
+        const assignAlias = (value) => {
+          if (value === undefined || value === null) return;
+          try {
+            const str = String(value);
+            if (str && str !== renderKey) aliasSet.add(str);
+          } catch {}
+        };
+        assignAlias(instanceKey);
+        assignAlias(summon?.id);
+        assignAlias(baseId);
+        const anchorIds = Array.from(aliasSet);
+
         const baseElement = resolveDamageTypeFromEntity(summon);
-        let result = { ...summon, hpKey: key };
+        let result = { ...summon, hpKey: key, renderKey, anchorIds };
         if (baseElement && baseElement !== 'generic') {
           result = { ...result, element: baseElement };
         }
@@ -1513,6 +1609,18 @@
       }
 
       detectSummons(partySummons, foeSummons);
+
+      for (const [signature, count] of seenSummonSlots) {
+        const pool = summonRenderState.get(signature);
+        if (pool && pool.length > count) {
+          pool.length = count;
+        }
+      }
+      for (const signature of Array.from(summonRenderState.keys())) {
+        if (!seenSummonSlots.has(signature)) {
+          summonRenderState.delete(signature);
+        }
+      }
 
       if (snap.enrage && differs(snap.enrage, enrage)) enrage = snap.enrage;
       
@@ -1848,7 +1956,7 @@
           <!-- Summons -->
           {#if foe.summons?.length}
             <div class="summon-list">
-              {#each foe.summons as summon (summon.instance_id || summon.id)}
+              {#each foe.summons as summon (summon.renderKey)}
                 <div
                   class="summon-entry"
                   in:fade={{ duration: effectiveReducedMotion ? 0 : 200 }}
@@ -1897,13 +2005,17 @@
                       </div>
                     {/if}
                     
-                    <div class="fighter-anchor" use:registerAnchor={summon.instance_id || summon.id}>
-                      <BattleFighterCard 
-                        fighter={summon} 
-                        position="top" 
-                        {effectiveReducedMotion} 
-                        size="medium" 
-                        highlight={hoveredId === (summon.instance_id || summon.id) || (hoveredId && summon?.summoner_id && summon?.summon_type && hoveredId === `${summon.summoner_id}_${summon.summon_type}_summon`)}
+                    <div class="fighter-anchor" use:registerAnchor={{ id: summon.renderKey, aliases: summon.anchorIds }}>
+                      <BattleFighterCard
+                        fighter={summon}
+                        position="top"
+                        {effectiveReducedMotion}
+                        size="medium"
+                        highlight={
+                          hoveredId === summon.renderKey ||
+                          (Array.isArray(summon.anchorIds) && summon.anchorIds.includes(hoveredId)) ||
+                          (hoveredId && summon?.summoner_id && summon?.summon_type && hoveredId === `${summon.summoner_id}_${summon.summon_type}_summon`)
+                        }
                       />
                     </div>
                   </div>
@@ -1927,7 +2039,7 @@
         <!-- Summons (show above player portrait for party) -->
         {#if member.summons?.length}
           <div class="summon-list">
-            {#each member.summons as summon (summon.instance_id || summon.id)}
+            {#each member.summons as summon (summon.renderKey)}
               <div
                 class="summon-entry"
                 in:fade={{ duration: effectiveReducedMotion ? 0 : 200 }}
@@ -1935,13 +2047,17 @@
               >
                 <div in:scale={{ duration: effectiveReducedMotion ? 0 : 200 }} class="summon-inner">
                   <!-- Summon portrait -->
-                  <div class="fighter-anchor" use:registerAnchor={summon.instance_id || summon.id}>
+                  <div class="fighter-anchor" use:registerAnchor={{ id: summon.renderKey, aliases: summon.anchorIds }}>
                     <BattleFighterCard
                       fighter={summon}
                       position="bottom"
                       {effectiveReducedMotion}
-                      size="medium" 
-                      highlight={hoveredId === (summon.instance_id || summon.id) || (hoveredId && summon?.summoner_id && summon?.summon_type && hoveredId === `${summon.summoner_id}_${summon.summon_type}_summon`)}
+                      size="medium"
+                      highlight={
+                        hoveredId === summon.renderKey ||
+                        (Array.isArray(summon.anchorIds) && summon.anchorIds.includes(hoveredId)) ||
+                        (hoveredId && summon?.summoner_id && summon?.summon_type && hoveredId === `${summon.summoner_id}_${summon.summon_type}_summon`)
+                      }
                     />
                   </div>
 
