@@ -13,6 +13,13 @@ The Battle Review overlay is now organized around a timeline-first layout backed
 
 The timeline-first grid places metric tabs across the top, the timeline viewport on the left, and entity metrics/side panels on the right. The layout collapses gracefully for smaller viewports.
 
+### Battle Review Menu Overlay (Archive Access)
+
+- **`BattleReviewMenu.svelte`** lives under `frontend/src/lib/components/battle-review/` and provides an archive view that can be opened from the main run menu. The overlay is mounted when `$overlayView === 'battle-review-menu'` and is rendered directly inside an `OverlaySurface` (no popup chrome) so the embedded review can stretch to the viewport edges.
+- The menu fetches `/tracking/runs` and `/tracking/runs/<run_id>` through new helpers exported from `frontend/src/lib/systems/uiApi.js` (`listTrackedRuns`, `getTrackedRun`). While either request is in flight the menu shows a `TripleRingSpinner`, mirroring the rest of the overlay loading states.
+- `groupBattleSummariesByFloor` normalizes each run's ordered `battle_summaries` payload. Floors increment whenever a room index drops (floor reset), and the helper returns `{ floor, label, fights[] }` tuples so the menu can expose separate selects for run, floor, and fight. Tests in `frontend/tests/tracking-helpers.test.js` pin the grouping behavior.
+- Once a fight is chosen the menu renders the existing `<BattleReview>` shell and passes the selected run ID and battle index. The embedded review inherits reduced-motion flags from the host overlay, so accessibility settings stay aligned with the core battle review experience.
+
 ## Shareable Logs Routing
 
 - The Battle Review shell is also exposed as a standalone route at `/logs/[run_id]`. The page hydrates the review by parsing URL parameters (battle index, active tab, timeline filters, comparison selections, pins, and zoom window) with the helpers in `battleReview/urlState.js` and passing them to the shared stores.

@@ -15,6 +15,7 @@
   import PullResultsOverlay from './PullResultsOverlay.svelte';
   import CharacterEditor from './CharacterEditor.svelte';
   import Inventory from './Inventory.svelte';
+  import BattleReviewMenu from './battle-review/BattleReviewMenu.svelte';
   import SettingsMenu from './SettingsMenu.svelte';
   import Guidebook from './Guidebook.svelte';
   import RunChooser from './RunChooser.svelte';
@@ -328,6 +329,15 @@
   <PopupWindow title="Inventory" padding="0" maxWidth="1200px" zIndex={1300} on:close={() => dispatch('back')}>
     <Inventory cards={roomData?.cards ?? []} relics={roomData?.relics ?? []} />
   </PopupWindow>
+{/if}
+
+{#if $overlayView === 'battle-review-menu'}
+  <OverlaySurface zIndex={1300}>
+    <BattleReviewMenu
+      reducedMotion={simplifiedTransitions ? true : effectiveReducedMotion}
+      on:close={() => dispatch('back')}
+    />
+  </OverlaySurface>
 {/if}
 
 {#if $overlayView === 'combat-viewer'}

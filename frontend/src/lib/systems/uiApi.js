@@ -158,6 +158,133 @@ export async function getBattleEvents(battleIndex, runId = '') {
 }
 
 /**
+ * Fetch the list of tracked runs available for review.
+ * @param {AbortSignal} [signal] optional abort controller signal
+ */
+export async function listTrackedRuns({ signal } = {}) {
+  const opts = signal ? { signal } : {};
+  const payload = await httpGet('/tracking/runs', opts, true);
+  if (Array.isArray(payload)) {
+    return { runs: payload };
+  }
+  if (Array.isArray(payload?.runs)) {
+    return { runs: payload.runs };
+  }
+  return { runs: [] };
+}
+
+/**
+ * Fetch details for a tracked run including battle summaries.
+ * @param {string} runId
+ * @param {AbortSignal} [signal]
+ */
+export async function getTrackedRun(runId, { signal } = {}) {
+  if (!runId) {
+    throw new Error('Run id is required');
+  }
+  const opts = signal ? { signal } : {};
+  return httpGet(`/tracking/runs/${encodeURIComponent(runId)}`, opts, true);
+}
+
+/**
+ * Group ordered battle summaries by floor, incrementing the floor when the
+ * room index resets.
+ *
+ * @param {Array<Record<string, any>>} summaries
+ * @returns {Array<{ floor: number, label: string, fights: Array<{ battleIndex: number, label: string, summary: Record<string, any> }> }>}
+ */
+export function groupBattleSummariesByFloor(summaries = []) {
+  if (!Array.isArray(summaries) || summaries.length === 0) {
+    return [];
+  }
+
+  const floors = [];
+  let currentFloor = 1;
+  let currentGroup = { floor: currentFloor, fights: [] };
+  let lastRoomIndex = null;
+
+  const coerceIndex = (value) => {
+    if (value === undefined || value === null) return null;
+    const num = Number(value);
+    return Number.isFinite(num) ? num : null;
+  };
+
+  const ensureGroupPushed = () => {
+    if (currentGroup.fights.length > 0) {
+      floors.push(currentGroup);
+    }
+  };
+
+  const deriveBattleIndex = (entry, fallback) => {
+    const candidates = [
+      entry?.battle_index,
+      entry?.battleIndex,
+      entry?.index,
+      entry?.battle?.index,
+      entry?.id
+    ];
+    for (const candidate of candidates) {
+      const n = Number(candidate);
+      if (Number.isFinite(n) && n > 0) {
+        return Math.floor(n);
+      }
+    }
+    return fallback;
+  };
+
+  const deriveFightLabel = (entry, fallbackIndex) => {
+    const candidates = [
+      entry?.battle_name,
+      entry?.battleName,
+      entry?.room_name,
+      entry?.roomName,
+      entry?.room_type,
+      entry?.roomType
+    ];
+    for (const candidate of candidates) {
+      if (candidate) {
+        return String(candidate);
+      }
+    }
+    return `Fight ${fallbackIndex}`;
+  };
+
+  summaries.forEach((entry, idx) => {
+    const roomIndex = coerceIndex(entry?.room_index ?? entry?.roomIndex);
+    const battleIndex = deriveBattleIndex(entry, idx + 1);
+
+    if (
+      lastRoomIndex !== null &&
+      roomIndex !== null &&
+      roomIndex < lastRoomIndex
+    ) {
+      ensureGroupPushed();
+      currentFloor += 1;
+      currentGroup = { floor: currentFloor, fights: [] };
+    }
+
+    const label = deriveFightLabel(entry, battleIndex || idx + 1);
+    currentGroup.fights.push({ battleIndex, label, summary: entry });
+
+    if (roomIndex !== null) {
+      lastRoomIndex = roomIndex;
+    }
+  });
+
+  ensureGroupPushed();
+
+  return floors.map((floorGroup) => ({
+    floor: floorGroup.floor,
+    label: `Floor ${floorGroup.floor}`,
+    fights: floorGroup.fights.map((fight, fightIdx) => ({
+      battleIndex: fight.battleIndex || fightIdx + 1,
+      label: fight.label || `Fight ${fightIdx + 1}`,
+      summary: fight.summary
+    }))
+  }));
+}
+
+/**
  * Fetch catalog data for relics, cards, DoTs, and HoTs.
  */
 export async function getCatalogData() {
