@@ -28,6 +28,7 @@ from services.run_service import backup_save
 from services.run_service import get_battle_events
 from services.run_service import get_battle_summary
 from services.run_service import restore_save
+from services.run_service import shutdown_run
 from services.run_service import start_run
 from services.run_service import update_party
 from services.run_service import wipe_save
@@ -469,6 +470,17 @@ async def handle_ui_action() -> tuple[str, int, dict[str, Any]]:
             except ValueError as exc:
                 return create_error_response(str(exc), 400)
 
+        elif action == "end_run":
+            target_run_id = params.get("run_id") or run_id
+            if not target_run_id:
+                return create_error_response("No active run", 400)
+
+            run_ended = await shutdown_run(target_run_id)
+            if not run_ended:
+                return jsonify({"error": "Run not found"}), 404
+
+            return jsonify({"message": "Run ended successfully"})
+
         else:
             return create_error_response(f"Unknown action: {action}", 400)
 
@@ -529,33 +541,11 @@ async def start_run_endpoint() -> tuple[str, int, dict[str, Any]]:
 @bp.delete("/run/<run_id>")
 async def end_run(run_id: str) -> tuple[str, int, dict[str, Any]]:
     """End a specific run by deleting it from the database."""
-    def delete_run():
-        with get_save_manager().connection() as conn:
-            # Check if run exists
-            cur = conn.execute("SELECT id FROM runs WHERE id = ?", (run_id,))
-            if not cur.fetchone():
-                return False
-
-            # Delete the run
-            conn.execute("DELETE FROM runs WHERE id = ?", (run_id,))
-            return True
 
     try:
-        # End run logging
-        end_run_logging()
-
-        await emit_battle_end_for_runs([run_id])
-
-        # Delete from database
-        existed = await asyncio.to_thread(delete_run)
-        if not existed:
+        run_ended = await shutdown_run(run_id)
+        if not run_ended:
             return jsonify({"error": "Run not found"}), 404
-
-        purge_run_state(run_id)
-
-        await log_run_end(run_id, "aborted")
-        await log_play_session_end(run_id)
-        await log_menu_action("Run", "ended", {"run_id": run_id})
 
         return jsonify({"message": "Run ended successfully"}), 200
 
