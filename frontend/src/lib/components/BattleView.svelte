@@ -140,20 +140,12 @@
   $: displayActionValues = Boolean(showActionValues || serverShowActionValues);
   function getFoeSizePx(count) {
     const c = Math.max(1, Number(count || 0));
-    if (c <= 1) return 384;
-    if (c === 2) return 320;
-    if (c === 3) return 288;
-    if (c === 4) return 272;
-    if (c === 5) return 256; // match player size
-    if (c === 6) return 224;
-    if (c === 7) return 208;
-    if (c === 8) return 144;
-    if (c === 9) return 136;
-    if (c === 10) return 128;
-    if (c === 11) return 120;
-    if (c === 12) return 112;
-    if (c === 13) return 104;
-    return 96; // 14 or more
+    if (c <= 5) {
+      return 180 - (c - 1) * 5;
+    }
+
+    const scaled = 160 - (c - 5) * 8;
+    return Math.max(70, scaled);
   }
   let timer;
   function clearPollTimer() {
@@ -2261,7 +2253,7 @@
   }
 
   .foe-hp-bar {
-    width: 96px; /* match enlarged foe portrait width */
+    width: 96px; /* fallback width; actual sizing controlled inline */
     margin-bottom: 0.25rem;
   }
 
