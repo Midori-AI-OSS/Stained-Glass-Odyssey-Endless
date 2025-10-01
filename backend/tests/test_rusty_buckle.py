@@ -3,8 +3,11 @@ import sys
 import types
 
 import pytest
+from runs import lifecycle as lifecycle_module
 
 from autofighter.party import Party
+from autofighter.rooms.battle import events as battle_events
+from autofighter.rooms.battle import snapshots as battle_snapshots_module
 import autofighter.stats as stats
 from plugins.characters._base import PlayerBase
 from plugins.characters.foe_base import FoeBase
@@ -23,6 +26,7 @@ def bus(monkeypatch):
     bus = event_bus_module.EventBus()
     monkeypatch.setattr(stats, "BUS", bus)
     monkeypatch.setattr(rb, "BUS", bus)
+    monkeypatch.setattr(battle_events, "BUS", bus)
 
     llms = types.ModuleType("llms")
     torch_checker = types.ModuleType("llms.torch_checker")
@@ -190,3 +194,44 @@ async def test_apply_no_type_error(bus):
     party = Party(members=[PlayerBase(), PlayerBase()], relics=["rusty_buckle"])
     relic = RustyBuckle()
     await relic.apply(party)
+
+
+@pytest.mark.asyncio
+async def test_effect_charge_snapshot_updates_and_clears(bus):
+    lifecycle_module.battle_snapshots.clear()
+    run_id = "rusty-effects"
+
+    first = PlayerBase()
+    second = PlayerBase()
+    first._base_max_hp = 1_000
+    second._base_max_hp = 1_000
+    first.hp = first.max_hp
+    second.hp = second.max_hp
+
+    party = Party(members=[first, second], relics=["rusty_buckle"])
+    battle_snapshots_module.prepare_snapshot_overlay(run_id, [party, first, second])
+
+    relic = RustyBuckle()
+    await relic.apply(party)
+
+    snapshot = lifecycle_module.battle_snapshots[run_id]
+    charges = snapshot.get("effects_charge")
+    assert charges is not None and len(charges) == 1
+    assert charges[0]["progress"] == pytest.approx(0.0)
+
+    await party.members[0].apply_damage(500)
+    await _drain_pending_tasks()
+
+    charges = lifecycle_module.battle_snapshots[run_id].get("effects_charge")
+    assert charges is not None and len(charges) == 1
+    entry = charges[0]
+    assert entry["id"] == "rusty_buckle"
+    assert entry["hits"] == 5
+    assert entry["estimated_damage_per_hit"] == 2
+    assert entry["estimated_total_damage"] == 10
+    assert entry["progress"] == pytest.approx(0.25, rel=1e-6)
+
+    await battle_events.handle_battle_end([], party.members)
+
+    assert "effects_charge" not in lifecycle_module.battle_snapshots[run_id]
+    lifecycle_module.battle_snapshots.clear()
