@@ -17,7 +17,7 @@ class RustyBuckle(RelicBase):
     stars: int = 1
     effects: dict[str, float] = field(default_factory=dict)
     about: str = (
-        "All allies bleed for 5% Max HP per stack at the start of each turn and unleash Aftertaste as the party suffers."
+        "All allies bleed for 5% Max HP per stack at the start of every turn—ally or foe—and unleash Aftertaste as the party suffers."
     )
 
     async def apply(self, party) -> None:
@@ -40,6 +40,12 @@ class RustyBuckle(RelicBase):
         else:
             state["stacks"] = stacks
             state["party_max_hp"] = sum(ally.max_hp for ally in party.members)
+
+            member_ids = {id(ally) for ally in party.members}
+            for key in list(state["prev_hp"].keys()):
+                if key not in member_ids:
+                    del state["prev_hp"][key]
+
             for ally in party.members:
                 state["prev_hp"][id(ally)] = ally.hp
 
@@ -47,22 +53,31 @@ class RustyBuckle(RelicBase):
             from plugins.characters.foe_base import FoeBase
 
             current_state = getattr(party, "_rusty_buckle_state", state)
-            if isinstance(entity, FoeBase):
-                if entity not in current_state["foes"]:
-                    current_state["foes"].append(entity)
+            if isinstance(entity, FoeBase) and entity not in current_state["foes"]:
+                current_state["foes"].append(entity)
+
+            current_stacks = current_state.get("stacks", 0)
+            if current_stacks <= 0:
                 return
 
-            if entity in party.members:
-                current_stacks = current_state.get("stacks", 0)
-                if current_stacks <= 0:
-                    return
-                bleed = int(entity.max_hp * 0.05 * current_stacks)
-                dmg = min(bleed, max(entity.hp - 1, 0))
+            bleed_pct = 0.05 * current_stacks
+
+            for member in party.members:
+                if getattr(member, "hp", 0) <= 0:
+                    continue
+
+                member_id = id(member)
+                current_state["prev_hp"].setdefault(member_id, member.hp)
+
+                bleed = int(member.max_hp * bleed_pct)
+                dmg = min(bleed, max(member.hp - 1, 0))
+                if dmg <= 0:
+                    continue
 
                 await BUS.emit_async(
                     "relic_effect",
                     "rusty_buckle",
-                    entity,
+                    member,
                     "turn_bleed",
                     dmg,
                     {
@@ -72,7 +87,7 @@ class RustyBuckle(RelicBase):
                     },
                 )
 
-                safe_async_task(entity.apply_cost_damage(dmg))
+                safe_async_task(member.apply_cost_damage(dmg))
 
         async def _damage(target, attacker, _original, *_: object) -> None:
             if target not in party.members:
@@ -138,6 +153,6 @@ class RustyBuckle(RelicBase):
         hits = 5 + 3 * (stacks - 1)
         req = int((1 + 0.5 * (stacks - 1)) * 100)
         return (
-            f"All allies bleed for {bleed}% Max HP at the start of each turn. "
+            f"All allies bleed for {bleed}% Max HP at the start of every turn, ally or foe. "
             f"Each {req}% party HP lost triggers {hits} Aftertaste hits at random foes."
         )
