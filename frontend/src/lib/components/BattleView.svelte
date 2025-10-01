@@ -2241,7 +2241,7 @@
     align-items: flex-start;
     margin-top: clamp(6vh, 8vh + 2vw, 10vh);
     padding-inline: clamp(0.5rem, 4vw, 2.5rem);
-    max-width: min(100%, 1150px);
+    max-width: min(100%, 1500px);
     margin-inline: auto;
   }
 
