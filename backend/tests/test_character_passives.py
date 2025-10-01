@@ -3,12 +3,15 @@ import random
 
 import pytest
 
+from autofighter.effects import EffectManager
+from autofighter.effects import HealingOverTime
 from autofighter.passives import PassiveRegistry
 from autofighter.stats import BUS
 from autofighter.stats import Stats
 from autofighter.stats import set_battle_active
 from plugins.damage_types.generic import Generic
 from plugins.effects.aftertaste import Aftertaste
+from plugins.passives.normal.ally_overload import AllyOverload
 from plugins.passives.normal.hilander_critical_ferment import HilanderCriticalFerment
 from plugins.passives.normal.mezzy_gluttonous_bulwark import MezzyGluttonousBulwark
 
@@ -109,6 +112,49 @@ async def test_ally_overload_passive():
 
     # Should now have Overload active (4 attacks)
     assert ally.actions_per_turn == 4
+
+
+@pytest.mark.asyncio
+async def test_ally_overload_battle_end_restores_hots():
+    """Ensure Overload cleanup restores HoTs when battles end abruptly."""
+
+    AllyOverload._overload_charge.clear()
+    AllyOverload._overload_active.clear()
+    AllyOverload._add_hot_backup.clear()
+    AllyOverload._battle_end_handlers.clear()
+
+    registry = PassiveRegistry()
+    ally = Stats(hp=1000, damage_type=Generic())
+    ally.effect_manager = EffectManager(ally)
+    ally.passives = ["ally_overload"]
+
+    original_add_hot = ally.effect_manager.add_hot
+
+    # Build enough charge to activate Overload and block HoTs.
+    for _ in range(21):
+        await registry.trigger("action_taken", ally)
+
+    assert ally.actions_per_turn == 4
+    assert ally.effect_manager.add_hot is not original_add_hot
+
+    blocked_hot = HealingOverTime("blocked", 5, 2, "blocked")
+    ally.effect_manager.add_hot(blocked_hot)
+    assert not ally.effect_manager.hots
+    assert not ally.hots
+
+    await BUS.emit_async("battle_end", ally)
+
+    assert not AllyOverload.is_overload_active(ally)
+    assert ally.actions_per_turn == 2
+    assert ally.effect_manager.add_hot.__func__ is original_add_hot.__func__
+
+    restored_hot = HealingOverTime("restored", 7, 3, "restored")
+    ally.effect_manager.add_hot(restored_hot)
+
+    assert ally.effect_manager.hots == [restored_hot]
+    assert ally.hots == [restored_hot.id]
+    assert id(ally) not in AllyOverload._add_hot_backup
+    assert id(ally) not in AllyOverload._battle_end_handlers
 
 
 @pytest.mark.asyncio

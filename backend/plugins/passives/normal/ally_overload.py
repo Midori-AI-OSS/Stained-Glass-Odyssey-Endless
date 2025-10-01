@@ -1,9 +1,11 @@
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
+from typing import Any
 from typing import Callable
 from typing import ClassVar
 
 from autofighter.stat_effect import StatEffect
+from autofighter.stats import BUS
 
 if TYPE_CHECKING:
     from autofighter.stats import Stats
@@ -22,7 +24,8 @@ class AllyOverload:
     # Class-level tracking of overload charge and stance for each entity
     _overload_charge: ClassVar[dict[int, int]] = {}
     _overload_active: ClassVar[dict[int, bool]] = {}
-    _add_hot_backup: ClassVar[dict[int, Callable]] = {}
+    _add_hot_backup: ClassVar[dict[int, Callable[..., Any]]] = {}
+    _battle_end_handlers: ClassVar[dict[int, Callable[..., Any]]] = {}
 
     async def apply(self, target: "Stats") -> None:
         """Apply Ally's twin dagger and overload mechanics."""
@@ -97,6 +100,25 @@ class AllyOverload:
             self._add_hot_backup[entity_id] = em.add_hot
             em.add_hot = _block_hot.__get__(em, type(em))
 
+        existing_handler = self._battle_end_handlers.pop(entity_id, None)
+        if existing_handler is not None:
+            BUS.unsubscribe("battle_end", existing_handler)
+
+        async def _on_battle_end(*_: object, **__: object) -> None:
+            BUS.unsubscribe("battle_end", _on_battle_end)
+            self._battle_end_handlers.pop(entity_id, None)
+
+            if self._overload_active.get(entity_id):
+                await self._deactivate_overload(target)
+                return
+
+            original = self._add_hot_backup.pop(entity_id, None)
+            if em is not None and original is not None:
+                em.add_hot = original
+
+        self._battle_end_handlers[entity_id] = _on_battle_end
+        BUS.subscribe("battle_end", _on_battle_end)
+
         # Cap recoverable HP at 20% of normal
         max_recoverable_hp = int(target.max_hp * 0.2)
         hp_cap = StatEffect(
@@ -111,6 +133,10 @@ class AllyOverload:
         """Deactivate Overload stance."""
         entity_id = id(target)
         self._overload_active[entity_id] = False
+
+        handler = self._battle_end_handlers.pop(entity_id, None)
+        if handler is not None:
+            BUS.unsubscribe("battle_end", handler)
 
         # Remove all Overload effects
         effects_to_remove = [
