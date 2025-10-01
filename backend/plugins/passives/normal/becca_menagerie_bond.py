@@ -71,12 +71,37 @@ class BeccaMenagerieBond:
         current_ids = {id(s) for s in jellyfish_summons}
         buffed_ids = self._buffed_summons.setdefault(entity_key, set())
 
-        if current_spirit_stacks != applied_stacks:
+        spirit_effect_name = f"{self.id}_spirit_bonuses"
+        pet_effect_name = f"{self.id}_pet_spirit_bonuses"
+
+        def _has_effect(entity: "Stats", effect_name: str) -> bool:
+            if not hasattr(entity, "get_active_effects"):
+                return False
+            try:
+                active_effects = entity.get_active_effects()
+            except Exception:
+                return False
+            return any(effect.name == effect_name for effect in active_effects)
+
+        refresh_required = current_spirit_stacks != applied_stacks
+        if current_spirit_stacks > 0 and not _has_effect(target, spirit_effect_name):
+            refresh_required = True
+
+        if current_spirit_stacks > 0:
+            missing_summon_effects = {
+                id(summon)
+                for summon in jellyfish_summons
+                if not _has_effect(summon, pet_effect_name)
+            }
+            if missing_summon_effects:
+                buffed_ids.difference_update(missing_summon_effects)
+
+        if refresh_required:
             spirit_attack_bonus = int(target._base_atk * 0.05 * current_spirit_stacks)
             spirit_defense_bonus = int(target._base_defense * 0.05 * current_spirit_stacks)
 
             spirit_effect = StatEffect(
-                name=f"{self.id}_spirit_bonuses",
+                name=spirit_effect_name,
                 stat_modifiers={
                     "atk": spirit_attack_bonus,
                     "defense": spirit_defense_bonus,
@@ -88,7 +113,7 @@ class BeccaMenagerieBond:
 
             for summon in jellyfish_summons:
                 pet_effect = StatEffect(
-                    name=f"{self.id}_pet_spirit_bonuses",
+                    name=pet_effect_name,
                     stat_modifiers={
                         "atk": spirit_attack_bonus,
                         "defense": spirit_defense_bonus,
@@ -108,7 +133,7 @@ class BeccaMenagerieBond:
                 for summon in jellyfish_summons:
                     if id(summon) in new_ids:
                         pet_effect = StatEffect(
-                            name=f"{self.id}_pet_spirit_bonuses",
+                            name=pet_effect_name,
                             stat_modifiers={
                                 "atk": spirit_attack_bonus,
                                 "defense": spirit_defense_bonus,
