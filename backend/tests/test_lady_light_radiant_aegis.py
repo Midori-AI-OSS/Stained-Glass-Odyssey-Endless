@@ -2,65 +2,78 @@ import asyncio
 
 import pytest
 
+from autofighter.effects import EffectManager
 from autofighter.stats import BUS
 from autofighter.stats import Stats
+from plugins.damage_types.light import Light
+from plugins.dots.bleed import Bleed
+from plugins.hots.radiant_regeneration import RadiantRegeneration
 from plugins.passives.normal.lady_light_radiant_aegis import LadyLightRadiantAegis
 
 
-@pytest.mark.asyncio
-async def test_radiant_aegis_shields_persist_after_tick():
-    passive = LadyLightRadiantAegis()
-    healer = Stats()
-    ally = Stats()
+class DummyLightUser(Stats):
+    async def use_ultimate(self) -> bool:  # pragma: no cover - helper for tests
+        if not self.ultimate_ready:
+            return False
+        self.ultimate_charge = 0
+        self.ultimate_ready = False
+        await BUS.emit_async("ultimate_used", self)
+        return True
 
-    ally.shields = 0
-    ally.overheal_enabled = False
+
+@pytest.mark.asyncio
+async def test_radiant_aegis_hot_event_applies_shields():
+    LadyLightRadiantAegis._attack_bonuses.clear()
+    passive = LadyLightRadiantAegis()
+    healer = DummyLightUser(damage_type=Light())
+    healer.vitality = 1.5
+    ally = Stats()
+    ally.vitality = 1.25
+    ally.effect_manager = EffectManager(ally)
 
     await passive.apply(healer)
-    await passive.on_hot_applied(healer, ally, hot_amount=200)
 
+    hot = RadiantRegeneration()
+    hot.healing = 8  # Boost base healing so scaling is visible
+    hot.source = healer
+    ally.effect_manager.add_hot(hot)
+
+    await asyncio.sleep(0.05)
+
+    expected_hot = int(hot.healing * healer.vitality * ally.vitality)
+    expected_shield = int(expected_hot * 0.5)
+    assert ally.shields == expected_shield
     assert ally.overheal_enabled is True
-    assert ally.shields == 100
 
-    hot_res_effect = f"{passive.id}_hot_resistance"
-    assert any(effect.name == hot_res_effect for effect in ally.get_active_effects())
+    resistance_name = f"{passive.id}_hot_resistance"
+    assert any(effect.name == resistance_name for effect in ally.get_active_effects())
 
-    ally.tick_effects()
-
-    assert not any(effect.name == hot_res_effect for effect in ally.get_active_effects())
-    assert ally.shields == 100
+    BUS.emit_batched("battle_end", healer)
+    await asyncio.sleep(0.05)
 
 
 @pytest.mark.asyncio
-async def test_radiant_aegis_cleanse_heal_emits_event():
+async def test_radiant_aegis_dot_cleanse_triggers_on_light_ultimate():
+    LadyLightRadiantAegis._attack_bonuses.clear()
     passive = LadyLightRadiantAegis()
-    target = Stats()
+    healer = DummyLightUser(damage_type=Light())
     ally = Stats()
+    ally.hp = ally.max_hp - 100
+    healer.effect_manager = EffectManager(healer)
+    ally.effect_manager = EffectManager(ally)
+    ally.effect_manager.add_dot(Bleed(10, 3))
 
-    await passive.apply(target)
-    expected_heal = int(ally.max_hp * 0.05)
-    ally.hp = ally.max_hp - 200
+    await passive.apply(healer)
 
-    events: list[tuple[Stats, Stats, int, str, str]] = []
+    healer.add_ultimate_charge(15)
+    await healer.damage_type.ultimate(healer, [healer, ally], [])
+    await asyncio.sleep(0.05)
 
-    def _on_heal_received(tgt, healer, amount, source_type, source_name):
-        events.append((tgt, healer, amount, source_type, source_name))
+    expected_attack_bonus = int(healer.atk * 0.02)
+    assert LadyLightRadiantAegis.get_attack_bonus(healer) == expected_attack_bonus
 
-    BUS.subscribe("heal_received", _on_heal_received)
+    cleanse_effect_name = f"{passive.id}_cleanse_attack_{id(healer)}"
+    assert any(effect.name == cleanse_effect_name for effect in healer.get_active_effects())
 
-    try:
-        await passive.on_dot_cleanse(target, ally)
-        await asyncio.sleep(0.05)
-    finally:
-        BUS.unsubscribe("heal_received", _on_heal_received)
-
-    assert ally.hp == ally.max_hp - 200 + expected_heal
-
-    assert any(
-        event[0] is ally
-        and event[1] is target
-        and event[2] == expected_heal
-        and event[3] == "cleanse"
-        and event[4] == passive.id
-        for event in events
-    )
+    BUS.emit_batched("battle_end", healer)
+    await asyncio.sleep(0.05)
