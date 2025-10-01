@@ -14,6 +14,26 @@ backend:
   - changed-files:
     - any-glob-to-any-file: 'backend/**'
 
+char:
+- all:
+  - changed-files:
+    - any-glob-to-any-file: 'backend/plugins/characters/**'
+
+passive:
+- all:
+  - changed-files:
+    - any-glob-to-any-file: 'backend/plugins/passives/**'
+
+card:
+- all:
+  - changed-files:
+    - any-glob-to-any-file: 'backend/plugins/cards/**'
+
+relic:
+- all:
+  - changed-files:
+    - any-glob-to-any-file: 'backend/plugins/relics/**'
+
 frontend:
 - all:
   - changed-files:
