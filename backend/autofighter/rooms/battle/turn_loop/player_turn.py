@@ -532,8 +532,16 @@ async def _handle_wind_spread(
     scale = 1.0 / (2.0 * living_targets)
     scaled_atk = member.atk * scale
     additional_hits = 0
-    for extra_index, extra_foe in enumerate(context.foes):
-        if extra_index == target_index or extra_foe.hp <= 0:
+    try:
+        target_foe = context.foes[target_index]
+    except Exception:
+        target_foe = None
+
+    foe_snapshot = list(zip(list(context.foes), list(context.foe_effects)))
+    defeated_during_spread = False
+
+    for extra_foe, extra_manager in foe_snapshot:
+        if extra_foe is target_foe or getattr(extra_foe, "hp", 0) <= 0:
             await pace_sleep(YIELD_MULTIPLIER)
             continue
         extra_damage = await extra_foe.apply_damage(
@@ -572,18 +580,19 @@ async def _handle_wind_spread(
                 party=context.combat_party.members,
                 foes=context.foes,
             )
-        context.foe_effects[extra_index].maybe_inflict_dot(member, extra_damage)
+        extra_manager.maybe_inflict_dot(member, extra_damage)
         context.exp_reward, context.temp_rdr = await credit_if_dead(
             foe_obj=extra_foe,
             exp_reward=context.exp_reward,
             temp_rdr=context.temp_rdr,
             **context.credit_kwargs,
         )
+        if getattr(extra_foe, "hp", 0) <= 0:
+            defeated_during_spread = True
+    if defeated_during_spread:
         remove_dead_foes(
             foes=context.foes,
             foe_effects=context.foe_effects,
             enrage_mods=context.enrage_mods,
         )
-        if not context.foes:
-            break
     return additional_hits
