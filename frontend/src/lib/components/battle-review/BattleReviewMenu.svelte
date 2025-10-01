@@ -2,6 +2,7 @@
   import { onMount, createEventDispatcher } from 'svelte';
   import TripleRingSpinner from '../TripleRingSpinner.svelte';
   import BattleReview from '../BattleReview.svelte';
+  import MenuPanel from '../MenuPanel.svelte';
   import {
     listTrackedRuns,
     getTrackedRun,
@@ -172,7 +173,12 @@
   }
 </script>
 
-<div class="battle-review-menu" data-testid="battle-review-menu">
+<MenuPanel
+  class="battle-review-menu"
+  data-testid="battle-review-menu"
+  padding="1rem"
+  {reducedMotion}
+>
   <header class="menu-header">
     <h2>Battle Review Archive</h2>
     <button type="button" class="close-btn" on:click={closeMenu}>Close</button>
@@ -247,14 +253,11 @@
       />
     </section>
   {/if}
-</div>
+</MenuPanel>
 
 <style>
-  .battle-review-menu {
-    display: flex;
-    flex-direction: column;
+  :global(.battle-review-menu) {
     gap: 1rem;
-    width: 100%;
     color: #fff;
   }
 
