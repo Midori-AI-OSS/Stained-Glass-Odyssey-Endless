@@ -385,7 +385,7 @@ export function createBattlePollingController({
       }
 
       const snapHasRewards = hasRewards(snap);
-      const snapCompleted = Boolean(snap?.awaiting_next) || Boolean(snap?.next_room) || snap?.result === 'defeat';
+      const snapCompleted = Boolean(snap?.awaiting_next) || snap?.result === 'defeat';
       const partyDead = Array.isArray(snap?.party) && snap.party.length > 0 && snap.party.every((m) => (m?.hp ?? 1) <= 0);
       const foesDead = Array.isArray(snap?.foes) && snap.foes.length > 0 && snap.foes.every((f) => (f?.hp ?? 1) <= 0);
       const combatOver = partyDead || foesDead;
