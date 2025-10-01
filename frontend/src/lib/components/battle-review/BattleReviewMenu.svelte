@@ -256,7 +256,7 @@
 </MenuPanel>
 
 <style>
-  .battle-review-menu {
+  :global(.battle-review-menu) {
     gap: 1rem;
     color: #fff;
   }
