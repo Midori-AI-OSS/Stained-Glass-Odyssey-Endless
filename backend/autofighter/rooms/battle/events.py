@@ -81,6 +81,10 @@ async def handle_battle_end(
     except Exception:
         pass
 
+    run_id = _resolve_run_id(*members, *foes)
+    if run_id:
+        _snapshots.clear_effect_charges(run_id)
+
 
 def _resolve_run_id(*entities: Any) -> str | None:
     return _snapshots.resolve_run_id(*entities)

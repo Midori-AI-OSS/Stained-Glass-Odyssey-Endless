@@ -171,6 +171,7 @@ async def test_floor_boss_guarantees_ticket_drop(monkeypatch):
         action_queue_snapshot={},
         battle_logger=None,
         exp_reward=0,
+        run_id=None,
     )
     tickets = [item for item in result["loot"]["items"] if item["id"] == "ticket"]
     assert tickets and tickets[0]["stars"] == 0

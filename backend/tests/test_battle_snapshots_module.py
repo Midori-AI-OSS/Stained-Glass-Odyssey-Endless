@@ -1,9 +1,9 @@
 from __future__ import annotations
 
 import importlib
+from pathlib import Path
 import sys
 import types
-from pathlib import Path
 
 import pytest
 
@@ -94,3 +94,19 @@ def test_mutate_snapshot_overlay_updates_snapshot_fields(snapshot_env) -> None:
     assert snapshot["recent_events"] == [event_payload]
 
     assert snapshots_module.get_status_phase(run_id) == status_payload
+
+
+def test_prepare_snapshot_overlay_clears_effect_charges(snapshot_env) -> None:
+    snapshots_module, battle_snapshots = snapshot_env
+    run_id = "snapshot-effects"
+
+    combatant = Stats()
+    combatant.id = "effect-tester"
+
+    snapshots_module.set_effect_charges(run_id, {"id": "example", "progress": 1.0})
+    assert battle_snapshots[run_id]["effects_charge"][0]["id"] == "example"
+
+    snapshots_module.prepare_snapshot_overlay(run_id, [combatant])
+
+    assert snapshots_module.get_effect_charges(run_id) is None
+    assert "effects_charge" not in battle_snapshots[run_id]

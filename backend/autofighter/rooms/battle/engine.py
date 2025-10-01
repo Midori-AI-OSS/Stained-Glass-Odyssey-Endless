@@ -20,6 +20,7 @@ from autofighter.summons.base import Summon
 from autofighter.summons.manager import SummonManager
 
 from ...party import Party
+from . import snapshots as _snapshots
 from .events import handle_battle_end
 from .events import handle_battle_start
 from .pacing import _EXTRA_TURNS
@@ -154,6 +155,8 @@ async def run_battle(
             )
         except Exception:
             pass
+
+    effects_charge = _snapshots.get_effect_charges(run_id)
 
     await handle_battle_end(foes, combat_party.members)
 
@@ -307,6 +310,7 @@ async def run_battle(
             "rdr": temp_rdr,
             "action_queue": action_queue_snapshot,
             "ended": True,
+            **({"effects_charge": effects_charge} if effects_charge is not None else {}),
         }
 
     dealt, taken = _damage_totals()
@@ -345,6 +349,8 @@ async def run_battle(
         action_queue_snapshot=action_queue_snapshot,
         battle_logger=battle_logger,
         exp_reward=exp_reward,
+        run_id=run_id,
+        effects_charge=effects_charge,
     )
 
 
