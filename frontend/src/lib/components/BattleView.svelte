@@ -17,6 +17,7 @@
   import ActionQueue from '../battle/ActionQueue.svelte';
   import BattleEventFloaters from './BattleEventFloaters.svelte';
   import BattleTargetingOverlay from './BattleTargetingOverlay.svelte';
+  import EffectsChargeContainer from './battle/EffectsChargeContainer.svelte';
   import { motionStore } from '../systems/settingsStorage.js';
   import { haltSync } from '../systems/overlayState.js';
 
@@ -176,6 +177,8 @@
   let recentEventCounts = new Map();
   let lastRecentEventTokens = [];
   let floaterDuration = 1200;
+  let battleSnapshot = null;
+  let effectCharges = [];
   const relevantRecentEventTypes = new Set([
     'damage_taken',
     'heal_received',
@@ -186,6 +189,62 @@
   ]);
   let lastRunId = runId;
 
+  function normalizeChargeIdentifier(entry, index) {
+    const candidates = [entry?.id, entry?.effect_id, entry?.effectId, entry?.name, entry?.label];
+    for (const value of candidates) {
+      if (value === undefined || value === null) continue;
+      try {
+        const text = String(value).trim();
+        if (text) return text;
+      } catch {}
+    }
+    return `charge-${index}`;
+  }
+
+  function normalizeChargeName(entry, index) {
+    const candidates = [entry?.name, entry?.label, entry?.id, entry?.effect_id, entry?.effectId];
+    for (const value of candidates) {
+      if (value === undefined || value === null) continue;
+      try {
+        const text = String(value).trim();
+        if (text) return text;
+      } catch {}
+    }
+    return `Effect ${index + 1}`;
+  }
+
+  function normalizeChargeProgress(value) {
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) return 0;
+    if (numeric > 1 && numeric <= 100) {
+      return Math.max(0, Math.min(1, numeric / 100));
+    }
+    return Math.max(0, Math.min(1, numeric));
+  }
+
+  function normalizeChargeDamage(value) {
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric)) return null;
+    return numeric;
+  }
+
+  function sanitizeEffectCharges(source) {
+    if (!Array.isArray(source)) return [];
+    return source
+      .map((entry, index) => {
+        if (!entry || typeof entry !== 'object') return null;
+        const id = normalizeChargeIdentifier(entry, index);
+        const name = normalizeChargeName(entry, index);
+        const progress = normalizeChargeProgress(entry.progress ?? entry.charge ?? entry.value ?? 0);
+        const estimatedDamage = normalizeChargeDamage(
+          entry.estimatedDamage ?? entry.estimated_damage ?? entry.damage ?? entry.expected_damage
+        );
+        return { id, name, progress, estimatedDamage };
+      })
+      .filter(Boolean);
+  }
+
+  $: effectCharges = sanitizeEffectCharges(battleSnapshot?.effects_charge ?? []);
   // Slow down floater animation a bit for readability
   $: floaterDuration = Math.max(1400, pollDelay * 5);
   $: if (runId !== lastRunId) {
@@ -210,6 +269,7 @@
     hpHistory = new Map();
     lastRunId = runId;
     currentTurn = null;
+    battleSnapshot = null;
   }
   $: if (!active) {
     floaterFeed = [];
@@ -231,6 +291,7 @@
     pendingLayers = new Map();
     hpHistory = new Map();
     currentTurn = null;
+    battleSnapshot = null;
   }
 
   // Compute and update anchor for a given id/node
@@ -1801,6 +1862,17 @@
         clearFloaterBatch();
       }
 
+      if (snap && typeof snap === 'object') {
+        const rawCharges = Array.isArray(snap.effects_charge)
+          ? snap.effects_charge
+              .map((entry) => (entry && typeof entry === 'object' ? { ...entry } : null))
+              .filter(Boolean)
+          : [];
+        battleSnapshot = { effects_charge: rawCharges };
+      } else {
+        battleSnapshot = null;
+      }
+
       const shouldForceRelease = phaseOutcome?.shouldRelease ?? true;
       await releaseHpDrains({ force: shouldForceRelease || !waitingForResolve });
 
@@ -1889,6 +1961,11 @@
     reducedMotion={effectiveReducedMotion}
     turnPhase={storedTurnPhase}
   />
+  {#if effectCharges.length}
+    <div class="overlay-layer charge-panel">
+      <EffectsChargeContainer charges={effectCharges} reducedMotion={effectiveReducedMotion} />
+    </div>
+  {/if}
   {#if showStatusTimeline && statusTimeline.length && phaseAllowsOverlays}
     <div class:reduced={effectiveReducedMotion} class="status-timeline overlay-layer" aria-live="polite">
       {#each statusTimeline as chip (chip.key)}
@@ -2468,6 +2545,20 @@
     align-items: center;
     justify-content: center;
     line-height: 1;
+  }
+
+  .charge-panel {
+    position: absolute;
+    top: clamp(0.75rem, 2.4vh, 1.65rem);
+    right: clamp(0.75rem, 2.4vw, 1.75rem);
+    pointer-events: none;
+    z-index: 6;
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  .charge-panel :global(.effects-charge-container) {
+    pointer-events: none;
   }
 
   .status-timeline {
