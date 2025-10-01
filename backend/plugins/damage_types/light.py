@@ -59,12 +59,27 @@ class Light(DamageTypeBase):
                 ally.effect_manager = mgr
 
             # Remove all DoTs from the ally and their effect manager
+            removed_dots = []
             for dot in list(mgr.dots):
                 try:
                     mgr.dots.remove(dot)
                     ally.dots.remove(dot.id)
+                    removed_dots.append(dot)
                 except ValueError:
                     pass
+
+            for dot in removed_dots:
+                BUS.emit_batched(
+                    "dot_cleansed",
+                    actor,
+                    ally,
+                    getattr(dot, "id", None),
+                    {
+                        "dot_name": getattr(dot, "name", None),
+                        "remaining_turns": getattr(dot, "turns", None),
+                        "dot_damage": getattr(dot, "damage", None),
+                    },
+                )
 
             missing = ally.max_hp - ally.hp
             if missing > 0:
