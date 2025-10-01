@@ -18,11 +18,11 @@ from autofighter.stats import BUS
 from autofighter.summons.base import Summon
 from autofighter.summons.manager import SummonManager
 from plugins.cards.phantom_ally import PhantomAlly
-from plugins.damage_types.lightning import Lightning
-from plugins.characters.foe_base import FoeBase
-from plugins.passives.normal.becca_menagerie_bond import BeccaMenagerieBond
 from plugins.characters.ally import Ally
 from plugins.characters.becca import Becca
+from plugins.characters.foe_base import FoeBase
+from plugins.damage_types.lightning import Lightning
+from plugins.passives.normal.becca_menagerie_bond import BeccaMenagerieBond
 
 
 @pytest.mark.asyncio
@@ -50,6 +50,7 @@ async def test_summon_creation_basic(monkeypatch):
     # Verify stat inheritance
     assert summon.atk == 50  # 50% of 100
     assert summon.max_hp == 100  # 50% of 200
+    assert summon.hp == summon.max_hp  # Summon spawns at full health
     assert summon.defense == 25  # 50% of 50
     assert summon.summoner_id == "test_summoner"
     assert summon.summon_type == "test"
@@ -79,6 +80,7 @@ async def test_summon_manager_creation_and_tracking(monkeypatch):
     )
 
     assert summon is not None
+    assert summon.hp == summon.max_hp
     assert summon.summoner_id == "test_summoner"
 
     # Verify tracking
