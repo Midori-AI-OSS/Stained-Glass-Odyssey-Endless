@@ -104,6 +104,7 @@ class Summon(Stats):
         summon._base_max_hp = base_hp
         summon._base_atk = base_atk
         summon._base_defense = base_def
+        summon.hp = summon.max_hp
         # Inherit other relevant stats at same multiplier
         summon._base_crit_rate = summoner.crit_rate * stat_multiplier
         summon._base_crit_damage = summoner.crit_damage * stat_multiplier
