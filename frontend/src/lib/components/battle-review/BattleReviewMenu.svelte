@@ -3,11 +3,7 @@
   import TripleRingSpinner from '../TripleRingSpinner.svelte';
   import BattleReview from '../BattleReview.svelte';
   import MenuPanel from '../MenuPanel.svelte';
-  import {
-    listTrackedRuns,
-    getTrackedRun,
-    groupBattleSummariesByFloor
-  } from '../../systems/uiApi.js';
+  import { listTrackedRuns, getTrackedRun } from '../../systems/uiApi.js';
 
   export let reducedMotion = false;
 
@@ -22,10 +18,9 @@
   let runStatus = 'idle';
   let runError = '';
 
-  let floors = [];
-  let selectedFloorKey = '';
   let selectedFightKey = '';
   let selectedBattleIndex = null;
+  let fights = [];
 
   let runsController = null;
   let detailsController = null;
@@ -128,20 +123,56 @@
     }
   }
 
-  $: floors = groupBattleSummariesByFloor(
-    runDetails?.battle_summaries || runDetails?.battleSummaries || []
-  );
-
-  $: {
-    if (!floors.length) {
-      selectedFloorKey = '';
-    } else if (!floors.some((floor) => String(floor.floor) === selectedFloorKey)) {
-      selectedFloorKey = String(floors[0].floor);
+  function deriveBattleIndex(entry, fallback) {
+    const candidates = [
+      entry?.battle_index,
+      entry?.battleIndex,
+      entry?.index,
+      entry?.battle?.index,
+      entry?.id
+    ];
+    for (const candidate of candidates) {
+      const n = Number(candidate);
+      if (Number.isFinite(n) && n > 0) {
+        return Math.floor(n);
+      }
     }
+    return fallback ?? null;
   }
 
-  $: activeFloor = floors.find((floor) => String(floor.floor) === selectedFloorKey) || null;
-  $: fights = activeFloor?.fights || [];
+  function deriveFightLabel(entry, fallbackIndex) {
+    const candidates = [
+      entry?.battle_name,
+      entry?.battleName,
+      entry?.room_name,
+      entry?.roomName,
+      entry?.room_type,
+      entry?.roomType
+    ];
+    for (const candidate of candidates) {
+      if (candidate) {
+        return String(candidate);
+      }
+    }
+    return `Fight ${fallbackIndex}`;
+  }
+
+  $: fights = (() => {
+    const summaries =
+      runDetails?.battle_summaries || runDetails?.battleSummaries || [];
+    if (!Array.isArray(summaries) || summaries.length === 0) {
+      return [];
+    }
+    return summaries.map((summary, idx) => {
+      const fallback = idx + 1;
+      const battleIndex = deriveBattleIndex(summary, fallback);
+      return {
+        battleIndex,
+        label: deriveFightLabel(summary, battleIndex || fallback),
+        summary
+      };
+    });
+  })();
 
   $: {
     if (!fights.length) {
@@ -158,10 +189,6 @@
 
   function handleRunChange(event) {
     selectedRunId = event?.target?.value || '';
-  }
-
-  function handleFloorChange(event) {
-    selectedFloorKey = event?.target?.value || '';
   }
 
   function handleFightChange(event) {
@@ -206,7 +233,7 @@
     </label>
 
     <label>
-      <span class="label-text">Floor</span>
+      <span class="label-text">Fight</span>
       {#if runStatus === 'loading' && runsStatus !== 'error'}
         <div class="loading-line">
           <TripleRingSpinner {reducedMotion} />
@@ -214,26 +241,10 @@
         </div>
       {:else if runStatus === 'error'}
         <div class="status-text error">{runError}</div>
-      {:else if !floors.length}
-        <div class="status-text empty">No battles recorded for this run.</div>
-      {:else}
-        <select on:change={handleFloorChange} bind:value={selectedFloorKey}>
-          {#each floors as floor (floor.floor)}
-            <option value={String(floor.floor)}>{floor.label}</option>
-          {/each}
-        </select>
-      {/if}
-    </label>
-
-    <label>
-      <span class="label-text">Fight</span>
-      {#if runStatus === 'loading' && runsStatus !== 'error'}
-        <div class="loading-line">
-          <TripleRingSpinner {reducedMotion} />
-          <span>Loading battles…</span>
-        </div>
       {:else if fights.length === 0}
-        <div class="status-text empty">Select a run and floor to view fights.</div>
+        <div class="status-text empty">
+          {selectedRunId ? 'No fights recorded for this run.' : 'Select a run to view fights.'}
+        </div>
       {:else}
         <select on:change={handleFightChange} bind:value={selectedFightKey}>
           {#each fights as fight (String(fight.battleIndex))}
@@ -298,7 +309,7 @@
 
   @media (min-width: 780px) {
     .selectors {
-      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-template-columns: repeat(2, minmax(0, 1fr));
       align-items: end;
     }
   }
