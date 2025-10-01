@@ -22,8 +22,21 @@ class ArcaneRepeater(CardBase):
     async def apply(self, party) -> None:  # type: ignore[override]
         await super().apply(party)
 
-        async def _attack(attacker, target, amount) -> None:
+        async def _hit_landed(
+            attacker,
+            target,
+            amount,
+            source_type: str | None = "attack",
+            source_name: str | None = None,
+            *_args,
+        ) -> None:
             if attacker not in party.members:
+                return
+            if source_type != "attack":
+                return
+            if target is None:
+                return
+            if amount is None:
                 return
             if random.random() >= 0.30:
                 return
@@ -42,4 +55,4 @@ class ArcaneRepeater(CardBase):
             )
             safe_async_task(target.apply_damage(dmg, attacker=attacker))
 
-        self.subscribe("attack_used", _attack)
+        self.subscribe("hit_landed", _hit_landed)
