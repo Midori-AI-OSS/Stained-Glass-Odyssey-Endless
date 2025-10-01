@@ -3,6 +3,7 @@ Tests for the unified summons system.
 """
 
 import asyncio
+import copy
 from pathlib import Path
 import sys
 
@@ -18,11 +19,24 @@ from autofighter.stats import BUS
 from autofighter.summons.base import Summon
 from autofighter.summons.manager import SummonManager
 from plugins.cards.phantom_ally import PhantomAlly
+from plugins.damage_types.lightning import Lightning
+from plugins.characters.foe_base import FoeBase
 from plugins.characters.ally import Ally
 from plugins.characters.becca import Becca
-from plugins.characters.foe_base import FoeBase
-from plugins.damage_types.lightning import Lightning
 from plugins.passives.normal.becca_menagerie_bond import BeccaMenagerieBond
+
+
+def _reset_becca_passive_state() -> None:
+    """Clear global Becca Menagerie Bond tracking between tests."""
+
+    for store in (
+        BeccaMenagerieBond._summon_cooldown,
+        BeccaMenagerieBond._spirit_stacks,
+        BeccaMenagerieBond._last_summon,
+        BeccaMenagerieBond._applied_spirit_stacks,
+        BeccaMenagerieBond._buffed_summons,
+    ):
+        store.clear()
 
 
 @pytest.mark.asyncio
@@ -217,11 +231,51 @@ async def test_phantom_ally_new_system(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_becca_menagerie_bond_persists_between_battles(monkeypatch):
+    """Becca's passive should retain summon history across battle clones."""
+
+    monkeypatch.setattr(torch_checker, "is_torch_available", lambda: False)
+
+    _reset_becca_passive_state()
+    SummonManager.reset_all()
+
+    passive = BeccaMenagerieBond()
+    template_becca = Becca()
+    template_becca.id = "becca_passive_persistence"
+
+    battle_one_becca = copy.deepcopy(template_becca)
+    await passive.apply(battle_one_becca)
+
+    assert await passive.summon_jellyfish(battle_one_becca, jellyfish_type="electric")
+
+    key = BeccaMenagerieBond._resolve_entity_key(battle_one_becca)
+    passive._summon_cooldown[key] = 0
+
+    assert await passive.summon_jellyfish(battle_one_becca, jellyfish_type="poison")
+
+    assert BeccaMenagerieBond.get_spirit_stacks(battle_one_becca) == 1
+    assert BeccaMenagerieBond.get_last_summon_type(battle_one_becca) == "poison"
+
+    SummonManager.reset_all()
+
+    battle_two_becca = copy.deepcopy(template_becca)
+    await passive.apply(battle_two_becca)
+
+    assert BeccaMenagerieBond.get_spirit_stacks(battle_two_becca) == 1
+    assert BeccaMenagerieBond.get_last_summon_type(battle_two_becca) == "poison"
+    assert BeccaMenagerieBond.get_active_summon_type(battle_two_becca) is None
+
+    _reset_becca_passive_state()
+    SummonManager.reset_all()
+
+
+@pytest.mark.asyncio
 async def test_becca_jellyfish_after_phantom(monkeypatch):
     """Becca can still summon a jellyfish after Phantom Ally adds a copy."""
 
     monkeypatch.setattr(torch_checker, "is_torch_available", lambda: False)
 
+    _reset_becca_passive_state()
     SummonManager.cleanup()
 
     becca = Becca()
@@ -253,6 +307,7 @@ async def test_becca_jellyfish_summoning(monkeypatch):
     """Test Becca's jellyfish summoning using new system."""
     monkeypatch.setattr(torch_checker, "is_torch_available", lambda: False)
 
+    _reset_becca_passive_state()
     SummonManager.cleanup()
 
     # Create Becca
@@ -286,6 +341,7 @@ async def test_becca_summon_added_to_party(monkeypatch):
     """Summoning a jellyfish adds it to the party for battle."""
     monkeypatch.setattr(torch_checker, "is_torch_available", lambda: False)
 
+    _reset_becca_passive_state()
     SummonManager.cleanup()
 
     becca = Becca()
@@ -307,6 +363,7 @@ async def test_collect_summons_grouped_by_owner(monkeypatch):
     """Ensure snapshot helper groups summons by summoner id."""
     monkeypatch.setattr(torch_checker, "is_torch_available", lambda: False)
 
+    _reset_becca_passive_state()
     SummonManager.cleanup()
 
     becca = Becca()
@@ -329,6 +386,7 @@ async def test_becca_jellyfish_replacement_creates_spirit(monkeypatch):
     """Test that replacing jellyfish creates spirit stacks."""
     monkeypatch.setattr(torch_checker, "is_torch_available", lambda: False)
 
+    _reset_becca_passive_state()
     SummonManager.cleanup()
 
     # Create Becca
@@ -344,7 +402,7 @@ async def test_becca_jellyfish_replacement_creates_spirit(monkeypatch):
     assert passive.get_spirit_stacks(becca) == 0
 
     # Wait for cooldown
-    passive._summon_cooldown[id(becca)] = 0
+    passive._summon_cooldown[BeccaMenagerieBond._resolve_entity_key(becca)] = 0
     becca.hp = 100  # Reset HP
 
     # Summon different jellyfish (should create spirit)
@@ -362,6 +420,7 @@ async def test_spirit_spawn_on_summon_defeat(monkeypatch):
     """Becca gains a spirit stack when her jellyfish is defeated."""
     monkeypatch.setattr(torch_checker, "is_torch_available", lambda: False)
 
+    _reset_becca_passive_state()
     SummonManager.cleanup()
 
     becca = Becca()
