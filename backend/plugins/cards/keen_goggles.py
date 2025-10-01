@@ -39,7 +39,7 @@ class KeenGoggles(CardBase):
             else:
                 pool = manager.mods
 
-            effect = next((eff for eff in pool if getattr(eff, "id", None) == effect_id), None)
+            effect = next((eff for eff in reversed(pool) if getattr(eff, "id", None) == effect_id), None)
             if effect is None:
                 return
 
