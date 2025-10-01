@@ -19,11 +19,12 @@ from autofighter.relics import award_relic
 from autofighter.rooms.battle.turn_loop import player_turn
 from autofighter.stats import BUS
 from autofighter.stats import Stats
+from plugins.characters._base import PlayerBase
 from plugins.effects.aftertaste import Aftertaste
 import plugins.event_bus as event_bus_module
-from plugins.characters._base import PlayerBase
 import plugins.relics._base as relic_base_module
 import plugins.relics.echoing_drum as echoing_drum_module
+from plugins.relics.greed_engine import GreedEngine
 import plugins.relics.timekeepers_hourglass as hourglass_module
 
 
@@ -322,6 +323,22 @@ async def test_greed_engine_stacks():
     assert a.hp == 200 - int(200 * (0.01 + 0.005))
     await BUS.emit_async("gold_earned", 100)
     assert party.gold == int(100 * (0.5 + 0.25))
+
+
+def test_greed_engine_text_updates():
+    relic = GreedEngine()
+
+    assert (
+        relic.about
+        == "Party loses HP on every combat action via the shared turn_start hook "
+        "but gains extra gold and rare drops."
+    )
+
+    assert (
+        relic.describe(1)
+        == "Party loses 1.0% HP on every combat action, gains 50% more gold, and "
+        "increases rare drop rate by 0.5%."
+    )
 
 
 @pytest.mark.asyncio

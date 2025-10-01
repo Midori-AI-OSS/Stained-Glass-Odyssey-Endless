@@ -8,13 +8,16 @@ from plugins.relics._base import safe_async_task
 
 @dataclass
 class GreedEngine(RelicBase):
-    """Lose HP each turn but gain extra gold and rare drops."""
+    """Lose HP on every combat action but gain extra gold and rare drops."""
 
     id: str = "greed_engine"
     name: str = "Greed Engine"
     stars: int = 3
     effects: dict[str, float] = field(default_factory=dict)
-    about: str = "Lose HP each turn but gain extra gold and rare drops."
+    about: str = (
+        "Party loses HP on every combat action via the shared turn_start hook "
+        "but gains extra gold and rare drops."
+    )
 
     async def apply(self, party) -> None:
         await super().apply(party)
@@ -69,6 +72,6 @@ class GreedEngine(RelicBase):
         hp = 1 + 0.5 * (stacks - 1)
         rdr = 0.5 + 0.1 * (stacks - 1)
         return (
-            f"Party loses {hp:.1f}% HP each turn, gains {gold:.0f}% more gold, "
+            f"Party loses {hp:.1f}% HP on every combat action, gains {gold:.0f}% more gold, "
             f"and increases rare drop rate by {rdr:.1f}%."
         )
