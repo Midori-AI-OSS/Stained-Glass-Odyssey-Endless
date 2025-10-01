@@ -214,6 +214,9 @@ async def build_battle_progress_payload(
         status_phase = _snapshots.get_status_phase(run_id)
         if status_phase is not None:
             payload["status_phase"] = status_phase
+        charges = _snapshots.get_effect_charges(run_id)
+        if charges is not None:
+            payload["effects_charge"] = charges
 
     if ended is not None:
         payload["ended"] = ended

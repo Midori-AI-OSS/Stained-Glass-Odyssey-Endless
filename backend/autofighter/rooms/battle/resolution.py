@@ -16,6 +16,7 @@ from plugins.damage_types import ALL_DAMAGE_TYPES
 from plugins.relics.fallback_essence import FallbackEssence
 
 from ...party import Party
+from . import snapshots as _snapshots
 from .rewards import _apply_rdr_to_stars
 from .rewards import _calc_gold
 from .rewards import _pick_card_stars
@@ -51,6 +52,8 @@ async def resolve_rewards(
     action_queue_snapshot: dict[str, Any],
     battle_logger: BattleLogger | None,
     exp_reward: int,
+    run_id: str | None,
+    effects_charge: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Assemble the battle victory payload including loot and choices."""
 
@@ -187,7 +190,7 @@ async def resolve_rewards(
         items,
     )
 
-    return {
+    result = {
         "result": "boss" if room.strength > 1.0 else "battle",
         "party": party_data,
         "party_summons": party_summons,
@@ -211,3 +214,9 @@ async def resolve_rewards(
         "action_queue": action_queue_snapshot,
         "ended": True,
     }
+    charges = effects_charge
+    if charges is None:
+        charges = _snapshots.get_effect_charges(run_id)
+    if charges is not None:
+        result["effects_charge"] = charges
+    return result

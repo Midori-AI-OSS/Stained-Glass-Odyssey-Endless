@@ -14,6 +14,9 @@ __all__ = [
     "prepare_snapshot_overlay",
     "mutate_snapshot_overlay",
     "resolve_run_id",
+    "set_effect_charges",
+    "get_effect_charges",
+    "clear_effect_charges",
     "get_recent_events",
     "get_status_phase",
     "get_registered_entities",
@@ -29,6 +32,7 @@ _party_run_ids: dict[int, str] = {}
 _party_refs: dict[int, weakref.ref[Party]] = {}
 _recent_events: dict[str, deque[dict[str, Any]]] = {}
 _status_phases: dict[str, dict[str, Any] | None] = {}
+_effect_charges: dict[str, list[dict[str, Any]]] = {}
 
 
 def resolve_run_id(*entities: Any) -> str | None:
@@ -110,6 +114,7 @@ def get_registered_run_ids() -> set[str]:
     run_ids.update(rid for rid in _party_run_ids.values() if rid)
     run_ids.update(rid for rid in _recent_events if rid)
     run_ids.update(rid for rid in _status_phases if rid)
+    run_ids.update(rid for rid in _effect_charges if rid)
 
     return run_ids
 
@@ -125,6 +130,7 @@ def prepare_snapshot_overlay(run_id: str | None, entities: Iterable[Any]) -> Non
     else:
         queue.clear()
     _status_phases.pop(run_id, None)
+    clear_effect_charges(run_id)
     snapshot = _get_snapshot(run_id)
     snapshot.setdefault("recent_events", [])
     snapshot.pop("status_phase", None)
@@ -171,6 +177,44 @@ def get_status_phase(run_id: str | None) -> dict[str, Any] | None:
     if not run_id:
         return None
     return _status_phases.get(run_id)
+
+
+def set_effect_charges(
+    run_id: str | None,
+    payload: Iterable[dict[str, Any]] | dict[str, Any] | None,
+) -> None:
+    if not run_id:
+        return
+    if not payload:
+        clear_effect_charges(run_id)
+        return
+    if isinstance(payload, dict):
+        entries = [dict(payload)]
+    else:
+        entries = [dict(entry) for entry in payload if entry]
+    if not entries:
+        clear_effect_charges(run_id)
+        return
+    _effect_charges[run_id] = [dict(entry) for entry in entries]
+    snapshot = _get_snapshot(run_id)
+    snapshot["effects_charge"] = [dict(entry) for entry in entries]
+
+
+def get_effect_charges(run_id: str | None) -> list[dict[str, Any]] | None:
+    if not run_id:
+        return None
+    payload = _effect_charges.get(run_id)
+    if payload is None:
+        return None
+    return [dict(entry) for entry in payload]
+
+
+def clear_effect_charges(run_id: str | None) -> None:
+    if not run_id:
+        return
+    _effect_charges.pop(run_id, None)
+    snapshot = _get_snapshot(run_id)
+    snapshot.pop("effects_charge", None)
 
 
 def _ensure_event_queue(run_id: str) -> deque[dict[str, Any]]:
