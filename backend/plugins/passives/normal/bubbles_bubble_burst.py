@@ -18,17 +18,41 @@ class BubblesBubbleBurst:
     plugin_type = "passive"
     id = "bubbles_bubble_burst"
     name = "Bubble Burst"
-    trigger = "turn_start"  # Triggers at start of Bubbles' turn
+    trigger = ["turn_start", "hit_landed"]  # React at turn start and when landing hits
     max_stacks = 20  # Soft cap - show attack buff stacks with diminished returns past 20
     stack_display = "number"
 
     # Track bubble stacks per enemy target
     _bubble_stacks: ClassVar[dict[int, dict[int, int]]] = {}  # bubbles_id -> {target_id -> stacks}
 
-    async def apply(self, target: "Stats") -> None:
-        """Switch to a new random damage type each turn."""
+    async def apply(self, target: "Stats", event: str | None = None, **kwargs) -> None:
+        """Switch to a new random damage type each turn.
+
+        The passive now receives hit_landed events via the registry. We only
+        want to rotate elements on the turn_start trigger, so ignore other
+        events routed through :meth:`apply`.
+        """
+
+        if event is not None and event != "turn_start":
+            return
+
         dtype_name = choice(ALL_DAMAGE_TYPES)
         target.damage_type = load_damage_type(dtype_name)
+
+    async def on_hit_landed(
+        self,
+        bubbles: "Stats",
+        enemy: "Stats",
+        _damage: int,
+        _action_type: str,
+        **__,
+    ) -> None:
+        """Route hit_landed events into the existing stack logic."""
+
+        if enemy is None:
+            return
+
+        await self.on_hit_enemy(bubbles, enemy)
 
     async def on_hit_enemy(self, bubbles: "Stats", enemy: "Stats") -> None:
         """Apply bubble stack when hitting an enemy."""
@@ -119,3 +143,11 @@ class BubblesBubbleBurst:
             "at 3 stacks bubbles burst for area damage and give +10% attack "
             "per burst (+5% after 20 stacks)."
         )
+
+    async def on_defeat(self, target: "Stats") -> None:
+        """Remove stored stacks when Bubbles leaves the battle."""
+
+        entity_id = id(target)
+        self._bubble_stacks.pop(entity_id, None)
+        for stacks in self._bubble_stacks.values():
+            stacks.pop(entity_id, None)
