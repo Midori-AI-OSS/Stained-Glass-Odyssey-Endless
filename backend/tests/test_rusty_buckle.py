@@ -6,10 +6,10 @@ import pytest
 
 from autofighter.party import Party
 import autofighter.stats as stats
+from plugins.characters._base import PlayerBase
+from plugins.characters.foe_base import FoeBase
 from plugins.effects.aftertaste import Aftertaste
 import plugins.event_bus as event_bus_module
-from plugins.characters.foe_base import FoeBase
-from plugins.characters._base import PlayerBase
 import plugins.relics.rusty_buckle as rb
 from plugins.relics.rusty_buckle import RustyBuckle
 
@@ -70,9 +70,6 @@ async def test_all_allies_bleed_each_turn(bus):
     foe = FoeBase()
     await bus.emit_async("turn_start", foe)
     await _drain_pending_tasks()
-    for member in party.members:
-        await bus.emit_async("turn_start", member)
-    await _drain_pending_tasks()
 
     assert party.members[0].hp == 950
     assert party.members[1].hp == 760
@@ -81,8 +78,15 @@ async def test_all_allies_bleed_each_turn(bus):
         await bus.emit_async("turn_start", member)
     await _drain_pending_tasks()
 
-    assert party.members[0].hp == 900
-    assert party.members[1].hp == 720
+    assert party.members[0].hp == 850
+    assert party.members[1].hp == 680
+
+    for member in party.members:
+        await bus.emit_async("turn_start", member)
+    await _drain_pending_tasks()
+
+    assert party.members[0].hp == 750
+    assert party.members[1].hp == 600
 
 
 @pytest.mark.asyncio
@@ -151,6 +155,34 @@ async def test_stacks_increase_threshold(monkeypatch, bus):
     await party.members[1].apply_damage(500)
     await _drain_pending_tasks()
     assert hits == 8
+
+
+@pytest.mark.asyncio
+async def test_reapply_refreshes_prev_hp_snapshot(bus):
+    party = Party(members=[PlayerBase(), PlayerBase()], relics=["rusty_buckle"])
+    relic = RustyBuckle()
+    await relic.apply(party)
+
+    foe = FoeBase()
+    await bus.emit_async("turn_start", foe)
+    for member in party.members:
+        await bus.emit_async("turn_start", member)
+    await _drain_pending_tasks()
+
+    party.members[0].hp = 600
+    party.members[1].hp = 400
+
+    party.relics.append("rusty_buckle")
+    await relic.apply(party)
+
+    state = party._rusty_buckle_state
+    assert state["prev_hp"][id(party.members[0])] == 600
+    assert state["prev_hp"][id(party.members[1])] == 400
+
+    pre_hp_lost = state["hp_lost"]
+    await party.members[0].apply_damage(100)
+    await _drain_pending_tasks()
+    assert state["hp_lost"] == pre_hp_lost + 100
 
 
 @pytest.mark.asyncio
