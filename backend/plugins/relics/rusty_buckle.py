@@ -51,8 +51,11 @@ class RustyBuckle(RelicBase):
 
         async def _turn_start(entity) -> None:
             from plugins.characters.foe_base import FoeBase
+            from plugins.characters.player_base import PlayerBase
 
             current_state = getattr(party, "_rusty_buckle_state", state)
+            if entity is None or not isinstance(entity, (PlayerBase, FoeBase)):
+                return
             if isinstance(entity, FoeBase) and entity not in current_state["foes"]:
                 current_state["foes"].append(entity)
 
