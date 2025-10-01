@@ -8,6 +8,7 @@ import {
 } from '../src/lib/systems/battleReview/state.js';
 
 const tabsShell = readFileSync(join(import.meta.dir, '../src/lib/components/battle-review/TabsShell.svelte'), 'utf8');
+const battleReview = readFileSync(join(import.meta.dir, '../src/lib/components/BattleReview.svelte'), 'utf8');
 
 function sampleSummary() {
   return {
@@ -100,5 +101,11 @@ describe('battle review shell layout', () => {
     expect(tabsShell).toContain('timeline-wrapper');
     expect(tabsShell).toContain('<TimelineRegion />');
     expect(tabsShell).toContain('<EntityTableContainer />');
+  });
+
+  test('battle review gate keeps layout behind summary status', () => {
+    expect(battleReview).toContain('<TripleRingSpinner');
+    expect(battleReview).toContain("$summaryStatus === 'ready'");
+    expect(battleReview).toContain("status-banner loading");
   });
 });

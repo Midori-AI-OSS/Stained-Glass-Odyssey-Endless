@@ -1,6 +1,7 @@
 <script>
   import { getContext } from 'svelte';
   import { BATTLE_REVIEW_CONTEXT_KEY } from '../../systems/battleReview/state.js';
+  import TripleRingSpinner from '../TripleRingSpinner.svelte';
 
   const MAX_EVENTS = 250;
   const context = getContext(BATTLE_REVIEW_CONTEXT_KEY);
@@ -11,7 +12,8 @@
     loadEvents,
     timeline,
     timelineCursor,
-    setTimelineCursor
+    setTimelineCursor,
+    reducedMotion
   } = context;
 
   $: if ($eventsOpen && $eventsStatus === 'idle') {
@@ -22,7 +24,7 @@
   $: emptyMessage = buildEmptyMessage($eventsStatus, filteredEvents, $timeline?.hasData ?? false);
 
   function buildEmptyMessage(status, events, hasData) {
-    if (status === 'loading') return 'Loading events…';
+    if (status === 'loading') return '';
     if (events.length) return '';
     if (!hasData) return 'No timeline data is available yet.';
     return 'No events matched the current filters.';
@@ -64,7 +66,12 @@
       <button type="button" class="close-btn" on:click={toggleEvents}>Close</button>
     </header>
     <div class="drawer-body">
-      {#if emptyMessage}
+      {#if $eventsStatus === 'loading'}
+        <div class="drawer-loading" role="status" aria-live="polite">
+          <TripleRingSpinner reducedMotion={$reducedMotion} />
+          <span>Loading events…</span>
+        </div>
+      {:else if emptyMessage}
         <p class="drawer-message">{emptyMessage}</p>
       {:else}
         <ul class="events-list">
@@ -144,6 +151,20 @@
   .drawer-body {
     flex: 1;
     overflow-y: auto;
+  }
+
+  .drawer-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    padding: 1.5rem 0;
+    color: rgba(226, 232, 240, 0.85);
+  }
+
+  .drawer-loading span {
+    font-size: 0.85rem;
   }
 
   .drawer-message {

@@ -8,6 +8,7 @@
   import { buildBattleReviewLink } from '../systems/battleReview/urlState.js';
   import TabsShell from './battle-review/TabsShell.svelte';
   import EventsDrawer from './battle-review/EventsDrawer.svelte';
+  import TripleRingSpinner from './TripleRingSpinner.svelte';
 
   export let runId = '';
   export let battleIndex = 0;
@@ -41,10 +42,12 @@
     resultSummary,
     eventsOpen,
     eventsStatus,
+    summaryStatus,
     toggleEvents,
     shareableState,
     applyViewState,
-    updateProps
+    updateProps,
+    reducedMotion: reducedMotionStore
   } = state;
 
   setContext(BATTLE_REVIEW_CONTEXT_KEY, {
@@ -153,42 +156,53 @@
 <svelte:options accessors={true} />
 
 <div class="battle-review-panel">
-  <div class="battle-review-layout">
-    <header class="review-header">
-      <div class="header-metric">Result: {$resultSummary.result}</div>
-      <div class="header-metric">
-        Duration: {$resultSummary.duration != null ? `${$resultSummary.duration}s` : '—'}
-      </div>
-      <div class="header-metric">Events: {fmt($resultSummary.eventCount)}</div>
-      <div class="header-metric">Criticals: {fmt($summary?.critical_hits ? Object.values($summary.critical_hits).reduce((a, b) => a + b, 0) : 0)}</div>
-      <span class="spacer"></span>
-      <button
-        class="events-toggle"
-        class:busy={$eventsStatus === 'loading'}
-        on:click={toggleEvents}
-        type="button"
-      >
-        {$eventsOpen ? 'Hide' : 'Show'} Event Log
-      </button>
-      <button
-        class="copy-link"
-        type="button"
-        on:click={copyLogsLink}
-        aria-live="polite"
-      >
-        {#if copyState === 'copied'}
-          Link copied!
-        {:else if copyState === 'error'}
-          Copy failed
-        {:else}
-          Copy Logs Link
-        {/if}
-      </button>
-    </header>
+  {#if $summaryStatus === 'ready'}
+    <div class="battle-review-layout">
+      <header class="review-header">
+        <div class="header-metric">Result: {$resultSummary.result}</div>
+        <div class="header-metric">
+          Duration: {$resultSummary.duration != null ? `${$resultSummary.duration}s` : '—'}
+        </div>
+        <div class="header-metric">Events: {fmt($resultSummary.eventCount)}</div>
+        <div class="header-metric">Criticals: {fmt($summary?.critical_hits ? Object.values($summary.critical_hits).reduce((a, b) => a + b, 0) : 0)}</div>
+        <span class="spacer"></span>
+        <button
+          class="events-toggle"
+          class:busy={$eventsStatus === 'loading'}
+          on:click={toggleEvents}
+          type="button"
+        >
+          {$eventsOpen ? 'Hide' : 'Show'} Event Log
+        </button>
+        <button
+          class="copy-link"
+          type="button"
+          on:click={copyLogsLink}
+          aria-live="polite"
+        >
+          {#if copyState === 'copied'}
+            Link copied!
+          {:else if copyState === 'error'}
+            Copy failed
+          {:else}
+            Copy Logs Link
+          {/if}
+        </button>
+      </header>
 
-    <TabsShell />
-    <EventsDrawer />
-  </div>
+      <TabsShell />
+      <EventsDrawer />
+    </div>
+  {:else if $summaryStatus === 'error'}
+    <div class="status-banner error" role="alert">
+      Unable to load the battle summary. Please try again later.
+    </div>
+  {:else}
+    <div class="status-banner loading" role="status" aria-live="polite">
+      <TripleRingSpinner reducedMotion={$reducedMotionStore} />
+      <p>{$summaryStatus === 'loading' ? 'Loading battle summary…' : 'Preparing battle summary…'}</p>
+    </div>
+  {/if}
 </div>
 
 <style>
@@ -198,6 +212,33 @@
     flex: 1 1 auto;
     min-height: 0;
     width: 100%;
+  }
+
+  .status-banner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    padding: 3rem 1rem;
+    text-align: center;
+    color: #e2e8f0;
+    background: linear-gradient(0deg, rgba(148, 163, 184, 0.16), rgba(148, 163, 184, 0.08)), var(--glass-bg);
+    border: var(--glass-border);
+    box-shadow: var(--glass-shadow);
+    backdrop-filter: var(--glass-filter);
+  }
+
+  .status-banner.loading p {
+    margin: 0;
+    font-size: 0.95rem;
+    color: rgba(226, 232, 240, 0.85);
+  }
+
+  .status-banner.error {
+    color: #fecaca;
+    border-color: rgba(239, 68, 68, 0.55);
+    background: linear-gradient(0deg, rgba(239, 68, 68, 0.16), rgba(239, 68, 68, 0.05)), var(--glass-bg);
   }
 
   .battle-review-layout {
