@@ -53,6 +53,7 @@ async def resolve_rewards(
     battle_logger: BattleLogger | None,
     exp_reward: int,
     run_id: str | None,
+    effects_charge: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Assemble the battle victory payload including loot and choices."""
 
@@ -213,7 +214,9 @@ async def resolve_rewards(
         "action_queue": action_queue_snapshot,
         "ended": True,
     }
-    charges = _snapshots.get_effect_charges(run_id)
+    charges = effects_charge
+    if charges is None:
+        charges = _snapshots.get_effect_charges(run_id)
     if charges is not None:
         result["effects_charge"] = charges
     return result
