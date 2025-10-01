@@ -110,7 +110,7 @@ async def test_arcane_repeater_repeats_attack():
 
     dmg = loop.run_until_complete(foe.apply_damage(ally.atk, attacker=ally))
     with patch("random.random", return_value=0.1):
-        await BUS.emit_async("attack_used", ally, foe, dmg)
+        await BUS.emit_async("hit_landed", ally, foe, dmg, "attack")
         loop.run_until_complete(asyncio.sleep(0))
     expected = dmg + int(dmg * 0.5)
     assert foe.hp == 1000 - expected
