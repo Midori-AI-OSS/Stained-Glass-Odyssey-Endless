@@ -26,6 +26,7 @@
   import BackendShutdownOverlay from './BackendShutdownOverlay.svelte';
   import FloatingLoot from './FloatingLoot.svelte';
   import CombatViewer from './CombatViewer.svelte';
+  import { getReviewKeyTransition } from './reviewCache.js';
   import { rewardOpen as computeRewardOpen } from '../systems/viewportState.js';
   import { getBattleSummary } from '../systems/uiApi.js';
   import { motionStore } from '../systems/settingsStorage.js';
@@ -85,6 +86,7 @@
   let reviewReady = false;
   let reviewSummary = null;
   let reviewLoadingToken = 0;
+  let lastReviewKey = null;
   async function waitForReview(battleIndex, tokenRef) {
     // Retry a few times while backend finalizes logs
     const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -113,19 +115,41 @@
     reviewReady = true;
   }
 
-  $: if (reviewOpen) {
-    // Start loading for this battle
-    reviewReady = false;
-    reviewSummary = null;
-    const tokenRef = { value: ++reviewLoadingToken };
-    logOverlay('reviewOpen true - starting waitForReview', { token: tokenRef.value });
-    if (roomData?.battle_index > 0) {
-      waitForReview(roomData.battle_index, tokenRef);
+  $: {
+    const transition = getReviewKeyTransition({
+      reviewOpen,
+      reviewKey,
+      lastKey: lastReviewKey
+    });
+
+    if (transition.open) {
+      if (transition.shouldFetch) {
+        // Start loading for this battle only when key changes
+        reviewReady = false;
+        reviewSummary = null;
+        lastReviewKey = transition.nextKey;
+        const tokenRef = { value: ++reviewLoadingToken };
+        logOverlay('reviewOpen true - starting waitForReview', {
+          token: tokenRef.value,
+          reviewKey: transition.nextKey
+        });
+        if (roomData?.battle_index > 0) {
+          waitForReview(roomData.battle_index, tokenRef);
+        }
+      } else {
+        lastReviewKey = transition.nextKey;
+      }
+    } else {
+      if (transition.shouldReset && transition.clearedKey !== null) {
+        logOverlay('reviewOpen false - clearing review cache', {
+          lastReviewKey: transition.clearedKey
+        });
+      }
+      // Reset gate when review is not open
+      lastReviewKey = null;
+      reviewReady = false;
+      reviewSummary = null;
     }
-  } else {
-    // Reset gate when review is not open
-    reviewReady = false;
-    reviewSummary = null;
   }
 
   // Auto-skip Battle Review when skipBattleReview is enabled

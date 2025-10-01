@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 import { get } from 'svelte/store';
+import { getReviewKeyTransition } from '../src/lib/components/reviewCache.js';
 import {
   overlayStateStore,
   overlayBlocking,
@@ -66,5 +67,38 @@ describe('overlay state gating helpers', () => {
     });
     expect(get(overlayBlocking)).toBe(false);
     expect(get(haltSync)).toBe(false);
+  });
+
+  test('review key transition keeps review ready after repeated battle index', () => {
+    const reviewKey = 'run-1|5';
+    let lastKey = null;
+
+    let transition = getReviewKeyTransition({
+      reviewOpen: true,
+      reviewKey,
+      lastKey
+    });
+    expect(transition.shouldFetch).toBe(true);
+    if (transition.shouldReset) {
+      setReviewOverlayState({ open: true, ready: false });
+    }
+    lastKey = transition.nextKey;
+
+    setReviewOverlayState({ ready: true });
+    expect(overlayStateStore.getSnapshot().reviewReady).toBe(true);
+
+    transition = getReviewKeyTransition({
+      reviewOpen: true,
+      reviewKey,
+      lastKey
+    });
+    expect(transition.shouldFetch).toBe(false);
+    if (transition.shouldReset) {
+      setReviewOverlayState({ open: true, ready: false });
+    } else {
+      setReviewOverlayState({ open: true });
+    }
+
+    expect(overlayStateStore.getSnapshot().reviewReady).toBe(true);
   });
 });
