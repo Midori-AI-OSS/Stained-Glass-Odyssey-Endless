@@ -218,9 +218,12 @@
     opacity: 0.82;
   }
 
-  .effects-charge-container.reduced .charge-fill,
+  .effects-charge-container.reduced .charge-fill {
+    transition: none;
+  }
+
   @media (prefers-reduced-motion: reduce) {
-    .charge-fill {
+    .effects-charge-container .charge-fill {
       transition: none;
     }
   }
