@@ -5,6 +5,7 @@
     BATTLE_REVIEW_CONTEXT_KEY,
     createDefaultTimelineFilters
   } from '../../systems/battleReview/state.js';
+  import TripleRingSpinner from '../TripleRingSpinner.svelte';
 
   const context = getContext(BATTLE_REVIEW_CONTEXT_KEY);
   const {
@@ -20,7 +21,8 @@
     displayFoes,
     currentTab,
     eventsStatus,
-    loadEvents
+    loadEvents,
+    reducedMotion
   } = context;
 
   const FILTER_ID_PATTERN = /[^a-z0-9._:-]/gi;
@@ -438,6 +440,13 @@
     </button>
   </div>
 
+  {#if $eventsStatus === 'loading'}
+    <div class="events-loading" role="status" aria-live="polite">
+      <TripleRingSpinner reducedMotion={$reducedMotion} duration="1s" />
+      <span>Loading events…</span>
+    </div>
+  {/if}
+
   {#if projection?.hasData}
     <div class="timeline-summary">
       <div class="summary-chip">
@@ -635,6 +644,18 @@
     align-items: center;
     font-size: 0.78rem;
     color: rgba(226, 232, 240, 0.85);
+  }
+
+  .events-loading {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin: 0.5rem 0 0;
+    color: rgba(226, 232, 240, 0.85);
+  }
+
+  .events-loading span {
+    font-size: 0.85rem;
   }
 
   .control-group {
