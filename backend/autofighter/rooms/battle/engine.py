@@ -156,6 +156,8 @@ async def run_battle(
         except Exception:
             pass
 
+    effects_charge = _snapshots.get_effect_charges(run_id)
+
     await handle_battle_end(foes, combat_party.members)
 
     battle_result = (
@@ -267,7 +269,6 @@ async def run_battle(
             "items": [],
         }
         dealt, taken = _damage_totals()
-        effects_charge = _snapshots.get_effect_charges(run_id)
         if run_id is not None:
             try:
                 await log_battle_summary(
@@ -349,6 +350,7 @@ async def run_battle(
         battle_logger=battle_logger,
         exp_reward=exp_reward,
         run_id=run_id,
+        effects_charge=effects_charge,
     )
 
 
