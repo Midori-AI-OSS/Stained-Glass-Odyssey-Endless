@@ -1,10 +1,13 @@
 from dataclasses import dataclass
 from dataclasses import field
+import logging
+import random
 
-from autofighter.effects import EffectManager
-from autofighter.effects import create_stat_buff
 from autofighter.stats import BUS
 from plugins.cards._base import CardBase
+from plugins.cards._base import safe_async_task
+
+log = logging.getLogger(__name__)
 
 
 @dataclass
@@ -12,42 +15,60 @@ class SteadyGrip(CardBase):
     id: str = "steady_grip"
     name: str = "Steady Grip"
     stars: int = 1
-    effects: dict[str, float] = field(default_factory=lambda: {"atk": 0.03, "dodge_odds": 0.03})
-    about: str = "+3% ATK & +3% Dodge Odds; On applying a control effect (stun/silence), gain +2% ATK for next action"
+    effects: dict[str, float] = field(default_factory=lambda: {"atk": 0.05})
+    about: str = (
+        "+5% ATK; Critical hits can become super crits, dealing 4× total damage"
+    )
 
     async def apply(self, party) -> None:  # type: ignore[override]
         await super().apply(party)
 
-        async def _on_effect_applied(target, effect_name, duration, source):
-            # Check if source is one of our party members and effect is a control effect
-            if source in party.members:
-                effect_lower = effect_name.lower()
-                is_control = any(keyword in effect_lower for keyword in ['stun', 'silence', 'freeze', 'paralyze'])
+        async def _on_critical_hit(attacker, target, damage, action_name):
+            if attacker not in party.members:
+                return
 
-                if is_control:
-                    # Grant +2% ATK for next action
-                    effect_manager = getattr(source, 'effect_manager', None)
-                    if effect_manager is None:
-                        effect_manager = EffectManager(source)
-                        source.effect_manager = effect_manager
+            crit_rate = float(getattr(attacker, "crit_rate", 0.0) or 0.0)
+            super_crit_chance = min(max(crit_rate * 0.2, 0.0), 1.0)
+            roll = random.random()
+            log.debug(
+                "Steady Grip super crit roll: %s chance=%s for attacker=%s",
+                roll,
+                super_crit_chance,
+                getattr(attacker, "id", "unknown"),
+            )
+            if roll >= super_crit_chance:
+                return
 
-                    # Create temporary ATK buff
-                    atk_mod = create_stat_buff(
-                        source,
-                        name=f"{self.id}_control_atk",
-                        turns=1,
-                        atk_mult=1.02  # +2% ATK
-                    )
-                    effect_manager.add_modifier(atk_mod)
+            bonus_damage = int(damage * 3)
+            if bonus_damage <= 0:
+                return
 
-                    import logging
-                    log = logging.getLogger(__name__)
-                    log.debug("Steady Grip control bonus: +2%% ATK for next action to %s", source.id)
-                    await BUS.emit_async("card_effect", self.id, source, "control_atk_bonus", 2, {
-                        "atk_bonus": 2,
-                        "duration": 1,
-                        "control_effect": effect_name,
-                        "trigger_event": "control_applied"
-                    })
+            log.debug(
+                "Steady Grip applying bonus damage: %s to target=%s",
+                bonus_damage,
+                getattr(target, "id", "unknown"),
+            )
+            safe_async_task(
+                target.apply_damage(
+                    bonus_damage,
+                    attacker,
+                    trigger_on_hit=False,
+                    action_name="steady_grip_super_crit",
+                )
+            )
+            await BUS.emit_async(
+                "card_effect",
+                self.id,
+                attacker,
+                "super_crit",
+                bonus_damage,
+                {
+                    "trigger_event": "critical_hit",
+                    "bonus_damage": bonus_damage,
+                    "chance": super_crit_chance,
+                    "roll": roll,
+                    "action_name": action_name,
+                },
+            )
 
-        self.subscribe("effect_applied", _on_effect_applied)
+        self.subscribe("critical_hit", _on_critical_hit)

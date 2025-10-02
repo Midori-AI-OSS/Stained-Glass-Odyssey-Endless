@@ -16,8 +16,8 @@ import plugins.event_bus as event_bus_module
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 from autofighter.stats import BUS
 from autofighter.stats import Stats
-from plugins.effects.critical_boost import CriticalBoost
 from plugins.characters._base import PlayerBase
+from plugins.effects.critical_boost import CriticalBoost
 
 NEW_CARDS: list[tuple[str, dict[str, float]]] = [
     ("lightweight_boots", {"dodge_odds": 0.03}),
@@ -29,11 +29,11 @@ NEW_CARDS: list[tuple[str, dict[str, float]]] = [
     ("rejuvenating_tonic", {"regain": 0.04}),
     ("adamantine_band", {"max_hp": 0.04}),
     ("precision_sights", {"crit_damage": 0.04}),
+    ("steady_grip", {"atk": 0.05}),
     ("inspiring_banner", {"atk": 0.02, "defense": 0.02}),
     ("tactical_kit", {"atk": 0.02, "max_hp": 0.02}),
     ("bulwark_totem", {"defense": 0.02, "max_hp": 0.02}),
     ("farsight_scope", {"crit_rate": 0.03}),
-    ("steady_grip", {"atk": 0.03, "dodge_odds": 0.03}),
     ("coated_armor", {"mitigation": 0.03, "defense": 0.03}),
     ("swift_bandanna", {"crit_rate": 0.03, "dodge_odds": 0.03}),
     ("reinforced_cloak", {"defense": 0.03, "effect_resistance": 0.03}),
