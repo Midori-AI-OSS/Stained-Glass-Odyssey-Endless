@@ -1,9 +1,50 @@
 <script>
+  import { fade, fly } from 'svelte/transition';
+  import { cubicOut } from 'svelte/easing';
+  import { onDestroy } from 'svelte';
+  import { browser } from '$app/environment';
+
   import StarStorm from './StarStorm.svelte';
   export let padding = '0.5rem';
-  export let reducedMotion = false;
+  export let reducedMotion;
   export let starColor = '';
   export let style = '';
+
+  const TRANSITION_DURATION = 220;
+
+  let prefersReducedMotion = false;
+
+  if (browser) {
+    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+    const updatePreference = (event) => {
+      prefersReducedMotion = event.matches;
+    };
+
+    updatePreference(mediaQuery);
+
+    mediaQuery.addEventListener?.('change', updatePreference);
+    mediaQuery.addListener?.(updatePreference);
+
+    onDestroy(() => {
+      mediaQuery.removeEventListener?.('change', updatePreference);
+      mediaQuery.removeListener?.(updatePreference);
+    });
+  }
+
+  $: shouldReduceMotion = reducedMotion ?? prefersReducedMotion;
+
+  $: flyInOptions = shouldReduceMotion
+    ? { duration: 0 }
+    : { y: -12, duration: TRANSITION_DURATION, easing: cubicOut };
+
+  $: flyOutOptions = shouldReduceMotion
+    ? { duration: 0 }
+    : { y: 12, duration: TRANSITION_DURATION, easing: cubicOut };
+
+  $: fadeOptions = shouldReduceMotion
+    ? { duration: 0 }
+    : { duration: TRANSITION_DURATION, easing: cubicOut };
 </script>
 
 <style>
@@ -24,8 +65,6 @@
     box-shadow: var(--glass-shadow);
     border: var(--glass-border);
     backdrop-filter: var(--glass-filter);
-    animation: panel-slide-fade 220ms ease-out both;
-    will-change: transform, opacity;
   }
 
   /* Themed scrollbars for dark UI */
@@ -49,35 +88,17 @@
   .panel::-webkit-scrollbar-thumb:hover {
     background: linear-gradient(180deg, rgba(215, 215, 225, 0.7), rgba(175, 175, 190, 0.7));
   }
-
-  .panel.motion-disabled {
-    animation: none;
-  }
-
-  @media (prefers-reduced-motion: reduce) {
-    .panel {
-      animation: none;
-    }
-  }
-
-  @keyframes panel-slide-fade {
-    from {
-      opacity: 0;
-      transform: translateY(-0.75rem);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
 </style>
 
 <div
   {...$$restProps}
   class={`panel ${$$props.class || ''}`}
-  class:motion-disabled={reducedMotion}
   style={`--padding: ${padding}; ${style}`}
+  in:fly={flyInOptions}
+  in:fade={fadeOptions}
+  out:fly={flyOutOptions}
+  out:fade={fadeOptions}
 >
-  <StarStorm color={starColor} {reducedMotion} />
+  <StarStorm color={starColor} reducedMotion={shouldReduceMotion} />
   <slot />
 </div>
