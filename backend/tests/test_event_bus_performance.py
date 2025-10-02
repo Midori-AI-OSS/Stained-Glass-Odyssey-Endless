@@ -125,7 +125,7 @@ class TestEventBusPerformance:
                 await BUS.emit_async(
                     "relic_effect",
                     "aftertaste",
-                    attacker,
+                    target,
                     "aftertaste",
                     25,
                     {
@@ -135,6 +135,7 @@ class TestEventBusPerformance:
                         "random_damage_type": "Fire",
                         "actual_damage": 25,
                     },
+                    attacker,
                 )
 
                 # Then emits damage_dealt when damage is applied

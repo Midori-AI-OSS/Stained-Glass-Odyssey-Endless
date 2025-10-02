@@ -144,6 +144,9 @@ async def test_card_and_relic_events_record_snapshot_metadata(monkeypatch):
 
     assert calls == [expected_multiplier, expected_multiplier]
 
+    attacker = Stats()
+    attacker.id = "attacker"
+
     await BUS.emit_async(
         "relic_effect",
         "aftertaste",
@@ -156,6 +159,7 @@ async def test_card_and_relic_events_record_snapshot_metadata(monkeypatch):
             "base_damage": 18,
             "actual_damage": 21,
         },
+        attacker,
     )
 
     events = list(battle_snapshots[run_id].get("recent_events", []))
@@ -163,9 +167,13 @@ async def test_card_and_relic_events_record_snapshot_metadata(monkeypatch):
     aftertaste_event = events[-1]
     assert aftertaste_event["type"] == "relic_effect"
     assert aftertaste_event["amount"] == 21
+    assert aftertaste_event["source_id"] == attacker.id
     assert aftertaste_event["target_id"] == member.id
     aftertaste_metadata = aftertaste_event.get("metadata", {})
     assert aftertaste_metadata["relic_id"] == "aftertaste"
     assert aftertaste_metadata["effect"] == "aftertaste"
     assert aftertaste_metadata["details"]["effect_label"] == "aftertaste"
     assert aftertaste_metadata["details"]["effect_type"] == "aftertaste"
+
+    assert battle_snapshots[run_id]["active_id"] == attacker.id
+    assert battle_snapshots[run_id]["active_target_id"] == member.id

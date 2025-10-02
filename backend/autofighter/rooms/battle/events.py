@@ -500,9 +500,10 @@ async def _on_relic_effect(
     effect_type: str | None = None,
     amount: int | float | None = None,
     details: dict[str, Any] | None = None,
+    attacker: Stats | None = None,
     *_: Any,
 ) -> None:
-    run_id = _resolve_run_id(recipient)
+    run_id = _resolve_run_id(recipient, attacker)
     if not run_id:
         return
     metadata = {
@@ -512,21 +513,24 @@ async def _on_relic_effect(
         "details": details,
     }
     target = recipient if isinstance(recipient, Stats) else None
+    source = attacker if isinstance(attacker, Stats) else None
     _record_event(
         run_id,
         event_type="relic_effect",
-        source=None,
+        source=source,
         target=target,
         amount=amount,
         metadata=metadata,
     )
+    kwargs: dict[str, Any] = {}
+    if source is not None:
+        kwargs["active_id"] = getattr(source, "id", None)
     if target is not None:
-        ident = getattr(target, "id", None)
-        mutate_snapshot_overlay(
-            run_id,
-            active_id=ident,
-            active_target_id=ident,
-        )
+        kwargs["active_target_id"] = getattr(target, "id", None)
+        if "active_id" not in kwargs:
+            kwargs["active_id"] = getattr(target, "id", None)
+    if kwargs:
+        mutate_snapshot_overlay(run_id, **kwargs)
     await pace_sleep(YIELD_MULTIPLIER)
 
 
