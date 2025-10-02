@@ -94,7 +94,7 @@ class Aftertaste:
             await BUS.emit_async(
                 "relic_effect",
                 "aftertaste",
-                attacker,
+                target,
                 "aftertaste",
                 amount,
                 {
@@ -108,6 +108,7 @@ class Aftertaste:
                     ),
                     "actual_damage": amount,
                 },
+                attacker,
             )
 
             dmg = await target.apply_damage(amount, temp_attacker, action_name="Aftertaste")

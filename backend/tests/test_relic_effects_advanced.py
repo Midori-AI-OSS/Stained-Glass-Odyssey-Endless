@@ -115,10 +115,16 @@ async def test_killer_instinct_grants_extra_turn():
 
     speed_events: list[tuple[int, dict[str, object]]] = []
 
-    def _capture_relic_effect(relic_id, *_args):
+    def _capture_relic_effect(
+        relic_id,
+        recipient,
+        event_name,
+        value,
+        payload,
+        *_extra,
+    ):
         if relic_id != "killer_instinct":
             return
-        _, event_name, value, payload = _args
         if event_name == "kill_speed_boost":
             speed_events.append((value, payload))
 
