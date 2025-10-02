@@ -16,7 +16,13 @@ class LightweightBoots(CardBase):
     async def apply(self, party) -> None:  # type: ignore[override]
         await super().apply(party)
 
-        async def _on_dodge(dodger, attacker, original_damage, *_extra):
+        async def _on_dodge(
+            dodger,
+            attacker,
+            raw_amount,
+            action_name,
+            details=None,
+        ):
             # Check if dodger is one of our party members
             if dodger in party.members:
                 # Heal 2% HP
@@ -45,6 +51,9 @@ class LightweightBoots(CardBase):
                             {
                                 "heal_amount": heal_amount,
                                 "trigger_event": "dodge",
+                                "raw_amount": raw_amount,
+                                "action_name": action_name,
+                                "details": details or {},
                             },
                         )
                     except Exception as e:

@@ -16,6 +16,11 @@ passive abilities:
 - `target_acquired` – dispatched immediately after a combatant selects a
   target. The acting entity and chosen target are provided so clients can
   highlight the intended victim before damage resolves.
+- `dodge` – dispatched from `Stats.apply_damage` when an incoming attack is
+  avoided. Subscribers receive the dodging entity, the attacker (or `None` if
+  environmental), the raw damage amount that would have been applied, the
+  resolved action name, and a metadata dictionary containing the dodger and
+  attacker ids along with the emitting source (`{"source": "stats.apply_damage"}`).
 
 Damage type ultimates are invoked directly from `rooms/battle/core.py` when
 `ultimate_ready` is set. Each damage type plugin is responsible for consuming
