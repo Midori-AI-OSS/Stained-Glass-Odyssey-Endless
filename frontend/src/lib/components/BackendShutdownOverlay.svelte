@@ -6,6 +6,7 @@
   export let message = 'The backend encountered a critical error.';
   export let traceback = '';
   export let status = 500;
+  export let reducedMotion = false;
 
   const dispatch = createEventDispatcher();
 
@@ -39,7 +40,7 @@
   }
 </script>
 
-<PopupWindow title="Backend Shutting Down" on:close={close}>
+<PopupWindow title="Backend Shutting Down" {reducedMotion} on:close={close}>
   <div class="content">
     <p class="lead">The backend reported a critical error (status {status}) and is shutting down.</p>
     <p>
