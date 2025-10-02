@@ -136,12 +136,17 @@
     width: clamp(220px, 22vw, 280px);
     max-width: 320px;
     padding: 0.9rem 1rem;
-    border-radius: 18px;
-    background: color-mix(in srgb, rgba(18, 20, 38, 0.9) 82%, var(--accent, #8ac) 18%);
-    border: 1px solid color-mix(in srgb, rgba(255, 255, 255, 0.45) 70%, var(--accent, #8ac) 30%);
-    box-shadow: 0 18px 45px rgba(5, 8, 20, 0.45);
+    border-radius: 0;
+    background: linear-gradient(
+        0deg,
+        color-mix(in oklab, var(--accent, #8ac) 18%, transparent 82%),
+        color-mix(in oklab, var(--accent, #8ac) 6%, transparent 94%)
+      ),
+      var(--glass-bg);
+    border: var(--glass-border);
+    box-shadow: var(--glass-shadow);
     color: rgba(248, 250, 255, 0.95);
-    backdrop-filter: blur(18px) saturate(130%);
+    backdrop-filter: var(--glass-filter);
   }
 
   .sr-only {
@@ -196,17 +201,28 @@
   .charge-progress {
     position: relative;
     width: 100%;
-    height: 0.55rem;
-    border-radius: 999px;
-    background: rgba(255, 255, 255, 0.08);
-    border: 1px solid rgba(255, 255, 255, 0.16);
+    height: 0.6rem;
+    border-radius: 0;
+    background: linear-gradient(
+        0deg,
+        color-mix(in oklab, var(--accent, #8ac) 12%, transparent 88%),
+        color-mix(in oklab, var(--accent, #8ac) 4%, transparent 96%)
+      ),
+      var(--glass-bg);
+    border: 1px solid color-mix(in oklab, var(--accent, #8ac) 28%, transparent 72%);
+    box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--accent, #8ac) 18%, transparent 82%);
     overflow: hidden;
   }
 
   .charge-fill {
     height: 100%;
-    background: linear-gradient(90deg, color-mix(in srgb, var(--accent, #8ac) 55%, #fff 45%), rgba(255, 255, 255, 0.85));
-    box-shadow: 0 0 12px color-mix(in srgb, var(--accent, #8ac) 55%, rgba(255, 255, 255, 0.85) 45%);
+    background: linear-gradient(
+      90deg,
+      color-mix(in oklab, var(--accent, #8ac) 65%, white 35%),
+      color-mix(in oklab, var(--accent, #8ac) 35%, white 65%)
+    );
+    box-shadow: 0 0 12px color-mix(in oklab, var(--accent, #8ac) 55%, transparent 45%);
+    border-right: 1px solid color-mix(in oklab, var(--accent, #8ac) 45%, transparent 55%);
     transition: width 260ms cubic-bezier(0.25, 0.9, 0.3, 1);
   }
 
