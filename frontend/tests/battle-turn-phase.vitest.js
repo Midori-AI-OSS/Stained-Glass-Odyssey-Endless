@@ -113,6 +113,27 @@ describe('BattleView turn phase handling', () => {
     vi.useRealTimers();
   });
 
+  it('requests snapshots with the orchestrator payload shape', async () => {
+    const snapshot = buildSnapshot({ turnPhase: { state: 'start' } });
+    roomAction.mockImplementation(() => Promise.resolve(clone(snapshot)));
+
+    render(BattleView, {
+      props: {
+        runId: 'snapshot-run',
+        active: true,
+        framerate: 60,
+      },
+    });
+
+    await settle();
+
+    await waitFor(() => {
+      expect(roomAction).toHaveBeenCalled();
+    });
+
+    expect(roomAction).toHaveBeenCalledWith('0', { action: 'snapshot', run_id: 'snapshot-run' });
+  });
+
   it('persists attacker targeting through start/resolve and clears on end', async () => {
     const statusPhaseTemplate = {
       phase: 'dot',
