@@ -25,6 +25,15 @@ describe('Battle event floaters', () => {
     expect(floaterSource).toContain('critical = Boolean');
   });
 
+  test('includes effect_label fallback so aftertaste labels render in floaters', () => {
+    const labelBlockStart = floaterSource.indexOf('const LABEL_FALLBACK_KEYS');
+    expect(labelBlockStart).toBeGreaterThan(-1);
+    const labelBlockEnd = floaterSource.indexOf('];', labelBlockStart);
+    expect(labelBlockEnd).toBeGreaterThan(labelBlockStart);
+    const labelBlock = floaterSource.slice(labelBlockStart, labelBlockEnd);
+    expect(labelBlock).toContain("'effect_label'");
+  });
+
   test('staggered floater scheduling uses index-based offsets', () => {
     const anchor = 'list.forEach((raw, i) => {';
     const start = floaterSource.indexOf(anchor);

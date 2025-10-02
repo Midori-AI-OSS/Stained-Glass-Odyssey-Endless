@@ -95,8 +95,8 @@ class RustyBuckle(RelicBase):
         _update_charge_snapshot()
 
         async def _turn_start(entity) -> None:
-            from plugins.characters.foe_base import FoeBase
             from plugins.characters._base import PlayerBase
+            from plugins.characters.foe_base import FoeBase
 
             current_state = getattr(party, "_rusty_buckle_state", state)
             if entity is None or not isinstance(entity, (PlayerBase, FoeBase)):
@@ -166,6 +166,7 @@ class RustyBuckle(RelicBase):
                     "aftertaste_trigger",
                     dmg,
                     {
+                        "effect_label": "aftertaste",
                         "trigger_count": triggers,
                         "hp_lost_percentage": lost_pct * 100,
                         "aftertaste_hits": hits,
