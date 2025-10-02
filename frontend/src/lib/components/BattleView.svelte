@@ -1522,7 +1522,7 @@
     dispatch('snapshot-start');
     let haltedDuringFetch = false;
     try {
-      const snap = await roomAction(runId, 'battle', 'snapshot');
+      const snap = await roomAction('0', { action: 'snapshot', run_id: runId });
       if (isSyncHalted()) {
         haltedDuringFetch = true;
         return;
