@@ -26,7 +26,8 @@ class ReinforcedCloak(CardBase):
             if starting_turns is None or starting_turns < 3:
                 return
 
-            if details.get("effect_type") != "stat_modifier":
+            effect_type = details.get("effect_type")
+            if effect_type not in {"stat_modifier", "dot"}:
                 return
 
             effect_id = details.get("effect_id")
@@ -34,14 +35,16 @@ class ReinforcedCloak(CardBase):
                 return
 
             effect_manager = getattr(entity, "effect_manager", None)
-            if effect_manager is None or not hasattr(effect_manager, "mods"):
+            pool_name = "mods" if effect_type == "stat_modifier" else "dots"
+            if effect_manager is None or not hasattr(effect_manager, pool_name):
                 self.cleanup_subscriptions()
                 return
 
+            pool = getattr(effect_manager, pool_name)
             modifier = next(
                 (
                     mod
-                    for mod in reversed(effect_manager.mods)
+                    for mod in reversed(pool)
                     if getattr(mod, "id", None) == effect_id
                 ),
                 None,
@@ -50,13 +53,18 @@ class ReinforcedCloak(CardBase):
             if modifier is None or not hasattr(modifier, "turns"):
                 return
 
-            deltas = getattr(modifier, "deltas", None) or {}
-            multipliers = getattr(modifier, "multipliers", None) or {}
-            has_negative_delta = any(value < 0 for value in deltas.values())
-            has_negative_multiplier = any(value < 1 for value in multipliers.values())
+            if effect_type == "stat_modifier":
+                deltas = getattr(modifier, "deltas", None) or {}
+                multipliers = getattr(modifier, "multipliers", None) or {}
+                has_negative_delta = any(value < 0 for value in deltas.values())
+                has_negative_multiplier = any(value < 1 for value in multipliers.values())
 
-            if not has_negative_delta and not has_negative_multiplier:
-                return
+                if not has_negative_delta and not has_negative_multiplier:
+                    return
+            else:
+                damage = getattr(modifier, "damage", None)
+                if damage is not None and damage <= 0:
+                    return
 
             if random.random() >= 0.30:
                 return
