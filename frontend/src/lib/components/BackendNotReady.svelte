@@ -4,6 +4,7 @@
 
   export let apiBase = '';
   export let message = 'Backend is not ready yet.';
+  export let reducedMotion = false;
 
   const dispatch = createEventDispatcher();
 
@@ -16,7 +17,7 @@
   }
 </script>
 
-<PopupWindow title="Backend Not Ready" on:close={close}>
+<PopupWindow title="Backend Not Ready" {reducedMotion} on:close={close}>
   <div style="padding: 0.5rem 0.25rem; line-height: 1.4;">
     <p>The Web UI cannot reach the backend.</p>
     <p><strong>API:</strong> {apiBase}</p>

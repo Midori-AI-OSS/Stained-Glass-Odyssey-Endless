@@ -21,7 +21,11 @@
 </script>
 
 {#if bareSurface}
-  <div class="box" style={`--max-w: ${maxWidth}; --max-h: ${maxHeight}` }>
+  <div
+    class="box"
+    class:motion-enabled={!reducedMotion}
+    style={`--max-w: ${maxWidth}; --max-h: ${maxHeight}` }
+  >
     <div class="inner">
       <div class="content-wrap">
         <MenuPanel class="panel-body" {padding} {reducedMotion}>
@@ -41,7 +45,11 @@
   </div>
 {:else}
   <OverlaySurface {zIndex} noScroll={surfaceNoScroll}>
-    <div class="box" style={`--max-w: ${maxWidth}; --max-h: ${maxHeight}` }>
+    <div
+      class="box"
+      class:motion-enabled={!reducedMotion}
+      style={`--max-w: ${maxWidth}; --max-h: ${maxHeight}` }
+    >
       <div class="inner">
         <div class="content-wrap">
           <MenuPanel class="panel-body" {padding} {reducedMotion}>
@@ -99,6 +107,32 @@
     flex-direction: column;
     /* allow children to shrink and scroll within */
     min-height: 0;
+    transform-origin: center;
+  }
+
+  .box.motion-enabled {
+    animation: popup-bounce-in 210ms ease-out both;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .box.motion-enabled {
+      animation: none;
+    }
+  }
+
+  @keyframes popup-bounce-in {
+    0% {
+      transform: scale(0.92);
+      opacity: 0;
+    }
+    65% {
+      transform: scale(1.02);
+      opacity: 1;
+    }
+    100% {
+      transform: scale(1);
+      opacity: 1;
+    }
   }
 
   .inner { display: flex; flex-direction: column; min-height: 0; }

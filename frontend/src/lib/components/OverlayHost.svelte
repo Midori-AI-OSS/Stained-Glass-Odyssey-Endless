@@ -238,7 +238,7 @@
 {/if}
 
 {#if $overlayView === 'defeat'}
-  <PopupWindow title="Defeat" on:close={() => dispatch('back')}>
+  <PopupWindow title="Defeat" reducedMotion={overlayReducedMotion} on:close={() => dispatch('back')}>
     <div style="padding: 0.5rem 0.25rem; line-height: 1.4;">
       <p>Your party was defeated.</p>
       <p>You have been returned to the main menu.</p>
@@ -253,6 +253,7 @@
   <ErrorOverlay
     message={$overlayData.message || 'An unexpected error occurred.'}
     traceback={$overlayData.traceback || ''}
+    reducedMotion={overlayReducedMotion}
     on:close={() => dispatch('back')}
   />
 {/if}
@@ -262,14 +263,15 @@
     message={$overlayData.message || 'A critical backend error occurred.'}
     traceback={$overlayData.traceback || ''}
     status={$overlayData.status || 500}
+    reducedMotion={overlayReducedMotion}
     on:close={() => dispatch('back')}
   />
 {/if}
 
 {#if $overlayView === 'run-choose'}
-  <PopupWindow title="Resume or Start Run" maxWidth="720px" zIndex={1300} on:close={() => dispatch('back')}>
+  <PopupWindow title="Resume or Start Run" maxWidth="720px" zIndex={1300} reducedMotion={overlayReducedMotion} on:close={() => dispatch('back')}>
     <RunChooser runs={$overlayData.runs || []}
-      reducedMotion={simplifiedTransitions ? true : effectiveReducedMotion}
+      reducedMotion={overlayReducedMotion}
       on:choose={(e) => dispatch('loadRun', e.detail.run)}
       on:load={(e) => dispatch('loadRun', e.detail.run)}
       on:startNew={() => dispatch('startNewRun')}
@@ -281,6 +283,7 @@
   <BackendNotReady
     apiBase={$overlayData.apiBase || ''}
     message={$overlayData.message || 'Backend is not ready yet.'}
+    reducedMotion={overlayReducedMotion}
     on:close={() => dispatch('back')}
   />
 {/if}
@@ -308,6 +311,7 @@
     title="Warp Mechanics"
     maxWidth="640px"
     zIndex={1350}
+    reducedMotion={overlayReducedMotion}
     on:close={() => dispatch('back')}
   >
     <div class="warp-info-body">
@@ -351,7 +355,7 @@
 {/if}
 
 {#if $overlayView === 'inventory'}
-  <PopupWindow title="Inventory" padding="0" maxWidth="1200px" zIndex={1300} on:close={() => dispatch('back')}>
+  <PopupWindow title="Inventory" padding="0" maxWidth="1200px" zIndex={1300} reducedMotion={overlayReducedMotion} on:close={() => dispatch('back')}>
     <Inventory cards={roomData?.cards ?? []} relics={roomData?.relics ?? []} />
   </PopupWindow>
 {/if}
@@ -381,7 +385,7 @@
 {/if}
 
 {#if $overlayView === 'settings'}
-  <PopupWindow title="Settings" maxWidth="960px" maxHeight="90vh" zIndex={1300} on:close={() => dispatch('back')}>
+  <PopupWindow title="Settings" maxWidth="960px" maxHeight="90vh" zIndex={1300} reducedMotion={overlayReducedMotion} on:close={() => dispatch('back')}>
     <SettingsMenu
       {sfxVolume}
       {musicVolume}
@@ -403,7 +407,7 @@
 {/if}
 
 {#if $overlayView === 'guidebook'}
-  <PopupWindow title="Guidebook" maxWidth="1200px" maxHeight="90vh" zIndex={1300} on:close={() => dispatch('back')}>
+  <PopupWindow title="Guidebook" maxWidth="1200px" maxHeight="90vh" zIndex={1300} reducedMotion={overlayReducedMotion} on:close={() => dispatch('back')}>
     <Guidebook />
   </PopupWindow>
 {/if}
@@ -415,6 +419,7 @@
     maxHeight="100%"
     zIndex={1100}
     surfaceNoScroll={true}
+    reducedMotion={overlayReducedMotion}
     on:close={() => { /* block closing while choices remain */ }}
   >
     <RewardOverlay

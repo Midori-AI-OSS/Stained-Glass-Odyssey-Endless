@@ -5,6 +5,7 @@
 
   export let message = '';
   export let traceback = '';
+  export let reducedMotion = false;
 
   const dispatch = createEventDispatcher();
   let reportUrl = '';
@@ -20,7 +21,7 @@
   }
 </script>
 
-<PopupWindow title="Error" on:close={close}>
+<PopupWindow title="Error" {reducedMotion} on:close={close}>
   <div style="padding: 0.5rem 0.25rem; line-height: 1.4;">
     <pre>{message}\n{traceback}</pre>
     <div class="stained-glass-row" style="justify-content: flex-end; margin-top: 0.75rem;">
