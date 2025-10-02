@@ -122,12 +122,20 @@ class TestEventBusPerformance:
             # Simulate initial attack triggering multiple Aftertaste effects
             for i in range(aftertaste_count):
                 # Each Aftertaste effect emits a relic_effect event
-                await BUS.emit_async("relic_effect", "aftertaste", attacker, "damage", 25, {
-                    "effect_type": "aftertaste",
-                    "base_damage": 25,
-                    "random_damage_type": "Fire",
-                    "actual_damage": 25
-                })
+                await BUS.emit_async(
+                    "relic_effect",
+                    "aftertaste",
+                    attacker,
+                    "aftertaste",
+                    25,
+                    {
+                        "effect_label": "aftertaste",
+                        "effect_type": "aftertaste",
+                        "base_damage": 25,
+                        "random_damage_type": "Fire",
+                        "actual_damage": 25,
+                    },
+                )
 
                 # Then emits damage_dealt when damage is applied
                 await BUS.emit_async("damage_dealt", attacker, target, 25, "effect", "aftertaste", "Fire", "Aftertaste (Fire)")

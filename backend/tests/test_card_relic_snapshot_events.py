@@ -143,3 +143,29 @@ async def test_card_and_relic_events_record_snapshot_metadata(monkeypatch):
     assert relic_metadata["details"] == {"source": "shop"}
 
     assert calls == [expected_multiplier, expected_multiplier]
+
+    await BUS.emit_async(
+        "relic_effect",
+        "aftertaste",
+        member,
+        "aftertaste",
+        21,
+        {
+            "effect_label": "aftertaste",
+            "effect_type": "aftertaste",
+            "base_damage": 18,
+            "actual_damage": 21,
+        },
+    )
+
+    events = list(battle_snapshots[run_id].get("recent_events", []))
+    assert len(events) == 3
+    aftertaste_event = events[-1]
+    assert aftertaste_event["type"] == "relic_effect"
+    assert aftertaste_event["amount"] == 21
+    assert aftertaste_event["target_id"] == member.id
+    aftertaste_metadata = aftertaste_event.get("metadata", {})
+    assert aftertaste_metadata["relic_id"] == "aftertaste"
+    assert aftertaste_metadata["effect"] == "aftertaste"
+    assert aftertaste_metadata["details"]["effect_label"] == "aftertaste"
+    assert aftertaste_metadata["details"]["effect_type"] == "aftertaste"

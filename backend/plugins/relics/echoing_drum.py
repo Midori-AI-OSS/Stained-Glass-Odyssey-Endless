@@ -89,6 +89,7 @@ class EchoingDrum(RelicBase):
                     "aftertaste_trigger",
                     total_hits,
                     {
+                        "effect_label": "aftertaste",
                         "original_amount": amount,
                         "total_chance": total_chance,
                         "guaranteed_hits": guaranteed_hits,

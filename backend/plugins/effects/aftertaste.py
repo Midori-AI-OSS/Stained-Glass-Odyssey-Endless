@@ -91,12 +91,24 @@ class Aftertaste:
 
             # Emit event before applying damage to track aftertaste as relic effect
             from autofighter.stats import BUS
-            await BUS.emit_async("relic_effect", "aftertaste", attacker, "damage", amount, {
-                "effect_type": "aftertaste",
-                "base_damage": self.base_pot,
-                "random_damage_type": random_damage_type.id if hasattr(random_damage_type, 'id') else str(random_damage_type),
-                "actual_damage": amount
-            })
+            await BUS.emit_async(
+                "relic_effect",
+                "aftertaste",
+                attacker,
+                "aftertaste",
+                amount,
+                {
+                    "effect_label": "aftertaste",
+                    "effect_type": "aftertaste",
+                    "base_damage": self.base_pot,
+                    "random_damage_type": (
+                        random_damage_type.id
+                        if hasattr(random_damage_type, "id")
+                        else str(random_damage_type)
+                    ),
+                    "actual_damage": amount,
+                },
+            )
 
             dmg = await target.apply_damage(amount, temp_attacker, action_name="Aftertaste")
             results.append(dmg)
