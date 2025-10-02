@@ -316,9 +316,6 @@
 </MenuPanel>
 
 <style>
-  .warp-menu {
-    --glass-border: 1.5px solid rgba(0,0,0,0.6);
-  }
   /* Header styling matching Guidebook/Inventory */
   .warp-header {
     display: flex;
@@ -376,15 +373,17 @@
     padding: 0.55rem 0.8rem;
     color: #fff;
     background: rgba(255,255,255,0.10);
-    border: 1px solid rgba(255,255,255,0.2);
+    border: var(--glass-border);
     cursor: pointer;
-    transition: all 0.15s ease;
+    transition: background 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+    box-shadow: 0 1px 4px 0 rgba(0,40,120,0.10);
     font-size: 0.9rem;
   }
 
   .header-actions button:hover {
-    background: rgba(255,255,255,0.15);
-    border-color: rgba(120,180,255,0.5);
+    background: rgba(120,180,255,0.22);
+    border-color: rgba(120,180,255,0.55);
+    box-shadow: 0 2px 8px 0 rgba(0,40,120,0.18);
   }
 
   .header-actions button:disabled {
@@ -393,7 +392,7 @@
   }
 
   .info-btn {
-    border-radius: 6px;
+    border-radius: 0;
   }
 
   .info-label {
@@ -471,9 +470,9 @@
 
   /* Featured character section */
   .featured-character {
-    background: rgba(255,255,255,0.05);
-    border: 1px solid rgba(255,255,255,0.2);
-    border-radius: 8px;
+    background: rgba(255,255,255,0.10);
+    border: var(--glass-border);
+    border-radius: 0;
     padding: 1.5rem;
     margin-bottom: 1.5rem;
   }
@@ -508,9 +507,9 @@
     justify-content: center;
     width: 64px;
     height: 64px;
-    background: rgba(255,255,255,0.1);
-    border-radius: 8px;
-    border: 1px solid rgba(255,255,255,0.2);
+    background: rgba(255,255,255,0.10);
+    border-radius: 0;
+    border: var(--glass-border);
     color: rgba(255,255,255,0.7);
     position: relative;
     overflow: hidden;
@@ -560,9 +559,9 @@
 
   /* Standard info section */
   .standard-info {
-    background: rgba(255,255,255,0.05);
-    border: 1px solid rgba(255,255,255,0.2);
-    border-radius: 8px;
+    background: rgba(255,255,255,0.10);
+    border: var(--glass-border);
+    border-radius: 0;
     padding: 1.5rem;
     margin-bottom: 1.5rem;
   }
@@ -595,24 +594,25 @@
     align-items: center;
     gap: 0.25rem;
     padding: 1rem;
-    background: rgba(120,180,255,0.2);
-    border: 2px solid rgba(120,180,255,0.5);
+    background: rgba(255,255,255,0.10);
+    border: var(--glass-border);
     color: #fff;
     cursor: pointer;
-    transition: all 0.2s ease;
-    border-radius: 8px;
+    transition: background 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    border-radius: 0;
+    box-shadow: 0 1px 4px 0 rgba(0,40,120,0.10);
   }
 
   .pull-btn:hover:not(:disabled) {
-    background: rgba(120,180,255,0.3);
-    border-color: rgba(120,180,255,0.7);
-    transform: translateY(-2px);
+    background: rgba(120,180,255,0.22);
+    border-color: rgba(120,180,255,0.55);
+    box-shadow: 0 2px 8px 0 rgba(0,40,120,0.18);
   }
 
   .pull-btn:disabled {
     opacity: 0.5;
     cursor: not-allowed;
-    transform: none;
+    box-shadow: none;
   }
 
   .pull-text {
@@ -633,18 +633,20 @@
 
   .close-btn {
     padding: 0.75rem 2rem;
-    background: rgba(255,255,255,0.1);
-    border: 2px solid rgba(255,255,255,0.3);
+    background: rgba(255,255,255,0.10);
+    border: var(--glass-border);
     color: #fff;
     cursor: pointer;
-    transition: all 0.2s ease;
-    border-radius: 8px;
+    transition: background 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    border-radius: 0;
+    box-shadow: 0 1px 4px 0 rgba(0,40,120,0.10);
     font-size: 1rem;
   }
 
   .close-btn:hover {
-    background: rgba(255,255,255,0.15);
-    border-color: rgba(255,255,255,0.5);
+    background: rgba(120,180,255,0.22);
+    border-color: rgba(120,180,255,0.55);
+    box-shadow: 0 2px 8px 0 rgba(0,40,120,0.18);
   }
 
   /* Mobile responsiveness */
