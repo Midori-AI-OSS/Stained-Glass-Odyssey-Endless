@@ -87,6 +87,105 @@
     return 'damage';
   }
 
+  function matchesAftertaste(value) {
+    if (value === undefined || value === null) return false;
+    try {
+      return String(value).toLowerCase().includes('aftertaste');
+    } catch {
+      return false;
+    }
+  }
+
+  function isAftertasteEvent(evt) {
+    if (!evt || typeof evt !== 'object') return false;
+    if (matchesAftertaste(evt.effectLabel)) return true;
+    const metadata = evt.metadata && typeof evt.metadata === 'object' ? evt.metadata : null;
+    if (!metadata) return false;
+    const metadataKeys = [
+      'effect_label',
+      'effect',
+      'effect_type',
+      'effectType',
+      'source_name',
+      'sourceName',
+      'action_name',
+      'actionName',
+      'card_name',
+      'cardName',
+      'relic_name',
+      'relicName',
+      'label',
+      'name',
+    ];
+    for (const key of metadataKeys) {
+      if (matchesAftertaste(metadata[key])) return true;
+    }
+    const details = metadata.details && typeof metadata.details === 'object' ? metadata.details : null;
+    if (details) {
+      for (const key of metadataKeys) {
+        if (matchesAftertaste(details[key])) return true;
+      }
+    }
+    const effects = Array.isArray(metadata.effects) ? metadata.effects : [];
+    for (const effect of effects) {
+      if (!effect || typeof effect !== 'object') continue;
+      if (matchesAftertaste(effect.id) || matchesAftertaste(effect.name) || matchesAftertaste(effect.type)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  function extractDamageTypeId(evt) {
+    if (!evt || typeof evt !== 'object') return '';
+    const candidates = [];
+    const baseKeys = [
+      'damageTypeId',
+      'damage_type_id',
+      'damage_type',
+      'damageType',
+      'random_damage_type',
+      'randomDamageType',
+      'element',
+    ];
+    for (const key of baseKeys) {
+      if (evt[key] !== undefined && evt[key] !== null) {
+        candidates.push(evt[key]);
+      }
+    }
+    const metadata = evt.metadata && typeof evt.metadata === 'object' ? evt.metadata : null;
+    if (metadata) {
+      for (const key of baseKeys) {
+        if (metadata[key] !== undefined && metadata[key] !== null) {
+          candidates.push(metadata[key]);
+        }
+      }
+      const details = metadata.details && typeof metadata.details === 'object' ? metadata.details : null;
+      if (details) {
+        for (const key of baseKeys) {
+          if (details[key] !== undefined && details[key] !== null) {
+            candidates.push(details[key]);
+          }
+        }
+      }
+      const effects = Array.isArray(metadata.effects) ? metadata.effects : [];
+      for (const effect of effects) {
+        if (!effect || typeof effect !== 'object') continue;
+        for (const key of baseKeys) {
+          if (effect[key] !== undefined && effect[key] !== null) {
+            candidates.push(effect[key]);
+            break;
+          }
+        }
+      }
+    }
+    for (const candidate of candidates) {
+      const value = String(candidate).trim();
+      if (value) return value;
+    }
+    return '';
+  }
+
   function findColorSource() {
     if (!Array.isArray(events)) return null;
     const attackerKey = normalizeId(activeId);
@@ -117,7 +216,7 @@
   $: arrowEvent = findColorSource();
   $: arrowColor = (() => {
     if (arrowEvent) {
-      const damageType = arrowEvent.damageTypeId || arrowEvent.metadata?.damage_type_id;
+      const damageType = extractDamageTypeId(arrowEvent);
       if (damageType) {
         const variant = resolveVariant(arrowEvent.type);
         return getDamageTypeColor(damageType, { variant });
@@ -135,10 +234,37 @@
 
   $: showAttackerPulse = phaseAllowsArrow && Boolean(attackerCanvas);
   $: showTargetPulse = phaseAllowsArrow && Boolean(targetCanvas);
+  $: aftertasteEvent = (() => {
+    if (arrowVisible || !showTargetPulse) return null;
+    if (!Array.isArray(events) || !events.length) return null;
+    if (!targetKey) return null;
+    for (let i = events.length - 1; i >= 0; i -= 1) {
+      const evt = events[i];
+      if (!evt || typeof evt !== 'object') continue;
+      if (!isAftertasteEvent(evt)) continue;
+      const eventTarget = normalizeId(evt.target_id ?? evt.targetId);
+      if (targetKey && eventTarget && eventTarget !== targetKey) continue;
+      return evt;
+    }
+    return null;
+  })();
+  $: aftertasteMarkerColor = (() => {
+    if (aftertasteEvent) {
+      const damageType = extractDamageTypeId(aftertasteEvent);
+      if (damageType) {
+        const variant = resolveVariant(aftertasteEvent.type);
+        return getDamageTypeColor(damageType, { variant });
+      }
+    }
+    const fallback = findCombatant(targetKey) || findCombatant(attackerKey);
+    return resolveElementColor(fallback);
+  })();
+  $: overlayColor = arrowVisible ? arrowColor : aftertasteMarkerColor;
+  $: showAftertasteMarker = Boolean(!arrowVisible && showTargetPulse && aftertasteEvent && targetCanvas);
 </script>
 
 {#if showAttackerPulse || showTargetPulse}
-  <div class:reduced={reducedMotion} class="targeting-overlay" style={`--arrow-color:${arrowColor};`}>
+  <div class:reduced={reducedMotion} class="targeting-overlay" style={`--arrow-color:${overlayColor};`}>
     <svg viewBox="0 0 1000 1000" preserveAspectRatio="none">
       <defs>
         <!-- Smaller arrowhead -->
@@ -155,6 +281,12 @@
           y2={targetCanvas?.y ?? 0}
           marker-end={`url(#${markerId})`}
         />
+      {/if}
+      {#if showAftertasteMarker}
+        <g>
+          <circle class="node target outer" cx={targetCanvas?.x ?? 0} cy={targetCanvas?.y ?? 0} r="18" />
+          <circle class="node target inner" cx={targetCanvas?.x ?? 0} cy={targetCanvas?.y ?? 0} r="6" />
+        </g>
       {/if}
       <!-- Attacker pulse removed per UX feedback -->
       <!-- Target pulse removed per UX feedback -->
