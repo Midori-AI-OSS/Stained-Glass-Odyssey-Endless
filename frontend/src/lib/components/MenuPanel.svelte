@@ -24,6 +24,8 @@
     box-shadow: var(--glass-shadow);
     border: var(--glass-border);
     backdrop-filter: var(--glass-filter);
+    animation: panel-slide-fade 220ms ease-out both;
+    will-change: transform, opacity;
   }
 
   /* Themed scrollbars for dark UI */
@@ -47,11 +49,33 @@
   .panel::-webkit-scrollbar-thumb:hover {
     background: linear-gradient(180deg, rgba(215, 215, 225, 0.7), rgba(175, 175, 190, 0.7));
   }
+
+  .panel.motion-disabled {
+    animation: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .panel {
+      animation: none;
+    }
+  }
+
+  @keyframes panel-slide-fade {
+    from {
+      opacity: 0;
+      transform: translateY(-0.75rem);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
 </style>
 
 <div
   {...$$restProps}
   class={`panel ${$$props.class || ''}`}
+  class:motion-disabled={reducedMotion}
   style={`--padding: ${padding}; ${style}`}
 >
   <StarStorm color={starColor} {reducedMotion} />

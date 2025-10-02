@@ -269,6 +269,7 @@
 {#if $overlayView === 'run-choose'}
   <PopupWindow title="Resume or Start Run" maxWidth="720px" zIndex={1300} on:close={() => dispatch('back')}>
     <RunChooser runs={$overlayData.runs || []}
+      reducedMotion={simplifiedTransitions ? true : effectiveReducedMotion}
       on:choose={(e) => dispatch('loadRun', e.detail.run)}
       on:load={(e) => dispatch('loadRun', e.detail.run)}
       on:startNew={() => dispatch('startNewRun')}
@@ -366,11 +367,12 @@
 
 {#if $overlayView === 'combat-viewer'}
   <OverlaySurface zIndex={1300}>
-    <CombatViewer 
+    <CombatViewer
       party={battleSnapshot?.party ?? []}
       foes={battleSnapshot?.foes ?? []}
       {runId}
       {battleSnapshot}
+      reducedMotion={simplifiedTransitions ? true : effectiveReducedMotion}
       on:close={() => dispatch('back')}
       on:pauseCombat={() => dispatch('pauseCombat')}
       on:resumeCombat={() => dispatch('resumeCombat')}
