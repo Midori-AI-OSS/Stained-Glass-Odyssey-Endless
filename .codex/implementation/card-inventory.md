@@ -31,6 +31,7 @@ detail pane.
 - Rejuvenating Tonic – +4% Regain; When using a heal, heal an additional +1% HP
 - Adamantine Band – +4% HP; If lethal damage would reduce you below 1 HP, reduce that damage by 10%
 - Precision Sights – +4% Crit Damage; After scoring a crit, gain +2% crit damage for 2 turns (small stacking)
+- Steady Grip – +5% ATK; Critical hits can overcharge into 4× super crits based on crit rate (≈5% chance per 25% crit)
 - Inspiring Banner – +2% ATK & +2% DEF; At battle start, grant a random ally +2% ATK for 2 turns
 - Tactical Kit – +2% ATK & +2% HP; Once per battle, convert 1% HP to +2% ATK for one action
 - Bulwark Totem – +2% DEF & +2% HP; When lethal damage would drop an ally to 0 HP, siphon 5% of that hit from a healthy teammate to restore the victim (tiny soak)

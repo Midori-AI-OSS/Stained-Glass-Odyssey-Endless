@@ -29,6 +29,7 @@ NEW_CARDS: list[tuple[str, dict[str, float]]] = [
     ("rejuvenating_tonic", {"regain": 0.04}),
     ("adamantine_band", {"max_hp": 0.04}),
     ("precision_sights", {"crit_damage": 0.04}),
+    ("steady_grip", {"atk": 0.05}),
     ("inspiring_banner", {"atk": 0.02, "defense": 0.02}),
     ("tactical_kit", {"atk": 0.02, "max_hp": 0.02}),
     ("bulwark_totem", {"defense": 0.02, "max_hp": 0.02}),

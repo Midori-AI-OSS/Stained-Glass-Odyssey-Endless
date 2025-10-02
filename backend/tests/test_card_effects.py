@@ -117,6 +117,57 @@ async def test_arcane_repeater_repeats_attack():
 
 
 @pytest.mark.asyncio
+async def test_steady_grip_super_crit_bonus_damage():
+    party = Party()
+    attacker = PlayerBase()
+    attacker.id = "ally"
+    attacker.crit_rate = 0.5
+    party.members.append(attacker)
+    award_card(party, "steady_grip")
+    await apply_cards(party)
+
+    class DummyTarget:
+        def __init__(self) -> None:
+            self.hp = 1000
+            self.id = "target"
+            self.calls: list[dict[str, object]] = []
+
+        async def apply_damage(
+            self,
+            amount,
+            attacker,
+            *,
+            trigger_on_hit=True,
+            action_name=None,
+        ):
+            self.calls.append(
+                {
+                    "amount": amount,
+                    "attacker": attacker,
+                    "trigger_on_hit": trigger_on_hit,
+                    "action_name": action_name,
+                }
+            )
+            self.hp -= amount
+            return int(amount)
+
+    target = DummyTarget()
+    damage = 100
+
+    with patch("plugins.cards.steady_grip.random.random", return_value=0.0):
+        await BUS.emit_async("critical_hit", attacker, target, damage, "attack")
+        await asyncio.sleep(0)
+
+    assert target.hp == 1000 - damage * 3
+    assert target.calls
+    first_call = target.calls[0]
+    assert first_call["trigger_on_hit"] is False
+    assert first_call["action_name"] == "steady_grip_super_crit"
+
+    await BUS.emit_async("battle_end")
+
+
+@pytest.mark.asyncio
 async def test_mindful_tassel_boosts_first_debuff():
     loop = setup_event_loop()
     party = Party()
