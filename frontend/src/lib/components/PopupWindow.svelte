@@ -18,12 +18,52 @@
   function close() {
     dispatch('close');
   }
+
+  function popupBounceOut(node, options = {}) {
+    const { reducedMotion: motionDisabled = false } = options;
+
+    const prefersReducedMotion =
+      typeof window !== 'undefined' &&
+      typeof window.matchMedia === 'function' &&
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    if (motionDisabled || prefersReducedMotion) {
+      return {
+        duration: 0
+      };
+    }
+
+    const duration = 210;
+    const overshoot = 0.02;
+    const liftPhase = 0.65;
+
+    return {
+      duration,
+      css: (_t, u) => {
+        const progress = Math.min(1, Math.max(0, u));
+        let scale = 1;
+
+        if (progress < liftPhase) {
+          const liftProgress = liftPhase === 0 ? 1 : progress / liftPhase;
+          scale = 1 + overshoot * liftProgress;
+        } else {
+          const settleRange = Math.max(0.0001, 1 - liftPhase);
+          const settleProgress = (progress - liftPhase) / settleRange;
+          scale = 1 + overshoot * (1 - settleProgress);
+        }
+
+        const opacity = 1 - progress;
+        return `transform: scale(${scale}); opacity: ${opacity};`;
+      }
+    };
+  }
 </script>
 
 {#if bareSurface}
   <div
     class="box"
     class:motion-enabled={!reducedMotion}
+    out:popupBounceOut={{ reducedMotion }}
     style={`--max-w: ${maxWidth}; --max-h: ${maxHeight}` }
   >
     <div class="inner">
@@ -48,6 +88,7 @@
     <div
       class="box"
       class:motion-enabled={!reducedMotion}
+      out:popupBounceOut={{ reducedMotion }}
       style={`--max-w: ${maxWidth}; --max-h: ${maxHeight}` }
     >
       <div class="inner">
