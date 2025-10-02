@@ -726,6 +726,20 @@ class Stats:
                     self.id,
                     getattr(attacker_obj, "id", "unknown"),
                 )
+                await BUS.emit_async(
+                    "dodge",
+                    self,
+                    attacker_obj,
+                    amount,
+                    action_name or "attack",
+                    {
+                        "dodger_id": getattr(self, "id", "unknown"),
+                        "attacker_id": getattr(attacker_obj, "id", "unknown")
+                        if attacker_obj is not None
+                        else None,
+                        "source": "stats.apply_damage",
+                    },
+                )
                 return 0
             atk_type = _ensure(attacker_obj)
             # Avoid recursive chains from secondary effects (e.g., Lightning on-hit reactions)
