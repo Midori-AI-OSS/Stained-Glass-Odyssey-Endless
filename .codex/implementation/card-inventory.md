@@ -35,7 +35,6 @@ detail pane.
 - Tactical Kit – +2% ATK & +2% HP; Once per battle, convert 1% HP to +2% ATK for one action
 - Bulwark Totem – +2% DEF & +2% HP; When lethal damage would drop an ally to 0 HP, siphon 5% of that hit from a healthy teammate to restore the victim (tiny soak)
 - Farsight Scope – +3% Crit Rate; Attacks against enemies under 50% HP gain +6% crit rate
-- Steady Grip – +3% ATK & +3% Dodge Odds; On applying a control effect (stun/silence), gain +2% ATK for next action
 - Coated Armor – +3% Mitigation & +3% DEF; When mitigation reduces incoming damage, heal 1% HP
 - Guiding Compass – +3% EXP Gain & +3% Effect Hit Rate; First battle of a run grants a small extra XP bonus
 - Swift Bandanna – +3% Crit Rate & +3% Dodge Odds; On dodge, gain +1% crit rate for next action
