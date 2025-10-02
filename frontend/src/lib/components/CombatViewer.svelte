@@ -19,6 +19,7 @@
   export let foes = [];
   export let runId = '';
   export let battleSnapshot = null;
+  export let reducedMotion = false;
 
   const dispatch = createEventDispatcher();
 
@@ -329,7 +330,7 @@
   }
 </script>
 
-<MenuPanel>
+<MenuPanel {reducedMotion}>
   <div class="combat-viewer">
     <div class="viewer-header">
       <h2>Combat Viewer</h2>
