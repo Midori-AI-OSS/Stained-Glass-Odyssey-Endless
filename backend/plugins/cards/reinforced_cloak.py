@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from dataclasses import field
+import logging
 import random
 
 from autofighter.stats import BUS
@@ -17,31 +18,77 @@ class ReinforcedCloak(CardBase):
     async def apply(self, party) -> None:  # type: ignore[override]
         await super().apply(party)
 
-        async def _on_effect_applied(target, effect_name, duration, source):
-            # Check if target is one of our party members and effect is a long debuff
-            if target in party.members and duration >= 3:  # Long debuff (3+ turns)
-                effect_lower = effect_name.lower()
-                is_debuff = any(keyword in effect_lower for keyword in
-                               ['bleed', 'poison', 'burn', 'freeze', 'stun', 'silence', 'slow', 'weakness', 'curse'])
+        async def _on_effect_applied(effect_name, entity, details=None):
+            if entity not in party.members or not details:
+                return
 
-                if is_debuff and random.random() < 0.30:
-                    # Reduce duration by 1 (30% chance)
-                    # Try to find and modify the effect duration
-                    effect_manager = getattr(target, 'effect_manager', None)
-                    if effect_manager and hasattr(effect_manager, 'modifiers'):
-                        for modifier in effect_manager.modifiers:
-                            if hasattr(modifier, 'name') and effect_name.lower() in modifier.name.lower():
-                                if hasattr(modifier, 'turns') and modifier.turns > 1:
-                                    modifier.turns -= 1
-                                    import logging
-                                    log = logging.getLogger(__name__)
-                                    log.debug("Reinforced Cloak reduced long debuff duration by 1 for %s (%s)", target.id, effect_name)
-                                    await BUS.emit_async("card_effect", self.id, target, "debuff_duration_reduction", 1, {
-                                        "effect_reduced": effect_name,
-                                        "turns_reduced": 1,
-                                        "trigger_chance": 0.30,
-                                        "original_duration": duration
-                                    })
-                                    break
+            starting_turns = details.get("turns")
+            if starting_turns is None or starting_turns < 3:
+                return
+
+            if details.get("effect_type") != "stat_modifier":
+                return
+
+            effect_id = details.get("effect_id")
+            if not effect_id:
+                return
+
+            effect_manager = getattr(entity, "effect_manager", None)
+            if effect_manager is None or not hasattr(effect_manager, "mods"):
+                self.cleanup_subscriptions()
+                return
+
+            modifier = next(
+                (
+                    mod
+                    for mod in reversed(effect_manager.mods)
+                    if getattr(mod, "id", None) == effect_id
+                ),
+                None,
+            )
+
+            if modifier is None or not hasattr(modifier, "turns"):
+                return
+
+            deltas = getattr(modifier, "deltas", None) or {}
+            multipliers = getattr(modifier, "multipliers", None) or {}
+            has_negative_delta = any(value < 0 for value in deltas.values())
+            has_negative_multiplier = any(value < 1 for value in multipliers.values())
+
+            if not has_negative_delta and not has_negative_multiplier:
+                return
+
+            if random.random() >= 0.30:
+                return
+
+            if modifier.turns <= 1:
+                return
+
+            modifier.turns -= 1
+
+            log = logging.getLogger(__name__)
+            log.debug(
+                "Reinforced Cloak reduced long debuff duration by 1 for %s (%s)",
+                getattr(entity, "id", entity),
+                effect_name,
+            )
+            await BUS.emit_async(
+                "card_effect",
+                self.id,
+                entity,
+                "debuff_duration_reduction",
+                1,
+                {
+                    "effect_reduced": effect_name,
+                    "turns_reduced": 1,
+                    "trigger_chance": 0.30,
+                    "original_duration": starting_turns,
+                },
+            )
+
+        def _on_battle_end(actor) -> None:
+            if actor in party.members:
+                self.cleanup_subscriptions()
 
         self.subscribe("effect_applied", _on_effect_applied)
+        self.subscribe("battle_end", _on_battle_end)
