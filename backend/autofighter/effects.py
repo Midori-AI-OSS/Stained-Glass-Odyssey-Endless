@@ -259,7 +259,11 @@ class DamageOverTime:
 
         # Check if this DOT will kill the target
         target_hp_before = target.hp
-        await target.apply_damage(dmg, attacker=attacker_for_events)
+        await target.apply_damage(
+            dmg,
+            attacker=attacker_for_events,
+            trigger_on_hit=False,
+        )
 
         # If target died from this DOT, emit a DOT kill event - async for better performance
         if target_hp_before > 0 and target.hp <= 0:
