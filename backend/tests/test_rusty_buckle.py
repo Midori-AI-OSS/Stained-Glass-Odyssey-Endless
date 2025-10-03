@@ -96,6 +96,9 @@ async def test_all_allies_bleed_each_turn(bus):
 @pytest.mark.asyncio
 async def test_aftertaste_triggers_on_cumulative_loss(monkeypatch, bus):
     party = Party(members=[PlayerBase(), PlayerBase()], relics=["rusty_buckle"])
+    for member in party.members:
+        member._base_max_hp = 100
+        member.hp = member.max_hp
     relic = RustyBuckle()
     await relic.apply(party)
 
@@ -114,12 +117,22 @@ async def test_aftertaste_triggers_on_cumulative_loss(monkeypatch, bus):
 
     monkeypatch.setattr(Aftertaste, "apply", fake_apply)
 
-    await party.members[0].apply_damage(1000)
-    await _drain_pending_tasks()
-    assert hits == 0
+    async def drain_party_once() -> None:
+        for member in party.members:
+            await member.apply_damage(member.max_hp)
+        await _drain_pending_tasks()
 
-    await party.members[1].apply_damage(1000)
-    await _drain_pending_tasks()
+    async def restore_party() -> None:
+        for member in party.members:
+            await member.apply_healing(member.max_hp)
+        await _drain_pending_tasks()
+
+    for _ in range(49):
+        await drain_party_once()
+        await restore_party()
+        assert hits == 0
+
+    await drain_party_once()
     assert hits == 5
 
 
@@ -127,10 +140,10 @@ async def test_aftertaste_triggers_on_cumulative_loss(monkeypatch, bus):
 async def test_stacks_increase_threshold(monkeypatch, bus):
     first = PlayerBase()
     second = PlayerBase()
-    first._base_max_hp = 500
-    first.hp = 500
-    second._base_max_hp = 500
-    second.hp = 500
+    first._base_max_hp = 100
+    first.hp = first.max_hp
+    second._base_max_hp = 100
+    second.hp = second.max_hp
     party = Party(members=[first, second], relics=["rusty_buckle", "rusty_buckle"])
     relic = RustyBuckle()
     await relic.apply(party)
@@ -150,14 +163,22 @@ async def test_stacks_increase_threshold(monkeypatch, bus):
 
     monkeypatch.setattr(Aftertaste, "apply", fake_apply)
 
-    await party.members[0].apply_damage(500)
-    await party.members[0].apply_healing(500)
-    await party.members[0].apply_damage(500)
-    await _drain_pending_tasks()
-    assert hits == 0
+    async def drain_party_once() -> None:
+        for member in party.members:
+            await member.apply_damage(member.max_hp)
+        await _drain_pending_tasks()
 
-    await party.members[1].apply_damage(500)
-    await _drain_pending_tasks()
+    async def restore_party() -> None:
+        for member in party.members:
+            await member.apply_healing(member.max_hp)
+        await _drain_pending_tasks()
+
+    for _ in range(59):
+        await drain_party_once()
+        await restore_party()
+        assert hits == 0
+
+    await drain_party_once()
     assert hits == 8
 
 
@@ -229,7 +250,9 @@ async def test_effect_charge_snapshot_updates_and_clears(bus):
     assert entry["hits"] == 5
     assert entry["estimated_damage_per_hit"] == 2
     assert entry["estimated_total_damage"] == 10
-    assert entry["progress"] == pytest.approx(0.25, rel=1e-6)
+    expected_threshold = int((first.max_hp + second.max_hp) * RustyBuckle._threshold_multiplier(1))
+    assert entry["threshold_per_charge"] == expected_threshold
+    assert entry["progress"] == pytest.approx(0.005, rel=1e-6)
 
     await battle_events.handle_battle_end([], party.members)
 
