@@ -1,5 +1,5 @@
 <script>
-  import { fade, fly } from 'svelte/transition';
+  import { fly } from 'svelte/transition';
   import { cubicOut } from 'svelte/easing';
   import { onDestroy } from 'svelte';
   import { browser } from '$app/environment';
@@ -42,9 +42,6 @@
     ? { duration: 0 }
     : { y: 12, duration: TRANSITION_DURATION, easing: cubicOut };
 
-  $: fadeOptions = shouldReduceMotion
-    ? { duration: 0 }
-    : { duration: TRANSITION_DURATION, easing: cubicOut };
 </script>
 
 <style>
@@ -95,9 +92,7 @@
   class={`panel ${$$props.class || ''}`}
   style={`--padding: ${padding}; ${style}`}
   in:fly={flyInOptions}
-  in:fade={fadeOptions}
   out:fly={flyOutOptions}
-  out:fade={fadeOptions}
 >
   <StarStorm color={starColor} reducedMotion={shouldReduceMotion} />
   <slot />
