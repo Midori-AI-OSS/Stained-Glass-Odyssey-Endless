@@ -62,6 +62,13 @@ describe('PartyPicker component', () => {
     expect(content).toContain('sparkleTrail');
   });
 
+  test('roster stages on first tap and requires a second tap or long-press to toggle', () => {
+    const content = readFileSync(join(import.meta.dir, '../src/lib/components/PartyRoster.svelte'), 'utf8');
+    expect(content).toContain('if (wasStaged && priorPreview === id && !char?.is_player) {');
+    expect(content).toContain('armToggle(char, priorPreview);');
+    expect(content).toContain("dispatchToggle(char.id, { replaceId, reason: 'long-press' });");
+  });
+
   test('roster layout snapshot', () => {
     const content = readFileSync(join(import.meta.dir, '../src/lib/components/PartyRoster.svelte'), 'utf8');
     expect(content).toMatchSnapshot();
