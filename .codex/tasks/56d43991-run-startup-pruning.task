@@ -26,3 +26,5 @@ Implement automatic cleanup of stale runs when the backend boots so the UI alway
 - Coordinate with whoever owns run backup/restore endpoints so expectations stay aligned (`services/run_service.py` helpers like `backup_save`, `restore_save`).
 - Validate that login reward streak tracking and analytics events remain intact after pruning.
 - If adding new helper functions, keep files under ~300 lines or split appropriately per repository guidelines.
+
+Ready for Task Master
