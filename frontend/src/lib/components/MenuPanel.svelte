@@ -67,6 +67,14 @@
     backdrop-filter: var(--glass-filter);
   }
 
+  .panel-content {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    width: 100%;
+    min-height: 100%;
+  }
+
   /* Themed scrollbars for dark UI */
   .panel {
     scrollbar-width: thin;
@@ -95,10 +103,10 @@
   class={`panel ${$$props.class || ''}`}
   style={`--padding: ${padding}; ${style}`}
   in:fly={flyInOptions}
-  in:fade={fadeOptions}
   out:fly={flyOutOptions}
-  out:fade={fadeOptions}
 >
-  <StarStorm color={starColor} reducedMotion={shouldReduceMotion} />
-  <slot />
+  <div class="panel-content" in:fade={fadeOptions} out:fade={fadeOptions}>
+    <StarStorm color={starColor} reducedMotion={shouldReduceMotion} />
+    <slot />
+  </div>
 </div>
