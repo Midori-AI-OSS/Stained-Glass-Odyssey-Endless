@@ -54,6 +54,8 @@
     'name',
     'display_name',
     'displayName',
+    'effect_label',
+    'effectLabel',
     'effect_name',
     'effect',
     'effect_type',
@@ -146,6 +148,8 @@
       if (meta.details && typeof meta.details === 'object') {
         const details = meta.details;
         fallbackValues.push(
+          details.effect_label,
+          details.effectLabel,
           details.effect,
           details.effect_type,
           details.effectType,

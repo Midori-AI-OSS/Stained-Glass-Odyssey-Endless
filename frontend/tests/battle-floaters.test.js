@@ -34,6 +34,28 @@ describe('Battle event floaters', () => {
     expect(labelBlock).toContain("'effect_label'");
   });
 
+  test('DETAIL_LABEL_KEYS include nested effect_label variants for aftertaste metadata', () => {
+    const detailBlockStart = floaterSource.indexOf('const DETAIL_LABEL_KEYS');
+    expect(detailBlockStart).toBeGreaterThan(-1);
+    const detailBlockEnd = floaterSource.indexOf('];', detailBlockStart);
+    expect(detailBlockEnd).toBeGreaterThan(detailBlockStart);
+    const detailBlock = floaterSource.slice(detailBlockStart, detailBlockEnd);
+    expect(detailBlock).toContain("'effect_label'");
+    expect(detailBlock).toContain("'effectLabel'");
+  });
+
+  test('card and relic floater fallback inspects metadata.details effect_label', () => {
+    const detailsBlockStart = floaterSource.indexOf('const details = meta.details;');
+    expect(detailsBlockStart).toBeGreaterThan(-1);
+    const fallbackPushStart = floaterSource.indexOf('fallbackValues.push(', detailsBlockStart);
+    expect(fallbackPushStart).toBeGreaterThan(detailsBlockStart);
+    const fallbackPushEnd = floaterSource.indexOf(');', fallbackPushStart);
+    expect(fallbackPushEnd).toBeGreaterThan(fallbackPushStart);
+    const fallbackBlock = floaterSource.slice(fallbackPushStart, fallbackPushEnd);
+    expect(fallbackBlock).toContain('details.effect_label');
+    expect(fallbackBlock).toContain('details.effectLabel');
+  });
+
   test('staggered floater scheduling uses index-based offsets', () => {
     const anchor = 'list.forEach((raw, i) => {';
     const start = floaterSource.indexOf(anchor);
