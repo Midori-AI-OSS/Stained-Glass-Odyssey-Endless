@@ -210,9 +210,18 @@ async def get_ui_state() -> tuple[str, int, dict[str, Any]]:
                 isinstance(progression, dict) and progression.get("current_step")
             )
 
+            has_active_battle_task = (
+                run_id in battle_tasks and not battle_tasks[run_id].done()
+            )
+            state_reports_battle = bool(state.get("battle"))
+
             if snap is not None and is_battle_room:
                 current_room_data = snap
-            elif is_battle_room and not awaiting_progression:
+            elif (
+                is_battle_room
+                and not awaiting_progression
+                and (has_active_battle_task or state_reports_battle)
+            ):
                 # Battle is active but no snapshot is available yet.
                 current_room_data = {
                     "result": "battle",
