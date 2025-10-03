@@ -115,7 +115,7 @@
 
     previewId = id;
 
-    if (wasStaged && !char?.is_player) {
+    if (wasStaged && priorPreview === id && !char?.is_player) {
       const replaceId = stagedReplaceId ?? computeReplaceTarget(id, priorPreview);
       dispatchToggle(id, { replaceId, reason: 'second-click' });
       clearStaged(id);
