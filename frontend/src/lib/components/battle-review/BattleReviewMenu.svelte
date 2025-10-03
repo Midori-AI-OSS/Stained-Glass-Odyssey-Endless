@@ -4,6 +4,7 @@
   import BattleReview from '../BattleReview.svelte';
   import MenuPanel from '../MenuPanel.svelte';
   import { listTrackedRuns, getTrackedRun } from '../../systems/uiApi.js';
+  import { deriveFightsFromRunDetails } from './battleReviewMenuHelpers.js';
 
   export let reducedMotion = false;
 
@@ -123,56 +124,7 @@
     }
   }
 
-  function deriveBattleIndex(entry, fallback) {
-    const candidates = [
-      entry?.battle_index,
-      entry?.battleIndex,
-      entry?.index,
-      entry?.battle?.index,
-      entry?.id
-    ];
-    for (const candidate of candidates) {
-      const n = Number(candidate);
-      if (Number.isFinite(n) && n > 0) {
-        return Math.floor(n);
-      }
-    }
-    return fallback ?? null;
-  }
-
-  function deriveFightLabel(entry, fallbackIndex) {
-    const candidates = [
-      entry?.battle_name,
-      entry?.battleName,
-      entry?.room_name,
-      entry?.roomName,
-      entry?.room_type,
-      entry?.roomType
-    ];
-    for (const candidate of candidates) {
-      if (candidate) {
-        return String(candidate);
-      }
-    }
-    return `Fight ${fallbackIndex}`;
-  }
-
-  $: fights = (() => {
-    const summaries =
-      runDetails?.battle_summaries || runDetails?.battleSummaries || [];
-    if (!Array.isArray(summaries) || summaries.length === 0) {
-      return [];
-    }
-    return summaries.map((summary, idx) => {
-      const fallback = idx + 1;
-      const battleIndex = deriveBattleIndex(summary, fallback);
-      return {
-        battleIndex,
-        label: deriveFightLabel(summary, battleIndex || fallback),
-        summary
-      };
-    });
-  })();
+  $: fights = deriveFightsFromRunDetails(runDetails);
 
   $: {
     if (!fights.length) {
