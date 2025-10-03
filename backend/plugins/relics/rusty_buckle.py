@@ -60,7 +60,8 @@ class RustyBuckle(RelicBase):
             triggers = max(int(current_state.get("triggers", 0)), 0)
             if stacks <= 0 or party_max_hp <= 0:
                 return None
-            threshold = party_max_hp * (1 + 0.5 * (stacks - 1))
+            threshold_multiplier = self._threshold_multiplier(stacks)
+            threshold = party_max_hp * threshold_multiplier
             if threshold <= 0:
                 progress = 0.0
             else:
@@ -151,7 +152,7 @@ class RustyBuckle(RelicBase):
             current_state["hp_lost"] += lost
             party_max_hp = current_state["party_max_hp"]
             triggers = current_state["triggers"]
-            threshold = party_max_hp * (1 + 0.5 * (current_stacks - 1))
+            threshold = party_max_hp * self._threshold_multiplier(current_stacks)
             while party_max_hp and current_state["hp_lost"] >= threshold * (triggers + 1):
                 triggers += 1
                 current_state["triggers"] = triggers
@@ -201,11 +202,15 @@ class RustyBuckle(RelicBase):
         self.subscribe(party, "heal_received", _heal)
         self.subscribe(party, "battle_end", _cleanup)
 
+    @staticmethod
+    def _threshold_multiplier(stacks: int) -> float:
+        return 50.0 + 10.0 * max(stacks - 1, 0)
+
     def describe(self, stacks: int) -> str:
         bleed = 5 * stacks
         hits = 5 + 3 * (stacks - 1)
-        req = int((1 + 0.5 * (stacks - 1)) * 100)
+        req = int(self._threshold_multiplier(stacks) * 100)
         return (
             f"All allies bleed for {bleed}% Max HP at the start of every turn, ally or foe. "
-            f"Each {req}% party HP lost triggers {hits} Aftertaste hits at random foes."
+            f"Each {req}% party HP lost (5000% for the first stack and +1000% per extra) triggers {hits} Aftertaste hits at random foes."
         )
