@@ -41,6 +41,57 @@ from services.user_level_service import get_user_level
 log = logging.getLogger(__name__)
 
 
+async def prune_runs_on_startup() -> None:
+    """Remove stale run state before the backend begins serving requests."""
+
+    def _collect_and_delete_runs() -> list[str]:
+        with get_save_manager().connection() as conn:
+            rows = conn.execute("SELECT id FROM runs").fetchall()
+            run_ids = [row[0] for row in rows if row and row[0]]
+            if run_ids:
+                conn.execute("DELETE FROM runs")
+            return run_ids
+
+    log.info("Pruning stored runs prior to startup.")
+
+    removed_run_ids: list[str] | None
+    try:
+        removed_run_ids = await asyncio.to_thread(_collect_and_delete_runs)
+    except Exception:  # pragma: no cover - defensive guardrail
+        log.exception("Failed to inspect stored runs during startup pruning.")
+        removed_run_ids = None
+
+    await emit_battle_end_for_runs(removed_run_ids)
+    purge_all_run_state()
+    end_run_logging()
+
+    if removed_run_ids is None:
+        log.warning(
+            "Startup run pruning cleared in-memory state but persistent cleanup may have failed.",
+        )
+        return
+
+    if removed_run_ids:
+        log.info(
+            "Startup run pruning removed %d stored run(s).", len(removed_run_ids)
+        )
+
+        telemetry_tasks = []
+        for run_id in removed_run_ids:
+            telemetry_tasks.append(log_run_end(run_id, "aborted"))
+            telemetry_tasks.append(log_play_session_end(run_id))
+            telemetry_tasks.append(
+                log_menu_action(
+                    "Run",
+                    "startup_pruned",
+                    {"run_id": run_id, "reason": "startup_prune"},
+                )
+            )
+        await asyncio.gather(*telemetry_tasks)
+    else:
+        log.info("Startup run pruning completed; no stored runs found.")
+
+
 async def _validate_party_members(members: list[str]) -> None:
     if (
         "player" not in members

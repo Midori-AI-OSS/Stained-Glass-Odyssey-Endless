@@ -37,6 +37,7 @@ from runs.party_manager import _describe_passives  # noqa: F401
 from runs.party_manager import _load_player_customization  # noqa: F401
 from runs.party_manager import load_party  # noqa: F401
 from runs.party_manager import save_party  # noqa: F401
+from services.run_service import prune_runs_on_startup
 from werkzeug.exceptions import HTTPException
 
 from autofighter.gacha import GachaManager  # noqa: F401  # re-export for tests
@@ -126,6 +127,11 @@ async def _cleanup_loop() -> None:
     while True:
         await asyncio.sleep(300)
         await cleanup_battle_state()
+
+
+@app.before_serving
+async def prune_runs_before_serving() -> None:
+    await prune_runs_on_startup()
 
 
 @app.before_serving
