@@ -355,9 +355,9 @@
                   <p>Each element has strengths and weaknesses:</p>
                   <ul>
                     <li><strong>Fire</strong> → <em>Ice</em> (1.25x damage)</li>
-                    <li><strong>Ice</strong> → <em>Lightning</em> (1.25x damage)</li>
+                    <li><strong>Ice</strong> → <em>Fire</em> (1.25x damage)</li>
                     <li><strong>Lightning</strong> → <em>Wind</em> (1.25x damage)</li>
-                    <li><strong>Wind</strong> → <em>Fire</em> (1.25x damage)</li>
+                    <li><strong>Wind</strong> → <em>Lightning</em> (1.25x damage)</li>
                     <li><strong>Light</strong> ↔ <em>Dark</em> (mutual weakness)</li>
                   </ul>
                   <p class="resistance-note">Same-type attacks deal 0.75x damage (resistance)</p>

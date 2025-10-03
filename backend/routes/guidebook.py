@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from importlib import import_module
 from typing import Any
 
 from quart import Blueprint
@@ -14,6 +15,64 @@ from tracking import log_menu_action
 from tracking import log_overlay_action
 
 bp = Blueprint("guidebook", __name__, url_prefix="/guidebook")
+
+
+def _load_damage_type_class(name: str):
+    try:
+        module = import_module(f"plugins.damage_types.{name.lower()}")
+        return getattr(module, name)
+    except Exception:
+        module = import_module("plugins.damage_types.generic")
+        return module.Generic
+
+
+def _compute_strong_against_map() -> dict[str, list[str]]:
+    all_types = list(ALL_DAMAGE_TYPES)
+    weakness_by_type: dict[str, str] = {}
+
+    for name in all_types:
+        cls = _load_damage_type_class(name)
+        weakness = getattr(cls, "weakness", None)
+        if isinstance(weakness, str) and weakness.lower() != "none":
+            weakness_by_type[name] = weakness
+
+    strong_map: dict[str, list[str]] = {}
+    for type_name, weakness in weakness_by_type.items():
+        strong_map.setdefault(weakness, []).append(type_name)
+
+    for attacker in strong_map:
+        strong_map[attacker].sort()
+
+    return strong_map
+
+
+def _elemental_resistance_summary() -> str:
+    strong_map = _compute_strong_against_map()
+
+    primary_order = ["Fire", "Ice", "Lightning", "Wind"]
+    relationships: list[str] = []
+
+    for attacker in primary_order:
+        for target in strong_map.get(attacker, []):
+            relationships.append(f"{attacker}→{target}")
+
+    light_targets = set(strong_map.get("Light", []))
+    dark_targets = set(strong_map.get("Dark", []))
+    if "Dark" in light_targets and "Light" in dark_targets:
+        relationships.append("Light↔Dark")
+    else:
+        for target in sorted(light_targets):
+            relationships.append(f"Light→{target}")
+        for target in sorted(dark_targets):
+            relationships.append(f"Dark→{target}")
+
+    handled = set(primary_order + ["Light", "Dark"])
+    remaining = sorted(name for name in strong_map if name not in handled)
+    for attacker in remaining:
+        for target in strong_map[attacker]:
+            relationships.append(f"{attacker}→{target}")
+
+    return ", ".join(relationships)
 
 
 @bp.get("/damage-types")
@@ -200,7 +259,13 @@ async def mechs() -> tuple[str, int, dict[str, Any]]:
         {"name": "Ultimate Charge", "description": "Gain charge during combat; spend it to use your damage type's ultimate."},
         {"name": "DoTs & HoTs", "description": "Damage/Healing over time effects stack and interact with some elements."},
         {"name": "Enrage", "description": "Foes may gain enrage increasing difficulty as rooms progress."},
-        {"name": "Elemental Resistances", "description": "Each damage type has a weakness: Fire→Ice, Ice→Lightning, Lightning→Wind, Wind→Fire, Light↔Dark. Generic has no weaknesses."},
+        {
+            "name": "Elemental Resistances",
+            "description": (
+                "Each damage type has a weakness: "
+                f"{_elemental_resistance_summary()}. Generic has no weaknesses."
+            )
+        },
         {"name": "Vitality Scaling", "description": "Affects healing, damage dealt, damage reduction, and experience gain."},
         {"name": "Level Benefits", "description": "In-run leveling grants fixed stats (+10 HP, +5 ATK, +3 DEF) plus 0.3%-0.8% boost to ALL stats per level. Global user level provides persistent stat scaling across runs."},
     ]
