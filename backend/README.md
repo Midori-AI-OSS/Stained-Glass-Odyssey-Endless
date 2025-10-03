@@ -13,6 +13,15 @@ uv sync
 uv run app.py
 ```
 
+## Startup Run Pruning
+
+On startup the backend now clears any persisted run rows and in-memory battle
+state before serving traffic. This guarantees the UI always begins from a clean
+menu instead of reviving unfinished adventures that remained on disk. Battle
+logs remain on disk, and telemetry records each removed run as an "aborted"
+outcome so analytics timelines stay consistent. Operators must restore an
+exported backup after a restart if they want to pick up a suspended run.
+
 ## LLM Loader
 
 `backend/llms/loader.py` provides a LangChain-based loader for local models. Select a backend with `AF_LLM_MODEL`:
