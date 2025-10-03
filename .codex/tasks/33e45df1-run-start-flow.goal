@@ -1,0 +1,56 @@
+# Goal: Streamline Run Startup Workflow
+
+## Summary
+We need to replace the current single-click "Start Run" action with a guided setup that walks the player through building their party, choosing a run type, configuring run modifiers, and finally launching the run. On backend boot we should automatically prune any lingering runs instead of resurfacing them. This goal will stage work across backend run lifecycle management, new metadata endpoints, and frontend UI flows.
+
+## Current State Observations
+- Backend stores runs in the `runs` table and exposes `/ui` helpers that default to the most recent saved run; `get_default_active_run` simply returns the first run id without checking freshness, so old runs persist across restarts.【F:backend/routes/ui.py†L37-L105】
+- `start_run` currently accepts only party members, player damage type, and pressure; map generation and boss selection happen immediately with no notion of run types or optional modifiers.【F:backend/services/run_service.py†L45-L175】
+- The frontend Run overlay (`RunChooser`) presents a basic chooser that allows resuming an old run or launching a new one, and the main viewport triggers `startRun` directly with the party picker’s selection and optional pressure slider; there’s no wizard to collect additional configuration.【F:frontend/src/lib/components/RunChooser.svelte†L1-L67】【F:frontend/src/lib/systems/uiApi.js†L38-L65】
+
+## Desired Outcomes
+1. Backend clears all prior runs during startup so players always begin from a clean slate when the service restarts.
+2. A new metadata layer exposes available run types/game modes and configurable modifiers (pressure, room count, boss pool, foe density, etc.) so the frontend can render picker UIs.
+3. Frontend run setup becomes a multi-step flow: Build Party → Choose Run Type → Configure Modifiers → Confirm & Start.
+4. Documentation and tests reflect the new flow, including removal of run restore/reload UX.
+
+## Proposed Task Breakdown
+1. **Backend bootstrap pruning**
+   - Introduce a startup hook (e.g., `@app.before_serving`) that wipes `runs` and related battle state, logging the cleanup and ensuring tracking events mark any purged run as aborted.
+   - Validate compatibility with backup/restore endpoints and document the behavior change in backend README or implementation notes.
+2. **Run configuration metadata service**
+   - Define a schema for run types and modifiers (e.g., JSON config or database table) and expose it via a new API endpoint (`/run/config` or similar).
+    - Capture baseline modifier definitions covering:
+     - **Foe Speed** – +0.01× action point/speed per stack.
+     - **Foe HP** – +0.5× max/current HP per stack.
+     - **Foe Mitigation** – +0.00001× mitigation per stack.
+     - **Foe Vitality** – +0.00001× vitality per stack.
+     - **Foe Glitched Rate** – increased odds of foes rolling the Glitched state per stack.
+     - **Foe Prime Rate** – increased odds of foes rolling the Prime state per stack.
+     - **Character Stat Down** – lowers all player stats by 0.001× per stack, switching to 0.000001× per stack once the stack count exceeds 500, and awards a 5% rare drop rate (RDR) and character experience bonus on the first stack plus an additional +1% per extra stack (e.g., two stacks = 11%).
+   - For every stack applied to a foe-focused modifier, grant +50% character experience and rare drop rate (RDR) as part of the reward calculations (global exp remains derived from character exp).
+   - Ensure all modifiers respect diminishing returns semantics and document how the backend enforces that curve.
+   - Extend `start_run` to accept a run type identifier and modifier payload, persisting selections alongside the run entry.
+   - Add validation to guard against invalid combinations and provide descriptive error responses.
+3. **Frontend data plumbing**
+   - Fetch the new run configuration metadata during UI bootstrap (or when opening the Run overlay) and normalize it for client-side use.
+   - Remove assumptions about the only modifier being pressure; prepare stores/actions to hold selected run type and modifier values.
+4. **Run setup wizard UI**
+   - Replace `RunChooser` with a wizard that sequences Party Picker → Run Type → Modifier configuration → Review/confirmation.
+   - Ensure each step is stateful, accessible, and resilient to backend failures; include ability to backtrack before launch.
+   - Update overlays and run menu buttons to launch the wizard, and retire the “load run” path since old runs are pruned.
+5. **Backend integration & analytics**
+   - Update `start_run` request payloads to send the selected run type/mods, persist them in the run record, and feed them into map generation or future game mode hooks.
+   - Emit tracking/logging events capturing the selected configuration for analytics.
+6. **Documentation & testing**
+   - Refresh `.codex/implementation` notes for run modules, frontend docs, and any onboarding guides to describe the new flow.
+   - Add backend tests covering pruning behavior and run configuration validation, plus frontend component/store tests for the wizard state machine.
+
+## Open Questions / Follow-ups
+- What initial run types and modifiers should ship first (e.g., "Standard", "Boss Rush")? Define seed data before implementation.
+- Should run configuration be persisted for analytics only or actively change map generation parameters (e.g., custom room counts per floor)? Coordinate with map generation specialists.
+- Determine whether pressure defaults should vary per run type and how to handle unsupported combinations gracefully.
+
+## References & Suggested Reading
+- Backend lifecycle helpers for run cleanup and persistence (`runs/lifecycle.py`).
+- Frontend overlay controller and run state stores in `frontend/src/lib` to understand wizard integration points.
