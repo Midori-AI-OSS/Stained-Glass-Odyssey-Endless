@@ -198,15 +198,29 @@ async def get_ui_state() -> tuple[str, int, dict[str, Any]]:
 
             # Check if there's an active battle snapshot
             snap = battle_snapshots.get(run_id)
-            if snap is not None and current_room_type in {"battle-weak", "battle-normal", "battle-boss-floor"}:
+            is_battle_room = current_room_type in {"battle-weak", "battle-normal", "battle-boss-floor"}
+            awaiting_flags = (
+                state.get("awaiting_next")
+                or state.get("awaiting_card")
+                or state.get("awaiting_relic")
+                or state.get("awaiting_loot")
+            )
+            progression = state.get("reward_progression")
+            awaiting_progression = awaiting_flags or (
+                isinstance(progression, dict) and progression.get("current_step")
+            )
+
+            has_active_battle_task = (
+                run_id in battle_tasks and not battle_tasks[run_id].done()
+            )
+            state_reports_battle = bool(state.get("battle"))
+
+            if snap is not None and is_battle_room:
                 current_room_data = snap
             elif (
-                current_room_type in {"battle-weak", "battle-normal", "battle-boss-floor"}
-                and run_id in battle_tasks
-                and not state.get("awaiting_next")
-                and not state.get("awaiting_card")
-                and not state.get("awaiting_relic")
-                and not state.get("awaiting_loot")
+                is_battle_room
+                and not awaiting_progression
+                and (has_active_battle_task or state_reports_battle)
             ):
                 # Battle is active but no snapshot is available yet.
                 current_room_data = {
