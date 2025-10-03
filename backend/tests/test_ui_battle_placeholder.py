@@ -34,6 +34,7 @@ async def test_ui_reports_battle_mode_when_snapshot_missing(app_with_db):
     state["awaiting_card"] = False
     state["awaiting_relic"] = False
     state["awaiting_loot"] = False
+    state["battle"] = True
     state.pop("reward_progression", None)
     await asyncio.to_thread(save_map, run_id, state)
 
