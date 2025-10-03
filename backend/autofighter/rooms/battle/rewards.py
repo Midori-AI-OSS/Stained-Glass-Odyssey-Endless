@@ -15,22 +15,22 @@ def _pick_card_stars(room: "Room") -> int:
 
     roll = random.random()
     if isinstance(room, BossRoom):
-        if roll < 0.60:
+        if roll < 0.95:
             return 3
-        if roll < 0.85:
+        if roll < 0.99:
             return 4
         return 5
     if isinstance(room, BattleRoom) and getattr(room, "strength", 1.0) > 1.0:
-        if roll < 0.40:
-            return 1
         if roll < 0.70:
+            return 1
+        if roll < 0.95:
             return 2
-        if roll < 0.7015:
+        if roll < 0.99:
             return 3
-        if roll < 0.7025:
+        if roll < 0.999:
             return 4
         return 5
-    return 1 if roll < 0.80 else 2
+    return 1 if roll < 0.99 else 2
 
 
 def _roll_relic_drop(room: "Room", rdr: float) -> bool:
@@ -76,14 +76,14 @@ def _pick_relic_stars(room: "Room") -> int:
 
     roll = random.random()
     if isinstance(room, BossRoom):
-        if roll < 0.6:
-            return 3
         if roll < 0.9:
+            return 3
+        if roll < 0.99:
             return 4
         return 5
-    if roll < 0.7:
+    if roll < 0.95:
         return 1
-    if roll < 0.9:
+    if roll < 0.98:
         return 2
     return 3
 
