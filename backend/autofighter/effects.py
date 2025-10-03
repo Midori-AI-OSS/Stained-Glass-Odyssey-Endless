@@ -225,6 +225,15 @@ class DamageOverTime:
     source: Stats | None = None
 
     async def tick(self, target: Stats, *_: object) -> bool:
+        try:
+            from autofighter.rooms.battle.pacing import YIELD_MULTIPLIER
+            from autofighter.rooms.battle.pacing import pace_sleep
+        except (ImportError, ModuleNotFoundError):
+            YIELD_MULTIPLIER = 0.0
+
+            async def pace_sleep(_multiplier: float = 1.0) -> None:
+                await asyncio.sleep(0)
+
         from autofighter.stats import BUS  # Import here to avoid circular imports
 
         source_actor = self.source or target
@@ -273,6 +282,7 @@ class DamageOverTime:
                 "final_damage": dmg
             })
 
+        await pace_sleep(YIELD_MULTIPLIER)
         self.turns -= 1
         return self.turns > 0
 
@@ -288,6 +298,15 @@ class HealingOverTime:
     source: Stats | None = None
 
     async def tick(self, target: Stats, *_: object) -> bool:
+        try:
+            from autofighter.rooms.battle.pacing import YIELD_MULTIPLIER
+            from autofighter.rooms.battle.pacing import pace_sleep
+        except (ImportError, ModuleNotFoundError):
+            YIELD_MULTIPLIER = 0.0
+
+            async def pace_sleep(_multiplier: float = 1.0) -> None:
+                await asyncio.sleep(0)
+
         from autofighter.stats import BUS  # Import here to avoid circular imports
 
         if getattr(target, "hp", 0) <= 0:
@@ -314,6 +333,7 @@ class HealingOverTime:
         })
 
         await target.apply_healing(heal, healer=healer)
+        await pace_sleep(YIELD_MULTIPLIER)
         self.turns -= 1
         return self.turns > 0
 

@@ -1,5 +1,6 @@
 import asyncio
 import importlib
+import inspect
 import sys
 import types
 
@@ -289,6 +290,96 @@ async def test_stat_modifier_applies_and_expires():
     assert stats.atk == 10
     assert stats.defense == 20
     assert not stats.mods
+
+
+@pytest.mark.asyncio
+async def test_damage_over_time_tick_awaits_pacing(monkeypatch):
+    pacing = importlib.import_module("autofighter.rooms.battle.pacing")
+    calls: list[tuple[str, float]] = []
+
+    async def fake_sleep(multiplier: float = 1.0) -> None:
+        frame = inspect.currentframe()
+        caller = frame.f_back.f_locals.get("self") if frame and frame.f_back else None
+        calls.append((type(caller).__name__ if caller is not None else "", multiplier))
+
+    monkeypatch.setattr(pacing, "pace_sleep", fake_sleep)
+    monkeypatch.setattr(pacing, "YIELD_MULTIPLIER", 0.25)
+
+    target = Stats()
+    target.set_base_stat('max_hp', 200)
+    target.set_base_stat('defense', 0)
+    target.hp = target.max_hp
+
+    dot = effects.DamageOverTime("burn", damage=5, turns=1, id="burn")
+
+    set_battle_active(True)
+    try:
+        await dot.tick(target)
+    finally:
+        set_battle_active(False)
+
+    assert calls == [("DamageOverTime", pacing.YIELD_MULTIPLIER)]
+
+
+@pytest.mark.asyncio
+async def test_healing_over_time_tick_awaits_pacing(monkeypatch):
+    pacing = importlib.import_module("autofighter.rooms.battle.pacing")
+    calls: list[tuple[str, float]] = []
+
+    async def fake_sleep(multiplier: float = 1.0) -> None:
+        frame = inspect.currentframe()
+        caller = frame.f_back.f_locals.get("self") if frame and frame.f_back else None
+        calls.append((type(caller).__name__ if caller is not None else "", multiplier))
+
+    monkeypatch.setattr(pacing, "pace_sleep", fake_sleep)
+    monkeypatch.setattr(pacing, "YIELD_MULTIPLIER", 0.5)
+
+    target = Stats()
+    target.set_base_stat('max_hp', 100)
+    target.hp = 50
+
+    hot = effects.HealingOverTime("regen", healing=5, turns=1, id="regen")
+
+    await hot.tick(target)
+
+    assert calls == [("HealingOverTime", pacing.YIELD_MULTIPLIER)]
+    assert target.hp > 50
+
+
+@pytest.mark.asyncio
+async def test_parallel_dot_ticks_respect_pacing(monkeypatch):
+    pacing = importlib.import_module("autofighter.rooms.battle.pacing")
+    calls: list[tuple[str, float]] = []
+
+    async def fake_sleep(multiplier: float = 1.0) -> None:
+        frame = inspect.currentframe()
+        caller = frame.f_back.f_locals.get("self") if frame and frame.f_back else None
+        calls.append((type(caller).__name__ if caller is not None else "", multiplier))
+
+    monkeypatch.setattr(pacing, "pace_sleep", fake_sleep)
+    monkeypatch.setattr(pacing, "YIELD_MULTIPLIER", 0.1)
+
+    target = Stats()
+    target.set_base_stat('max_hp', 500)
+    target.set_base_stat('defense', 0)
+    target.hp = target.max_hp
+
+    manager = EffectManager(target)
+    for idx in range(25):
+        manager.add_dot(effects.DamageOverTime(f"burn{idx}", damage=1, turns=1, id=f"burn{idx}"))
+
+    set_battle_active(True)
+    try:
+        await manager.tick()
+    finally:
+        set_battle_active(False)
+
+    dot_calls = [call for call in calls if call[0] == "DamageOverTime"]
+    manager_calls = [call for call in calls if call[0] == "EffectManager"]
+
+    assert len(dot_calls) == 25
+    assert all(multiplier == pacing.YIELD_MULTIPLIER for _, multiplier in dot_calls)
+    assert len(manager_calls) >= 3
 
 
 @pytest.mark.asyncio
