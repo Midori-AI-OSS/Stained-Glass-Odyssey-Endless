@@ -279,7 +279,35 @@
       id: char?.id ?? previewId ?? null,
       character: char || null
     };
-    upgradeContext = mode === 'upgrade' ? nextDetail : null;
+    const previousContext = upgradeContext;
+    if (mode === 'upgrade') {
+      const sameCharacter = Boolean(previousContext?.id && previousContext.id === nextDetail.id);
+      const samePendingTarget = Boolean(
+        previousContext?.pendingStat && previousContext?.id && previousContext.id === nextDetail.id
+      );
+      upgradeContext = {
+        ...nextDetail,
+        stat: nextDetail.stat ?? (sameCharacter ? previousContext?.stat ?? null : null),
+        lastRequestedStat:
+          nextDetail.lastRequestedStat ??
+          (samePendingTarget
+            ? previousContext?.lastRequestedStat ?? previousContext?.pendingStat ?? null
+            : null),
+        pendingStat: samePendingTarget
+          ? previousContext?.pendingStat ?? null
+          : nextDetail.pendingStat ?? null,
+        message:
+          nextDetail.message ??
+          (samePendingTarget ? previousContext?.message ?? '' : '') ??
+          '',
+        error:
+          nextDetail.error ??
+          (samePendingTarget ? previousContext?.error ?? '' : '') ??
+          ''
+      };
+    } else {
+      upgradeContext = null;
+    }
     if (mode === 'upgrade') {
       previewStat = detail?.stat ?? previewStat ?? null;
     } else {
