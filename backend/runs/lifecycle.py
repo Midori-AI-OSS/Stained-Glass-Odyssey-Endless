@@ -145,7 +145,9 @@ async def cleanup_battle_state() -> None:
             ended = state.get("ended", False)
 
         has_rewards = any([awaiting_card, awaiting_relic, awaiting_loot])
-        run_result = str(state.get("run_result", "")).strip().lower() if state else ""
+        run_result = str(snap.get("run_result", "")).strip().lower()
+        if not run_result and state:
+            run_result = str(state.get("run_result", "")).strip().lower()
         preserve_snapshot = ended and run_result == "defeat"
 
         if ended or (not awaiting_next and not has_rewards):
