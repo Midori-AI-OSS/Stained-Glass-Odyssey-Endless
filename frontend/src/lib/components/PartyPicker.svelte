@@ -281,12 +281,13 @@
     };
     const previousContext = upgradeContext;
     if (mode === 'upgrade') {
+      const sameCharacter = Boolean(previousContext?.id && previousContext.id === nextDetail.id);
       const samePendingTarget = Boolean(
         previousContext?.pendingStat && previousContext?.id && previousContext.id === nextDetail.id
       );
       upgradeContext = {
         ...nextDetail,
-        stat: nextDetail.stat ?? previousContext?.stat ?? null,
+        stat: nextDetail.stat ?? (sameCharacter ? previousContext?.stat ?? null : null),
         lastRequestedStat:
           nextDetail.lastRequestedStat ??
           (samePendingTarget
