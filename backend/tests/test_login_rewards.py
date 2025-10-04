@@ -67,7 +67,7 @@ async def test_login_reward_status_endpoint(app_with_db):
 
 
 @pytest.mark.asyncio
-async def test_login_reward_claim_flow(app_with_db):
+async def test_login_reward_auto_claim_flow(app_with_db):
     app, _ = app_with_db
     client = app.test_client()
 
@@ -83,19 +83,21 @@ async def test_login_reward_claim_flow(app_with_db):
 
     status_resp = await client.get("/rewards/login")
     status = await status_resp.get_json()
-    assert status["can_claim"] is True
     assert status["rooms_completed"] >= 3
+    assert status["claimed_today"] is True
+    assert status["can_claim"] is False
     assert "daily_rdr_bonus" in status
 
-    claim_resp = await client.post("/rewards/login/claim")
-    assert claim_resp.status_code == 200
-    claim = await claim_resp.get_json()
-    assert claim["streak"] == status["streak"]
-    assert claim["reward_items"] == status["reward_items"]
-    assert claim["inventory"]
-    for entry in claim["reward_items"]:
+    manager = login_rewards.GachaManager(login_rewards.get_save_manager())
+
+    def get_inventory() -> dict[str, int]:
+        return manager._get_items()
+
+    inventory = await asyncio.to_thread(get_inventory)
+    assert inventory
+    for entry in status["reward_items"]:
         key = entry["item_id"]
-        assert claim["inventory"][key] >= 1
+        assert inventory.get(key, 0) >= 1
 
     # Claiming again on the same day should fail
     second = await client.post("/rewards/login/claim")

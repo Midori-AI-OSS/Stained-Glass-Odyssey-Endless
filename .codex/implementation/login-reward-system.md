@@ -22,10 +22,12 @@ items for logging in and actively clearing rooms each day.
 
 ## Room Completion Requirement
 - Players must clear **three rooms** within the active reward window before the
-  daily bundle can be claimed.
+  daily bundle is granted.
 - Every successful room advancement triggers `record_room_completion`, which:
   - Refreshes the reward-day bookkeeping.
   - Increments the running room counter for the day.
+  - Automatically grants the daily bundle as soon as the requirement is met,
+    provided the day has not already been fulfilled.
 - Room clears from previous reward days do not carry forward.
 
 ## Reward Calculation
@@ -48,17 +50,17 @@ items for logging in and actively clearing rooms each day.
   - Returns streak length, room progress, claim availability, and a preview of
     the day's reward bundle.
 - `POST /rewards/login/claim`
-  - Validates the three-room requirement and ensures the day's reward has not
-    already been claimed.
-  - Grants the reward bundle and returns the updated streak and inventory
-    snapshot.
+  - Fallback endpoint that attempts to grant the bundle if the automatic flow
+    has not yet fulfilled the day.
+  - Returns an error when the requirement is unmet or when the daily bundle has
+    already been delivered by the auto-claim logic.
 - Responses include `seconds_until_reset` and the ISO timestamp of the next
   2:00 AM PT reset to aid frontend countdown timers.
 
 ## Failure Modes
 - Claim attempts before clearing three rooms produce `400` responses with the
   `daily requirement not met` error message.
-- Repeated claims within the same reward window return `400` responses with
+- Requests after the automatic grant has already run return `400` responses with
   `reward already claimed`.
 - Database read or write issues are isolated so that room advancement continues
   even if the reward bookkeeping encounters an error; the failure is logged and
@@ -66,13 +68,14 @@ items for logging in and actively clearing rooms each day.
 
 ## Frontend Panel
 - `LoginRewardsPanel.svelte` renders the centered main-menu banner and refreshes
-  `/rewards/login` on mount, tab focus, manual refresh, and after claims.
+  `/rewards/login` on mount, tab focus, manual refresh, and while waiting for an
+  auto-claim to complete.
 - The panel shows up to the most recent 12 streak days using chevron badges,
   truncating with a leading ellipsis when streaks exceed the window.
 - Countdown ticks locally from the `seconds_until_reset` field; hitting zero
   schedules an automatic refresh to pick up the next day's bundle.
-- Reward previews enumerate item names, star ratings, and damage types; the
-  claim button stays disabled until the three-room requirement is met.
+- Reward previews enumerate item names, star ratings, and damage types; status
+  messaging communicates whether the day's bundle has already been delivered.
 
 ## Visual Reference
 - Refer to `.codex/docs/login-rewards-panel.svg` for an annotated layout of the
