@@ -1,21 +1,77 @@
 <script>
   import { createEventDispatcher } from 'svelte';
+  import { fly } from 'svelte/transition';
+  import { quintOut } from 'svelte/easing';
   import { getElementIcon, getElementColor } from '../systems/assetLoader.js';
+  import { formatPercent, formatMaterialQuantity, formatCost } from '../utils/upgradeFormatting.js';
 
   export let roster = [];
   export let previewId;
   export let selected = [];
   export let userBuffPercent = 0;
   export let upgradeMode = false;
+  export let upgradeData = null;
+  export let upgradeLoading = false;
+  export let upgradeError = null;
+  export let upgradeContext = null;
+  export let selectedStat = null;
+  export let reducedMotion = false;
 
   const statTabs = ['Core', 'Offense', 'Defense'];
-  let activeTab = 'Core';
   const dispatch = createEventDispatcher();
+  const UPGRADE_STATS = [
+    { key: 'max_hp', label: 'HP', hint: 'Bolster survivability.' },
+    { key: 'atk', label: 'ATK', hint: 'Improve offensive power.' },
+    { key: 'defense', label: 'DEF', hint: 'Stiffen defenses.' },
+    { key: 'crit_rate', label: 'Crit Rate', hint: 'Raise critical odds.' },
+    { key: 'crit_damage', label: 'Crit DMG', hint: 'Amplify crit damage.' },
+    { key: 'vitality', label: 'Vitality', hint: 'Extend buff durations & recovery.' },
+    { key: 'mitigation', label: 'Mitigation', hint: 'Soften incoming damage.' }
+  ];
 
+  let activeTab = 'Core';
   let previewChar;
   $: previewChar = roster.find((r) => r.id === previewId);
   $: isPlayer = !!previewChar?.is_player;
   $: viewStats = previewChar?.stats || {};
+
+  $: upgradeTotals = upgradeData?.stat_totals || {};
+  $: upgradeCounts = upgradeData?.stat_counts || {};
+  $: nextCosts = upgradeData?.next_costs || {};
+  $: upgradeItems = upgradeData?.items || {};
+  $: resolvedElement = upgradeData?.element || previewChar?.element || 'generic';
+  $: upgradeMaterialKey = `${String(resolvedElement || 'generic').toLowerCase()}_1`;
+  $: availableMaterials = Number(upgradeItems?.[upgradeMaterialKey] ?? 0);
+  $: resolvedSelectedStat = (() => {
+    if (selectedStat) return selectedStat;
+    if (upgradeContext?.pendingStat) return upgradeContext.pendingStat;
+    if (upgradeContext?.stat) return upgradeContext.stat;
+    if (upgradeContext?.lastRequestedStat) return upgradeContext.lastRequestedStat;
+    return UPGRADE_STATS[0]?.key || null;
+  })();
+  $: activeStatInfo = UPGRADE_STATS.find((entry) => entry.key === resolvedSelectedStat) || UPGRADE_STATS[0];
+  $: activeStatLabel = activeStatInfo?.label || '';
+  $: activeStatHint = activeStatInfo?.hint || '';
+  $: activeStatLevel = Number(upgradeCounts?.[resolvedSelectedStat] ?? 0);
+  $: activeNextCost = nextCosts?.[resolvedSelectedStat] ?? null;
+  $: activeImpactNow = formatPercent(Number(upgradeTotals?.[resolvedSelectedStat] ?? 0));
+  $: impactAfterValue = (() => {
+    const current = Number(upgradeTotals?.[resolvedSelectedStat] ?? 0);
+    const increment = Number(activeNextCost?.count ?? 0) * 0.001;
+    return current + (Number.isFinite(increment) ? increment : 0);
+  })();
+  $: activeImpactAfter = formatPercent(impactAfterValue);
+  $: formattedCost = formatCost(activeNextCost);
+  $: upgradeStatusMessage = (() => {
+    if (upgradeContext?.pendingStat) {
+      return `Upgrading ${activeStatLabel || 'stat'}…`;
+    }
+    if (upgradeContext?.error) return upgradeContext.error;
+    if (upgradeContext?.message) return upgradeContext.message;
+    if (upgradeLoading) return 'Loading upgrade data…';
+    if (upgradeError) return upgradeError.message || String(upgradeError);
+    return '';
+  })();
 
   function toggleMember() {
     if (!previewId) return;
@@ -24,12 +80,17 @@
 
   function openUpgrade() {
     if (!previewId) return;
-    dispatch('open-upgrade', { id: previewId });
+    dispatch('open-upgrade', { id: previewId, stat: resolvedSelectedStat });
   }
 
   function closeUpgrade() {
     if (!previewId) return;
     dispatch('close-upgrade', { id: previewId });
+  }
+
+  function handleUpgradeDismiss(reason = 'close') {
+    if (!upgradeMode) return;
+    dispatch('close-upgrade', { id: previewId ?? null, reason });
   }
 
   function formatStat(runtimeValue, baseValue, suffix = '') {
@@ -68,9 +129,35 @@
     return character.stats?.base_stats?.[statName];
   }
 
+  function selectStat(stat) {
+    if (!previewId || !stat) return;
+    dispatch('select-upgrade', { id: previewId, stat });
+    dispatch('open-upgrade', { id: previewId, stat });
+  }
+
+  function requestUpgrade() {
+    if (!previewId || !resolvedSelectedStat) return;
+    const nextCostCount = activeNextCost?.count ?? null;
+    dispatch('request-upgrade', {
+      id: previewId,
+      stat: resolvedSelectedStat,
+      expectedMaterials: nextCostCount,
+      availableMaterials
+    });
+  }
+
+  function computeImpactNow(statKey) {
+    return formatPercent(Number(upgradeTotals?.[statKey] ?? 0));
+  }
+
+  function computeImpactAfter(statKey) {
+    const current = Number(upgradeTotals?.[statKey] ?? 0);
+    const increment = Number(nextCosts?.[statKey]?.count ?? 0) * 0.001;
+    return formatPercent(current + (Number.isFinite(increment) ? increment : 0));
+  }
 </script>
 
-<div class="stats-panel" data-testid="stats-panel">
+<div class="stats-panel" data-testid="stats-panel" class:upgrade-active={upgradeMode}>
   <div class="stats-tabs">
     {#each statTabs as tab}
       <button class="tab-btn" class:active={activeTab === tab} on:click={() => activeTab = tab}>
@@ -78,57 +165,142 @@
       </button>
     {/each}
   </div>
-  {#if previewId}
-    {#each roster.filter((r) => r.id === previewId) as sel}
-      <div class="stats-header">
-        <span class="char-name">{sel.name}</span>
-        <span class="char-level">Lv {sel.stats.level ?? sel.stats.lv ?? 1}</span>
-        <svelte:component
-          this={getElementIcon(sel.element || 'Generic')}
-          class="type-icon"
-          style={`color: ${getElementColor(sel.element || 'Generic')}`}
-          aria-hidden="true" />
-      </div>
-      {#if sel.about}
-        <div class="char-about">{sel.about}</div>
-        <div class="inline-divider" aria-hidden="true"></div>
-      {/if}
-      <div class="stats-list">
-        {#if activeTab === 'Core'}
-          <div>
-            <span>HP</span>
-            <span>
-              {#if viewStats.max_hp != null}
-                {(viewStats.hp ?? 0) + '/' + formatStat(viewStats.max_hp, getBaseStat(sel, 'max_hp'))}
-              {:else}
-                {viewStats.hp ?? '-'}
+  {#if previewChar}
+    <div class="stats-header">
+      <span class="char-name">{previewChar.name}</span>
+      <span class="char-level">Lv {previewChar.stats.level ?? previewChar.stats.lv ?? 1}</span>
+      <svelte:component
+        this={getElementIcon(previewChar.element || 'Generic')}
+        class="type-icon"
+        style={`color: ${getElementColor(previewChar.element || 'Generic')}`}
+        aria-hidden="true" />
+    </div>
+    {#if previewChar.about}
+      <div class="char-about">{previewChar.about}</div>
+      <div class="inline-divider" aria-hidden="true"></div>
+    {/if}
+    <div class="stats-body">
+      {#if upgradeMode}
+        <div class="upgrade-layer">
+          <div class="upgrade-overlay" on:click={() => handleUpgradeDismiss('overlay')} aria-hidden="true"></div>
+          <div
+            class="upgrade-panel"
+            role="dialog"
+            aria-label="Stat upgrade preview"
+            on:click|stopPropagation
+            in:fly={{ x: reducedMotion ? 0 : 28, duration: reducedMotion ? 0 : 200, easing: quintOut }}
+            out:fly={{ x: reducedMotion ? 0 : 20, duration: reducedMotion ? 0 : 160, easing: quintOut }}
+          >
+            <header>
+              <h3>{activeStatLabel} Upgrade</h3>
+              {#if activeStatHint}
+                <p class="hint">{activeStatHint}</p>
               {/if}
-            </span>
+            </header>
+            <div class="upgrade-summary">
+              <div>
+                <span class="label">Impact now</span>
+                <span class="value">{activeImpactNow}</span>
+              </div>
+              <div>
+                <span class="label">After upgrade</span>
+                <span class="value">{activeImpactAfter}</span>
+              </div>
+              <div>
+                <span class="label">Current level</span>
+                <span class="value">Lv {activeStatLevel}</span>
+              </div>
+              <div>
+                <span class="label">Materials</span>
+                <span class="value">{formatMaterialQuantity(availableMaterials, upgradeMaterialKey)}</span>
+              </div>
+            </div>
+            <div class="upgrade-costs">
+              <div>
+                <span class="label">Cost</span>
+                <span class="value">{formattedCost}</span>
+              </div>
+              <div>
+                <span class="label">Status</span>
+                <span class="value status">{upgradeStatusMessage || 'Ready'}</span>
+              </div>
+            </div>
+            <div class="upgrade-options" role="listbox" aria-label="Select stat to upgrade">
+              {#each UPGRADE_STATS as entry}
+                {#key entry.key}
+                  <button
+                    type="button"
+                    class="upgrade-option"
+                    class:active={resolvedSelectedStat === entry.key}
+                    on:click={() => selectStat(entry.key)}
+                  >
+                    <span class="option-title">{entry.label}</span>
+                    <span class="option-impact">
+                      <span class="now" aria-label="Impact now">{computeImpactNow(entry.key)}</span>
+                      <span class="after" aria-label="After upgrade">{computeImpactAfter(entry.key)}</span>
+                    </span>
+                    <span class="option-cost">{formatCost(nextCosts?.[entry.key])}</span>
+                  </button>
+                {/key}
+              {/each}
+            </div>
+            <div class="upgrade-actions">
+              <button type="button" class="secondary" on:click={() => handleUpgradeDismiss('cancel')}>
+                Cancel
+              </button>
+              <button
+                type="button"
+                class="confirm"
+                on:click={requestUpgrade}
+                disabled={!resolvedSelectedStat || upgradeContext?.pendingStat}
+              >
+                Upgrade
+              </button>
+            </div>
           </div>
-          <div><span>EXP</span><span>{sel.stats.exp ?? sel.stats.xp ?? '-'}</span></div>
-          <div><span>Vitality</span><span>{formatMult(sel.stats.vitality ?? sel.stats.vita, getBaseStat(sel, 'vitality'))}</span></div>
-          <div><span>Regain</span><span>{formatStat(sel.stats.regain ?? sel.stats.regain_rate, getBaseStat(sel, 'regain'))}</span></div>
-          <div class="buff-note">Global Buff: +{userBuffPercent}%</div>
-        {:else if activeTab === 'Offense'}
-          <div><span>ATK</span><span>{formatStat(viewStats.atk, getBaseStat(sel, 'atk'))}</span></div>
-          <div><span>CRIT Rate</span><span>{formatStat(viewStats.crit_rate, getBaseStat(sel, 'crit_rate'), '%')}</span></div>
-          <div><span>CRIT DMG</span><span>{formatStat(viewStats.crit_damage, getBaseStat(sel, 'crit_damage'), '%')}</span></div>
-          <div><span>Effect Hit Rate</span><span>{formatStat(viewStats.effect_hit_rate, getBaseStat(sel, 'effect_hit_rate'), '%')}</span></div>
-        {:else if activeTab === 'Defense'}
-          <div><span>DEF</span><span>{formatStat(viewStats.defense, getBaseStat(sel, 'defense'))}</span></div>
-          <div><span>Mitigation</span><span>{formatMult(viewStats.mitigation, getBaseStat(sel, 'mitigation'))}</span></div>
-          <div><span>Dodge Odds</span><span>{formatStat(viewStats.dodge_odds, getBaseStat(sel, 'dodge_odds'), '%')}</span></div>
-          <div><span>Effect Resist</span><span>{formatStat(viewStats.effect_resistance, getBaseStat(sel, 'effect_resistance'), '%')}</span></div>
-        {/if}
-      </div>
-    {/each}
+        </div>
+      {:else}
+        <div
+          class="stats-list"
+          in:fly={{ x: reducedMotion ? 0 : -24, duration: reducedMotion ? 0 : 200, easing: quintOut }}
+          out:fly={{ x: reducedMotion ? 0 : -18, duration: reducedMotion ? 0 : 150, easing: quintOut }}
+        >
+          {#if activeTab === 'Core'}
+            <div>
+              <span>HP</span>
+              <span>
+                {#if viewStats.max_hp != null}
+                  {(viewStats.hp ?? 0) + '/' + formatStat(viewStats.max_hp, getBaseStat(previewChar, 'max_hp'))}
+                {:else}
+                  {viewStats.hp ?? '-'}
+                {/if}
+              </span>
+            </div>
+            <div><span>EXP</span><span>{previewChar.stats.exp ?? previewChar.stats.xp ?? '-'}</span></div>
+            <div><span>Vitality</span><span>{formatMult(previewChar.stats.vitality ?? previewChar.stats.vita, getBaseStat(previewChar, 'vitality'))}</span></div>
+            <div><span>Regain</span><span>{formatStat(previewChar.stats.regain ?? previewChar.stats.regain_rate, getBaseStat(previewChar, 'regain'))}</span></div>
+            <div class="buff-note">Global Buff: +{userBuffPercent}%</div>
+          {:else if activeTab === 'Offense'}
+            <div><span>ATK</span><span>{formatStat(viewStats.atk, getBaseStat(previewChar, 'atk'))}</span></div>
+            <div><span>CRIT Rate</span><span>{formatStat(viewStats.crit_rate, getBaseStat(previewChar, 'crit_rate'), '%')}</span></div>
+            <div><span>CRIT DMG</span><span>{formatStat(viewStats.crit_damage, getBaseStat(previewChar, 'crit_damage'), '%')}</span></div>
+            <div><span>Effect Hit Rate</span><span>{formatStat(viewStats.effect_hit_rate, getBaseStat(previewChar, 'effect_hit_rate'), '%')}</span></div>
+          {:else if activeTab === 'Defense'}
+            <div><span>DEF</span><span>{formatStat(viewStats.defense, getBaseStat(previewChar, 'defense'))}</span></div>
+            <div><span>Mitigation</span><span>{formatMult(viewStats.mitigation, getBaseStat(previewChar, 'mitigation'))}</span></div>
+            <div><span>Dodge Odds</span><span>{formatStat(viewStats.dodge_odds, getBaseStat(previewChar, 'dodge_odds'), '%')}</span></div>
+            <div><span>Effect Resist</span><span>{formatStat(viewStats.effect_resistance, getBaseStat(previewChar, 'effect_resistance'), '%')}</span></div>
+          {/if}
+        </div>
+      {/if}
+    </div>
   {:else}
     <div class="stats-placeholder">Select a character to view stats</div>
   {/if}
   {#if previewId}
     <div class="stats-confirm">
       {#if upgradeMode}
-        <button class="secondary" on:click={closeUpgrade} title="Close upgrade stats">Close stats</button>
+        <button class="secondary" on:click={() => handleUpgradeDismiss('footer')} title="Close upgrade stats">Cancel upgrade</button>
       {:else}
         <button class="secondary" on:click={openUpgrade} title="Upgrade stats for this character">Upgrade stats</button>
       {/if}
@@ -157,6 +329,7 @@
     border-radius: 8px;
     position: relative;
   }
+  .stats-panel.upgrade-active { overflow: hidden; }
   .stats-header {
     display: flex;
     align-items: center;
@@ -169,6 +342,7 @@
   .type-icon { width: 24px; height: 24px; }
   .buff-note { font-size: 0.85rem; color: #ccc; margin-bottom: 0.3rem; }
   .char-about { margin: 0.25rem 0; font-style: italic; }
+  .stats-body { position: relative; flex: 1; min-height: 0; }
   .stats-list {
     display: flex;
     flex-direction: column;
@@ -201,6 +375,8 @@
     min-height: 28px;
     border-radius: 0;
     transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+    cursor: pointer;
+    opacity: 0.85;
   }
   button.secondary:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.5); }
   button.confirm {
@@ -213,8 +389,14 @@
     min-height: 28px;
     border-radius: 0;
     transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+    cursor: pointer;
+    opacity: 0.9;
   }
   button.confirm:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.5); }
+  button.confirm:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
   .stats-tabs {
     display: flex;
     flex-wrap: wrap;
@@ -235,5 +417,102 @@
     height: 1px;
     background: linear-gradient(90deg, transparent, rgba(255,255,255,0.35), transparent);
     margin: 0 0 0.35rem 0;
+  }
+  .upgrade-layer {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: stretch;
+    justify-content: flex-end;
+  }
+  .upgrade-overlay {
+    flex: 1;
+    background: rgba(0,0,0,0.35);
+  }
+  .upgrade-panel {
+    width: min(100%, 20rem);
+    background: rgba(8, 8, 12, 0.92);
+    border-left: 1px solid rgba(255,255,255,0.1);
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    box-sizing: border-box;
+    backdrop-filter: blur(6px);
+  }
+  .upgrade-panel header h3 {
+    margin: 0;
+    color: #fff;
+    font-size: 1.1rem;
+  }
+  .upgrade-panel header .hint {
+    margin: 0.25rem 0 0;
+    color: rgba(255,255,255,0.7);
+    font-size: 0.85rem;
+  }
+  .upgrade-summary, .upgrade-costs {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.5rem;
+    color: #ddd;
+  }
+  .upgrade-summary .value, .upgrade-costs .value { font-weight: 600; color: #fff; }
+  .upgrade-summary .label, .upgrade-costs .label {
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    opacity: 0.65;
+  }
+  .upgrade-costs .status { color: #ffdca8; font-weight: 500; }
+  .upgrade-options {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    overflow-y: auto;
+    max-height: 12rem;
+  }
+  .upgrade-option {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 6px;
+    padding: 0.55rem 0.6rem;
+    display: grid;
+    grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 1fr);
+    gap: 0.5rem;
+    align-items: center;
+    color: #eee;
+    cursor: pointer;
+    transition: border-color 150ms ease-in-out, background 150ms ease-in-out;
+  }
+  .upgrade-option .option-impact {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    font-size: 0.85rem;
+  }
+  .upgrade-option .option-impact .after { color: #80ffb0; }
+  .upgrade-option .option-cost { font-size: 0.85rem; opacity: 0.8; }
+  .upgrade-option.active {
+    border-color: rgba(255,255,255,0.45);
+    background: rgba(27, 101, 189, 0.25);
+  }
+  .upgrade-option:hover { border-color: rgba(255,255,255,0.35); }
+  .upgrade-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.5rem;
+  }
+  .upgrade-actions .confirm {
+    background: linear-gradient(135deg, rgba(76,175,255,0.95), rgba(129,212,250,0.95));
+    color: #02131f;
+    font-weight: 600;
+    padding: 0.45rem 0.9rem;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+  }
+  .upgrade-actions .confirm:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
   }
 </style>

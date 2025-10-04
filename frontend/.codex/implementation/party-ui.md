@@ -38,11 +38,17 @@ Implementation details:
   can be disabled via Settings.
 - `StatTabs.svelte` uses flexible sizing so the panel fills its side and now
   surfaces a read-only stat summary alongside upgrade controls rather than
-  embedding the inline Character Editor.
+  embedding the inline Character Editor. In upgrade mode the stats list now
+  slides away and a right-aligned upgrade sheet animates in with "impact now",
+  "after upgrade", expected material cost, and the available inventory count
+  for the currently selected damage type.
 - The stat upgrade section pulls `/players/<id>/upgrade` to show remaining
-  points, per-stat totals, and next costs, dispatches `open-upgrade-mode` /
-  `close-upgrade-mode` events for `PartyPicker.svelte`, and issues upgrade
+  points, per-stat totals, and next costs, dispatches `open-upgrade` /
+  `close-upgrade` events for `PartyPicker.svelte`, and issues upgrade
   requests through the API helper that lets the server determine point costs.
+  Stat buttons in the portrait preview emit a `select-upgrade` event so the
+  Party picker can sync the highlighted stat with the new side-panel controls
+  before forwarding the upgrade request to the backend.
 - `PartyPicker.svelte` tracks the preview pane mode in a local store. Upgrade
   interactions toggle an inline upgrade sheet, which bubbles events back to the
   overlay so stat spend requests can be handled alongside the existing upgrade
