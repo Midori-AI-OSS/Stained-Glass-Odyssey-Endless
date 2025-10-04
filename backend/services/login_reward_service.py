@@ -466,12 +466,20 @@ async def record_room_completion(now: datetime | None = None) -> None:
             changed = True
 
         auto_granted = False
+        grant_error: Exception | None = None
         if state.rooms_completed >= ROOMS_REQUIRED:
-            result, _ = await _attempt_grant_login_reward(state, current_time)
-            auto_granted = result == "granted"
+            try:
+                result, _ = await _attempt_grant_login_reward(state, current_time)
+            except Exception as error:  # noqa: BLE001 - ensure room progress is persisted first
+                grant_error = error
+            else:
+                auto_granted = result == "granted"
 
-        if changed and not auto_granted:
+        if changed and (grant_error is not None or not auto_granted):
             await _save_state(state)
+
+        if grant_error is not None:
+            raise grant_error
 
 
 async def claim_login_reward(now: datetime | None = None) -> dict[str, Any]:
