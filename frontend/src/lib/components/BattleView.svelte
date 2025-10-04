@@ -179,6 +179,12 @@
     'card_effect',
     'relic_effect',
   ]);
+  const tickIndicatorQueues = new Map();
+  const tickIndicatorTimers = new Map();
+  const tickIndicatorTokenRefs = new Map();
+  let tickIndicators = new Map();
+  let tickIndicatorCounter = 0;
+  let tickIndicatorDuration = 800;
   let lastRunId = runId;
 
   function normalizeChargeIdentifier(entry, index) {
@@ -262,6 +268,7 @@
     lastRunId = runId;
     currentTurn = null;
     battleSnapshot = null;
+    clearTickIndicators();
   }
   $: if (!active) {
     floaterFeed = [];
@@ -284,6 +291,7 @@
     hpHistory = new Map();
     currentTurn = null;
     battleSnapshot = null;
+    clearTickIndicators();
   }
 
   // Compute and update anchor for a given id/node
@@ -736,6 +744,7 @@
   // Example: 30fps -> 3/s, 60fps -> 6/s, 120fps -> 12/s
   let pollDelay = 10000 / framerate;
   $: pollDelay = 10000 / framerate;
+  $: tickIndicatorDuration = Math.max(750, pollDelay * 1.35);
   $: statusChipLifetime = effectiveReducedMotion ? Math.max(900, pollDelay * 6) : Math.max(1600, pollDelay * 10);
   let bg = getRandomBackground();
 
@@ -918,6 +927,125 @@
     ].join('::');
   }
 
+  function refreshTickIndicators() {
+    if (!tickIndicatorQueues.size) {
+      tickIndicators = new Map();
+      return;
+    }
+    tickIndicators = new Map(
+      Array.from(tickIndicatorQueues.entries(), ([key, list]) => [
+        key,
+        list.slice().sort((a, b) => a.timestamp - b.timestamp),
+      ]),
+    );
+  }
+
+  function clearTickIndicators() {
+    for (const handle of tickIndicatorTimers.values()) {
+      try { clearTimeout(handle); } catch {}
+    }
+    tickIndicatorQueues.clear();
+    tickIndicatorTimers.clear();
+    tickIndicatorTokenRefs.clear();
+    tickIndicators = new Map();
+    tickIndicatorCounter = 0;
+  }
+
+  function queueTickIndicators(events) {
+    if (!Array.isArray(events) || !events.length) return;
+    let mutated = false;
+    for (const raw of events) {
+      if (!raw || typeof raw !== 'object') continue;
+      const normalized = raw && typeof raw === 'object' && 'damageTypeId' in raw
+        ? raw
+        : normalizeRecentEvent(raw);
+      if (!normalized) continue;
+      const kind = String(normalized.type || '').toLowerCase();
+      if (kind !== 'dot_tick' && kind !== 'hot_tick') continue;
+      const targetKey = normalizeId(normalized.target_id ?? normalized.targetId);
+      if (!targetKey) continue;
+      const token = eventToken(normalized);
+      if (token && tickIndicatorTokenRefs.has(token)) continue;
+      const timestamp = Date.now();
+      const entry = {
+        id: `${timestamp}:${tickIndicatorCounter += 1}`,
+        targetId: targetKey,
+        amount: Number(normalized.amount ?? 0) || 0,
+        damageTypeId: normalizeDamageTypeId(
+          normalized.damageTypeId ||
+            normalized.metadata?.damage_type_id ||
+            normalized.metadata?.damage_type ||
+            normalized.metadata?.element ||
+            '',
+        ),
+        type: kind,
+        timestamp,
+        token,
+      };
+      const existing = tickIndicatorQueues.get(targetKey) || [];
+      tickIndicatorQueues.set(targetKey, [...existing, entry]);
+      if (token) tickIndicatorTokenRefs.set(token, entry.id);
+      const delay = Math.max(0, Number(tickIndicatorDuration) || 0);
+      const handle = setTimeout(() => {
+        tickIndicatorTimers.delete(entry.id);
+        const queue = tickIndicatorQueues.get(targetKey) || [];
+        const next = queue.filter(item => item.id !== entry.id);
+        if (next.length) {
+          tickIndicatorQueues.set(targetKey, next);
+        } else {
+          tickIndicatorQueues.delete(targetKey);
+        }
+        if (entry.token && tickIndicatorTokenRefs.get(entry.token) === entry.id) {
+          tickIndicatorTokenRefs.delete(entry.token);
+        }
+        refreshTickIndicators();
+      }, delay || 0);
+      tickIndicatorTimers.set(entry.id, handle);
+      mutated = true;
+    }
+    if (mutated) refreshTickIndicators();
+  }
+
+  function collectTickIndicatorIds(entity) {
+    const ids = new Set();
+    if (entity === undefined || entity === null) return ids;
+    if (typeof entity !== 'object') {
+      const key = normalizeId(entity);
+      if (key) ids.add(key);
+      return ids;
+    }
+    const directKeys = [
+      entity.id,
+      entity.instance_id,
+      entity.renderKey,
+      entity.render_key,
+      entity.hpKey,
+      entity.anchorId,
+    ];
+    for (const value of directKeys) {
+      const key = normalizeId(value);
+      if (key) ids.add(key);
+    }
+    if (Array.isArray(entity.anchorIds)) {
+      for (const candidate of entity.anchorIds) {
+        const key = normalizeId(candidate);
+        if (key) ids.add(key);
+      }
+    }
+    return ids;
+  }
+
+  function getTickIndicatorsForEntity(entity, source = tickIndicators) {
+    const ids = collectTickIndicatorIds(entity);
+    for (const key of ids) {
+      if (source.has(key)) {
+        const queue = source.get(key) || [];
+        if (queue.length) return queue;
+      }
+    }
+    return [];
+  }
+
   // Group/dedupe recent events: show only newly increased instances per unique token
   function processRecentEvents(events) {
     if (!Array.isArray(events)) {
@@ -953,6 +1081,9 @@
     }
     recentEventCounts = nextCounts;
     lastRecentEventTokens = tokens;
+    if (newOnes.length) {
+      queueTickIndicators(newOnes);
+    }
     return newOnes;
   }
 
@@ -1842,7 +1973,9 @@
       const phaseOutcome = handlePhaseTransition(phaseInfo, normalizedEvents, snap.recent_events || []);
 
       if (phaseOutcome && 'overlayEvents' in phaseOutcome) {
-        recentEvents = phaseOutcome.overlayEvents || [];
+        const overlayList = phaseOutcome.overlayEvents || [];
+        recentEvents = overlayList;
+        queueTickIndicators(overlayList);
       } else if (!Array.isArray(snap.recent_events)) {
         recentEvents = [];
       }
@@ -1915,6 +2048,7 @@
   onDestroy(() => {
     clearPollTimer();
     clearStatusTimeline();
+    clearTickIndicators();
   });
 
   // Watch active state changes
@@ -2052,7 +2186,14 @@
           
           <!-- Character photo/portrait -->
           <div class="fighter-anchor" use:registerAnchor={foe.id}>
-            <BattleFighterCard fighter={foe} position="top" {effectiveReducedMotion} sizePx={getFoeSizePx(foeCount)} highlight={hoveredId === foe.id} />
+            <BattleFighterCard
+              fighter={foe}
+              position="top"
+              {effectiveReducedMotion}
+              sizePx={getFoeSizePx(foeCount)}
+              highlight={hoveredId === foe.id}
+              tickIndicators={getTickIndicatorsForEntity(foe, tickIndicators)}
+            />
           </div>
           
           <!-- Summons -->
@@ -2118,6 +2259,7 @@
                           (Array.isArray(summon.anchorIds) && summon.anchorIds.includes(hoveredId)) ||
                           (hoveredId && summon?.summoner_id && summon?.summon_type && hoveredId === `${summon.summoner_id}_${summon.summon_type}_summon`)
                         }
+                        tickIndicators={getTickIndicatorsForEntity(summon, tickIndicators)}
                       />
                     </div>
                   </div>
@@ -2160,6 +2302,7 @@
                         (Array.isArray(summon.anchorIds) && summon.anchorIds.includes(hoveredId)) ||
                         (hoveredId && summon?.summoner_id && summon?.summon_type && hoveredId === `${summon.summoner_id}_${summon.summon_type}_summon`)
                       }
+                      tickIndicators={getTickIndicatorsForEntity(summon, tickIndicators)}
                     />
                   </div>
 
@@ -2219,7 +2362,13 @@
 
         <div class="party-main fighter-anchor" use:registerAnchor={member.id}>
           <!-- Character photo as base (ult & pips overlay handled inside) -->
-          <BattleFighterCard fighter={member} position="bottom" {effectiveReducedMotion} highlight={hoveredId === member.id} />
+          <BattleFighterCard
+            fighter={member}
+            position="bottom"
+            {effectiveReducedMotion}
+            highlight={hoveredId === member.id}
+            tickIndicators={getTickIndicatorsForEntity(member, tickIndicators)}
+          />
         </div>
         
         <!-- HP bar under the photo -->
