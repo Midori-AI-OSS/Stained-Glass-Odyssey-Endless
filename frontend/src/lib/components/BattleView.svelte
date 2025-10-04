@@ -1035,11 +1035,11 @@
     return ids;
   }
 
-  function getTickIndicatorsForEntity(entity) {
+  function getTickIndicatorsForEntity(entity, source = tickIndicators) {
     const ids = collectTickIndicatorIds(entity);
     for (const key of ids) {
-      if (tickIndicators.has(key)) {
-        const queue = tickIndicators.get(key) || [];
+      if (source.has(key)) {
+        const queue = source.get(key) || [];
         if (queue.length) return queue;
       }
     }
@@ -2192,7 +2192,7 @@
               {effectiveReducedMotion}
               sizePx={getFoeSizePx(foeCount)}
               highlight={hoveredId === foe.id}
-              tickIndicators={getTickIndicatorsForEntity(foe)}
+              tickIndicators={getTickIndicatorsForEntity(foe, tickIndicators)}
             />
           </div>
           
@@ -2259,7 +2259,7 @@
                           (Array.isArray(summon.anchorIds) && summon.anchorIds.includes(hoveredId)) ||
                           (hoveredId && summon?.summoner_id && summon?.summon_type && hoveredId === `${summon.summoner_id}_${summon.summon_type}_summon`)
                         }
-                        tickIndicators={getTickIndicatorsForEntity(summon)}
+                        tickIndicators={getTickIndicatorsForEntity(summon, tickIndicators)}
                       />
                     </div>
                   </div>
@@ -2302,7 +2302,7 @@
                         (Array.isArray(summon.anchorIds) && summon.anchorIds.includes(hoveredId)) ||
                         (hoveredId && summon?.summoner_id && summon?.summon_type && hoveredId === `${summon.summoner_id}_${summon.summon_type}_summon`)
                       }
-                      tickIndicators={getTickIndicatorsForEntity(summon)}
+                      tickIndicators={getTickIndicatorsForEntity(summon, tickIndicators)}
                     />
                   </div>
 
@@ -2367,7 +2367,7 @@
             position="bottom"
             {effectiveReducedMotion}
             highlight={hoveredId === member.id}
-            tickIndicators={getTickIndicatorsForEntity(member)}
+            tickIndicators={getTickIndicatorsForEntity(member, tickIndicators)}
           />
         </div>
         
