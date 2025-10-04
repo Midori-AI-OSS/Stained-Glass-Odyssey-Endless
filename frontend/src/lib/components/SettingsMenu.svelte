@@ -241,7 +241,7 @@
     }
 
     endingRun = false;
-    dispatch('endRun');
+    dispatch('endRun', { reason: 'forced' });
     // Clear status after a short delay so users see feedback
     try { setTimeout(() => (endRunStatus = ''), 1200); } catch {}
   }

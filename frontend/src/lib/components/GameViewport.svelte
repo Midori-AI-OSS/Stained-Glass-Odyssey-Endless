@@ -424,7 +424,7 @@
       on:loadRun={(e) => dispatch('loadRun', e.detail)}
       on:startNewRun={() => dispatch('startNewRun')}
       on:saveSettings={(e) => ({ sfxVolume, musicVolume, voiceVolume, framerate, reducedMotion, showActionValues, showTurnCounter, flashEnrageCounter, fullIdleMode, skipBattleReview, animationSpeed } = e.detail)}
-      on:endRun={() => dispatch('endRun')}
+      on:endRun={(e) => dispatch('endRun', e.detail)}
       on:shopBuy={(e) => dispatch('shopBuy', e.detail)}
       on:shopReroll={() => dispatch('shopReroll')}
         on:shopLeave={() => dispatch('shopLeave')}

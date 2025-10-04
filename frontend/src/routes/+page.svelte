@@ -455,7 +455,9 @@
     }
   }
 
-  async function handleRunEnd() {
+  async function handleRunEnd(eventOrDetail = {}) {
+    const detail = eventOrDetail?.detail !== undefined ? eventOrDetail.detail : eventOrDetail;
+    const reason = detail?.reason ? String(detail.reason) : '';
     // Halt any in-flight battle snapshot polling ASAP
     haltSync = true;
     // Proactively ask backend to end any active runs to avoid lingering state
@@ -468,6 +470,9 @@
     stopUIPolling();
     homeOverlay();
     clearRunState();
+    if (reason === 'forced') {
+      openOverlay('run-ended');
+    }
   }
 
   function handleDefeat() {
