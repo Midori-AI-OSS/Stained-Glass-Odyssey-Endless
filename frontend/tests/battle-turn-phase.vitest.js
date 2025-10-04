@@ -598,4 +598,71 @@ describe('BattleView turn phase handling', () => {
     component.$set({ active: false });
     await settle();
   });
+
+  it('forwards tick indicators to fighter cards without suppressing status icons', async () => {
+    const tickSnapshot = buildSnapshot();
+    tickSnapshot.party = tickSnapshot.party.map((member) => ({
+      ...member,
+      hots: [{ id: 'regen', stacks: 1 }],
+    }));
+    tickSnapshot.foes = tickSnapshot.foes.map((foe) => ({
+      ...foe,
+      dots: [{ id: 'burn', stacks: 1 }],
+    }));
+    tickSnapshot.recent_events = [
+      {
+        type: 'dot_tick',
+        source_id: 'hero',
+        target_id: 'goblin',
+        amount: 12,
+        metadata: { damage_type_id: 'fire' },
+      },
+      {
+        type: 'hot_tick',
+        source_id: 'hero',
+        target_id: 'hero',
+        amount: 10,
+        metadata: { damage_type_id: 'light' },
+      },
+    ];
+
+    const idleSnapshot = clone(tickSnapshot);
+    idleSnapshot.recent_events = [];
+
+    roomAction
+      .mockImplementationOnce(() => Promise.resolve(clone(tickSnapshot)))
+      .mockImplementation(() => Promise.resolve(clone(idleSnapshot)));
+
+    render(BattleView, {
+      props: {
+        runId: 'tick-indicator-test',
+        active: true,
+        framerate: 60,
+        showStatusTimeline: false,
+        showHud: false,
+        showFoes: true,
+      },
+    });
+
+    await settle();
+
+    const cards = await screen.findAllByTestId('fighter-card');
+    const goblinCard = cards.find((el) => el.dataset.id === 'goblin');
+    const heroCard = cards.find((el) => el.dataset.id === 'hero');
+    expect(goblinCard).toBeDefined();
+    expect(heroCard).toBeDefined();
+    expect(goblinCard.dataset.ticks).toBe('1');
+    expect(goblinCard.dataset.tickTypes).toContain('dot_tick');
+    expect(heroCard.dataset.ticks).toBe('1');
+    expect(heroCard.dataset.tickTypes).toContain('hot_tick');
+
+    const statusRows = screen.getAllByTestId('status-icons');
+    expect(statusRows.length).toBeGreaterThanOrEqual(2);
+
+    await vi.advanceTimersByTimeAsync(800);
+    await settle();
+
+    expect(goblinCard.dataset.ticks).toBe('0');
+    expect(heroCard.dataset.ticks).toBe('0');
+  });
 });

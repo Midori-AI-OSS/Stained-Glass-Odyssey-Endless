@@ -17,6 +17,7 @@
   export let size = 'normal'; // 'normal' or 'small'
   export let sizePx = 0; // optional explicit pixel size override
   export let highlight = false; // glow when referenced (e.g., hovered in action queue)
+  export let tickIndicators = [];
 
   // Use granular motion settings for portrait glows
   $: motionSettings = $motionStore || { 
@@ -180,6 +181,39 @@
       }, dur);
     } catch {}
   }
+
+  function normalizeTickIndicator(entry, index) {
+    if (!entry || typeof entry !== 'object') return null;
+    const type = String(entry.type || '').toLowerCase();
+    if (type !== 'dot_tick' && type !== 'hot_tick') return null;
+    const timestamp = Number(entry.timestamp ?? Date.now());
+    let id = entry.id;
+    if (id === undefined || id === null || id === '') {
+      id = `${type}-${timestamp}-${index}`;
+    }
+    try {
+      id = String(id);
+    } catch {
+      id = `${type}-${index}`;
+    }
+    const amount = Number(entry.amount ?? 0) || 0;
+    const damageType = entry.damageTypeId || fighter?.damage_type || fighter?.element || 'generic';
+    const palette = getDamageTypePalette(damageType);
+    return {
+      id,
+      type,
+      amount,
+      timestamp,
+      palette,
+    };
+  }
+
+  $: activeTickIndicators = Array.isArray(tickIndicators)
+    ? tickIndicators
+        .map((entry, index) => normalizeTickIndicator(entry, index))
+        .filter(Boolean)
+        .sort((a, b) => a.timestamp - b.timestamp)
+    : [];
 </script>
 
   <div
@@ -188,6 +222,23 @@
     class:highlight={highlight && !isDead && !disablePortraitGlows}
     style="--portrait-size: {portraitSize}; --element-color: {elColor}; --element-glow-color: {elementGlow.color}"
   >
+    {#if activeTickIndicators.length}
+      <div class="tick-indicator-layer" class:reduced={effectiveReducedMotion} data-position={position}>
+        {#each activeTickIndicators as indicator, index (indicator.id)}
+          <div
+            class="tick-arrow {indicator.type === 'hot_tick' ? 'hot' : 'dot'}"
+            style={`--arrow-color:${indicator.palette.base}; --arrow-highlight:${indicator.palette.highlight}; --arrow-shadow:${indicator.palette.shadow}; --stack-index:${index};`}
+          >
+            <span class="arrow-body" aria-hidden="true"></span>
+            <span class="arrow-head" aria-hidden="true"></span>
+            <span class="sr-only">
+              {indicator.type === 'hot_tick' ? 'Healing over time tick' : 'Damage over time tick'}
+              {indicator.amount ? ` ${indicator.amount > 0 ? '+' : ''}${indicator.amount}` : ''}
+            </span>
+          </div>
+        {/each}
+      </div>
+    {/if}
   <div
     class="element-wrapper"
     class:element-change={elementChanged}
@@ -288,6 +339,114 @@
     display: flex;
     align-items: center;
     justify-content: center;
+  }
+
+  .tick-indicator-layer {
+    position: absolute;
+    top: calc(-0.36 * var(--portrait-size));
+    left: 50%;
+    transform: translate(-50%, 0);
+    display: flex;
+    gap: clamp(0.25rem, calc(var(--portrait-size) * 0.05), 0.6rem);
+    pointer-events: none;
+    z-index: 6;
+    filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.45));
+  }
+
+  .tick-indicator-layer[data-position='bottom'] {
+    top: calc(-0.4 * var(--portrait-size));
+  }
+
+  .tick-indicator-layer[data-position='top'] {
+    top: calc(-0.32 * var(--portrait-size));
+  }
+
+  .tick-indicator-layer .tick-arrow {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: clamp(2px, calc(var(--portrait-size) * 0.01), 4px);
+    --arrow-height: clamp(14px, calc(var(--portrait-size) * 0.32), 42px);
+    --arrow-width: clamp(4px, calc(var(--portrait-size) * 0.02), 7px);
+    --arrow-head: clamp(6px, calc(var(--portrait-size) * 0.06), 12px);
+    --arrow-color: #f6d365;
+  }
+
+  .tick-indicator-layer .tick-arrow.hot {
+    flex-direction: column-reverse;
+  }
+
+  .tick-indicator-layer .arrow-body {
+    display: block;
+    width: var(--arrow-width);
+    height: var(--arrow-height);
+    border-radius: 999px;
+    background: linear-gradient(
+      to bottom,
+      color-mix(in oklab, var(--arrow-highlight, var(--arrow-color)) 80%, white 20%),
+      var(--arrow-color),
+      color-mix(in oklab, var(--arrow-shadow, var(--arrow-color)) 65%, black 15%)
+    );
+  }
+
+  .tick-indicator-layer .tick-arrow.hot .arrow-body {
+    background: linear-gradient(
+      to top,
+      color-mix(in oklab, var(--arrow-highlight, var(--arrow-color)) 80%, white 20%),
+      var(--arrow-color),
+      color-mix(in oklab, var(--arrow-shadow, var(--arrow-color)) 65%, black 15%)
+    );
+  }
+
+  .tick-indicator-layer .arrow-head {
+    width: 0;
+    height: 0;
+    border-left: calc(var(--arrow-head) * 0.5) solid transparent;
+    border-right: calc(var(--arrow-head) * 0.5) solid transparent;
+  }
+
+  .tick-indicator-layer .tick-arrow.dot .arrow-head {
+    border-top: var(--arrow-head) solid var(--arrow-color, #f6d365);
+  }
+
+  .tick-indicator-layer .tick-arrow.hot .arrow-head {
+    border-bottom: var(--arrow-head) solid var(--arrow-color, #f6d365);
+  }
+
+  .tick-indicator-layer:not(.reduced) .tick-arrow.dot {
+    animation: tick-drop 0.8s ease-in-out infinite;
+    animation-delay: calc(var(--stack-index, 0) * 0.12s);
+  }
+
+  .tick-indicator-layer:not(.reduced) .tick-arrow.hot {
+    animation: tick-rise 0.8s ease-in-out infinite;
+    animation-delay: calc(var(--stack-index, 0) * 0.12s);
+  }
+
+  .tick-indicator-layer.reduced .tick-arrow {
+    animation: none;
+  }
+
+  @keyframes tick-drop {
+    0%, 100% { transform: translateY(-4px); }
+    50% { transform: translateY(3px); }
+  }
+
+  @keyframes tick-rise {
+    0%, 100% { transform: translateY(4px); }
+    50% { transform: translateY(-3px); }
+  }
+
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    border: 0;
   }
 
   .element-wrapper {
