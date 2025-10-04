@@ -34,6 +34,7 @@
   let upgradeTokens = {};
   const EMPTY_UPGRADE_STATE = { data: null, loading: false, error: null };
   let previewUpgradeState = EMPTY_UPGRADE_STATE;
+  let previewStat = null;
   const STAT_LABELS = {
     max_hp: 'HP',
     atk: 'ATK',
@@ -56,6 +57,7 @@
   $: if ((previewId ?? null) !== lastPreviewedId) {
     lastPreviewedId = previewId ?? null;
     upgradeContext = null;
+    previewStat = null;
     previewMode.set('portrait');
     if (previewId) refreshUpgradeData(previewId, { force: true });
     try { dispatch('previewMode', { mode: 'portrait', id: previewId ?? null }); } catch {}
@@ -278,12 +280,23 @@
       character: char || null
     };
     upgradeContext = mode === 'upgrade' ? nextDetail : null;
+    if (mode === 'upgrade') {
+      previewStat = detail?.stat ?? previewStat ?? null;
+    } else {
+      previewStat = null;
+    }
     previewMode.set(mode);
     // When entering upgrade mode, force-refresh upgrade data so convert availability is accurate
     if (mode === 'upgrade' && nextDetail.id) {
       try { refreshUpgradeData(nextDetail.id, { force: true }); } catch {}
     }
     try { dispatch('previewMode', { mode, ...nextDetail }); } catch {}
+  }
+
+  function handleUpgradeSelection(detail) {
+    if (!detail) return;
+    previewStat = detail.stat ?? previewStat ?? null;
+    handlePreviewMode(detail, 'upgrade');
   }
 
   async function forwardUpgradeRequest(detail) {
@@ -445,10 +458,12 @@
         upgradeData={previewUpgradeState.data}
         upgradeLoading={previewUpgradeState.loading}
         upgradeError={previewUpgradeState.error}
+        selectedStat={previewStat}
         {reducedMotion}
         on:open-upgrade={(e) => handlePreviewMode(e.detail, 'upgrade')}
         on:close-upgrade={(e) => handlePreviewMode(e.detail, 'portrait')}
         on:request-upgrade={(e) => forwardUpgradeRequest(e.detail)}
+        on:select-upgrade={(e) => handleUpgradeSelection(e.detail)}
         on:element-change={(e) => {
           const el = e.detail?.element || '';
           previewElementOverride = el || previewElementOverride;
@@ -461,11 +476,22 @@
         }}
       />
       <div class="right-col">
-        <StatTabs {roster} {previewId} {selected} {userBuffPercent}
+        <StatTabs
+          {roster}
+          {previewId}
+          {selected}
+          {userBuffPercent}
           upgradeMode={$previewMode === 'upgrade'}
+          upgradeData={previewUpgradeState.data}
+          upgradeLoading={previewUpgradeState.loading}
+          upgradeError={previewUpgradeState.error}
+          upgradeContext={upgradeContext}
+          selectedStat={previewStat}
           on:toggle={(e) => toggleMember(e.detail)}
           on:open-upgrade={(e) => handlePreviewMode(e.detail, 'upgrade')}
           on:close-upgrade={(e) => handlePreviewMode(e.detail, 'portrait')}
+          on:request-upgrade={(e) => forwardUpgradeRequest(e.detail)}
+          on:select-upgrade={(e) => handleUpgradeSelection(e.detail)}
         />
         <div class="party-actions-inline">
           {#if actionLabel === 'Start Run'}

@@ -20,6 +20,7 @@
   export let upgradeLoading = false;
   export let upgradeError = null;
   export let reducedMotion = false;
+  export let selectedStat = null;
 
   const dispatch = createEventDispatcher();
   const REPEAT_OPTIONS = [1, 5, 10];
@@ -62,7 +63,7 @@
   $: ElementIcon = getElementIcon(elementName || 'Generic');
   $: pendingStat = upgradeContext?.pendingStat || null;
   $: highlightedStat =
-    pendingStat || upgradeContext?.stat || upgradeContext?.lastRequestedStat || null;
+    pendingStat || upgradeContext?.stat || upgradeContext?.lastRequestedStat || selectedStat || null;
   $: upgradeItems = upgradeData?.items || {};
   $: upgradeTotals = upgradeData?.stat_totals || {};
   $: upgradeCosts = upgradeData?.next_costs || {};
@@ -278,6 +279,12 @@
     });
   }
 
+  function selectUpgrade(stat) {
+    if (!selected || !stat || pendingAction) return;
+    dispatch('select-upgrade', { id: selected.id, stat });
+    dispatch('open-upgrade', { id: selected.id, stat });
+  }
+
   function handleBackgroundClick(event) {
     if (event.target !== event.currentTarget) return;
     closeUpgrade('background');
@@ -403,31 +410,31 @@
 
               <!-- Buttons; icons inherit accent via color -->
               <button type="button" class="stat-icon-btn" style={`left:${currentLayout.hp.x}%; top:${currentLayout.hp.y}%; transform:translate(-50%,-50%); color:${accent}`}
-                class:active={highlightedStat==='max_hp'} disabled={pendingAction} on:click={() => requestUpgrade('max_hp')} aria-label={`HP — Bolster survivability. Level ${statLevel('max_hp')}`} title={`HP — Bolster survivability. Level ${statLevel('max_hp')}`}>
+                class:active={highlightedStat==='max_hp'} disabled={pendingAction} on:click={() => selectUpgrade('max_hp')} aria-label={`HP — Bolster survivability. Level ${statLevel('max_hp')}`} title={`HP — Bolster survivability. Level ${statLevel('max_hp')}`}>
                 <Heart aria-hidden="true" />
               </button>
               <button type="button" class="stat-icon-btn" style={`left:${currentLayout.atk.x}%; top:${currentLayout.atk.y}%; transform:translate(-50%,-50%); color:${accent}`}
-                class:active={highlightedStat==='atk'} disabled={pendingAction} on:click={() => requestUpgrade('atk')} aria-label={`ATK — Improve offensive power. Level ${statLevel('atk')}`} title={`ATK — Improve offensive power. Level ${statLevel('atk')}`}>
+                class:active={highlightedStat==='atk'} disabled={pendingAction} on:click={() => selectUpgrade('atk')} aria-label={`ATK — Improve offensive power. Level ${statLevel('atk')}`} title={`ATK — Improve offensive power. Level ${statLevel('atk')}`}>
                 <Sword aria-hidden="true" />
               </button>
               <button type="button" class="stat-icon-btn" style={`left:${currentLayout.def.x}%; top:${currentLayout.def.y}%; transform:translate(-50%,-50%); color:${accent}`}
-                class:active={highlightedStat==='defense'} disabled={pendingAction} on:click={() => requestUpgrade('defense')} aria-label={`DEF — Stiffen defenses. Level ${statLevel('defense')}`} title={`DEF — Stiffen defenses. Level ${statLevel('defense')}`}>
+                class:active={highlightedStat==='defense'} disabled={pendingAction} on:click={() => selectUpgrade('defense')} aria-label={`DEF — Stiffen defenses. Level ${statLevel('defense')}`} title={`DEF — Stiffen defenses. Level ${statLevel('defense')}`}>
                 <Shield aria-hidden="true" />
               </button>
               <button type="button" class="stat-icon-btn" style={`left:${currentLayout.crit_rate.x}%; top:${currentLayout.crit_rate.y}%; transform:translate(-50%,-50%); color:${accent}`}
-                class:active={highlightedStat==='crit_rate'} disabled={pendingAction} on:click={() => requestUpgrade('crit_rate')} aria-label={`Crit Rate — Raise critical odds. Level ${statLevel('crit_rate')}`} title={`Crit Rate — Raise critical odds. Level ${statLevel('crit_rate')}`}>
+                class:active={highlightedStat==='crit_rate'} disabled={pendingAction} on:click={() => selectUpgrade('crit_rate')} aria-label={`Crit Rate — Raise critical odds. Level ${statLevel('crit_rate')}`} title={`Crit Rate — Raise critical odds. Level ${statLevel('crit_rate')}`}>
                 <Crosshair aria-hidden="true" />
               </button>
               <button type="button" class="stat-icon-btn" style={`left:${currentLayout.crit_damage.x}%; top:${currentLayout.crit_damage.y}%; transform:translate(-50%,-50%); color:${accent}`}
-                class:active={highlightedStat==='crit_damage'} disabled={pendingAction} on:click={() => requestUpgrade('crit_damage')} aria-label={`Crit DMG — Amplify crit damage. Level ${statLevel('crit_damage')}`} title={`Crit DMG — Amplify crit damage. Level ${statLevel('crit_damage')}`}>
+                class:active={highlightedStat==='crit_damage'} disabled={pendingAction} on:click={() => selectUpgrade('crit_damage')} aria-label={`Crit DMG — Amplify crit damage. Level ${statLevel('crit_damage')}`} title={`Crit DMG — Amplify crit damage. Level ${statLevel('crit_damage')}`}>
                 <Zap aria-hidden="true" />
               </button>
               <button type="button" class="stat-icon-btn" style={`left:${currentLayout.vitality.x}%; top:${currentLayout.vitality.y}%; transform:translate(-50%,-50%); color:${accent}`}
-                class:active={highlightedStat==='vitality'} disabled={!!pendingStat} on:click={() => requestUpgrade('vitality')} aria-label={`Vitality — Extend buff durations & recovery. Level ${statLevel('vitality')}`} title={`Vitality — Extend buff durations & recovery. Level ${statLevel('vitality')}`}>
+                class:active={highlightedStat==='vitality'} disabled={!!pendingStat} on:click={() => selectUpgrade('vitality')} aria-label={`Vitality — Extend buff durations & recovery. Level ${statLevel('vitality')}`} title={`Vitality — Extend buff durations & recovery. Level ${statLevel('vitality')}`}>
                 <HeartPulse aria-hidden="true" />
               </button>
               <button type="button" class="stat-icon-btn" style={`left:${currentLayout.mitigation.x}%; top:${currentLayout.mitigation.y}%; transform:translate(-50%,-50%); color:${accent}`}
-                class:active={highlightedStat==='mitigation'} disabled={!!pendingStat} on:click={() => requestUpgrade('mitigation')} aria-label={`Mitigation — Soften incoming damage. Level ${statLevel('mitigation')}`} title={`Mitigation — Soften incoming damage. Level ${statLevel('mitigation')}`}>
+                class:active={highlightedStat==='mitigation'} disabled={!!pendingStat} on:click={() => selectUpgrade('mitigation')} aria-label={`Mitigation — Soften incoming damage. Level ${statLevel('mitigation')}`} title={`Mitigation — Soften incoming damage. Level ${statLevel('mitigation')}`}>
                 <ShieldPlus aria-hidden="true" />
               </button>
           </div>
