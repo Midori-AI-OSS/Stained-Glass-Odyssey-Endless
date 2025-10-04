@@ -250,6 +250,19 @@
   </PopupWindow>
 {/if}
 
+{#if $overlayView === 'run-ended'}
+  <PopupWindow title="Run Ended" reducedMotion={overlayReducedMotion} on:close={() => dispatch('back')}>
+    <div class="run-ended-content">
+      <h2 class="run-ended-heading">Run Ended</h2>
+      <p class="run-ended-message">You ended this run manually. Progress has been saved to the main menu.</p>
+      <p class="run-ended-note">Feel free to start a new challenge whenever you're ready.</p>
+      <div class="run-ended-actions stained-glass-row">
+        <button class="icon-btn" on:click={() => dispatch('back')}>Return</button>
+      </div>
+    </div>
+  </PopupWindow>
+{/if}
+
 {#if $overlayView === 'error'}
   <ErrorOverlay
     message={$overlayData.message || 'An unexpected error occurred.'}
@@ -402,7 +415,7 @@
       {runId}
       {backendFlavor}
       on:save={(e) => dispatch('saveSettings', e.detail)}
-      on:endRun={() => dispatch('endRun')}
+      on:endRun={(e) => dispatch('endRun', e.detail)}
     />
   </PopupWindow>
 {/if}
@@ -557,6 +570,39 @@
   }
 
   .defeat-actions {
+    justify-content: center;
+    margin-top: 0.75rem;
+  }
+
+  .run-ended-content {
+    padding: 0.75rem 0.75rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    text-align: center;
+    line-height: 1.5;
+  }
+
+  .run-ended-heading {
+    margin: 0;
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--accent, #7bdff2);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .run-ended-message,
+  .run-ended-note {
+    margin: 0;
+  }
+
+  .run-ended-note {
+    font-size: 0.95rem;
+    color: rgba(255, 255, 255, 0.8);
+  }
+
+  .run-ended-actions {
     justify-content: center;
     margin-top: 0.75rem;
   }
