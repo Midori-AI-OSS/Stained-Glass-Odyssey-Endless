@@ -181,8 +181,7 @@
     {/if}
     <div class="stats-body">
       {#if upgradeMode}
-        <div class="upgrade-layer">
-          <div class="upgrade-overlay" on:click={() => handleUpgradeDismiss('overlay')} aria-hidden="true"></div>
+        <div class="upgrade-layer" on:click={() => handleUpgradeDismiss('overlay')}>
           <div
             class="upgrade-panel"
             role="dialog"
@@ -423,22 +422,16 @@
     inset: 0;
     display: flex;
     align-items: stretch;
-    justify-content: flex-end;
-  }
-  .upgrade-overlay {
-    flex: 1;
-    background: rgba(0,0,0,0.35);
   }
   .upgrade-panel {
-    width: min(100%, 20rem);
-    background: rgba(8, 8, 12, 0.92);
-    border-left: 1px solid rgba(255,255,255,0.1);
+    flex: 1;
+    width: 100%;
+    height: 100%;
     padding: 1rem;
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
     box-sizing: border-box;
-    backdrop-filter: blur(6px);
   }
   .upgrade-panel header h3 {
     margin: 0;
