@@ -33,7 +33,7 @@ We need to replace the current single-click "Start Run" action with a guided set
        - **Foe defenses** – foes inherit a minimum defense floor of `pressure × 10` that then rolls a 0.82–1.50 variance. *Example: pressure 5 → base floor 50, resulting in a 41–75 defense band that overrides lower rolls from other scaling knobs.*
        - **Elite odds** – each stack adds +1% to both Prime and Glitched spawn chances on top of room- and floor-derived values, mirroring the backend’s `pressure × 0.01` bonus.
        - **Shop taxes** – baseline shop prices scale multiplicatively by `1.26^pressure` (±5% variance before visit taxes). *Example: pressure 5 → roughly 3.18× base cost before repeat-visit surcharges.*
-       - Continue to pair pressure stacks with the +50% character experience and rare drop rate (RDR) bonuses granted to foe-focused modifiers so reward expectations stay aligned.
+      - Clarify that pressure stacks no longer grant extra character experience or rare drop rate (RDR) bonuses—the reward loop still depends on the party's RDR and per-foe kill payouts, with pressure only nudging upgrade item star floors via `pressure // 10`, so communicate that tradeoff accurately.
    - For every stack applied to a foe-focused modifier, grant +50% character experience and rare drop rate (RDR) as part of the reward calculations (global exp remains derived from character exp).
    - Ensure the metadata explicitly calls out that the frontend must render Pressure with an on-hover tooltip summarizing the increased difficulty and reward tradeoff so the existing UX expectation is preserved.
    - Ensure all modifiers respect diminishing returns semantics and document how the backend enforces that curve.
