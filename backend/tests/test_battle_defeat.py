@@ -1,6 +1,7 @@
 import importlib.util
 from pathlib import Path
 
+import json
 import pytest
 from runs.lifecycle import battle_locks
 
@@ -47,7 +48,7 @@ async def test_run_battle_handles_defeat_cleanup(app_with_db, monkeypatch):
     app = app_module.app
     client = app.test_client()
 
-    async def fake_resolve(self, party, data, progress, foe=None):
+    async def fake_resolve(self, party, data, progress, foe=None, **_):
         return {"result": "defeat", "ended": True}
 
     monkeypatch.setattr(BattleRoom, "resolve", fake_resolve)
@@ -69,6 +70,30 @@ async def test_run_battle_handles_defeat_cleanup(app_with_db, monkeypatch):
     # Wait for battle task to complete
     task = app_module.battle_tasks[run_id]
     await task
+
+    with app_module.get_save_manager().connection() as conn:
+        row = conn.execute("SELECT map FROM runs WHERE id = ?", (run_id,)).fetchone()
+    assert row is not None
+
+    state = json.loads(row[0])
+    assert state.get("ended") is True
+    assert state.get("run_result") == "defeat"
+    assert state.get("run_result_logged") in {True, False}
+
+    assert run_id in app_module.battle_snapshots
+    snap = app_module.battle_snapshots[run_id]
+    assert snap.get("result") == "defeat"
+    assert snap.get("ended") is True
+    assert run_id not in battle_locks
+
+    ui_resp = await client.get("/ui")
+    assert ui_resp.status_code == 200
+    ui_state = await ui_resp.get_json()
+    assert ui_state.get("active_run") == run_id
+    assert ui_state.get("game_state", {}).get("map", {}).get("ended") is True
+
+    shutdown_resp = await client.delete(f"/run/{run_id}")
+    assert shutdown_resp.status_code in {200, 207}
 
     with app_module.get_save_manager().connection() as conn:
         row = conn.execute("SELECT id FROM runs WHERE id = ?", (run_id,)).fetchone()

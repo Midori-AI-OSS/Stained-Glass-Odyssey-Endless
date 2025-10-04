@@ -521,28 +521,57 @@ async def shutdown_run(run_id: str) -> bool:
     be found. Any other exception bubbles up to the caller.
     """
 
-    def delete_run() -> bool:
+    def delete_run() -> tuple[bool, dict[str, object]]:
         with get_save_manager().connection() as conn:
-            cur = conn.execute("SELECT id FROM runs WHERE id = ?", (run_id,))
-            if not cur.fetchone():
-                return False
+            cur = conn.execute("SELECT map FROM runs WHERE id = ?", (run_id,))
+            row = cur.fetchone()
+            if not row:
+                return False, {}
+
+            try:
+                state = json.loads(row[0]) if row[0] else {}
+            except Exception:  # pragma: no cover - defensive guardrail
+                state = {}
 
             conn.execute("DELETE FROM runs WHERE id = ?", (run_id,))
-            return True
+            return True, state
 
     end_run_logging()
 
     await emit_battle_end_for_runs([run_id])
 
-    existed = await asyncio.to_thread(delete_run)
+    existed, state = await asyncio.to_thread(delete_run)
     if not existed:
+        purge_run_state(run_id, cancel_task=False)
         return False
 
     purge_run_state(run_id)
 
-    await log_run_end(run_id, "aborted")
-    await log_play_session_end(run_id)
-    await log_menu_action("Run", "ended", {"run_id": run_id})
+    run_result = str(state.get("run_result", "")).strip().lower()
+    telemetry_logged = bool(state.get("run_result_logged"))
+
+    if run_result == "defeat":
+        if not telemetry_logged:
+            try:
+                await log_run_end(run_id, "defeat")
+            except Exception:  # pragma: no cover - telemetry should not break cleanup
+                pass
+            try:
+                await log_play_session_end(run_id)
+            except Exception:  # pragma: no cover - telemetry should not break cleanup
+                pass
+    else:
+        await log_run_end(run_id, "aborted")
+        await log_play_session_end(run_id)
+
+    await log_menu_action(
+        "Run",
+        "ended",
+        {
+            "run_id": run_id,
+            "result": run_result or "aborted",
+        },
+    )
 
     return True
 

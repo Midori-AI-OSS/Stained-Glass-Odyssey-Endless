@@ -106,6 +106,31 @@ function hasRewards(snap) {
   return cards || relics || lootItems || lootGold;
 }
 
+function snapshotIndicatesDefeat(source) {
+  if (!source || typeof source !== 'object') return false;
+  const result = String(source?.result || source?.run_result || '').toLowerCase();
+  if (result === 'defeat') return true;
+  if (source?.ended && result === 'defeat') return true;
+  return false;
+}
+
+function runStoreSnapshotShowsDefeat(snapshot) {
+  if (!snapshot || typeof snapshot !== 'object') return false;
+  if (snapshotIndicatesDefeat(snapshot.roomData)) return true;
+  if (snapshotIndicatesDefeat(snapshot.lastBattleSnapshot)) return true;
+  return false;
+}
+
+function mapPayloadShowsDefeat(payload) {
+  if (!payload || typeof payload !== 'object') return false;
+  const currentState = payload.current_state || {};
+  if (snapshotIndicatesDefeat(currentState.room_data)) return true;
+  const mapResult = String(payload?.map?.run_result || payload?.map?.result || '').toLowerCase();
+  if (mapResult === 'defeat') return true;
+  if (payload?.map?.ended && mapResult === 'defeat') return true;
+  return false;
+}
+
 function getFramerateSetting() {
   try {
     const raw = typeof window !== 'undefined' ? window.localStorage?.getItem('autofighter_settings') : null;
@@ -338,6 +363,7 @@ export function createBattlePollingController({
   async function tick() {
     if (destroyed) return;
     const snapshot = runStore.getSnapshot();
+    const defeatFromStore = runStoreSnapshotShowsDefeat(snapshot);
     if (!snapshot.battleActive || !snapshot.runId) {
       stop();
       return;
@@ -433,7 +459,7 @@ export function createBattlePollingController({
       if (shouldHandleRunEndError(error)) {
         runStore.setBattleActive(false);
         clearTimer();
-        callbacks.onRunEnd({ error });
+        callbacks.onRunEnd({ error, defeat: defeatFromStore, runId: snapshot.runId });
         callbacks.onBattleSettled({ error });
         setStatus({ active: false, lastError: null, consecutiveFailures: 0, lastTick: Date.now() });
         return;
@@ -568,17 +594,23 @@ export function createMapPollingController({
       return;
     }
 
+    const defeatFromStore = runStoreSnapshotShowsDefeat(snapshot);
+
     if (!(await shouldPoll())) {
       schedule(intervalMs);
       return;
     }
 
+    let defeatFromPayload = false;
+
     try {
       const data = await getMapFn(snapshot.runId);
       if (!data) {
-        callbacks.onRunEnd();
+        callbacks.onRunEnd({ defeat: defeatFromStore, runId: snapshot.runId });
         return;
       }
+
+      defeatFromPayload = mapPayloadShowsDefeat(data);
 
       if (data.party) {
         runStore.setParty(normalizePartyIds(data.party));
@@ -611,7 +643,8 @@ export function createMapPollingController({
     } catch (error) {
       callbacks.onError(error);
       if (shouldHandleRunEndError(error) || String(error?.message || '').toLowerCase().includes('run ended')) {
-        callbacks.onRunEnd();
+        const defeatContext = defeatFromStore || defeatFromPayload;
+        callbacks.onRunEnd({ defeat: defeatContext, runId: snapshot.runId });
         return;
       }
     }

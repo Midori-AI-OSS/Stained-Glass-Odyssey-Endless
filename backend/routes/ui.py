@@ -15,7 +15,6 @@ from runs.lifecycle import battle_snapshots
 from runs.lifecycle import battle_tasks
 from runs.lifecycle import emit_battle_end_for_runs
 from runs.lifecycle import load_map
-from runs.lifecycle import purge_all_run_state
 from runs.lifecycle import purge_run_state
 from runs.lifecycle import save_map
 from runs.party_manager import load_party
@@ -570,46 +569,45 @@ async def end_run(run_id: str) -> tuple[str, int, dict[str, Any]]:
 @bp.delete("/runs")
 async def end_all_runs() -> tuple[str, int, dict[str, Any]]:
     """End all runs by deleting them from the database."""
-    def delete_all_runs():
-        with get_save_manager().connection() as conn:
-            # Get count of runs before deletion
-            cur = conn.execute("SELECT id FROM runs")
-            rows = cur.fetchall()
-            count = len(rows)
 
-            # Delete all runs
-            conn.execute("DELETE FROM runs")
-            return count, [row[0] for row in rows]
+    def collect_run_ids() -> list[str]:
+        with get_save_manager().connection() as conn:
+            cur = conn.execute("SELECT id FROM runs")
+            return [row[0] for row in cur.fetchall() if row and row[0]]
 
     try:
-        # End run logging
-        end_run_logging()
-
-        await emit_battle_end_for_runs()
-
-        # Cancel all active battle tasks and clear per-run state
-        purge_all_run_state()
-
-        # Delete from database
-        deleted_count, run_ids = await asyncio.to_thread(delete_all_runs)
+        run_ids = await asyncio.to_thread(collect_run_ids)
+        deleted = 0
+        failed: list[str] = []
 
         for run_id in run_ids:
-            purge_run_state(run_id, cancel_task=False)
+            try:
+                removed = await shutdown_run(run_id)
+            except Exception:  # pragma: no cover - defensive cleanup guardrail
+                failed.append(run_id)
+                continue
 
-        # Ensure no lingering state after bulk deletion
-        battle_snapshots.clear()
-        battle_locks.clear()
-        battle_tasks.clear()
+            if removed:
+                deleted += 1
+            else:
+                failed.append(run_id)
 
-        for run_id in run_ids:
-            await log_run_end(run_id, "aborted")
-            await log_play_session_end(run_id)
-        await log_menu_action("Run", "ended_all", {"deleted_count": deleted_count})
+        await log_menu_action(
+            "Run",
+            "ended_all",
+            {"deleted_count": deleted, "requested_count": len(run_ids), "failed": failed},
+        )
 
-        return jsonify({
-            "message": f"Ended {deleted_count} run(s) successfully",
-            "deleted_count": deleted_count
-        }), 200
+        status = 200 if not failed else 207
+        payload: dict[str, Any] = {
+            "message": f"Ended {deleted} run(s) successfully",
+            "deleted_count": deleted,
+            "requested_count": len(run_ids),
+        }
+        if failed:
+            payload["failed"] = failed
+
+        return jsonify(payload), status
 
     except Exception as e:
         return jsonify({"error": f"Failed to end runs: {str(e)}"}), 500

@@ -183,4 +183,78 @@ describe('polling orchestrator', () => {
 
     controller.destroy();
   });
+
+  test('map polling surfaces defeat flag when run disappears', async () => {
+    const halt = writable(false);
+    const overlay = writable(false);
+    const store = createRunStateStore();
+    store.setRunId('defeat-run');
+    store.setBattleActive(false);
+    store.setRoomData({ result: 'defeat', ended: true });
+    store.setLastBattleSnapshot({ result: 'defeat', ended: true });
+
+    let defeatPayload = null;
+
+    const controller = createMapPollingController({
+      runStore: store,
+      haltStore: { subscribe: halt.subscribe },
+      overlayStore: { subscribe: overlay.subscribe },
+      getOverlayView: () => 'main',
+      intervalMs: 0,
+      getMapFn: async () => null,
+      handlers: {
+        onRunEnd: (payload) => {
+          defeatPayload = payload;
+        }
+      }
+    });
+
+    await delay(30);
+
+    expect(defeatPayload).toBeTruthy();
+    expect(defeatPayload?.defeat).toBe(true);
+    expect(defeatPayload?.runId).toBe('defeat-run');
+
+    controller.destroy();
+  });
+
+  test('battle polling reports defeat flag on terminal error', async () => {
+    const halt = writable(false);
+    const overlay = writable(false);
+    const store = createRunStateStore();
+    store.setRunId('battle-defeat');
+    store.setBattleActive(true);
+    store.setRoomData({ result: 'defeat', ended: true });
+    store.setLastBattleSnapshot({ result: 'defeat', ended: true });
+
+    let defeatPayload = null;
+
+    const controller = createBattlePollingController({
+      runStore: store,
+      haltStore: { subscribe: halt.subscribe },
+      overlayStore: { subscribe: overlay.subscribe },
+      getOverlayView: () => 'main',
+      getDelayMs: () => 0,
+      fetchSnapshot: async () => {
+        const error = new Error('Run ended');
+        error.status = 404;
+        throw error;
+      },
+      handlers: {
+        onRunEnd: (payload) => {
+          defeatPayload = payload;
+        },
+        onBattleSettled: () => {}
+      }
+    });
+
+    await delay(30);
+
+    expect(defeatPayload).toBeTruthy();
+    expect(defeatPayload?.defeat).toBe(true);
+    expect(defeatPayload?.runId).toBe('battle-defeat');
+    expect(defeatPayload?.error).toBeInstanceOf(Error);
+
+    controller.destroy();
+  });
 });

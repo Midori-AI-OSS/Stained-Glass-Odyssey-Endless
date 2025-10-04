@@ -753,14 +753,22 @@
     onBattleSettled: () => {
       scheduleMapRefresh();
     },
-    onRunEnd: () => {
-      handleRunEnd();
+    onRunEnd: ({ defeat } = {}) => {
+      if (defeat) {
+        handleDefeat();
+      } else {
+        handleRunEnd();
+      }
     }
   });
 
   configureMapPollingHandlers({
-    onRunEnd: () => {
-      handleRunEnd();
+    onRunEnd: ({ defeat } = {}) => {
+      if (defeat) {
+        handleDefeat();
+      } else {
+        handleRunEnd();
+      }
     },
     onError: (error) => {
       console.warn('State polling failed:', error?.message || error);
