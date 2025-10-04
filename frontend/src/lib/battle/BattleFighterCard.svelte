@@ -9,6 +9,7 @@
     hasCharacterGallery,
     advanceCharacterImage
   } from '../systems/assetLoader.js';
+  import { stringHashIndex } from '../systems/assetRegistry.js';
   import { motionStore } from '../systems/settingsStorage.js';
 
   export let fighter = {};
@@ -182,6 +183,8 @@
     } catch {}
   }
 
+  const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
+
   function normalizeTickIndicator(entry, index) {
     if (!entry || typeof entry !== 'object') return null;
     const type = String(entry.type || '').toLowerCase();
@@ -199,12 +202,36 @@
     const amount = Number(entry.amount ?? 0) || 0;
     const damageType = entry.damageTypeId || fighter?.damage_type || fighter?.element || 'generic';
     const palette = getDamageTypePalette(damageType);
+
+    const scatterSeed = `${id}:${index}:${timestamp}:${type}`;
+    const normalizeHash = (seed) => {
+      const modulo = 997;
+      const result = stringHashIndex(seed, modulo);
+      return modulo > 1 ? result / (modulo - 1) : 0;
+    };
+
+    const baseMargin = 0.14; // keep arrows away from the portrait edges
+    const xNorm = normalizeHash(`${scatterSeed}:x`);
+    const yNorm = normalizeHash(`${scatterSeed}:y`);
+    const horizontal = clamp(baseMargin + (1 - baseMargin * 2) * xNorm, baseMargin, 1 - baseMargin);
+
+    let minVertical = baseMargin;
+    let maxVertical = 1 - baseMargin;
+    if (type === 'dot_tick') {
+      maxVertical = clamp(0.68, baseMargin, 1 - baseMargin);
+    } else if (type === 'hot_tick') {
+      minVertical = clamp(0.32, baseMargin, 1 - baseMargin);
+    }
+    const vertical = clamp(minVertical + (maxVertical - minVertical) * yNorm, baseMargin, 1 - baseMargin);
+
     return {
       id,
       type,
       amount,
       timestamp,
       palette,
+      offsetX: Number((horizontal * 100).toFixed(2)),
+      offsetY: Number((vertical * 100).toFixed(2))
     };
   }
 
@@ -227,10 +254,12 @@
         {#each activeTickIndicators as indicator, index (indicator.id)}
           <div
             class="tick-arrow {indicator.type === 'hot_tick' ? 'hot' : 'dot'}"
-            style={`--arrow-color:${indicator.palette.base}; --arrow-highlight:${indicator.palette.highlight}; --arrow-shadow:${indicator.palette.shadow}; --stack-index:${index};`}
+            style={`--arrow-color:${indicator.palette.base}; --arrow-highlight:${indicator.palette.highlight}; --arrow-shadow:${indicator.palette.shadow}; --stack-index:${index}; --arrow-top:${indicator.offsetY}%; --arrow-left:${indicator.offsetX}%;`}
           >
-            <span class="arrow-body" aria-hidden="true"></span>
-            <span class="arrow-head" aria-hidden="true"></span>
+            <div class="arrow-visual" aria-hidden="true">
+              <span class="arrow-body"></span>
+              <span class="arrow-head"></span>
+            </div>
             <span class="sr-only">
               {indicator.type === 'hot_tick' ? 'Healing over time tick' : 'Damage over time tick'}
               {indicator.amount ? ` ${indicator.amount > 0 ? '+' : ''}${indicator.amount}` : ''}
@@ -343,26 +372,31 @@
 
   .tick-indicator-layer {
     position: absolute;
-    top: calc(-0.36 * var(--portrait-size));
-    left: 50%;
-    transform: translate(-50%, 0);
-    display: flex;
-    gap: clamp(0.25rem, calc(var(--portrait-size) * 0.05), 0.6rem);
+    inset: 0;
     pointer-events: none;
     z-index: 6;
-    filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.45));
-  }
-
-  .tick-indicator-layer[data-position='bottom'] {
-    top: calc(-0.4 * var(--portrait-size));
-  }
-
-  .tick-indicator-layer[data-position='top'] {
-    top: calc(-0.32 * var(--portrait-size));
+    display: block;
+    overflow: hidden;
+    filter: drop-shadow(0 3px 10px rgba(0, 0, 0, 0.55));
+    --arrow-top-min: 12%;
+    --arrow-top-max: 88%;
+    --arrow-left-min: 12%;
+    --arrow-left-max: 88%;
   }
 
   .tick-indicator-layer .tick-arrow {
-    position: relative;
+    position: absolute;
+    top: clamp(var(--arrow-top-min), var(--arrow-top, 50%), var(--arrow-top-max));
+    left: clamp(var(--arrow-left-min), var(--arrow-left, 50%), var(--arrow-left-max));
+    transform: translate(-50%, -50%);
+    opacity: 0.78;
+    mix-blend-mode: screen;
+    filter: drop-shadow(0 1px 4px rgba(0, 0, 0, 0.45));
+    pointer-events: none;
+    isolation: isolate;
+  }
+
+  .tick-indicator-layer .arrow-visual {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -373,7 +407,7 @@
     --arrow-color: #f6d365;
   }
 
-  .tick-indicator-layer .tick-arrow.hot {
+  .tick-indicator-layer .tick-arrow.hot .arrow-visual {
     flex-direction: column-reverse;
   }
 
@@ -382,20 +416,21 @@
     width: var(--arrow-width);
     height: var(--arrow-height);
     border-radius: 999px;
+    opacity: 0.92;
     background: linear-gradient(
       to bottom,
-      color-mix(in oklab, var(--arrow-highlight, var(--arrow-color)) 80%, white 20%),
+      color-mix(in oklab, var(--arrow-highlight, var(--arrow-color)) 75%, white 25%),
       var(--arrow-color),
-      color-mix(in oklab, var(--arrow-shadow, var(--arrow-color)) 65%, black 15%)
+      color-mix(in oklab, var(--arrow-shadow, var(--arrow-color)) 60%, black 20%)
     );
   }
 
   .tick-indicator-layer .tick-arrow.hot .arrow-body {
     background: linear-gradient(
       to top,
-      color-mix(in oklab, var(--arrow-highlight, var(--arrow-color)) 80%, white 20%),
+      color-mix(in oklab, var(--arrow-highlight, var(--arrow-color)) 75%, white 25%),
       var(--arrow-color),
-      color-mix(in oklab, var(--arrow-shadow, var(--arrow-color)) 65%, black 15%)
+      color-mix(in oklab, var(--arrow-shadow, var(--arrow-color)) 60%, black 20%)
     );
   }
 
@@ -407,24 +442,24 @@
   }
 
   .tick-indicator-layer .tick-arrow.dot .arrow-head {
-    border-top: var(--arrow-head) solid var(--arrow-color, #f6d365);
+    border-top: var(--arrow-head) solid color-mix(in oklab, var(--arrow-color, #f6d365) 92%, transparent);
   }
 
   .tick-indicator-layer .tick-arrow.hot .arrow-head {
-    border-bottom: var(--arrow-head) solid var(--arrow-color, #f6d365);
+    border-bottom: var(--arrow-head) solid color-mix(in oklab, var(--arrow-color, #f6d365) 92%, transparent);
   }
 
-  .tick-indicator-layer:not(.reduced) .tick-arrow.dot {
+  .tick-indicator-layer:not(.reduced) .tick-arrow.dot .arrow-visual {
     animation: tick-drop 0.8s ease-in-out infinite;
     animation-delay: calc(var(--stack-index, 0) * 0.12s);
   }
 
-  .tick-indicator-layer:not(.reduced) .tick-arrow.hot {
+  .tick-indicator-layer:not(.reduced) .tick-arrow.hot .arrow-visual {
     animation: tick-rise 0.8s ease-in-out infinite;
     animation-delay: calc(var(--stack-index, 0) * 0.12s);
   }
 
-  .tick-indicator-layer.reduced .tick-arrow {
+  .tick-indicator-layer.reduced .arrow-visual {
     animation: none;
   }
 
