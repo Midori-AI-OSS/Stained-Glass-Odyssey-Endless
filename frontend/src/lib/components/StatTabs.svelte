@@ -365,33 +365,27 @@
     margin-top: 0.25rem;
     gap: 0.5rem;
   }
-  button.secondary {
-    background: rgba(0,0,0,0.5);
-    color: #fff;
-    border: 1px solid rgba(255,255,255,0.35);
-    padding: 0.45rem 0.8rem;
-    font-size: 0.9rem;
-    min-height: 28px;
-    border-radius: 0;
-    transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
-    cursor: pointer;
-    opacity: 0.85;
-  }
-  button.secondary:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.5); }
+  button.secondary,
   button.confirm {
-    background: rgba(0,0,0,0.5);
+    background: linear-gradient(0deg, rgba(255,255,255,0.04), rgba(255,255,255,0.04)), rgba(6, 12, 24, 0.55);
     color: #fff;
-    border: 1px solid rgba(255,255,255,0.35);
+    border: var(--glass-border);
     padding: 0.45rem 0.8rem;
-    align-self: flex-end;
-    font-size: 0.95rem;
     min-height: 28px;
-    border-radius: 0;
+    border-radius: 6px;
     transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
     cursor: pointer;
     opacity: 0.9;
+    box-shadow: var(--glass-shadow);
+    backdrop-filter: var(--glass-filter);
   }
-  button.confirm:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.5); }
+  button.secondary { font-size: 0.9rem; opacity: 0.85; }
+  button.confirm { font-size: 0.95rem; }
+  button.secondary:hover,
+  button.confirm:hover {
+    background: linear-gradient(0deg, rgba(255,255,255,0.08), rgba(255,255,255,0.08)), rgba(10, 18, 34, 0.6);
+    border-color: rgba(255,255,255,0.55);
+  }
   button.confirm:disabled {
     opacity: 0.45;
     cursor: not-allowed;
@@ -422,16 +416,25 @@
     inset: 0;
     display: flex;
     align-items: stretch;
+    justify-content: flex-end;
+    padding: 0.75rem 0.6rem;
+    background: linear-gradient(90deg, rgba(10, 15, 28, 0.45) 0%, rgba(10, 15, 28, 0.82) 65%);
+    backdrop-filter: blur(2px);
   }
   .upgrade-panel {
-    flex: 1;
-    width: 100%;
+    flex: 0 1 360px;
+    width: min(100%, 360px);
     height: 100%;
     padding: 1rem;
+    margin-left: auto;
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
     box-sizing: border-box;
+    background: linear-gradient(0deg, rgba(255,255,255,0.05), rgba(255,255,255,0.05)), var(--glass-bg);
+    box-shadow: var(--glass-shadow);
+    border: var(--glass-border);
+    backdrop-filter: var(--glass-filter);
   }
   .upgrade-panel header h3 {
     margin: 0;
@@ -465,9 +468,9 @@
     max-height: 12rem;
   }
   .upgrade-option {
-    background: rgba(255,255,255,0.05);
-    border: 1px solid rgba(255,255,255,0.08);
-    border-radius: 6px;
+    background: linear-gradient(0deg, rgba(255,255,255,0.03), rgba(255,255,255,0.03)), rgba(6, 12, 24, 0.55);
+    border: var(--glass-border);
+    border-radius: 8px;
     padding: 0.55rem 0.6rem;
     display: grid;
     grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 1fr);
@@ -475,7 +478,9 @@
     align-items: center;
     color: #eee;
     cursor: pointer;
-    transition: border-color 150ms ease-in-out, background 150ms ease-in-out;
+    transition: border-color 150ms ease-in-out, background 150ms ease-in-out, box-shadow 150ms ease-in-out;
+    box-shadow: var(--glass-shadow);
+    backdrop-filter: var(--glass-filter);
   }
   .upgrade-option .option-impact {
     display: flex;
@@ -486,26 +491,18 @@
   .upgrade-option .option-impact .after { color: #80ffb0; }
   .upgrade-option .option-cost { font-size: 0.85rem; opacity: 0.8; }
   .upgrade-option.active {
-    border-color: rgba(255,255,255,0.45);
-    background: rgba(27, 101, 189, 0.25);
+    border-color: rgba(56, 189, 248, 0.65);
+    background: linear-gradient(0deg, rgba(56, 189, 248, 0.18), rgba(56, 189, 248, 0.08)), var(--glass-bg);
+    box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.35), var(--glass-shadow);
   }
-  .upgrade-option:hover { border-color: rgba(255,255,255,0.35); }
+  .upgrade-option:hover {
+    border-color: rgba(255,255,255,0.55);
+    background: linear-gradient(0deg, rgba(255,255,255,0.08), rgba(255,255,255,0.08)), rgba(10, 18, 34, 0.6);
+  }
   .upgrade-actions {
     display: flex;
     justify-content: flex-end;
     gap: 0.5rem;
   }
-  .upgrade-actions .confirm {
-    background: linear-gradient(135deg, rgba(76,175,255,0.95), rgba(129,212,250,0.95));
-    color: #02131f;
-    font-weight: 600;
-    padding: 0.45rem 0.9rem;
-    border-radius: 6px;
-    border: none;
-    cursor: pointer;
-  }
-  .upgrade-actions .confirm:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
+  .upgrade-actions .confirm { font-weight: 600; }
 </style>
