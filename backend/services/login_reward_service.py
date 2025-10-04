@@ -15,10 +15,10 @@ from typing import Any
 from zoneinfo import ZoneInfo
 
 from runs.encryption import get_save_manager
+from tracking import log_login_event
 
 from autofighter.gacha import GachaManager
 from plugins.damage_types import ALL_DAMAGE_TYPES
-from tracking import log_login_event
 
 PT_ZONE = ZoneInfo("America/Los_Angeles")
 RESET_OFFSET = timedelta(hours=2)
@@ -383,6 +383,37 @@ async def _apply_rewards(items: list[dict[str, Any]]) -> dict[str, int]:
     return await asyncio.to_thread(update_inventory)
 
 
+async def _attempt_grant_login_reward(
+    state: LoginRewardState,
+    current_time: datetime,
+) -> tuple[str, dict[str, Any] | None]:
+    reward_day = _reward_day(current_time)
+    claimed_today = _parse_date(state.last_claim_day) == reward_day
+    if claimed_today:
+        return "already_claimed", None
+
+    rooms_completed = state.rooms_completed
+    if rooms_completed < ROOMS_REQUIRED:
+        return "requirement_not_met", None
+
+    if not state.reward_items:
+        state.reward_items = _generate_reward_items(state.streak)
+
+    items = [dict(item) for item in state.reward_items]
+    inventory = await _apply_rewards(items)
+
+    state.last_claim_day = reward_day.isoformat()
+    state.last_claim_at = current_time.isoformat()
+    await _save_state(state)
+
+    payload = {
+        "streak": state.streak,
+        "reward_items": items,
+        "inventory": inventory,
+    }
+    return "granted", payload
+
+
 async def get_login_reward_status(now: datetime | None = None) -> dict[str, Any]:
     async with STATE_LOCK:
         state = await _load_state()
@@ -434,7 +465,12 @@ async def record_room_completion(now: datetime | None = None) -> None:
         if _update_daily_rdr_bonus(state):
             changed = True
 
-        if changed:
+        auto_granted = False
+        if state.rooms_completed >= ROOMS_REQUIRED:
+            result, _ = await _attempt_grant_login_reward(state, current_time)
+            auto_granted = result == "granted"
+
+        if changed and not auto_granted:
             await _save_state(state)
 
 
@@ -444,30 +480,14 @@ async def claim_login_reward(now: datetime | None = None) -> dict[str, Any]:
         current_time = _ensure_timezone(now)
         _refresh_state(state, current_time, mark_login=True)
 
-        reward_day = _reward_day(current_time)
-        rooms_completed = state.rooms_completed
-        claimed_today = _parse_date(state.last_claim_day) == reward_day
-
-        if claimed_today:
+        result, payload = await _attempt_grant_login_reward(state, current_time)
+        if result == "already_claimed":
             raise ValueError("reward already claimed")
-        if rooms_completed < ROOMS_REQUIRED:
+        if result == "requirement_not_met":
             raise ValueError("daily requirement not met")
-
-        if not state.reward_items:
-            state.reward_items = _generate_reward_items(state.streak)
-
-        items = [dict(item) for item in state.reward_items]
-        inventory = await _apply_rewards(items)
-
-        state.last_claim_day = reward_day.isoformat()
-        state.last_claim_at = current_time.isoformat()
-        await _save_state(state)
-
-        return {
-            "streak": state.streak,
-            "reward_items": items,
-            "inventory": inventory,
-        }
+        if payload is None:
+            raise ValueError("unable to grant reward")
+        return payload
 
 
 async def get_daily_rdr_bonus(now: datetime | None = None) -> float:

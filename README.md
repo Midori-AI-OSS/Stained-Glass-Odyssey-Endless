@@ -4,9 +4,10 @@ A web-based auto-battler game featuring strategic party management, elemental co
 
 ## Daily Login Rewards
 
-Log in each day, clear at least three rooms, and claim a streak-based bundle of
-damage-type upgrade items. Rewards reset at 2:00 AM Pacific Time and scale up
-every seven and one hundred consecutive days.
+Log in each day, clear at least three rooms, and a streak-based bundle of
+damage-type upgrade items will be delivered automatically to your inventory.
+Rewards reset at 2:00 AM Pacific Time and scale up every seven and one hundred
+consecutive days.
 
 ## Quick Start with Docker Compose (Recommended)
 

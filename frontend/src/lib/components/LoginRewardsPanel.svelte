@@ -2,7 +2,7 @@
   import { onDestroy, onMount } from 'svelte';
   import { Clock3, Gift, RefreshCw, Star, Sparkles } from 'lucide-svelte';
 
-  import { claimLoginReward, getLoginRewardStatus } from '$lib/systems/uiApi.js';
+  import { getLoginRewardStatus } from '$lib/systems/uiApi.js';
 
   // When true, renders in an embedded layout suitable for panels
   export let embedded = false;
@@ -14,13 +14,13 @@
 
   let loading = true;
   let refreshing = false;
-  let claiming = false;
   let errorMessage = '';
   let status = null;
   let countdownSeconds = 0;
   let countdownTimer = null;
   let pendingAutoRefresh = false;
   let lastFetch = 0;
+  let autoRefreshTimer = null;
 
   function formatCountdown(totalSeconds) {
     const total = Number.isFinite(totalSeconds) ? Math.max(0, Math.floor(totalSeconds)) : 0;
@@ -84,7 +84,7 @@
   }
 
   async function loadStatus({ force = false } = {}) {
-    if (refreshing || claiming) return;
+    if (refreshing) return;
     const now = Date.now();
     if (!force && status && now - lastFetch < MIN_REFRESH_INTERVAL) {
       return;
@@ -114,23 +114,6 @@
     await loadStatus({ force: true });
   }
 
-  async function handleClaim() {
-    if (!status || claiming || status.claimed_today || !status.can_claim) {
-      return;
-    }
-    claiming = true;
-    errorMessage = '';
-    try {
-      await claimLoginReward();
-      await loadStatus({ force: true });
-    } catch (error) {
-      console.error('Failed to claim reward:', error);
-      errorMessage = error?.message || 'Failed to claim the reward. Please try again.';
-    } finally {
-      claiming = false;
-    }
-  }
-
   function handleVisibilityChange() {
     try {
       if (typeof document === 'undefined') return;
@@ -152,12 +135,16 @@
       clearInterval(countdownTimer);
       countdownTimer = null;
     }
+    if (autoRefreshTimer) {
+      clearInterval(autoRefreshTimer);
+      autoRefreshTimer = null;
+    }
     if (typeof document !== 'undefined') {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     }
   });
 
-  $: if (!loading && !refreshing && !claiming && countdownSeconds === 0 && status && !pendingAutoRefresh) {
+  $: if (!loading && !refreshing && countdownSeconds === 0 && status && !pendingAutoRefresh) {
     pendingAutoRefresh = true;
     queueMicrotask(async () => {
       try {
@@ -173,22 +160,32 @@
   $: roomsProgress = roomsRequired > 0 ? Math.min(1, Math.max(0, roomsCompleted / roomsRequired)) : 0;
   $: roomsRemaining = Math.max(0, roomsRequired - roomsCompleted);
   $: roomsOverRequirement = Math.max(0, roomsCompleted - roomsRequired);
+  $: shouldAutoPoll = Boolean(status && !status.claimed_today && roomsRemaining <= 1);
+  $: {
+    if (shouldAutoPoll) {
+      if (!autoRefreshTimer) {
+        autoRefreshTimer = setInterval(() => {
+          loadStatus({ force: true });
+        }, MIN_REFRESH_INTERVAL);
+      }
+    } else if (autoRefreshTimer) {
+      clearInterval(autoRefreshTimer);
+      autoRefreshTimer = null;
+    }
+  }
   $: dailyRdrBonus = Math.max(0, Number(status?.daily_rdr_bonus ?? 0));
   $: dailyRdrBonusLabel = formatBonusPercent(dailyRdrBonus);
   $: streak = Math.max(1, Number(status?.streak || 0));
   $: streakDays = computeVisibleDays(streak);
   $: resetLabel = formatResetLabel(status?.reset_at);
   $: countdownLabel = formatCountdown(countdownSeconds);
-  $: claimDisabled = claiming || !status || status.claimed_today || !status.can_claim;
-  $: claimButtonLabel = status
+  $: autoDeliveryLabel = status
     ? status.claimed_today
-      ? 'Reward Claimed'
-      : status.can_claim
-        ? 'Claim Reward'
-        : roomsRemaining === 0
-          ? 'Complete a run to unlock'
-          : `Clear ${roomsRemaining} more room${roomsRemaining === 1 ? '' : 's'}`
-    : 'Claim Reward';
+      ? 'Today\'s bundle has been delivered to your inventory.'
+      : roomsRemaining > 0
+        ? `Clear ${roomsRemaining} more room${roomsRemaining === 1 ? '' : 's'} today for automatic delivery.`
+        : 'Delivering bundle…'
+    : 'Complete today\'s runs to unlock the automatic bundle.';
 </script>
 
 <div class="login-reward-panel" class:embedded class:flat role="region" aria-live="polite">
@@ -244,8 +241,8 @@
       <div class="progress-bar" role="progressbar" aria-valuemin="0" aria-valuemax="{roomsRequired}" aria-valuenow="{Math.min(roomsCompleted, roomsRequired)}">
         <div class="progress-fill" style={`width: ${Math.round(roomsProgress * 100)}%`}></div>
       </div>
-      {#if !status.can_claim && !status.claimed_today}
-        <p class="progress-hint">Clear {roomsRequired} rooms in the current day to unlock the reward bundle.</p>
+      {#if !status.claimed_today}
+        <p class="progress-hint">Clear {roomsRequired} rooms in the current day to trigger automatic delivery.</p>
       {:else if status.claimed_today}
         <p class="progress-hint success">Today's bundle has been delivered to your inventory.</p>
       {/if}
@@ -292,17 +289,10 @@
     </div>
 
     <div class="actions">
-      <button class="icon-btn claim-btn" on:click={handleClaim} disabled={claimDisabled}>
-        {#if status.claimed_today}
-          <Sparkles size={16} />
-        {:else}
-          <Gift size={16} />
-        {/if}
-        <span>{claimButtonLabel}</span>
-      </button>
-      {#if claiming}
-        <div class="claim-status">Claiming reward…</div>
-      {/if}
+      <div class="auto-delivery" class:delivered={status.claimed_today}>
+        <Gift size={16} />
+        <span>{autoDeliveryLabel}</span>
+      </div>
     </div>
   {/if}
 </div>
@@ -653,15 +643,27 @@
     align-items: stretch;
   }
 
-  /* Full-width primary action at bottom */
-  .actions .icon-btn { width: 100%; height: auto; justify-content: center; }
+  .auto-delivery {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.6rem 0.8rem;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    color: #fff;
+    font-size: 0.82rem;
+    letter-spacing: 0.02em;
+    box-shadow: 0 1px 4px 0 rgba(0, 40, 120, 0.12);
+  }
 
-  /* Optional: small visual distinction for the primary action */
-  .claim-btn:not(:disabled) { border-color: rgba(200,240,255,0.35); }
+  .auto-delivery span {
+    line-height: 1.3;
+  }
 
-  .claim-status {
-    font-size: 0.75rem; /* align with progress-text scale */
-    opacity: 0.8;
+  .auto-delivery.delivered {
+    background: rgba(90, 160, 120, 0.22);
+    border-color: rgba(140, 220, 180, 0.45);
+    box-shadow: 0 2px 10px rgba(0, 60, 60, 0.25);
   }
 
   @media (max-width: 1024px) {
