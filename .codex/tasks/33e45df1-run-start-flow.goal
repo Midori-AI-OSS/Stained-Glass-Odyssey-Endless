@@ -28,13 +28,21 @@ We need to replace the current single-click "Start Run" action with a guided set
      - **Foe Glitched Rate** – increased odds of foes rolling the Glitched state per stack.
      - **Foe Prime Rate** – increased odds of foes rolling the Prime state per stack.
      - **Character Stat Down** – lowers all player stats by 0.001× per stack, switching to 0.000001× per stack once the stack count exceeds 500, and awards a 5% rare drop rate (RDR) and character experience bonus on the first stack plus an additional +1% per extra stack (e.g., two stacks = 11%).
+     - **Pressure** – the classic stackable difficulty lever. The metadata response must spell out exactly how a pressure stack translates into gameplay knobs so the frontend can echo that math to players:
+       - **Encounter sizing** – encounter templates start at one foe and add +1 base slot for every five pressure (capped by the 10-slot spawn ceiling) before party-size bonuses. *Example: pressure 5 → `floor(5 ÷ 5) = 1` extra base foe, so encounters expect two enemies before party bonuses.*
+       - **Foe defenses** – foes inherit a minimum defense floor of `pressure × 10` that then rolls a 0.82–1.50 variance. *Example: pressure 5 → base floor 50, resulting in a 41–75 defense band that overrides lower rolls from other scaling knobs.*
+       - **Elite odds** – each stack adds +1% to both Prime and Glitched spawn chances on top of room- and floor-derived values, mirroring the backend’s `pressure × 0.01` bonus.
+       - **Shop taxes** – baseline shop prices scale multiplicatively by `1.26^pressure` (±5% variance before visit taxes). *Example: pressure 5 → roughly 3.18× base cost before repeat-visit surcharges.*
+      - Clarify that pressure stacks no longer grant extra character experience or rare drop rate (RDR) bonuses—the reward loop still depends on the party's RDR and per-foe kill payouts, with pressure only nudging upgrade item star floors via `pressure // 10`, so communicate that tradeoff accurately.
    - For every stack applied to a foe-focused modifier, grant +50% character experience and rare drop rate (RDR) as part of the reward calculations (global exp remains derived from character exp).
+   - Ensure the metadata explicitly calls out that the frontend must render Pressure with an on-hover tooltip summarizing the increased difficulty and reward tradeoff so the existing UX expectation is preserved.
    - Ensure all modifiers respect diminishing returns semantics and document how the backend enforces that curve.
    - Extend `start_run` to accept a run type identifier and modifier payload, persisting selections alongside the run entry.
    - Add validation to guard against invalid combinations and provide descriptive error responses.
 3. **Frontend data plumbing**
    - Fetch the new run configuration metadata during UI bootstrap (or when opening the Run overlay) and normalize it for client-side use.
    - Remove assumptions about the only modifier being pressure; prepare stores/actions to hold selected run type and modifier values.
+   - Expose tooltip/helper text from the metadata—especially the Pressure difficulty/reward summary—so the run setup wizard can render the required hover affordance.
 4. **Run setup wizard UI**
    - Replace `RunChooser` with a wizard that sequences Party Picker → Run Type → Modifier configuration → Review/confirmation.
    - Ensure each step is stateful, accessible, and resilient to backend failures; include ability to backtrack before launch.
