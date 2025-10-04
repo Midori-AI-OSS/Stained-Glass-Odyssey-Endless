@@ -679,6 +679,9 @@ export function createBattleReviewState(initialProps = {}) {
   const timeWindow = writable(null);
   const timelineCursor = writable({ time: 0, eventId: null });
 
+  const reducedMotion = derived(props, ($props) => Boolean($props.reducedMotion));
+  const activeTab = writable('overview');
+
   let lastKey = '';
   let currentToken = 0;
 
@@ -775,7 +778,6 @@ export function createBattleReviewState(initialProps = {}) {
     }
   }
 
-  const reducedMotion = derived(props, ($props) => Boolean($props.reducedMotion));
   const displayParty = derived([props, summary], ([$props, $summary]) => deriveDisplayParty($props, $summary));
   const displayFoes = derived([props, summary], ([$props, $summary]) => deriveDisplayFoes($props, $summary));
   const outgoingBySource = derived([displayParty, displayFoes], ([$party, $foes]) =>
@@ -783,8 +785,6 @@ export function createBattleReviewState(initialProps = {}) {
   );
 
   const availableTabs = derived([displayParty, displayFoes], ([$party, $foes]) => buildAvailableTabs($party, $foes));
-
-  const activeTab = writable('overview');
 
   const currentTab = derived([availableTabs, activeTab], ([$tabs, $active]) =>
     $tabs.find((tab) => tab.id === $active) || $tabs[0]
