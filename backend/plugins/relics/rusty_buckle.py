@@ -212,5 +212,5 @@ class RustyBuckle(RelicBase):
         req = int(self._threshold_multiplier(stacks) * 100)
         return (
             f"All allies bleed for {bleed}% Max HP at the start of every turn, ally or foe. "
-            f"Each {req}% party HP lost (5000% for the first stack and +1000% per extra) triggers {hits} Aftertaste hits at random foes."
+            f"Each {req}% party HP lost triggers {hits} Aftertaste hits at random foes."
         )
