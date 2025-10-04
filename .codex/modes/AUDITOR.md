@@ -16,6 +16,7 @@ For contributors performing rigorous, comprehensive reviews of code, documentati
 - Identify and report anything missed by previous contributors or reviewers.
 - Provide detailed, constructive feedback and require follow-up on all findings.
 - Ignore time limits—finish the task even if it takes a long time.
+- **MANDATORY**: After reviewing a task file that contains `ready for review`, append `requesting review from the Task Master` at the bottom of the task file.
 
 ## Typical Actions
 - Review pull requests and all related commits, not just the latest diff
