@@ -116,6 +116,7 @@ async def cleanup_battle_state() -> None:
     locks_removed = 0
 
     for run_id in completed:
+        state: dict[str, Any] = {}
         if battle_tasks.pop(run_id, None) is not None:
             tasks_removed += 1
 
@@ -144,10 +145,15 @@ async def cleanup_battle_state() -> None:
             ended = state.get("ended", False)
 
         has_rewards = any([awaiting_card, awaiting_relic, awaiting_loot])
+        run_result = str(snap.get("run_result", "")).strip().lower()
+        if not run_result and state:
+            run_result = str(state.get("run_result", "")).strip().lower()
+        preserve_snapshot = ended and run_result == "defeat"
 
         if ended or (not awaiting_next and not has_rewards):
-            if battle_snapshots.pop(run_id, None) is not None:
-                snapshots_removed += 1
+            if not preserve_snapshot:
+                if battle_snapshots.pop(run_id, None) is not None:
+                    snapshots_removed += 1
             if battle_locks.pop(run_id, None) is not None:
                 locks_removed += 1
 
@@ -316,41 +322,65 @@ async def _run_battle(
                     for foe_id, cooldown in updated.items()
                 ]
             if result.get("result") == "defeat":
-                state["awaiting_card"] = False
-                state["awaiting_relic"] = False
-                state["awaiting_loot"] = False
-                state["awaiting_next"] = False
+                state.update(
+                    {
+                        "awaiting_card": False,
+                        "awaiting_relic": False,
+                        "awaiting_loot": False,
+                        "awaiting_next": False,
+                        "ended": True,
+                        "run_result": "defeat",
+                        "run_result_logged": state.get("run_result_logged", False),
+                    }
+                )
                 try:
                     await asyncio.to_thread(save_map, run_id, state)
+                except Exception:
+                    pass
+                try:
                     await asyncio.to_thread(save_party, run_id, party)
-                    result.update(
-                        {
-                            "run_id": run_id,
-                            "current_room": rooms[state["current"]].room_type,
-                            "current_index": state["current"],
-                            "awaiting_card": False,
-                            "awaiting_relic": False,
-                            "awaiting_loot": False,
-                            "awaiting_next": False,
-                            "next_room": None,
-                            "ended": True,
-                        }
-                    )
-                    await progress(result)
-                    try:
-                        await log_run_end(run_id, "defeat")
-                        await log_play_session_end(run_id)
-                    except Exception:
-                        pass
+                except Exception:
+                    pass
+
+                result.update(
+                    {
+                        "run_id": run_id,
+                        "current_room": rooms[state["current"]].room_type,
+                        "current_index": state["current"],
+                        "awaiting_card": False,
+                        "awaiting_relic": False,
+                        "awaiting_loot": False,
+                        "awaiting_next": False,
+                        "next_room": None,
+                        "ended": True,
+                        "run_result": "defeat",
+                    }
+                )
+                await progress(result)
+
+                telemetry_logged = False
+                try:
+                    await log_run_end(run_id, "defeat")
+                    await log_play_session_end(run_id)
+                except Exception:
+                    pass
+                else:
+                    telemetry_logged = True
                 finally:
-                    try:
-                        # End run logging when run is deleted due to defeat
-                        end_run_logging()
-                        with get_save_manager().connection() as conn:
-                            conn.execute("DELETE FROM runs WHERE id = ?", (run_id,))
-                    except Exception:
-                        pass
-                purge_run_state(run_id, cancel_task=False)
+                    if telemetry_logged:
+                        state["run_result_logged"] = True
+                        try:
+                            await asyncio.to_thread(save_map, run_id, state)
+                        except Exception:
+                            pass
+
+                try:
+                    end_run_logging()
+                except Exception:
+                    pass
+
+                battle_tasks.pop(run_id, None)
+                battle_locks.pop(run_id, None)
                 return
             has_card_choices = bool(result.get("card_choices"))
             has_relic_choices = bool(result.get("relic_choices"))

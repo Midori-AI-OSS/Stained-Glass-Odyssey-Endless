@@ -238,12 +238,13 @@
 {/if}
 
 {#if $overlayView === 'defeat'}
-  <PopupWindow title="Defeat" reducedMotion={overlayReducedMotion} on:close={() => dispatch('back')}>
-    <div style="padding: 0.5rem 0.25rem; line-height: 1.4;">
-      <p>Your party was defeated.</p>
-      <p>You have been returned to the main menu.</p>
-      <div class="stained-glass-row" style="justify-content: flex-end; margin-top: 0.75rem;">
-        <button class="icon-btn" on:click={() => dispatch('back')}>OK</button>
+  <PopupWindow title="Run Lost" reducedMotion={overlayReducedMotion} on:close={() => dispatch('back')}>
+    <div class="defeat-content">
+      <h2 class="defeat-heading">Run Lost</h2>
+      <p class="defeat-message">Your party was overwhelmed and the run has come to an end.</p>
+      <p class="defeat-note">All rewards and progress have been preserved so you can regroup from the main menu.</p>
+      <div class="defeat-actions stained-glass-row">
+        <button class="icon-btn" on:click={() => dispatch('back')}>Return</button>
       </div>
     </div>
   </PopupWindow>
@@ -525,6 +526,39 @@
   .warp-info-note {
     font-size: 0.9rem;
     color: rgba(255,255,255,0.75);
+  }
+
+  .defeat-content {
+    padding: 0.75rem 0.75rem 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    text-align: center;
+    line-height: 1.5;
+  }
+
+  .defeat-heading {
+    margin: 0;
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--warning-text, #ff6b6b);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .defeat-message,
+  .defeat-note {
+    margin: 0;
+  }
+
+  .defeat-note {
+    font-size: 0.95rem;
+    color: rgba(255, 255, 255, 0.8);
+  }
+
+  .defeat-actions {
+    justify-content: center;
+    margin-top: 0.75rem;
   }
 
   .overlay-inset {
