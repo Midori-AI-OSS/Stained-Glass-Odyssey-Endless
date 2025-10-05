@@ -611,9 +611,7 @@
                       type="number"
                       min={mod.stacking?.minimum ?? 0}
                       step={mod.stacking?.step ?? 1}
-                      {#if Number.isFinite(mod.stacking?.maximum)}
-                        max={mod.stacking.maximum}
-                      {/if}
+                      max={Number.isFinite(mod.stacking?.maximum) ? mod.stacking.maximum : undefined}
                       value={sanitizeStack(mod.id, modifierValues[mod.id])}
                       on:change={(event) => handleModifierChange(mod.id, event.target.value)}
                     />
