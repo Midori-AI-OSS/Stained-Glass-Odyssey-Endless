@@ -7,6 +7,7 @@
     getRandomBackground,
     getElementColor,
     getLightstreamSwordVisual,
+    getDamageTypePalette,
     normalizeDamageTypeId
   } from '../systems/assetLoader.js';
   import BattleFighterCard from '../battle/BattleFighterCard.svelte';
@@ -17,6 +18,7 @@
   import ActionQueue from '../battle/ActionQueue.svelte';
   import BattleEventFloaters from './BattleEventFloaters.svelte';
   import BattleTargetingOverlay from './BattleTargetingOverlay.svelte';
+  import BattleProjectileLayer from './BattleProjectileLayer.svelte';
   import EffectsChargeContainer from './battle/EffectsChargeContainer.svelte';
   import { motionStore } from '../systems/settingsStorage.js';
   import { haltSync } from '../systems/overlayState.js';
@@ -161,6 +163,7 @@
   let logs = [];
   let hoveredId = null;
   let floaterFeed = [];
+  let projectileEntries = [];
   // Anchor positions for floating damage/heal numbers: id -> { x, y } in [0..1] relative to root field
   let anchors = {};
   // Track live DOM nodes for anchors to allow global recompute when layout shifts (e.g., removals)
@@ -169,6 +172,10 @@
   let recentEventCounts = new Map();
   let lastRecentEventTokens = [];
   let floaterDuration = 1200;
+  const projectileTimers = new Map();
+  let projectileCounter = 0;
+  const projectileAnimationMs = 420;
+  const projectileCleanupBufferMs = 260;
   let battleSnapshot = null;
   let effectCharges = [];
   const relevantRecentEventTypes = new Set([
@@ -265,6 +272,8 @@
     summonRenderState.clear();
     pendingLayers = new Map();
     hpHistory = new Map();
+    clearProjectiles();
+    projectileCounter = 0;
     lastRunId = runId;
     currentTurn = null;
     battleSnapshot = null;
@@ -289,6 +298,8 @@
     phaseSequenceCounter = 0;
     pendingLayers = new Map();
     hpHistory = new Map();
+    clearProjectiles();
+    projectileCounter = 0;
     currentTurn = null;
     battleSnapshot = null;
     clearTickIndicators();
@@ -704,9 +715,11 @@
       pendingFloaterRawEvents = [];
       pendingFloaterNormalizedEvents = [];
     }
+    const floaterEvents = processRecentEvents(effectiveRaw);
+    registerProjectileEvents(floaterEvents);
     return {
       normalizedEvents: Array.isArray(effectiveNormalized) ? effectiveNormalized : [],
-      floaterFeed: processRecentEvents(effectiveRaw),
+      floaterFeed: floaterEvents,
     };
   }
 
@@ -882,6 +895,122 @@
     };
   }
 
+  const DIRECT_ATTACK_KEYS = [
+    'attack_token',
+    'attackToken',
+    'attack_instance',
+    'attackInstance',
+    'attack_id',
+    'attackId',
+    'attack_key',
+    'attackKey',
+    'attack_uuid',
+    'attackUuid',
+    'sequence_id',
+    'sequenceId',
+    'sequence_key',
+    'sequenceKey',
+    'combo_id',
+    'comboId',
+    'hit_id',
+    'hitId',
+    'hit_key',
+    'hitKey',
+  ];
+
+  const ATTACK_INDEX_KEYS = [
+    'sequence_index',
+    'sequenceIndex',
+    'hit_index',
+    'hitIndex',
+    'attack_index',
+    'attackIndex',
+    'combo_index',
+    'comboIndex',
+    'step_index',
+    'stepIndex',
+  ];
+
+  const ATTACK_SEQUENCE_FALLBACK_KEYS = [
+    'attack_sequence',
+    'attackSequence',
+    'attack_seq',
+    'attackSeq',
+    'sequence',
+    'combo_sequence',
+    'comboSequence',
+  ];
+
+  const ATTACK_METADATA_KEYS = ['attack_metadata', 'attackMetadata', 'combo_metadata', 'comboMetadata'];
+
+  function normalizeTokenValue(value) {
+    if (value === undefined || value === null) return '';
+    if (typeof value === 'number') {
+      if (!Number.isFinite(value)) return '';
+      return String(value);
+    }
+    if (typeof value === 'boolean') {
+      return value ? 'true' : 'false';
+    }
+    try {
+      const text = String(value);
+      return text.trim();
+    } catch {
+      return '';
+    }
+  }
+
+  function flattenSequenceValue(value) {
+    if (value === undefined || value === null) return '';
+    if (Array.isArray(value)) {
+      const parts = value
+        .map((entry) => flattenSequenceValue(entry))
+        .filter((part) => part && part.trim() !== '');
+      return parts.join('>');
+    }
+    if (typeof value === 'object') {
+      const keys = Object.keys(value).sort();
+      const parts = [];
+      for (const key of keys) {
+        const normalized = flattenSequenceValue(value[key]);
+        if (normalized) {
+          parts.push(`${key}:${normalized}`);
+        } else {
+          parts.push(`${key}:`);
+        }
+      }
+      return parts.join('|');
+    }
+    return normalizeTokenValue(value);
+  }
+
+  function extractAttackSequenceToken(metadata) {
+    if (!metadata || typeof metadata !== 'object') return '';
+    const parts = [];
+    for (const key of DIRECT_ATTACK_KEYS) {
+      const normalized = normalizeTokenValue(metadata[key]);
+      if (normalized) parts.push(`${key}:${normalized}`);
+    }
+    for (const key of ATTACK_INDEX_KEYS) {
+      const normalized = normalizeTokenValue(metadata[key]);
+      if (normalized) parts.push(`${key}:${normalized}`);
+    }
+    for (const key of ATTACK_METADATA_KEYS) {
+      const normalized = flattenSequenceValue(metadata[key]);
+      if (normalized) parts.push(`${key}:${normalized}`);
+    }
+    for (const key of ATTACK_SEQUENCE_FALLBACK_KEYS) {
+      if (key in metadata) {
+        const normalized = flattenSequenceValue(metadata[key]);
+        if (normalized) {
+          parts.push(`seq:${normalized}`);
+          break;
+        }
+      }
+    }
+    return parts.join('||');
+  }
+
   function eventToken(evt) {
     if (!evt) return '';
     const metadata = evt.metadata || {};
@@ -912,6 +1041,7 @@
           )
           .join('|')
       : '';
+    const attackSequenceToken = extractAttackSequenceToken(metadata);
     return [
       evt.type || '',
       evt.target_id || '',
@@ -924,7 +1054,148 @@
       cardIdentifiers,
       relicIdentifiers,
       effectDetails,
+      attackSequenceToken,
     ].join('::');
+  }
+
+  function toTrimmedId(value) {
+    if (value === undefined || value === null) return '';
+    try {
+      const text = String(value);
+      const trimmed = text.trim();
+      return trimmed;
+    } catch {
+      return '';
+    }
+  }
+
+  function findFirstId(candidates) {
+    for (const value of candidates) {
+      const trimmed = toTrimmedId(value);
+      if (trimmed) return trimmed;
+    }
+    return '';
+  }
+
+  function isCandidateLuna(value) {
+    const text = toTrimmedId(value);
+    if (!text) return false;
+    const normalized = text.toLowerCase();
+    if (normalized === 'luna') return true;
+    const stripped = normalized.replace(/[^a-z]/g, '');
+    return stripped === 'luna';
+  }
+
+  function isLunaHitEvent(evt) {
+    if (!evt || typeof evt !== 'object') return false;
+    const type = String(evt.type || '').toLowerCase();
+    if (type !== 'damage_taken') return false;
+    const metadata = evt.metadata && typeof evt.metadata === 'object' ? evt.metadata : {};
+    const sourceCandidates = [
+      evt.source_id,
+      evt.sourceId,
+      metadata.source_id,
+      metadata.sourceId,
+      metadata.source,
+      metadata.source_name,
+      metadata.sourceName,
+      metadata.card_owner_id,
+      metadata.card_ownerId,
+      metadata.card_owner,
+      metadata.card_owner_name,
+      metadata.cardOwnerName,
+      metadata.owner_id,
+      metadata.ownerId,
+      metadata.owner_name,
+      metadata.ownerName,
+      metadata.attacker_id,
+      metadata.attackerId,
+      metadata.attacker,
+      metadata.attacker_name,
+      metadata.attackerName,
+    ];
+    if (!sourceCandidates.some(isCandidateLuna)) return false;
+    const targetId = findFirstId([
+      evt.target_id,
+      evt.targetId,
+      metadata.target_id,
+      metadata.targetId,
+      metadata.target,
+      metadata.target_name,
+      metadata.targetName,
+    ]);
+    return Boolean(targetId && targetId !== '' && targetId !== undefined);
+  }
+
+  function buildProjectilePayload(evt) {
+    if (!isLunaHitEvent(evt)) return null;
+    const metadata = evt.metadata && typeof evt.metadata === 'object' ? evt.metadata : {};
+    const sourceId = findFirstId([
+      evt.source_id,
+      evt.sourceId,
+      metadata.source_id,
+      metadata.sourceId,
+      metadata.card_owner_id,
+      metadata.card_ownerId,
+      metadata.owner_id,
+      metadata.ownerId,
+      metadata.attacker_id,
+      metadata.attackerId,
+    ]);
+    const targetId = findFirstId([
+      evt.target_id,
+      evt.targetId,
+      metadata.target_id,
+      metadata.targetId,
+      metadata.target,
+    ]);
+    if (!sourceId || !targetId || sourceId === targetId) return null;
+    const damageTypeId = evt.damageTypeId || metadata.damage_type_id || metadata.element || '';
+    const palette = getDamageTypePalette(damageTypeId || 'generic');
+    const sequenceKey = extractAttackSequenceToken(metadata) || `${evt.type || ''}:${targetId}:${evt.amount ?? ''}`;
+    return {
+      sourceId,
+      targetId,
+      damageTypeId: damageTypeId || 'generic',
+      palette,
+      metadata,
+      sequenceKey,
+      eventType: evt.type || '',
+    };
+  }
+
+  function queueProjectile(payload) {
+    if (!payload) return;
+    projectileCounter += 1;
+    const id = `projectile-${projectileCounter}`;
+    const entry = { ...payload, id };
+    projectileEntries = [...projectileEntries, entry];
+    const timeout = setTimeout(() => {
+      projectileTimers.delete(id);
+      const remaining = projectileEntries.filter(item => item.id !== id);
+      if (remaining.length !== projectileEntries.length) {
+        projectileEntries = remaining;
+      }
+    }, projectileAnimationMs + projectileCleanupBufferMs);
+    projectileTimers.set(id, timeout);
+  }
+
+  function registerProjectileEvents(events) {
+    if (!Array.isArray(events) || !events.length) return;
+    for (const evt of events) {
+      const payload = buildProjectilePayload(evt);
+      if (payload) queueProjectile(payload);
+    }
+  }
+
+  function clearProjectiles() {
+    for (const timeout of projectileTimers.values()) {
+      clearTimeout(timeout);
+    }
+    projectileTimers.clear();
+    if (projectileEntries.length) {
+      projectileEntries = [];
+    }
   }
 
   function refreshTickIndicators() {
@@ -1985,6 +2256,7 @@
         recentEventCounts = new Map();
         lastRecentEventTokens = [];
         clearFloaterBatch();
+        clearProjectiles();
       }
 
       if (snap && typeof snap === 'object') {
@@ -2049,6 +2321,7 @@
     clearPollTimer();
     clearStatusTimeline();
     clearTickIndicators();
+    clearProjectiles();
   });
 
   // Watch active state changes
@@ -2067,6 +2340,13 @@
 >
   <EnrageIndicator active={Boolean(enrage?.active)} reducedMotion={effectiveReducedMotion} enrageData={enrage} />
   <BattleEffects cue={effectCue} />
+  <BattleProjectileLayer
+    class="overlay-layer"
+    projectiles={projectileEntries}
+    anchors={anchors}
+    reducedMotion={effectiveReducedMotion}
+    durationMs={projectileAnimationMs}
+  />
   <BattleEventFloaters
     class="overlay-layer"
     events={floaterFeed}

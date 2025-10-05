@@ -10,6 +10,7 @@ import FighterCardStub from './__fixtures__/BattleFighterCard.stub.svelte';
 import EnrageIndicatorStub from './__fixtures__/EnrageIndicator.stub.svelte';
 import BattleLogStub from './__fixtures__/BattleLog.stub.svelte';
 import StatusIconsStub from './__fixtures__/StatusIcons.stub.svelte';
+import ProjectileStub from './__fixtures__/BattleProjectileLayer.stub.svelte';
 
 vi.mock('$lib', () => ({
   roomAction: vi.fn(),
@@ -23,6 +24,9 @@ vi.mock('../src/lib/battle/ActionQueue.svelte', () => ({
 }));
 vi.mock('../src/lib/components/BattleEventFloaters.svelte', () => ({
   default: FloatersStub,
+}));
+vi.mock('../src/lib/components/BattleProjectileLayer.svelte', () => ({
+  default: ProjectileStub,
 }));
 vi.mock('../src/lib/effects/BattleEffects.svelte', () => ({
   default: EffectsStub,
@@ -132,6 +136,104 @@ describe('BattleView turn phase handling', () => {
     });
 
     expect(roomAction).toHaveBeenCalledWith('0', { action: 'snapshot', run_id: 'snapshot-run' });
+  });
+
+  it('keeps sequential Luna hits distinct and spawns projectiles', async () => {
+    const startSnapshot = buildSnapshot({
+      turnPhase: { state: 'start', attacker_id: 'luna', target_id: 'goblin' },
+    });
+    startSnapshot.party = startSnapshot.party.map((member) => ({
+      ...member,
+      id: 'luna',
+      name: 'Luna',
+    }));
+    startSnapshot.recent_events = [
+      {
+        type: 'damage_taken',
+        source_id: 'luna',
+        target_id: 'goblin',
+        amount: 30,
+        metadata: {
+          damage_type_id: 'dark',
+          attack_sequence: { sequence_id: 'combo-1', hit_index: 0 },
+          source_id: 'luna',
+          source_name: 'Luna',
+        },
+      },
+      {
+        type: 'damage_taken',
+        source_id: 'luna',
+        target_id: 'goblin',
+        amount: 30,
+        metadata: {
+          damage_type_id: 'dark',
+          attack_sequence: { sequence_id: 'combo-1', hit_index: 1 },
+          source_id: 'luna',
+          source_name: 'Luna',
+        },
+      },
+    ];
+
+    const resolveSnapshot = buildSnapshot({
+      turnPhase: { state: 'resolve', attacker_id: 'luna', target_id: 'goblin' },
+      includeActiveIds: false,
+    });
+    resolveSnapshot.party = resolveSnapshot.party.map((member) => ({
+      ...member,
+      id: 'luna',
+      name: 'Luna',
+    }));
+    resolveSnapshot.foes = resolveSnapshot.foes.map((foe) => ({ ...foe, hp: 20 }));
+    resolveSnapshot.recent_events = [];
+
+    const endSnapshot = buildSnapshot({
+      turnPhase: { state: 'end' },
+      includeActiveIds: false,
+    });
+    endSnapshot.party = endSnapshot.party.map((member) => ({
+      ...member,
+      id: 'luna',
+      name: 'Luna',
+    }));
+    endSnapshot.foes = endSnapshot.foes.map((foe) => ({ ...foe, hp: 20 }));
+    endSnapshot.recent_events = [];
+
+    const snapshots = [startSnapshot, resolveSnapshot, endSnapshot];
+    roomAction.mockImplementation(() =>
+      Promise.resolve(clone(snapshots.length ? snapshots.shift() : endSnapshot)),
+    );
+
+    const { component } = render(BattleView, {
+      props: {
+        runId: 'luna-projectiles',
+        active: true,
+        framerate: 10000,
+        showStatusTimeline: false,
+        showHud: false,
+        showFoes: true,
+      },
+    });
+
+    await settle();
+
+    await waitFor(() => {
+      expect(screen.getByTestId('floaters-probe').dataset.count).toBe('2');
+    });
+
+    await waitFor(() => {
+      expect(screen.getByTestId('projectiles-probe').dataset.count).toBe('2');
+    });
+
+    const projectileProbe = screen.getByTestId('projectiles-probe');
+    expect(projectileProbe.dataset.starts).toBe('luna,luna');
+    expect(projectileProbe.dataset.targets).toBe('goblin,goblin');
+    const sequences = projectileProbe.dataset.sequences.split(',');
+    expect(sequences).toHaveLength(2);
+    expect(sequences[0]).toContain('hit_index:0');
+    expect(sequences[1]).toContain('hit_index:1');
+
+    component.$set({ active: false });
+    await settle();
   });
 
   it('persists attacker targeting through start/resolve and clears on end', async () => {
