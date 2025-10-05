@@ -36,6 +36,9 @@ Implementation details:
   user just made.
 - `PartyPicker.svelte` propagates `reducedMotion` to the roster so the effect
   can be disabled via Settings.
+- `RunChooser.svelte` stretches the party step wrapper so the embedded
+  `PartyPicker` keeps the full Menu Panel footprint during the start-run flow,
+  matching the sizing used when opening the Party menu from the main menu.
 - `StatTabs.svelte` uses flexible sizing so the panel fills its side and now
   surfaces a read-only stat summary alongside upgrade controls rather than
   embedding the inline Character Editor. In upgrade mode the stats list now
