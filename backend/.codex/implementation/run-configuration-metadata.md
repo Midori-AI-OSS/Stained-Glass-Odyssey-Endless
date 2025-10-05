@@ -56,6 +56,14 @@ stat penalties without re-validating the metadata payload. The context is
 persisted alongside the map state and stamped onto generated nodes via a
 metadata hash for analytics.
 
+The `apply_player_modifier_context` helper keeps player stats aligned with the
+stored configuration. `start_run` uses it immediately after validation so the
+new party reflects any character penalties before the first map is generated,
+and `runs.party_manager.load_party` invokes the same helper when rehydrating a
+run. This prevents stat penalties from disappearing on reloads and ensures
+telemetry derived from reloaded parties matches the preview calculations in the
+setup wizard.
+
 Run type definitions may also include `room_overrides` metadata. The
 `get_room_overrides` helper normalises these directives so `MapGenerator` can
 consistently disable or duplicate optional rooms (e.g., Boss Rush removes shops

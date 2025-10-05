@@ -16,6 +16,7 @@ from plugins import characters as player_plugins
 from plugins.characters._base import PlayerBase
 from plugins.damage_types import load_damage_type
 from services.run_configuration import RunModifierContext
+from services.run_configuration import apply_player_modifier_context
 
 from .encryption import get_save_manager
 
@@ -313,6 +314,8 @@ def load_party(run_id: str) -> Party:
     except Exception:
         log.exception("Failed to resolve daily RDR bonus; falling back to base value")
         daily_bonus = 0.0
+
+    apply_player_modifier_context(members, hydrated_context or raw_modifier_context)
 
     party = Party(
         members=members,
