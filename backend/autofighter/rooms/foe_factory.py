@@ -6,12 +6,15 @@ from typing import Any
 from typing import Collection
 from typing import Mapping
 
+from services.run_configuration import RunModifierContext
+
 from autofighter.mapgen import MapNode
 from autofighter.party import Party
 from autofighter.rooms.foes import SpawnTemplate
 from autofighter.rooms.foes.catalog import load_catalog
 from autofighter.rooms.foes.scaling import apply_attribute_scaling
 from autofighter.rooms.foes.scaling import apply_base_debuffs
+from autofighter.rooms.foes.scaling import apply_permanent_scaling
 from autofighter.rooms.foes.scaling import calculate_cumulative_rooms
 from autofighter.rooms.foes.scaling import compute_base_multiplier
 from autofighter.rooms.foes.scaling import enforce_thresholds
@@ -100,13 +103,28 @@ class FoeFactory:
         progression_info: Mapping[str, Any] = progression or {}
         total_rooms = progression_info.get("total_rooms_cleared", 0)
         floors = progression_info.get("floors_cleared", 0)
+        context: RunModifierContext | None = getattr(party, "run_modifier_context", None)
+        config = dict(self.config)
         pressure_override = progression_info.get("current_pressure")
-        if pressure_override is None:
+        if context is not None:
+            try:
+                pressure_override = int(getattr(context, "pressure", pressure_override))
+            except Exception:
+                pressure_override = getattr(node, "pressure", 0)
+            try:
+                per_stack_floor = context.pressure_defense_floor / max(context.pressure, 1) if context.pressure else config.get("pressure_defense_floor", 10)
+                config["pressure_defense_floor"] = per_stack_floor
+            except Exception:
+                pass
+            config["pressure_defense_min_roll"] = context.pressure_defense_min_roll
+            config["pressure_defense_max_roll"] = context.pressure_defense_max_roll
+        elif pressure_override is None:
             pressure_override = getattr(node, "pressure", 0)
         prime_chance, glitched_chance = self.calculate_rank_probabilities(
             total_rooms,
             floors,
             pressure_override,
+            context=context,
         )
         room_type = getattr(node, "room_type", "") or ""
         forced_prime = "prime" in room_type
@@ -137,12 +155,24 @@ class FoeFactory:
                 foe.rank = "glitched boss"
             else:
                 foe.rank = "boss"
+            if context is not None:
+                apply_permanent_scaling(
+                    foe,
+                    multipliers=context.foe_stat_multipliers,
+                    deltas=context.foe_stat_deltas,
+                    name="Run modifier scaling",
+                    modifier_id=f"{config.get('scaling_modifier_id', 'foe_room_scaling')}_run_mod",
+                )
+                try:
+                    foe.hp = foe.max_hp
+                except Exception:
+                    pass
             return [foe]
 
         desired = _desired_count(
             node,
             party,
-            config=self.config,
+            config=config,
         )
         templates = _sample_templates(
             desired,
@@ -150,7 +180,7 @@ class FoeFactory:
             node=node,
             party_ids=party_ids,
             recent_ids=recent_set,
-            config=self.config,
+            config=config,
         )
         foes: list[FoeBase] = []
         for template in templates:
@@ -164,6 +194,18 @@ class FoeFactory:
                 foe.rank = "prime"
             elif is_glitched:
                 foe.rank = "glitched"
+            if context is not None:
+                apply_permanent_scaling(
+                    foe,
+                    multipliers=context.foe_stat_multipliers,
+                    deltas=context.foe_stat_deltas,
+                    name="Run modifier scaling",
+                    modifier_id=f"{config.get('scaling_modifier_id', 'foe_room_scaling')}_run_mod",
+                )
+                try:
+                    foe.hp = foe.max_hp
+                except Exception:
+                    pass
             foes.append(foe)
         return foes
 
@@ -172,6 +214,8 @@ class FoeFactory:
         total_rooms_cleared: int = 0,
         floors_cleared: int = 0,
         pressure: int = 0,
+        *,
+        context: RunModifierContext | None = None,
     ) -> tuple[float, float]:
         try:
             rooms = max(int(total_rooms_cleared), 0)
@@ -195,32 +239,66 @@ class FoeFactory:
         else:
             floor_multiplier = 1.0
         scaled_rate = base_rate * floor_multiplier
-        pressure_bonus = pressure_value * 0.01
-        total_rate = scaled_rate + pressure_bonus
-        chance = 1.0 if total_rate >= 1.0 else max(total_rate, 0.0)
-        return chance, chance
+        if context is None:
+            pressure_bonus = pressure_value * 0.01
+            glitched_bonus = 0.0
+            prime_bonus = 0.0
+        else:
+            pressure_bonus = max(context.elite_spawn_bonus_pct, 0.0) / 100.0
+            glitched_bonus = max(context.glitched_spawn_bonus_pct, 0.0) / 100.0
+            prime_bonus = max(context.prime_spawn_bonus_pct, 0.0) / 100.0
+        base_total = max(scaled_rate + pressure_bonus, 0.0)
+        glitched_rate = min(1.0, max(base_total + glitched_bonus, 0.0))
+        prime_rate = min(1.0, max(base_total + prime_bonus, 0.0))
+        return prime_rate, glitched_rate
 
-    def scale_stats(self, obj: Stats, node: MapNode, strength: float = 1.0) -> None:
+    def scale_stats(
+        self, obj: Stats, node: MapNode, strength: float = 1.0, context: RunModifierContext | None = None
+    ) -> None:
+        if context is None:
+            context = getattr(node, "run_modifier_context", None)
+
         cumulative_rooms = calculate_cumulative_rooms(node)
+        config = dict(self.config)
+        if context is not None:
+            try:
+                per_stack_floor = context.pressure_defense_floor / max(context.pressure, 1) if context.pressure else config.get("pressure_defense_floor", 10)
+                config["pressure_defense_floor"] = per_stack_floor
+            except Exception:
+                pass
+            config["pressure_defense_min_roll"] = context.pressure_defense_min_roll
+            config["pressure_defense_max_roll"] = context.pressure_defense_max_roll
         base_mult = compute_base_multiplier(
             strength,
             node,
-            self.config,
+            config,
             cumulative_rooms=cumulative_rooms,
         )
-        foe_debuff = apply_base_debuffs(obj, node, self.config)
+        foe_debuff = apply_base_debuffs(obj, node, config)
         apply_attribute_scaling(
             obj,
             base_mult,
-            self.config,
+            config,
         )
         enforce_thresholds(
             obj,
             node,
-            self.config,
+            config,
             cumulative_rooms=cumulative_rooms,
             foe_debuff=foe_debuff,
         )
+        if context is not None:
+            apply_permanent_scaling(
+                obj,
+                multipliers=context.foe_stat_multipliers,
+                deltas=context.foe_stat_deltas,
+                name="Run modifier scaling",
+                modifier_id=f"{config.get('scaling_modifier_id', 'foe_room_scaling')}_run_mod",
+            )
+            try:
+                obj.hp = obj.max_hp
+            except Exception:
+                pass
 
 
 _FACTORY: FoeFactory | None = None
