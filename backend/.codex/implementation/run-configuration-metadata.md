@@ -56,6 +56,13 @@ stat penalties without re-validating the metadata payload. The context is
 persisted alongside the map state and stamped onto generated nodes via a
 metadata hash for analytics.
 
+Run type definitions may also include `room_overrides` metadata. The
+`get_room_overrides` helper normalises these directives so `MapGenerator` can
+consistently disable or duplicate optional rooms (e.g., Boss Rush removes shops
+and rests while future experiments may introduce extra shops or restorative
+rooms). Downstream systems should consult these overrides instead of relying on
+ad-hoc party flags when deciding which room types to present.
+
 ## Reward Application
 
 `services/run_service.start_run` integrates the validation result:

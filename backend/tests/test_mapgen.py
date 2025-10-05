@@ -3,6 +3,8 @@ import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
+from collections import Counter
+
 from services.run_configuration import build_run_modifier_context
 from services.run_configuration import validate_run_configuration
 
@@ -73,3 +75,26 @@ def test_generator_marks_prime_glitched_and_bonus_rooms():
         if "glitched" in room.room_type:
             assert room.glitched_bonus_pct >= context.glitched_spawn_bonus_pct
         assert room.elite_bonus_pct >= context.elite_spawn_bonus_pct
+
+
+def test_generator_respects_room_overrides_for_disabling():
+    selection = validate_run_configuration(run_type="standard", modifiers={"pressure": 0})
+    selection.snapshot.setdefault("room_overrides", {})["shop"] = 0
+    context = build_run_modifier_context(selection.snapshot)
+    gen = MapGenerator("seed", modifier_context=context, configuration=selection.snapshot)
+    rooms = gen.generate_floor()
+    assert all(room.room_type != "shop" for room in rooms)
+
+
+def test_generator_applies_room_quota_overrides():
+    selection = validate_run_configuration(run_type="standard", modifiers={"pressure": 0})
+    selection.snapshot["room_overrides"] = {
+        "shop": {"count": 2},
+        "rest": {"count": 1},
+    }
+    context = build_run_modifier_context(selection.snapshot)
+    gen = MapGenerator("seed", modifier_context=context, configuration=selection.snapshot)
+    rooms = gen.generate_floor()
+    counts = Counter(room.room_type for room in rooms)
+    assert counts.get("shop", 0) == 2
+    assert counts.get("rest", 0) == 1

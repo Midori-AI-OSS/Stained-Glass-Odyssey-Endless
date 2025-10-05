@@ -4,6 +4,7 @@ import pytest
 from services.run_configuration import RunModifierContext
 from services.run_configuration import build_run_modifier_context
 from services.run_configuration import get_modifier_snapshot
+from services.run_configuration import get_room_overrides
 from services.run_configuration import validate_run_configuration
 
 
@@ -63,3 +64,18 @@ def test_get_modifier_snapshot_normalises_entries():
     missing = get_modifier_snapshot(selection.snapshot, "nonexistent")
     assert missing["id"] == "nonexistent"
     assert missing["stacks"] == 0
+
+
+def test_get_room_overrides_normalises_payload():
+    selection = validate_run_configuration(run_type="standard", modifiers={"pressure": 0})
+    selection.snapshot["room_overrides"] = {
+        "shop": 0,
+        "rest": {"enabled": True, "count": 2},
+        "event": {"quantity": 1},
+    }
+    overrides = get_room_overrides(selection.snapshot)
+    assert overrides["shop"]["enabled"] is False
+    assert overrides["shop"]["count"] == 0
+    assert overrides["rest"]["enabled"] is True
+    assert overrides["rest"]["count"] == 2
+    assert overrides["event"]["count"] == 1

@@ -15,7 +15,7 @@ Source code lives under the backend:
 - `PluginLoader` scans the `plugins/` directory to register available classes.
 - `RoomManager` coordinates transitions between battle, shop, and other rooms for each run.
 - The Quart app exposes endpoints that the web frontend calls to drive gameplay.
-- `MapGenerator` creates 10-room floors seeded per run, guaranteeing at least one shop. Pressure Level adds extra rooms and boss encounters, and chat rooms may appear after battle nodes without increasing the room count.
+- `MapGenerator` creates 10-room floors seeded per run. By default a shop is reserved each floor, but run configuration `room_overrides` can disable or duplicate optional rooms. Pressure Level adds extra rooms and boss encounters, and chat rooms may appear after battle nodes without increasing the room count.
 - Active runs persist across page reloads. The frontend caches `runId` and the next room in `localStorage`, verifies the ID via `/map/<run_id>` on startup, and resumes the current room if valid; invalid IDs are cleared.
 
 ## Run configuration metadata and start flow
@@ -36,7 +36,7 @@ Source code lives under the backend:
   - The final multipliers are included in the run snapshot and telemetry payload so downstream services and analytics can reason about the selected configuration.
 - `start_run` serialises both the configuration snapshot and a condensed `RunModifierContext` into the persisted run state. Map nodes inherit the same context metadata hash so the shop, foe factory, and analytics pipelines can reconstruct the active modifiers without re-validating wizard input.
 - The modifier context applies the player stat penalty multiplier immediately to every party member, ensuring combat stats match the previewed difficulty adjustments. Derived foe stat multipliers, encounter slot bonuses, elite odds, shop multipliers, and pressure defense floors are cached for the map generator and foe factory.
-- `MapGenerator` hydrates nodes with the modifier context and honours configuration-driven flags (e.g., `boss_rush` disabling shops/rests) instead of relying on ad-hoc party attributes. Battle rooms inherit per-node `encounter_bonus`, elite/prime/glitched spawn percentages, and modifier metadata hashes so the foe factory can deterministically add extra combatants and enforce forced prime or glitched encounters.
+- `MapGenerator` hydrates nodes with the modifier context and honours configuration-driven overrides (for example, `room_overrides` disabling shops/rests) instead of relying on ad-hoc party attributes. Battle rooms inherit per-node `encounter_bonus`, elite/prime/glitched spawn percentages, and modifier metadata hashes so the foe factory can deterministically add extra combatants and enforce forced prime or glitched encounters.
 - Shop rooms read the stored context to surface metadata hashes, price/tax multipliers, and encounter bonuses back to the client, keeping the UI and telemetry aligned with the selected run modifiers.
 - Telemetry events (`log_run_start`, `log_menu_action`) embed the metadata snapshot, ensuring analytics retain the chosen run type, modifier stacks, and reward boosts.
 

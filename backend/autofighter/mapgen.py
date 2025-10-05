@@ -100,6 +100,14 @@ class MapGenerator:
             except Exception:  # pragma: no cover - defensive import guard
                 pass
         self.configuration = dict(configuration or {})
+        self._room_overrides: dict[str, dict[str, Any]] = {}
+        if self.configuration:
+            try:
+                from services.run_configuration import get_room_overrides
+
+                self._room_overrides = get_room_overrides(self.configuration)
+            except Exception:
+                self._room_overrides = {}
 
     def generate_floor(self, party: Party | None = None) -> list[MapNode]:
         if self._is_boss_rush(party):
@@ -164,7 +172,11 @@ class MapGenerator:
         )
         index += 1
         middle = self.rooms_per_floor - 2
-        suppressed: set[str] = set()
+        suppressed: set[str] = {
+            room_type
+            for room_type, override in self._room_overrides.items()
+            if not override.get("enabled", True)
+        }
         if self._disable_room("shop", party):
             suppressed.add("shop")
         if self._disable_room("rest", party):
@@ -175,8 +187,21 @@ class MapGenerator:
                 suppressed.update({"shop", "rest"})
 
         quotas: dict[str, int] = {}
-        if "shop" not in suppressed:
-            quotas["shop"] = 1
+
+        def _apply_quota(room_type: str, default: int | None = None) -> None:
+            if room_type in suppressed:
+                return
+            quota_value = self._room_quota(room_type, default)
+            if quota_value is None or quota_value <= 0:
+                return
+            quotas[room_type] = int(quota_value)
+
+        _apply_quota("shop", default=1)
+        _apply_quota("rest")
+        for room_type in self._room_overrides:
+            if room_type in {"shop", "rest"}:
+                continue
+            _apply_quota(room_type)
         room_types: list[str] = []
         for key, count in quotas.items():
             room_types.extend([key] * count)
@@ -351,7 +376,32 @@ class MapGenerator:
             return self._party_requests_boss_rush(party)
         return False
 
+    def _room_enabled(self, room_type: str) -> bool:
+        override = self._room_overrides.get(room_type)
+        if override is None:
+            return True
+        return bool(override.get("enabled", True))
+
+    def _room_quota(self, room_type: str, default: int | None = None) -> int | None:
+        override = self._room_overrides.get(room_type)
+        if override is None:
+            return default
+        if not bool(override.get("enabled", True)):
+            return 0
+        count = override.get("count")
+        if count is None:
+            return default
+        try:
+            numeric = int(count)
+        except (TypeError, ValueError):
+            return default
+        if numeric <= 0:
+            return 0
+        return numeric
+
     def _disable_room(self, room_type: str, party: Party | None) -> bool:
+        if not self._room_enabled(room_type):
+            return True
         run_type = self.configuration.get("run_type")
         run_type_id: str | None = None
         if isinstance(run_type, Mapping):

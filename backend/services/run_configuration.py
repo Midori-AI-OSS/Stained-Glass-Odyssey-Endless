@@ -352,6 +352,7 @@ _RUN_TYPES: list[dict[str, Any]] = [
         "description": "Balanced adventure with classic pacing and full map variety.",
         "default_modifiers": {"pressure": 0},
         "allowed_modifiers": list(_MODIFIER_DEFINITIONS.keys()),
+        "room_overrides": {},
     },
     {
         "id": "boss_rush",
@@ -359,6 +360,7 @@ _RUN_TYPES: list[dict[str, Any]] = [
         "description": "Shortened gauntlet that escalates pressure quickly and leans on elite encounters.",
         "default_modifiers": {"pressure": 5, "foe_hp": 2, "foe_mitigation": 2},
         "allowed_modifiers": list(_MODIFIER_DEFINITIONS.keys()),
+        "room_overrides": {"shop": 0, "rest": 0},
     },
 ]
 
@@ -524,6 +526,8 @@ def validate_run_configuration(
     reward_bonuses["exp_multiplier"] = 1.0 + reward_bonuses["exp_bonus"]
     reward_bonuses["rdr_multiplier"] = 1.0 + reward_bonuses["rdr_bonus"]
 
+    room_overrides = run_type_entry.get("room_overrides", {}) or {}
+
     snapshot = {
         "version": METADATA_VERSION,
         "generated_at": metadata["generated_at"],
@@ -531,14 +535,20 @@ def validate_run_configuration(
             "id": run_type_entry["id"],
             "label": run_type_entry.get("label"),
             "description": run_type_entry.get("description"),
+            "room_overrides": room_overrides,
         },
         "modifiers": modifier_snapshots,
         "pressure": _pressure_effects(pressure_value),
         "reward_bonuses": reward_bonuses,
+        "room_overrides": room_overrides,
     }
 
     return RunConfigurationSelection(
-        run_type={"id": run_type_entry["id"], "label": run_type_entry.get("label")},
+        run_type={
+            "id": run_type_entry["id"],
+            "label": run_type_entry.get("label"),
+            "room_overrides": room_overrides,
+        },
         modifiers=normalized,
         pressure=pressure_value,
         reward_bonuses=reward_bonuses,
@@ -680,6 +690,63 @@ def get_modifier_snapshot(snapshot: Mapping[str, Any], modifier_id: str) -> dict
     }
 
     return summary
+
+
+def _normalise_room_override(value: Any) -> dict[str, Any]:
+    enabled = True
+    count: int | None = None
+
+    if isinstance(value, ABCMapping):
+        if "enabled" in value:
+            enabled = bool(value.get("enabled", True))
+        numeric_candidate: Any | None = None
+        for key in ("count", "quantity", "slots"):
+            if key in value:
+                numeric_candidate = value.get(key)
+                break
+        if numeric_candidate is not None:
+            try:
+                count = max(int(numeric_candidate), 0)
+            except (TypeError, ValueError):
+                count = 0
+    elif isinstance(value, bool):
+        enabled = value
+    else:
+        try:
+            numeric = int(value)
+        except (TypeError, ValueError):
+            numeric = None
+        if numeric is None:
+            enabled = bool(value)
+        else:
+            count = max(numeric, 0)
+
+    if count is not None:
+        if count <= 0:
+            count = 0
+            enabled = False
+    return {"enabled": bool(enabled), "count": count}
+
+
+def get_room_overrides(snapshot: Mapping[str, Any]) -> dict[str, dict[str, Any]]:
+    """Return normalised optional room directives embedded in the snapshot."""
+
+    source = _coerce_mapping(snapshot)
+    raw_overrides: Any = source.get("room_overrides")
+    if not raw_overrides:
+        run_type = _coerce_mapping(source.get("run_type"))
+        raw_overrides = run_type.get("room_overrides")
+
+    overrides: dict[str, dict[str, Any]] = {}
+    if isinstance(raw_overrides, ABCMapping):
+        for key, value in raw_overrides.items():
+            if not key:
+                continue
+            room_type = str(key).strip()
+            if not room_type:
+                continue
+            overrides[room_type] = _normalise_room_override(value)
+    return overrides
 
 
 def _numeric(value: Any, *, default: float = 0.0) -> float:
@@ -837,6 +904,7 @@ __all__ = [
     "RunConfigurationSelection",
     "RunModifierContext",
     "get_modifier_snapshot",
+    "get_room_overrides",
     "build_run_modifier_context",
     "get_modifier_details",
     "get_run_configuration_metadata",
