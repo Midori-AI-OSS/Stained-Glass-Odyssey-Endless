@@ -53,7 +53,8 @@ export {
   resetAssetRegistryOverrides,
   getDefaultFallback,
   getSummonGallery,
-  getAvailableSummonIds
+  getAvailableSummonIds,
+  stringHashIndex
 };
 
 const ELEMENT_ICONS = {
