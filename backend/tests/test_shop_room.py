@@ -48,7 +48,8 @@ async def test_shop_generate_buy_reroll():
     p4.set_base_stat('max_hp', 150)
     p4.hp = 150
 
-    party = Party(members=[p1, p2, p3, p4], gold=100)
+    initial_gold = 250
+    party = Party(members=[p1, p2, p3, p4], gold=initial_gold)
 
     first = await room.resolve(party, {"action": ""})
     assert [m.hp for m in party.members] == [100, 150, 50, 150]
@@ -58,14 +59,14 @@ async def test_shop_generate_buy_reroll():
     purchase = initial_stock[0]
     second = await room.resolve(party, purchase)
     assert len(second["stock"]) == len(initial_stock) - 1
-    assert party.gold == 100 - purchase["cost"]
+    assert party.gold == initial_gold - purchase["cost"]
     if purchase["type"] == "card":
         assert purchase["id"] in party.cards
     else:
         assert purchase["id"] in party.relics
 
     third = await room.resolve(party, {"action": "reroll"})
-    assert party.gold == 100 - purchase["cost"] - REROLL_COST
+    assert party.gold == initial_gold - purchase["cost"] - REROLL_COST
     assert third["stock"]
     assert third["stock"] != second["stock"]
 
@@ -208,8 +209,18 @@ async def test_shop_handles_multi_item_payload():
     second_entry = initial_view["stock"][1]
     third_entry = initial_view["stock"][2]
 
-    first_cost = _taxed_price(first_entry["base_price"], node.pressure, initial_view["items_bought"])
-    second_cost = _taxed_price(second_entry["base_price"], node.pressure, initial_view["items_bought"] + 1)
+    first_cost = _taxed_price(
+        first_entry["base_price"],
+        node.pressure,
+        initial_view["items_bought"],
+        None,
+    )
+    second_cost = _taxed_price(
+        second_entry["base_price"],
+        node.pressure,
+        initial_view["items_bought"] + 1,
+        None,
+    )
 
     result = await room.resolve(
         party,
@@ -229,7 +240,12 @@ async def test_shop_handles_multi_item_payload():
     assert second_entry["id"] in party.relics
 
     remaining = result["stock"][0]
-    expected_remaining_cost = _taxed_price(remaining["base_price"], node.pressure, result["items_bought"])
+    expected_remaining_cost = _taxed_price(
+        remaining["base_price"],
+        node.pressure,
+        result["items_bought"],
+        None,
+    )
     assert remaining["cost"] == expected_remaining_cost
     assert remaining["tax"] == expected_remaining_cost - remaining["base_price"]
     assert remaining["id"] == third_entry["id"]
@@ -262,7 +278,12 @@ async def test_shop_accepts_single_item_dict_payload():
     assert len(initial_view["stock"]) == 1
 
     entry = initial_view["stock"][0]
-    expected_cost = _taxed_price(entry["base_price"], node.pressure, initial_view["items_bought"])
+    expected_cost = _taxed_price(
+        entry["base_price"],
+        node.pressure,
+        initial_view["items_bought"],
+        None,
+    )
 
     result = await room.resolve(
         party,
@@ -314,7 +335,12 @@ async def test_shop_multi_item_payload_skips_invalid_entries():
     second_entry = initial_view["stock"][1]
 
     wrong_cost = first_entry["cost"] + 50
-    valid_cost = _taxed_price(second_entry["base_price"], node.pressure, initial_view["items_bought"])
+    valid_cost = _taxed_price(
+        second_entry["base_price"],
+        node.pressure,
+        initial_view["items_bought"],
+        None,
+    )
 
     result = await room.resolve(
         party,
@@ -332,7 +358,12 @@ async def test_shop_multi_item_payload_skips_invalid_entries():
     assert any(entry["id"] == first_entry["id"] for entry in result["stock"])
 
     remaining_entry = next(entry for entry in result["stock"] if entry["id"] == first_entry["id"])
-    expected_cost = _taxed_price(remaining_entry["base_price"], node.pressure, result["items_bought"])
+    expected_cost = _taxed_price(
+        remaining_entry["base_price"],
+        node.pressure,
+        result["items_bought"],
+        None,
+    )
     assert remaining_entry["cost"] == expected_cost
     assert remaining_entry["tax"] == expected_cost - remaining_entry["base_price"]
 
@@ -351,7 +382,7 @@ def app_with_shop(tmp_path, monkeypatch):
     spec.loader.exec_module(app_module)
     app_module.app.testing = True
 
-    def fake_generate_floor(self):
+    def fake_generate_floor(self, *args, **kwargs):
         return [
             MapNode(0, "start", 1, 0, 1, 0),
             MapNode(1, "shop", 1, 1, 1, 0),

@@ -249,11 +249,18 @@ async def get_ui_state() -> tuple[str, int, dict[str, Any]]:
                     items_bought = 0
 
                 party_snapshot = await asyncio.to_thread(load_party, run_id)
+                context = getattr(current_node, "run_modifier_context", None)
+                if context is None:
+                    context = getattr(party_snapshot, "run_modifier_context", None)
+                    if context is not None:
+                        setattr(current_node, "run_modifier_context", context)
+
                 shop_view = serialize_shop_payload(
                     party_snapshot,
                     stored_stock,
                     getattr(current_node, "pressure", 0),
                     items_bought,
+                    context=context,
                 )
                 shop_view.update(
                     {

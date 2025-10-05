@@ -5,6 +5,8 @@ import math
 import random
 from typing import Any
 
+from services.run_configuration import RunModifierContext
+
 from ..cards import card_choices
 from ..party import Party
 from ..passives import PassiveRegistry
@@ -16,32 +18,66 @@ PRICE_BY_STARS = {1: 20, 2: 50, 3: 100, 4: 200, 5: 500}
 REROLL_COST = 10
 
 
-def _pressure_cost(base: int, pressure: int) -> int:
-    scale = 1.26 ** pressure
-    if pressure:
-        scale *= random.uniform(0.95, 1.05)
-    return int(base * scale)
+def _configured_cost(
+    base: int,
+    *,
+    pressure: int,
+    context: RunModifierContext | None,
+    rng: random.Random | None = None,
+) -> int:
+    random_source = rng or random
+    if context is not None:
+        multiplier = max(float(context.shop_multiplier), 0.0)
+        variance = getattr(context, "shop_variance", (0.95, 1.05))
+        try:
+            low, high = float(variance[0]), float(variance[1])
+        except Exception:
+            low, high = 0.95, 1.05
+    else:
+        multiplier = 1.26 ** max(pressure, 0)
+        low, high = 0.95, 1.05
+    if high > low:
+        multiplier *= random_source.uniform(low, high)
+    return int(base * multiplier)
 
 
-def _tax_amount(base_price: int, pressure: int, items_bought: int) -> int:
+def _tax_amount(
+    base_price: int,
+    pressure: int,
+    items_bought: int,
+    context: RunModifierContext | None,
+) -> int:
     if items_bought <= 0:
         return 0
-    rate = 0.01 * (pressure + 1) * items_bought
+    rate = 0.01 * (max(pressure, 0) + 1) * items_bought
+    if context is not None:
+        try:
+            rate *= max(float(context.shop_tax_multiplier), 0.0)
+        except Exception:
+            pass
     return int(math.ceil(base_price * rate))
 
 
-def _taxed_price(base_price: int, pressure: int, items_bought: int) -> int:
-    tax = _tax_amount(base_price, pressure, items_bought)
+def _taxed_price(
+    base_price: int,
+    pressure: int,
+    items_bought: int,
+    context: RunModifierContext | None,
+) -> int:
+    tax = _tax_amount(base_price, pressure, items_bought, context)
     return base_price + tax
 
 
 def _apply_tax_to_stock(
-    stock: list[dict[str, Any]], pressure: int, items_bought: int,
+    stock: list[dict[str, Any]],
+    pressure: int,
+    items_bought: int,
+    context: RunModifierContext | None,
 ) -> list[dict[str, Any]]:
     repriced: list[dict[str, Any]] = []
     for entry in stock:
         base_price = int(entry.get("base_price") or entry.get("price") or entry.get("cost") or 0)
-        taxed = _taxed_price(base_price, pressure, items_bought)
+        taxed = _taxed_price(base_price, pressure, items_bought, context)
         updated = {
             **entry,
             "base_price": base_price,
@@ -58,11 +94,13 @@ def serialize_shop_payload(
     stock: list[dict[str, Any]] | None,
     pressure: int,
     items_bought: int,
+    *,
+    context: RunModifierContext | None,
     transactions: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Serialize a shop state without mutating the underlying room."""
 
-    repriced_stock = _apply_tax_to_stock(stock or [], pressure, items_bought)
+    repriced_stock = _apply_tax_to_stock(stock or [], pressure, items_bought, context)
 
     try:
         registry_map = relic_registry()
@@ -88,8 +126,7 @@ def serialize_shop_payload(
         enriched_stock.append(enriched)
 
     party_data = [_serialize(member) for member in party.members]
-
-    return {
+    payload = {
         "result": "shop",
         "party": party_data,
         "gold": party.gold,
@@ -102,6 +139,35 @@ def serialize_shop_payload(
         "foes": [],
         "transactions": transactions or [],
     }
+    if context is not None:
+        payload["modifier_context"] = {
+            "metadata_hash": context.metadata_hash,
+            "shop_multiplier": context.shop_multiplier,
+            "shop_tax_multiplier": context.shop_tax_multiplier,
+        }
+    config_snapshot = getattr(party, "run_config", None)
+    if isinstance(config_snapshot, dict):
+        run_type = None
+        run_type_info = config_snapshot.get("run_type")
+        if isinstance(run_type_info, dict):
+            run_type = run_type_info.get("id")
+        modifiers = {}
+        raw_modifiers = config_snapshot.get("modifiers")
+        if isinstance(raw_modifiers, dict):
+            for key, value in raw_modifiers.items():
+                details = value.get("details") if isinstance(value, dict) else None
+                stacks = details.get("stacks") if isinstance(details, dict) else None
+                if stacks is not None:
+                    modifiers[key] = stacks
+        summary = {
+            "run_type": run_type,
+            "modifiers": modifiers,
+        }
+        if context is not None:
+            summary["metadata_hash"] = context.metadata_hash
+        payload["run_configuration"] = {k: v for k, v in summary.items() if v}
+
+    return payload
 
 
 def _apply_rdr_to_stars(stars: int, rdr: float) -> int:
@@ -125,15 +191,20 @@ def _pick_shop_stars() -> int:
     return 3
 
 
-def _generate_stock(party: Party, pressure: int) -> list[dict[str, Any]]:
+def _generate_stock(
+    party: Party,
+    pressure: int,
+    context: RunModifierContext | None,
+) -> list[dict[str, Any]]:
     stock: list[dict[str, Any]] = []
+    rng = random
     for _ in range(2):
         stars = _apply_rdr_to_stars(_pick_shop_stars(), party.rdr)
         choice = card_choices(party, stars, count=1)
         if choice:
             card = choice[0]
             base = PRICE_BY_STARS.get(card.stars, 0)
-            base_price = _pressure_cost(base, pressure)
+            base_price = _configured_cost(base, pressure=pressure, context=context, rng=rng)
             stock.append(
                 {
                     "id": card.id,
@@ -146,8 +217,6 @@ def _generate_stock(party: Party, pressure: int) -> list[dict[str, Any]]:
                     "tax": 0,
                 }
             )
-    # Offer up to 6 relics at the selected star tier; entries are unique
-    # Shop relics: roll star rank per slot; allow owned, ensure uniqueness within this stock
     all_relics = [cls() for cls in relic_registry().values()]
     seen_relics: set[str] = set()
     relic_list = []
@@ -156,12 +225,12 @@ def _generate_stock(party: Party, pressure: int) -> list[dict[str, Any]]:
         pool = [r for r in all_relics if r.stars == stars and r.id != "fallback_essence" and r.id not in seen_relics]
         if not pool:
             continue
-        relic = random.choice(pool)
+        relic = rng.choice(pool)
         seen_relics.add(relic.id)
         relic_list.append(relic)
     for relic in relic_list:
         base = PRICE_BY_STARS.get(relic.stars, 0)
-        base_price = _pressure_cost(base, pressure)
+        base_price = _configured_cost(base, pressure=pressure, context=context, rng=rng)
         stock.append(
             {
                 "id": relic.id,
@@ -174,7 +243,7 @@ def _generate_stock(party: Party, pressure: int) -> list[dict[str, Any]]:
                 "tax": 0,
             }
         )
-    random.shuffle(stock)
+    rng.shuffle(stock)
     return stock
 
 
@@ -197,11 +266,17 @@ class ShopRoom(Room):
             items_bought = 0
         self.node.items_bought = items_bought
 
+        context = getattr(self.node, "run_modifier_context", None)
+        if context is None:
+            context = getattr(party, "run_modifier_context", None)
+            if context is not None:
+                setattr(self.node, "run_modifier_context", context)
+
         stock = getattr(self.node, "stock", [])
         if not stock:
-            stock = _generate_stock(party, self.node.pressure)
+            stock = _generate_stock(party, self.node.pressure, context)
 
-        stock = _apply_tax_to_stock(stock, self.node.pressure, items_bought)
+        stock = _apply_tax_to_stock(stock, self.node.pressure, items_bought, context)
         self.node.stock = stock
 
         transactions: list[dict[str, Any]] = []
@@ -209,8 +284,8 @@ class ShopRoom(Room):
         if action == "reroll":
             if party.gold >= REROLL_COST:
                 party.gold -= REROLL_COST
-                stock = _generate_stock(party, self.node.pressure)
-                stock = _apply_tax_to_stock(stock, self.node.pressure, items_bought)
+                stock = _generate_stock(party, self.node.pressure, context)
+                stock = _apply_tax_to_stock(stock, self.node.pressure, items_bought, context)
                 self.node.stock = stock
                 transactions.append(
                     {
@@ -251,7 +326,12 @@ class ShopRoom(Room):
                     continue
 
                 base_price = int(entry.get("base_price") or 0)
-                expected_cost = _taxed_price(base_price, self.node.pressure, items_bought)
+                expected_cost = _taxed_price(
+                    base_price,
+                    self.node.pressure,
+                    items_bought,
+                    context,
+                )
                 if cost != expected_cost or party.gold < expected_cost:
                     continue
 
@@ -265,7 +345,12 @@ class ShopRoom(Room):
 
                 items_bought += 1
                 self.node.items_bought = items_bought
-                stock = _apply_tax_to_stock(stock, self.node.pressure, items_bought)
+                stock = _apply_tax_to_stock(
+                    stock,
+                    self.node.pressure,
+                    items_bought,
+                    context,
+                )
                 self.node.stock = stock
                 transactions.append(
                     {
@@ -283,6 +368,7 @@ class ShopRoom(Room):
             stock,
             self.node.pressure,
             items_bought,
+            context=context,
             transactions=transactions,
         )
         self.node.stock = payload["stock"]
