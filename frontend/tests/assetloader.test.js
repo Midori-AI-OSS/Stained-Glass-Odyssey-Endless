@@ -9,6 +9,7 @@ if (typeof import.meta.glob !== 'function') {
     getElementColor,
     getElementIcon,
     getDotImage,
+    getLightstreamSwordArt,
     registerAssetManifest
   } = await import('../src/lib/systems/assetLoader.js');
 
@@ -83,6 +84,14 @@ if (typeof import.meta.glob !== 'function') {
     test('resolves dot icon from effect object', () => {
       const icon = getDotImage({ id: 'burning' });
       expect(icon).toBeTruthy();
+    });
+
+    test('falls back to pooled lightstream sword art when element is unknown', () => {
+      const art = getLightstreamSwordArt('plasma');
+      expect(typeof art).toBe('string');
+      expect(art).toBeTruthy();
+      expect(art.includes('lightstreamswords')).toBe(true);
+      expect(art.includes('midoriai-logo')).toBe(false);
     });
   });
 }
