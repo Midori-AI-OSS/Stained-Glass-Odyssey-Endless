@@ -462,182 +462,230 @@
   }
 }} />
 
-<div class="wizard" data-step={step}>
-  <header class="wizard-header">
-    <h2>{stepTitle}</h2>
-    <div class="step-indicator" aria-hidden="true">
-      {#each visibleSteps as key, index}
-        <span class:selected={key === step} class:done={index < currentStepIndex}>
-          {index + 1}
-        </span>
-      {/each}
-    </div>
-  </header>
-
-  {#if step === 'resume'}
-    <MenuPanel
-      padding="var(--menu-panel-padding-tight, clamp(0.55rem, 1.6vw, 0.9rem))"
-      class="resume-panel"
-      {reducedMotion}
-    >
-      {#if normalizedRuns.length > 0}
-        <div class="runs" role="list">
-          {#each normalizedRuns as run, i}
-            <label class="run-item" role="listitem">
-              <input
-                type="radio"
-                name="resume-run"
-                bind:group={resumeIndex}
-                value={i}
-              />
-              <div class="summary">
-                <div class="id">{run.run_id}</div>
-                <div class="details">
-                  Floor {run?.map?.floor || 1}, Room {run?.map?.current || 1}, Pressure {run?.map?.rooms?.[0]?.pressure ?? 0}
-                </div>
-              </div>
-            </label>
-          {/each}
-        </div>
-        <div class="actions">
-          <button class="icon-btn" on:click={handleResume} disabled={resumeDisabled}>Resume Run</button>
-          <button class="icon-btn primary" on:click={() => goToStep('party')}>Start Guided Setup</button>
-        </div>
-      {:else}
-        <p>No active runs found.</p>
-        <div class="actions">
-          <button class="icon-btn primary" on:click={() => goToStep('party')}>Start Guided Setup</button>
-        </div>
-      {/if}
-    </MenuPanel>
-  {:else if step === 'party'}
-    <div class="party-step">
-      <PartyPicker
-        bind:selected={partySelection}
-        allowElementChange={true}
-        actionLabel="Continue"
-        {reducedMotion}
-        on:save={handlePartySave}
-        on:cancel={handlePartyCancel}
-        on:editorChange={(event) => {
-          const detail = event.detail || {};
-          if (detail?.damageType) {
-            damageType = String(detail.damageType);
-            persistDefaults();
-          }
-        }}
-      />
-      <div class="navigation">
-        {#if hasRuns}
-          <button class="ghost" on:click={() => goToStep('resume')}>Back</button>
-        {:else}
-          <button class="ghost" on:click={handleCancel}>Cancel</button>
-        {/if}
-        <button class="primary" on:click={handlePartySave} disabled={partySelection.length === 0}>Next</button>
+<MenuPanel
+  class="run-wizard"
+  data-step={step}
+  padding="var(--menu-panel-padding, clamp(0.65rem, 1.8vw, 1.1rem))"
+  {reducedMotion}
+>
+  <div class="wizard">
+    <header class="wizard-header">
+      <h2>{stepTitle}</h2>
+      <div class="step-indicator" aria-hidden="true">
+        {#each visibleSteps as key, index}
+          <span class:selected={key === step} class:done={index < currentStepIndex}>
+            {index + 1}
+          </span>
+        {/each}
       </div>
-    </div>
-  {:else if step === 'run-type'}
-    <MenuPanel
-      padding="var(--menu-panel-padding, clamp(0.65rem, 1.8vw, 1.1rem))"
-      class="run-type-panel"
-      {reducedMotion}
-    >
-      {#if metadataLoading}
-        <p class="loading">Loading configuration...</p>
-      {:else if metadataError}
-        <div class="error">
-          <p>{metadataError}</p>
-          <button class="icon-btn" on:click={() => fetchMetadata()}>Retry</button>
-        </div>
-      {:else}
-        <div class="run-types" role="list">
-          {#each runTypes as rt}
-            <button
-              type="button"
-              class="run-type-card"
-              class:active={rt.id === runTypeId}
-              on:click={() => handleRunTypeSelect(rt.id)}
-              role="listitem"
-            >
-              <div class="card-title">{rt.label}</div>
-              <p class="card-description">{rt.description}</p>
-              {#if Object.keys(rt.default_modifiers || {}).length > 0}
-                <div class="card-defaults">
-                  <strong>Defaults</strong>
-                  <ul>
-                    {#each Object.entries(rt.default_modifiers || {}) as [key, value]}
-                      <li>{modifierMap.get(key)?.label || key}: {value}</li>
-                    {/each}
-                  </ul>
+    </header>
+
+    {#if step === 'resume'}
+      <div class="resume-panel step-surface">
+        {#if normalizedRuns.length > 0}
+          <div class="runs" role="list">
+            {#each normalizedRuns as run, i}
+              <label class="run-item" role="listitem">
+                <input
+                  type="radio"
+                  name="resume-run"
+                  bind:group={resumeIndex}
+                  value={i}
+                />
+                <div class="summary">
+                  <div class="id">{run.run_id}</div>
+                  <div class="details">
+                    Floor {run?.map?.floor || 1}, Room {run?.map?.current || 1}, Pressure {run?.map?.rooms?.[0]?.pressure ?? 0}
+                  </div>
                 </div>
-              {/if}
-            </button>
-          {/each}
-        </div>
-      {/if}
-    </MenuPanel>
-    <div class="navigation">
-      <button class="ghost" on:click={() => goToStep('party')}>Back</button>
-      <button class="primary" on:click={goToModifiers} disabled={!runTypeId || metadataLoading || metadataError}>Next</button>
-    </div>
-  {:else if step === 'modifiers'}
-    <MenuPanel
-      padding="var(--menu-panel-padding, clamp(0.65rem, 1.8vw, 1.1rem))"
-      class="modifier-panel"
-      {reducedMotion}
-    >
-      {#if metadataLoading}
-        <p class="loading">Loading configuration...</p>
-      {:else if metadataError}
-        <div class="error">
-          <p>{metadataError}</p>
-          <button class="icon-btn" on:click={() => fetchMetadata()}>Retry</button>
-        </div>
-      {:else}
-        <div class="modifier-toolbar">
-          <div>
-            <strong>Pressure:</strong>
-            <span class="pressure-value">{pressureValue}</span>
+              </label>
+            {/each}
           </div>
-          {#if pressureTooltip()}
-            <p class="pressure-tooltip">{pressureTooltip()}</p>
+          <div class="actions">
+            <button class="icon-btn" on:click={handleResume} disabled={resumeDisabled}>Resume Run</button>
+            <button class="icon-btn primary" on:click={() => goToStep('party')}>Start Guided Setup</button>
+          </div>
+        {:else}
+          <p>No active runs found.</p>
+          <div class="actions">
+            <button class="icon-btn primary" on:click={() => goToStep('party')}>Start Guided Setup</button>
+          </div>
+        {/if}
+      </div>
+    {:else if step === 'party'}
+      <div class="party-step">
+        <PartyPicker
+          bind:selected={partySelection}
+          allowElementChange={true}
+          actionLabel="Continue"
+          {reducedMotion}
+          on:save={handlePartySave}
+          on:cancel={handlePartyCancel}
+          on:editorChange={(event) => {
+            const detail = event.detail || {};
+            if (detail?.damageType) {
+              damageType = String(detail.damageType);
+              persistDefaults();
+            }
+          }}
+        />
+        <div class="navigation">
+          {#if hasRuns}
+            <button class="ghost" on:click={() => goToStep('resume')}>Back</button>
+          {:else}
+            <button class="ghost" on:click={handleCancel}>Cancel</button>
           {/if}
-          <button class="icon-btn" on:click={resetModifiers}>Reset to {activeRunType?.label || 'defaults'}</button>
+          <button class="primary" on:click={handlePartySave} disabled={partySelection.length === 0}>Next</button>
         </div>
-        <div class="modifiers" role="list">
-          {#each selectedModifiers as mod}
-            <div class="modifier" role="listitem">
-              <div class="modifier-header">
-                <div>
-                  <span class="modifier-label">{modifierLabel(mod)}</span>
-                  {#if mod.category}
-                    <span class="modifier-category">{mod.category}</span>
-                  {/if}
-                </div>
-                <div class="modifier-inputs">
-                  <label>
-                    <span class="sr-only">Stacks</span>
-                    <input
-                      type="number"
-                      min={mod.stacking?.minimum ?? 0}
-                      step={mod.stacking?.step ?? 1}
-                      max={Number.isFinite(mod.stacking?.maximum) ? mod.stacking.maximum : undefined}
-                      value={sanitizeStack(mod.id, modifierValues[mod.id])}
-                      on:change={(event) => handleModifierChange(mod.id, event.target.value)}
-                    />
-                  </label>
-                </div>
-              </div>
-              {#if modifierDescription(mod)}
-                <p class="modifier-description">{modifierDescription(mod)}</p>
-              {/if}
-            </div>
-          {/each}
-        </div>
-        <div class="reward-preview">
-          <div>
-            <strong>Reward Preview</strong>
+      </div>
+    {:else if step === 'run-type'}
+      <div class="run-type-panel step-surface">
+        {#if metadataLoading}
+          <p class="loading">Loading configuration...</p>
+        {:else if metadataError}
+          <div class="error">
+            <p>{metadataError}</p>
+            <button class="icon-btn" on:click={() => fetchMetadata()}>Retry</button>
           </div>
+        {:else}
+          <div class="run-types" role="list">
+            {#each runTypes as rt}
+              <button
+                type="button"
+                class="run-type-card"
+                class:active={rt.id === runTypeId}
+                on:click={() => handleRunTypeSelect(rt.id)}
+                role="listitem"
+              >
+                <div class="card-title">{rt.label}</div>
+                <p class="card-description">{rt.description}</p>
+                {#if Object.keys(rt.default_modifiers || {}).length > 0}
+                  <div class="card-defaults">
+                    <strong>Defaults</strong>
+                    <ul>
+                      {#each Object.entries(rt.default_modifiers || {}) as [key, value]}
+                        <li>{modifierMap.get(key)?.label || key}: {value}</li>
+                      {/each}
+                    </ul>
+                  </div>
+                {/if}
+              </button>
+            {/each}
+          </div>
+        {/if}
+      </div>
+      <div class="navigation">
+        <button class="ghost" on:click={() => goToStep('party')}>Back</button>
+        <button class="primary" on:click={goToModifiers} disabled={!runTypeId || metadataLoading || metadataError}>Next</button>
+      </div>
+    {:else if step === 'modifiers'}
+      <div class="modifier-panel step-surface">
+        {#if metadataLoading}
+          <p class="loading">Loading configuration...</p>
+        {:else if metadataError}
+          <div class="error">
+            <p>{metadataError}</p>
+            <button class="icon-btn" on:click={() => fetchMetadata()}>Retry</button>
+          </div>
+        {:else}
+          <div class="modifier-toolbar">
+            <div>
+              <strong>Pressure:</strong>
+              <span class="pressure-value">{pressureValue}</span>
+            </div>
+            {#if pressureTooltip()}
+              <p class="pressure-tooltip">{pressureTooltip()}</p>
+            {/if}
+            <button class="icon-btn" on:click={resetModifiers}>Reset to {activeRunType?.label || 'defaults'}</button>
+          </div>
+          <div class="modifiers" role="list">
+            {#each selectedModifiers as mod}
+              <div class="modifier" role="listitem">
+                <div class="modifier-header">
+                  <div>
+                    <span class="modifier-label">{modifierLabel(mod)}</span>
+                    {#if mod.category}
+                      <span class="modifier-category">{mod.category}</span>
+                    {/if}
+                  </div>
+                  <div class="modifier-inputs">
+                    <label>
+                      <span class="sr-only">Stacks</span>
+                      <input
+                        type="number"
+                        min={mod.stacking?.minimum ?? 0}
+                        step={mod.stacking?.step ?? 1}
+                        max={Number.isFinite(mod.stacking?.maximum) ? mod.stacking.maximum : undefined}
+                        value={sanitizeStack(mod.id, modifierValues[mod.id])}
+                        on:change={(event) => handleModifierChange(mod.id, event.target.value)}
+                      />
+                    </label>
+                  </div>
+                </div>
+                {#if modifierDescription(mod)}
+                  <p class="modifier-description">{modifierDescription(mod)}</p>
+                {/if}
+              </div>
+            {/each}
+          </div>
+          <div class="reward-preview">
+            <div>
+              <strong>Reward Preview</strong>
+            </div>
+            <div class="preview-grid">
+              <div>
+                <span class="preview-label">EXP Bonus</span>
+                <span class="preview-value">{formatRewardBonus(rewardPreview.exp_bonus)}</span>
+              </div>
+              <div>
+                <span class="preview-label">RDR Bonus</span>
+                <span class="preview-value">{formatRewardBonus(rewardPreview.rdr_bonus)}</span>
+              </div>
+              <div>
+                <span class="preview-label">Foe Bonus</span>
+                <span class="preview-value">{formatRewardBonus(rewardPreview.foe_bonus)}</span>
+              </div>
+              <div>
+                <span class="preview-label">Player Bonus</span>
+                <span class="preview-value">{formatRewardBonus(rewardPreview.player_bonus)}</span>
+              </div>
+            </div>
+          </div>
+        {/if}
+      </div>
+      <div class="navigation">
+        <button class="ghost" on:click={() => goToStep('run-type')}>Back</button>
+        <button class="primary" on:click={goToConfirm} disabled={metadataLoading || metadataError}>Next</button>
+      </div>
+    {:else if step === 'confirm'}
+      <div class="confirm-panel step-surface">
+        <section>
+          <h3>Party</h3>
+          <ul>
+            {#each partySummary as member}
+              <li>{member}</li>
+            {/each}
+          </ul>
+        </section>
+        <section>
+          <h3>Run Type</h3>
+          <p>{activeRunType?.label || runTypeId}</p>
+          <p class="card-description">{activeRunType?.description}</p>
+        </section>
+        <section>
+          <h3>Modifiers</h3>
+          {#if selectedModifiers.some(isActiveModifier)}
+            <ul>
+              {#each selectedModifiers.filter(isActiveModifier) as mod}
+                <li>{modifierLabel(mod)}: {sanitizeStack(mod.id, modifierValues[mod.id])}</li>
+              {/each}
+            </ul>
+          {:else}
+            <p>No additional modifiers selected.</p>
+          {/if}
+        </section>
+        <section>
+          <h3>Reward Preview</h3>
           <div class="preview-grid">
             <div>
               <span class="preview-label">EXP Bonus</span>
@@ -656,72 +704,15 @@
               <span class="preview-value">{formatRewardBonus(rewardPreview.player_bonus)}</span>
             </div>
           </div>
-        </div>
-      {/if}
-    </MenuPanel>
-    <div class="navigation">
-      <button class="ghost" on:click={() => goToStep('run-type')}>Back</button>
-      <button class="primary" on:click={goToConfirm} disabled={metadataLoading || metadataError}>Next</button>
-    </div>
-  {:else if step === 'confirm'}
-    <MenuPanel
-      padding="var(--menu-panel-padding, clamp(0.65rem, 1.8vw, 1.1rem))"
-      class="confirm-panel"
-      {reducedMotion}
-    >
-      <section>
-        <h3>Party</h3>
-        <ul>
-          {#each partySummary as member}
-            <li>{member}</li>
-          {/each}
-        </ul>
-      </section>
-      <section>
-        <h3>Run Type</h3>
-        <p>{activeRunType?.label || runTypeId}</p>
-        <p class="card-description">{activeRunType?.description}</p>
-      </section>
-      <section>
-        <h3>Modifiers</h3>
-        {#if selectedModifiers.some(isActiveModifier)}
-          <ul>
-            {#each selectedModifiers.filter(isActiveModifier) as mod}
-              <li>{modifierLabel(mod)}: {sanitizeStack(mod.id, modifierValues[mod.id])}</li>
-            {/each}
-          </ul>
-        {:else}
-          <p>No additional modifiers selected.</p>
-        {/if}
-      </section>
-      <section>
-        <h3>Reward Preview</h3>
-        <div class="preview-grid">
-          <div>
-            <span class="preview-label">EXP Bonus</span>
-            <span class="preview-value">{formatRewardBonus(rewardPreview.exp_bonus)}</span>
-          </div>
-          <div>
-            <span class="preview-label">RDR Bonus</span>
-            <span class="preview-value">{formatRewardBonus(rewardPreview.rdr_bonus)}</span>
-          </div>
-          <div>
-            <span class="preview-label">Foe Bonus</span>
-            <span class="preview-value">{formatRewardBonus(rewardPreview.foe_bonus)}</span>
-          </div>
-          <div>
-            <span class="preview-label">Player Bonus</span>
-            <span class="preview-value">{formatRewardBonus(rewardPreview.player_bonus)}</span>
-          </div>
-        </div>
-      </section>
-    </MenuPanel>
-    <div class="navigation">
-      <button class="ghost" on:click={() => goToStep('modifiers')}>Back</button>
-      <button class="primary" on:click={startRun} disabled={submitting}>Start Run</button>
-    </div>
-  {/if}
-</div>
+        </section>
+      </div>
+      <div class="navigation">
+        <button class="ghost" on:click={() => goToStep('modifiers')}>Back</button>
+        <button class="primary" on:click={startRun} disabled={submitting}>Start Run</button>
+      </div>
+    {/if}
+  </div>
+</MenuPanel>
 
 <style>
   .wizard {
@@ -789,15 +780,19 @@
     opacity: 0.85;
   }
 
-  .resume-panel {
+  .step-surface {
     width: 100%;
     box-sizing: border-box;
-  }
-
-  .resume-panel :global(.panel-content) {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    padding: clamp(0.65rem, 1.8vw, 1.1rem);
     display: flex;
     flex-direction: column;
     gap: var(--wizard-section-gap);
+  }
+
+  .resume-panel {
+    padding: clamp(0.55rem, 1.6vw, 0.9rem);
   }
 
   .runs {
