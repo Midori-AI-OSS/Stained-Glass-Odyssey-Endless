@@ -3,6 +3,7 @@ import math
 import pytest
 from services.run_configuration import RunModifierContext
 from services.run_configuration import build_run_modifier_context
+from services.run_configuration import get_modifier_snapshot
 from services.run_configuration import validate_run_configuration
 
 
@@ -48,3 +49,17 @@ def test_build_run_modifier_context_matches_snapshot_metadata():
     hydrated = RunModifierContext.from_dict(serialized)
     assert hydrated.shop_multiplier == pytest.approx(context.shop_multiplier)
     assert hydrated.encounter_slot_bonus == context.encounter_slot_bonus
+
+
+def test_get_modifier_snapshot_normalises_entries():
+    selection = validate_run_configuration(
+        run_type="standard",
+        modifiers={"pressure": 4, "foe_hp": 2},
+    )
+    snapshot = get_modifier_snapshot(selection.snapshot, "foe_hp")
+    assert snapshot["stacks"] == 2
+    assert snapshot["details"]["effective_bonus"] == selection.snapshot["modifiers"]["foe_hp"]["details"]["effective_bonus"]
+
+    missing = get_modifier_snapshot(selection.snapshot, "nonexistent")
+    assert missing["id"] == "nonexistent"
+    assert missing["stacks"] == 0

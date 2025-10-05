@@ -3,9 +3,10 @@ import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from autofighter.mapgen import MapGenerator
 from services.run_configuration import build_run_modifier_context
 from services.run_configuration import validate_run_configuration
+
+from autofighter.mapgen import MapGenerator
 
 
 class _BossRushParty:
@@ -46,3 +47,27 @@ def test_generator_attaches_modifier_context_metadata():
     rooms = gen.generate_floor()
     assert rooms[0].modifier_context["metadata_hash"] == context.metadata_hash
     assert rooms[0].metadata_hash == context.metadata_hash
+
+
+def test_generator_marks_prime_glitched_and_bonus_rooms():
+    selection = validate_run_configuration(
+        run_type="standard",
+        modifiers={"pressure": 12, "foe_prime_rate": 6, "foe_glitched_rate": 6},
+    )
+    context = build_run_modifier_context(selection.snapshot)
+    gen = MapGenerator("seed", modifier_context=context, configuration=selection.snapshot)
+    rooms = gen.generate_floor()
+    battle_rooms = [room for room in rooms if room.room_type.startswith("battle")]
+
+    assert any("prime" in room.room_type for room in battle_rooms)
+    assert any("glitched" in room.room_type for room in battle_rooms)
+    assert any(room.encounter_bonus > 0 for room in battle_rooms if room.room_type != "battle-boss-floor")
+
+    for room in battle_rooms:
+        if room.room_type == "battle-boss-floor":
+            continue
+        if "prime" in room.room_type:
+            assert room.prime_bonus_pct >= context.prime_spawn_bonus_pct
+        if "glitched" in room.room_type:
+            assert room.glitched_bonus_pct >= context.glitched_spawn_bonus_pct
+        assert room.elite_bonus_pct >= context.elite_spawn_bonus_pct

@@ -7,10 +7,11 @@ from collections.abc import Mapping
 import random
 from typing import Any
 
+from services.run_configuration import RunModifierContext
+
 from autofighter.mapgen import MapNode
 from autofighter.party import Party
 from autofighter.rooms.foes import SpawnTemplate
-from services.run_configuration import RunModifierContext
 
 
 def _weight_for_template(
@@ -197,6 +198,13 @@ def _desired_count(
     effective_step = pressure_step if pressure_step > 0 else 1
     base = min(base_cap, pressure_base + max(pressure, 0) // effective_step)
     base = min(base_cap, base + encounter_bonus)
+
+    try:
+        node_bonus = int(getattr(node, "encounter_bonus", 0))
+    except Exception:
+        node_bonus = 0
+    if node_bonus:
+        base = min(base_cap, base + max(node_bonus, 0))
 
     extras = 0
     members_obj = getattr(party, "members", [])

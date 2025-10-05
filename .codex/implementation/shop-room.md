@@ -20,10 +20,15 @@ Cards and relics share a star-based pricing table:
 | 5★    | 500          |
 
 These are base prices. Each pressure level multiplies the cost by **1.26**, and when
-pressure is above zero a final \u00b15\% variation is applied:
+pressure is above zero a final \u00b15\% variation is applied. Run modifiers can also
+stack shop multipliers, tax overrides, or custom variance bands. The backend caches
+these derived values inside the `RunModifierContext` so shop rooms can reuse the
+math without recomputing the wizard metadata:
 
 ```
-final_price = floor(base_price * (1.26 ** pressure) * rand(0.95, 1.05))
+multiplier = context.shop_multiplier  # includes pressure and modifier effects
+variance_low, variance_high = context.shop_variance
+final_price = floor(base_price * multiplier * rand(variance_low, variance_high))
 ```
 
 The reroll action always costs **10 gold** and is unaffected by pressure.
@@ -53,3 +58,7 @@ bun test
 ```
 
 The Svelte frontend exposes a stub `ShopMenu` built with `MenuPanel` that lists stock and provides **Buy**, **Reroll**, and **Leave** actions.
+
+Serialized payloads now include the modifier context metadata hash, the applied
+shop multipliers, per-node encounter bonuses, and the normalised modifier stack
+mapping so the frontend can confirm the active effects.

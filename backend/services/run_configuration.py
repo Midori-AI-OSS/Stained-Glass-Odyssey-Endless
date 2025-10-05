@@ -648,6 +648,40 @@ def get_modifier_details(snapshot: Mapping[str, Any], modifier_id: str) -> dict[
     return _coerce_mapping(entry.get("details", {}))
 
 
+def get_modifier_snapshot(snapshot: Mapping[str, Any], modifier_id: str) -> dict[str, Any]:
+    """Return a normalized snapshot for ``modifier_id``.
+
+    The configuration snapshot persisted on the run record mirrors the metadata
+    exposed to the frontend wizard. Downstream systems frequently need to know
+    both the stack count and any derived effect payloads without having to
+    duplicate the normalisation logic that produced the snapshot.  This helper
+    extracts the stored entry, coerces primitive fields into standard Python
+    types, and falls back to sane defaults when the modifier is absent.
+    """
+
+    entry = _modifier_entry(snapshot, modifier_id)
+    if not entry:
+        return {"id": modifier_id, "stacks": 0, "details": {}}
+
+    details = _coerce_mapping(entry.get("details", {}))
+
+    raw_stacks = details.get("stacks") if details else entry.get("stacks")
+    try:
+        stacks = int(raw_stacks)
+    except (TypeError, ValueError):
+        stacks = 0
+
+    summary = {
+        "id": entry.get("id", modifier_id),
+        "label": entry.get("label"),
+        "category": entry.get("category"),
+        "stacks": stacks,
+        "details": details,
+    }
+
+    return summary
+
+
 def _numeric(value: Any, *, default: float = 0.0) -> float:
     try:
         return float(value)
@@ -802,6 +836,7 @@ __all__ = [
     "METADATA_VERSION",
     "RunConfigurationSelection",
     "RunModifierContext",
+    "get_modifier_snapshot",
     "build_run_modifier_context",
     "get_modifier_details",
     "get_run_configuration_metadata",

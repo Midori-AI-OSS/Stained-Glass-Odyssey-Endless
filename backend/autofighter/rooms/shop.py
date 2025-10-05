@@ -146,6 +146,11 @@ def serialize_shop_payload(
             "shop_tax_multiplier": context.shop_tax_multiplier,
             "shop_variance": list(context.shop_variance),
             "encounter_slot_bonus": context.encounter_slot_bonus,
+            "pressure": context.pressure,
+            "elite_spawn_bonus_pct": context.elite_spawn_bonus_pct,
+            "prime_spawn_bonus_pct": context.prime_spawn_bonus_pct,
+            "glitched_spawn_bonus_pct": context.glitched_spawn_bonus_pct,
+            "modifier_stacks": dict(context.modifier_stacks),
         }
     config_snapshot = getattr(party, "run_config", None)
     if isinstance(config_snapshot, dict):
