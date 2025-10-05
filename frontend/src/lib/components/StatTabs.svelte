@@ -418,8 +418,7 @@
     align-items: stretch;
     justify-content: flex-end;
     padding: 0.75rem 0.6rem;
-    background: linear-gradient(90deg, rgba(10, 15, 28, 0.45) 0%, rgba(10, 15, 28, 0.82) 65%);
-    backdrop-filter: blur(2px);
+    background: none;
   }
   .upgrade-panel {
     flex: 0 1 360px;
