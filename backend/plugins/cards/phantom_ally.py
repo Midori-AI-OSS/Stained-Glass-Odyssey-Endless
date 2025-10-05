@@ -1,10 +1,12 @@
+import random
 from dataclasses import dataclass
 from dataclasses import field
-import random
 
 from autofighter.stats import BUS
-from autofighter.summons.manager import SummonManager
 from plugins.cards._base import CardBase
+from plugins.damage_types import load_damage_type
+from autofighter.summons.manager import SummonManager
+from plugins.damage_types._base import DamageTypeBase
 
 
 @dataclass
@@ -64,13 +66,26 @@ class PhantomAlly(CardBase):
         # Create phantom using the new summons system
         # Phantoms are full-strength copies (multiplier=1.0) that last the entire battle
         original_damage_type = getattr(original, "damage_type", None)
+        override_damage_type = None
+        if isinstance(original_damage_type, DamageTypeBase):
+            try:
+                override_damage_type = type(original_damage_type)()
+            except Exception:
+                override_damage_type = original_damage_type
+        elif isinstance(original_damage_type, str):
+            try:
+                override_damage_type = load_damage_type(original_damage_type)
+            except Exception:
+                override_damage_type = None
+        else:
+            override_damage_type = original_damage_type
         summon = SummonManager.create_summon(
             summoner=original,
             summon_type="phantom",
             source=self.id,
             stat_multiplier=1.0,  # Full strength copy
             turns_remaining=-1,  # Lasts the entire battle
-            override_damage_type=original_damage_type,
+            override_damage_type=override_damage_type,
         )
 
         if not summon:
