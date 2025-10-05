@@ -15,6 +15,7 @@ from autofighter.stats import apply_status_hooks
 from plugins import characters as player_plugins
 from plugins.characters._base import PlayerBase
 from plugins.damage_types import load_damage_type
+from services.run_configuration import RunModifierContext
 
 from .encryption import get_save_manager
 
@@ -228,6 +229,15 @@ def load_party(run_id: str) -> Party:
     if isinstance(data, list):
         data = {"members": data, "gold": 0, "relics": [], "cards": []}
     snapshot = data.get("player", {})
+    raw_modifier_context = data.get("modifier_context")
+    hydrated_context: RunModifierContext | None = None
+    if isinstance(raw_modifier_context, RunModifierContext):
+        hydrated_context = raw_modifier_context
+    elif isinstance(raw_modifier_context, dict):
+        try:
+            hydrated_context = RunModifierContext.from_dict(raw_modifier_context)
+        except Exception:
+            log.exception("Failed to hydrate run modifier context; preserving raw payload")
     exp_map: dict[str, int] = data.get("exp", {})
     level_map: dict[str, int] = data.get("level", {})
     exp_mult_map: dict[str, float] = data.get("exp_multiplier", {})
@@ -317,6 +327,10 @@ def load_party(run_id: str) -> Party:
     setattr(party, "base_rdr", stored_rdr)
     if "config" in data:
         setattr(party, "run_config", data.get("config"))
+    if hydrated_context is not None:
+        setattr(party, "run_modifier_context", hydrated_context)
+    elif raw_modifier_context is not None:
+        setattr(party, "run_modifier_context", raw_modifier_context)
     try:
         cleared = int(data.get("null_lantern_cleared", 0) or 0)
     except Exception:
@@ -336,11 +350,29 @@ def save_party(run_id: str, party: Party) -> None:
         row = cur.fetchone()
     existing = json.loads(row[0]) if row else {}
     snapshot = existing.get("player", {})
+    stored_context = None
+    if isinstance(existing, dict):
+        stored_context = existing.get("modifier_context")
+
     for member in party.members:
         if member.id == "player":
             # Persist the player's chosen damage type
             snapshot = {**snapshot, "damage_type": member.element_id}
             break
+    context_payload = stored_context
+    modifier_context = getattr(party, "run_modifier_context", None)
+    if isinstance(modifier_context, RunModifierContext):
+        context_payload = modifier_context.to_dict()
+    elif isinstance(modifier_context, dict):
+        context_payload = dict(modifier_context)
+    elif modifier_context is not None and hasattr(modifier_context, "to_dict"):
+        try:
+            context_payload = dict(modifier_context.to_dict())
+        except Exception:
+            log.exception(
+                "Failed to serialize run modifier context; preserving previous value",
+            )
+
     with get_save_manager().connection() as conn:
         base: dict[str, Any]
         if isinstance(existing, dict):
@@ -364,6 +396,10 @@ def save_party(run_id: str, party: Party) -> None:
                 "player": snapshot,
             }
         )
+        if context_payload is not None:
+            base["modifier_context"] = context_payload
+        else:
+            base.pop("modifier_context", None)
         conn.execute(
             "UPDATE runs SET party = ? WHERE id = ?",
             (json.dumps(base), run_id),
