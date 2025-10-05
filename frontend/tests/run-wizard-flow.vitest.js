@@ -365,4 +365,25 @@ describe('RunChooser wizard flow', () => {
       .map(([, , payload]) => payload);
     expect(startPayloads[startPayloads.length - 1]).toMatchObject({ quick_start: true });
   });
+
+  test('refetches metadata when metadata hash updates', async () => {
+    getRunConfigurationMetadata.mockResolvedValueOnce(JSON.parse(JSON.stringify(BASE_METADATA)));
+
+    const { component } = render(RunChooser, {
+      props: { runs: [], metadataHash: '1.0.0' }
+    });
+
+    await waitFor(() => expect(getRunConfigurationMetadata).toHaveBeenCalledTimes(1));
+    expect(getRunConfigurationMetadata.mock.calls[0][0]).toMatchObject({ metadataHash: '1.0.0' });
+
+    getRunConfigurationMetadata.mockResolvedValueOnce(
+      JSON.parse(JSON.stringify({ ...BASE_METADATA, version: '1.0.1' }))
+    );
+
+    await component.$set({ metadataHash: '1.0.1' });
+    await tick();
+
+    await waitFor(() => expect(getRunConfigurationMetadata).toHaveBeenCalledTimes(2));
+    expect(getRunConfigurationMetadata.mock.calls[1][0]).toMatchObject({ metadataHash: '1.0.1' });
+  });
 });

@@ -651,16 +651,29 @@ export async function getMap(_runId) {
  */
 export async function getActiveRuns() {
   const uiState = await getUIState();
+  const hashCandidate =
+    uiState?.run_config_metadata_hash ??
+    uiState?.game_state?.run_configuration_metadata_hash ??
+    uiState?.game_state?.run_configuration?.version ??
+    uiState?.game_state?.run_configuration?.metadata_hash ??
+    null;
+  const metadataHash =
+    typeof hashCandidate === 'string' && hashCandidate.trim()
+      ? hashCandidate.trim()
+      : null;
+
   if (uiState.active_run) {
     return {
       runs: [{
         run_id: uiState.active_run,
         party: uiState.game_state?.party || [],
         map: uiState.game_state?.map || {}
-      }]
+      }],
+      metadataHash
     };
   }
-  return { runs: [] };
+
+  return { runs: [], metadataHash };
 }
 
 /**
