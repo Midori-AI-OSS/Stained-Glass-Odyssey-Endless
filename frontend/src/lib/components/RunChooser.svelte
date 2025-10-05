@@ -39,6 +39,18 @@
   let completed = false;
 
   const hasOwn = (obj, key) => Object.prototype.hasOwnProperty.call(obj, key);
+  const EFFECT_LABEL_MAP = {
+    encounter_bonus: 'Foe slots',
+    defense_floor: 'DEF floor',
+    elite_spawn_bonus_pct: 'Elite odds',
+    shop_multiplier: 'Shop',
+    mitigation: 'Mitigation',
+    vitality: 'Vitality',
+    atk: 'Attack',
+    max_hp: 'Max HP',
+    glitched_chance: 'Glitched odds',
+    prime_chance: 'Prime odds'
+  };
 
   let normalizedRuns = [];
   let visibleSteps = STEP_SEQUENCE;
@@ -201,11 +213,13 @@
     const stacking = normaliseStacking(mod?.stacking);
     const rewards = buildRewardSummaries(mod?.reward_bonuses);
     const diminishing = buildDiminishingSummary(mod?.diminishing_returns);
+    const effects = buildEffectsSummary(mod);
     const previewChips = buildPreviewChips(mod);
     const previewSentence = buildPreviewSentence(previewChips);
     const tooltipParts = [
       mod?.description?.trim() || '',
       stacking.sentence,
+      effects.tooltip,
       rewards.tooltip,
       diminishing.tooltip,
       previewSentence
@@ -215,12 +229,169 @@
 
     return {
       stackSummary: stacking.inline,
+      effectsSummary: effects.inline,
       rewardSummary: rewards.inline,
       diminishingSummary: diminishing.inline,
       tooltipText,
       tooltipLabel,
       previewChips
     };
+  }
+
+  function buildEffectsSummary(mod) {
+    const effects = mod?.effects;
+    if (!effects || typeof effects !== 'object') {
+      return { inline: '', tooltip: '' };
+    }
+
+    if (hasOwn(effects, 'primary_penalty_per_stack')) {
+      return summarizePlayerPenaltyEffects(effects);
+    }
+
+    if (hasOwn(effects, 'stat') && hasOwn(effects, 'per_stack')) {
+      return summarizeStatScalingEffects(effects);
+    }
+
+    const entries = Object.entries(effects);
+    const inlineSegments = [];
+    const tooltipSegments = [];
+
+    for (const [key, raw] of entries) {
+      if (!raw) continue;
+      if (typeof raw === 'object') {
+        const inline = summarizeEffectEntry(key, raw);
+        if (inline) inlineSegments.push(inline);
+        if (raw.description) {
+          tooltipSegments.push(String(raw.description).trim());
+        }
+        if (raw.tooltip) {
+          tooltipSegments.push(String(raw.tooltip).trim());
+        }
+      } else if (typeof raw === 'string') {
+        tooltipSegments.push(raw.trim());
+      }
+    }
+
+    const inline = inlineSegments.length ? `Effects: ${inlineSegments.join(' • ')}` : '';
+    const tooltip = tooltipSegments.join(' ').trim();
+    return { inline, tooltip };
+  }
+
+  function summarizePlayerPenaltyEffects(effects) {
+    const primary = toNumber(effects.primary_penalty_per_stack);
+    const overflow = toNumber(effects.overflow_penalty_per_stack);
+    const threshold = toNumber(effects.overflow_threshold);
+
+    const inlineSegments = [];
+    const tooltipSegments = [];
+
+    if (Number.isFinite(primary) && primary > 0) {
+      inlineSegments.push(`${formatPercentDetailed(-primary)} stats/stack`);
+      const percent = stripLeadingPlus(formatPercentDetailed(primary));
+      tooltipSegments.push(`Each stack reduces all player stats by ${percent}.`);
+    }
+
+    if (Number.isFinite(overflow) && overflow > 0 && Number.isFinite(threshold) && threshold > 0) {
+      inlineSegments.push(
+        `${stripLeadingPlus(formatPercentDetailed(-overflow))} stats past ${threshold}`
+      );
+      const percent = stripLeadingPlus(formatPercentDetailed(overflow));
+      tooltipSegments.push(
+        `Stacks beyond ${threshold} reduce stats by only ${percent} each.`
+      );
+    }
+
+    const inline = inlineSegments.length ? `Effects: ${inlineSegments.join(' • ')}` : '';
+    const tooltip = tooltipSegments.join(' ').trim();
+    return { inline, tooltip };
+  }
+
+  function summarizeStatScalingEffects(effects) {
+    const stat = formatEffectLabel(effects.stat);
+    const perStack = toNumber(effects.per_stack);
+    if (!Number.isFinite(perStack)) {
+      return { inline: '', tooltip: '' };
+    }
+
+    const inlineValue = formatPerStackValue(perStack, stat, effects.scaling_type);
+    const inline = inlineValue ? `Effects: ${inlineValue}` : '';
+    const tooltipValue = inlineValue
+      ?.replace(/\s*\(multiplicative\)$/, '')
+      .replace(/\/?stack$/, '')
+      .trim();
+    const tooltip = tooltipValue
+      ? `Each stack modifies ${stat.toLowerCase()} by ${tooltipValue}.`
+      : '';
+    return { inline, tooltip };
+  }
+
+  function summarizeEffectEntry(key, effect) {
+    if (effect.type === 'step') {
+      const amount = toNumber(effect.amount_per_step);
+      const step = Math.max(1, toNumber(effect.step_size, 1));
+      if (!Number.isFinite(amount)) return '';
+      const label = formatEffectLabel(key);
+      const value = key.endsWith('_pct')
+        ? formatPercentPoints(amount)
+        : formatSignedInteger(amount);
+      return `${value} ${label}/${step} stacks`;
+    }
+
+    if (effect.type === 'linear') {
+      const perStack = toNumber(effect.per_stack);
+      if (!Number.isFinite(perStack)) return '';
+      const label = formatEffectLabel(key);
+      if (key.endsWith('_pct')) {
+        return `${formatPercentPoints(perStack)} ${label}/stack`;
+      }
+      return `${formatPerStackValue(perStack, label)}`;
+    }
+
+    if (effect.type === 'exponential') {
+      const base = toNumber(effect.base);
+      if (!Number.isFinite(base) || base <= 0) return '';
+      const label = formatEffectLabel(key);
+      return `${label} ${formatMultiplier(base)}^stack`;
+    }
+
+    return '';
+  }
+
+  function formatPerStackValue(value, label, scalingType = 'additive') {
+    if (!Number.isFinite(value)) return '';
+    const formatted = Math.abs(value) < 1 ? formatPercentDetailed(value) : formatSignedInteger(value);
+    const suffix = scalingType === 'multiplicative' ? ' (multiplicative)' : '';
+    return `${formatted} ${label}/stack${suffix}`;
+  }
+
+  function formatEffectLabel(key) {
+    if (!key) return 'value';
+    if (EFFECT_LABEL_MAP[key]) return EFFECT_LABEL_MAP[key];
+    return String(key).replace(/_/g, ' ').replace(/\b([a-z])/g, (match) => match.toUpperCase());
+  }
+
+  function formatSignedInteger(value) {
+    if (!Number.isFinite(value)) return '0';
+    const rounded = Math.round(value * 1000) / 1000;
+    return `${rounded >= 0 ? '+' : ''}${rounded}`;
+  }
+
+  function stripLeadingPlus(value) {
+    return typeof value === 'string' ? value.replace(/^\+/, '') : value;
+  }
+
+  function formatPercentDetailed(value) {
+    if (!Number.isFinite(value)) return '0%';
+    const num = Number(value) * 100;
+    let digits = 2;
+    const abs = Math.abs(num);
+    if (abs >= 100) digits = 0;
+    else if (abs >= 10) digits = 1;
+    else if (abs < 1) digits = 4;
+    let formatted = num.toFixed(digits);
+    formatted = formatted.replace(/\.0+$/, '').replace(/(\.\d*[1-9])0+$/, '$1');
+    const sign = num >= 0 ? '+' : '';
+    return `${sign}${formatted}%`;
   }
 
   function normaliseStacking(stacking) {
@@ -760,6 +931,7 @@
 {:else}
   <MenuPanel
     class="run-wizard"
+    class:modifiers-stage={step === 'modifiers'}
     data-step={step}
     padding="var(--menu-panel-padding, clamp(0.65rem, 1.8vw, 1.1rem))"
     {reducedMotion}
@@ -904,10 +1076,13 @@
                     </label>
                   </div>
                 </div>
-                {#if mod.meta?.stackSummary || mod.meta?.rewardSummary || mod.meta?.diminishingSummary}
+                {#if mod.meta?.stackSummary || mod.meta?.effectsSummary || mod.meta?.rewardSummary || mod.meta?.diminishingSummary}
                   <div class="modifier-meta">
                     {#if mod.meta?.stackSummary}
                       <span>{mod.meta.stackSummary}</span>
+                    {/if}
+                    {#if mod.meta?.effectsSummary}
+                      <span>{mod.meta.effectsSummary}</span>
                     {/if}
                     {#if mod.meta?.rewardSummary}
                       <span>{mod.meta.rewardSummary}</span>
@@ -1036,6 +1211,7 @@
     align-self: stretch;
     margin: 0;
     min-height: 0;
+    height: 100%;
   }
 
   .wizard > * {
@@ -1311,6 +1487,14 @@
     background: rgba(255, 255, 255, 0.05);
     padding: clamp(0.55rem, 1.6vw, 0.9rem) clamp(0.7rem, 2vw, 1.2rem);
     border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  :global(.panel.run-wizard.modifiers-stage) {
+    overflow: hidden;
+  }
+
+  :global(.panel.run-wizard.modifiers-stage .panel-content) {
+    height: 100%;
   }
 
   .pressure-value {
