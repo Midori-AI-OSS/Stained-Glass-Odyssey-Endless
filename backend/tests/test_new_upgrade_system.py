@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 import sqlcipher3
 
-STAR_TO_MATERIALS = {1: 1, 2: 150, 3: 22500, 4: 3375000}
+STAR_TO_MATERIALS = {1: 1, 2: 125, 3: 125**2, 4: 125**3}
 
 
 @pytest.fixture()
