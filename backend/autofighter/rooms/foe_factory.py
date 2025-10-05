@@ -116,8 +116,12 @@ class FoeFactory:
                 config["pressure_defense_floor"] = per_stack_floor
             except Exception:
                 pass
-            config["pressure_defense_min_roll"] = context.pressure_defense_min_roll
-            config["pressure_defense_max_roll"] = context.pressure_defense_max_roll
+            pressure_defense_min_roll = getattr(context, "pressure_defense_min_roll", None)
+            if pressure_defense_min_roll is not None:
+                config["pressure_defense_min_roll"] = pressure_defense_min_roll
+            pressure_defense_max_roll = getattr(context, "pressure_defense_max_roll", None)
+            if pressure_defense_max_roll is not None:
+                config["pressure_defense_max_roll"] = pressure_defense_max_roll
         elif pressure_override is None:
             pressure_override = getattr(node, "pressure", 0)
         prime_chance, glitched_chance = self.calculate_rank_probabilities(
@@ -266,8 +270,12 @@ class FoeFactory:
                 config["pressure_defense_floor"] = per_stack_floor
             except Exception:
                 pass
-            config["pressure_defense_min_roll"] = context.pressure_defense_min_roll
-            config["pressure_defense_max_roll"] = context.pressure_defense_max_roll
+            pressure_defense_min_roll = getattr(context, "pressure_defense_min_roll", None)
+            if pressure_defense_min_roll is not None:
+                config["pressure_defense_min_roll"] = pressure_defense_min_roll
+            pressure_defense_max_roll = getattr(context, "pressure_defense_max_roll", None)
+            if pressure_defense_max_roll is not None:
+                config["pressure_defense_max_roll"] = pressure_defense_max_roll
         base_mult = compute_base_multiplier(
             strength,
             node,
