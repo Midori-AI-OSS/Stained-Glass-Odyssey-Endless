@@ -6,6 +6,7 @@ import random
 from typing import Any
 
 from services.run_configuration import RunModifierContext
+from services.run_configuration import get_shop_modifier_summaries
 
 from ..cards import card_choices
 from ..party import Party
@@ -173,6 +174,9 @@ def serialize_shop_payload(
         if context is not None:
             summary["metadata_hash"] = context.metadata_hash
         payload["run_configuration"] = {k: v for k, v in summary.items() if v}
+        shop_summaries = get_shop_modifier_summaries(config_snapshot)
+        if shop_summaries:
+            payload["shop_modifiers"] = shop_summaries
 
     return payload
 

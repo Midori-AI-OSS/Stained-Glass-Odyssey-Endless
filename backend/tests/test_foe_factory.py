@@ -117,3 +117,18 @@ def test_desired_count_respects_modifier_context():
     boosted = _desired_count(node, party, config=base_config, context=context, rng=random.Random(0))
     assert boosted >= baseline
     assert boosted - baseline >= context.encounter_slot_bonus + node.encounter_bonus
+
+
+def test_desired_count_scales_down_for_strong_foe_modifiers():
+    selection = validate_run_configuration(
+        run_type="standard",
+        modifiers={"pressure": 8, "foe_hp": 4, "foe_speed": 3},
+    )
+    context = build_run_modifier_context(selection.snapshot)
+    node = MapNode(room_id=2, room_type="battle-normal", floor=1, index=2, loop=1, pressure=context.pressure)
+    party = Party(members=[Player()])
+    base_config = dict(ROOM_BALANCE_CONFIG)
+    baseline = _desired_count(node, party, config=base_config, context=None, rng=random.Random(1))
+    scaled = _desired_count(node, party, config=base_config, context=context, rng=random.Random(1))
+    assert scaled <= baseline
+    assert scaled >= 1

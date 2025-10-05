@@ -182,12 +182,17 @@ def _desired_count(
     except Exception:
         pressure_step = 1
 
+    spawn_pressure = 1.0
     if context is not None:
         try:
             pressure = max(int(context.pressure), 0)
         except Exception:
             pressure = 0
         encounter_bonus = max(int(getattr(context, "encounter_slot_bonus", 0)), 0)
+        try:
+            spawn_pressure = max(float(getattr(context, "foe_spawn_multiplier", 1.0)), 1.0)
+        except Exception:
+            spawn_pressure = 1.0
     else:
         try:
             pressure = int(getattr(node, "pressure", 0))
@@ -197,6 +202,10 @@ def _desired_count(
 
     effective_step = pressure_step if pressure_step > 0 else 1
     base = min(base_cap, pressure_base + max(pressure, 0) // effective_step)
+    if spawn_pressure > 1.0:
+        base = max(1, min(base_cap, int(round(base / spawn_pressure))))
+    elif spawn_pressure > 0:
+        base = max(1, min(base_cap, int(round(base * spawn_pressure))))
     base = min(base_cap, base + encounter_bonus)
 
     try:

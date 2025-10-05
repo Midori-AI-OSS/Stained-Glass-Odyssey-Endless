@@ -87,9 +87,15 @@ async def test_shop_cost_scales_with_pressure():
     p.hp = 100
 
     party = Party(members=[p], gold=5000)
+    selection = validate_run_configuration(run_type="standard", modifiers={"pressure": pressure})
+    context = build_run_modifier_context(selection.snapshot)
+    setattr(party, "run_config", selection.snapshot)
+    setattr(party, "run_modifier_context", context)
+    setattr(node, "run_modifier_context", context.to_dict())
 
     first = await room.resolve(party, {"action": ""})
     assert first["stock"]
+    assert any(entry["id"] == "pressure" for entry in first.get("shop_modifiers", []))
     for item in first["stock"]:
         base = PRICE_BY_STARS[item["stars"]]
         min_cost = int(base * (1.26 ** pressure) * 0.95)

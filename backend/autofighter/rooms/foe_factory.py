@@ -126,10 +126,7 @@ class FoeFactory:
                 config["pressure_defense_max_roll"] = float(context.pressure_defense_max_roll)
             except Exception:
                 pass
-            try:
-                config["pressure_spawn_base"] = int(config.get("pressure_spawn_base", 1)) + max(int(context.encounter_slot_bonus), 0)
-            except Exception:
-                pass
+            config["pressure_spawn_base"] = max(int(config.get("pressure_spawn_base", 1)), 1)
             speed_multiplier = context.foe_stat_multipliers.get("spd") if context.foe_stat_multipliers else None
             if speed_multiplier:
                 try:
@@ -137,6 +134,10 @@ class FoeFactory:
                     config["max_actions_per_turn"] = max(1, min(5, round(base_actions * speed_multiplier)))
                 except Exception:
                     pass
+            try:
+                config["pressure_multiplier"] = max(float(context.foe_strength_score), 1.0)
+            except Exception:
+                pass
         elif pressure_override is None:
             pressure_override = getattr(node, "pressure", 0)
         prime_chance, glitched_chance = self.calculate_rank_probabilities(
