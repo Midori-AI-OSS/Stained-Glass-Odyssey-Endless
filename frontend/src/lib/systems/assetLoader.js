@@ -265,8 +265,16 @@ function buildLightstreamSwordAssets() {
     wind: [],
     generic: []
   };
+  const pooled = new Set();
+  for (const url of map.generic) {
+    if (typeof url === 'string' && url) {
+      pooled.add(url);
+    }
+  }
   const entries = getSummonGallery('lightstreamswords');
   for (const entry of entries) {
+    const url = entry?.url;
+    if (!url) continue;
     let element = entry?.metadata?.element
       ? normalizeDamageTypeId(entry.metadata.element)
       : inferSwordElementFromPath(entry.path || entry.url);
@@ -274,8 +282,22 @@ function buildLightstreamSwordAssets() {
       element = 'generic';
     }
     if (!map[element]) map[element] = [];
-    map[element].push(entry.url);
+    if (!map[element].includes(url)) {
+      map[element].push(url);
+    }
+    pooled.add(url);
+    const fallbackElements = Array.isArray(entry?.metadata?.fallbackElements)
+      ? entry.metadata.fallbackElements
+      : [];
+    for (const extra of fallbackElements) {
+      const normalized = normalizeDamageTypeId(extra);
+      if (!normalized || !map[normalized]) continue;
+      if (!map[normalized].includes(url)) {
+        map[normalized].push(url);
+      }
+    }
   }
+  map.generic = Array.from(pooled);
   cachedSwordAssets = map;
   cachedSwordVersion = version;
   return map;
@@ -294,11 +316,15 @@ export function getLightstreamSwordArt(typeId, options = {}) {
   const key = normalizeDamageTypeId(typeId);
   const list = ensureSwordList(key);
   if (!list.length) {
-    return defaultFallback;
+    return '';
   }
   const seed = String(options.seed || '') || key;
   const idx = stringHashIndex(`${key}:${seed}`, list.length);
-  return list[idx] || list[0];
+  const art = list[idx] || list[0] || '';
+  if (!art || art === defaultFallback) {
+    return '';
+  }
+  return art;
 }
 
 export function getDamageTypePalette(typeId) {
