@@ -29,5 +29,3 @@ The run startup experience now ships as a multi-step wizard that fetches `/run/c
 ## Open Questions / Follow-ups
 - Validate that the new tooltip warning about uncapped modifier stacking gives players enough context about extreme configurations or if we still need a dedicated difficulty callout elsewhere in the flow.
 - What retention strategy should telemetry adopt for long-term modifier analytics (granularity, retention window, anonymization) now that richer payloads ship with each run start?
-
-ready for review
