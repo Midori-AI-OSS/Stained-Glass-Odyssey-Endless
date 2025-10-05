@@ -944,8 +944,7 @@
   </div>
 {:else}
   <MenuPanel
-    class="run-wizard"
-    class:modifiers-stage={step === 'modifiers'}
+    class={`run-wizard${step === 'modifiers' ? ' modifiers-stage' : ''}`}
     data-step={step}
     padding="var(--menu-panel-padding, clamp(0.65rem, 1.8vw, 1.1rem))"
     {reducedMotion}
