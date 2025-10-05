@@ -39,56 +39,67 @@ class NullLantern(RelicBase):
         if not hasattr(party, "pull_tokens"):
             party.pull_tokens = 0
 
+        def _is_foe_like(entity) -> bool:
+            from plugins.characters.foe_base import FoeBase
+
+            if isinstance(entity, FoeBase):
+                return True
+
+            plugin_type = getattr(entity, "plugin_type", "")
+            if isinstance(plugin_type, str) and plugin_type.lower() == "foe":
+                return True
+
+            rank = getattr(entity, "rank", "")
+            if isinstance(rank, str) and "boss" in rank.lower():
+                return True
+
+            return False
+
         async def _battle_start(entity) -> None:
             from plugins.characters.foe_base import FoeBase
 
             current_state = getattr(party, "_null_lantern_state", state)
-            if isinstance(entity, FoeBase):
-                # Reset per-battle award gate
-                current_state["awarded_in_battle"] = False
-                current_stacks = current_state.get("stacks", 0)
-                if current_stacks <= 0:
-                    return
-                mult = 1 + 1.5 * current_state["cleared"] * current_stacks
-                mod = create_stat_buff(
-                    entity,
-                    name=f"{self.id}_foe_{current_state['cleared']}",
-                    turns=9999,
-                    atk_mult=mult,
-                    defense_mult=mult,
-                    max_hp_mult=mult,
-                    hp_mult=mult,
-                )
-                entity.effect_manager.add_modifier(mod)
+            if not _is_foe_like(entity):
+                return
 
-                await BUS.emit_async(
-                    "relic_effect",
-                    "null_lantern",
-                    entity,
-                    "foe_buffed",
-                    int((mult - 1) * 100),
-                    {
-                        "battle_number": current_state["cleared"] + 1,
-                        "multiplier": mult,
-                        "escalation_percentage": 150 * current_stacks,
-                        "stacks": current_stacks,
-                    },
-                )
+            # Reset per-battle award gate for foe-like encounters
+            current_state["awarded_in_battle"] = False
+
+            if not isinstance(entity, FoeBase):
+                return
+
+            current_stacks = current_state.get("stacks", 0)
+            if current_stacks <= 0:
+                return
+            mult = 1 + 1.5 * current_state["cleared"] * current_stacks
+            mod = create_stat_buff(
+                entity,
+                name=f"{self.id}_foe_{current_state['cleared']}",
+                turns=9999,
+                atk_mult=mult,
+                defense_mult=mult,
+                max_hp_mult=mult,
+                hp_mult=mult,
+            )
+            entity.effect_manager.add_modifier(mod)
+
+            await BUS.emit_async(
+                "relic_effect",
+                "null_lantern",
+                entity,
+                "foe_buffed",
+                int((mult - 1) * 100),
+                {
+                    "battle_number": current_state["cleared"] + 1,
+                    "multiplier": mult,
+                    "escalation_percentage": 150 * current_stacks,
+                    "stacks": current_stacks,
+                },
+            )
 
         async def _battle_end(entity) -> None:
-            from plugins.characters.foe_base import FoeBase
-
             current_state = getattr(party, "_null_lantern_state", state)
-            foe_like = isinstance(entity, FoeBase)
-            if not foe_like:
-                plugin_type = getattr(entity, "plugin_type", "")
-                if isinstance(plugin_type, str) and plugin_type.lower() == "foe":
-                    foe_like = True
-                else:
-                    rank = getattr(entity, "rank", "")
-                    if isinstance(rank, str) and "boss" in rank.lower():
-                        foe_like = True
-            if not foe_like:
+            if not _is_foe_like(entity):
                 return
 
             # Ensure we only award once per battle, even with multiple foes
