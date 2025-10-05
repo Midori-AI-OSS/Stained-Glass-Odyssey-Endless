@@ -36,7 +36,7 @@ async def test_ice_ultimate_damage_scaling():
         foe._base_defense = 1
         foe._base_max_hp = 2000
         foe.hp = foe.max_hp
-    await user.damage_type.ultimate(user, [foe_a, foe_b])
+    await user.damage_type.ultimate(user, [user], [foe_a, foe_b])
     assert foe_a.hp == 2000 - 100 * 6
     assert foe_b.hp == 2000 - 169 * 6
 
