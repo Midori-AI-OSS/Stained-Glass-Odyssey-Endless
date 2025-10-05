@@ -4,7 +4,7 @@ from pathlib import Path
 import pytest
 import sqlcipher3
 
-STAR_TO_MATERIALS = {1: 1, 2: 150, 3: 22500, 4: 3375000}
+STAR_TO_MATERIALS = {1: 1, 2: 125, 3: 125**2, 4: 125**3}
 
 
 @pytest.fixture()
@@ -87,6 +87,46 @@ async def test_character_material_conversion(app_with_db):
     inventory = _fetch_item_counts(db_path)
     assert inventory["fire_2"] == 3
     assert inventory["fire_1"] == 10 + STAR_TO_MATERIALS[2] * 2
+
+
+@pytest.mark.asyncio
+async def test_upgrade_borrows_higher_tier_materials(app_with_db):
+    app, db_path = app_with_db
+    client = app.test_client()
+
+    conn = sqlcipher3.connect(db_path)
+    conn.execute("PRAGMA key = 'testkey'")
+    conn.execute(
+        "INSERT OR REPLACE INTO upgrade_items (id, count) VALUES (?, ?)",
+        ("fire_1", 210),
+    )
+    conn.commit()
+    conn.close()
+
+    from runs.encryption import get_save_manager
+
+    from autofighter.gacha import GachaManager
+
+    manager = GachaManager(get_save_manager())
+    items = manager._get_items()
+    manager._auto_craft(items)
+    manager._set_items(items)
+
+    resp = await client.post(
+        "/players/ally/upgrade",
+        json={"star_level": 1, "item_count": 200},
+    )
+    data = await resp.get_json()
+
+    assert resp.status_code == 200
+    assert data["materials_gained"] == STAR_TO_MATERIALS[1] * 200
+    assert data["items_consumed"].get("fire_1") == 85
+    assert data["items_consumed"].get("fire_2") == 1
+    assert data["material_key"] == "fire_1"
+
+    inventory = _fetch_item_counts(db_path)
+    assert inventory["fire_1"] == 200
+    assert inventory["fire_2"] == 5
 
 
 @pytest.mark.asyncio

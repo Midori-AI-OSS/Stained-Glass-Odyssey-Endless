@@ -497,7 +497,16 @@ UPGRADEABLE_STATS = [
     "vitality",
     "mitigation",
 ]
-STAR_TO_MATERIALS = {1: 1, 2: 150, 3: 22500, 4: 3375000}
+# Keep the star-to-material conversion aligned with the per-item unit scale so we
+# do not reject valid upgrade requests or lose value when consuming items.
+STAR_TO_MATERIALS = {1: 1, 2: 125, 3: 125**2, 4: 125**3}
+# Number of 1★ units represented by a single item at each star level.
+ITEM_UNIT_SCALE = {
+    1: 1,
+    2: 125,
+    3: 125**2,
+    4: 125**3,
+}
 MATERIAL_STAR_LEVEL = 1
 
 
@@ -913,45 +922,87 @@ async def upgrade_player(pid: str):
         materials_added = 0
         consumed_items: dict[str, int] = {}
         materials_per_item = STAR_TO_MATERIALS[star_level]
+        unit_scale = ITEM_UNIT_SCALE[star_level]
+        required_units = item_count * unit_scale
 
-        if pid == "player":
-            items_needed = item_count
-            preferred_keys: list[str] = []
-            active_key = f"{element}_{star_level}"
-            preferred_keys.append(active_key)
-            preferred_keys.append(f"generic_{star_level}")
-            for item_key in sorted(items):
-                if not item_key.endswith(f"_{star_level}"):
-                    continue
-                if item_key in preferred_keys:
-                    continue
-                preferred_keys.append(item_key)
-
-            for item_key in preferred_keys:
-                available = items.get(item_key, 0)
+        def _consume_items(key_list: list[str], tier: int, remaining: int) -> int:
+            units_per_item = ITEM_UNIT_SCALE[tier]
+            for item_key in key_list:
+                available = int(items.get(item_key, 0))
                 if available <= 0:
                     continue
-                consume = min(available, items_needed)
-                items[item_key] -= consume
-                consumed_items[item_key] = consume
-                materials_added += consume * materials_per_item
-                items_needed -= consume
-                if items_needed <= 0:
+                if remaining <= 0:
                     break
-            if items_needed > 0:
+                needed_items = min(
+                    available,
+                    math.ceil(remaining / units_per_item),
+                )
+                if needed_items <= 0:
+                    continue
+                items[item_key] = available - needed_items
+                consumed_items[item_key] = consumed_items.get(item_key, 0) + needed_items
+                remaining -= needed_items * units_per_item
+            return remaining
+
+        if pid == "player":
+            tiers = range(star_level, 5)
+            tier_keys: dict[int, list[str]] = {}
+            total_units = 0
+            for tier in tiers:
+                suffix = f"_{tier}"
+                active_key = f"{element}{suffix}"
+                keys: list[str] = [active_key, f"generic{suffix}"]
+                keys.extend(
+                    key
+                    for key in sorted(items)
+                    if key.endswith(suffix) and key not in keys
+                )
+                tier_keys[tier] = keys
+                units_per_item = ITEM_UNIT_SCALE[tier]
+                total_units += sum(int(items.get(key, 0)) for key in keys) * units_per_item
+
+            if total_units < required_units:
+                available_equivalent = total_units // unit_scale
                 return {
                     "error": (
                         f"insufficient {star_level}★ items (need {item_count}, "
-                        f"found {item_count - items_needed})"
+                        f"found {available_equivalent})"
                     )
                 }
+
+            remaining_units = required_units
+            for tier in tiers:
+                remaining_units = _consume_items(tier_keys[tier], tier, remaining_units)
+                if remaining_units <= 0:
+                    break
+            if remaining_units > 0:
+                return {"error": "failed to consume required materials"}
+            materials_added = item_count * materials_per_item
         else:
-            source_key = f"{element}_{star_level}"
-            available = int(items.get(source_key, 0))
-            if available < item_count:
-                return {"error": f"insufficient {element} {star_level}★ items"}
-            items[source_key] = available - item_count
-            consumed_items[source_key] = item_count
+            tiers = range(star_level, 5)
+            tier_keys: dict[int, list[str]] = {
+                tier: [f"{element}_{tier}"] for tier in tiers
+            }
+            total_units = sum(
+                int(items.get(keys[0], 0)) * ITEM_UNIT_SCALE[tier]
+                for tier, keys in tier_keys.items()
+            )
+            if total_units < required_units:
+                available_equivalent = total_units // unit_scale
+                return {
+                    "error": (
+                        f"insufficient {element} {star_level}★ items "
+                        f"(need {item_count}, found {available_equivalent})"
+                    )
+                }
+
+            remaining_units = required_units
+            for tier in tiers:
+                remaining_units = _consume_items(tier_keys[tier], tier, remaining_units)
+                if remaining_units <= 0:
+                    break
+            if remaining_units > 0:
+                return {"error": "failed to consume required materials"}
             materials_added = item_count * materials_per_item
 
         if materials_added <= 0:
