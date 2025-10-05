@@ -25,6 +25,7 @@ class MapNode:
     metadata_hash: str | None = None
     modifier_context: Mapping[str, Any] | None = None
     encounter_bonus: int = 0
+    encounter_bonus_marker: bool = False
     elite_bonus_pct: float = 0.0
     prime_bonus_pct: float = 0.0
     glitched_bonus_pct: float = 0.0
@@ -45,6 +46,7 @@ class MapNode:
             metadata_hash=data.get('metadata_hash'),
             modifier_context=data.get('modifier_context'),
             encounter_bonus=int(data.get('encounter_bonus', 0) or 0),
+            encounter_bonus_marker=bool(data.get('encounter_bonus_marker', False)),
             elite_bonus_pct=float(data.get('elite_bonus_pct', 0.0) or 0.0),
             prime_bonus_pct=float(data.get('prime_bonus_pct', 0.0) or 0.0),
             glitched_bonus_pct=float(data.get('glitched_bonus_pct', 0.0) or 0.0),
@@ -208,11 +210,11 @@ class MapGenerator:
         battle_types.extend(["battle-weak"] * weak)
 
         self._rand.shuffle(battle_types)
-        bonus_flags = [1] * min(encounter_bonus, len(battle_types))
-        bonus_flags.extend([0] * max(len(battle_types) - len(bonus_flags), 0))
+        bonus_flags = [True] * min(encounter_bonus, len(battle_types))
+        bonus_flags.extend([False] * max(len(battle_types) - len(bonus_flags), 0))
         if bonus_flags:
             self._rand.shuffle(bonus_flags)
-        battle_pairs = list(zip(battle_types, bonus_flags or [0] * len(battle_types)))
+        battle_pairs = list(zip(battle_types, bonus_flags or [False] * len(battle_types)))
 
         if room_types and room_types[0] == "shop":
             for i, rt in enumerate(room_types[1:], start=1):
@@ -233,15 +235,15 @@ class MapGenerator:
             room_types.append("battle-normal" if len(room_types) % 2 else "battle-weak")
 
         battle_iter = iter(battle_pairs)
-        enriched_types: list[tuple[str, int]] = []
+        enriched_types: list[tuple[str, bool]] = []
         for rt in room_types:
             if rt.startswith("battle"):
                 try:
                     enriched_types.append(next(battle_iter))
                 except StopIteration:
-                    enriched_types.append((rt, 0))
+                    enriched_types.append((rt, False))
             else:
-                enriched_types.append((rt, 0))
+                enriched_types.append((rt, False))
 
         for rt, bonus in enriched_types:
             nodes.append(
@@ -254,7 +256,8 @@ class MapGenerator:
                     pressure=self.pressure,
                     metadata_hash=metadata_hash,
                     modifier_context=self._raw_context,
-                    encounter_bonus=bonus if rt.startswith("battle") else 0,
+                    encounter_bonus=0,
+                    encounter_bonus_marker=bool(bonus) if rt.startswith("battle") else False,
                     elite_bonus_pct=elite_bonus_pct,
                     prime_bonus_pct=prime_bonus_pct,
                     glitched_bonus_pct=glitched_bonus_pct,
