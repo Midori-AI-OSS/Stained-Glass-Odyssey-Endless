@@ -283,7 +283,7 @@
 {/if}
 
 {#if $overlayView === 'run-choose'}
-  <PopupWindow title="Resume or Start Run" maxWidth="720px" zIndex={1300} reducedMotion={overlayReducedMotion} on:close={() => dispatch('back')}>
+  <OverlaySurface zIndex={1300}>
     <RunChooser runs={$overlayData.runs || []}
       reducedMotion={overlayReducedMotion}
       on:choose={(e) => dispatch('loadRun', e.detail.run)}
@@ -291,7 +291,7 @@
       on:startRun={(e) => dispatch('startRun', e.detail)}
       on:cancel={() => dispatch('back')}
     />
-  </PopupWindow>
+  </OverlaySurface>
 {/if}
 
 {#if $overlayView === 'backend-not-ready'}
