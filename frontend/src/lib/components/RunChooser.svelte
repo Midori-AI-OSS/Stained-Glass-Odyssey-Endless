@@ -4,6 +4,7 @@
 
   import MenuPanel from './MenuPanel.svelte';
   import PartyPicker from './PartyPicker.svelte';
+  import Tooltip from './Tooltip.svelte';
   import { formatPercent } from '../utils/upgradeFormatting.js';
   import {
     getRunConfigurationMetadata,
@@ -58,10 +59,14 @@
   $: totalSteps = visibleSteps.length;
   $: currentStepIndex = Math.max(0, visibleSteps.indexOf(step));
   $: activeRunType = runTypes.find((rt) => rt.id === runTypeId) || runTypes[0] || null;
-  $: selectedModifiers = modifiers.map((mod) => ({
-    ...mod,
-    value: sanitizeStack(mod.id, modifierValues[mod.id])
-  }));
+  $: selectedModifiers = modifiers.map((mod) => {
+    const value = sanitizeStack(mod.id, modifierValues[mod.id]);
+    return {
+      ...mod,
+      value,
+      meta: describeModifier(mod)
+    };
+  });
   $: pressureValue = sanitizeStack('pressure', modifierValues.pressure);
   $: rewardPreview = computeRewardPreview(modifierValues);
   $: stepTitle = deriveStepTitle(step);
@@ -190,6 +195,215 @@
       dirty[entry.id] = false;
     }
     return { values, dirty };
+  }
+
+  function describeModifier(mod) {
+    const stacking = normaliseStacking(mod?.stacking);
+    const rewards = buildRewardSummaries(mod?.reward_bonuses);
+    const diminishing = buildDiminishingSummary(mod?.diminishing_returns);
+    const previewChips = buildPreviewChips(mod);
+    const previewSentence = buildPreviewSentence(previewChips);
+    const tooltipParts = [
+      mod?.description?.trim() || '',
+      stacking.sentence,
+      rewards.tooltip,
+      diminishing.tooltip,
+      previewSentence
+    ].filter(Boolean);
+    const tooltipText = tooltipParts.join(' ');
+    const tooltipLabel = `${modifierLabel(mod)} modifier details. ${tooltipText || 'No additional details available.'}`;
+
+    return {
+      stackSummary: stacking.inline,
+      rewardSummary: rewards.inline,
+      diminishingSummary: diminishing.inline,
+      tooltipText,
+      tooltipLabel,
+      previewChips
+    };
+  }
+
+  function normaliseStacking(stacking) {
+    const minimum = toNumber(stacking?.minimum, 0);
+    const step = Math.max(1, toNumber(stacking?.step, 1));
+    const maximumValue = toNumber(stacking?.maximum, null);
+    const uncapped = maximumValue === null;
+    const inlineParts = [`Min ${minimum}`];
+    if (step > 1) inlineParts.push(`Step ${step}`);
+    inlineParts.push(uncapped ? 'Uncapped' : `Max ${maximumValue}`);
+    const inline = inlineParts.join(' • ');
+    const sentenceParts = [`Stacks start at ${minimum}${step > 1 ? ` and increase in increments of ${step}` : ''}.`];
+    sentenceParts.push(uncapped ? 'Stacks are uncapped by default.' : `Stacks cap at ${maximumValue}.`);
+    return {
+      minimum,
+      step,
+      maximum: maximumValue,
+      uncapped,
+      inline,
+      sentence: sentenceParts.join(' ')
+    };
+  }
+
+  function toNumber(value, fallback = null) {
+    if (value == null) return fallback;
+    const num = Number(value);
+    return Number.isFinite(num) ? num : fallback;
+  }
+
+  function buildRewardSummaries(bonuses) {
+    if (!bonuses || typeof bonuses !== 'object') {
+      return { inline: '', tooltip: '' };
+    }
+    const inlineSegments = [];
+    const tooltipSegments = [];
+
+    const perStackExp = toNumber(bonuses.exp_bonus_per_stack);
+    if (perStackExp) {
+      inlineSegments.push(`${formatPercent(perStackExp)} EXP/stack`);
+      tooltipSegments.push(`Each stack grants ${formatPercent(perStackExp)} EXP.`);
+    }
+
+    const perStackRdr = toNumber(bonuses.rdr_bonus_per_stack);
+    if (perStackRdr) {
+      inlineSegments.push(`${formatPercent(perStackRdr)} RDR/stack`);
+      tooltipSegments.push(`Each stack grants ${formatPercent(perStackRdr)} RDR.`);
+    }
+
+    const firstExp = toNumber(bonuses.exp_bonus_first_stack);
+    const additionalExp = toNumber(bonuses.exp_bonus_additional_stack);
+    if (firstExp) {
+      inlineSegments.push(
+        `EXP: ${formatPercent(firstExp)} first${additionalExp ? `, ${formatPercent(additionalExp)} each extra` : ''}`
+      );
+      tooltipSegments.push(
+        `The first stack adds ${formatPercent(firstExp)} EXP${
+          additionalExp ? ` with ${formatPercent(additionalExp)} for each additional stack` : ''
+        }.`
+      );
+    }
+
+    const firstRdr = toNumber(bonuses.rdr_bonus_first_stack);
+    const additionalRdr = toNumber(bonuses.rdr_bonus_additional_stack);
+    if (firstRdr) {
+      inlineSegments.push(
+        `RDR: ${formatPercent(firstRdr)} first${additionalRdr ? `, ${formatPercent(additionalRdr)} each extra` : ''}`
+      );
+      tooltipSegments.push(
+        `The first stack adds ${formatPercent(firstRdr)} RDR${
+          additionalRdr ? ` with ${formatPercent(additionalRdr)} for each additional stack` : ''
+        }.`
+      );
+    }
+
+    const inline = inlineSegments.length ? `Rewards: ${inlineSegments.join(' • ')}` : '';
+    const tooltip = tooltipSegments.length ? `Rewards: ${tooltipSegments.join(' ')}` : '';
+    return { inline, tooltip };
+  }
+
+  function buildDiminishingSummary(diminishing) {
+    if (!diminishing || typeof diminishing !== 'object' || !diminishing.applies) {
+      return { inline: '', tooltip: '' };
+    }
+    const stat = (diminishing.stat || 'this modifier').replace(/_/g, ' ');
+    const inline = `Diminishing: ${stat}`;
+    const tooltip = `Diminishing returns apply to ${stat}.`;
+    return { inline, tooltip };
+  }
+
+  function buildPreviewChips(mod) {
+    const preview = Array.isArray(mod?.preview) ? mod.preview : [];
+    return preview
+      .map((entry) => ({
+        stacks: toNumber(entry?.stacks, 0),
+        label: formatStackLabel(toNumber(entry?.stacks, 0)),
+        detail: formatPreviewDetail(mod, entry || {})
+      }))
+      .filter((chip) => chip.detail);
+  }
+
+  function buildPreviewSentence(chips) {
+    if (!chips || chips.length === 0) return '';
+    const highest = chips[chips.length - 1];
+    if (!highest?.detail) return '';
+    return `${highest.label} yields ${highest.detail}.`;
+  }
+
+  function formatStackLabel(value) {
+    const stacks = toNumber(value, 0);
+    return `${stacks} stack${stacks === 1 ? '' : 's'}`;
+  }
+
+  function formatPreviewDetail(mod, entry) {
+    if (!entry || typeof entry !== 'object') return '';
+    if (entry.encounter_bonus != null || entry.defense_floor != null || entry.shop_multiplier != null) {
+      const parts = [];
+      if (entry.encounter_bonus != null) {
+        const bonus = Number(entry.encounter_bonus) || 0;
+        parts.push(`+${bonus} foe${bonus === 1 ? '' : 's'}`);
+      }
+      if (entry.defense_floor != null) {
+        parts.push(`≥${Math.round(Number(entry.defense_floor) || 0)} DEF floor`);
+      }
+      if (entry.elite_spawn_bonus_pct != null) {
+        parts.push(`+${formatPercentPoints(entry.elite_spawn_bonus_pct)} elite odds`);
+      }
+      if (entry.shop_multiplier != null) {
+        parts.push(`Shop ${formatMultiplier(entry.shop_multiplier)}`);
+      }
+      return parts.join(' • ');
+    }
+
+    if (entry.effective_multiplier != null || entry.bonus_rdr != null || entry.bonus_exp != null) {
+      const parts = [];
+      if (entry.effective_multiplier != null) {
+        parts.push(`Stats ${formatMultiplier(entry.effective_multiplier)}`);
+      }
+      if (entry.bonus_exp != null) {
+        parts.push(`EXP ${formatPercent(entry.bonus_exp)}`);
+      }
+      if (entry.bonus_rdr != null) {
+        parts.push(`RDR ${formatPercent(entry.bonus_rdr)}`);
+      }
+      return parts.join(' • ');
+    }
+
+    if (entry.effective_bonus != null || entry.raw_bonus != null) {
+      const parts = [];
+      if (entry.raw_bonus != null) {
+        parts.push(`Raw ${formatPercent(entry.raw_bonus)}`);
+      }
+      if (entry.effective_bonus != null && entry.effective_bonus !== entry.raw_bonus) {
+        parts.push(`Effective ${formatPercent(entry.effective_bonus)}`);
+      }
+      return parts.join(' • ');
+    }
+
+    if (entry.raw_bonus_pct != null) {
+      return `Raw ${formatPercent(entry.raw_bonus_pct)}`;
+    }
+
+    return '';
+  }
+
+  function formatPercentPoints(value) {
+    const num = Number(value);
+    if (!Number.isFinite(num)) return '0%';
+    const abs = Math.abs(num);
+    let digits = 2;
+    if (abs >= 100) digits = 0;
+    else if (abs >= 10) digits = 1;
+    const formatted = num.toFixed(digits).replace(/\.0+$/, '').replace(/(\.\d*[1-9])0+$/, '$1');
+    return `${num >= 0 ? '+' : ''}${formatted}%`;
+  }
+
+  function formatMultiplier(value) {
+    const num = Number(value);
+    if (!Number.isFinite(num)) return '×1';
+    const abs = Math.abs(num);
+    let digits = 2;
+    if (abs >= 100) digits = 0;
+    else if (abs >= 10) digits = 1;
+    return `×${num.toFixed(digits).replace(/\.0+$/, '').replace(/(\.\d*[1-9])0+$/, '$1')}`;
   }
 
   function sanitizeStack(modId, rawValue) {
@@ -421,21 +635,77 @@
       rdr_bonus: 0
     };
     if (!modifiers.length) return result;
-    let foeStacks = 0;
     for (const entry of modifiers) {
       const stacks = sanitizeStack(entry.id, values[entry.id]);
-      if (entry.grants_reward_bonus) {
-        foeStacks += stacks;
-      }
-      if (entry.id === 'character_stat_down') {
-        const bonus = stacks > 0 ? 0.05 + Math.max(0, stacks - 1) * 0.06 : 0;
-        result.player_bonus = Number(bonus.toFixed(4));
+      const contribution = computeModifierRewardContribution(entry, stacks);
+      result.foe_bonus += contribution.foe_bonus;
+      result.player_bonus += contribution.player_bonus;
+      result.exp_bonus += contribution.exp_bonus;
+      result.rdr_bonus += contribution.rdr_bonus;
+    }
+    result.foe_bonus = Number(result.foe_bonus.toFixed(4));
+    result.player_bonus = Number(result.player_bonus.toFixed(4));
+    result.exp_bonus = Number(result.exp_bonus.toFixed(4));
+    result.rdr_bonus = Number(result.rdr_bonus.toFixed(4));
+    return result;
+  }
+
+  function computeModifierRewardContribution(mod, stacks) {
+    const totals = {
+      foe_bonus: 0,
+      player_bonus: 0,
+      exp_bonus: 0,
+      rdr_bonus: 0
+    };
+    if (!mod || !mod.reward_bonuses || typeof mod.reward_bonuses !== 'object') {
+      return totals;
+    }
+
+    const bonuses = mod.reward_bonuses;
+    const perStackReward = toNumber(bonuses.exp_bonus_per_stack ?? bonuses.rdr_bonus_per_stack);
+    if (perStackReward && mod.grants_reward_bonus) {
+      totals.foe_bonus += stacks * perStackReward;
+    }
+
+    const perStackExp = toNumber(bonuses.exp_bonus_per_stack);
+    if (perStackExp) {
+      totals.exp_bonus += stacks * perStackExp;
+    }
+
+    const perStackRdr = toNumber(bonuses.rdr_bonus_per_stack);
+    if (perStackRdr) {
+      totals.rdr_bonus += stacks * perStackRdr;
+    }
+
+    const firstExp = toNumber(bonuses.exp_bonus_first_stack);
+    if (firstExp && stacks > 0) {
+      totals.exp_bonus += firstExp;
+      const additionalExp = toNumber(bonuses.exp_bonus_additional_stack);
+      if (additionalExp && stacks > 1) {
+        totals.exp_bonus += (stacks - 1) * additionalExp;
       }
     }
-    result.foe_bonus = Number((foeStacks * 0.5).toFixed(4));
-    result.exp_bonus = Number((result.foe_bonus + result.player_bonus).toFixed(4));
-    result.rdr_bonus = result.exp_bonus;
-    return result;
+
+    const firstRdr = toNumber(bonuses.rdr_bonus_first_stack);
+    if (firstRdr && stacks > 0) {
+      totals.rdr_bonus += firstRdr;
+      const additionalRdr = toNumber(bonuses.rdr_bonus_additional_stack);
+      if (additionalRdr && stacks > 1) {
+        totals.rdr_bonus += (stacks - 1) * additionalRdr;
+      }
+      if (!mod.grants_reward_bonus) {
+        totals.player_bonus += firstRdr;
+        if (additionalRdr && stacks > 1) {
+          totals.player_bonus += (stacks - 1) * additionalRdr;
+        }
+      }
+    }
+
+    if (!mod.grants_reward_bonus && mod.id === 'character_stat_down') {
+      totals.player_bonus = totals.rdr_bonus;
+    }
+
+    return totals;
   }
 
   function modifierLabel(mod) {
@@ -451,7 +721,7 @@
   }
 
   function isActiveModifier(mod) {
-    const value = sanitizeStack(mod.id, modifierValues[mod.id]);
+    const value = typeof mod?.value === 'number' ? mod.value : sanitizeStack(mod.id, modifierValues[mod.id]);
     return value > (mod.stacking?.minimum ?? 0);
   }
 
@@ -602,13 +872,25 @@
             {#each selectedModifiers as mod}
               <div class="modifier" role="listitem">
                 <div class="modifier-header">
-                  <div>
+                  <div class="modifier-title">
                     <span class="modifier-label">{modifierLabel(mod)}</span>
                     {#if mod.category}
                       <span class="modifier-category">{mod.category}</span>
                     {/if}
                   </div>
-                  <div class="modifier-inputs">
+                  <div class="modifier-controls">
+                    {#if mod.meta?.tooltipText}
+                      <Tooltip text={mod.meta.tooltipText}>
+                        <button
+                          type="button"
+                          class="info-trigger"
+                          aria-label={mod.meta.tooltipLabel}
+                          data-tooltip={mod.meta.tooltipText}
+                        >
+                          <span aria-hidden="true">i</span>
+                        </button>
+                      </Tooltip>
+                    {/if}
                     <label>
                       <span class="sr-only">Stacks</span>
                       <input
@@ -622,8 +904,31 @@
                     </label>
                   </div>
                 </div>
+                {#if mod.meta?.stackSummary || mod.meta?.rewardSummary || mod.meta?.diminishingSummary}
+                  <div class="modifier-meta">
+                    {#if mod.meta?.stackSummary}
+                      <span>{mod.meta.stackSummary}</span>
+                    {/if}
+                    {#if mod.meta?.rewardSummary}
+                      <span>{mod.meta.rewardSummary}</span>
+                    {/if}
+                    {#if mod.meta?.diminishingSummary}
+                      <span>{mod.meta.diminishingSummary}</span>
+                    {/if}
+                  </div>
+                {/if}
                 {#if modifierDescription(mod)}
                   <p class="modifier-description">{modifierDescription(mod)}</p>
+                {/if}
+                {#if mod.meta?.previewChips?.length}
+                  <div class="modifier-preview" role="list">
+                    {#each mod.meta.previewChips as chip}
+                      <div class="preview-chip" role="listitem">
+                        <span class="chip-stack">{chip.label}</span>
+                        <span class="chip-detail">{chip.detail}</span>
+                      </div>
+                    {/each}
+                  </div>
                 {/if}
               </div>
             {/each}
@@ -677,7 +982,7 @@
           {#if selectedModifiers.some(isActiveModifier)}
             <ul>
               {#each selectedModifiers.filter(isActiveModifier) as mod}
-                <li>{modifierLabel(mod)}: {sanitizeStack(mod.id, modifierValues[mod.id])}</li>
+                <li>{modifierLabel(mod)}: {mod.value}</li>
               {/each}
             </ul>
           {:else}
@@ -799,6 +1104,8 @@
     display: flex;
     flex-direction: column;
     gap: var(--wizard-section-gap);
+    flex: 1 1 auto;
+    min-height: 0;
   }
 
   .resume-panel {
@@ -993,6 +1300,8 @@
     display: flex;
     flex-direction: column;
     gap: var(--wizard-section-gap);
+    flex: 1 1 auto;
+    min-height: 0;
   }
 
   .modifier-toolbar {
@@ -1019,7 +1328,8 @@
     display: flex;
     flex-direction: column;
     gap: var(--wizard-item-gap);
-    max-height: clamp(260px, 50vh, 420px);
+    flex: 1 1 auto;
+    min-height: 0;
     overflow-y: auto;
     padding-right: 0.35rem;
   }
@@ -1041,6 +1351,13 @@
     flex-wrap: wrap;
   }
 
+  .modifier-title {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem;
+  }
+
   .modifier-label {
     font-weight: 600;
   }
@@ -1052,14 +1369,14 @@
     text-transform: uppercase;
   }
 
-  .modifier-inputs {
+  .modifier-controls {
     display: flex;
     flex-wrap: wrap;
     gap: clamp(0.35rem, 1vw, 0.6rem);
     align-items: center;
   }
 
-  .modifier-inputs input {
+  .modifier-controls input {
     width: 5rem;
     padding: 0.35rem;
     background: rgba(0, 0, 0, 0.3);
@@ -1067,11 +1384,71 @@
     color: inherit;
   }
 
+  .info-trigger {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.8rem;
+    height: 1.8rem;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.06);
+    color: inherit;
+    cursor: pointer;
+    font-size: 0.9rem;
+    line-height: 1;
+  }
+
+  .info-trigger:hover,
+  .info-trigger:focus-visible {
+    background: rgba(120, 180, 255, 0.22);
+    outline: none;
+  }
+
+  .modifier-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    font-size: 0.75rem;
+    opacity: 0.85;
+  }
+
+  .modifier-meta span {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 0.2rem 0.45rem;
+  }
+
   .modifier-description {
     font-size: 0.85rem;
     opacity: 0.82;
     margin: 0;
     line-height: 1.4;
+  }
+
+  .modifier-preview {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: clamp(0.35rem, 1vw, 0.6rem);
+  }
+
+  .preview-chip {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    padding: clamp(0.4rem, 1.2vw, 0.65rem);
+  }
+
+  .chip-stack {
+    font-size: 0.75rem;
+    opacity: 0.7;
+    text-transform: uppercase;
+  }
+
+  .chip-detail {
+    font-size: 0.85rem;
+    font-weight: 600;
   }
 
   .reward-preview {
@@ -1184,7 +1561,7 @@
       grid-template-columns: minmax(0, 1fr);
     }
 
-    .modifier-inputs input {
+    .modifier-controls input {
       width: min(100%, 5.5rem);
     }
   }

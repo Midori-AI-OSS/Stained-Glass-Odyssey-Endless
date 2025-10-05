@@ -41,23 +41,61 @@ const BASE_METADATA = {
     {
       id: 'pressure',
       label: 'Pressure',
+      category: 'economy',
       description: 'Base challenge level',
-      stacking: { minimum: 0, maximum: 20, step: 1, default: 5 },
-      grants_reward_bonus: true
+      stacking: { minimum: 0, step: 1, default: 5 },
+      grants_reward_bonus: false,
+      reward_bonuses: {},
+      preview: [
+        {
+          stacks: 0,
+          encounter_bonus: 0,
+          defense_floor: 0,
+          elite_spawn_bonus_pct: 0,
+          shop_multiplier: 1
+        },
+        {
+          stacks: 5,
+          encounter_bonus: 1,
+          defense_floor: 50,
+          elite_spawn_bonus_pct: 5,
+          shop_multiplier: 3.2
+        }
+      ]
     },
     {
       id: 'enemy_buff',
       label: 'Enemy Buff',
+      category: 'foe',
       description: 'Improve foe stats',
-      stacking: { minimum: 0, maximum: 10, step: 1, default: 0 },
-      grants_reward_bonus: true
+      stacking: { minimum: 0, step: 1, default: 0 },
+      grants_reward_bonus: true,
+      reward_bonuses: {
+        exp_bonus_per_stack: 0.5,
+        rdr_bonus_per_stack: 0.5
+      },
+      preview: [
+        { stacks: 0, raw_bonus: 0, effective_bonus: 0 },
+        { stacks: 3, raw_bonus: 0.03, effective_bonus: 0.025 }
+      ]
     },
     {
       id: 'character_stat_down',
       label: 'Stat Down',
+      category: 'player',
       description: 'Reduce party stats for extra rewards',
       stacking: { minimum: 0, maximum: 5, step: 1, default: 0 },
-      grants_reward_bonus: false
+      grants_reward_bonus: false,
+      reward_bonuses: {
+        exp_bonus_first_stack: 0.05,
+        exp_bonus_additional_stack: 0.06,
+        rdr_bonus_first_stack: 0.05,
+        rdr_bonus_additional_stack: 0.06
+      },
+      preview: [
+        { stacks: 0, effective_multiplier: 1, bonus_rdr: 0, bonus_exp: 0 },
+        { stacks: 1, effective_multiplier: 0.999, bonus_rdr: 0.05, bonus_exp: 0.05 }
+      ]
     }
   ],
   pressure: { tooltip: 'Pressure influences encounter difficulty.' }
@@ -173,5 +211,32 @@ describe('RunChooser wizard flow', () => {
 
     expect(await screen.findByText('metadata offline')).toBeTruthy();
     expect(logMenuAction.mock.calls.map(([, eventName]) => eventName)).toContain('metadata_error');
+  });
+
+  test('renders metadata-driven tooltips and previews', async () => {
+    const { container } = render(RunChooser, { props: { runs: [] } });
+
+    await waitFor(() => expect(getRunConfigurationMetadata).toHaveBeenCalled());
+    await tick();
+
+    await fireEvent.click(screen.getByTestId('set-party'));
+    await fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+    await fireEvent.click(screen.getByRole('button', { name: /boss rush/i }));
+    await fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+    await tick();
+
+    const previewChips = Array.from(container.querySelectorAll('.preview-chip'));
+    const pressureChip = previewChips.find((chip) => chip.textContent?.includes('Shop ×'));
+    expect(pressureChip?.textContent).toContain('Shop ×3.2');
+
+    const foeTooltip = screen.getByRole('button', { name: /Enemy Buff modifier details/i });
+    expect(foeTooltip.getAttribute('data-tooltip')).toContain('Stacks are uncapped');
+    expect(foeTooltip.getAttribute('data-tooltip')).toContain('+50% EXP');
+
+    const playerTooltip = screen.getByRole('button', { name: /Stat Down modifier details/i });
+    const playerTooltipText = playerTooltip.getAttribute('data-tooltip');
+    expect(playerTooltipText).toContain('+5% RDR');
+
+    expect(container.textContent).toContain('RDR +5%');
   });
 });
