@@ -46,7 +46,7 @@
   let sanitizedMetadataHash = null;
   let currentMetadataHash = null;
   let lastRequestedMetadataHash = null;
-  let shouldRefetchMetadata = false;
+  let needsMetadataRefresh = false;
 
   const hasOwn = (obj, key) => Object.prototype.hasOwnProperty.call(obj, key);
   const EFFECT_LABEL_MAP = {
@@ -97,12 +97,11 @@
   $: quickStartPresets = deriveQuickStartPresets(runTypeId);
   $: sanitizedMetadataHash = normalizeMetadataHash(metadataHash);
   $: currentMetadataHash = normalizeMetadataHash(metadata?.metadata_hash ?? metadata?.version);
-  $: shouldRefetchMetadata =
+  $: needsMetadataRefresh =
     Boolean(sanitizedMetadataHash) &&
     sanitizedMetadataHash !== currentMetadataHash &&
-    sanitizedMetadataHash !== lastRequestedMetadataHash &&
     !metadataLoading;
-  $: if (shouldRefetchMetadata) {
+  $: if (needsMetadataRefresh && sanitizedMetadataHash !== lastRequestedMetadataHash) {
     lastRequestedMetadataHash = sanitizedMetadataHash;
     void fetchMetadata({ metadataHash: sanitizedMetadataHash });
   }
