@@ -277,6 +277,7 @@ class MapGenerator:
                 enriched_types.append((rt, False))
 
         for rt, bonus in enriched_types:
+            per_room_bonus = 1 if bonus and rt.startswith("battle") else 0
             nodes.append(
                 MapNode(
                     room_id=index,
@@ -287,7 +288,7 @@ class MapGenerator:
                     pressure=self.pressure,
                     metadata_hash=metadata_hash,
                     modifier_context=self._raw_context,
-                    encounter_bonus=0,
+                    encounter_bonus=per_room_bonus,
                     encounter_bonus_marker=bool(bonus) if rt.startswith("battle") else False,
                     elite_bonus_pct=elite_bonus_pct,
                     prime_bonus_pct=prime_bonus_pct,

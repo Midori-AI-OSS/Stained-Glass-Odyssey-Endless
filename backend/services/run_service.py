@@ -196,6 +196,7 @@ async def start_run(
         configuration_snapshot["client_version"] = client_metadata_version
 
     modifier_context = build_run_modifier_context(configuration_snapshot)
+    configuration_snapshot.setdefault("derived_effects", modifier_context.derived_metrics())
 
     player_stat_multiplier = apply_player_modifier_context(party_members, modifier_context)
 
@@ -324,6 +325,7 @@ async def start_run(
         configuration=configuration_snapshot,
     )
     await log_play_session_start(run_id, "local", start_ts)
+    derived_effects = modifier_context.derived_metrics()
     telemetry_payload = {
         "members": members,
         "damage_type": damage_type,
@@ -352,6 +354,12 @@ async def start_run(
             "pressure_defense_max_roll": modifier_context.pressure_defense_max_roll,
             "metadata_hash": modifier_context.metadata_hash,
             "modifier_stacks": modifier_context.modifier_stacks,
+            "foe_strength_score": derived_effects.get("foe_strength_score"),
+            "foe_spawn_multiplier": derived_effects.get("foe_spawn_multiplier"),
+            "foe_hp_multiplier": derived_effects.get("foe_hp_multiplier"),
+            "foe_speed_multiplier": derived_effects.get("foe_speed_multiplier"),
+            "foe_mitigation_bonus": derived_effects.get("foe_mitigation_bonus"),
+            "foe_vitality_bonus": derived_effects.get("foe_vitality_bonus"),
         },
     }
     if client_metadata_version is not None:

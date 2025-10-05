@@ -66,6 +66,12 @@ def test_generator_marks_prime_glitched_and_bonus_rooms():
     assert any(
         room.encounter_bonus_marker for room in battle_rooms if room.room_type != "battle-boss-floor"
     )
+    flagged = [
+        room
+        for room in battle_rooms
+        if room.room_type != "battle-boss-floor" and room.encounter_bonus_marker
+    ]
+    assert all(room.encounter_bonus == 1 for room in flagged)
 
     for room in battle_rooms:
         if room.room_type == "battle-boss-floor":

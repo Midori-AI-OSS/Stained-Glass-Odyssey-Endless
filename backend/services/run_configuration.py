@@ -63,12 +63,24 @@ def _pressure_effects(stacks: int) -> dict[str, Any]:
     defense_floor = stacks * 10
     elite_bonus = stacks
     shop_multiplier = 1.26 ** stacks if stacks else 1.0
+    # Pressure variance continues to match the legacy ±5% window to keep
+    # existing preview text accurate.  Downstream helpers may override the
+    # variance when additional modifiers contribute their own ranges.
+    shop_variance = (0.95, 1.05)
+    # The pressure tooltip documents a variance band of 0.82×–1.50× when
+    # rolling defense values.  Persist the raw bounds so context builders can
+    # expose them without re-parsing the description text.
+    defense_min_roll = 0.82
+    defense_max_roll = 1.50
     return {
         "stacks": stacks,
         "encounter_bonus": extra_foes,
         "defense_floor": defense_floor,
         "elite_spawn_bonus_pct": elite_bonus,
         "shop_multiplier": shop_multiplier,
+        "shop_variance": shop_variance,
+        "defense_min_roll": defense_min_roll,
+        "defense_max_roll": defense_max_roll,
         "tooltip": _PRESSURE_TOOLTIP,
     }
 
@@ -582,6 +594,8 @@ class RunModifierContext:
     pressure_defense_min_roll: float
     pressure_defense_max_roll: float
     encounter_slot_bonus: int
+    foe_strength_score: float
+    foe_spawn_multiplier: float
     modifier_stacks: dict[str, int]
     metadata_hash: str
 
@@ -603,8 +617,31 @@ class RunModifierContext:
             "pressure_defense_min_roll": self.pressure_defense_min_roll,
             "pressure_defense_max_roll": self.pressure_defense_max_roll,
             "encounter_slot_bonus": self.encounter_slot_bonus,
+            "foe_strength_score": self.foe_strength_score,
+            "foe_spawn_multiplier": self.foe_spawn_multiplier,
             "modifier_stacks": dict(self.modifier_stacks),
             "metadata_hash": self.metadata_hash,
+        }
+
+    def derived_metrics(self) -> dict[str, float]:
+        """Return lightweight aggregates for telemetry and persistence."""
+
+        hp_multiplier = float(self.foe_stat_multipliers.get("max_hp", 1.0) or 1.0)
+        speed_multiplier = float(self.foe_stat_multipliers.get("spd", 1.0) or 1.0)
+        mitigation_bonus = float(self.foe_stat_deltas.get("mitigation", 0.0) or 0.0)
+        vitality_bonus = float(self.foe_stat_deltas.get("vitality", 0.0) or 0.0)
+        return {
+            "foe_strength_score": self.foe_strength_score,
+            "foe_spawn_multiplier": self.foe_spawn_multiplier,
+            "foe_hp_multiplier": hp_multiplier,
+            "foe_speed_multiplier": speed_multiplier,
+            "foe_mitigation_bonus": mitigation_bonus,
+            "foe_vitality_bonus": vitality_bonus,
+            "shop_multiplier": self.shop_multiplier,
+            "shop_tax_multiplier": self.shop_tax_multiplier,
+            "elite_spawn_bonus_pct": self.elite_spawn_bonus_pct,
+            "prime_spawn_bonus_pct": self.prime_spawn_bonus_pct,
+            "glitched_spawn_bonus_pct": self.glitched_spawn_bonus_pct,
         }
 
     @classmethod
@@ -636,6 +673,8 @@ class RunModifierContext:
             pressure_defense_min_roll=float(mapping.get("pressure_defense_min_roll", 0.0) or 0.0),
             pressure_defense_max_roll=float(mapping.get("pressure_defense_max_roll", 0.0) or 0.0),
             encounter_slot_bonus=int(mapping.get("encounter_slot_bonus", 0) or 0),
+            foe_strength_score=float(mapping.get("foe_strength_score", 1.0) or 1.0),
+            foe_spawn_multiplier=float(mapping.get("foe_spawn_multiplier", 1.0) or 1.0),
             modifier_stacks=dict(mapping.get("modifier_stacks", {})),
             metadata_hash=str(mapping.get("metadata_hash", "")) or "",
         )
@@ -691,6 +730,46 @@ def get_modifier_snapshot(snapshot: Mapping[str, Any], modifier_id: str) -> dict
     }
 
     return summary
+
+
+def get_shop_modifier_summaries(snapshot: Mapping[str, Any]) -> list[dict[str, Any]]:
+    """Return normalized summaries for modifiers that affect shop pricing."""
+
+    source = _coerce_mapping(snapshot)
+    modifiers = _coerce_mapping(source.get("modifiers"))
+    summaries: list[dict[str, Any]] = []
+    for modifier_id in modifiers:
+        summary = get_modifier_snapshot(source, modifier_id)
+        details = _coerce_mapping(summary.get("details"))
+        relevant: dict[str, Any] = {}
+        if "shop_multiplier" in details:
+            relevant["shop_multiplier"] = _numeric(details.get("shop_multiplier"), default=1.0)
+        if "shop_tax_multiplier" in details:
+            relevant["shop_tax_multiplier"] = _numeric(details.get("shop_tax_multiplier"), default=1.0)
+        if "shop_variance" in details:
+            variance = details.get("shop_variance")
+            if isinstance(variance, (list, tuple)) and len(variance) == 2:
+                try:
+                    relevant["shop_variance"] = [float(variance[0]), float(variance[1])]
+                except (TypeError, ValueError):
+                    relevant["shop_variance"] = [0.95, 1.05]
+        if not relevant:
+            continue
+        stacks = summary.get("stacks", 0)
+        try:
+            normalized_stacks = int(stacks)
+        except (TypeError, ValueError):
+            normalized_stacks = 0
+        summaries.append(
+            {
+                "id": summary.get("id", modifier_id),
+                "label": summary.get("label"),
+                "category": summary.get("category"),
+                "stacks": normalized_stacks,
+                "details": relevant,
+            }
+        )
+    return summaries
 
 
 def _normalise_room_override(value: Any) -> dict[str, Any]:
@@ -871,6 +950,21 @@ def build_run_modifier_context(snapshot: Mapping[str, Any]) -> RunModifierContex
     if not shop_tax_multiplier:
         shop_tax_multiplier = 1.0
 
+    reward_info = _coerce_mapping(source.get("reward_bonuses"))
+    foe_reward_bonus = _numeric(reward_info.get("foe_modifier_bonus"))
+
+    hp_multiplier = foe_stat_multipliers.get("max_hp", 1.0) or 1.0
+    speed_multiplier = foe_stat_multipliers.get("spd", 1.0) or 1.0
+    mitigation_effect = foe_stat_deltas.get("mitigation", 0.0) or 0.0
+    vitality_effect = foe_stat_deltas.get("vitality", 0.0) or 0.0
+
+    spawn_pressure = 1.0 + max(0.0, foe_reward_bonus) * 0.25
+    spawn_pressure += max(0.0, hp_multiplier - 1.0) * 0.3
+    spawn_pressure += max(0.0, speed_multiplier - 1.0) * 0.2
+    spawn_pressure += max(0.0, mitigation_effect) * 2500.0
+    spawn_pressure += max(0.0, vitality_effect) * 2000.0
+    spawn_pressure = max(1.0, min(spawn_pressure, 5.0))
+
     # Include the snapshot version in the hash to keep context stable even when
     # future metadata fields are added.
     hash_material = json.dumps(
@@ -895,6 +989,8 @@ def build_run_modifier_context(snapshot: Mapping[str, Any]) -> RunModifierContex
         pressure_defense_min_roll=pressure_defense_min_roll,
         pressure_defense_max_roll=pressure_defense_max_roll,
         encounter_slot_bonus=encounter_bonus,
+        foe_strength_score=spawn_pressure,
+        foe_spawn_multiplier=spawn_pressure,
         modifier_stacks=modifier_stacks,
         metadata_hash=metadata_hash,
     )

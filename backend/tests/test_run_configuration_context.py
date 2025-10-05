@@ -7,6 +7,7 @@ from services.run_configuration import apply_player_modifier_context
 from services.run_configuration import build_run_modifier_context
 from services.run_configuration import get_modifier_snapshot
 from services.run_configuration import get_room_overrides
+from services.run_configuration import get_shop_modifier_summaries
 from services.run_configuration import validate_run_configuration
 
 
@@ -44,14 +45,18 @@ def test_build_run_modifier_context_matches_snapshot_metadata():
     assert context.pressure_defense_min_roll == pytest.approx(0.82)
     assert context.pressure_defense_max_roll == pytest.approx(1.50)
     assert context.modifier_stacks["foe_hp"] == 3
+    assert context.foe_strength_score >= 1.0
+    assert context.foe_spawn_multiplier == pytest.approx(context.foe_strength_score)
     assert len(context.metadata_hash) == 64
 
     serialized = context.to_dict()
     assert serialized["metadata_hash"] == context.metadata_hash
     assert serialized["foe_stat_multipliers"]["max_hp"] == context.foe_stat_multipliers["max_hp"]
+    assert serialized["foe_strength_score"] == pytest.approx(context.foe_strength_score)
     hydrated = RunModifierContext.from_dict(serialized)
     assert hydrated.shop_multiplier == pytest.approx(context.shop_multiplier)
     assert hydrated.encounter_slot_bonus == context.encounter_slot_bonus
+    assert hydrated.foe_strength_score == pytest.approx(context.foe_strength_score)
 
 
 def test_get_modifier_snapshot_normalises_entries():
@@ -81,6 +86,29 @@ def test_get_room_overrides_normalises_payload():
     assert overrides["rest"]["enabled"] is True
     assert overrides["rest"]["count"] == 2
     assert overrides["event"]["count"] == 1
+
+
+def test_get_shop_modifier_summaries_filters_relevant_entries():
+    selection = validate_run_configuration(run_type="standard", modifiers={"pressure": 3})
+    selection.snapshot.setdefault("modifiers", {})["custom_shop"] = {
+        "id": "custom_shop",
+        "label": "Custom Shop",
+        "category": "economy",
+        "details": {
+            "stacks": 2,
+            "shop_multiplier": 1.1,
+            "shop_tax_multiplier": 0.5,
+            "shop_variance": (0.9, 1.2),
+        },
+    }
+
+    summaries = get_shop_modifier_summaries(selection.snapshot)
+    assert any(entry["id"] == "custom_shop" for entry in summaries)
+    custom = next(entry for entry in summaries if entry["id"] == "custom_shop")
+    assert custom["stacks"] == 2
+    assert custom["details"]["shop_multiplier"] == pytest.approx(1.1)
+    assert custom["details"]["shop_tax_multiplier"] == pytest.approx(0.5)
+    assert custom["details"]["shop_variance"] == [0.9, 1.2]
 
 
 def test_apply_player_modifier_context_scales_stats():
