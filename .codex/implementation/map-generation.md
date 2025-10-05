@@ -2,7 +2,8 @@
 
 The map generator builds deterministic floor layouts using a seeded
 `MapGenerator`. Pressure Level influences both room structure and
-combat difficulty.
+combat difficulty, and modifier metadata enriches the generated nodes
+with additional context for encounter assembly.
 
 ## Seed Tracking
 Base seeds are persisted to `used_seeds.json`. Creating a `MapGenerator`
@@ -12,14 +13,19 @@ can be overridden with the `seed_store_path` argument for testing or
 custom setups.
 
 ## Room Adjustments
-- Base floors contain 45 rooms.
-- Every 10 Pressure Levels add one room before the floor boss.
-- Branching paths are introduced every 15 Pressure Levels. Branches
-  skip one room ahead and rejoin the main path.
-- Extra boss rooms appear at a rate of one per 20 Pressure Levels and
-  are placed throughout the floor.
+- Base floors contain 10 primary nodes (start, shop/rest slots,
+  battles, boss). Modifier stacks may flag individual battle rooms as
+  `battle-prime` or `battle-glitched` when spawn odds increase.
+- Per-room `encounter_bonus` values persist additional foe slots earned
+  from pressure stacks and modifier bonuses so the foe factory can
+  spawn the guaranteed extras deterministically.
+- The run modifier context caches elite, prime, and glitched spawn
+  percentages on every node so downstream systems do not need to
+  recalculate the metadata hash or modifier maths.
 
 ## Enemy Scaling
 Enemy stats scale with floor, room, and loop counts. Additional
 Pressure Level modifiers are applied via
-`autofighter.balance.pressure.apply_pressure` during battle setup.
+`autofighter.balance.pressure.apply_pressure` during battle setup, and
+per-room bonuses feed into `_desired_count` to honour `encounter_bonus`
+without re-running the configuration helper.

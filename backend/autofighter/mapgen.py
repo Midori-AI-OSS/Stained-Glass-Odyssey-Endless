@@ -10,6 +10,7 @@ from typing import Mapping
 
 if TYPE_CHECKING:  # pragma: no cover - import only for type checking
     from services.run_configuration import RunModifierContext
+
     from .party import Party
 
 
@@ -23,6 +24,11 @@ class MapNode:
     pressure: int
     metadata_hash: str | None = None
     modifier_context: Mapping[str, Any] | None = None
+    encounter_bonus: int = 0
+    encounter_bonus_marker: bool = False
+    elite_bonus_pct: float = 0.0
+    prime_bonus_pct: float = 0.0
+    glitched_bonus_pct: float = 0.0
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -39,6 +45,11 @@ class MapNode:
             pressure=data.get('pressure', 0),
             metadata_hash=data.get('metadata_hash'),
             modifier_context=data.get('modifier_context'),
+            encounter_bonus=int(data.get('encounter_bonus', 0) or 0),
+            encounter_bonus_marker=bool(data.get('encounter_bonus_marker', False)),
+            elite_bonus_pct=float(data.get('elite_bonus_pct', 0.0) or 0.0),
+            prime_bonus_pct=float(data.get('prime_bonus_pct', 0.0) or 0.0),
+            glitched_bonus_pct=float(data.get('glitched_bonus_pct', 0.0) or 0.0),
         )
 
 
@@ -60,6 +71,7 @@ class MapGenerator:
         self.loop = loop
         self.pressure = pressure
         self._raw_context: Mapping[str, Any] | None = None
+        self._context: "RunModifierContext | None" = None
         if modifier_context is not None:
             context_dict: Mapping[str, Any] | None = None
             if hasattr(modifier_context, "to_dict"):
@@ -73,12 +85,18 @@ class MapGenerator:
             if context_dict is not None:
                 self._raw_context = context_dict
             try:
-                from services.run_configuration import RunModifierContext  # local import to avoid cycle
+                from services.run_configuration import (
+                    RunModifierContext,  # local import to avoid cycle
+                )
 
                 if isinstance(modifier_context, RunModifierContext):
+                    self._context = modifier_context
                     self.pressure = modifier_context.pressure
                     if self._raw_context is None:
                         self._raw_context = modifier_context.to_dict()
+                elif context_dict is not None:
+                    self._context = RunModifierContext.from_dict(context_dict)
+                    self.pressure = self._context.pressure
             except Exception:  # pragma: no cover - defensive import guard
                 pass
         self.configuration = dict(configuration or {})
@@ -89,6 +107,45 @@ class MapGenerator:
 
         nodes: list[MapNode] = []
         index = 0
+        context = self._context
+        metadata_hash = self._raw_context.get("metadata_hash") if self._raw_context else None
+        encounter_bonus = 0
+        elite_bonus_pct = 0.0
+        prime_bonus_pct = 0.0
+        glitched_bonus_pct = 0.0
+        if context is not None:
+            try:
+                encounter_bonus = max(int(context.encounter_slot_bonus), 0)
+            except Exception:
+                encounter_bonus = 0
+            try:
+                elite_bonus_pct = max(float(context.elite_spawn_bonus_pct), 0.0)
+            except Exception:
+                elite_bonus_pct = 0.0
+            try:
+                prime_bonus_pct = max(float(context.prime_spawn_bonus_pct), 0.0)
+            except Exception:
+                prime_bonus_pct = 0.0
+            try:
+                glitched_bonus_pct = max(float(context.glitched_spawn_bonus_pct), 0.0)
+            except Exception:
+                glitched_bonus_pct = 0.0
+
+        prime_stacks = 0
+        glitched_stacks = 0
+        try:
+            from services.run_configuration import (
+                get_modifier_snapshot,  # local import to avoid cycle
+            )
+
+            prime_summary = get_modifier_snapshot(self.configuration, "foe_prime_rate")
+            glitched_summary = get_modifier_snapshot(self.configuration, "foe_glitched_rate")
+            prime_stacks = max(int(prime_summary.get("stacks", 0) or 0), 0)
+            glitched_stacks = max(int(glitched_summary.get("stacks", 0) or 0), 0)
+        except Exception:
+            prime_stacks = 0
+            glitched_stacks = 0
+
         nodes.append(
             MapNode(
                 room_id=index,
@@ -97,8 +154,12 @@ class MapGenerator:
                 index=index,
                 loop=self.loop,
                 pressure=self.pressure,
-                metadata_hash=self._raw_context.get("metadata_hash") if self._raw_context else None,
+                metadata_hash=metadata_hash,
                 modifier_context=self._raw_context,
+                encounter_bonus=0,
+                elite_bonus_pct=elite_bonus_pct,
+                prime_bonus_pct=prime_bonus_pct,
+                glitched_bonus_pct=glitched_bonus_pct,
             )
         )
         index += 1
@@ -120,11 +181,41 @@ class MapGenerator:
         for key, count in quotas.items():
             room_types.extend([key] * count)
         battle_count = middle - sum(quotas.values())
-        weak = battle_count // 2
-        normal = battle_count - weak
-        room_types.extend(["battle-weak"] * weak)
-        room_types.extend(["battle-normal"] * normal)
-        self._rand.shuffle(room_types)
+        if battle_count < 0:
+            battle_count = 0
+
+        normal = battle_count // 2
+        weak = battle_count - normal
+        if encounter_bonus:
+            normal = min(battle_count, normal + encounter_bonus)
+            weak = max(battle_count - normal, 0)
+
+        prime_rooms = 0
+        if prime_stacks:
+            prime_rooms = min(normal, max(prime_stacks // 2, 1))
+        elif prime_bonus_pct:
+            prime_rooms = min(normal, int(prime_bonus_pct // 15))
+
+        glitched_rooms = 0
+        remaining_slots = normal - prime_rooms
+        if glitched_stacks and remaining_slots > 0:
+            glitched_rooms = min(remaining_slots, max(glitched_stacks // 2, 1))
+        elif glitched_bonus_pct and remaining_slots > 0:
+            glitched_rooms = min(remaining_slots, int(glitched_bonus_pct // 20))
+
+        battle_types: list[str] = []
+        battle_types.extend(["battle-prime"] * prime_rooms)
+        battle_types.extend(["battle-glitched"] * glitched_rooms)
+        battle_types.extend(["battle-normal"] * max(normal - prime_rooms - glitched_rooms, 0))
+        battle_types.extend(["battle-weak"] * weak)
+
+        self._rand.shuffle(battle_types)
+        bonus_flags = [True] * min(encounter_bonus, len(battle_types))
+        bonus_flags.extend([False] * max(len(battle_types) - len(bonus_flags), 0))
+        if bonus_flags:
+            self._rand.shuffle(bonus_flags)
+        battle_pairs = list(zip(battle_types, bonus_flags or [False] * len(battle_types)))
+
         if room_types and room_types[0] == "shop":
             for i, rt in enumerate(room_types[1:], start=1):
                 if rt != "shop":
@@ -142,7 +233,19 @@ class MapGenerator:
             room_types = filtered[:middle]
         while len(room_types) < middle:
             room_types.append("battle-normal" if len(room_types) % 2 else "battle-weak")
+
+        battle_iter = iter(battle_pairs)
+        enriched_types: list[tuple[str, bool]] = []
         for rt in room_types:
+            if rt.startswith("battle"):
+                try:
+                    enriched_types.append(next(battle_iter))
+                except StopIteration:
+                    enriched_types.append((rt, False))
+            else:
+                enriched_types.append((rt, False))
+
+        for rt, bonus in enriched_types:
             nodes.append(
                 MapNode(
                     room_id=index,
@@ -151,8 +254,13 @@ class MapGenerator:
                     index=index,
                     loop=self.loop,
                     pressure=self.pressure,
-                    metadata_hash=self._raw_context.get("metadata_hash") if self._raw_context else None,
+                    metadata_hash=metadata_hash,
                     modifier_context=self._raw_context,
+                    encounter_bonus=0,
+                    encounter_bonus_marker=bool(bonus) if rt.startswith("battle") else False,
+                    elite_bonus_pct=elite_bonus_pct,
+                    prime_bonus_pct=prime_bonus_pct,
+                    glitched_bonus_pct=glitched_bonus_pct,
                 )
             )
             index += 1
@@ -164,14 +272,36 @@ class MapGenerator:
                 index=index,
                 loop=self.loop,
                 pressure=self.pressure,
-                metadata_hash=self._raw_context.get("metadata_hash") if self._raw_context else None,
+                metadata_hash=metadata_hash,
                 modifier_context=self._raw_context,
+                encounter_bonus=0,
+                elite_bonus_pct=elite_bonus_pct,
+                prime_bonus_pct=prime_bonus_pct,
+                glitched_bonus_pct=glitched_bonus_pct,
             )
         )
         return nodes
 
     def _generate_boss_rush_floor(self) -> list[MapNode]:
         nodes: list[MapNode] = []
+        metadata_hash = self._raw_context.get("metadata_hash") if self._raw_context else None
+        context = self._context
+        elite_bonus_pct = 0.0
+        prime_bonus_pct = 0.0
+        glitched_bonus_pct = 0.0
+        if context is not None:
+            try:
+                elite_bonus_pct = max(float(context.elite_spawn_bonus_pct), 0.0)
+            except Exception:
+                elite_bonus_pct = 0.0
+            try:
+                prime_bonus_pct = max(float(context.prime_spawn_bonus_pct), 0.0)
+            except Exception:
+                prime_bonus_pct = 0.0
+            try:
+                glitched_bonus_pct = max(float(context.glitched_spawn_bonus_pct), 0.0)
+            except Exception:
+                glitched_bonus_pct = 0.0
         for index in range(self.rooms_per_floor):
             room_type = "start" if index == 0 else "battle-boss-floor"
             nodes.append(
@@ -182,14 +312,18 @@ class MapGenerator:
                     index=index,
                     loop=self.loop,
                     pressure=self.pressure,
-                    metadata_hash=self._raw_context.get("metadata_hash") if self._raw_context else None,
+                    metadata_hash=metadata_hash,
                     modifier_context=self._raw_context,
+                    encounter_bonus=0,
+                    elite_bonus_pct=elite_bonus_pct,
+                    prime_bonus_pct=prime_bonus_pct,
+                    glitched_bonus_pct=glitched_bonus_pct,
                 )
             )
         return nodes
 
     @staticmethod
-    def _is_boss_rush(party: Party) -> bool:
+    def _party_requests_boss_rush(party: Party) -> bool:
         config = getattr(party, "run_config", None)
         if isinstance(config, dict):
             run_type = config.get("run_type")
@@ -199,6 +333,23 @@ class MapGenerator:
             elif isinstance(run_type, str) and run_type == "boss_rush":
                 return True
         return bool(getattr(party, "boss_rush", False))
+
+    def _is_boss_rush(self, party: Party | None) -> bool:
+        run_type_entry = self.configuration.get("run_type")
+        run_type_id: str | None = None
+        if isinstance(run_type_entry, Mapping):
+            candidate = run_type_entry.get("id")
+            if isinstance(candidate, str):
+                run_type_id = candidate
+        elif isinstance(run_type_entry, str):
+            run_type_id = run_type_entry
+
+        if run_type_id == "boss_rush":
+            return True
+
+        if party is not None:
+            return self._party_requests_boss_rush(party)
+        return False
 
     def _disable_room(self, room_type: str, party: Party | None) -> bool:
         run_type = self.configuration.get("run_type")

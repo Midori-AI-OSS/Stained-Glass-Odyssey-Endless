@@ -22,6 +22,8 @@ sys.modules.setdefault("services.user_level_service", user_level_module)
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import pytest  # noqa: E402
+from services.run_configuration import build_run_modifier_context  # noqa: E402
+from services.run_configuration import validate_run_configuration  # noqa: E402
 
 from autofighter.mapgen import MapNode  # noqa: E402
 from autofighter.party import Party  # noqa: E402
@@ -33,8 +35,6 @@ from autofighter.rooms.foes.selector import _desired_count  # noqa: E402
 from plugins.characters import CHARACTER_FOES  # noqa: E402
 from plugins.characters import Player  # noqa: E402
 from plugins.characters.slime import Slime  # noqa: E402
-from services.run_configuration import build_run_modifier_context  # noqa: E402
-from services.run_configuration import validate_run_configuration  # noqa: E402
 
 
 @pytest.fixture(autouse=True)
@@ -111,7 +111,9 @@ def test_desired_count_respects_modifier_context():
     node = MapNode(room_id=1, room_type="battle-normal", floor=1, index=1, loop=1, pressure=context.pressure)
     party = Party(members=[Player()])
     base_config = dict(ROOM_BALANCE_CONFIG)
+    node.encounter_bonus = 0
     baseline = _desired_count(node, party, config=base_config, context=None, rng=random.Random(0))
+    node.encounter_bonus = 2
     boosted = _desired_count(node, party, config=base_config, context=context, rng=random.Random(0))
     assert boosted >= baseline
-    assert boosted - baseline >= context.encounter_slot_bonus
+    assert boosted - baseline >= context.encounter_slot_bonus + node.encounter_bonus

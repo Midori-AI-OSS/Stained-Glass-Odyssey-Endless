@@ -9,6 +9,8 @@ from runs.lifecycle import load_map
 from runs.party_manager import load_party
 from runs.party_manager import save_party
 from services.room_service import shop_room
+from services.run_configuration import build_run_modifier_context
+from services.run_configuration import validate_run_configuration
 from services.run_service import advance_room
 from services.run_service import start_run
 
@@ -21,8 +23,6 @@ from autofighter.rooms.shop import ShopRoom
 from autofighter.rooms.shop import _taxed_price
 from autofighter.rooms.shop import serialize_shop_payload
 from plugins.characters._base import PlayerBase
-from services.run_configuration import build_run_modifier_context
-from services.run_configuration import validate_run_configuration
 
 
 @pytest.mark.asyncio
@@ -384,6 +384,11 @@ def test_serialize_shop_payload_reports_modifier_context():
     assert payload["modifier_context"]["metadata_hash"] == context.metadata_hash
     assert payload["modifier_context"]["shop_multiplier"] == pytest.approx(context.shop_multiplier)
     assert payload["modifier_context"]["shop_tax_multiplier"] == pytest.approx(context.shop_tax_multiplier)
+    assert payload["modifier_context"]["pressure"] == context.pressure
+    assert payload["modifier_context"]["prime_spawn_bonus_pct"] == pytest.approx(context.prime_spawn_bonus_pct)
+    assert payload["modifier_context"]["glitched_spawn_bonus_pct"] == pytest.approx(context.glitched_spawn_bonus_pct)
+    assert payload["modifier_context"]["elite_spawn_bonus_pct"] == pytest.approx(context.elite_spawn_bonus_pct)
+    assert payload["modifier_context"]["modifier_stacks"]["pressure"] == selection.modifiers["pressure"]
 
 
 @pytest.fixture()
