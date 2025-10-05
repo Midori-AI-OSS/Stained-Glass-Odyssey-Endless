@@ -118,7 +118,7 @@ async def _validate_party_members(members: list[str]) -> None:
 async def start_run(
     members: list[str],
     damage_type: str = "",
-    pressure: int = 0,
+    pressure: int | None = None,
     run_type: str | None = None,
     modifiers: dict[str, object] | None = None,
 ) -> dict[str, object]:
@@ -171,7 +171,7 @@ async def start_run(
         configuration: RunConfigurationSelection = validate_run_configuration(
             run_type=run_type,
             modifiers=modifiers or {},
-            fallback_pressure=pressure,
+            fallback_pressure=pressure if pressure is not None else None,
         )
     except ValueError as exc:
         raise ValueError(str(exc)) from exc
