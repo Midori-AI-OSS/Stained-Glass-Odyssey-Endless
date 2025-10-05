@@ -15,6 +15,13 @@ Root run state now lives in dedicated stores under `frontend/src/lib/systems/`. 
 - `frontend/src/lib/systems/uiApi.js`
   - Remains the primary UI-centric API for starting runs, performing room actions, advancing rooms, updating parties, fetching battle data, and selecting rewards.
   - `handleFetch` normalizes backend errors and reports them through the overlay system. `advanceRoom` reads the current run state before sending actions to avoid skipping pending rewards.
+  - `startRun` now accepts a configuration object `{ party, damageType, pressure, runType, modifiers }` so the run wizard can forward metadata-aware payloads. Legacy array-based calls remain supported for tests.
+  - `getRunConfigurationMetadata` fetches `/run/config` with optional overlay suppression, and `logMenuAction` forwards wizard telemetry through the UI action channel without interrupting the user on failure.
+
+- `frontend/src/lib/components/RunChooser.svelte`
+  - Replaced the legacy single-step chooser with a four-stage wizard (Resume → Party → Run Type → Modifiers → Confirm) that consumes live metadata, persists defaults in `localStorage`, and emits `startRun` with the consolidated configuration snapshot.
+  - Integrates telemetry via `logMenuAction` for step impressions, modifier adjustments, resumptions, cancellations, and start submissions so analytics receives a consistent event stream.
+  - Computes reward previews client-side to mirror backend multiplier math (foe-stack bonuses plus `character_stat_down` incentives) and surfaces the canonical pressure tooltip alongside modifier descriptions.
 
 - `frontend/src/lib/systems/pollingOrchestrator.js`
   - Owns the UI state, battle snapshot, and map fallback cadences. The controller subscribes to `haltSync`, `overlayBlocking`, and the overlay view store so all loops pause while overlays are active or manual halts are engaged.

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Mapping
 import json
 import traceback
 from typing import Any
@@ -400,6 +401,20 @@ async def handle_ui_action() -> tuple[str, int, dict[str, Any]]:
                     details={"params": params, "error": str(exc)},
                 )
                 return create_error_response(str(exc), 400)
+
+        elif action == "log_menu_action":
+            menu = params.get("menu") or params.get("category") or "Run"
+            event_name = params.get("event") or params.get("name")
+            details = params.get("details") or params.get("data") or {}
+            if not event_name:
+                return jsonify({"status": "ignored"}), 200
+
+            payload = details if isinstance(details, Mapping) else {"details": details}
+            try:
+                await log_menu_action(str(menu), str(event_name), payload)
+            except Exception:
+                pass
+            return jsonify({"ok": True}), 200
 
         elif action == "advance_room":
             if not run_id:
