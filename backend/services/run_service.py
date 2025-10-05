@@ -37,6 +37,7 @@ from autofighter.rooms import _serialize
 from plugins import characters as player_plugins
 from services.login_reward_service import record_room_completion
 from services.run_configuration import RunConfigurationSelection
+from services.run_configuration import apply_player_modifier_context
 from services.run_configuration import build_run_modifier_context
 from services.run_configuration import validate_run_configuration
 from services.user_level_service import get_user_level
@@ -196,39 +197,7 @@ async def start_run(
 
     modifier_context = build_run_modifier_context(configuration_snapshot)
 
-    player_stat_multiplier = float(modifier_context.player_stat_multiplier or 1.0)
-    if player_stat_multiplier != 1.0:
-        base_stats = (
-            "max_hp",
-            "atk",
-            "defense",
-            "crit_rate",
-            "crit_damage",
-            "effect_hit_rate",
-            "mitigation",
-            "regain",
-            "dodge_odds",
-            "effect_resistance",
-            "vitality",
-            "spd",
-        )
-        for member in party_members:
-            for stat_name in base_stats:
-                try:
-                    current = member.get_base_stat(stat_name)
-                except Exception:
-                    continue
-                try:
-                    scaled = current * player_stat_multiplier
-                except Exception:
-                    continue
-                if stat_name in {"max_hp", "atk", "defense", "regain", "spd"}:
-                    scaled = int(max(0, round(scaled)))
-                member.set_base_stat(stat_name, scaled)
-            try:
-                member.hp = member.max_hp
-            except Exception:
-                pass
+    player_stat_multiplier = apply_player_modifier_context(party_members, modifier_context)
 
     exp_multiplier_map: dict[str, float] = {}
     for member, info in zip(party_members, party_info):

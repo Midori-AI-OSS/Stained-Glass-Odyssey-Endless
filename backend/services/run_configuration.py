@@ -9,6 +9,7 @@ from datetime import datetime
 import hashlib
 import json
 from typing import Any
+from typing import Iterable
 from typing import Mapping
 
 from autofighter.effects import DIMINISHING_RETURNS_CONFIG
@@ -899,10 +900,108 @@ def build_run_modifier_context(snapshot: Mapping[str, Any]) -> RunModifierContex
     )
 
 
+def apply_player_modifier_context(
+    members: Iterable[Any],
+    modifier_context: RunModifierContext | Mapping[str, Any] | None,
+) -> float:
+    """Scale player stats according to the provided modifier context.
+
+    The run start flow serializes the modifier context alongside the run state so
+    reloads can rehydrate and continue applying player-focused penalties or
+    buffs.  This helper centralizes the stat scaling logic so both
+    ``start_run`` and ``load_party`` keep player stats in sync with the stored
+    configuration.
+
+    Parameters
+    ----------
+    members:
+        Iterable of player instances exposing ``get_base_stat`` and
+        ``set_base_stat``.  The helper is intentionally duck-typed so it can be
+        used with concrete ``Player`` subclasses during startup and with
+        ``Stats`` instances in tests.
+    modifier_context:
+        Either a :class:`RunModifierContext`, a raw mapping captured from the
+        run snapshot, or ``None`` when no player modifiers apply.
+
+    Returns
+    -------
+    float
+        The multiplier that was applied to player stats (defaults to ``1.0``
+        when no scaling was necessary).
+    """
+
+    context: RunModifierContext | None
+    if isinstance(modifier_context, RunModifierContext):
+        context = modifier_context
+    elif isinstance(modifier_context, Mapping):
+        try:
+            context = RunModifierContext.from_dict(modifier_context)
+        except Exception:
+            context = None
+    else:
+        context = None
+
+    multiplier = 1.0
+    if context is not None:
+        try:
+            candidate = float(context.player_stat_multiplier or 1.0)
+        except (TypeError, ValueError):
+            candidate = 1.0
+        multiplier = max(candidate, 0.0)
+
+    if not members or multiplier == 1.0:
+        return 1.0
+
+    base_stats = (
+        "max_hp",
+        "atk",
+        "defense",
+        "crit_rate",
+        "crit_damage",
+        "effect_hit_rate",
+        "mitigation",
+        "regain",
+        "dodge_odds",
+        "effect_resistance",
+        "vitality",
+        "spd",
+    )
+    int_stats = {"max_hp", "atk", "defense", "regain", "spd"}
+
+    for member in members:
+        if member is None:
+            continue
+        for stat_name in base_stats:
+            try:
+                current = member.get_base_stat(stat_name)  # type: ignore[attr-defined]
+            except Exception:
+                continue
+            try:
+                scaled = current * multiplier
+            except Exception:
+                continue
+            if stat_name in int_stats:
+                try:
+                    scaled = int(max(0, round(scaled)))
+                except Exception:
+                    continue
+            try:
+                member.set_base_stat(stat_name, scaled)  # type: ignore[attr-defined]
+            except Exception:
+                continue
+        try:
+            member.hp = member.max_hp  # type: ignore[attr-defined]
+        except Exception:
+            continue
+
+    return multiplier
+
+
 __all__ = [
     "METADATA_VERSION",
     "RunConfigurationSelection",
     "RunModifierContext",
+    "apply_player_modifier_context",
     "get_modifier_snapshot",
     "get_room_overrides",
     "build_run_modifier_context",

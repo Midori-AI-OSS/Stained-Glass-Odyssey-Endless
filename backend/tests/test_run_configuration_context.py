@@ -1,7 +1,9 @@
 import math
 
 import pytest
+from autofighter.stats import Stats
 from services.run_configuration import RunModifierContext
+from services.run_configuration import apply_player_modifier_context
 from services.run_configuration import build_run_modifier_context
 from services.run_configuration import get_modifier_snapshot
 from services.run_configuration import get_room_overrides
@@ -79,3 +81,23 @@ def test_get_room_overrides_normalises_payload():
     assert overrides["rest"]["enabled"] is True
     assert overrides["rest"]["count"] == 2
     assert overrides["event"]["count"] == 1
+
+
+def test_apply_player_modifier_context_scales_stats():
+    selection = validate_run_configuration(
+        run_type="standard",
+        modifiers={"pressure": 0, "character_stat_down": 5},
+    )
+    context = build_run_modifier_context(selection.snapshot)
+
+    member = Stats()
+    baseline_hp = member.get_base_stat("max_hp")
+    baseline_atk = member.get_base_stat("atk")
+
+    multiplier = apply_player_modifier_context([member], context)
+
+    expected_mult = context.player_stat_multiplier
+    assert multiplier == pytest.approx(expected_mult)
+    assert member.get_base_stat("max_hp") == pytest.approx(baseline_hp * expected_mult, abs=1)
+    assert member.get_base_stat("atk") == pytest.approx(baseline_atk * expected_mult, abs=1)
+    assert member.hp == member.max_hp
