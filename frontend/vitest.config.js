@@ -6,6 +6,9 @@ const vitestEnvironmentShim = {
   name: 'vitest-environment-shim',
   enforce: 'pre',
   configureServer(server) {
+    if (!server) {
+      return;
+    }
     if (!server.environments) {
       const assetsInclude = server.config?.assetsInclude || (() => false);
       server.environments = {
