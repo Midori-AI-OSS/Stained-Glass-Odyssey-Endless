@@ -8,7 +8,7 @@ const vitestEnvironmentShim = {
   name: 'vitest-environment-shim',
   enforce: 'pre',
   configResolved(config) {
-    const assetsInclude = config.assetsInclude || (() => false);
+    const assetsInclude = config.assetsInclude || (function() { return false });
 
     const environments = {
       ...(config.environments ?? {}),
