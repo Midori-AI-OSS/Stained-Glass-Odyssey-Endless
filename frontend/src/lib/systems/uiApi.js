@@ -4,6 +4,12 @@
 import { openOverlay } from './OverlayController.js';
 import { httpGet, httpPost } from './httpClient.js';
 
+const RUN_CONFIG_STORAGE_KEY = 'run_config_metadata_v1';
+
+let cachedRunConfiguration = null;
+let cachedRunConfigurationHash = null;
+let runConfigurationPromise = null;
+
 /**
  * Get the complete UI state from the backend.
  * Returns the current UI mode, game state, and available actions.
@@ -106,8 +112,141 @@ function normalizeModifiers(modifiers) {
   return normalized;
 }
 
-export async function getRunConfigurationMetadata({ suppressOverlay = false } = {}) {
-  return await httpGet('/run/config', {}, suppressOverlay);
+function getSessionStorage() {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+  try {
+    return window.sessionStorage;
+  } catch {
+    return null;
+  }
+}
+
+function deriveMetadataHash(payload) {
+  if (!payload || typeof payload !== 'object') {
+    return null;
+  }
+  if (typeof payload.metadata_hash === 'string' && payload.metadata_hash.trim()) {
+    return payload.metadata_hash.trim();
+  }
+  if (typeof payload.version === 'string' && payload.version.trim()) {
+    return payload.version.trim();
+  }
+  return null;
+}
+
+function cloneMetadataPayload(payload) {
+  if (!payload || typeof payload !== 'object') {
+    return payload ?? null;
+  }
+  if (typeof structuredClone === 'function') {
+    try {
+      return structuredClone(payload);
+    } catch {}
+  }
+  try {
+    return JSON.parse(JSON.stringify(payload));
+  } catch {
+    return payload;
+  }
+}
+
+function loadCachedRunConfiguration() {
+  if (cachedRunConfiguration) {
+    return;
+  }
+  const storage = getSessionStorage();
+  if (!storage) {
+    return;
+  }
+  try {
+    const raw = storage.getItem(RUN_CONFIG_STORAGE_KEY);
+    if (!raw) {
+      return;
+    }
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === 'object') {
+      const payloadSource = parsed.payload && typeof parsed.payload === 'object' ? parsed.payload : parsed;
+      const cloned = cloneMetadataPayload(payloadSource);
+      cachedRunConfiguration = cloned;
+      cachedRunConfigurationHash = parsed.hash || deriveMetadataHash(cloned);
+    }
+  } catch (err) {
+    console.warn('Failed to load cached run configuration metadata', err);
+    cachedRunConfiguration = null;
+    cachedRunConfigurationHash = null;
+  }
+}
+
+function persistRunConfigurationCache(payload) {
+  const cloned = cloneMetadataPayload(payload);
+  cachedRunConfiguration = cloned || null;
+  cachedRunConfigurationHash = deriveMetadataHash(cloned);
+
+  const storage = getSessionStorage();
+  if (!storage) {
+    return;
+  }
+  try {
+    const serialized = JSON.stringify({
+      hash: cachedRunConfigurationHash,
+      payload: cloned,
+      savedAt: Date.now()
+    });
+    storage.setItem(RUN_CONFIG_STORAGE_KEY, serialized);
+  } catch (err) {
+    console.warn('Failed to persist run configuration metadata cache', err);
+  }
+}
+
+export function resetRunConfigurationMetadataCache() {
+  cachedRunConfiguration = null;
+  cachedRunConfigurationHash = null;
+  if (runConfigurationPromise) {
+    runConfigurationPromise = null;
+  }
+  const storage = getSessionStorage();
+  if (storage) {
+    try {
+      storage.removeItem(RUN_CONFIG_STORAGE_KEY);
+    } catch {}
+  }
+}
+
+export async function getRunConfigurationMetadata({
+  suppressOverlay = false,
+  forceRefresh = false,
+  metadataHash = null
+} = {}) {
+  loadCachedRunConfiguration();
+
+  if (
+    !forceRefresh &&
+    cachedRunConfiguration &&
+    (!metadataHash || !cachedRunConfigurationHash || metadataHash === cachedRunConfigurationHash)
+  ) {
+    return cachedRunConfiguration;
+  }
+
+  if (!forceRefresh && runConfigurationPromise) {
+    return runConfigurationPromise;
+  }
+
+  runConfigurationPromise = httpGet('/run/config', {}, suppressOverlay)
+    .then((payload) => {
+      persistRunConfigurationCache(payload);
+      return cachedRunConfiguration;
+    })
+    .catch((error) => {
+      runConfigurationPromise = null;
+      throw error;
+    })
+    .finally(() => {
+      runConfigurationPromise = null;
+    });
+
+  return runConfigurationPromise;
 }
 
 export async function logMenuAction(menu, event, data = {}) {

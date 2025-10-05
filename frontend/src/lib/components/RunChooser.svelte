@@ -12,6 +12,8 @@
   } from '../systems/uiApi.js';
 
   const STORAGE_KEY = 'run_wizard_defaults_v1';
+  const PRESET_STORAGE_KEY = 'run_wizard_recent_presets_v1';
+  const MAX_PRESETS_PER_RUN_TYPE = 3;
   const STEP_SEQUENCE = ['resume', 'party', 'run-type', 'modifiers', 'confirm'];
 
   export let runs = [];
@@ -37,6 +39,9 @@
   let visitedSteps = new Set();
   let wizardSessionId = '';
   let completed = false;
+  let recentPresetCache = {};
+  let quickStartPresets = [];
+  let lastAppliedPresetFingerprint = null;
 
   const hasOwn = (obj, key) => Object.prototype.hasOwnProperty.call(obj, key);
   const EFFECT_LABEL_MAP = {
@@ -84,12 +89,14 @@
   $: stepTitle = deriveStepTitle(step);
   $: resumeDisabled = resumeIndex < 0 || resumeIndex >= normalizedRuns.length;
   $: partySummary = partySelection.slice(0, 5);
+  $: quickStartPresets = deriveQuickStartPresets(runTypeId);
 
   onMount(() => {
     resumeIndex = normalizedRuns.length > 0 ? 0 : -1;
     wizardSessionId = createSessionId();
     loadPersistedDefaults();
     initializeFromPersistence();
+    loadRecentPresets();
     if (!hasRuns) {
       step = 'party';
     }
@@ -154,11 +161,56 @@
     }
   }
 
-  async function fetchMetadata() {
+  function loadRecentPresets() {
+    if (!browser) return;
+    try {
+      const raw = localStorage.getItem(PRESET_STORAGE_KEY);
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object') {
+        recentPresetCache = { ...parsed };
+      }
+    } catch (err) {
+      console.warn('Failed to load run wizard presets', err);
+      recentPresetCache = {};
+    }
+  }
+
+  function persistRecentPresetCache(nextCache) {
+    recentPresetCache = nextCache;
+    if (!browser) return;
+    try {
+      localStorage.setItem(PRESET_STORAGE_KEY, JSON.stringify(nextCache));
+    } catch (err) {
+      console.warn('Failed to persist run wizard presets', err);
+    }
+  }
+
+  function fingerprintPresetValues(values) {
+    if (!values || typeof values !== 'object') {
+      return '';
+    }
+    const entries = Object.entries(values).map(([key, value]) => {
+      const numeric = Number(value);
+      return [key, Number.isFinite(numeric) ? numeric : value];
+    });
+    entries.sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
+    try {
+      return JSON.stringify(entries);
+    } catch {
+      return entries.map(([key, value]) => `${key}:${value}`).join('|');
+    }
+  }
+
+  async function fetchMetadata({ forceRefresh = false, metadataHash = null } = {}) {
     metadataLoading = true;
     metadataError = '';
     try {
-      const payload = await getRunConfigurationMetadata({ suppressOverlay: true });
+      const payload = await getRunConfigurationMetadata({
+        suppressOverlay: true,
+        forceRefresh,
+        metadataHash
+      });
       metadata = payload || {};
       runTypes = Array.isArray(payload?.run_types) ? payload.run_types : [];
       modifiers = Array.isArray(payload?.modifiers) ? payload.modifiers : [];
@@ -173,6 +225,7 @@
       modifierDirty = baseState.dirty;
 
       applyRunTypeDefaults(runTypeId, { resetDirty: true });
+      lastAppliedPresetFingerprint = null;
 
       if (persistedDefaults?.modifiers && typeof persistedDefaults.modifiers === 'object') {
         const overrides = persistedDefaults.modifiers;
@@ -207,6 +260,160 @@
       dirty[entry.id] = false;
     }
     return { values, dirty };
+  }
+
+  function rememberPreset(modifierPayload) {
+    if (!runTypeId || !Array.isArray(modifiers) || modifiers.length === 0) {
+      return;
+    }
+    if (!modifierPayload || typeof modifierPayload !== 'object') {
+      return;
+    }
+    const sanitized = {};
+    for (const entry of modifiers) {
+      sanitized[entry.id] = sanitizeStack(entry.id, modifierPayload[entry.id]);
+    }
+    storePresetForRunType(runTypeId, sanitized);
+  }
+
+  function storePresetForRunType(targetRunType, values) {
+    if (!targetRunType || !values || typeof values !== 'object') {
+      return;
+    }
+    const storedValues = {};
+    for (const [key, value] of Object.entries(values)) {
+      storedValues[key] = value;
+    }
+    const fingerprint = fingerprintPresetValues(storedValues);
+    if (!fingerprint) {
+      return;
+    }
+    const existing = Array.isArray(recentPresetCache[targetRunType])
+      ? [...recentPresetCache[targetRunType]]
+      : [];
+    const filtered = existing.filter((entry) => entry?.fingerprint !== fingerprint);
+    filtered.unshift({
+      values: storedValues,
+      fingerprint,
+      metadataVersion: metadata?.version || null,
+      savedAt: Date.now()
+    });
+    if (filtered.length > MAX_PRESETS_PER_RUN_TYPE) {
+      filtered.length = MAX_PRESETS_PER_RUN_TYPE;
+    }
+    persistRecentPresetCache({ ...recentPresetCache, [targetRunType]: filtered });
+  }
+
+  function deriveQuickStartPresets(targetRunType) {
+    if (!targetRunType || !Array.isArray(modifiers) || modifiers.length === 0) {
+      return [];
+    }
+    const stored = recentPresetCache?.[targetRunType];
+    if (!Array.isArray(stored) || stored.length === 0) {
+      return [];
+    }
+    const seen = new Set();
+    const options = [];
+    for (const entry of stored) {
+      const source = entry?.values && typeof entry.values === 'object' ? entry.values : {};
+      const normalized = {};
+      for (const mod of modifiers) {
+        normalized[mod.id] = sanitizeStack(mod.id, source[mod.id]);
+      }
+      const fingerprint = entry?.fingerprint || fingerprintPresetValues(normalized);
+      if (!fingerprint || seen.has(fingerprint)) {
+        continue;
+      }
+      seen.add(fingerprint);
+      const stacks = buildPresetStackSummary(normalized);
+      const reward = computeRewardPreview(normalized);
+      options.push({
+        values: normalized,
+        stacks,
+        reward,
+        fingerprint,
+        metadataVersion: entry?.metadataVersion || null,
+        savedAt: entry?.savedAt || 0
+      });
+      if (options.length >= MAX_PRESETS_PER_RUN_TYPE) {
+        break;
+      }
+    }
+    return options;
+  }
+
+  function buildPresetStackSummary(values) {
+    if (!values || typeof values !== 'object') {
+      return [];
+    }
+    const summary = [];
+    for (const entry of modifiers) {
+      const sanitized = sanitizeStack(entry.id, values[entry.id]);
+      if (entry.id === 'pressure' || sanitized > (entry.stacking?.minimum ?? 0)) {
+        summary.push(`${modifierLabel(entry)} ${sanitized}`);
+      }
+    }
+    return summary.length ? summary : ['No modifiers'];
+  }
+
+  function getRunTypeDefault(modId) {
+    const entry = modifierMap.get(modId);
+    if (!entry) {
+      return 0;
+    }
+    const runTypeDefault = activeRunType?.default_modifiers?.[modId];
+    if (runTypeDefault !== undefined) {
+      return sanitizeStack(modId, runTypeDefault);
+    }
+    const stacking = entry.stacking || {};
+    return sanitizeStack(modId, stacking.default ?? stacking.minimum ?? 0);
+  }
+
+  function presetButtonLabel(preset, index) {
+    if (!preset) {
+      return `Apply preset ${index + 1}`;
+    }
+    const stackText = Array.isArray(preset.stacks) ? preset.stacks.join(', ') : 'No modifiers';
+    const reward = preset.reward || {};
+    const rewardSegments = [];
+    if (Number.isFinite(reward.exp_bonus) && reward.exp_bonus !== 0) {
+      rewardSegments.push(`EXP ${formatRewardBonus(reward.exp_bonus)}`);
+    }
+    if (Number.isFinite(reward.rdr_bonus) && reward.rdr_bonus !== 0) {
+      rewardSegments.push(`RDR ${formatRewardBonus(reward.rdr_bonus)}`);
+    }
+    if (Number.isFinite(reward.foe_bonus) && reward.foe_bonus !== 0) {
+      rewardSegments.push(`Foe ${formatRewardBonus(reward.foe_bonus)}`);
+    }
+    if (Number.isFinite(reward.player_bonus) && reward.player_bonus !== 0) {
+      rewardSegments.push(`Player ${formatRewardBonus(reward.player_bonus)}`);
+    }
+    const rewardText = rewardSegments.length ? `. Reward preview ${rewardSegments.join(', ')}` : '';
+    return `Apply preset ${index + 1}: ${stackText}${rewardText}`;
+  }
+
+  function applyPreset(preset, index) {
+    if (!preset || !preset.values) {
+      return;
+    }
+    const nextValues = { ...modifierValues };
+    const nextDirty = { ...modifierDirty };
+    for (const entry of modifiers) {
+      const sanitized = sanitizeStack(entry.id, preset.values[entry.id]);
+      nextValues[entry.id] = sanitized;
+      nextDirty[entry.id] = sanitized !== getRunTypeDefault(entry.id);
+    }
+    modifierValues = nextValues;
+    modifierDirty = nextDirty;
+    lastAppliedPresetFingerprint = preset.fingerprint || fingerprintPresetValues(preset.values);
+    persistDefaults();
+    logWizardEvent('preset_applied', {
+      run_type: runTypeId,
+      preset_index: index,
+      preset_fingerprint: lastAppliedPresetFingerprint,
+      metadata_version: metadata?.version || null,
+      modifiers: summarizeActiveModifiers()
+    });
   }
 
   function describeModifier(mod) {
@@ -656,7 +863,8 @@
         runTypeId,
         modifiers: modifierValues,
         party: partySelection.slice(0, 5),
-        damageType
+        damageType,
+        metadataVersion: metadata?.version || null
       };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
     } catch (err) {
@@ -723,6 +931,7 @@
     runTypeId = id;
     applyRunTypeDefaults(runTypeId, { resetDirty: true });
     persistDefaults();
+    lastAppliedPresetFingerprint = null;
     logWizardEvent('run_type_selected', { run_type: runTypeId });
   }
 
@@ -731,12 +940,14 @@
     if (raw === '') {
       modifierValues = { ...modifierValues, [modId]: '' };
       modifierDirty = { ...modifierDirty, [modId]: true };
+      lastAppliedPresetFingerprint = null;
       return;
     }
     const sanitized = sanitizeStack(modId, raw);
     modifierValues = { ...modifierValues, [modId]: sanitized };
     modifierDirty = { ...modifierDirty, [modId]: true };
     persistDefaults();
+    lastAppliedPresetFingerprint = null;
     logWizardEvent('modifier_adjusted', { modifier: modId, value: sanitized });
   }
 
@@ -747,6 +958,7 @@
     modifierDirty = { ...modifierDirty };
     applyRunTypeDefaults(runTypeId, { resetDirty: true });
     persistDefaults();
+    lastAppliedPresetFingerprint = null;
     logWizardEvent('modifiers_reset', { run_type: runTypeId });
   }
 
@@ -790,8 +1002,12 @@
       run_type: runTypeId,
       modifiers: payload.modifiers,
       party_size: payload.party.length,
-      pressure: payload.pressure
+      pressure: payload.pressure,
+      preset_fingerprint: lastAppliedPresetFingerprint,
+      quick_start: Boolean(lastAppliedPresetFingerprint)
     });
+    rememberPreset(payload.modifiers);
+    lastAppliedPresetFingerprint = null;
     dispatch('startRun', payload);
     setTimeout(() => {
       submitting = false;
@@ -1000,7 +1216,7 @@
         {:else if metadataError}
           <div class="error">
             <p>{metadataError}</p>
-            <button class="icon-btn" on:click={() => fetchMetadata()}>Retry</button>
+            <button class="icon-btn" on:click={() => fetchMetadata({ forceRefresh: true })}>Retry</button>
           </div>
         {:else}
           <div class="run-types" role="list">
@@ -1040,7 +1256,7 @@
         {:else if metadataError}
           <div class="error">
             <p>{metadataError}</p>
-            <button class="icon-btn" on:click={() => fetchMetadata()}>Retry</button>
+            <button class="icon-btn" on:click={() => fetchMetadata({ forceRefresh: true })}>Retry</button>
           </div>
         {:else}
           <div class="modifier-toolbar">
@@ -1053,6 +1269,56 @@
             {/if}
             <button class="icon-btn" on:click={resetModifiers}>Reset to {activeRunType?.label || 'defaults'}</button>
           </div>
+          {#if quickStartPresets.length > 0}
+            <div class="recent-presets" role="region" aria-label="Recent modifier presets">
+              <div class="recent-header">
+                <strong>Recent Presets</strong>
+                {#if metadata?.version}
+                  <span class="metadata-hash">Metadata {metadata.version}</span>
+                {/if}
+              </div>
+              <div class="preset-list" role="list">
+                {#each quickStartPresets as preset, index}
+                  <button
+                    type="button"
+                    class="preset-card"
+                    role="listitem"
+                    on:click={() => applyPreset(preset, index)}
+                    aria-label={presetButtonLabel(preset, index)}
+                  >
+                    <div class="preset-title">Preset {index + 1}</div>
+                    <div class="preset-stacks">{preset.stacks.join(' • ')}</div>
+                    <div class="preset-reward-grid">
+                      <div>
+                        <span class="preview-label">EXP</span>
+                        <span class="preview-value">{formatRewardBonus(preset.reward.exp_bonus)}</span>
+                      </div>
+                      <div>
+                        <span class="preview-label">RDR</span>
+                        <span class="preview-value">{formatRewardBonus(preset.reward.rdr_bonus)}</span>
+                      </div>
+                      <div>
+                        <span class="preview-label">Foe</span>
+                        <span class="preview-value">{formatRewardBonus(preset.reward.foe_bonus)}</span>
+                      </div>
+                      <div>
+                        <span class="preview-label">Player</span>
+                        <span class="preview-value">{formatRewardBonus(preset.reward.player_bonus)}</span>
+                      </div>
+                    </div>
+                    {#if preset.metadataVersion}
+                      <div
+                        class="preset-metadata"
+                        class:stale={metadata?.version && preset.metadataVersion !== metadata.version}
+                      >
+                        Metadata {preset.metadataVersion}
+                      </div>
+                    {/if}
+                  </button>
+                {/each}
+              </div>
+            </div>
+          {/if}
           <div class="modifiers" role="list">
             {#each selectedModifiers as mod}
               <div class="modifier" role="listitem">
@@ -1500,6 +1766,92 @@
     background: rgba(255, 255, 255, 0.05);
     padding: clamp(0.55rem, 1.6vw, 0.9rem) clamp(0.7rem, 2vw, 1.2rem);
     border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .recent-presets {
+    display: flex;
+    flex-direction: column;
+    gap: clamp(0.45rem, 1vw, 0.75rem);
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    padding: clamp(0.55rem, 1.6vw, 0.9rem) clamp(0.7rem, 2vw, 1.2rem);
+  }
+
+  .recent-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .metadata-hash {
+    font-size: 0.75rem;
+    opacity: 0.6;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .preset-list {
+    display: grid;
+    gap: clamp(0.45rem, 1.2vw, 0.75rem);
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  }
+
+  .preset-card {
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+    gap: clamp(0.35rem, 1vw, 0.55rem);
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    padding: clamp(0.5rem, 1.6vw, 0.85rem);
+    color: inherit;
+    cursor: pointer;
+  }
+
+  .preset-card:hover,
+  .preset-card:focus-visible {
+    border-color: rgba(120, 180, 255, 0.5);
+    background: rgba(120, 180, 255, 0.12);
+    outline: none;
+  }
+
+  .preset-title {
+    font-weight: 600;
+    font-size: 0.95rem;
+  }
+
+  .preset-stacks {
+    font-size: 0.85rem;
+    opacity: 0.85;
+  }
+
+  .preset-reward-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.35rem;
+  }
+
+  .preset-reward-grid .preview-label {
+    font-size: 0.7rem;
+    opacity: 0.65;
+  }
+
+  .preset-reward-grid .preview-value {
+    font-size: 0.85rem;
+  }
+
+  .preset-metadata {
+    font-size: 0.7rem;
+    opacity: 0.65;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .preset-metadata.stale {
+    color: #f7ba61;
+    opacity: 0.95;
   }
 
   :global(.panel.run-wizard.modifiers-stage) {
