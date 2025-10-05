@@ -11,9 +11,11 @@ from runs.encryption import get_save_manager
 from runs.lifecycle import battle_snapshots
 from runs.lifecycle import battle_tasks
 from runs.lifecycle import load_map
+from runs.lifecycle import save_map
 from runs.party_manager import load_party
 from runs.party_manager import save_party
 from services.room_service import battle_room
+from services.room_service import boss_room
 from services.run_service import advance_room
 from services.run_service import start_run
 
@@ -186,3 +188,74 @@ async def test_null_lantern_awards_pull_tickets(monkeypatch):
 
     battle_tasks.pop(second_run_id, None)
     battle_snapshots.pop(second_run_id, None)
+
+
+@pytest.mark.asyncio
+async def test_null_lantern_awards_boss_bonus_tickets(monkeypatch):
+    import autofighter.rooms.battle.engine as battle_engine
+
+    async def fast_run_turn_loop(
+        *,
+        room,
+        party,
+        combat_party,
+        registry,
+        foes,
+        foe_effects,
+        enrage_mods,
+        enrage_state,
+        progress,
+        visual_queue,
+        temp_rdr,
+        exp_reward,
+        run_id,
+        battle_tasks,
+        abort,
+    ):
+        for foe in foes:
+            if hasattr(foe, "hp"):
+                foe.hp = 0
+        for member in combat_party.members:
+            if getattr(member, "hp", 1) <= 0:
+                member.hp = getattr(member, "max_hp", 1) or 1
+        return 1, temp_rdr, 0
+
+    monkeypatch.setattr(battle_engine, "run_turn_loop", fast_run_turn_loop)
+    monkeypatch.setattr(
+        "autofighter.rooms.battle.resolution.random.random",
+        lambda: 1.0,
+    )
+    monkeypatch.setattr(
+        "autofighter.rooms.battle.resolution.random.choice",
+        lambda seq: seq[0],
+    )
+
+    run_state = await start_run(["player"])
+    run_id = run_state["run_id"]
+
+    state, _ = await asyncio.to_thread(load_map, run_id)
+    state["rooms"][state["current"]]["room_type"] = "battle-boss-floor"
+    await asyncio.to_thread(save_map, run_id, state)
+
+    party = await asyncio.to_thread(load_party, run_id)
+    if "null_lantern" not in party.relics:
+        party.relics.append("null_lantern")
+    stack_count = party.relics.count("null_lantern")
+    await asyncio.to_thread(save_party, run_id, party)
+
+    await boss_room(run_id, {})
+    task = battle_tasks[run_id]
+    await task
+
+    snapshot = battle_snapshots[run_id]
+    loot_items = snapshot.get("loot", {}).get("items", [])
+    tickets = [item for item in loot_items if item.get("id") == "ticket"]
+
+    expected_tickets = 1 + stack_count + 1
+    assert len(tickets) == expected_tickets
+
+    persisted_party = await asyncio.to_thread(load_party, run_id)
+    assert getattr(persisted_party, "pull_tokens", 0) == 1 + stack_count
+
+    battle_tasks.pop(run_id, None)
+    battle_snapshots.pop(run_id, None)
