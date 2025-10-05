@@ -323,6 +323,7 @@ async def handle_ui_action() -> tuple[str, int, dict[str, Any]]:
             pressure = params.get("pressure")
             run_type = params.get("run_type")
             modifiers = params.get("modifiers")
+            metadata_version = params.get("metadata_version")
 
             if not isinstance(members, list):
                 return create_error_response("Party must be a list of member IDs", 400)
@@ -337,6 +338,7 @@ async def handle_ui_action() -> tuple[str, int, dict[str, Any]]:
                     pressure,
                     run_type=run_type,
                     modifiers=modifiers,
+                    metadata_version=metadata_version,
                 )
                 return jsonify(result)
             except ValueError as exc:
@@ -349,6 +351,7 @@ async def handle_ui_action() -> tuple[str, int, dict[str, Any]]:
                         "pressure": pressure,
                         "run_type": run_type,
                         "modifiers": modifiers,
+                        "metadata_version": metadata_version,
                         "error": str(exc),
                     },
                 )
@@ -575,6 +578,7 @@ async def start_run_endpoint() -> tuple[str, int, dict[str, Any]]:
         pressure = data.get("pressure", 0)
         run_type = data.get("run_type")
         modifiers = data.get("modifiers")
+        metadata_version = data.get("metadata_version")
 
         try:
             result = await start_run(
@@ -583,6 +587,7 @@ async def start_run_endpoint() -> tuple[str, int, dict[str, Any]]:
                 pressure,
                 run_type=run_type,
                 modifiers=modifiers,
+                metadata_version=metadata_version,
             )
             return jsonify(result), 200
         except ValueError as exc:
@@ -595,6 +600,7 @@ async def start_run_endpoint() -> tuple[str, int, dict[str, Any]]:
                     "pressure": pressure,
                     "run_type": run_type,
                     "modifiers": modifiers,
+                    "metadata_version": metadata_version,
                     "error": str(exc),
                 },
             )

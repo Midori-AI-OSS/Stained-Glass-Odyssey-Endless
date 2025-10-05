@@ -34,6 +34,40 @@ describe('api calls', () => {
     expect(result).toEqual({ run_id: '123', map: [] });
   });
 
+  test('startRun forwards metadata version', async () => {
+    const fetchMock = mock(async (url, options) => {
+      expect(url).toBe('http://backend.test/ui/action');
+      const body = JSON.parse(options.body);
+      expect(body).toEqual({
+        action: 'start_run',
+        params: {
+          party: ['hero'],
+          damage_type: 'Fire',
+          pressure: 5,
+          run_type: 'boss_rush',
+          modifiers: { pressure: 5 },
+          metadata_version: '2025.02'
+        }
+      });
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({ run_id: 'abc', map: [] })
+      };
+    });
+    global.fetch = fetchMock;
+    const result = await startRun({
+      party: ['hero'],
+      damageType: 'Fire',
+      pressure: 5,
+      runType: 'boss_rush',
+      modifiers: { pressure: 5 },
+      metadataVersion: '2025.02'
+    });
+    expect(result).toEqual({ run_id: 'abc', map: [] });
+    expect(fetchMock.mock.calls.length).toBe(1);
+  });
+
   test('updateParty sends party', async () => {
     global.fetch = createFetch({ status: 'ok' });
     const result = await updateParty(['sample_player']);
