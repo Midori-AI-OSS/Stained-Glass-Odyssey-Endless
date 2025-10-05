@@ -529,14 +529,6 @@
             }
           }}
         />
-        <div class="navigation">
-          {#if hasRuns}
-            <button class="ghost" on:click={() => goToStep('resume')}>Back</button>
-          {:else}
-            <button class="ghost" on:click={handleCancel}>Cancel</button>
-          {/if}
-          <button class="primary" on:click={handlePartySave} disabled={partySelection.length === 0}>Next</button>
-        </div>
       </div>
     {:else if step === 'run-type'}
       <div class="run-type-panel step-surface">
