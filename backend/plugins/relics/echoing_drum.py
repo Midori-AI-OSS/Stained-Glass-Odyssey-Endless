@@ -117,4 +117,31 @@ class EchoingDrum(RelicBase):
         self.subscribe(party, "battle_end", _cleanup)
 
     def describe(self, stacks: int) -> str:
-        return self.about
+        total_chance = max(0, 25 * stacks)
+        guaranteed_hits = total_chance // 100
+        remainder = total_chance % 100
+
+        stack_text = "stack" if stacks == 1 else "stacks"
+        base_sentence = (
+            "First attack each battle has "
+            f"{total_chance}% total chance to trigger Aftertaste "
+            f"(25% per stack, {stacks} {stack_text})."
+        )
+
+        overflow_sentence = "Overflow converts every +100% into a guaranteed extra hit"
+        if guaranteed_hits:
+            overflow_sentence += (
+                f", currently guaranteeing {guaranteed_hits} extra hit"
+                f"{'s' if guaranteed_hits != 1 else ''}"
+            )
+        else:
+            overflow_sentence += ", though no extra hits are guaranteed yet"
+
+        if remainder:
+            overflow_sentence += (
+                f" and leaving a {remainder}% chance toward one more"
+            )
+        else:
+            overflow_sentence += " with no leftover chance beyond the guaranteed hits"
+
+        return f"{base_sentence} {overflow_sentence}."
