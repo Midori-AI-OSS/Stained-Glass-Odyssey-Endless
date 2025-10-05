@@ -38,12 +38,15 @@
   export let flashEnrageCounter = true;
 
   // Use granular motion settings with fallback to legacy prop
-  $: motionSettings = $motionStore || { 
-    globalReducedMotion: false, 
-    disablePortraitGlows: false, 
-    simplifyOverlayTransitions: false 
+  $: motionSettings = $motionStore || {
+    globalReducedMotion: false,
+    disablePortraitGlows: false,
+    simplifyOverlayTransitions: false,
+    enableBattleFx: false
   };
   $: effectiveReducedMotion = reducedMotion || motionSettings.globalReducedMotion;
+  $: battleFxEnabled = Boolean(motionSettings?.enableBattleFx);
+  $: battleFxActive = battleFxEnabled && !effectiveReducedMotion;
 
   let foes = [];
   let queue = [];
@@ -422,7 +425,7 @@
   
   let effectCue = '';
   function queueEffect(name) {
-    if (!name || effectiveReducedMotion) return;
+    if (!name || effectiveReducedMotion || !battleFxEnabled) return;
     effectCue = name;
     tick().then(() => {
       effectCue = '';
@@ -2339,7 +2342,7 @@
   bind:this={rootEl}
 >
   <EnrageIndicator active={Boolean(enrage?.active)} reducedMotion={effectiveReducedMotion} enrageData={enrage} />
-  <BattleEffects cue={effectCue} />
+  <BattleEffects cue={effectCue} enabled={battleFxActive} />
   <BattleProjectileLayer
     class="overlay-layer"
     projectiles={projectileEntries}

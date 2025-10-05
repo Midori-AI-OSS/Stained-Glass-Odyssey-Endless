@@ -178,6 +178,19 @@
       />
     </div>
   </div>
+
+  <div class="control" title="Enable RPG Maker style battle effects rendered with Effekseer.">
+    <div class="control-left">
+      <span class="label"><Move /> Enable RPG Maker FX</span>
+    </div>
+    <div class="control-right">
+      <input
+        type="checkbox"
+        bind:checked={motionSettings.enableBattleFx}
+        on:change={(e) => updateMotion({ enableBattleFx: e.target.checked })}
+      />
+    </div>
+  </div>
 </div>
 
 <style>

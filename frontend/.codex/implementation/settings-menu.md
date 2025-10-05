@@ -46,6 +46,8 @@ Replaces the single "Reduced Motion" toggle with granular accessibility controls
 - **Disable Portrait Glows**: Removes glowing effects from `BattleFighterCard` portraits
 - **Simplify Overlay Transitions**: Uses simpler transitions for overlays and menus
 - **Disable Star Storm**: Turns off the animated `StarStorm.svelte` background effect
+- **Enable RPG Maker FX**: Opt-in switch for Effekseer battle animations such as spell bursts and weapon trails. When disabled,
+  the `BattleEffects` layer stays dormant so the WebGL runtime never initializes.
 
 Each control operates independently, allowing players to disable specific animations while keeping others. Components like `StarStorm.svelte` and `BattleEventFloaters.svelte` check both legacy `reducedMotion` props and the new granular settings via `getMotionSettings()`.
 
