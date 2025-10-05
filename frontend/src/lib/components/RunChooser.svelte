@@ -885,12 +885,24 @@
 
   .party-standalone {
     --wizard-section-gap: clamp(0.65rem, 1.8vw, 1.1rem);
+    display: flex;
+    flex: 1 1 auto;
+    width: 100%;
+    min-height: 0;
   }
 
   .party-step {
     display: flex;
     flex-direction: column;
+    flex: 1 1 auto;
     gap: var(--wizard-section-gap, clamp(0.65rem, 1.8vw, 1.1rem));
+    width: 100%;
+    min-height: 0;
+  }
+
+  .party-step :global(.panel) {
+    flex: 1 1 auto;
+    min-height: 100%;
   }
 
   .navigation {
