@@ -46,6 +46,29 @@ const BASE_METADATA = {
       stacking: { minimum: 0, step: 1, default: 5 },
       grants_reward_bonus: false,
       reward_bonuses: {},
+      effects: {
+        encounter_bonus: {
+          type: 'step',
+          step_size: 5,
+          amount_per_step: 1,
+          description: 'Adds +1 base foe slot for every five stacks before party-size adjustments.'
+        },
+        defense_floor: {
+          type: 'linear',
+          per_stack: 10,
+          description: 'Foes roll at least pressure × 10 defense before variance is applied.'
+        },
+        elite_spawn_bonus_pct: {
+          type: 'linear',
+          per_stack: 1,
+          description: 'Prime and Glitched odds each gain +1 percentage point per stack.'
+        },
+        shop_multiplier: {
+          type: 'exponential',
+          base: 1.26,
+          description: 'Shop prices multiply by 1.26^pressure (±5% variance before repeat-visit taxes).'
+        }
+      },
       preview: [
         {
           stacks: 0,
@@ -74,6 +97,11 @@ const BASE_METADATA = {
         exp_bonus_per_stack: 0.5,
         rdr_bonus_per_stack: 0.5
       },
+      effects: {
+        stat: 'atk',
+        per_stack: 0.01,
+        scaling_type: 'additive'
+      },
       preview: [
         { stacks: 0, raw_bonus: 0, effective_bonus: 0 },
         { stacks: 3, raw_bonus: 0.03, effective_bonus: 0.025 }
@@ -91,6 +119,11 @@ const BASE_METADATA = {
         exp_bonus_additional_stack: 0.06,
         rdr_bonus_first_stack: 0.05,
         rdr_bonus_additional_stack: 0.06
+      },
+      effects: {
+        primary_penalty_per_stack: 0.001,
+        overflow_penalty_per_stack: 0.000001,
+        overflow_threshold: 500
       },
       preview: [
         { stacks: 0, effective_multiplier: 1, bonus_rdr: 0, bonus_exp: 0 },
@@ -229,14 +262,24 @@ describe('RunChooser wizard flow', () => {
     const pressureChip = previewChips.find((chip) => chip.textContent?.includes('Shop ×'));
     expect(pressureChip?.textContent).toContain('Shop ×3.2');
 
+    const pressureTooltip = screen.getByRole('button', { name: /Pressure modifier details/i });
+    const pressureTooltipText = pressureTooltip.getAttribute('data-tooltip') || '';
+    expect(pressureTooltipText).toContain('Stacks are uncapped');
+    expect(pressureTooltipText).toContain('Adds +1 base foe slot for every five stacks');
+
     const foeTooltip = screen.getByRole('button', { name: /Enemy Buff modifier details/i });
-    expect(foeTooltip.getAttribute('data-tooltip')).toContain('Stacks are uncapped');
-    expect(foeTooltip.getAttribute('data-tooltip')).toContain('+50% EXP');
+    const foeTooltipText = foeTooltip.getAttribute('data-tooltip') || '';
+    expect(foeTooltipText).toContain('Each stack modifies attack by +1% Attack');
+    expect(foeTooltipText).toContain('+50% EXP');
 
     const playerTooltip = screen.getByRole('button', { name: /Stat Down modifier details/i });
-    const playerTooltipText = playerTooltip.getAttribute('data-tooltip');
+    const playerTooltipText = playerTooltip.getAttribute('data-tooltip') || '';
+    expect(playerTooltipText).toContain('Each stack reduces all player stats by 0.1%');
+    expect(playerTooltipText).toContain('Stacks beyond 500 reduce stats by only 0.0001%');
     expect(playerTooltipText).toContain('+5% RDR');
 
+    expect(container.textContent).toContain('Effects: +1% Attack/stack');
+    expect(container.textContent).toContain('Effects: -0.1% stats/stack');
     expect(container.textContent).toContain('RDR +5%');
   });
 });
