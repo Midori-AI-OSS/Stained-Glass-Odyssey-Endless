@@ -17,6 +17,7 @@
   const STEP_SEQUENCE = ['resume', 'party', 'run-type', 'modifiers', 'confirm'];
 
   export let runs = [];
+  export let metadataHash = null;
   export let reducedMotion = false;
 
   const dispatch = createEventDispatcher();
@@ -42,6 +43,10 @@
   let recentPresetCache = {};
   let quickStartPresets = [];
   let lastAppliedPresetFingerprint = null;
+  let sanitizedMetadataHash = null;
+  let currentMetadataHash = null;
+  let lastRequestedMetadataHash = null;
+  let shouldRefetchMetadata = false;
 
   const hasOwn = (obj, key) => Object.prototype.hasOwnProperty.call(obj, key);
   const EFFECT_LABEL_MAP = {
@@ -90,6 +95,17 @@
   $: resumeDisabled = resumeIndex < 0 || resumeIndex >= normalizedRuns.length;
   $: partySummary = partySelection.slice(0, 5);
   $: quickStartPresets = deriveQuickStartPresets(runTypeId);
+  $: sanitizedMetadataHash = normalizeMetadataHash(metadataHash);
+  $: currentMetadataHash = normalizeMetadataHash(metadata?.metadata_hash ?? metadata?.version);
+  $: shouldRefetchMetadata =
+    Boolean(sanitizedMetadataHash) &&
+    sanitizedMetadataHash !== currentMetadataHash &&
+    sanitizedMetadataHash !== lastRequestedMetadataHash &&
+    !metadataLoading;
+  $: if (shouldRefetchMetadata) {
+    lastRequestedMetadataHash = sanitizedMetadataHash;
+    void fetchMetadata({ metadataHash: sanitizedMetadataHash });
+  }
 
   onMount(() => {
     resumeIndex = normalizedRuns.length > 0 ? 0 : -1;
@@ -100,7 +116,10 @@
     if (!hasRuns) {
       step = 'party';
     }
-    void fetchMetadata();
+    const persistedHash = normalizeMetadataHash(persistedDefaults?.metadataVersion);
+    const initialHash = sanitizedMetadataHash || persistedHash;
+    lastRequestedMetadataHash = initialHash;
+    void fetchMetadata({ metadataHash: initialHash });
     logStepImpression(step);
     logWizardEvent('opened', { run_count: normalizedRuns.length });
   });
@@ -202,14 +221,26 @@
     }
   }
 
-  async function fetchMetadata({ forceRefresh = false, metadataHash = null } = {}) {
+  function normalizeMetadataHash(value) {
+    if (typeof value === 'string' && value.trim()) {
+      return value.trim();
+    }
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      return String(value);
+    }
+    return null;
+  }
+
+  async function fetchMetadata({ forceRefresh = false, metadataHash: incomingHash = null } = {}) {
     metadataLoading = true;
     metadataError = '';
+    const hashHint = normalizeMetadataHash(incomingHash);
+    lastRequestedMetadataHash = hashHint;
     try {
       const payload = await getRunConfigurationMetadata({
         suppressOverlay: true,
         forceRefresh,
-        metadataHash
+        metadataHash: hashHint
       });
       metadata = payload || {};
       runTypes = Array.isArray(payload?.run_types) ? payload.run_types : [];

@@ -19,6 +19,7 @@ from services.asset_service import get_asset_manifest
 from services.reward_service import select_card
 from services.reward_service import select_relic
 from services.room_service import room_action
+from services.run_configuration import METADATA_VERSION
 from services.run_configuration import get_run_configuration_metadata
 from services.run_service import advance_room
 from services.run_service import backup_save
@@ -147,6 +148,7 @@ async def get_ui_state() -> tuple[str, int, dict[str, Any]]:
     """Get complete UI state for the active run."""
     run_id = get_default_active_run()
     asset_manifest = get_asset_manifest()
+    metadata_hash = METADATA_VERSION
 
     if not run_id:
         return jsonify({
@@ -155,6 +157,7 @@ async def get_ui_state() -> tuple[str, int, dict[str, Any]]:
             "game_state": None,
             "available_actions": ["start_run"],
             "asset_manifest": asset_manifest,
+            "run_config_metadata_hash": metadata_hash,
         })
 
     try:
@@ -176,6 +179,15 @@ async def get_ui_state() -> tuple[str, int, dict[str, Any]]:
                 return json.loads(row[0]) if row and row[0] else {}
 
         party_state = await asyncio.to_thread(get_party_data)
+        run_configuration_snapshot = (
+            party_state.get("config")
+            if isinstance(party_state, dict)
+            else None
+        )
+        if isinstance(run_configuration_snapshot, dict):
+            hash_candidate = run_configuration_snapshot.get("version")
+            if isinstance(hash_candidate, str) and hash_candidate.strip():
+                metadata_hash = hash_candidate.strip()
 
         # Determine current room state and what the frontend should display
         current_index = int(state.get("current", 0))
@@ -277,6 +289,10 @@ async def get_ui_state() -> tuple[str, int, dict[str, Any]]:
             }
         }
 
+        if isinstance(run_configuration_snapshot, dict):
+            game_state["run_configuration"] = run_configuration_snapshot
+            game_state["run_configuration_metadata_hash"] = metadata_hash
+
         # Determine UI mode based on game state
         mode = determine_ui_mode(game_state)
 
@@ -286,6 +302,7 @@ async def get_ui_state() -> tuple[str, int, dict[str, Any]]:
             "game_state": game_state,
             "available_actions": get_available_actions(mode, game_state),
             "asset_manifest": asset_manifest,
+            "run_config_metadata_hash": metadata_hash,
         })
 
     except Exception as e:

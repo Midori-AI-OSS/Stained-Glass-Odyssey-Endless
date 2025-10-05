@@ -285,6 +285,7 @@
 {#if $overlayView === 'run-choose'}
   <OverlaySurface zIndex={1300}>
     <RunChooser runs={$overlayData.runs || []}
+      metadataHash={$overlayData.metadataHash ?? null}
       reducedMotion={overlayReducedMotion}
       on:choose={(e) => dispatch('loadRun', e.detail.run)}
       on:load={(e) => dispatch('loadRun', e.detail.run)}

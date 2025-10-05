@@ -383,11 +383,13 @@
 
   async function openRun() {
     // First, check backend for any active runs and let user choose
+    let metadataHash = null;
     try {
       const data = await getActiveRuns();
+      metadataHash = data?.metadataHash ?? null;
       const activeRuns = data?.runs || [];
       if (activeRuns.length > 0) {
-        openOverlay('run-choose', { runs: activeRuns });
+        openOverlay('run-choose', { runs: activeRuns, metadataHash });
         return;
       }
     } catch {}
@@ -452,7 +454,7 @@
       }
     } else {
       await primePartySeed();
-      openOverlay('run-choose', { runs: [] });
+      openOverlay('run-choose', { runs: [], metadataHash });
     }
   }
 
@@ -606,7 +608,7 @@
     // Ensure we truly start fresh: end any active runs first
     try { await endAllRuns(); } catch {}
     await primePartySeed();
-    openOverlay('run-choose', { runs: [] });
+    openOverlay('run-choose', { runs: [], metadataHash: null });
   }
 
   async function handleParty() {
