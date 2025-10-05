@@ -319,7 +319,7 @@ async def handle_ui_action() -> tuple[str, int, dict[str, Any]]:
             # Validate start_run parameters
             members = params.get("party", ["player"])
             damage_type = params.get("damage_type", "")
-            pressure = params.get("pressure", 0)
+            pressure = params.get("pressure")
 
             if not isinstance(members, list):
                 return create_error_response("Party must be a list of member IDs", 400)
