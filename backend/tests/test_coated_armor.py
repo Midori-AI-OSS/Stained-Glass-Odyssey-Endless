@@ -22,7 +22,7 @@ def flush_bus_tasks(loop):
         loop.run_until_complete(batch_task)
 
 
-def test_spiked_shield_retaliates_damage():
+def test_coated_armor_heals_after_mitigation():
     loop = setup_event_loop()
     BUS.set_loop(loop)
     set_battle_active(True)
@@ -31,13 +31,12 @@ def test_spiked_shield_retaliates_damage():
     defender = PlayerBase()
     attacker = PlayerBase()
 
-    defender.set_base_stat('atk', 100)
-    defender.set_base_stat('defense', 400)
     defender.set_base_stat('max_hp', 1000)
     defender.hp = defender.max_hp
+    defender.set_base_stat('defense', 5)
+    defender.set_base_stat('atk', 50)
     defender.dodge_odds = 0.0
     defender.damage_type = Generic()
-    defender.id = "defender"
 
     attacker.set_base_stat('max_hp', 1000)
     attacker.hp = attacker.max_hp
@@ -47,23 +46,24 @@ def test_spiked_shield_retaliates_damage():
     attacker.crit_rate = 0.0
     attacker.crit_damage = 1.0
     attacker.damage_type = Generic()
-    attacker.id = "attacker"
 
     party.members.append(defender)
-    award_card(party, "spiked_shield")
+    award_card(party, "coated_armor")
     loop.run_until_complete(apply_cards(party))
+
+    heal_amount = int(defender.max_hp * 0.01)
+    initial_hp = defender.hp
 
     try:
         damage_taken = loop.run_until_complete(
             defender.apply_damage(500, attacker=attacker)
         )
-        assert 0 < damage_taken < 500
+        assert damage_taken > heal_amount
 
         loop.run_until_complete(asyncio.sleep(0))
 
-        retaliation_damage = attacker.max_hp - attacker.hp
-        assert retaliation_damage >= int(defender.atk * 0.03)
-        assert attacker.last_damage_taken == retaliation_damage
+        expected_hp = min(defender.max_hp, initial_hp - damage_taken + heal_amount)
+        assert defender.hp == expected_hp
     finally:
         loop.run_until_complete(BUS.emit_async("battle_end", defender))
         flush_bus_tasks(loop)

@@ -794,6 +794,7 @@ class Stats:
         amount = self_type.on_damage_taken(amount, attacker_obj, self)
         amount = self_type.on_party_damage_taken(amount, attacker_obj, self)
         src_vit = attacker_obj.vitality if attacker_obj is not None else 1.0
+        original_damage_before_mitigation = amount
         # Guard against division by zero if vitality/mitigation are driven to 0 by effects
         defense_term = max(self.defense ** 5, 1)
         vit = float(self.vitality) if isinstance(self.vitality, (int, float)) else 1.0
@@ -812,12 +813,14 @@ class Stats:
         mitigated_amount = amount
         for _ in range(passes):
             mitigated_amount = ((mitigated_amount ** 2) * src_vit) / denom
-        amount = mitigated_amount
         # Enrage: increase damage taken globally by N% per enrage stack
         enr = get_enrage_percent()
         if enr > 0:
-            amount *= (1.0 + enr)
-        amount = max(int(amount), 1)
+            mitigated_amount *= (1.0 + enr)
+            original_damage_before_mitigation *= (1.0 + enr)
+        amount = max(int(mitigated_amount), 1)
+        mitigated_amount_for_event = amount
+        original_damage_for_event = max(int(round(original_damage_before_mitigation)), 0)
         if critical and attacker_obj is not None:
             log.info("Critical hit! %s -> %s for %s", attacker_obj.id, self.id, amount)
             # Emit critical hit event for battle logging - async for better performance
@@ -850,6 +853,20 @@ class Stats:
         self.last_damage_taken = hp_damage
         self.last_overkill = overkill
         self.damage_taken += hp_damage
+
+        mitigation_reduced_damage = (
+            original_damage_for_event > mitigated_amount_for_event
+            and mitigated_amount_for_event > 0
+            and hp_damage > 0
+        )
+        if mitigation_reduced_damage:
+            await BUS.emit_async(
+                "mitigation_triggered",
+                self,
+                original_damage_for_event,
+                mitigated_amount_for_event,
+                attacker_obj,
+            )
 
         if old_hp > 0 and self.hp <= 0:
             if attacker_obj is not None:
