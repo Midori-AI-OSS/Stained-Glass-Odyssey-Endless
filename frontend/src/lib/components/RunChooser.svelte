@@ -214,8 +214,8 @@
     const rewards = buildRewardSummaries(mod?.reward_bonuses);
     const diminishing = buildDiminishingSummary(mod?.diminishing_returns);
     const effects = buildEffectsSummary(mod);
-    const previewChips = buildPreviewChips(mod);
-    const previewSentence = buildPreviewSentence(previewChips);
+    const previewChips = buildPreviewChips(mod, stacking);
+    const previewSentence = buildPreviewSentence(previewChips, stacking);
     const tooltipParts = [
       mod?.description?.trim() || '',
       stacking.sentence,
@@ -399,11 +399,10 @@
     const step = Math.max(1, toNumber(stacking?.step, 1));
     const maximumValue = toNumber(stacking?.maximum, null);
     const uncapped = maximumValue === null;
-    const inlineParts = [`Min ${minimum}`];
-    if (step > 1) inlineParts.push(`Step ${step}`);
+    const inlineParts = [`Min ${minimum}`, `Step ${step}`];
     inlineParts.push(uncapped ? 'Uncapped' : `Max ${maximumValue}`);
     const inline = inlineParts.join(' • ');
-    const sentenceParts = [`Stacks start at ${minimum}${step > 1 ? ` and increase in increments of ${step}` : ''}.`];
+    const sentenceParts = [`Stacks start at ${minimum}.`, `Stacks increase by ${step} each time.`];
     sentenceParts.push(uncapped ? 'Stacks are uncapped by default.' : `Stacks cap at ${maximumValue}.`);
     return {
       minimum,
@@ -481,26 +480,41 @@
     return { inline, tooltip };
   }
 
-  function buildPreviewChips(mod) {
+  function buildPreviewChips(mod, stacking) {
     const preview = Array.isArray(mod?.preview) ? mod.preview : [];
     return preview
       .map((entry) => ({
         stacks: toNumber(entry?.stacks, 0),
-        label: formatStackLabel(toNumber(entry?.stacks, 0)),
+        rawStacks: entry?.stacks,
+        label: formatStackLabel(entry?.stacks, stacking),
         detail: formatPreviewDetail(mod, entry || {})
       }))
-      .filter((chip) => chip.detail);
+      .filter((chip) => chip.detail)
+      .sort((a, b) => a.stacks - b.stacks);
   }
 
-  function buildPreviewSentence(chips) {
+  function buildPreviewSentence(chips, stacking) {
     if (!chips || chips.length === 0) return '';
     const highest = chips[chips.length - 1];
     if (!highest?.detail) return '';
-    return `${highest.label} yields ${highest.detail}.`;
+    let sentence = `${highest.label} yields ${highest.detail}.`;
+    if (stacking?.uncapped && Number.isFinite(highest.stacks)) {
+      sentence += ' Stacks continue scaling beyond this preview because the modifier is uncapped.';
+    }
+    return sentence;
   }
 
-  function formatStackLabel(value) {
-    const stacks = toNumber(value, 0);
+  function formatStackLabel(value, stacking) {
+    if (value == null || value === 'infinite' || value === Infinity) {
+      if (stacking?.uncapped) {
+        return '∞ stacks';
+      }
+      return 'Max stacks';
+    }
+    const stacks = toNumber(value, null);
+    if (!Number.isFinite(stacks)) {
+      return stacking?.uncapped ? '∞ stacks' : 'Stacks';
+    }
     return `${stacks} stack${stacks === 1 ? '' : 's'}`;
   }
 

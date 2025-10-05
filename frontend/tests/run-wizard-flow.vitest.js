@@ -265,6 +265,8 @@ describe('RunChooser wizard flow', () => {
     const pressureTooltip = screen.getByRole('button', { name: /Pressure modifier details/i });
     const pressureTooltipText = pressureTooltip.getAttribute('data-tooltip') || '';
     expect(pressureTooltipText).toContain('Stacks are uncapped');
+    expect(pressureTooltipText).toContain('Stacks increase by 1 each time.');
+    expect(pressureTooltipText).toContain('Stacks continue scaling beyond this preview because the modifier is uncapped.');
     expect(pressureTooltipText).toContain('Adds +1 base foe slot for every five stacks');
 
     const foeTooltip = screen.getByRole('button', { name: /Enemy Buff modifier details/i });
