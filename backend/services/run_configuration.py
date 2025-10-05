@@ -559,12 +559,19 @@ class RunModifierContext:
 
     pressure: int
     shop_multiplier: float
+    shop_tax_multiplier: float
+    shop_variance: tuple[float, float]
     elite_spawn_bonus_pct: float
     glitched_spawn_bonus_pct: float
     prime_spawn_bonus_pct: float
     foe_stat_multipliers: dict[str, float]
     foe_stat_deltas: dict[str, float]
     player_stat_multiplier: float
+    pressure_defense_floor: float
+    pressure_defense_min_roll: float
+    pressure_defense_max_roll: float
+    encounter_slot_bonus: int
+    modifier_stacks: dict[str, int]
     metadata_hash: str
 
     def to_dict(self) -> dict[str, object]:
@@ -573,14 +580,54 @@ class RunModifierContext:
         return {
             "pressure": self.pressure,
             "shop_multiplier": self.shop_multiplier,
+            "shop_tax_multiplier": self.shop_tax_multiplier,
+            "shop_variance": list(self.shop_variance),
             "elite_spawn_bonus_pct": self.elite_spawn_bonus_pct,
             "glitched_spawn_bonus_pct": self.glitched_spawn_bonus_pct,
             "prime_spawn_bonus_pct": self.prime_spawn_bonus_pct,
             "foe_stat_multipliers": dict(self.foe_stat_multipliers),
             "foe_stat_deltas": dict(self.foe_stat_deltas),
             "player_stat_multiplier": self.player_stat_multiplier,
+            "pressure_defense_floor": self.pressure_defense_floor,
+            "pressure_defense_min_roll": self.pressure_defense_min_roll,
+            "pressure_defense_max_roll": self.pressure_defense_max_roll,
+            "encounter_slot_bonus": self.encounter_slot_bonus,
+            "modifier_stacks": dict(self.modifier_stacks),
             "metadata_hash": self.metadata_hash,
         }
+
+    @classmethod
+    def from_dict(cls, payload: Mapping[str, Any]) -> "RunModifierContext":
+        """Hydrate a context instance from serialized data."""
+
+        mapping = dict(payload or {})
+
+        def _pair(value: Any) -> tuple[float, float]:
+            if isinstance(value, (list, tuple)) and len(value) == 2:
+                try:
+                    return (float(value[0]), float(value[1]))
+                except (TypeError, ValueError):
+                    pass
+            return (0.95, 1.05)
+
+        return cls(
+            pressure=int(mapping.get("pressure", 0)),
+            shop_multiplier=float(mapping.get("shop_multiplier", 1.0) or 1.0),
+            shop_tax_multiplier=float(mapping.get("shop_tax_multiplier", 1.0) or 1.0),
+            shop_variance=_pair(mapping.get("shop_variance")),
+            elite_spawn_bonus_pct=float(mapping.get("elite_spawn_bonus_pct", 0.0) or 0.0),
+            glitched_spawn_bonus_pct=float(mapping.get("glitched_spawn_bonus_pct", 0.0) or 0.0),
+            prime_spawn_bonus_pct=float(mapping.get("prime_spawn_bonus_pct", 0.0) or 0.0),
+            foe_stat_multipliers=dict(mapping.get("foe_stat_multipliers", {})),
+            foe_stat_deltas=dict(mapping.get("foe_stat_deltas", {})),
+            player_stat_multiplier=float(mapping.get("player_stat_multiplier", 1.0) or 1.0),
+            pressure_defense_floor=float(mapping.get("pressure_defense_floor", 0.0) or 0.0),
+            pressure_defense_min_roll=float(mapping.get("pressure_defense_min_roll", 0.0) or 0.0),
+            pressure_defense_max_roll=float(mapping.get("pressure_defense_max_roll", 0.0) or 0.0),
+            encounter_slot_bonus=int(mapping.get("encounter_slot_bonus", 0) or 0),
+            modifier_stacks=dict(mapping.get("modifier_stacks", {})),
+            metadata_hash=str(mapping.get("metadata_hash", "")) or "",
+        )
 
 
 def _coerce_mapping(value: Any) -> dict[str, Any]:
@@ -589,9 +636,15 @@ def _coerce_mapping(value: Any) -> dict[str, Any]:
     return {}
 
 
-def _modifier_details(snapshot: Mapping[str, Any], modifier_id: str) -> dict[str, Any]:
+def _modifier_entry(snapshot: Mapping[str, Any], modifier_id: str) -> dict[str, Any]:
     modifiers = _coerce_mapping(snapshot.get("modifiers"))
-    entry = _coerce_mapping(modifiers.get(modifier_id, {}))
+    return _coerce_mapping(modifiers.get(modifier_id, {}))
+
+
+def get_modifier_details(snapshot: Mapping[str, Any], modifier_id: str) -> dict[str, Any]:
+    """Return the stored detail block for ``modifier_id`` if present."""
+
+    entry = _modifier_entry(snapshot, modifier_id)
     return _coerce_mapping(entry.get("details", {}))
 
 
@@ -615,8 +668,23 @@ def build_run_modifier_context(snapshot: Mapping[str, Any]) -> RunModifierContex
     shop_multiplier = _numeric(pressure_info.get("shop_multiplier"), default=1.0)
     elite_bonus_pct = _numeric(pressure_info.get("elite_spawn_bonus_pct"))
 
+    modifiers = _coerce_mapping(source.get("modifiers"))
+    modifier_stacks: dict[str, int] = {}
+
+    def _stack_count(modifier_id: str) -> int:
+        entry = _modifier_entry(source, modifier_id)
+        details = _coerce_mapping(entry.get("details"))
+        raw_value = details.get("stacks") if details else entry.get("stacks")
+        try:
+            return int(raw_value)
+        except (TypeError, ValueError):
+            return 0
+
+    for modifier_id in modifiers:
+        modifier_stacks[modifier_id] = _stack_count(modifier_id)
+
     def _effective_bonus(modifier_id: str) -> float:
-        details = _modifier_details(source, modifier_id)
+        details = get_modifier_details(source, modifier_id)
         if "effective_bonus" in details:
             return _numeric(details.get("effective_bonus"))
         if "raw_bonus" in details:
@@ -649,11 +717,57 @@ def build_run_modifier_context(snapshot: Mapping[str, Any]) -> RunModifierContex
         _effective_bonus("foe_prime_rate"),
     ) * 100.0
 
-    char_penalty = _modifier_details(source, "character_stat_down")
+    char_penalty = get_modifier_details(source, "character_stat_down")
     player_stat_multiplier = _numeric(
         char_penalty.get("effective_multiplier"),
         default=1.0,
     )
+
+    shop_tax_multiplier = 1.0
+    shop_variance = (0.95, 1.05)
+
+    def _update_variance(candidate: Any) -> tuple[float, float]:
+        if isinstance(candidate, (list, tuple)) and len(candidate) == 2:
+            try:
+                low, high = float(candidate[0]), float(candidate[1])
+            except (TypeError, ValueError):
+                return shop_variance
+            if low <= high:
+                return (low, high)
+        return shop_variance
+
+    for modifier_id, entry in modifiers.items():
+        if modifier_id == "pressure":
+            continue
+        details = _coerce_mapping(entry.get("details"))
+        if not details:
+            continue
+        multiplier = details.get("shop_multiplier")
+        if multiplier is not None:
+            shop_multiplier *= _numeric(multiplier, default=1.0)
+        tax_multiplier = details.get("shop_tax_multiplier")
+        if tax_multiplier is not None:
+            shop_tax_multiplier *= _numeric(tax_multiplier, default=1.0)
+        variance_candidate = details.get("shop_variance")
+        if variance_candidate is not None:
+            shop_variance = _update_variance(variance_candidate)
+
+    pressure_defense_floor = _numeric(pressure_info.get("defense_floor"))
+    pressure_defense_min_roll = _numeric(pressure_info.get("defense_min_roll"), default=0.82)
+    pressure_defense_max_roll = _numeric(pressure_info.get("defense_max_roll"), default=1.50)
+    encounter_bonus = int(pressure_info.get("encounter_bonus", 0) or 0)
+    pressure_stacks = max(pressure_stacks, 0)
+    if not shop_multiplier:
+        shop_multiplier = 1.0
+    base_variance = pressure_info.get("shop_variance")
+    if base_variance is not None:
+        shop_variance = _update_variance(base_variance)
+
+    if pressure_stacks and not pressure_defense_floor:
+        pressure_defense_floor = 10.0 * pressure_stacks
+
+    if not shop_tax_multiplier:
+        shop_tax_multiplier = 1.0
 
     # Include the snapshot version in the hash to keep context stable even when
     # future metadata fields are added.
@@ -667,12 +781,19 @@ def build_run_modifier_context(snapshot: Mapping[str, Any]) -> RunModifierContex
     return RunModifierContext(
         pressure=pressure_stacks,
         shop_multiplier=shop_multiplier or 1.0,
+        shop_tax_multiplier=shop_tax_multiplier or 1.0,
+        shop_variance=shop_variance,
         elite_spawn_bonus_pct=elite_bonus_pct,
         glitched_spawn_bonus_pct=glitched_bonus_pct,
         prime_spawn_bonus_pct=prime_bonus_pct,
         foe_stat_multipliers=foe_stat_multipliers,
         foe_stat_deltas=foe_stat_deltas,
         player_stat_multiplier=player_stat_multiplier or 1.0,
+        pressure_defense_floor=pressure_defense_floor,
+        pressure_defense_min_roll=pressure_defense_min_roll,
+        pressure_defense_max_roll=pressure_defense_max_roll,
+        encounter_slot_bonus=encounter_bonus,
+        modifier_stacks=modifier_stacks,
         metadata_hash=metadata_hash,
     )
 
@@ -682,6 +803,7 @@ __all__ = [
     "RunConfigurationSelection",
     "RunModifierContext",
     "build_run_modifier_context",
+    "get_modifier_details",
     "get_run_configuration_metadata",
     "validate_run_configuration",
 ]

@@ -11,6 +11,7 @@ import gc
 import json
 import logging
 from typing import Any
+from typing import Mapping
 
 from battle_logging.writers import end_run_logging
 from tracking import log_play_session_end
@@ -21,6 +22,7 @@ from autofighter.mapgen import MapNode
 from autofighter.party import Party
 from autofighter.rooms import BattleRoom
 from autofighter.stats import Stats
+from services.run_configuration import RunModifierContext
 
 from .encryption import get_save_manager
 from .party_manager import save_party
@@ -191,6 +193,28 @@ def load_map(run_id: str) -> tuple[dict, list[MapNode]]:
         return {"rooms": [], "current": 0, "battle": False}, []
     state = json.loads(row[0])
     rooms = [MapNode.from_dict(n) for n in state.get("rooms", [])]
+    raw_context = state.get("modifier_context")
+    context: RunModifierContext | None = None
+    if isinstance(raw_context, Mapping):
+        try:
+            context = RunModifierContext.from_dict(raw_context)
+        except Exception:
+            context = None
+    for node in rooms:
+        if context is not None:
+            node.modifier_context = context.to_dict()
+            setattr(node, "run_modifier_context", context)
+            if not getattr(node, "metadata_hash", None):
+                node.metadata_hash = context.metadata_hash
+        elif isinstance(node.modifier_context, Mapping):
+            try:
+                context_candidate = RunModifierContext.from_dict(node.modifier_context)
+            except Exception:
+                context_candidate = None
+            if context_candidate is not None:
+                setattr(node, "run_modifier_context", context_candidate)
+                if not getattr(node, "metadata_hash", None):
+                    node.metadata_hash = context_candidate.metadata_hash
     return state, rooms
 
 

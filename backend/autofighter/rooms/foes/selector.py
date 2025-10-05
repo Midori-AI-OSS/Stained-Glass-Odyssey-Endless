@@ -10,6 +10,7 @@ from typing import Any
 from autofighter.mapgen import MapNode
 from autofighter.party import Party
 from autofighter.rooms.foes import SpawnTemplate
+from services.run_configuration import RunModifierContext
 
 
 def _weight_for_template(
@@ -160,6 +161,7 @@ def _desired_count(
     party: Party,
     *,
     config: Mapping[str, Any],
+    context: RunModifierContext | None = None,
     rng: random.Random | None = None,
 ) -> int:
     """Calculate the number of foes to spawn for the encounter."""
@@ -179,13 +181,22 @@ def _desired_count(
     except Exception:
         pressure_step = 1
 
-    try:
-        pressure = int(getattr(node, "pressure", 0))
-    except Exception:
-        pressure = 0
+    if context is not None:
+        try:
+            pressure = max(int(context.pressure), 0)
+        except Exception:
+            pressure = 0
+        encounter_bonus = max(int(getattr(context, "encounter_slot_bonus", 0)), 0)
+    else:
+        try:
+            pressure = int(getattr(node, "pressure", 0))
+        except Exception:
+            pressure = 0
+        encounter_bonus = 0
 
     effective_step = pressure_step if pressure_step > 0 else 1
     base = min(base_cap, pressure_base + max(pressure, 0) // effective_step)
+    base = min(base_cap, base + encounter_bonus)
 
     extras = 0
     members_obj = getattr(party, "members", [])

@@ -19,7 +19,10 @@ from autofighter.rooms.shop import PRICE_BY_STARS
 from autofighter.rooms.shop import REROLL_COST
 from autofighter.rooms.shop import ShopRoom
 from autofighter.rooms.shop import _taxed_price
+from autofighter.rooms.shop import serialize_shop_payload
 from plugins.characters._base import PlayerBase
+from services.run_configuration import build_run_modifier_context
+from services.run_configuration import validate_run_configuration
 
 
 @pytest.mark.asyncio
@@ -366,6 +369,21 @@ async def test_shop_multi_item_payload_skips_invalid_entries():
     )
     assert remaining_entry["cost"] == expected_cost
     assert remaining_entry["tax"] == expected_cost - remaining_entry["base_price"]
+
+
+def test_serialize_shop_payload_reports_modifier_context():
+    selection = validate_run_configuration(run_type="standard", modifiers={"pressure": 4})
+    context = build_run_modifier_context(selection.snapshot)
+    member = PlayerBase()
+    member.id = "context_tester"
+    party = Party(members=[member], gold=100)
+    stock = [
+        {"id": "ctx_item", "name": "Context Item", "stars": 1, "type": "card", "base_price": 50, "price": 50, "cost": 50, "tax": 0}
+    ]
+    payload = serialize_shop_payload(party, stock, context.pressure, 0, context=context)
+    assert payload["modifier_context"]["metadata_hash"] == context.metadata_hash
+    assert payload["modifier_context"]["shop_multiplier"] == pytest.approx(context.shop_multiplier)
+    assert payload["modifier_context"]["shop_tax_multiplier"] == pytest.approx(context.shop_tax_multiplier)
 
 
 @pytest.fixture()

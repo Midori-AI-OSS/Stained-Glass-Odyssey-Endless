@@ -20,6 +20,7 @@ from services.reward_service import select_card
 from services.reward_service import select_relic
 from services.room_service import room_action
 from services.run_configuration import METADATA_VERSION
+from services.run_configuration import RunModifierContext
 from services.run_configuration import get_run_configuration_metadata
 from services.run_service import advance_room
 from services.run_service import backup_save
@@ -250,11 +251,30 @@ async def get_ui_state() -> tuple[str, int, dict[str, Any]]:
 
                 party_snapshot = await asyncio.to_thread(load_party, run_id)
                 context = getattr(current_node, "run_modifier_context", None)
+                if isinstance(context, dict):
+                    try:
+                        context = RunModifierContext.from_dict(context)
+                        setattr(current_node, "run_modifier_context", context)
+                    except Exception:
+                        context = None
                 if context is None:
-                    context = getattr(party_snapshot, "run_modifier_context", None)
+                    snapshot_context = getattr(party_snapshot, "run_modifier_context", None)
+                    if isinstance(snapshot_context, dict):
+                        try:
+                            snapshot_context = RunModifierContext.from_dict(snapshot_context)
+                        except Exception:
+                            snapshot_context = None
+                    context = snapshot_context
                     if context is not None:
                         setattr(current_node, "run_modifier_context", context)
-
+                if context is None:
+                    stored_context = state.get("modifier_context")
+                    if isinstance(stored_context, dict):
+                        try:
+                            context = RunModifierContext.from_dict(stored_context)
+                        except Exception:
+                            context = None
+                
                 shop_view = serialize_shop_payload(
                     party_snapshot,
                     stored_stock,
