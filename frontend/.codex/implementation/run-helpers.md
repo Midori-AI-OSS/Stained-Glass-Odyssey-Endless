@@ -20,9 +20,9 @@ Root run state now lives in dedicated stores under `frontend/src/lib/systems/`. 
 
 - `frontend/src/lib/components/RunChooser.svelte`
   - Replaced the legacy single-step chooser with a four-stage wizard (Resume → Party → Run Type → Modifiers → Confirm) that consumes live metadata, persists defaults in `localStorage`, and emits `startRun` with the consolidated configuration snapshot.
-  - Memoizes run configuration metadata for the current browser session, using hashes surfaced from `/ui` to avoid redundant `/run/config` requests while still refreshing automatically when the backend version changes.
+  - Memoizes run configuration metadata for the current browser session, storing the backend-provided metadata hash alongside the payload so subsequent wizard mounts reuse the cached response until the hash changes.
   - Integrates telemetry via `logMenuAction` for step impressions, modifier adjustments, resumptions, cancellations, and start submissions so analytics receives a consistent event stream.
-  - Stores the last few modifier configurations per run type and surfaces them as quick-start presets (including reward previews and metadata version badges) so players can reapply favourite setups instantly.
+  - Stores the last few modifier configurations per run type and surfaces them as quick-start presets (including reward previews and metadata version badges) so players can reapply favourite setups instantly. Presets now persist both the display version and the metadata hash so stale presets are flagged automatically when the backend updates.
   - Computes reward previews client-side to mirror backend multiplier math (foe-stack bonuses plus `character_stat_down` incentives) and surfaces the canonical pressure tooltip alongside modifier descriptions.
   - Hydrates modifier tooltips with metadata-driven stacking, reward, and effect summaries (including preview chips) so the copy stays in sync with the backend schema. Preview chips are normalised and sorted by stack count, explicitly call out `Step` size for every modifier, and append an uncapped scaling reminder when metadata omits a maximum.
 

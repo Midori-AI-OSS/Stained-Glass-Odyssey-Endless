@@ -227,7 +227,8 @@ describe('RunChooser wizard flow', () => {
       damageType: 'fire',
       party: ['unit-1', 'unit-2'],
       modifiers: expect.objectContaining({ pressure: 7, enemy_buff: 3 }),
-      metadataVersion: BASE_METADATA.version
+      metadataVersion: BASE_METADATA.version,
+      metadataSignature: BASE_METADATA.version
     });
 
     const presetStore = JSON.parse(localStorage.getItem('run_wizard_recent_presets_v1') || '{}');
@@ -237,6 +238,7 @@ describe('RunChooser wizard flow', () => {
       character_stat_down: 0
     });
     expect(presetStore?.boss?.[0]?.metadataVersion).toBe(BASE_METADATA.version);
+    expect(presetStore?.boss?.[0]?.metadataSignature).toBe(BASE_METADATA.version);
 
     const events = logMenuAction.mock.calls.map(([, eventName]) => eventName);
     expect(events).toContain('metadata_loaded');
@@ -364,6 +366,50 @@ describe('RunChooser wizard flow', () => {
       .filter(([, eventName]) => eventName === 'start_submitted')
       .map(([, , payload]) => payload);
     expect(startPayloads[startPayloads.length - 1]).toMatchObject({ quick_start: true });
+
+    const presetStore = JSON.parse(localStorage.getItem('run_wizard_recent_presets_v1') || '{}');
+    expect(presetStore?.boss?.[0]?.metadataSignature).toBe(BASE_METADATA.version);
+  });
+
+  test('persists metadata hash for cache-aware reloads', async () => {
+    cleanup();
+    localStorage.clear();
+    getRunConfigurationMetadata.mockReset();
+    logMenuAction.mockReset();
+
+    const HASHED_METADATA = {
+      ...BASE_METADATA,
+      metadata_hash: 'hash-001'
+    };
+
+    getRunConfigurationMetadata.mockResolvedValueOnce(JSON.parse(JSON.stringify(HASHED_METADATA)));
+
+    const { container } = render(RunChooser, { props: { runs: [] } });
+
+    await waitFor(() => expect(getRunConfigurationMetadata).toHaveBeenCalled());
+    await tick();
+
+    await fireEvent.click(screen.getByTestId('set-party'));
+    await fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+    await fireEvent.click(screen.getByRole('button', { name: /standard run/i }));
+    await fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+    await tick();
+
+    await fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+    await tick();
+    await fireEvent.click(screen.getByRole('button', { name: 'Start Run' }));
+    await tick();
+
+    const persisted = JSON.parse(localStorage.getItem('run_wizard_defaults_v1') || '{}');
+    expect(persisted.metadataSignature).toBe('hash-001');
+    expect(persisted.metadataVersion).toBe(BASE_METADATA.version);
+
+    const presetStore = JSON.parse(localStorage.getItem('run_wizard_recent_presets_v1') || '{}');
+    expect(presetStore?.standard?.[0]?.metadataSignature).toBe('hash-001');
+    expect(presetStore?.standard?.[0]?.metadataVersion).toBe(BASE_METADATA.version);
+
+    const metadataBadge = container.querySelector('.preset-metadata');
+    expect(metadataBadge?.textContent).toContain('Metadata 1.0.0');
   });
 
   test('refetches metadata when metadata hash updates', async () => {

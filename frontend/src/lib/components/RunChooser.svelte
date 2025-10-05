@@ -116,7 +116,9 @@
     if (!hasRuns) {
       step = 'party';
     }
-    const persistedHash = normalizeMetadataHash(persistedDefaults?.metadataVersion);
+    const persistedHash = normalizeMetadataHash(
+      persistedDefaults?.metadataSignature ?? persistedDefaults?.metadataVersion
+    );
     const initialHash = sanitizedMetadataHash || persistedHash;
     lastRequestedMetadataHash = initialHash;
     void fetchMetadata({ metadataHash: initialHash });
@@ -327,6 +329,7 @@
       values: storedValues,
       fingerprint,
       metadataVersion: metadata?.version || null,
+      metadataSignature: normalizeMetadataHash(metadata?.metadata_hash ?? metadata?.version),
       savedAt: Date.now()
     });
     if (filtered.length > MAX_PRESETS_PER_RUN_TYPE) {
@@ -358,12 +361,16 @@
       seen.add(fingerprint);
       const stacks = buildPresetStackSummary(normalized);
       const reward = computeRewardPreview(normalized);
+      const metadataSignature = normalizeMetadataHash(
+        entry?.metadataSignature ?? entry?.metadataVersion
+      );
       options.push({
         values: normalized,
         stacks,
         reward,
         fingerprint,
         metadataVersion: entry?.metadataVersion || null,
+        metadataSignature,
         savedAt: entry?.savedAt || 0
       });
       if (options.length >= MAX_PRESETS_PER_RUN_TYPE) {
@@ -890,12 +897,14 @@
   function persistDefaults() {
     if (!browser) return;
     try {
+      const metadataSignature = normalizeMetadataHash(metadata?.metadata_hash ?? metadata?.version);
       const payload = {
         runTypeId,
         modifiers: modifierValues,
         party: partySelection.slice(0, 5),
         damageType,
-        metadataVersion: metadata?.version || null
+        metadataVersion: metadata?.version || null,
+        metadataSignature
       };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
     } catch (err) {
@@ -1340,7 +1349,11 @@
                     {#if preset.metadataVersion}
                       <div
                         class="preset-metadata"
-                        class:stale={metadata?.version && preset.metadataVersion !== metadata.version}
+                        class:stale={
+                          currentMetadataHash &&
+                          preset.metadataSignature &&
+                          preset.metadataSignature !== currentMetadataHash
+                        }
                       >
                         Metadata {preset.metadataVersion}
                       </div>
