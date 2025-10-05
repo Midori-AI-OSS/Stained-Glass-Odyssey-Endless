@@ -14,7 +14,9 @@ drives the daily login reward flow.
 - A progress card tracks the "three rooms per day" requirement and surfaces the
   current count as both a numeric label and animated progress bar.
 - Reward entries render as grid chips with star icons, item names, and the
-  damage type/ID metadata surfaced by the backend.
+  damage type/ID metadata surfaced by the backend. Identical rewards collapse
+  into a single chip that appends a `(Nx)` suffix to highlight the combined
+  quantity.
 
 ## Behaviour
 - Fetches `/rewards/login` on mount, when the tab regains focus, after manual
