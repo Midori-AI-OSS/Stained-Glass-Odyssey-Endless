@@ -49,7 +49,8 @@ function getDefaultSettings() {
       disableFloatingDamage: false,
       disablePortraitGlows: false,
       simplifyOverlayTransitions: false,
-      disableStarStorm: false
+      disableStarStorm: false,
+      enableBattleFx: false
     },
     // Legacy settings for backward compatibility
     framerate: 60,
@@ -79,11 +80,16 @@ function migrateSettings(data) {
         ...data,
         version: SETTINGS_VERSION
       };
-      
+
+      migrated.motion = {
+        ...defaults.motion,
+        ...(data.motion || {})
+      };
+
       // If we had an old reducedMotion setting, migrate it to the new structure
       if (data.reducedMotion !== undefined) {
         migrated.motion = {
-          ...defaults.motion,
+          ...migrated.motion,
           globalReducedMotion: Boolean(data.reducedMotion),
           // When old reducedMotion was enabled, enable most motion reduction options
           disableFloatingDamage: Boolean(data.reducedMotion),
@@ -143,9 +149,10 @@ export function loadSettings() {
     // Ensure motion settings exist
     const defaults = getDefaultSettings();
 
-    if (!data.motion) {
-      data.motion = defaults.motion;
-    }
+    data.motion = {
+      ...defaults.motion,
+      ...(data.motion || {})
+    };
 
     // Ensure theme settings exist
     if (!data.theme) {
