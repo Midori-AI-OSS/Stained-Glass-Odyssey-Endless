@@ -27,12 +27,12 @@ export async function getUIState() {
  * @param {string} action - The action to perform
  * @param {object} params - Action-specific parameters
  */
-export async function sendAction(action, params = {}) {
+export async function sendAction(action, params = {}, { suppressOverlay = false } = {}) {
   try {
-    return await httpPost('/ui/action', { action, params });
+    return await httpPost('/ui/action', { action, params }, {}, suppressOverlay);
   } catch (e) {
     // Add context for action errors
-    if (!e.overlayShown) {
+    if (!suppressOverlay && !e.overlayShown) {
       const message = e.message || `Failed to execute action: ${action}`;
       openOverlay('error', { message, traceback: e?.stack || '' });
       console.error('sendAction failure:', { action, params, message });
@@ -47,12 +47,79 @@ export async function sendAction(action, params = {}) {
  * @param {string} damageType - Damage type for the player
  * @param {number} pressure - Pressure setting
  */
-export async function startRun(party, damageType = '', pressure = 0) {
-  return await sendAction('start_run', { 
-    party: party || ['player'], 
-    damage_type: damageType, 
-    pressure 
-  });
+export async function startRun(options) {
+  const payload = normalizeStartRunPayload(options);
+  return await sendAction('start_run', payload);
+}
+
+function normalizeStartRunPayload(options) {
+  if (Array.isArray(options)) {
+    return {
+      party: options || ['player'],
+      damage_type: '',
+      pressure: 0
+    };
+  }
+
+  if (options && typeof options === 'object') {
+    const {
+      party,
+      damageType = '',
+      pressure = 0,
+      runType = null,
+      modifiers = null
+    } = options;
+    const normalizedParty = Array.isArray(party) && party.length > 0 ? party : ['player'];
+    const normalizedModifiers = normalizeModifiers(modifiers);
+    const normalizedPressure = Number.isFinite(Number(pressure)) ? Number(pressure) : 0;
+    return {
+      party: normalizedParty,
+      damage_type: damageType,
+      pressure: normalizedPressure,
+      run_type: runType || undefined,
+      modifiers: normalizedModifiers
+    };
+  }
+
+  return {
+    party: ['player'],
+    damage_type: '',
+    pressure: 0
+  };
+}
+
+function normalizeModifiers(modifiers) {
+  if (!modifiers || typeof modifiers !== 'object') {
+    return undefined;
+  }
+
+  const normalized = {};
+  for (const [key, value] of Object.entries(modifiers)) {
+    const numeric = Number(value);
+    normalized[key] = Number.isFinite(numeric) ? numeric : value;
+  }
+  return normalized;
+}
+
+export async function getRunConfigurationMetadata({ suppressOverlay = false } = {}) {
+  return await httpGet('/run/config', {}, suppressOverlay);
+}
+
+export async function logMenuAction(menu, event, data = {}) {
+  if (!event) return;
+  const params = {
+    menu: menu || 'Run',
+    event,
+    details: data
+  };
+  try {
+    await sendAction('log_menu_action', params, { suppressOverlay: true });
+  } catch (err) {
+    // Logging should never interrupt the user flow; swallow errors silently.
+    if (typeof console !== 'undefined') {
+      console.warn('logMenuAction failed', err);
+    }
+  }
 }
 
 /**

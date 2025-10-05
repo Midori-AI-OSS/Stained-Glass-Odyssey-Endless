@@ -451,7 +451,8 @@
         scheduleMapRefresh();
       }
     } else {
-      openOverlay('party-start');
+      await primePartySeed();
+      openOverlay('run-choose', { runs: [] });
     }
   }
 
@@ -484,10 +485,14 @@
   }
 
   async function handleStart(event) {
-    const pressure = event?.detail?.pressure || 0;
+    const detail = event?.detail || {};
+    const providedModifiers = detail.modifiers && typeof detail.modifiers === 'object' ? detail.modifiers : {};
+    const pressureFromDetail = Number.isFinite(Number(detail.pressure)) ? Number(detail.pressure) : null;
+    const pressure = pressureFromDetail ?? Number(providedModifiers?.pressure ?? 0) || 0;
+    const requestedRunType = detail.runType || detail.run_type || null;
     haltSync = false;
     await primePartySeed();
-    const seededParty = normalizePartyIds(selectedParty);
+    const seededParty = normalizePartyIds(detail.party || selectedParty);
     if (!partiesEqual(selectedParty, seededParty)) {
       selectedParty = [...seededParty];
     }
@@ -541,8 +546,14 @@
     // No active runs found, start a new run
     await syncPlayerConfig();
 
-    const dmgType = editorConfigs.player?.damageType || editorState.damageType;
-    const data = await startRun(seededParty, dmgType, pressure);
+    const dmgType = detail.damageType || editorConfigs.player?.damageType || editorState.damageType;
+    const data = await startRun({
+      party: seededParty,
+      damageType: dmgType,
+      pressure,
+      runType: requestedRunType,
+      modifiers: providedModifiers
+    });
     runState.setRunId(data.run_id);
     runState.setMapRooms(data.map?.rooms || []);
     runState.setCurrentRoom({
@@ -595,7 +606,7 @@
     // Ensure we truly start fresh: end any active runs first
     try { await endAllRuns(); } catch {}
     await primePartySeed();
-    openOverlay('party-start');
+    openOverlay('run-choose', { runs: [] });
   }
 
   async function handleParty() {

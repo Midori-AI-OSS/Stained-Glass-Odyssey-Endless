@@ -288,7 +288,8 @@
       reducedMotion={overlayReducedMotion}
       on:choose={(e) => dispatch('loadRun', e.detail.run)}
       on:load={(e) => dispatch('loadRun', e.detail.run)}
-      on:startNew={() => dispatch('startNewRun')}
+      on:startRun={(e) => dispatch('startRun', e.detail)}
+      on:cancel={() => dispatch('back')}
     />
   </PopupWindow>
 {/if}
@@ -300,18 +301,6 @@
     reducedMotion={overlayReducedMotion}
     on:close={() => dispatch('back')}
   />
-{/if}
-
-{#if $overlayView === 'party-start'}
-  <OverlaySurface>
-    <PartyPicker bind:selected reducedMotion={simplifiedTransitions ? true : effectiveReducedMotion}
-      allowElementChange={true}
-      actionLabel="Start Run"
-      on:save={(e) => dispatch('startRun', e.detail)}
-      on:editorChange={(e) => dispatch('editorChange', e.detail)}
-      on:cancel={() => dispatch('back')}
-    />
-  </OverlaySurface>
 {/if}
 
 {#if $overlayView === 'pulls'}
