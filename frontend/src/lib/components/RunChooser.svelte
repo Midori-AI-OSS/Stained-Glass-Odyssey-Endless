@@ -716,7 +716,8 @@
 
 <style>
   .wizard {
-    --wizard-max-width: min(960px, 100%);
+    --wizard-max-width: 100%;
+    --wizard-inner-max-width: 100%;
     --wizard-section-gap: clamp(0.65rem, 1.8vw, 1.1rem);
     --wizard-item-gap: clamp(0.45rem, 1.4vw, 0.8rem);
     --wizard-action-gap: clamp(0.55rem, 1.6vw, 0.95rem);
@@ -726,13 +727,21 @@
     width: var(--wizard-max-width);
     max-width: var(--wizard-max-width);
     flex: 1 1 auto;
-    align-self: center;
-    margin: 0 auto;
+    align-self: stretch;
+    margin: 0;
     min-height: 0;
   }
 
   .wizard > * {
     min-width: 0;
+  }
+
+  .wizard-header,
+  .step-surface,
+  .navigation {
+    width: min(100%, var(--wizard-inner-max-width));
+    margin-left: auto;
+    margin-right: auto;
   }
 
   .wizard-header {
@@ -1125,7 +1134,7 @@
 
   @media (max-width: 720px) {
     .wizard {
-      --wizard-max-width: min(100%, 640px);
+      --wizard-inner-max-width: 100%;
     }
 
     .wizard-header {
