@@ -329,6 +329,11 @@
 
   function handleModifierChange(modId, raw) {
     if (!modifierMap.has(modId)) return;
+    if (raw === '') {
+      modifierValues = { ...modifierValues, [modId]: '' };
+      modifierDirty = { ...modifierDirty, [modId]: true };
+      return;
+    }
     const sanitized = sanitizeStack(modId, raw);
     modifierValues = { ...modifierValues, [modId]: sanitized };
     modifierDirty = { ...modifierDirty, [modId]: true };
@@ -611,8 +616,8 @@
                         min={mod.stacking?.minimum ?? 0}
                         step={mod.stacking?.step ?? 1}
                         max={Number.isFinite(mod.stacking?.maximum) ? mod.stacking.maximum : undefined}
-                        value={sanitizeStack(mod.id, modifierValues[mod.id])}
-                        on:change={(event) => handleModifierChange(mod.id, event.target.value)}
+                        value={modifierValues[mod.id] ?? ''}
+                        on:input={(event) => handleModifierChange(mod.id, event.target.value)}
                       />
                     </label>
                   </div>

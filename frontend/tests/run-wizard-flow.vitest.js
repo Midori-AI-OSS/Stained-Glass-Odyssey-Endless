@@ -123,14 +123,16 @@ describe('RunChooser wizard flow', () => {
     expect(pressureInput).toBeTruthy();
     expect(enemyInput).toBeTruthy();
 
-    await fireEvent.change(pressureInput, { target: { value: '7' } });
-    await fireEvent.change(enemyInput, { target: { value: '3' } });
+    await fireEvent.input(pressureInput, { target: { value: '7' } });
+    await fireEvent.input(enemyInput, { target: { value: '3' } });
 
     const modifiersNext = screen.getByRole('button', { name: 'Next' });
     await fireEvent.click(modifiersNext);
     await tick();
 
     expect(screen.getByRole('heading', { name: 'Review & Start' })).toBeTruthy();
+    expect(screen.getByText('Pressure: 7')).toBeTruthy();
+    expect(screen.getByText('Enemy Buff: 3')).toBeTruthy();
 
     const startButton = screen.getByRole('button', { name: 'Start Run' });
     await fireEvent.click(startButton);
