@@ -329,6 +329,11 @@
 
   function handleModifierChange(modId, raw) {
     if (!modifierMap.has(modId)) return;
+    if (raw === '') {
+      modifierValues = { ...modifierValues, [modId]: '' };
+      modifierDirty = { ...modifierDirty, [modId]: true };
+      return;
+    }
     const sanitized = sanitizeStack(modId, raw);
     modifierValues = { ...modifierValues, [modId]: sanitized };
     modifierDirty = { ...modifierDirty, [modId]: true };
@@ -462,25 +467,46 @@
   }
 }} />
 
-<MenuPanel
-  class="run-wizard"
-  data-step={step}
-  padding="var(--menu-panel-padding, clamp(0.65rem, 1.8vw, 1.1rem))"
-  {reducedMotion}
->
-  <div class="wizard">
-    <header class="wizard-header">
-      <h2>{stepTitle}</h2>
-      <div class="step-indicator" aria-hidden="true">
-        {#each visibleSteps as key, index}
-          <span class:selected={key === step} class:done={index < currentStepIndex}>
-            {index + 1}
-          </span>
-        {/each}
-      </div>
-    </header>
+{#if step === 'party'}
+  <div class="party-standalone" data-step={step}>
+    <div class="party-step">
+      <PartyPicker
+        bind:selected={partySelection}
+        allowElementChange={true}
+        actionLabel="Continue"
+        {reducedMotion}
+        on:save={handlePartySave}
+        on:cancel={handlePartyCancel}
+        on:editorChange={(event) => {
+          const detail = event.detail || {};
+          if (detail?.damageType) {
+            damageType = String(detail.damageType);
+            persistDefaults();
+          }
+        }}
+      />
+    </div>
+  </div>
+{:else}
+  <MenuPanel
+    class="run-wizard"
+    data-step={step}
+    padding="var(--menu-panel-padding, clamp(0.65rem, 1.8vw, 1.1rem))"
+    {reducedMotion}
+  >
+    <div class="wizard">
+      <header class="wizard-header">
+        <h2>{stepTitle}</h2>
+        <div class="step-indicator" aria-hidden="true">
+          {#each visibleSteps as key, index}
+            <span class:selected={key === step} class:done={index < currentStepIndex}>
+              {index + 1}
+            </span>
+          {/each}
+        </div>
+      </header>
 
-    {#if step === 'resume'}
+      {#if step === 'resume'}
       <div class="resume-panel step-surface">
         {#if normalizedRuns.length > 0}
           <div class="runs" role="list">
@@ -511,24 +537,6 @@
             <button class="icon-btn primary" on:click={() => goToStep('party')}>Start Guided Setup</button>
           </div>
         {/if}
-      </div>
-    {:else if step === 'party'}
-      <div class="party-step">
-        <PartyPicker
-          bind:selected={partySelection}
-          allowElementChange={true}
-          actionLabel="Continue"
-          {reducedMotion}
-          on:save={handlePartySave}
-          on:cancel={handlePartyCancel}
-          on:editorChange={(event) => {
-            const detail = event.detail || {};
-            if (detail?.damageType) {
-              damageType = String(detail.damageType);
-              persistDefaults();
-            }
-          }}
-        />
       </div>
     {:else if step === 'run-type'}
       <div class="run-type-panel step-surface">
@@ -608,8 +616,8 @@
                         min={mod.stacking?.minimum ?? 0}
                         step={mod.stacking?.step ?? 1}
                         max={Number.isFinite(mod.stacking?.maximum) ? mod.stacking.maximum : undefined}
-                        value={sanitizeStack(mod.id, modifierValues[mod.id])}
-                        on:change={(event) => handleModifierChange(mod.id, event.target.value)}
+                        value={modifierValues[mod.id] ?? ''}
+                        on:input={(event) => handleModifierChange(mod.id, event.target.value)}
                       />
                     </label>
                   </div>
@@ -703,8 +711,9 @@
         <button class="primary" on:click={startRun} disabled={submitting}>Start Run</button>
       </div>
     {/if}
-  </div>
-</MenuPanel>
+    </div>
+  </MenuPanel>
+{/if}
 
 <style>
   .wizard {
@@ -874,10 +883,14 @@
     cursor: default;
   }
 
+  .party-standalone {
+    --wizard-section-gap: clamp(0.65rem, 1.8vw, 1.1rem);
+  }
+
   .party-step {
     display: flex;
     flex-direction: column;
-    gap: var(--wizard-section-gap);
+    gap: var(--wizard-section-gap, clamp(0.65rem, 1.8vw, 1.1rem));
   }
 
   .navigation {
