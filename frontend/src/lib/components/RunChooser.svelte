@@ -90,7 +90,7 @@
     };
   });
   $: pressureValue = sanitizeStack('pressure', modifierValues.pressure);
-  $: rewardPreview = computeRewardPreview(modifierValues);
+  $: rewardPreview = computeRewardPreview(modifierValues, modifiers);
   $: stepTitle = deriveStepTitle(step);
   $: resumeDisabled = resumeIndex < 0 || resumeIndex >= normalizedRuns.length;
   $: partySummary = partySelection.slice(0, 5);
@@ -359,7 +359,7 @@
       }
       seen.add(fingerprint);
       const stacks = buildPresetStackSummary(normalized);
-      const reward = computeRewardPreview(normalized);
+      const reward = computeRewardPreview(normalized, modifiers);
       const metadataSignature = normalizeMetadataHash(
         entry?.metadataSignature ?? entry?.metadataVersion
       );
@@ -1067,15 +1067,17 @@
     dispatch('cancel');
   }
 
-  function computeRewardPreview(values) {
+  function computeRewardPreview(values, availableModifiers = modifiers) {
     const result = {
       foe_bonus: 0,
       player_bonus: 0,
       exp_bonus: 0,
       rdr_bonus: 0
     };
-    if (!modifiers.length) return result;
-    for (const entry of modifiers) {
+    if (!Array.isArray(availableModifiers) || availableModifiers.length === 0) {
+      return result;
+    }
+    for (const entry of availableModifiers) {
       const stacks = sanitizeStack(entry.id, values[entry.id]);
       const contribution = computeModifierRewardContribution(entry, stacks);
       result.foe_bonus += contribution.foe_bonus;
