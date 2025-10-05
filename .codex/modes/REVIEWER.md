@@ -12,7 +12,7 @@ For contributors who audit repository documentation to keep it accurate and curr
 - For every discrepancy, generate a `TMT-<hash>-<description>.md` task file in the root `.codex/tasks/` folder using a random hash from `openssl rand -hex 4`.
 - Maintain `.codex/notes/reviewer-mode-cheat-sheet.md` with human or lead preferences gathered during audits.
 - Ignore time limits—finish the task even if it takes a long time.
-- After reviewing a task file that contains `ready for review`, append `requesting review from the Task Master` at the bottom of the task file.
+- After reviewing a task file that contains `ready for review`, append `requesting review from the Task Master` at the bottom of the task file only if the task is fully done and all acceptance criteria are met.
 
 ## Typical Actions
 - Review prior findings in `.codex/review/` and add a new hashed review note there.
