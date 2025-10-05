@@ -37,6 +37,7 @@ from autofighter.rooms import _serialize
 from plugins import characters as player_plugins
 from services.login_reward_service import record_room_completion
 from services.run_configuration import RunConfigurationSelection
+from services.run_configuration import build_run_modifier_context
 from services.run_configuration import validate_run_configuration
 from services.user_level_service import get_user_level
 
@@ -193,6 +194,8 @@ async def start_run(
     if client_metadata_version is not None:
         configuration_snapshot["client_version"] = client_metadata_version
 
+    modifier_context = build_run_modifier_context(configuration_snapshot)
+
     exp_multiplier_map: dict[str, float] = {}
     for member, info in zip(party_members, party_info):
         member.exp_multiplier *= exp_multiplier
@@ -207,6 +210,7 @@ async def start_run(
         rdr=rdr_multiplier,
     )
     setattr(initial_party, "run_config", configuration_snapshot)
+    setattr(initial_party, "run_modifier_context", modifier_context)
     run_type_id = configuration.run_type.get("id")
     if run_type_id == "boss_rush":
         setattr(initial_party, "no_shops", True)
@@ -278,6 +282,7 @@ async def start_run(
                             # Freeze the user level for the duration of this run
                             "user_level": int(get_user_level()),
                             "player": snapshot,
+                            "modifier_context": modifier_context.to_dict(),
                             "config": configuration_snapshot,
                         }
                     ),
@@ -320,6 +325,16 @@ async def start_run(
             "rdr_bonus": reward_bonuses.get("rdr_bonus", 0.0),
         },
         "metadata_version": configuration_snapshot.get("version"),
+        "derived_effects": {
+            "shop_multiplier": modifier_context.shop_multiplier,
+            "foe_stat_multipliers": modifier_context.foe_stat_multipliers,
+            "foe_stat_deltas": modifier_context.foe_stat_deltas,
+            "player_stat_multiplier": modifier_context.player_stat_multiplier,
+            "elite_spawn_bonus_pct": modifier_context.elite_spawn_bonus_pct,
+            "glitched_spawn_bonus_pct": modifier_context.glitched_spawn_bonus_pct,
+            "prime_spawn_bonus_pct": modifier_context.prime_spawn_bonus_pct,
+            "metadata_hash": modifier_context.metadata_hash,
+        },
     }
     if client_metadata_version is not None:
         telemetry_payload["client_metadata_version"] = client_metadata_version
@@ -330,6 +345,7 @@ async def start_run(
         "map": state,
         "party": party_info,
         "configuration": configuration_snapshot,
+        "modifier_context": modifier_context.to_dict(),
     }
 
 

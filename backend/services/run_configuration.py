@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping as ABCMapping
 from dataclasses import dataclass
 from datetime import UTC
 from datetime import datetime
+import hashlib
+import json
 from typing import Any
 from typing import Mapping
 
@@ -543,9 +546,142 @@ def validate_run_configuration(
     )
 
 
+@dataclass(frozen=True)
+class RunModifierContext:
+    """Derived modifier effects that downstream systems can reuse.
+
+    The run startup wizard persists the raw configuration snapshot so gameplay
+    systems do not need to replicate validation or metadata lookups.  This
+    context condenses the snapshot into lightweight scalar values that map
+    cleanly onto encounter generation, foe stat scaling, shop economy logic,
+    and player stat adjustments.
+    """
+
+    pressure: int
+    shop_multiplier: float
+    elite_spawn_bonus_pct: float
+    glitched_spawn_bonus_pct: float
+    prime_spawn_bonus_pct: float
+    foe_stat_multipliers: dict[str, float]
+    foe_stat_deltas: dict[str, float]
+    player_stat_multiplier: float
+    metadata_hash: str
+
+    def to_dict(self) -> dict[str, object]:
+        """Serialize the context into JSON-friendly primitives."""
+
+        return {
+            "pressure": self.pressure,
+            "shop_multiplier": self.shop_multiplier,
+            "elite_spawn_bonus_pct": self.elite_spawn_bonus_pct,
+            "glitched_spawn_bonus_pct": self.glitched_spawn_bonus_pct,
+            "prime_spawn_bonus_pct": self.prime_spawn_bonus_pct,
+            "foe_stat_multipliers": dict(self.foe_stat_multipliers),
+            "foe_stat_deltas": dict(self.foe_stat_deltas),
+            "player_stat_multiplier": self.player_stat_multiplier,
+            "metadata_hash": self.metadata_hash,
+        }
+
+
+def _coerce_mapping(value: Any) -> dict[str, Any]:
+    if isinstance(value, ABCMapping):
+        return dict(value)
+    return {}
+
+
+def _modifier_details(snapshot: Mapping[str, Any], modifier_id: str) -> dict[str, Any]:
+    modifiers = _coerce_mapping(snapshot.get("modifiers"))
+    entry = _coerce_mapping(modifiers.get(modifier_id, {}))
+    return _coerce_mapping(entry.get("details", {}))
+
+
+def _numeric(value: Any, *, default: float = 0.0) -> float:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return float(default)
+
+
+def build_run_modifier_context(snapshot: Mapping[str, Any]) -> RunModifierContext:
+    """Extract reusable modifier effects from a configuration snapshot."""
+
+    source = _coerce_mapping(snapshot)
+    pressure_info = _coerce_mapping(source.get("pressure"))
+    try:
+        pressure_stacks = int(pressure_info.get("stacks", 0))
+    except (TypeError, ValueError):
+        pressure_stacks = 0
+
+    shop_multiplier = _numeric(pressure_info.get("shop_multiplier"), default=1.0)
+    elite_bonus_pct = _numeric(pressure_info.get("elite_spawn_bonus_pct"))
+
+    def _effective_bonus(modifier_id: str) -> float:
+        details = _modifier_details(source, modifier_id)
+        if "effective_bonus" in details:
+            return _numeric(details.get("effective_bonus"))
+        if "raw_bonus" in details:
+            return _numeric(details.get("raw_bonus"))
+        return 0.0
+
+    foe_stat_multipliers: dict[str, float] = {}
+    foe_stat_deltas: dict[str, float] = {}
+
+    hp_bonus = _effective_bonus("foe_hp")
+    if hp_bonus:
+        foe_stat_multipliers["max_hp"] = 1.0 + hp_bonus
+
+    speed_bonus = _effective_bonus("foe_speed")
+    if speed_bonus:
+        foe_stat_multipliers["spd"] = 1.0 + speed_bonus
+
+    mitigation_bonus = _effective_bonus("foe_mitigation")
+    if mitigation_bonus:
+        foe_stat_deltas["mitigation"] = mitigation_bonus
+
+    vitality_bonus = _effective_bonus("foe_vitality")
+    if vitality_bonus:
+        foe_stat_deltas["vitality"] = vitality_bonus
+
+    glitched_bonus_pct = _numeric(
+        _effective_bonus("foe_glitched_rate"),
+    ) * 100.0
+    prime_bonus_pct = _numeric(
+        _effective_bonus("foe_prime_rate"),
+    ) * 100.0
+
+    char_penalty = _modifier_details(source, "character_stat_down")
+    player_stat_multiplier = _numeric(
+        char_penalty.get("effective_multiplier"),
+        default=1.0,
+    )
+
+    # Include the snapshot version in the hash to keep context stable even when
+    # future metadata fields are added.
+    hash_material = json.dumps(
+        {"version": source.get("version"), "modifiers": source.get("modifiers"), "pressure": pressure_info},
+        sort_keys=True,
+        separators=(",", ":"),
+    ).encode("utf-8")
+    metadata_hash = hashlib.sha256(hash_material).hexdigest()
+
+    return RunModifierContext(
+        pressure=pressure_stacks,
+        shop_multiplier=shop_multiplier or 1.0,
+        elite_spawn_bonus_pct=elite_bonus_pct,
+        glitched_spawn_bonus_pct=glitched_bonus_pct,
+        prime_spawn_bonus_pct=prime_bonus_pct,
+        foe_stat_multipliers=foe_stat_multipliers,
+        foe_stat_deltas=foe_stat_deltas,
+        player_stat_multiplier=player_stat_multiplier or 1.0,
+        metadata_hash=metadata_hash,
+    )
+
+
 __all__ = [
     "METADATA_VERSION",
     "RunConfigurationSelection",
+    "RunModifierContext",
+    "build_run_modifier_context",
     "get_run_configuration_metadata",
     "validate_run_configuration",
 ]
