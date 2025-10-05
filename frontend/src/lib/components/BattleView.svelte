@@ -424,11 +424,19 @@
   }
   
   let effectCue = '';
+  let pendingEffect = null;
   function queueEffect(name) {
     if (!name || effectiveReducedMotion || !battleFxEnabled) return;
+    if (name === effectCue || name === pendingEffect) return;
+
+    pendingEffect = name;
     effectCue = name;
+
     tick().then(() => {
-      effectCue = '';
+      if (pendingEffect === name) {
+        pendingEffect = null;
+        effectCue = '';
+      }
     });
   }
 
