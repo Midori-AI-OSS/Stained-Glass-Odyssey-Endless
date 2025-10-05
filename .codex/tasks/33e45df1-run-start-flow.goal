@@ -11,7 +11,8 @@ The run startup experience now ships as a multi-step wizard that fetches `/run/c
 
 ## Desired Outcomes
 1. **Metadata consumption & UX polish**
-   - Audit the wizard to ensure every run modifier exposes its tooltip, reward preview, and stacking rules, filling in any missing copy and aligning layout with the metadata schema (categories, icons, danger tags).【F:frontend/src/lib/components/RunChooser.svelte†L13-L414】【F:backend/services/run_configuration.py†L340-L520】
+   - Audit the wizard to ensure every run modifier exposes its tooltip, reward preview, and stacking rules, filling in any missing copy and aligning layout with the metadata schema (categories, icons, danger tags).【F:frontend/src/lib/components/RunChooser.svelte†L13-L414】【F:backend/services/run_configuration.py†L340-L520】 Add explicit tooltip copy that calls out uncapped modifier stacking so players understand the potential for extreme configurations at selection time.
+   - Stretch the `Configure Modifiers` step container to occupy the full menu panel height so scroll bars disappear unless content actually overflows, keeping the call-to-action anchored consistently with other wizard steps.【F:frontend/src/lib/components/RunChooser.svelte†L13-L414】
    - Cache the fetched metadata per client session so returning to the wizard avoids redundant network calls while still handling version mismatches gracefully via the stored metadata hash.【F:frontend/src/lib/systems/uiApi.js†L50-L128】【F:backend/routes/ui.py†L520-L590】
    - Persist recently used modifier presets locally and resurface them as quick-start options to close the UX gap between “resume last run” and fresh wizard flows, now that direct run resume is unsupported.【F:frontend/src/lib/components/RunChooser.svelte†L416-L439】
 2. **Gameplay integration of run modifiers**
