@@ -41,6 +41,90 @@ class PlayerTurnIterationResult:
     battle_over: bool
 
 
+def _calculate_action_progress(attacker: Any) -> tuple[int, int]:
+    """Return the current action index (1-based) and total actions per turn."""
+
+    try:
+        total = int(getattr(attacker, "actions_per_turn", 1))
+    except Exception:
+        total = 1
+    total = max(total, 1)
+
+    try:
+        remaining = int(getattr(attacker, "action_points", 0))
+    except Exception:
+        remaining = 0
+    remaining = max(remaining, 0)
+
+    if remaining <= 0:
+        index = total
+    else:
+        used = max(total - min(remaining, total), 0)
+        index = min(total, used + 1)
+
+    return index, total
+
+
+def _next_attack_sequence(attacker: Any) -> int:
+    """Increment and return the attack sequence counter for an attacker."""
+
+    current = getattr(attacker, "_attack_sequence_counter", 0)
+    try:
+        current = int(current)
+    except Exception:
+        current = 0
+    current = max(current, 0) + 1
+    setattr(attacker, "_attack_sequence_counter", current)
+    return current
+
+
+def prepare_action_attack_metadata(attacker: Any) -> dict[str, int]:
+    """Stage metadata describing the current action before damage is applied."""
+
+    attack_index, attack_total = _calculate_action_progress(attacker)
+    sequence = _next_attack_sequence(attacker)
+    metadata = {
+        "attack_index": attack_index,
+        "attack_total": attack_total,
+        "attack_sequence": sequence,
+    }
+    setattr(attacker, "_pending_attack_metadata", metadata)
+    setattr(
+        attacker,
+        "_last_action_metadata",
+        {"attack_index": attack_index, "attack_total": attack_total},
+    )
+    return metadata
+
+
+def prepare_additional_hit_metadata(attacker: Any) -> dict[str, int]:
+    """Stage metadata for additional hits within the same action (e.g., spreads)."""
+
+    last = getattr(attacker, "_last_action_metadata", None)
+    if isinstance(last, dict):
+        try:
+            attack_index = int(last.get("attack_index", 1))
+        except Exception:
+            attack_index = 1
+        try:
+            attack_total = int(last.get("attack_total", 1))
+        except Exception:
+            attack_total = 1
+    else:
+        attack_index, attack_total = _calculate_action_progress(attacker)
+
+    attack_total = max(attack_total, 1)
+    attack_index = max(1, min(attack_index, attack_total))
+    sequence = _next_attack_sequence(attacker)
+    metadata = {
+        "attack_index": attack_index,
+        "attack_total": attack_total,
+        "attack_sequence": sequence,
+    }
+    setattr(attacker, "_pending_attack_metadata", metadata)
+    return metadata
+
+
 async def execute_player_phase(context: TurnLoopContext) -> bool:
     """Process all player-controlled turns and report whether battle continues."""
 
@@ -279,6 +363,7 @@ async def _run_player_turn_iteration(
             battle_over=not context.foes,
         )
 
+    prepare_action_attack_metadata(member)
     damage = await target_foe.apply_damage(
         member.atk,
         attacker=member,
@@ -544,6 +629,7 @@ async def _handle_wind_spread(
         if extra_foe is target_foe or getattr(extra_foe, "hp", 0) <= 0:
             await pace_sleep(YIELD_MULTIPLIER)
             continue
+        prepare_additional_hit_metadata(member)
         extra_damage = await extra_foe.apply_damage(
             scaled_atk,
             attacker=member,

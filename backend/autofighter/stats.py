@@ -2,6 +2,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from dataclasses import field
 import importlib
+from itertools import count
 import logging
 import random
 from typing import Optional
@@ -22,6 +23,9 @@ _BATTLE_ACTIVE: bool = False
 
 # Starting value for action gauges.
 GAUGE_START: int = 10_000
+
+
+_DAMAGE_EVENT_SEQUENCE = count(1)
 
 
 _ACTIVE_STATS: WeakValueDictionary[int, "Stats"] = WeakValueDictionary()
@@ -718,6 +722,43 @@ class Stats:
             return dt
 
         attacker_obj = attacker if attacker is not self else None
+        attack_metadata: dict[str, int] = {}
+        if attacker_obj is not None:
+            staged_metadata = getattr(attacker_obj, "_pending_attack_metadata", None)
+            if isinstance(staged_metadata, dict):
+                normalized: dict[str, int] = {}
+                for key, value in staged_metadata.items():
+                    if key not in {"attack_index", "attack_total", "attack_sequence"}:
+                        continue
+                    try:
+                        normalized[key] = int(value)
+                    except Exception:
+                        continue
+                if "attack_total" in normalized:
+                    normalized["attack_total"] = max(normalized["attack_total"], 1)
+                if "attack_index" in normalized and "attack_total" in normalized:
+                    normalized["attack_index"] = max(
+                        1, min(normalized["attack_index"], normalized["attack_total"])
+                    )
+                elif "attack_index" in normalized:
+                    normalized["attack_index"] = max(normalized["attack_index"], 1)
+                elif "attack_total" in normalized:
+                    normalized.setdefault("attack_index", 1)
+                attack_metadata = normalized
+            if hasattr(attacker_obj, "_pending_attack_metadata"):
+                delattr(attacker_obj, "_pending_attack_metadata")
+
+        sequence_value = attack_metadata.get("attack_sequence")
+        if sequence_value is None:
+            sequence_value = next(_DAMAGE_EVENT_SEQUENCE)
+        else:
+            try:
+                sequence_value = int(sequence_value)
+            except Exception:
+                sequence_value = next(_DAMAGE_EVENT_SEQUENCE)
+        attack_metadata["attack_sequence"] = max(sequence_value, 1)
+        if attacker_obj is not None:
+            setattr(attacker_obj, "_attack_sequence_counter", attack_metadata["attack_sequence"])
         critical = False
         if attacker_obj is not None:
             if random.random() < self.dodge_odds:
@@ -844,6 +885,7 @@ class Stats:
             "shield_absorbed": shield_absorbed,
             "overkill": overkill,
         }
+        damage_details.update(attack_metadata)
 
         BUS.emit_batched(
             "damage_taken",
