@@ -236,13 +236,13 @@ export async function getBattleEvents(battleIndex, runId = '') {
 export async function listTrackedRuns({ signal } = {}) {
   const opts = signal ? { signal } : {};
   const payload = await httpGet('/tracking/runs', opts, true);
-  if (Array.isArray(payload)) {
-    return { runs: payload };
-  }
-  if (Array.isArray(payload?.runs)) {
-    return { runs: payload.runs };
-  }
-  return { runs: [] };
+  const rawRuns = Array.isArray(payload)
+    ? payload
+    : Array.isArray(payload?.runs)
+      ? payload.runs
+      : [];
+  const runs = rawRuns.map(normalizeRunSummary);
+  return { runs };
 }
 
 /**
@@ -255,7 +255,25 @@ export async function getTrackedRun(runId, { signal } = {}) {
     throw new Error('Run id is required');
   }
   const opts = signal ? { signal } : {};
-  return httpGet(`/tracking/runs/${encodeURIComponent(runId)}`, opts, true);
+  const payload = await httpGet(`/tracking/runs/${encodeURIComponent(runId)}`, opts, true);
+  if (!payload || typeof payload !== 'object') {
+    return payload;
+  }
+
+  const result = { ...payload };
+  if (result.run && typeof result.run === 'object') {
+    result.run = normalizeRunSummary(result.run);
+    if (!result.configuration && result.run?.configuration) {
+      result.configuration = result.run.configuration;
+    }
+  } else if (!result.run) {
+    const configuration = normalizeRunConfiguration(result);
+    if (configuration) {
+      result.configuration = configuration;
+    }
+  }
+
+  return result;
 }
 
 /**
@@ -354,6 +372,106 @@ export function groupBattleSummariesByFloor(summaries = []) {
       summary: fight.summary
     }))
   }));
+}
+
+function normalizeRunSummary(run) {
+  if (!run || typeof run !== 'object') {
+    return run ?? {};
+  }
+  const normalized = { ...run };
+  const configuration = normalizeRunConfiguration(run);
+  if (configuration) {
+    normalized.configuration = configuration;
+  } else {
+    delete normalized.configuration;
+  }
+  return normalized;
+}
+
+function normalizeRunConfiguration(source) {
+  if (!source || typeof source !== 'object') {
+    return null;
+  }
+
+  const baseConfiguration = isPlainObject(source.configuration) ? source.configuration : {};
+
+  const runType =
+    baseConfiguration.run_type ??
+    baseConfiguration.runType ??
+    source.run_type ??
+    source.runType ??
+    null;
+
+  const modifiers = coerceConfigurationValue(
+    baseConfiguration.modifiers,
+    baseConfiguration.modifiers_json,
+    baseConfiguration.modifiersJson,
+    source.modifiers,
+    source.modifiers_json,
+    source.modifiersJson
+  );
+
+  const rewardBonuses = coerceConfigurationValue(
+    baseConfiguration.reward_bonuses,
+    baseConfiguration.rewardBonuses,
+    baseConfiguration.reward_json,
+    baseConfiguration.rewardJson,
+    source.reward_bonuses,
+    source.rewardBonuses,
+    source.reward_json,
+    source.rewardJson
+  );
+
+  if (runType == null && modifiers == null && rewardBonuses == null) {
+    return null;
+  }
+
+  return {
+    runType: runType ?? null,
+    run_type: runType ?? null,
+    modifiers: modifiers ?? {},
+    rewardBonuses: rewardBonuses ?? {},
+    reward_bonuses: rewardBonuses ?? {},
+  };
+}
+
+function coerceConfigurationValue(...candidates) {
+  for (const candidate of candidates) {
+    if (candidate === undefined || candidate === null) {
+      continue;
+    }
+    const parsed = parseMaybeJSON(candidate);
+    if (parsed === undefined || parsed === null) {
+      continue;
+    }
+    if (isPlainObject(parsed) || Array.isArray(parsed)) {
+      return parsed;
+    }
+    if (typeof parsed === 'string' && parsed.trim() === '') {
+      continue;
+    }
+    return parsed;
+  }
+  return null;
+}
+
+function parseMaybeJSON(value) {
+  if (typeof value !== 'string') {
+    return value;
+  }
+  const trimmed = value.trim();
+  if (!trimmed) {
+    return value;
+  }
+  try {
+    return JSON.parse(trimmed);
+  } catch {
+    return value;
+  }
+}
+
+function isPlainObject(value) {
+  return !!value && typeof value === 'object' && !Array.isArray(value);
 }
 
 /**

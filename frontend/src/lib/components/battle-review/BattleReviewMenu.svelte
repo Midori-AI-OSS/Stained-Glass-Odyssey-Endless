@@ -14,6 +14,7 @@
   let runsStatus = 'idle';
   let runsError = '';
   let selectedRunId = '';
+  let selectedRunSummary = null;
 
   let runDetails = null;
   let runStatus = 'idle';
@@ -22,6 +23,9 @@
   let selectedFightKey = '';
   let selectedBattleIndex = null;
   let fights = [];
+  let runConfiguration = null;
+  let modifierEntries = [];
+  let rewardEntries = [];
 
   let runsController = null;
   let detailsController = null;
@@ -139,6 +143,17 @@
     selectedBattleIndex = match?.battleIndex ?? null;
   }
 
+  $: selectedRunSummary = runs.find((run) => runValue(run) === selectedRunId) || null;
+  $: runConfiguration =
+    runDetails?.run?.configuration ||
+    runDetails?.configuration ||
+    selectedRunSummary?.configuration ||
+    null;
+  $: modifierEntries = configurationEntries(runConfiguration?.modifiers);
+  $: rewardEntries = configurationEntries(
+    runConfiguration?.rewardBonuses ?? runConfiguration?.reward_bonuses
+  );
+
   function handleRunChange(event) {
     selectedRunId = event?.target?.value || '';
   }
@@ -149,6 +164,66 @@
 
   function closeMenu() {
     dispatch('close');
+  }
+
+  function configurationEntries(source) {
+    if (!source) {
+      return [];
+    }
+    if (Array.isArray(source)) {
+      return source.map((entry, index) => {
+        if (isPlainObject(entry)) {
+          const label = entry.label ?? entry.name ?? entry.id ?? `Entry ${index + 1}`;
+          const value =
+            entry.value ?? entry.amount ?? entry.bonus ?? entry.modifier ?? entry.score ?? entry;
+          return [label, value];
+        }
+        return [`Entry ${index + 1}`, entry];
+      });
+    }
+    if (isPlainObject(source)) {
+      return Object.entries(source);
+    }
+    return [['value', source]];
+  }
+
+  function formatConfigValue(value) {
+    if (value === null || value === undefined) {
+      return '—';
+    }
+    if (typeof value === 'number') {
+      return Number.isInteger(value) ? value : value.toFixed(2);
+    }
+    if (typeof value === 'boolean') {
+      return value ? 'Yes' : 'No';
+    }
+    if (Array.isArray(value)) {
+      return value.map((item) => formatConfigValue(item)).join(', ');
+    }
+    if (isPlainObject(value)) {
+      try {
+        return JSON.stringify(value);
+      } catch (error) {
+        return String(value);
+      }
+    }
+    return String(value);
+  }
+
+  function formatRunTypeLabel(value) {
+    if (!value) {
+      return 'Unknown';
+    }
+    const str = String(value).replace(/[_-]+/g, ' ');
+    return str
+      .split(' ')
+      .filter(Boolean)
+      .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+      .join(' ');
+  }
+
+  function isPlainObject(value) {
+    return !!value && typeof value === 'object' && !Array.isArray(value);
   }
 </script>
 
@@ -206,6 +281,38 @@
       {/if}
     </label>
   </section>
+
+  {#if runConfiguration}
+    <section class="run-configuration">
+      <h3>Run Configuration</h3>
+      <div class="config-row">
+        <span class="config-label">Run Type</span>
+        <span class="config-value">{formatRunTypeLabel(runConfiguration.runType ?? runConfiguration.run_type)}</span>
+      </div>
+      {#if modifierEntries.length}
+        <div class="config-subheading">Modifiers</div>
+        <ul class="config-list">
+          {#each modifierEntries as [label, value], index (`modifier-${index}`)}
+            <li>
+              <span class="config-label">{label}</span>
+              <span class="config-value">{formatConfigValue(value)}</span>
+            </li>
+          {/each}
+        </ul>
+      {/if}
+      {#if rewardEntries.length}
+        <div class="config-subheading">Reward Bonuses</div>
+        <ul class="config-list">
+          {#each rewardEntries as [label, value], index (`reward-${index}`)}
+            <li>
+              <span class="config-label">{label}</span>
+              <span class="config-value">{formatConfigValue(value)}</span>
+            </li>
+          {/each}
+        </ul>
+      {/if}
+    </section>
+  {/if}
 
   {#if selectedBattleIndex}
     <section class="review-host">
@@ -309,6 +416,63 @@
 
   .status-text.empty {
     color: rgba(255, 255, 255, 0.7);
+  }
+
+  .run-configuration {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    background: rgba(12, 18, 32, 0.85);
+    border: 1px solid rgba(110, 140, 200, 0.35);
+    border-radius: 8px;
+  }
+
+  .run-configuration h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    letter-spacing: 0.02em;
+  }
+
+  .config-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+    font-size: 0.95rem;
+  }
+
+  .config-subheading {
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 0.75rem;
+    letter-spacing: 0.08em;
+    opacity: 0.75;
+  }
+
+  .config-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+
+  .config-list li {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    font-size: 0.9rem;
+  }
+
+  .config-label {
+    font-weight: 600;
+  }
+
+  .config-value {
+    font-variant-numeric: tabular-nums;
+    text-align: right;
   }
 
   .review-host {
