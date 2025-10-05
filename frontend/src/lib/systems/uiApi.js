@@ -57,7 +57,8 @@ function normalizeStartRunPayload(options) {
     return {
       party: options || ['player'],
       damage_type: '',
-      pressure: 0
+      pressure: 0,
+      metadata_version: null
     };
   }
 
@@ -67,24 +68,28 @@ function normalizeStartRunPayload(options) {
       damageType = '',
       pressure = 0,
       runType = null,
-      modifiers = null
+      modifiers = null,
+      metadataVersion = null
     } = options;
     const normalizedParty = Array.isArray(party) && party.length > 0 ? party : ['player'];
     const normalizedModifiers = normalizeModifiers(modifiers);
     const normalizedPressure = Number.isFinite(Number(pressure)) ? Number(pressure) : 0;
+    const normalizedMetadataVersion = metadataVersion ?? null;
     return {
       party: normalizedParty,
       damage_type: damageType,
       pressure: normalizedPressure,
       run_type: runType || undefined,
-      modifiers: normalizedModifiers
+      modifiers: normalizedModifiers,
+      metadata_version: normalizedMetadataVersion
     };
   }
 
   return {
     party: ['player'],
     damage_type: '',
-    pressure: 0
+    pressure: 0,
+    metadata_version: null
   };
 }
 

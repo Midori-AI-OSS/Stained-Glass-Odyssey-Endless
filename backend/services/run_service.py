@@ -121,6 +121,7 @@ async def start_run(
     pressure: int | None = None,
     run_type: str | None = None,
     modifiers: dict[str, object] | None = None,
+    metadata_version: str | None = None,
 ) -> dict[str, object]:
     """Create a new run and return its initial state."""
     damage_type = (damage_type or "").capitalize()
@@ -182,6 +183,16 @@ async def start_run(
     exp_multiplier = float(reward_bonuses.get("exp_multiplier", 1.0))
     rdr_multiplier = float(reward_bonuses.get("rdr_multiplier", 1.0))
 
+    client_metadata_version: str | None = None
+    if metadata_version is not None:
+        candidate = str(metadata_version).strip()
+        if candidate:
+            client_metadata_version = candidate
+
+    configuration_snapshot = configuration.snapshot.copy()
+    if client_metadata_version is not None:
+        configuration_snapshot["client_version"] = client_metadata_version
+
     exp_multiplier_map: dict[str, float] = {}
     for member, info in zip(party_members, party_info):
         member.exp_multiplier *= exp_multiplier
@@ -195,7 +206,7 @@ async def start_run(
         cards=[],
         rdr=rdr_multiplier,
     )
-    setattr(initial_party, "run_config", configuration.snapshot)
+    setattr(initial_party, "run_config", configuration_snapshot)
     run_type_id = configuration.run_type.get("id")
     if run_type_id == "boss_rush":
         setattr(initial_party, "no_shops", True)
@@ -267,7 +278,7 @@ async def start_run(
                             # Freeze the user level for the duration of this run
                             "user_level": int(get_user_level()),
                             "player": snapshot,
-                            "config": configuration.snapshot,
+                            "config": configuration_snapshot,
                         }
                     ),
                     json.dumps(state),
@@ -294,30 +305,31 @@ async def start_run(
         run_id,
         start_ts,
         member_snapshots,
-        configuration=configuration.snapshot,
+        configuration=configuration_snapshot,
     )
     await log_play_session_start(run_id, "local", start_ts)
-    await log_menu_action(
-        "Run",
-        "started",
-        {
-            "members": members,
-            "damage_type": damage_type,
-            "pressure": pressure_value,
-            "run_id": run_id,
-            "run_type": configuration.run_type.get("id"),
-            "modifiers": configuration.modifiers,
-            "reward_bonuses": {
-                "exp_bonus": reward_bonuses.get("exp_bonus", 0.0),
-                "rdr_bonus": reward_bonuses.get("rdr_bonus", 0.0),
-            },
+    telemetry_payload = {
+        "members": members,
+        "damage_type": damage_type,
+        "pressure": pressure_value,
+        "run_id": run_id,
+        "run_type": configuration.run_type.get("id"),
+        "modifiers": configuration.modifiers,
+        "reward_bonuses": {
+            "exp_bonus": reward_bonuses.get("exp_bonus", 0.0),
+            "rdr_bonus": reward_bonuses.get("rdr_bonus", 0.0),
         },
-    )
+        "metadata_version": configuration_snapshot.get("version"),
+    }
+    if client_metadata_version is not None:
+        telemetry_payload["client_metadata_version"] = client_metadata_version
+
+    await log_menu_action("Run", "started", telemetry_payload)
     return {
         "run_id": run_id,
         "map": state,
         "party": party_info,
-        "configuration": configuration.snapshot,
+        "configuration": configuration_snapshot,
     }
 
 
