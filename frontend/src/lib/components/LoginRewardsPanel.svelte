@@ -209,7 +209,7 @@
             });
           }
           return map;
-        }, new Map())
+        }, new Map()).values()
       )
     : [];
   $: autoDeliveryLabel = status
