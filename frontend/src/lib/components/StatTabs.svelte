@@ -417,23 +417,22 @@
     display: flex;
     align-items: stretch;
     justify-content: flex-end;
-    padding: 0.75rem 0.6rem;
+    padding: 0;
     background: none;
   }
   .upgrade-panel {
-    flex: 0 1 360px;
-    width: min(100%, 360px);
+    flex: 1 1 auto;
+    width: 100%;
     height: 100%;
     padding: 1rem;
-    margin-left: auto;
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
     box-sizing: border-box;
-    background: linear-gradient(0deg, rgba(255,255,255,0.05), rgba(255,255,255,0.05)), var(--glass-bg);
-    box-shadow: var(--glass-shadow);
-    border: var(--glass-border);
-    backdrop-filter: var(--glass-filter);
+    background: none;
+    box-shadow: none;
+    border: none;
+    backdrop-filter: none;
   }
   .upgrade-panel header h3 {
     margin: 0;
