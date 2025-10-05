@@ -226,8 +226,17 @@ describe('RunChooser wizard flow', () => {
       runTypeId: 'boss',
       damageType: 'fire',
       party: ['unit-1', 'unit-2'],
-      modifiers: expect.objectContaining({ pressure: 7, enemy_buff: 3 })
+      modifiers: expect.objectContaining({ pressure: 7, enemy_buff: 3 }),
+      metadataVersion: BASE_METADATA.version
     });
+
+    const presetStore = JSON.parse(localStorage.getItem('run_wizard_recent_presets_v1') || '{}');
+    expect(presetStore?.boss?.[0]?.values).toMatchObject({
+      pressure: 7,
+      enemy_buff: 3,
+      character_stat_down: 0
+    });
+    expect(presetStore?.boss?.[0]?.metadataVersion).toBe(BASE_METADATA.version);
 
     const events = logMenuAction.mock.calls.map(([, eventName]) => eventName);
     expect(events).toContain('metadata_loaded');
@@ -283,5 +292,77 @@ describe('RunChooser wizard flow', () => {
     expect(container.textContent).toContain('Effects: +1% Attack/stack');
     expect(container.textContent).toContain('Effects: -0.1% stats/stack');
     expect(container.textContent).toContain('RDR +5%');
+  });
+
+  test('quick start presets surface recent modifier selections', async () => {
+    const first = render(RunChooser, { props: { runs: [] } });
+
+    await waitFor(() => expect(getRunConfigurationMetadata).toHaveBeenCalled());
+    await tick();
+
+    await fireEvent.click(screen.getByTestId('set-party'));
+    await fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+    await fireEvent.click(screen.getByRole('button', { name: /boss rush/i }));
+    await fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+    await tick();
+
+    const modifierNodes = Array.from(first.container.querySelectorAll('.modifier'));
+    const pressureInput = modifierNodes
+      .find((node) => node.querySelector('.modifier-label')?.textContent?.includes('Pressure'))
+      ?.querySelector('input');
+    const enemyInput = modifierNodes
+      .find((node) => node.querySelector('.modifier-label')?.textContent?.includes('Enemy Buff'))
+      ?.querySelector('input');
+
+    await fireEvent.input(pressureInput, { target: { value: '9' } });
+    await fireEvent.input(enemyInput, { target: { value: '4' } });
+
+    await fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+    await tick();
+    await fireEvent.click(screen.getByRole('button', { name: 'Start Run' }));
+    await tick();
+
+    cleanup();
+    getRunConfigurationMetadata.mockClear();
+    logMenuAction.mockClear();
+    getRunConfigurationMetadata.mockResolvedValue(JSON.parse(JSON.stringify(BASE_METADATA)));
+
+    const second = render(RunChooser, { props: { runs: [] } });
+
+    await waitFor(() => expect(getRunConfigurationMetadata).toHaveBeenCalled());
+    await tick();
+
+    await fireEvent.click(screen.getByTestId('set-party'));
+    await fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+    await fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+    await tick();
+
+    const quickStartButton = await screen.findByRole('button', { name: /Apply preset 1/i });
+    await fireEvent.click(quickStartButton);
+    await tick();
+
+    const secondModifiers = Array.from(second.container.querySelectorAll('.modifier'));
+    const secondPressure = secondModifiers
+      .find((node) => node.querySelector('.modifier-label')?.textContent?.includes('Pressure'))
+      ?.querySelector('input');
+    const secondEnemy = secondModifiers
+      .find((node) => node.querySelector('.modifier-label')?.textContent?.includes('Enemy Buff'))
+      ?.querySelector('input');
+
+    expect(secondPressure?.value).toBe('9');
+    expect(secondEnemy?.value).toBe('4');
+
+    const events = logMenuAction.mock.calls.map(([, eventName]) => eventName);
+    expect(events).toContain('preset_applied');
+
+    await fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+    await tick();
+    await fireEvent.click(screen.getByRole('button', { name: 'Start Run' }));
+    await tick();
+
+    const startPayloads = logMenuAction.mock.calls
+      .filter(([, eventName]) => eventName === 'start_submitted')
+      .map(([, , payload]) => payload);
+    expect(startPayloads[startPayloads.length - 1]).toMatchObject({ quick_start: true });
   });
 });
