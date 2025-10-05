@@ -488,7 +488,7 @@
     const detail = event?.detail || {};
     const providedModifiers = detail.modifiers && typeof detail.modifiers === 'object' ? detail.modifiers : {};
     const pressureFromDetail = Number.isFinite(Number(detail.pressure)) ? Number(detail.pressure) : null;
-    const pressure = pressureFromDetail ?? Number(providedModifiers?.pressure ?? 0) || 0;
+    const pressure = (pressureFromDetail ?? Number(providedModifiers?.pressure ?? 0)) || 0;
     const requestedRunType = detail.runType || detail.run_type || null;
     haltSync = false;
     await primePartySeed();
