@@ -22,6 +22,16 @@
   let lastFetch = 0;
   let autoRefreshTimer = null;
 
+  function getRewardKey(item) {
+    if (item && item.item_id != null) {
+      return `id:${item.item_id}`;
+    }
+    const stars = item?.stars ?? 'unknown-stars';
+    const damage = item?.damage_type ?? 'unknown-damage';
+    const name = item?.name ?? 'unknown-name';
+    return `meta:${stars}::${damage}::${name}`;
+  }
+
   function formatCountdown(totalSeconds) {
     const total = Number.isFinite(totalSeconds) ? Math.max(0, Math.floor(totalSeconds)) : 0;
     const hours = Math.floor(total / 3600);
@@ -179,6 +189,29 @@
   $: streakDays = computeVisibleDays(streak);
   $: resetLabel = formatResetLabel(status?.reset_at);
   $: countdownLabel = formatCountdown(countdownSeconds);
+  $: groupedRewardItems = status?.reward_items?.length
+    ? Array.from(
+        status.reward_items.reduce((map, item) => {
+          const key = getRewardKey(item);
+          const rawQuantity = Number(item?.quantity ?? 1);
+          const baseQuantity = Number.isFinite(rawQuantity) ? Math.max(1, Math.floor(rawQuantity)) : 1;
+          if (map.has(key)) {
+            const existing = map.get(key);
+            map.set(key, {
+              ...existing,
+              quantity: existing.quantity + baseQuantity
+            });
+          } else {
+            map.set(key, {
+              ...item,
+              groupKey: key,
+              quantity: baseQuantity
+            });
+          }
+          return map;
+        }, new Map()).values()
+      )
+    : [];
   $: autoDeliveryLabel = status
     ? status.claimed_today
       ? 'Today\'s bundle has been delivered to your inventory.'
@@ -266,11 +299,11 @@
     </div>
 
     <div class="reward-items" aria-label="Today's reward items">
-      {#if status.reward_items && status.reward_items.length > 0}
-        {#each status.reward_items as item}
+      {#if groupedRewardItems.length > 0}
+        {#each groupedRewardItems as item (item.groupKey)}
           <div
             class="reward-chip"
-            title={`${item?.name || 'Reward'} • ${Math.max(1, Number(item?.stars) || 1)}★ ${String(item?.damage_type || 'Unknown').toUpperCase()}`}
+            title={`${item?.name || 'Reward'} • ${Math.max(1, Number(item?.stars) || 1)}★ ${String(item?.damage_type || 'Unknown').toUpperCase()}${item.quantity > 1 ? ` • ${item.quantity}x` : ''}`}
           >
             <div class="reward-stars" aria-hidden="true">
               {#each Array(Math.max(1, Number(item?.stars) || 1)) as _, idx}
@@ -278,7 +311,13 @@
               {/each}
             </div>
             <div class="reward-meta">
-              <span class="reward-name">{item?.name || `${item?.stars ?? 1}★ ${item?.damage_type || 'Unknown'}`}</span>
+              <span class="reward-name">
+                {item?.name || `${item?.stars ?? 1}★ ${item?.damage_type || 'Unknown'}`}
+                {#if item.quantity > 1}
+                  {' '}
+                  ({item.quantity}x)
+                {/if}
+              </span>
               <span class="reward-type">{(item?.damage_type || '').toUpperCase()} • ID {item?.item_id}</span>
             </div>
           </div>
