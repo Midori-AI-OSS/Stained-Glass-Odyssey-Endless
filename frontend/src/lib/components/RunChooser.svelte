@@ -475,7 +475,11 @@
   </header>
 
   {#if step === 'resume'}
-    <MenuPanel padding="0.25rem" class="resume-panel" {reducedMotion}>
+    <MenuPanel
+      padding="var(--menu-panel-padding-tight, clamp(0.55rem, 1.6vw, 0.9rem))"
+      class="resume-panel"
+      {reducedMotion}
+    >
       {#if normalizedRuns.length > 0}
         <div class="runs" role="list">
           {#each normalizedRuns as run, i}
@@ -533,7 +537,11 @@
       </div>
     </div>
   {:else if step === 'run-type'}
-    <MenuPanel class="run-type-panel" {reducedMotion}>
+    <MenuPanel
+      padding="var(--menu-panel-padding, clamp(0.65rem, 1.8vw, 1.1rem))"
+      class="run-type-panel"
+      {reducedMotion}
+    >
       {#if metadataLoading}
         <p class="loading">Loading configuration...</p>
       {:else if metadataError}
@@ -573,7 +581,11 @@
       <button class="primary" on:click={goToModifiers} disabled={!runTypeId || metadataLoading || metadataError}>Next</button>
     </div>
   {:else if step === 'modifiers'}
-    <MenuPanel class="modifier-panel" {reducedMotion}>
+    <MenuPanel
+      padding="var(--menu-panel-padding, clamp(0.65rem, 1.8vw, 1.1rem))"
+      class="modifier-panel"
+      {reducedMotion}
+    >
       {#if metadataLoading}
         <p class="loading">Loading configuration...</p>
       {:else if metadataError}
@@ -652,7 +664,11 @@
       <button class="primary" on:click={goToConfirm} disabled={metadataLoading || metadataError}>Next</button>
     </div>
   {:else if step === 'confirm'}
-    <MenuPanel class="confirm-panel" {reducedMotion}>
+    <MenuPanel
+      padding="var(--menu-panel-padding, clamp(0.65rem, 1.8vw, 1.1rem))"
+      class="confirm-panel"
+      {reducedMotion}
+    >
       <section>
         <h3>Party</h3>
         <ul>
@@ -709,28 +725,46 @@
 
 <style>
   .wizard {
+    --wizard-max-width: min(960px, 100%);
+    --wizard-section-gap: clamp(0.65rem, 1.8vw, 1.1rem);
+    --wizard-item-gap: clamp(0.45rem, 1.4vw, 0.8rem);
+    --wizard-action-gap: clamp(0.55rem, 1.6vw, 0.95rem);
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
-    width: min(960px, 92vw);
+    gap: var(--wizard-section-gap);
+    width: var(--wizard-max-width);
+    max-width: var(--wizard-max-width);
+    flex: 1 1 auto;
+    align-self: center;
+    margin: 0 auto;
+    min-height: 0;
+  }
+
+  .wizard > * {
+    min-width: 0;
   }
 
   .wizard-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 1rem;
+    gap: clamp(0.6rem, 1.6vw, 1rem);
+    flex-wrap: wrap;
   }
 
   .wizard-header h2 {
     margin: 0;
-    font-size: 1.5rem;
+    font-size: clamp(1.25rem, 2.2vw, 1.6rem);
     font-weight: 600;
+    flex: 1 1 auto;
+    min-width: min(12rem, 100%);
   }
 
   .step-indicator {
     display: inline-flex;
-    gap: 0.4rem;
+    flex-wrap: wrap;
+    gap: clamp(0.35rem, 1vw, 0.55rem);
+    justify-content: flex-end;
   }
 
   .step-indicator span {
@@ -756,55 +790,79 @@
   }
 
   .resume-panel {
-    min-width: 520px;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .resume-panel :global(.panel-content) {
+    display: flex;
+    flex-direction: column;
+    gap: var(--wizard-section-gap);
   }
 
   .runs {
     display: flex;
     flex-direction: column;
-    gap: 0.4rem;
-    margin-bottom: 0.5rem;
+    gap: var(--wizard-item-gap);
+    margin: 0;
   }
 
   .run-item {
     display: flex;
-    gap: 0.5rem;
-    align-items: center;
+    gap: clamp(0.55rem, 1.4vw, 0.9rem);
+    align-items: flex-start;
     background: rgba(255, 255, 255, 0.06);
-    padding: 0.35rem 0.5rem;
+    padding: clamp(0.5rem, 1.5vw, 0.85rem);
+    min-width: 0;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+
+  .run-item input {
+    margin-top: 0.25rem;
   }
 
   .summary {
     display: flex;
     flex-direction: column;
-    gap: 0.15rem;
+    gap: 0.2rem;
+    flex: 1 1 auto;
+    min-width: 0;
   }
 
   .id {
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
     font-size: 0.8rem;
     opacity: 0.9;
+    word-break: break-word;
   }
 
   .details {
     font-size: 0.85rem;
     opacity: 0.85;
+    line-height: 1.35;
   }
 
   .actions {
     display: flex;
     justify-content: flex-end;
-    gap: 0.5rem;
-    margin-top: 0.25rem;
+    gap: var(--wizard-action-gap);
+    margin-top: clamp(0.35rem, 1vw, 0.6rem);
+    flex-wrap: wrap;
   }
 
   .icon-btn {
-    background: rgba(255, 255, 255, 0.10);
+    background: rgba(255, 255, 255, 0.1);
     border: none;
     border-radius: 0;
-    padding: 0.45rem 0.75rem;
+    padding: clamp(0.45rem, 1.4vw, 0.75rem) clamp(0.75rem, 2vw, 1.2rem);
     cursor: pointer;
     color: inherit;
+    transition: background 0.18s ease;
+  }
+
+  .actions .icon-btn {
+    flex: 1 1 160px;
+    min-width: min(220px, 100%);
   }
 
   .icon-btn:hover {
@@ -823,21 +881,26 @@
   .party-step {
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
+    gap: var(--wizard-section-gap);
   }
 
   .navigation {
     display: flex;
     justify-content: flex-end;
-    gap: 0.5rem;
+    align-items: center;
+    gap: var(--wizard-action-gap);
+    flex-wrap: wrap;
+    margin-top: clamp(0.35rem, 1vw, 0.6rem);
   }
 
   .navigation button {
-    padding: 0.5rem 1.25rem;
+    padding: clamp(0.5rem, 1.5vw, 0.85rem) clamp(1rem, 2.6vw, 1.6rem);
     border: none;
     cursor: pointer;
     border-radius: 0;
     font-size: 0.95rem;
+    flex: 1 1 160px;
+    min-width: min(220px, 100%);
   }
 
   .navigation .ghost {
@@ -859,16 +922,20 @@
   .run-types {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 0.75rem;
+    gap: var(--wizard-item-gap);
   }
 
   .run-type-card {
     background: rgba(255, 255, 255, 0.06);
     border: 1px solid transparent;
-    padding: 0.75rem;
+    padding: clamp(0.65rem, 1.6vw, 1rem);
     text-align: left;
     cursor: pointer;
     color: inherit;
+    display: flex;
+    flex-direction: column;
+    gap: clamp(0.35rem, 1vw, 0.6rem);
+    min-width: 0;
   }
 
   .run-type-card:hover,
@@ -879,19 +946,21 @@
 
   .card-title {
     font-weight: 600;
-    margin-bottom: 0.25rem;
+    margin: 0;
   }
 
   .card-description {
     font-size: 0.9rem;
     opacity: 0.85;
     margin: 0;
+    line-height: 1.45;
   }
 
   .card-defaults {
-    margin-top: 0.5rem;
+    margin: 0;
     font-size: 0.85rem;
     opacity: 0.85;
+    line-height: 1.35;
   }
 
   .card-defaults ul {
@@ -902,15 +971,16 @@
   .modifier-panel {
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
+    gap: var(--wizard-section-gap);
   }
 
   .modifier-toolbar {
     display: flex;
     flex-direction: column;
-    gap: 0.4rem;
+    gap: clamp(0.35rem, 1vw, 0.6rem);
     background: rgba(255, 255, 255, 0.05);
-    padding: 0.5rem 0.75rem;
+    padding: clamp(0.55rem, 1.6vw, 0.9rem) clamp(0.7rem, 2vw, 1.2rem);
+    border: 1px solid rgba(255, 255, 255, 0.08);
   }
 
   .pressure-value {
@@ -927,25 +997,27 @@
   .modifiers {
     display: flex;
     flex-direction: column;
-    gap: 0.65rem;
-    max-height: 360px;
+    gap: var(--wizard-item-gap);
+    max-height: clamp(260px, 50vh, 420px);
     overflow-y: auto;
     padding-right: 0.35rem;
   }
 
   .modifier {
     background: rgba(255, 255, 255, 0.05);
-    padding: 0.6rem 0.75rem;
+    padding: clamp(0.6rem, 1.6vw, 1rem);
     display: flex;
     flex-direction: column;
-    gap: 0.4rem;
+    gap: clamp(0.35rem, 1vw, 0.55rem);
+    border: 1px solid rgba(255, 255, 255, 0.08);
   }
 
   .modifier-header {
     display: flex;
     justify-content: space-between;
-    align-items: center;
-    gap: 0.75rem;
+    align-items: flex-start;
+    gap: clamp(0.45rem, 1.2vw, 0.75rem);
+    flex-wrap: wrap;
   }
 
   .modifier-label {
@@ -957,6 +1029,13 @@
     opacity: 0.7;
     margin-left: 0.4rem;
     text-transform: uppercase;
+  }
+
+  .modifier-inputs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: clamp(0.35rem, 1vw, 0.6rem);
+    align-items: center;
   }
 
   .modifier-inputs input {
@@ -971,18 +1050,19 @@
     font-size: 0.85rem;
     opacity: 0.82;
     margin: 0;
+    line-height: 1.4;
   }
 
   .reward-preview {
     display: flex;
     flex-direction: column;
-    gap: 0.4rem;
+    gap: clamp(0.4rem, 1.2vw, 0.7rem);
   }
 
   .preview-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-    gap: 0.5rem;
+    gap: var(--wizard-item-gap);
   }
 
   .preview-label {
@@ -998,16 +1078,24 @@
 
   .confirm-panel {
     display: grid;
-    gap: 0.75rem;
+    gap: var(--wizard-section-gap);
   }
 
   .confirm-panel section {
     background: rgba(255, 255, 255, 0.05);
-    padding: 0.75rem;
+    padding: clamp(0.65rem, 1.6vw, 1rem);
+    display: flex;
+    flex-direction: column;
+    gap: clamp(0.35rem, 1vw, 0.6rem);
   }
 
   .confirm-panel h3 {
-    margin-top: 0;
+    margin: 0;
+  }
+
+  .confirm-panel ul,
+  .confirm-panel p {
+    margin: 0;
   }
 
   .loading {
@@ -1017,7 +1105,7 @@
   .error {
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: clamp(0.45rem, 1.2vw, 0.7rem);
   }
 
   .sr-only {
@@ -1030,5 +1118,53 @@
     clip: rect(0, 0, 0, 0);
     white-space: nowrap;
     border: 0;
+  }
+
+  @media (min-width: 768px) {
+    .actions .icon-btn,
+    .navigation button {
+      flex: 0 0 auto;
+      min-width: 0;
+    }
+  }
+
+  @media (max-width: 720px) {
+    .wizard {
+      --wizard-max-width: min(100%, 640px);
+    }
+
+    .wizard-header {
+      align-items: flex-start;
+    }
+
+    .step-indicator {
+      justify-content: flex-start;
+    }
+
+    .actions,
+    .navigation {
+      justify-content: stretch;
+    }
+
+    .actions .icon-btn,
+    .navigation button {
+      flex: 1 1 120px;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .step-indicator span {
+      width: 1.5rem;
+      height: 1.5rem;
+      font-size: 0.8rem;
+    }
+
+    .run-types {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .modifier-inputs input {
+      width: min(100%, 5.5rem);
+    }
   }
 </style>
