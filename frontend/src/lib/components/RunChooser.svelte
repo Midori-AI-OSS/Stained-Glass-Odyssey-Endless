@@ -717,7 +717,7 @@
 <style>
   .wizard {
     --wizard-max-width: 100%;
-    --wizard-inner-max-width: min(100%, 960px);
+    --wizard-inner-max-width: 100%;
     --wizard-section-gap: clamp(0.65rem, 1.8vw, 1.1rem);
     --wizard-item-gap: clamp(0.45rem, 1.4vw, 0.8rem);
     --wizard-action-gap: clamp(0.55rem, 1.6vw, 0.95rem);
