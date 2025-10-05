@@ -404,9 +404,11 @@
   select {
     appearance: none;
     background: color-mix(in oklab, var(--glass-bg) 72%, rgba(148, 163, 184, 0.25) 28%);
+    background-color: color-mix(in oklab, var(--glass-bg) 72%, rgba(148, 163, 184, 0.25) 28%);
     border: 1px solid rgba(148, 163, 184, 0.45);
     box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.3);
-    color: #f1f5f9;
+    color: #f8fafc;
+    color-scheme: dark;
     padding: 0.5rem 0.65rem;
     font-size: 0.95rem;
     transition: border-color 0.18s ease, box-shadow 0.18s ease, color 0.18s ease;
@@ -421,6 +423,24 @@
   select:focus-visible {
     outline: 2px solid rgba(125, 211, 252, 0.9);
     outline-offset: 2px;
+  }
+
+  select option,
+  select optgroup {
+    background-color: color-mix(in oklab, var(--glass-bg) 85%, rgba(15, 23, 42, 0.55) 15%);
+    color: #e2e8f0;
+    font: inherit;
+  }
+
+  select option:hover,
+  select option:checked,
+  select option:focus {
+    background-color: color-mix(in oklab, rgba(56, 189, 248, 0.28) 45%, var(--glass-bg) 55%);
+    color: #f8fafc;
+  }
+
+  select option:disabled {
+    color: rgba(148, 163, 184, 0.65);
   }
 
   .loading-line {
