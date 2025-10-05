@@ -39,9 +39,9 @@
 
   const hasOwn = (obj, key) => Object.prototype.hasOwnProperty.call(obj, key);
 
-  const stepIndex = () => STEP_SEQUENCE.indexOf(step);
-
   let normalizedRuns = [];
+  let visibleSteps = STEP_SEQUENCE;
+  let currentStepIndex = 0;
 
   $: normalizedRuns = Array.isArray(runs) ? runs : [];
   $: if (normalizedRuns.length === 0 && step === 'resume') {
@@ -53,8 +53,10 @@
     resumeIndex = -1;
   }
 
-  $: totalSteps = STEP_SEQUENCE.length - (normalizedRuns.length > 0 ? 0 : 1);
   $: hasRuns = normalizedRuns.length > 0;
+  $: visibleSteps = STEP_SEQUENCE.filter((key) => !(key === 'resume' && !hasRuns));
+  $: totalSteps = visibleSteps.length;
+  $: currentStepIndex = Math.max(0, visibleSteps.indexOf(step));
   $: activeRunType = runTypes.find((rt) => rt.id === runTypeId) || runTypes[0] || null;
   $: selectedModifiers = modifiers.map((mod) => ({
     ...mod,
@@ -464,14 +466,10 @@
   <header class="wizard-header">
     <h2>{stepTitle}</h2>
     <div class="step-indicator" aria-hidden="true">
-      {#each STEP_SEQUENCE as key, index}
-        {#if key === 'resume' && !hasRuns}
-          <!-- Skip resume indicator when no runs exist -->
-        {:else}
-          <span class:selected={key === step} class:done={index < stepIndex()}>
-            {index + 1}
-          </span>
-        {/if}
+      {#each visibleSteps as key, index}
+        <span class:selected={key === step} class:done={index < currentStepIndex}>
+          {index + 1}
+        </span>
       {/each}
     </div>
   </header>
