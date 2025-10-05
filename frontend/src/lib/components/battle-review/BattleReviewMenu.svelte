@@ -239,15 +239,15 @@
   </header>
 
   <section class="selectors">
-    <label>
+    <label class="selector-card">
       <span class="label-text">Run</span>
       {#if runsStatus === 'loading'}
-        <div class="loading-line">
+        <div class="loading-line" role="status" aria-live="polite">
           <TripleRingSpinner {reducedMotion} />
           <span>Loading runs…</span>
         </div>
       {:else if runsStatus === 'error'}
-        <div class="status-text error">{runsError}</div>
+        <div class="status-text error" role="alert">{runsError}</div>
       {:else if runs.length === 0}
         <div class="status-text empty">No tracked runs found.</div>
       {:else}
@@ -259,15 +259,15 @@
       {/if}
     </label>
 
-    <label>
+    <label class="selector-card">
       <span class="label-text">Fight</span>
       {#if runStatus === 'loading' && runsStatus !== 'error'}
-        <div class="loading-line">
+        <div class="loading-line" role="status" aria-live="polite">
           <TripleRingSpinner {reducedMotion} />
           <span>Loading battles…</span>
         </div>
       {:else if runStatus === 'error'}
-        <div class="status-text error">{runError}</div>
+        <div class="status-text error" role="alert">{runError}</div>
       {:else if fights.length === 0}
         <div class="status-text empty">
           {selectedRunId ? 'No fights recorded for this run.' : 'Select a run to view fights.'}
@@ -328,7 +328,7 @@
 <style>
   :global(.battle-review-menu) {
     gap: 1rem;
-    color: #fff;
+    color: #e2e8f0;
   }
 
   .menu-header {
@@ -346,19 +346,25 @@
   }
 
   .close-btn {
-    background: rgba(255, 255, 255, 0.16);
-    border: 1px solid rgba(255, 255, 255, 0.35);
-    color: inherit;
-    padding: 0.35rem 0.8rem;
+    appearance: none;
+    border: 1px solid rgba(148, 163, 184, 0.55);
+    background: color-mix(in oklab, var(--glass-bg) 78%, rgba(148, 163, 184, 0.32) 22%);
+    color: #f0f9ff;
+    padding: 0.38rem 0.9rem;
     cursor: pointer;
-    border-radius: 4px;
-    font-size: 0.95rem;
-    transition: background 0.2s ease, box-shadow 0.2s ease;
+    font-size: 0.9rem;
+    transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease;
   }
 
   .close-btn:hover {
-    background: rgba(120, 180, 255, 0.25);
-    box-shadow: 0 2px 8px rgba(0, 40, 120, 0.18);
+    background: color-mix(in oklab, rgba(56, 189, 248, 0.28) 45%, var(--glass-bg) 55%);
+    border-color: rgba(125, 211, 252, 0.65);
+    color: #f8fafc;
+  }
+
+  .close-btn:focus-visible {
+    outline: 2px solid rgba(125, 211, 252, 0.9);
+    outline-offset: 2px;
   }
 
   .selectors {
@@ -376,8 +382,18 @@
   label {
     display: flex;
     flex-direction: column;
-    gap: 0.35rem;
+    gap: 0.5rem;
     font-size: 0.95rem;
+  }
+
+  .selector-card {
+    padding: 0.85rem;
+    background: linear-gradient(0deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.03)), var(--glass-bg);
+    border: var(--glass-border);
+    box-shadow: var(--glass-shadow);
+    backdrop-filter: var(--glass-filter);
+    width: 100%;
+    box-sizing: border-box;
   }
 
   .label-text {
@@ -386,13 +402,25 @@
   }
 
   select {
-    background: rgba(20, 30, 55, 0.9);
-    border: 1px solid rgba(130, 160, 220, 0.4);
-    color: inherit;
-    border-radius: 6px;
-    padding: 0.5rem 0.6rem;
-    font-size: 0.95rem;
     appearance: none;
+    background: color-mix(in oklab, var(--glass-bg) 72%, rgba(148, 163, 184, 0.25) 28%);
+    border: 1px solid rgba(148, 163, 184, 0.45);
+    box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.3);
+    color: #f1f5f9;
+    padding: 0.5rem 0.65rem;
+    font-size: 0.95rem;
+    transition: border-color 0.18s ease, box-shadow 0.18s ease, color 0.18s ease;
+    width: 100%;
+  }
+
+  select:hover {
+    border-color: rgba(125, 211, 252, 0.65);
+    box-shadow: inset 0 0 0 1px rgba(56, 189, 248, 0.22);
+  }
+
+  select:focus-visible {
+    outline: 2px solid rgba(125, 211, 252, 0.9);
+    outline-offset: 2px;
   }
 
   .loading-line {
@@ -400,6 +428,9 @@
     align-items: center;
     gap: 0.5rem;
     min-height: 2.2rem;
+    padding: 0.45rem 0.5rem;
+    background: color-mix(in oklab, rgba(148, 163, 184, 0.35) 25%, transparent 75%);
+    border: 1px solid rgba(148, 163, 184, 0.35);
   }
 
   .status-text {
@@ -408,24 +439,30 @@
     min-height: 2.2rem;
     display: flex;
     align-items: center;
+    padding: 0.45rem 0.5rem;
+    background: color-mix(in oklab, rgba(148, 163, 184, 0.22) 20%, transparent 80%);
+    border: 1px solid rgba(148, 163, 184, 0.35);
   }
 
   .status-text.error {
-    color: #f8a0a0;
+    color: #fecaca;
+    border-color: rgba(239, 68, 68, 0.45);
+    background: linear-gradient(0deg, rgba(239, 68, 68, 0.12), rgba(239, 68, 68, 0.04)), var(--glass-bg);
   }
 
   .status-text.empty {
-    color: rgba(255, 255, 255, 0.7);
+    color: rgba(226, 232, 240, 0.8);
   }
 
   .run-configuration {
     display: flex;
     flex-direction: column;
     gap: 0.75rem;
-    padding: 0.75rem;
-    background: rgba(12, 18, 32, 0.85);
-    border: 1px solid rgba(110, 140, 200, 0.35);
-    border-radius: 8px;
+    padding: 0.9rem 1rem;
+    background: linear-gradient(0deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.03)), var(--glass-bg);
+    border: var(--glass-border);
+    box-shadow: var(--glass-shadow);
+    backdrop-filter: var(--glass-filter);
   }
 
   .run-configuration h3 {
@@ -483,8 +520,9 @@
   }
 
   .review-host :global(.battle-review-panel) {
-    background: rgba(15, 20, 35, 0.78);
-    border: 1px solid rgba(110, 140, 200, 0.35);
-    box-shadow: 0 18px 42px rgba(5, 10, 25, 0.6);
+    background: linear-gradient(0deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.02)), var(--glass-bg);
+    border: var(--glass-border);
+    box-shadow: var(--glass-shadow);
+    backdrop-filter: var(--glass-filter);
   }
 </style>
