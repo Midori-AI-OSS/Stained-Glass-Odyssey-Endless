@@ -318,7 +318,6 @@
                   ({item.quantity}x)
                 {/if}
               </span>
-              <span class="reward-type">{(item?.damage_type || '').toUpperCase()} • ID {item?.item_id}</span>
             </div>
           </div>
         {/each}
