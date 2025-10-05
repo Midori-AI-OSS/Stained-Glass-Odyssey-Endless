@@ -144,6 +144,8 @@ def serialize_shop_payload(
             "metadata_hash": context.metadata_hash,
             "shop_multiplier": context.shop_multiplier,
             "shop_tax_multiplier": context.shop_tax_multiplier,
+            "shop_variance": list(context.shop_variance),
+            "encounter_slot_bonus": context.encounter_slot_bonus,
         }
     config_snapshot = getattr(party, "run_config", None)
     if isinstance(config_snapshot, dict):
@@ -267,6 +269,12 @@ class ShopRoom(Room):
         self.node.items_bought = items_bought
 
         context = getattr(self.node, "run_modifier_context", None)
+        if isinstance(context, dict):
+            try:
+                context = RunModifierContext.from_dict(context)
+                setattr(self.node, "run_modifier_context", context)
+            except Exception:
+                context = None
         if context is None:
             context = getattr(party, "run_modifier_context", None)
             if context is not None:

@@ -4,9 +4,12 @@ from dataclasses import asdict
 from dataclasses import dataclass
 from random import Random
 from typing import TYPE_CHECKING
+from typing import Any
 from typing import ClassVar
+from typing import Mapping
 
 if TYPE_CHECKING:  # pragma: no cover - import only for type checking
+    from services.run_configuration import RunModifierContext
     from .party import Party
 
 
@@ -18,6 +21,8 @@ class MapNode:
     index: int
     loop: int
     pressure: int
+    metadata_hash: str | None = None
+    modifier_context: Mapping[str, Any] | None = None
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -31,21 +36,55 @@ class MapNode:
             floor=data.get('floor', 1),
             index=data.get('index', 0),
             loop=data.get('loop', 1),
-            pressure=data.get('pressure', 0)
+            pressure=data.get('pressure', 0),
+            metadata_hash=data.get('metadata_hash'),
+            modifier_context=data.get('modifier_context'),
         )
 
 
 class MapGenerator:
     rooms_per_floor: ClassVar[int] = 10
 
-    def __init__(self, seed: str, floor: int = 1, loop: int = 1, pressure: int = 0) -> None:
+    def __init__(
+        self,
+        seed: str,
+        *,
+        floor: int = 1,
+        loop: int = 1,
+        pressure: int = 0,
+        modifier_context: "RunModifierContext | Mapping[str, Any] | None" = None,
+        configuration: Mapping[str, Any] | None = None,
+    ) -> None:
         self._rand = Random(seed)
         self.floor = floor
         self.loop = loop
         self.pressure = pressure
+        self._raw_context: Mapping[str, Any] | None = None
+        if modifier_context is not None:
+            context_dict: Mapping[str, Any] | None = None
+            if hasattr(modifier_context, "to_dict"):
+                try:
+                    context_dict = modifier_context.to_dict()  # type: ignore[attr-defined]
+                except Exception:  # pragma: no cover - defensive
+                    context_dict = None
+            elif isinstance(modifier_context, Mapping):
+                context_dict = dict(modifier_context)
+
+            if context_dict is not None:
+                self._raw_context = context_dict
+            try:
+                from services.run_configuration import RunModifierContext  # local import to avoid cycle
+
+                if isinstance(modifier_context, RunModifierContext):
+                    self.pressure = modifier_context.pressure
+                    if self._raw_context is None:
+                        self._raw_context = modifier_context.to_dict()
+            except Exception:  # pragma: no cover - defensive import guard
+                pass
+        self.configuration = dict(configuration or {})
 
     def generate_floor(self, party: Party | None = None) -> list[MapNode]:
-        if party is not None and self._is_boss_rush(party):
+        if self._is_boss_rush(party):
             return self._generate_boss_rush_floor()
 
         nodes: list[MapNode] = []
@@ -58,16 +97,18 @@ class MapGenerator:
                 index=index,
                 loop=self.loop,
                 pressure=self.pressure,
+                metadata_hash=self._raw_context.get("metadata_hash") if self._raw_context else None,
+                modifier_context=self._raw_context,
             )
         )
         index += 1
         middle = self.rooms_per_floor - 2
         suppressed: set[str] = set()
+        if self._disable_room("shop", party):
+            suppressed.add("shop")
+        if self._disable_room("rest", party):
+            suppressed.add("rest")
         if party is not None:
-            if getattr(party, "no_shops", False):
-                suppressed.add("shop")
-            if getattr(party, "no_rests", False):
-                suppressed.add("rest")
             relics = getattr(party, "relics", [])
             if isinstance(relics, list) and "null_lantern" in relics:
                 suppressed.update({"shop", "rest"})
@@ -110,6 +151,8 @@ class MapGenerator:
                     index=index,
                     loop=self.loop,
                     pressure=self.pressure,
+                    metadata_hash=self._raw_context.get("metadata_hash") if self._raw_context else None,
+                    modifier_context=self._raw_context,
                 )
             )
             index += 1
@@ -121,6 +164,8 @@ class MapGenerator:
                 index=index,
                 loop=self.loop,
                 pressure=self.pressure,
+                metadata_hash=self._raw_context.get("metadata_hash") if self._raw_context else None,
+                modifier_context=self._raw_context,
             )
         )
         return nodes
@@ -137,6 +182,8 @@ class MapGenerator:
                     index=index,
                     loop=self.loop,
                     pressure=self.pressure,
+                    metadata_hash=self._raw_context.get("metadata_hash") if self._raw_context else None,
+                    modifier_context=self._raw_context,
                 )
             )
         return nodes
@@ -152,3 +199,22 @@ class MapGenerator:
             elif isinstance(run_type, str) and run_type == "boss_rush":
                 return True
         return bool(getattr(party, "boss_rush", False))
+
+    def _disable_room(self, room_type: str, party: Party | None) -> bool:
+        run_type = self.configuration.get("run_type")
+        run_type_id: str | None = None
+        if isinstance(run_type, Mapping):
+            candidate = run_type.get("id")
+            if isinstance(candidate, str):
+                run_type_id = candidate
+        elif isinstance(run_type, str):
+            run_type_id = run_type
+
+        if run_type_id == "boss_rush" and room_type in {"shop", "rest"}:
+            return True
+
+        if party is not None:
+            flag_name = f"no_{room_type}s"
+            if getattr(party, flag_name, False):
+                return True
+        return False

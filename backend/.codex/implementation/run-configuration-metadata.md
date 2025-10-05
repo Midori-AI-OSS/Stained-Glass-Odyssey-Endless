@@ -49,7 +49,12 @@ payload, and the legacy `pressure` fallback. The helper:
 
 `RunConfigurationSelection.snapshot` is serialised directly into the
 `runs.party` JSON under the `config` key and returned to the frontend as
-`configuration` from `start_run`.
+`configuration` from `start_run`. The helper also builds a
+`RunModifierContext` derived from the snapshot so downstream systems can read
+foe stat multipliers, encounter slot bonuses, shop/tax multipliers, and player
+stat penalties without re-validating the metadata payload. The context is
+persisted alongside the map state and stamped onto generated nodes via a
+metadata hash for analytics.
 
 ## Reward Application
 

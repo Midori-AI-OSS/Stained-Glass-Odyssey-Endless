@@ -196,6 +196,40 @@ async def start_run(
 
     modifier_context = build_run_modifier_context(configuration_snapshot)
 
+    player_stat_multiplier = float(modifier_context.player_stat_multiplier or 1.0)
+    if player_stat_multiplier != 1.0:
+        base_stats = (
+            "max_hp",
+            "atk",
+            "defense",
+            "crit_rate",
+            "crit_damage",
+            "effect_hit_rate",
+            "mitigation",
+            "regain",
+            "dodge_odds",
+            "effect_resistance",
+            "vitality",
+            "spd",
+        )
+        for member in party_members:
+            for stat_name in base_stats:
+                try:
+                    current = member.get_base_stat(stat_name)
+                except Exception:
+                    continue
+                try:
+                    scaled = current * player_stat_multiplier
+                except Exception:
+                    continue
+                if stat_name in {"max_hp", "atk", "defense", "regain", "spd"}:
+                    scaled = int(max(0, round(scaled)))
+                member.set_base_stat(stat_name, scaled)
+            try:
+                member.hp = member.max_hp
+            except Exception:
+                pass
+
     exp_multiplier_map: dict[str, float] = {}
     for member, info in zip(party_members, party_info):
         member.exp_multiplier *= exp_multiplier
@@ -213,12 +247,18 @@ async def start_run(
     setattr(initial_party, "run_modifier_context", modifier_context)
     run_type_id = configuration.run_type.get("id")
     if run_type_id == "boss_rush":
-        setattr(initial_party, "no_shops", True)
-        setattr(initial_party, "no_rests", True)
         setattr(initial_party, "boss_rush", True)
 
-    generator = MapGenerator(run_id, pressure=pressure_value)
+    generator = MapGenerator(
+        run_id,
+        pressure=pressure_value,
+        modifier_context=modifier_context,
+        configuration=configuration_snapshot,
+    )
     nodes = generator.generate_floor(party=initial_party)
+    for node in nodes:
+        setattr(node, "run_modifier_context", modifier_context)
+        setattr(node, "metadata_hash", modifier_context.metadata_hash)
 
     boss_choice = None
     if initial_party.members and nodes:
@@ -235,6 +275,8 @@ async def start_run(
         "total_rooms_cleared": 0,
         "floors_cleared": 0,
         "current_pressure": int(pressure_value or 0),
+        "modifier_context": modifier_context.to_dict(),
+        "run_configuration": configuration_snapshot,
     }
     if boss_choice is not None and nodes:
         state["floor_boss"] = {
@@ -327,13 +369,20 @@ async def start_run(
         "metadata_version": configuration_snapshot.get("version"),
         "derived_effects": {
             "shop_multiplier": modifier_context.shop_multiplier,
+            "shop_tax_multiplier": modifier_context.shop_tax_multiplier,
+            "shop_variance": list(modifier_context.shop_variance),
             "foe_stat_multipliers": modifier_context.foe_stat_multipliers,
             "foe_stat_deltas": modifier_context.foe_stat_deltas,
             "player_stat_multiplier": modifier_context.player_stat_multiplier,
             "elite_spawn_bonus_pct": modifier_context.elite_spawn_bonus_pct,
             "glitched_spawn_bonus_pct": modifier_context.glitched_spawn_bonus_pct,
             "prime_spawn_bonus_pct": modifier_context.prime_spawn_bonus_pct,
+            "encounter_slot_bonus": modifier_context.encounter_slot_bonus,
+            "pressure_defense_floor": modifier_context.pressure_defense_floor,
+            "pressure_defense_min_roll": modifier_context.pressure_defense_min_roll,
+            "pressure_defense_max_roll": modifier_context.pressure_defense_max_roll,
             "metadata_hash": modifier_context.metadata_hash,
+            "modifier_stacks": modifier_context.modifier_stacks,
         },
     }
     if client_metadata_version is not None:

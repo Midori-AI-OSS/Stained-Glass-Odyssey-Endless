@@ -21,6 +21,7 @@ from autofighter.rooms.foes.scaling import enforce_thresholds
 from autofighter.rooms.foes.selector import _choose_template
 from autofighter.rooms.foes.selector import _desired_count
 from autofighter.rooms.foes.selector import _sample_templates
+from autofighter.rooms.foes.selector import _weight_for_template
 from autofighter.stats import Stats
 from plugins.characters.foe_base import FoeBase
 
@@ -66,6 +67,7 @@ class FoeFactory:
             self._player_templates,
             self._adjectives,
         ) = load_catalog()
+        self._weight_for_template = _weight_for_template
 
     @property
     def templates(self) -> Mapping[str, SpawnTemplate]:
@@ -116,12 +118,25 @@ class FoeFactory:
                 config["pressure_defense_floor"] = per_stack_floor
             except Exception:
                 pass
-            pressure_defense_min_roll = getattr(context, "pressure_defense_min_roll", None)
-            if pressure_defense_min_roll is not None:
-                config["pressure_defense_min_roll"] = pressure_defense_min_roll
-            pressure_defense_max_roll = getattr(context, "pressure_defense_max_roll", None)
-            if pressure_defense_max_roll is not None:
-                config["pressure_defense_max_roll"] = pressure_defense_max_roll
+            try:
+                config["pressure_defense_min_roll"] = float(context.pressure_defense_min_roll)
+            except Exception:
+                pass
+            try:
+                config["pressure_defense_max_roll"] = float(context.pressure_defense_max_roll)
+            except Exception:
+                pass
+            try:
+                config["pressure_spawn_base"] = int(config.get("pressure_spawn_base", 1)) + max(int(context.encounter_slot_bonus), 0)
+            except Exception:
+                pass
+            speed_multiplier = context.foe_stat_multipliers.get("spd") if context.foe_stat_multipliers else None
+            if speed_multiplier:
+                try:
+                    base_actions = int(config.get("max_actions_per_turn", 1))
+                    config["max_actions_per_turn"] = max(1, min(5, round(base_actions * speed_multiplier)))
+                except Exception:
+                    pass
         elif pressure_override is None:
             pressure_override = getattr(node, "pressure", 0)
         prime_chance, glitched_chance = self.calculate_rank_probabilities(
@@ -177,6 +192,7 @@ class FoeFactory:
             node,
             party,
             config=config,
+            context=context,
         )
         templates = _sample_templates(
             desired,
@@ -263,6 +279,14 @@ class FoeFactory:
             context = getattr(node, "run_modifier_context", None)
 
         cumulative_rooms = calculate_cumulative_rooms(node)
+        baseline_stats: dict[str, float] = {}
+        for key in ("max_hp", "atk", "defense"):
+            try:
+                value = getattr(obj, key)
+            except Exception:
+                value = None
+            if isinstance(value, (int, float)):
+                baseline_stats[key] = float(value)
         config = dict(self.config)
         if context is not None:
             try:
@@ -295,6 +319,16 @@ class FoeFactory:
             cumulative_rooms=cumulative_rooms,
             foe_debuff=foe_debuff,
         )
+        for stat_name, baseline in baseline_stats.items():
+            try:
+                current = getattr(obj, stat_name)
+            except Exception:
+                continue
+            if isinstance(current, (int, float)) and current < baseline:
+                try:
+                    obj.set_base_stat(stat_name, baseline)
+                except Exception:
+                    continue
         if context is not None:
             apply_permanent_scaling(
                 obj,
