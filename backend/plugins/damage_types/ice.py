@@ -16,19 +16,32 @@ class Ice(DamageTypeBase):
     def create_dot(self, damage: float, source) -> DamageOverTime | None:
         return damage_effects.create_dot(self.id, damage, source)
 
-    async def ultimate(self, user: Stats, foes: list[Stats]) -> bool:
+    async def ultimate(
+        self,
+        actor: Stats,
+        allies: list[Stats],
+        enemies: list[Stats],
+    ) -> bool:
         """Strike all foes six times, ramping damage by 30% per target."""
         from autofighter.rooms.battle.pacing import YIELD_MULTIPLIER
         from autofighter.rooms.battle.pacing import pace_sleep
 
-        if not await self.consume_ultimate(user):
+        if not await self.consume_ultimate(actor):
             return False
-        base = user.atk
+
+        if not enemies:
+            return True
+
+        base = actor.atk
         for _ in range(6):
             bonus = 1.0
-            for foe in foes:
+            for enemy in enemies:
                 dmg = int(base * bonus)
-                await foe.apply_damage(dmg, attacker=user, action_name="Ice Ultimate")
+                await enemy.apply_damage(
+                    dmg,
+                    attacker=actor,
+                    action_name="Ice Ultimate",
+                )
                 await pace_sleep(YIELD_MULTIPLIER)
                 bonus += 0.3
             await pace_sleep(YIELD_MULTIPLIER)
