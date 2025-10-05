@@ -27,5 +27,7 @@ The run startup experience now ships as a multi-step wizard that fetches `/run/c
    - Add backend unit coverage for the new modifier hooks (e.g., foe factory scaling, shop pricing) and extend frontend tests if additional UI surfaces are introduced for mid-run visibility.【F:frontend/tests/run-wizard-flow.vitest.js†L33-L117】【F:backend/tests/test_run_configuration_service.py†L10-L64】
 
 ## Open Questions / Follow-ups
-- How should the UX communicate extreme modifier combinations so players understand they are intentionally uncapped while still surfacing encounter difficulty expectations?
+- Validate that the new tooltip warning about uncapped modifier stacking gives players enough context about extreme configurations or if we still need a dedicated difficulty callout elsewhere in the flow.
 - What retention strategy should telemetry adopt for long-term modifier analytics (granularity, retention window, anonymization) now that richer payloads ship with each run start?
+
+ready for review
