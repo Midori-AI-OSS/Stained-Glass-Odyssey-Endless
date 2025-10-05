@@ -497,7 +497,9 @@ UPGRADEABLE_STATS = [
     "vitality",
     "mitigation",
 ]
-STAR_TO_MATERIALS = {1: 1, 2: 150, 3: 22500, 4: 3375000}
+# Keep the star-to-material conversion aligned with the per-item unit scale so we
+# do not reject valid upgrade requests or lose value when consuming items.
+STAR_TO_MATERIALS = {1: 1, 2: 125, 3: 125**2, 4: 125**3}
 # Number of 1★ units represented by a single item at each star level.
 ITEM_UNIT_SCALE = {
     1: 1,
