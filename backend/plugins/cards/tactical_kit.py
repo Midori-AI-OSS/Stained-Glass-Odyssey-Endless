@@ -21,7 +21,7 @@ class TacticalKit(CardBase):
         # Track which members have used their tactical conversion
         conversion_used = set()
 
-        async def _on_action_about_to_start(actor):
+        async def _on_action_about_to_start(actor, *_args, **_kwargs):
             # Check if actor is one of our party members and hasn't used conversion yet
             if actor in party.members:
                 actor_id = id(actor)
@@ -68,5 +68,5 @@ class TacticalKit(CardBase):
             if target in party.members:
                 conversion_used.clear()
 
-        self.subscribe("action_start", _on_action_about_to_start)
+        self.subscribe("action_used", _on_action_about_to_start)
         self.subscribe("battle_start", _on_battle_start)
