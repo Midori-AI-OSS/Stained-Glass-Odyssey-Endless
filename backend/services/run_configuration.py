@@ -116,7 +116,7 @@ def _character_stat_penalty(stacks: int) -> dict[str, Any]:
     bonus_rdr = 0.0
     bonus_exp = 0.0
     if stacks > 0:
-        bonus_rdr = 0.05 + max(0, stacks - 1) * 0.01
+        bonus_rdr = 0.05 + max(0, stacks - 1) * 0.06
         bonus_exp = bonus_rdr
     return {
         "stacks": stacks,
@@ -137,6 +137,37 @@ _MODIFIER_DEFINITIONS: dict[str, dict[str, Any]] = {
         "min_stacks": 0,
         "stack_step": 1,
         "grants_reward_bonus": False,
+        "description": "Classic encounter scaler that increases foe count, defenses, elite odds, and shop taxes.",
+        "effects_metadata": {
+            "encounter_bonus": {
+                "type": "step",
+                "step_size": 5,
+                "amount_per_step": 1,
+                "maximum_additional_slots": 9,
+                "description": "Adds +1 base foe slot for every five stacks before party-size adjustments.",
+            },
+            "defense_floor": {
+                "type": "linear",
+                "per_stack": 10,
+                "variance_multiplier": [0.82, 1.5],
+                "description": "Foes roll at least pressure × 10 defense before the 0.82×–1.50× variance band is applied.",
+            },
+            "elite_spawn_bonus_pct": {
+                "type": "linear",
+                "per_stack": 1,
+                "description": "Prime and Glitched odds each gain +1 percentage point per stack.",
+            },
+            "shop_multiplier": {
+                "type": "exponential",
+                "base": 1.26,
+                "description": "Shop prices multiply by 1.26^pressure (±5% variance before repeat-visit taxes).",
+            },
+        },
+        "reward_bonuses": {
+            "exp_bonus_per_stack": 0.0,
+            "rdr_bonus_per_stack": 0.0,
+        },
+        "preview_stacks": [0, 1, 5, 10, 20],
         "effects": _pressure_effects,
     },
     "foe_speed": {
@@ -146,6 +177,22 @@ _MODIFIER_DEFINITIONS: dict[str, dict[str, Any]] = {
         "min_stacks": 0,
         "stack_step": 1,
         "grants_reward_bonus": True,
+        "description": "Boosts foe action speed and initiative by +0.01× per stack before diminishing returns.",
+        "effects_metadata": {
+            "stat": "atk",
+            "per_stack": 0.01,
+            "scaling_type": "additive",
+        },
+        "diminishing_returns": {
+            "applies": True,
+            "stat": "atk",
+            "source": "autofighter.effects.calculate_diminishing_returns",
+        },
+        "reward_bonuses": {
+            "exp_bonus_per_stack": 0.5,
+            "rdr_bonus_per_stack": 0.5,
+        },
+        "preview_stacks": [0, 1, 5, 10],
         "effects": lambda stacks: _percent_modifier_effect(0.01, stacks),
         "diminishing_stat": "atk",
     },
@@ -156,6 +203,22 @@ _MODIFIER_DEFINITIONS: dict[str, dict[str, Any]] = {
         "min_stacks": 0,
         "stack_step": 1,
         "grants_reward_bonus": True,
+        "description": "Raises foe max/current HP by +0.5× per stack before diminishing returns.",
+        "effects_metadata": {
+            "stat": "max_hp",
+            "per_stack": 0.5,
+            "scaling_type": "additive",
+        },
+        "diminishing_returns": {
+            "applies": True,
+            "stat": "max_hp",
+            "source": "autofighter.effects.calculate_diminishing_returns",
+        },
+        "reward_bonuses": {
+            "exp_bonus_per_stack": 0.5,
+            "rdr_bonus_per_stack": 0.5,
+        },
+        "preview_stacks": [0, 1, 5, 10],
         "effects": lambda stacks: _foe_modifier_effect("max_hp", 0.5, stacks),
         "diminishing_stat": "max_hp",
     },
@@ -166,6 +229,22 @@ _MODIFIER_DEFINITIONS: dict[str, dict[str, Any]] = {
         "min_stacks": 0,
         "stack_step": 1,
         "grants_reward_bonus": True,
+        "description": "Adds +0.00001 mitigation per stack with diminishing returns to curb runaway defenses.",
+        "effects_metadata": {
+            "stat": "mitigation",
+            "per_stack": 0.00001,
+            "scaling_type": "additive",
+        },
+        "diminishing_returns": {
+            "applies": True,
+            "stat": "mitigation",
+            "source": "autofighter.effects.calculate_diminishing_returns",
+        },
+        "reward_bonuses": {
+            "exp_bonus_per_stack": 0.5,
+            "rdr_bonus_per_stack": 0.5,
+        },
+        "preview_stacks": [0, 1, 5, 10],
         "effects": lambda stacks: _foe_modifier_effect("mitigation", 0.00001, stacks),
         "diminishing_stat": "mitigation",
     },
@@ -176,6 +255,22 @@ _MODIFIER_DEFINITIONS: dict[str, dict[str, Any]] = {
         "min_stacks": 0,
         "stack_step": 1,
         "grants_reward_bonus": True,
+        "description": "Adds +0.00001 vitality per stack before diminishing returns for regeneration-heavy foes.",
+        "effects_metadata": {
+            "stat": "vitality",
+            "per_stack": 0.00001,
+            "scaling_type": "additive",
+        },
+        "diminishing_returns": {
+            "applies": True,
+            "stat": "vitality",
+            "source": "autofighter.effects.calculate_diminishing_returns",
+        },
+        "reward_bonuses": {
+            "exp_bonus_per_stack": 0.5,
+            "rdr_bonus_per_stack": 0.5,
+        },
+        "preview_stacks": [0, 1, 5, 10],
         "effects": lambda stacks: _foe_modifier_effect("vitality", 0.00001, stacks),
         "diminishing_stat": "vitality",
     },
@@ -186,6 +281,17 @@ _MODIFIER_DEFINITIONS: dict[str, dict[str, Any]] = {
         "min_stacks": 0,
         "stack_step": 1,
         "grants_reward_bonus": True,
+        "description": "Increases Glitched foe spawn odds by +1% per stack.",
+        "effects_metadata": {
+            "stat": "glitched_chance",
+            "per_stack": 0.01,
+            "scaling_type": "additive",
+        },
+        "reward_bonuses": {
+            "exp_bonus_per_stack": 0.5,
+            "rdr_bonus_per_stack": 0.5,
+        },
+        "preview_stacks": [0, 1, 5, 10],
         "effects": lambda stacks: _percent_modifier_effect(0.01, stacks),
     },
     "foe_prime_rate": {
@@ -195,6 +301,17 @@ _MODIFIER_DEFINITIONS: dict[str, dict[str, Any]] = {
         "min_stacks": 0,
         "stack_step": 1,
         "grants_reward_bonus": True,
+        "description": "Increases Prime foe spawn odds by +1% per stack.",
+        "effects_metadata": {
+            "stat": "prime_chance",
+            "per_stack": 0.01,
+            "scaling_type": "additive",
+        },
+        "reward_bonuses": {
+            "exp_bonus_per_stack": 0.5,
+            "rdr_bonus_per_stack": 0.5,
+        },
+        "preview_stacks": [0, 1, 5, 10],
         "effects": lambda stacks: _percent_modifier_effect(0.01, stacks),
     },
     "character_stat_down": {
@@ -204,6 +321,22 @@ _MODIFIER_DEFINITIONS: dict[str, dict[str, Any]] = {
         "min_stacks": 0,
         "stack_step": 1,
         "grants_reward_bonus": False,
+        "description": (
+            "Reduces all player stats by 0.001× per stack (0.000001× past 500 stacks) in exchange for"
+            " escalating RDR/EXP bonuses."
+        ),
+        "effects_metadata": {
+            "primary_penalty_per_stack": 0.001,
+            "overflow_penalty_per_stack": 0.000001,
+            "overflow_threshold": 500,
+        },
+        "reward_bonuses": {
+            "exp_bonus_first_stack": 0.05,
+            "exp_bonus_additional_stack": 0.06,
+            "rdr_bonus_first_stack": 0.05,
+            "rdr_bonus_additional_stack": 0.06,
+        },
+        "preview_stacks": [0, 1, 2, 10, 100, 500, 600],
         "effects": _character_stat_penalty,
     },
 }
@@ -240,8 +373,32 @@ def get_run_configuration_metadata() -> dict[str, Any]:
             "stack_step": entry["stack_step"],
             "grants_reward_bonus": entry["grants_reward_bonus"],
         }
+        if "description" in entry:
+            base["description"] = entry["description"]
+        base["stacking"] = {
+            "minimum": entry.get("min_stacks", 0),
+            "step": entry.get("stack_step", 1),
+            "maximum": entry.get("max_stacks"),
+            "default": entry.get("default_stacks", entry.get("min_stacks", 0)),
+        }
+        base["reward_bonuses"] = entry.get("reward_bonuses", {})
+        diminishing = entry.get("diminishing_returns")
+        if not diminishing and entry.get("diminishing_stat"):
+            diminishing = {
+                "applies": True,
+                "stat": entry["diminishing_stat"],
+                "source": "autofighter.effects.calculate_diminishing_returns",
+            }
+        if diminishing:
+            base["diminishing_returns"] = diminishing
+        if "effects_metadata" in entry:
+            base["effects"] = entry["effects_metadata"]
         if entry["id"] == "pressure":
             base["tooltip"] = _PRESSURE_TOOLTIP
+        preview_stacks = entry.get("preview_stacks") or [0, 1, 5, 10]
+        effects_fn = entry.get("effects")
+        if callable(effects_fn):
+            base["preview"] = [effects_fn(stacks) for stacks in preview_stacks]
         modifiers.append(base)
 
     return {

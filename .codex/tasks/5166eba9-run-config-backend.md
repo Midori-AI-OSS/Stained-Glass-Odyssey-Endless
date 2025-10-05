@@ -5,6 +5,7 @@ Build the backend plumbing for the run setup wizard described in the `Streamline
 
 ## Prerequisites & References
 - Goal file: `.codex/tasks/33e45df1-run-start-flow.goal`.
+- Audit log: `.codex/audit/887f01b9-run-config-backend.audit.md`.
 - Existing run creation service: `backend/services/run_service.py` (especially `start_run`).
 - UI helper endpoints: `backend/routes/ui.py` for context on how run metadata is consumed today.
 - Tracking hooks for logging selections: `backend/tracking` package.
