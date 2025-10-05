@@ -5,6 +5,7 @@ Tests for the unified summons system.
 import asyncio
 import copy
 from pathlib import Path
+import random
 import sys
 
 import pytest
@@ -19,10 +20,10 @@ from autofighter.stats import BUS
 from autofighter.summons.base import Summon
 from autofighter.summons.manager import SummonManager
 from plugins.cards.phantom_ally import PhantomAlly
-from plugins.damage_types.lightning import Lightning
-from plugins.characters.foe_base import FoeBase
 from plugins.characters.ally import Ally
 from plugins.characters.becca import Becca
+from plugins.characters.foe_base import FoeBase
+from plugins.damage_types.lightning import Lightning
 from plugins.passives.normal.becca_menagerie_bond import BeccaMenagerieBond
 
 
@@ -207,12 +208,15 @@ async def test_phantom_ally_new_system(monkeypatch):
     # Create party
     ally = Ally()
     ally.id = "ally"
+    lightning = Lightning()
+    ally.damage_type = lightning
     ally.ensure_permanent_summon_slots(1)
     becca = Becca()
     becca.id = "becca"
     party = Party(members=[ally, becca])
 
     # Apply PhantomAlly card
+    monkeypatch.setattr(random, "choice", lambda members: ally)
     await PhantomAlly().apply(party)
 
     # Should have 3 members now (2 original + 1 phantom)
@@ -228,6 +232,8 @@ async def test_phantom_ally_new_system(monkeypatch):
     assert phantom is not None
     assert phantom.summon_source == "phantom_ally"
     assert phantom.turns_remaining == -1  # Should last the entire battle
+    assert getattr(phantom, "damage_type", None) is not None
+    assert getattr(phantom.damage_type, "id", None) == lightning.id
 
 
 @pytest.mark.asyncio

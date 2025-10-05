@@ -63,12 +63,14 @@ class PhantomAlly(CardBase):
 
         # Create phantom using the new summons system
         # Phantoms are full-strength copies (multiplier=1.0) that last the entire battle
+        original_damage_type = getattr(original, "damage_type", None)
         summon = SummonManager.create_summon(
             summoner=original,
             summon_type="phantom",
             source=self.id,
             stat_multiplier=1.0,  # Full strength copy
             turns_remaining=-1,  # Lasts the entire battle
+            override_damage_type=original_damage_type,
         )
 
         if not summon:
