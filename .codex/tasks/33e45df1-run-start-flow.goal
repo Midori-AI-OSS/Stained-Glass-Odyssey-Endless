@@ -1,54 +1,35 @@
 # Goal: Streamline Run Startup Workflow
 
 ## Summary
-We need to replace the current single-click "Start Run" action with a guided setup that walks the player through building their party, choosing a run type, configuring run modifiers, and finally launching the run. Backend startup pruning now clears lingering runs automatically, so the remaining work focuses on the new metadata endpoints, frontend UI flows, and analytics required to support the richer configuration experience.
+We need to replace the current single-click "Start Run" action with a guided setup that walks the player through building their party, choosing a run type, configuring run modifiers, and finally launching the run. Backend startup pruning now clears lingering runs automatically, the run-configuration metadata API is online, and `start_run` already persists selections with telemetry, so the remaining work centers on the frontend wizard, metadata UX polish, analytics follow-ups, and any configuration hooks the backend still lacks.
 
 ## Current State Observations
-- Backend now prunes lingering runs on startup via the `prune_runs_on_startup` hook, so players begin each boot from a clean slate; however, `/ui` helpers still default to the most recent run id without richer metadata, leaving the new configuration flow work outstanding.【F:backend/routes/ui.py†L37-L105】
-- `start_run` currently accepts only party members, player damage type, and pressure; map generation and boss selection happen immediately with no notion of run types or optional modifiers.【F:backend/services/run_service.py†L45-L175】
-- The frontend Run overlay (`RunChooser`) presents a basic chooser that allows resuming an old run or launching a new one, and the main viewport triggers `startRun` directly with the party picker’s selection and optional pressure slider; there’s no wizard to collect additional configuration.【F:frontend/src/lib/components/RunChooser.svelte†L1-L67】【F:frontend/src/lib/systems/uiApi.js†L38-L65】
+- Backend now prunes lingering runs on startup via the `prune_runs_on_startup` hook, so players begin each boot from a clean slate; `/ui` helpers also expose the run configuration metadata at `/run/config`, giving the frontend a stable source for run types, modifiers, and pressure tooltip copy.【F:backend/services/run_service.py†L46-L95】【F:backend/app.py†L1-L140】【F:backend/routes/ui.py†L520-L590】【F:backend/services/run_configuration.py†L340-L412】
+- `start_run` validates run types and modifiers, persists the configuration snapshot on the run record, and emits telemetry payloads that include the chosen run type, modifier stacks, and derived reward bonuses, but the game flow still only reacts to pressure during map generation.【F:backend/services/run_service.py†L120-L260】【F:backend/services/run_configuration.py†L340-L412】
+- The frontend Run overlay (`RunChooser`) remains a basic chooser that resumes or starts runs without any multi-step wizard, and the UI API continues to post only party, damage type, and pressure—ignoring the new metadata entirely.【F:frontend/src/lib/components/RunChooser.svelte†L1-L69】【F:frontend/src/lib/systems/uiApi.js†L1-L90】
 
 ## Desired Outcomes
-1. A new metadata layer exposes available run types/game modes and configurable modifiers (pressure, room count, boss pool, foe density, etc.) so the frontend can render picker UIs.
-2. Frontend run setup becomes a multi-step flow: Build Party → Choose Run Type → Configure Modifiers → Confirm & Start.
-3. Documentation and tests reflect the new flow, including removal of run restore/reload UX.
+1. Frontend run setup becomes a resilient multi-step wizard (Build Party → Choose Run Type → Configure Modifiers → Confirm & Start) that consumes the live metadata feed and replaces the legacy chooser.
+2. Metadata UX conveys modifier effects, tooltips, and reward bonuses clearly, allowing players to preview pressure math and modifier penalties before launching a run.
+3. Telemetry and analytics capture wizard interactions and final selections, with any missing dashboards or event schemas queued as follow-up tasks.
+4. Backend gaps discovered during integration—such as map generation hooks for non-pressure modifiers or run-type-specific defaults—are documented and ticketed so they can be tackled next.
 
 ## Proposed Task Breakdown
-1. **Run configuration metadata service**
-   - Define a schema for run types and modifiers (e.g., JSON config or database table) and expose it via a new API endpoint (`/run/config` or similar).
-    - Capture baseline modifier definitions covering:
-     - **Foe Speed** – +0.01× action point/speed per stack.
-     - **Foe HP** – +0.5× max/current HP per stack.
-     - **Foe Mitigation** – +0.00001× mitigation per stack.
-     - **Foe Vitality** – +0.00001× vitality per stack.
-     - **Foe Glitched Rate** – increased odds of foes rolling the Glitched state per stack.
-     - **Foe Prime Rate** – increased odds of foes rolling the Prime state per stack.
-     - **Character Stat Down** – lowers all player stats by 0.001× per stack, switching to 0.000001× per stack once the stack count exceeds 500, and awards a 5% rare drop rate (RDR) and character experience bonus on the first stack plus an additional +1% per extra stack (e.g., two stacks = 11%).
-     - **Pressure** – the classic stackable difficulty lever. The metadata response must spell out exactly how a pressure stack translates into gameplay knobs so the frontend can echo that math to players:
-       - **Encounter sizing** – encounter templates start at one foe and add +1 base slot for every five pressure (capped by the 10-slot spawn ceiling) before party-size bonuses. *Example: pressure 5 → `floor(5 ÷ 5) = 1` extra base foe, so encounters expect two enemies before party bonuses.*
-       - **Foe defenses** – foes inherit a minimum defense floor of `pressure × 10` that then rolls a 0.82–1.50 variance. *Example: pressure 5 → base floor 50, resulting in a 41–75 defense band that overrides lower rolls from other scaling knobs.*
-       - **Elite odds** – each stack adds +1% to both Prime and Glitched spawn chances on top of room- and floor-derived values, mirroring the backend’s `pressure × 0.01` bonus.
-       - **Shop taxes** – baseline shop prices scale multiplicatively by `1.26^pressure` (±5% variance before visit taxes). *Example: pressure 5 → roughly 3.18× base cost before repeat-visit surcharges.*
-      - Clarify that pressure stacks no longer grant extra character experience or rare drop rate (RDR) bonuses—the reward loop still depends on the party's RDR and per-foe kill payouts, with pressure only nudging upgrade item star floors via `pressure // 10`, so communicate that tradeoff accurately.
-   - For every stack applied to a foe-focused modifier, grant +50% character experience and rare drop rate (RDR) as part of the reward calculations (global exp remains derived from character exp).
-   - Ensure the metadata explicitly calls out that the frontend must render Pressure with an on-hover tooltip summarizing the increased difficulty and reward tradeoff so the existing UX expectation is preserved.
-   - Ensure all modifiers respect diminishing returns semantics and document how the backend enforces that curve.
-   - Extend `start_run` to accept a run type identifier and modifier payload, persisting selections alongside the run entry.
-   - Add validation to guard against invalid combinations and provide descriptive error responses.
-2. **Frontend data plumbing**
-   - Fetch the new run configuration metadata during UI bootstrap (or when opening the Run overlay) and normalize it for client-side use.
-   - Remove assumptions about the only modifier being pressure; prepare stores/actions to hold selected run type and modifier values.
-   - Expose tooltip/helper text from the metadata—especially the Pressure difficulty/reward summary—so the run setup wizard can render the required hover affordance.
-3. **Run setup wizard UI**
-   - Replace `RunChooser` with a wizard that sequences Party Picker → Run Type → Modifier configuration → Review/confirmation.
-   - Ensure each step is stateful, accessible, and resilient to backend failures; include ability to backtrack before launch.
-   - Update overlays and run menu buttons to launch the wizard, and retire the “load run” path since old runs are pruned.
-4. **Backend integration & analytics**
-   - Update `start_run` request payloads to send the selected run type/mods, persist them in the run record, and feed them into map generation or future game mode hooks.
-   - Emit tracking/logging events capturing the selected configuration for analytics.
+1. **Frontend run setup wizard**
+   - Replace `RunChooser` with a staged wizard that sequences Party Picker → Run Type → Modifier configuration → Review/confirmation, handling cancellations, retries, and accessibility concerns.【F:frontend/src/lib/components/RunChooser.svelte†L1-L69】
+   - Wire the wizard into existing overlays and menu triggers so the single-click start flow disappears once the guided setup ships.【F:frontend/src/lib/systems/uiApi.js†L1-L90】
+2. **Metadata consumption & UX polish**
+   - Fetch `/run/config` metadata when opening the wizard, cache it client-side, and surface descriptions, tooltips, preview stacks, and reward bonuses alongside each control.【F:backend/routes/ui.py†L520-L590】【F:backend/services/run_configuration.py†L340-L412】
+   - Ensure selections post full payloads back to the backend (`run_type`, `modifiers`, `pressure`) and persist client defaults for future sessions.【F:backend/services/run_service.py†L120-L260】
+3. **Analytics and telemetry follow-ups**
+   - Extend UI logging to capture wizard step impressions, modifier adjustments, and abandoned starts so downstream analytics teams can measure usage.【F:backend/services/run_service.py†L205-L260】
+   - Confirm backend tracking (`log_run_start`, `log_menu_action`) receives the enriched configuration data and document any additional events or dashboards needed for product analytics.【F:backend/services/run_service.py†L205-L260】
+4. **Backend configuration gaps**
+   - Audit map generation, foe selection, and reward systems to determine how non-pressure modifiers should influence gameplay; document required hooks or create follow-up tickets where implementation is still missing.【F:backend/services/run_service.py†L191-L229】【F:backend/services/run_configuration.py†L340-L412】
+   - Validate that saved run snapshots and restore flows propagate the stored configuration so future UI surfaces can display it accurately.【F:backend/services/run_service.py†L248-L260】【F:backend/routes/ui.py†L37-L210】
 5. **Documentation & testing**
-   - Refresh `.codex/implementation` notes for run modules, frontend docs, and any onboarding guides to describe the new flow.
-   - Add backend tests covering pruning behavior and run configuration validation, plus frontend component/store tests for the wizard state machine.
+   - Refresh `.codex/implementation` notes and onboarding guides to explain the wizard, metadata contract, and telemetry responsibilities.
+   - Add backend validation/unit tests for new modifier interactions plus frontend component/store tests covering the wizard state machine and persistence.
 
 ## Open Questions / Follow-ups
 - What initial run types and modifiers should ship first (e.g., "Standard", "Boss Rush")? Define seed data before implementation.
@@ -56,5 +37,8 @@ We need to replace the current single-click "Start Run" action with a guided set
 - Determine whether pressure defaults should vary per run type and how to handle unsupported combinations gracefully.
 
 ## References & Suggested Reading
-- Backend lifecycle helpers for run cleanup and persistence (`runs/lifecycle.py`).
-- Frontend overlay controller and run state stores in `frontend/src/lib` to understand wizard integration points.
+- Run configuration metadata helpers in `backend/services/run_configuration.py` and the `/run/config` route in `backend/routes/ui.py` for the canonical schema and API surface.【F:backend/services/run_configuration.py†L1-L549】【F:backend/routes/ui.py†L520-L590】
+- Run startup flow and telemetry logging in `backend/services/run_service.py` to understand how selections are persisted today.【F:backend/services/run_service.py†L120-L260】
+- Current frontend run chooser and API glue in `frontend/src/lib/components/RunChooser.svelte` and `frontend/src/lib/systems/uiApi.js` to see what the wizard must replace.【F:frontend/src/lib/components/RunChooser.svelte†L1-L69】【F:frontend/src/lib/systems/uiApi.js†L1-L90】
+
+ready for review
