@@ -320,18 +320,36 @@ async def handle_ui_action() -> tuple[str, int, dict[str, Any]]:
             members = params.get("party", ["player"])
             damage_type = params.get("damage_type", "")
             pressure = params.get("pressure")
+            run_type = params.get("run_type")
+            modifiers = params.get("modifiers")
 
             if not isinstance(members, list):
                 return create_error_response("Party must be a list of member IDs", 400)
 
+            if modifiers is not None and not isinstance(modifiers, dict):
+                return create_error_response("Modifiers must be an object keyed by modifier id", 400)
+
             try:
-                result = await start_run(members, damage_type, pressure)
+                result = await start_run(
+                    members,
+                    damage_type,
+                    pressure,
+                    run_type=run_type,
+                    modifiers=modifiers,
+                )
                 return jsonify(result)
             except ValueError as exc:
                 await log_menu_action(
                     "Run",
                     "error",
-                    {"members": members, "damage_type": damage_type, "pressure": pressure, "error": str(exc)},
+                    {
+                        "members": members,
+                        "damage_type": damage_type,
+                        "pressure": pressure,
+                        "run_type": run_type,
+                        "modifiers": modifiers,
+                        "error": str(exc),
+                    },
                 )
                 return create_error_response(str(exc), 400)
 
