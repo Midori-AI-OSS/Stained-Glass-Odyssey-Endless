@@ -67,6 +67,8 @@ async def log_run_start(
     start_ts: int,
     members: list[dict[str, Any]],
     outcome: str | None = None,
+    *,
+    configuration: dict[str, Any] | None = None,
 ) -> None:
     def write(conn: Any) -> None:
         cur = conn.execute(
@@ -89,6 +91,23 @@ async def log_run_start(
                     slot,
                     member.get("character_id", "unknown"),
                     _dump(stats),
+                ),
+            )
+        if configuration:
+            run_type_value = configuration.get("run_type")
+            if isinstance(run_type_value, dict):
+                run_type_value = run_type_value.get("id", "")
+            reward_payload = configuration.get("reward_bonuses")
+            conn.execute(
+                "INSERT OR REPLACE INTO run_configurations (run_id, run_type, modifiers_json, reward_json, version, recorded_ts) "
+                "VALUES (?, ?, ?, ?, ?, ?)",
+                (
+                    run_id,
+                    run_type_value,
+                    _dump(configuration.get("modifiers")),
+                    _dump(reward_payload),
+                    str(configuration.get("version", "")),
+                    start_ts,
                 ),
             )
 

@@ -5,23 +5,20 @@ import json
 import traceback
 from typing import Any
 
-from battle_logging.writers import end_run_logging
 from quart import Blueprint
 from quart import jsonify
 from quart import request
 from runs.encryption import get_save_manager
-from runs.lifecycle import battle_locks
 from runs.lifecycle import battle_snapshots
 from runs.lifecycle import battle_tasks
-from runs.lifecycle import emit_battle_end_for_runs
 from runs.lifecycle import load_map
-from runs.lifecycle import purge_run_state
 from runs.lifecycle import save_map
 from runs.party_manager import load_party
 from services.asset_service import get_asset_manifest
 from services.reward_service import select_card
 from services.reward_service import select_relic
 from services.room_service import room_action
+from services.run_configuration import get_run_configuration_metadata
 from services.run_service import advance_room
 from services.run_service import backup_save
 from services.run_service import get_battle_events
@@ -33,8 +30,6 @@ from services.run_service import update_party
 from services.run_service import wipe_save
 from tracking import log_game_action
 from tracking import log_menu_action
-from tracking import log_play_session_end
-from tracking import log_run_end
 
 from autofighter.rooms.shop import serialize_shop_payload
 
@@ -324,7 +319,7 @@ async def handle_ui_action() -> tuple[str, int, dict[str, Any]]:
             # Validate start_run parameters
             members = params.get("party", ["player"])
             damage_type = params.get("damage_type", "")
-            pressure = params.get("pressure", 0)
+            pressure = params.get("pressure")
 
             if not isinstance(members, list):
                 return create_error_response("Party must be a list of member IDs", 400)
@@ -527,6 +522,16 @@ async def battle_events(index: int):
     return jsonify(data)
 
 
+@bp.get("/run/config")
+async def run_configuration_metadata() -> tuple[str, int, dict[str, Any]]:
+    metadata = get_run_configuration_metadata()
+    try:
+        await log_menu_action("Run", "view_config", {"version": metadata.get("version")})
+    except Exception:
+        pass
+    return jsonify(metadata), 200
+
+
 @bp.post("/run/start")
 async def start_run_endpoint() -> tuple[str, int, dict[str, Any]]:
     """Start a new run. Alternative endpoint that matches test expectations."""
@@ -535,15 +540,30 @@ async def start_run_endpoint() -> tuple[str, int, dict[str, Any]]:
         members = data.get("party", ["player"])
         damage_type = data.get("damage_type", "")
         pressure = data.get("pressure", 0)
+        run_type = data.get("run_type")
+        modifiers = data.get("modifiers")
 
         try:
-            result = await start_run(members, damage_type, pressure)
+            result = await start_run(
+                members,
+                damage_type,
+                pressure,
+                run_type=run_type,
+                modifiers=modifiers,
+            )
             return jsonify(result), 200
         except ValueError as exc:
             await log_menu_action(
                 "Run",
                 "error",
-                {"members": members, "damage_type": damage_type, "pressure": pressure, "error": str(exc)},
+                {
+                    "members": members,
+                    "damage_type": damage_type,
+                    "pressure": pressure,
+                    "run_type": run_type,
+                    "modifiers": modifiers,
+                    "error": str(exc),
+                },
             )
             return jsonify({"error": str(exc)}), 400
 

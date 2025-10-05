@@ -45,6 +45,9 @@ class MapGenerator:
         self.pressure = pressure
 
     def generate_floor(self, party: Party | None = None) -> list[MapNode]:
+        if party is not None and self._is_boss_rush(party):
+            return self._generate_boss_rush_floor()
+
         nodes: list[MapNode] = []
         index = 0
         nodes.append(
@@ -121,3 +124,31 @@ class MapGenerator:
             )
         )
         return nodes
+
+    def _generate_boss_rush_floor(self) -> list[MapNode]:
+        nodes: list[MapNode] = []
+        for index in range(self.rooms_per_floor):
+            room_type = "start" if index == 0 else "battle-boss-floor"
+            nodes.append(
+                MapNode(
+                    room_id=index,
+                    room_type=room_type,
+                    floor=self.floor,
+                    index=index,
+                    loop=self.loop,
+                    pressure=self.pressure,
+                )
+            )
+        return nodes
+
+    @staticmethod
+    def _is_boss_rush(party: Party) -> bool:
+        config = getattr(party, "run_config", None)
+        if isinstance(config, dict):
+            run_type = config.get("run_type")
+            if isinstance(run_type, dict):
+                if run_type.get("id") == "boss_rush":
+                    return True
+            elif isinstance(run_type, str) and run_type == "boss_rush":
+                return True
+        return bool(getattr(party, "boss_rush", False))

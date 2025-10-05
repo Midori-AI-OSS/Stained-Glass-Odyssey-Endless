@@ -13,8 +13,8 @@ from autofighter.passives import PassiveRegistry
 from autofighter.stats import Stats
 from autofighter.stats import apply_status_hooks
 from plugins import characters as player_plugins
-from plugins.damage_types import load_damage_type
 from plugins.characters._base import PlayerBase
+from plugins.damage_types import load_damage_type
 
 from .encryption import get_save_manager
 
@@ -315,6 +315,8 @@ def load_party(run_id: str) -> Party:
     )
     setattr(party, "login_rdr_bonus", daily_bonus)
     setattr(party, "base_rdr", stored_rdr)
+    if "config" in data:
+        setattr(party, "run_config", data.get("config"))
     try:
         cleared = int(data.get("null_lantern_cleared", 0) or 0)
     except Exception:
@@ -340,24 +342,31 @@ def save_party(run_id: str, party: Party) -> None:
             snapshot = {**snapshot, "damage_type": member.element_id}
             break
     with get_save_manager().connection() as conn:
-        data = {
-            "members": [m.id for m in party.members],
-            "gold": party.gold,
-            "relics": party.relics,
-            "cards": party.cards,
-            "exp": {m.id: m.exp for m in party.members},
-            "level": {m.id: m.level for m in party.members},
-            "exp_multiplier": {m.id: m.exp_multiplier for m in party.members},
-            "rdr": _extract_base_rdr(party),
-            "no_shops": bool(getattr(party, "no_shops", False)),
-            "no_rests": bool(getattr(party, "no_rests", False)),
-            "null_lantern_cleared": int(getattr(party, "_null_lantern_cleared", 0) or 0),
-            "pull_tokens": int(getattr(party, "pull_tokens", 0) or 0),
-            "player": snapshot,
-        }
+        base: dict[str, Any]
+        if isinstance(existing, dict):
+            base = dict(existing)
+        else:
+            base = {}
+        base.update(
+            {
+                "members": [m.id for m in party.members],
+                "gold": party.gold,
+                "relics": party.relics,
+                "cards": party.cards,
+                "exp": {m.id: m.exp for m in party.members},
+                "level": {m.id: m.level for m in party.members},
+                "exp_multiplier": {m.id: m.exp_multiplier for m in party.members},
+                "rdr": _extract_base_rdr(party),
+                "no_shops": bool(getattr(party, "no_shops", False)),
+                "no_rests": bool(getattr(party, "no_rests", False)),
+                "null_lantern_cleared": int(getattr(party, "_null_lantern_cleared", 0) or 0),
+                "pull_tokens": int(getattr(party, "pull_tokens", 0) or 0),
+                "player": snapshot,
+            }
+        )
         conn.execute(
             "UPDATE runs SET party = ? WHERE id = ?",
-            (json.dumps(data), run_id),
+            (json.dumps(base), run_id),
         )
 __all__ = [
     "_describe_passives",

@@ -43,3 +43,5 @@ Build the backend plumbing for the run setup wizard described in the `Streamline
 - Work with frontend owners so the API shape aligns with their wizard state machine.
 - Surface any open questions (e.g. initial run type list, modifier caps) back to Task Master if blockers arise.
 - Do **not** modify frontend code in this task; create follow-up tasks for UI work if necessary.
+
+ready for review

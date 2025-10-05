@@ -36,6 +36,8 @@ from autofighter.rooms import _choose_foe
 from autofighter.rooms import _serialize
 from plugins import characters as player_plugins
 from services.login_reward_service import record_room_completion
+from services.run_configuration import RunConfigurationSelection
+from services.run_configuration import validate_run_configuration
 from services.user_level_service import get_user_level
 
 log = logging.getLogger(__name__)
@@ -116,7 +118,9 @@ async def _validate_party_members(members: list[str]) -> None:
 async def start_run(
     members: list[str],
     damage_type: str = "",
-    pressure: int = 0,
+    pressure: int | None = None,
+    run_type: str | None = None,
+    modifiers: dict[str, object] | None = None,
 ) -> dict[str, object]:
     """Create a new run and return its initial state."""
     damage_type = (damage_type or "").capitalize()
@@ -163,15 +167,42 @@ async def start_run(
                 )
                 break
 
+    try:
+        configuration: RunConfigurationSelection = validate_run_configuration(
+            run_type=run_type,
+            modifiers=modifiers or {},
+            fallback_pressure=pressure if pressure is not None else None,
+        )
+    except ValueError as exc:
+        raise ValueError(str(exc)) from exc
+
+    pressure_value = configuration.pressure
+
+    reward_bonuses = configuration.reward_bonuses
+    exp_multiplier = float(reward_bonuses.get("exp_multiplier", 1.0))
+    rdr_multiplier = float(reward_bonuses.get("rdr_multiplier", 1.0))
+
+    exp_multiplier_map: dict[str, float] = {}
+    for member, info in zip(party_members, party_info):
+        member.exp_multiplier *= exp_multiplier
+        info["exp_multiplier"] = member.exp_multiplier
+        exp_multiplier_map[member.id] = float(member.exp_multiplier)
+
     initial_party = Party(
         members=party_members,
         gold=0,
         relics=[],
         cards=[],
-        rdr=1.0,
+        rdr=rdr_multiplier,
     )
+    setattr(initial_party, "run_config", configuration.snapshot)
+    run_type_id = configuration.run_type.get("id")
+    if run_type_id == "boss_rush":
+        setattr(initial_party, "no_shops", True)
+        setattr(initial_party, "no_rests", True)
+        setattr(initial_party, "boss_rush", True)
 
-    generator = MapGenerator(run_id, pressure=pressure)
+    generator = MapGenerator(run_id, pressure=pressure_value)
     nodes = generator.generate_floor(party=initial_party)
 
     boss_choice = None
@@ -188,7 +219,7 @@ async def start_run(
         "awaiting_next": False,
         "total_rooms_cleared": 0,
         "floors_cleared": 0,
-        "current_pressure": int(pressure or 0),
+        "current_pressure": int(pressure_value or 0),
     }
     if boss_choice is not None and nodes:
         state["floor_boss"] = {
@@ -228,10 +259,15 @@ async def start_run(
                             "cards": [],
                             "exp": dict.fromkeys(members, 0),
                             "level": dict.fromkeys(members, 1),
-                            "rdr": 1.0,
+                            "exp_multiplier": {
+                                mid: exp_multiplier_map.get(mid, exp_multiplier)
+                                for mid in members
+                            },
+                            "rdr": rdr_multiplier,
                             # Freeze the user level for the duration of this run
                             "user_level": int(get_user_level()),
                             "player": snapshot,
+                            "config": configuration.snapshot,
                         }
                     ),
                     json.dumps(state),
@@ -254,7 +290,12 @@ async def start_run(
             }
         )
 
-    await log_run_start(run_id, start_ts, member_snapshots)
+    await log_run_start(
+        run_id,
+        start_ts,
+        member_snapshots,
+        configuration=configuration.snapshot,
+    )
     await log_play_session_start(run_id, "local", start_ts)
     await log_menu_action(
         "Run",
@@ -262,11 +303,22 @@ async def start_run(
         {
             "members": members,
             "damage_type": damage_type,
-            "pressure": pressure,
+            "pressure": pressure_value,
             "run_id": run_id,
+            "run_type": configuration.run_type.get("id"),
+            "modifiers": configuration.modifiers,
+            "reward_bonuses": {
+                "exp_bonus": reward_bonuses.get("exp_bonus", 0.0),
+                "rdr_bonus": reward_bonuses.get("rdr_bonus", 0.0),
+            },
         },
     )
-    return {"run_id": run_id, "map": state, "party": party_info}
+    return {
+        "run_id": run_id,
+        "map": state,
+        "party": party_info,
+        "configuration": configuration.snapshot,
+    }
 
 
 async def update_party(run_id: str, members: list[str]) -> dict[str, object]:
