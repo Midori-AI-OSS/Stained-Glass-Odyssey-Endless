@@ -1,9 +1,11 @@
+# ruff: noqa: E402
 from pathlib import Path
 import sys
 
 import pytest
 
-sys.path.append(str(Path(__file__).resolve().parents[1]))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+sys.modules.pop("tracking", None)
 
 from tracking import log_battle_summary
 from tracking import log_card_acquisition
@@ -34,6 +36,12 @@ async def test_log_run_start_and_end(tmp_path, monkeypatch):
             {"slot": 0, "character_id": "player", "stats": {"hp": 1000}},
             {"slot": 1, "character_id": "ally", "stats": {"hp": 800}},
         ],
+        configuration={
+            "version": "test",
+            "run_type": {"id": "standard"},
+            "modifiers": {"pressure": 3},
+            "reward_bonuses": {"exp_bonus": 1.5, "rdr_bonus": 1.5},
+        },
     )
     await log_play_session_start("run-1", "local", 10)
     await log_battle_summary(
@@ -71,6 +79,14 @@ async def test_log_run_start_and_end(tmp_path, monkeypatch):
             ("run-1",),
         ).fetchone()
         assert battle == (5, 1200, 1, "/logs/run-1/battles/1/summary")
+        config_row = conn.execute(
+            "SELECT run_type, modifiers_json, reward_json, version FROM run_configurations WHERE run_id = ?",
+            ("run-1",),
+        ).fetchone()
+        assert config_row[0] == "standard"
+        assert "pressure" in config_row[1]
+        assert "exp_bonus" in config_row[2]
+        assert config_row[3] == "test"
 
 
 @pytest.mark.asyncio
@@ -169,6 +185,10 @@ async def test_migration_handles_existing_logs_url(tmp_path, monkeypatch):
     manager = get_tracking_manager()
     with manager.connection() as conn:
         version = conn.execute("PRAGMA user_version").fetchone()[0]
-        assert version == 2
+        assert version == 3
         columns = [row[1] for row in conn.execute("PRAGMA table_info('battle_summaries')")]
         assert "logs_url" in columns
+        config_table = conn.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='run_configurations'",
+        ).fetchone()
+        assert config_table is not None
