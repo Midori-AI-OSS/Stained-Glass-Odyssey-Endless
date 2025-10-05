@@ -187,14 +187,20 @@ class MapGenerator:
                 suppressed.update({"shop", "rest"})
 
         quotas: dict[str, int] = {}
+        remaining_optional_slots = middle
 
         def _apply_quota(room_type: str, default: int | None = None) -> None:
+            nonlocal remaining_optional_slots
             if room_type in suppressed:
                 return
             quota_value = self._room_quota(room_type, default)
             if quota_value is None or quota_value <= 0:
                 return
-            quotas[room_type] = int(quota_value)
+            allowed = min(int(quota_value), remaining_optional_slots)
+            if allowed <= 0:
+                return
+            quotas[room_type] = allowed
+            remaining_optional_slots -= allowed
 
         _apply_quota("shop", default=1)
         _apply_quota("rest")
