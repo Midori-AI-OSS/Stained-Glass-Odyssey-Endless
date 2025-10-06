@@ -225,6 +225,12 @@
     }
     lootConsumed = true;
   }
+
+  $: resolvedRoomTags = Array.isArray(roomData?.tags)
+    ? [...roomData.tags]
+    : Array.isArray(roomTags)
+      ? [...roomTags]
+      : [];
 </script>
 
 {#if $overlayView === 'party'}
@@ -666,8 +672,3 @@
     box-shadow: 0 2px 8px 0 rgba(0,40,120,0.18);
   }
 </style>
-  $: resolvedRoomTags = Array.isArray(roomData?.tags)
-    ? [...roomData.tags]
-    : Array.isArray(roomTags)
-      ? [...roomTags]
-      : [];
