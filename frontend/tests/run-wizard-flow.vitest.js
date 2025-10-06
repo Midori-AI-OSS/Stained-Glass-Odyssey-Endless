@@ -324,6 +324,71 @@ describe('RunChooser wizard flow', () => {
     });
   });
 
+  test('retains modifier selections on confirm after metadata refresh', async () => {
+    const initialMetadata = JSON.parse(JSON.stringify(BASE_METADATA));
+    initialMetadata.metadata_hash = 'initial-hash';
+    const refreshedMetadata = JSON.parse(JSON.stringify(BASE_METADATA));
+    refreshedMetadata.version = '1.0.1';
+    refreshedMetadata.metadata_hash = 'refresh-hash';
+
+    getRunConfigurationMetadata.mockImplementation(async ({ metadataHash }) => {
+      if (metadataHash === 'refresh-hash') {
+        return JSON.parse(JSON.stringify(refreshedMetadata));
+      }
+      return JSON.parse(JSON.stringify(initialMetadata));
+    });
+
+    const { component, container } = render(RunChooser, {
+      props: { runs: [], metadataHash: 'initial-hash' }
+    });
+
+    await waitFor(() => expect(getRunConfigurationMetadata).toHaveBeenCalledTimes(1));
+    await tick();
+
+    await fireEvent.click(screen.getByTestId('set-party'));
+    await fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+    await tick();
+
+    await fireEvent.click(screen.getByRole('button', { name: /boss rush/i }));
+    await tick();
+
+    await fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+    await tick();
+
+    const modifierNodes = Array.from(container.querySelectorAll('.modifier'));
+    const pressureInput = modifierNodes
+      .find((node) => node.querySelector('.modifier-label')?.textContent?.includes('Pressure'))
+      ?.querySelector('input');
+    const enemyInput = modifierNodes
+      .find((node) => node.querySelector('.modifier-label')?.textContent?.includes('Enemy Buff'))
+      ?.querySelector('input');
+
+    expect(pressureInput).toBeTruthy();
+    expect(enemyInput).toBeTruthy();
+
+    await fireEvent.input(pressureInput, { target: { value: '6' } });
+    await fireEvent.input(enemyInput, { target: { value: '2' } });
+
+    await fireEvent.click(screen.getByRole('button', { name: 'Next' }));
+    await tick();
+
+    expect(screen.getByRole('heading', { name: 'Review & Start' })).toBeTruthy();
+    expect(screen.getByText('Pressure: 6')).toBeTruthy();
+    expect(screen.getByText('Enemy Buff: 2')).toBeTruthy();
+
+    await component.$set({ metadataHash: 'refresh-hash' });
+    await tick();
+
+    await waitFor(() => expect(getRunConfigurationMetadata).toHaveBeenCalledTimes(2));
+    await tick();
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: 'Review & Start' })).toBeTruthy();
+      expect(screen.queryByText('Pressure: 6')).toBeTruthy();
+      expect(screen.queryByText('Enemy Buff: 2')).toBeTruthy();
+    });
+  });
+
   test('surfaces metadata errors and logs telemetry', async () => {
     getRunConfigurationMetadata.mockRejectedValueOnce(new Error('metadata offline'));
 
