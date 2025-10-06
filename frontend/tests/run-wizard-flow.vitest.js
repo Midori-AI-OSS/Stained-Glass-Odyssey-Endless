@@ -247,6 +247,83 @@ describe('RunChooser wizard flow', () => {
     expect(events).toContain('start_submitted');
   });
 
+  test('updates reward preview when metadata refresh changes rewards', async () => {
+    const initialMetadata = JSON.parse(JSON.stringify(BASE_METADATA));
+    initialMetadata.metadata_hash = '1.0.0';
+    const refreshedMetadata = JSON.parse(JSON.stringify(BASE_METADATA));
+    refreshedMetadata.version = '1.1.0';
+    refreshedMetadata.metadata_hash = 'refresh-hash';
+    refreshedMetadata.modifiers = refreshedMetadata.modifiers.map((entry) => {
+      if (entry.id === 'enemy_buff') {
+        return {
+          ...entry,
+          reward_bonuses: {
+            exp_bonus_per_stack: 0.75,
+            rdr_bonus_per_stack: 0.75
+          }
+        };
+      }
+      return entry;
+    });
+
+    getRunConfigurationMetadata.mockImplementation(async ({ metadataHash }) => {
+      if (metadataHash === 'refresh-hash') {
+        return JSON.parse(JSON.stringify(refreshedMetadata));
+      }
+      return JSON.parse(JSON.stringify(initialMetadata));
+    });
+
+    localStorage.setItem(
+      'run_wizard_defaults_v1',
+      JSON.stringify({
+        runTypeId: 'standard',
+        modifiers: { enemy_buff: 2 },
+        party: ['unit-1', 'unit-2'],
+        damageType: 'fire'
+      })
+    );
+
+    const { component } = render(RunChooser, { props: { runs: [] } });
+
+    await waitFor(() => expect(getRunConfigurationMetadata).toHaveBeenCalledTimes(1));
+    await tick();
+
+    await fireEvent.click(screen.getByTestId('set-party'));
+    const nextFromParty = screen.getByRole('button', { name: 'Next' });
+    await fireEvent.click(nextFromParty);
+    await tick();
+
+    const goToModifiers = screen.getByRole('button', { name: 'Next' });
+    await fireEvent.click(goToModifiers);
+    await tick();
+
+    const readRewardValue = (label) => {
+      const rewardSection = screen.getByText('Reward Preview').closest('.reward-preview');
+      if (!rewardSection) return null;
+      const rows = Array.from(rewardSection.querySelectorAll('.preview-grid > div'));
+      for (const row of rows) {
+        const labelNode = row.querySelector('.preview-label');
+        if (labelNode?.textContent?.trim() === label) {
+          return row.querySelector('.preview-value')?.textContent?.trim();
+        }
+      }
+      return null;
+    };
+
+    expect(readRewardValue('RDR Bonus')).toBe('+100%');
+    expect(readRewardValue('EXP Bonus')).toBe('+100%');
+
+    component.$set({ metadataHash: 'refresh-hash' });
+
+    await waitFor(() => expect(getRunConfigurationMetadata).toHaveBeenCalledTimes(2));
+    await tick();
+
+    await waitFor(() => {
+      expect(readRewardValue('RDR Bonus')).toBe('+150%');
+      expect(readRewardValue('EXP Bonus')).toBe('+150%');
+    });
+  });
+
   test('surfaces metadata errors and logs telemetry', async () => {
     getRunConfigurationMetadata.mockRejectedValueOnce(new Error('metadata offline'));
 
