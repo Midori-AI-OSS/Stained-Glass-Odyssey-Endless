@@ -243,6 +243,17 @@
         forceRefresh,
         metadataHash: hashHint
       });
+      console.log('RunChooser: metadata loaded', {
+        version: payload?.version ?? null,
+        hash: payload?.metadata_hash ?? null,
+        modifierRewardKeys: Array.isArray(payload?.modifiers)
+          ? payload.modifiers.map((entry) => ({
+              id: entry?.id,
+              rewardKeys: entry?.reward_bonuses ? Object.keys(entry.reward_bonuses) : []
+            })
+          )
+          : []
+      });
       metadata = payload || {};
       runTypes = Array.isArray(payload?.run_types) ? payload.run_types : [];
       modifiers = Array.isArray(payload?.modifiers) ? payload.modifiers : [];
