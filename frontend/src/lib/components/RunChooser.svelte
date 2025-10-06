@@ -1494,56 +1494,65 @@
       </div>
     {:else if step === 'confirm'}
       <div class="confirm-panel step-surface">
-        <section>
-          <h3>Party</h3>
-          <ul>
-            {#each partySummary as member}
-              <li>{member}</li>
-            {/each}
-          </ul>
-        </section>
-        <section>
-          <h3>Run Type</h3>
-          <p>{activeRunType?.label || runTypeId}</p>
-          <p class="card-description">{activeRunType?.description}</p>
-        </section>
-        <section>
-          <h3>Modifiers</h3>
-          {#if selectedModifiers.some(isActiveModifier)}
+        {#if metadataLoading}
+          <p class="loading">Loading configuration...</p>
+        {:else if metadataError}
+          <div class="error">
+            <p>{metadataError}</p>
+            <button class="icon-btn" on:click={() => fetchMetadata({ forceRefresh: true })}>Retry</button>
+          </div>
+        {:else}
+          <section>
+            <h3>Party</h3>
             <ul>
-              {#each selectedModifiers.filter(isActiveModifier) as mod}
-                <li>{modifierLabel(mod)}: {mod.value}</li>
+              {#each partySummary as member}
+                <li>{member}</li>
               {/each}
             </ul>
-          {:else}
-            <p>No additional modifiers selected.</p>
-          {/if}
-        </section>
-        <section>
-          <h3>Reward Preview</h3>
-          <div class="preview-grid">
-            <div>
-              <span class="preview-label">EXP Bonus</span>
-              <span class="preview-value">{formatRewardBonus(rewardPreview.exp_bonus)}</span>
+          </section>
+          <section>
+            <h3>Run Type</h3>
+            <p>{activeRunType?.label || runTypeId}</p>
+            <p class="card-description">{activeRunType?.description}</p>
+          </section>
+          <section>
+            <h3>Modifiers</h3>
+            {#if selectedModifiers.some(isActiveModifier)}
+              <ul>
+                {#each selectedModifiers.filter(isActiveModifier) as mod}
+                  <li>{modifierLabel(mod)}: {mod.value}</li>
+                {/each}
+              </ul>
+            {:else}
+              <p>No additional modifiers selected.</p>
+            {/if}
+          </section>
+          <section>
+            <h3>Reward Preview</h3>
+            <div class="preview-grid">
+              <div>
+                <span class="preview-label">EXP Bonus</span>
+                <span class="preview-value">{formatRewardBonus(rewardPreview.exp_bonus)}</span>
+              </div>
+              <div>
+                <span class="preview-label">RDR Bonus</span>
+                <span class="preview-value">{formatRewardBonus(rewardPreview.rdr_bonus)}</span>
+              </div>
+              <div>
+                <span class="preview-label">Foe Bonus</span>
+                <span class="preview-value">{formatRewardBonus(rewardPreview.foe_bonus)}</span>
+              </div>
+              <div>
+                <span class="preview-label">Player Bonus</span>
+                <span class="preview-value">{formatRewardBonus(rewardPreview.player_bonus)}</span>
+              </div>
             </div>
-            <div>
-              <span class="preview-label">RDR Bonus</span>
-              <span class="preview-value">{formatRewardBonus(rewardPreview.rdr_bonus)}</span>
-            </div>
-            <div>
-              <span class="preview-label">Foe Bonus</span>
-              <span class="preview-value">{formatRewardBonus(rewardPreview.foe_bonus)}</span>
-            </div>
-            <div>
-              <span class="preview-label">Player Bonus</span>
-              <span class="preview-value">{formatRewardBonus(rewardPreview.player_bonus)}</span>
-            </div>
-          </div>
-        </section>
+          </section>
+        {/if}
       </div>
       <div class="navigation">
         <button class="ghost" on:click={() => goToStep('modifiers')}>Back</button>
-        <button class="primary" on:click={startRun} disabled={submitting}>Start Run</button>
+        <button class="primary" on:click={startRun} disabled={submitting || metadataLoading || metadataError}>Start Run</button>
       </div>
     {/if}
     </div>
