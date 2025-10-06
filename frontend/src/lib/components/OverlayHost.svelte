@@ -35,6 +35,7 @@
   export let selected = [];
   export let runId = '';
   export let roomData = null;
+  export let roomTags = [];
   export let shopProcessing = false;
   export let battleSnapshot = null;
   export let editorState = {};
@@ -460,6 +461,7 @@
         cards={[]}
         relics={[]}
         reducedMotion={overlayReducedMotion}
+        roomTags={resolvedRoomTags}
       />
     {/key}
     <div slot="footer" class="stained-glass-row" style="justify-content: flex-end; margin-top: 0.75rem;">
@@ -499,6 +501,7 @@
       active={battleActive}
       showHud={true}
       showFoes={true}
+      roomTags={resolvedRoomTags}
       on:snapshot-start={() => dispatch('snapshot-start')}
       on:snapshot-end={() => dispatch('snapshot-end')}
     />
@@ -663,3 +666,8 @@
     box-shadow: 0 2px 8px 0 rgba(0,40,120,0.18);
   }
 </style>
+  $: resolvedRoomTags = Array.isArray(roomData?.tags)
+    ? [...roomData.tags]
+    : Array.isArray(roomTags)
+      ? [...roomTags]
+      : [];
