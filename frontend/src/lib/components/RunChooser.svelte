@@ -999,7 +999,7 @@
 
   function handleModifierChange(modId, raw) {
     console.log('handleModifierChange called:', { modId, raw, modifierValuesKeys: Object.keys(modifierValues) });
-    if (!modifierMap.has(modId)) return;
+    if (!modifierMap.has(modId) && modId !== 'pressure') return;
     if (raw === '') {
       modifierValues = { ...modifierValues, [modId]: '' };
       modifierDirty = { ...modifierDirty, [modId]: true };
