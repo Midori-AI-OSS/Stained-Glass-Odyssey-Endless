@@ -263,11 +263,38 @@
         runTypeId = runTypes[0]?.id || 'standard';
       }
 
+      // Preserve user modifications when metadata loads/reloads
+      const userModifiedKeys = new Set(
+        Object.entries(modifierDirty)
+          .filter(([_, isDirty]) => isDirty)
+          .map(([modId]) => modId)
+      );
+      
       const baseState = buildBaseModifierState();
-      modifierValues = baseState.values;
-      modifierDirty = baseState.dirty;
-
-      applyRunTypeDefaults(runTypeId, { resetDirty: true });
+      
+      // Start with base state
+      const nextValues = baseState.values;
+      const nextDirty = baseState.dirty;
+      
+      // Restore user-modified values
+      for (const modId of userModifiedKeys) {
+        if (modifierValues[modId] !== undefined) {
+          nextValues[modId] = sanitizeStack(modId, modifierValues[modId]);
+          nextDirty[modId] = true;
+        }
+      }
+      
+      modifierValues = nextValues;
+      modifierDirty = nextDirty;
+      
+      // Apply run type defaults, but don't reset dirty flags that are already set
+      applyRunTypeDefaults(runTypeId, { resetDirty: false });
+      
+      // Now mark user-modified values as dirty again
+      for (const modId of userModifiedKeys) {
+        modifierDirty[modId] = true;
+      }
+      
       lastAppliedPresetFingerprint = null;
 
       if (persistedDefaults?.modifiers && typeof persistedDefaults.modifiers === 'object') {
