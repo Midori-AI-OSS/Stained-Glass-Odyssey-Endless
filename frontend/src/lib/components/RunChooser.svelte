@@ -897,15 +897,27 @@
     if (!browser) return;
     try {
       const metadataSignature = normalizeMetadataHash(metadata?.metadata_hash ?? metadata?.version);
+      const clonedModifiers = {};
+      if (modifierValues && typeof modifierValues === 'object') {
+        for (const [key, value] of Object.entries(modifierValues)) {
+          clonedModifiers[key] = value;
+        }
+      }
+      const clonedParty = partySelection.slice(0, 5);
       const payload = {
         runTypeId,
-        modifiers: modifierValues,
-        party: partySelection.slice(0, 5),
+        modifiers: clonedModifiers,
+        party: clonedParty,
         damageType,
         metadataVersion: metadata?.version || null,
         metadataSignature
       };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+      persistedDefaults = {
+        ...payload,
+        modifiers: { ...clonedModifiers },
+        party: [...clonedParty]
+      };
     } catch (err) {
       console.warn('Failed to persist run wizard defaults', err);
     }
