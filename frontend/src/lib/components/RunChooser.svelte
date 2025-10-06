@@ -998,11 +998,13 @@
   }
 
   function handleModifierChange(modId, raw) {
+    console.log('handleModifierChange called:', { modId, raw, modifierValuesKeys: Object.keys(modifierValues) });
     if (!modifierMap.has(modId)) return;
     if (raw === '') {
       modifierValues = { ...modifierValues, [modId]: '' };
       modifierDirty = { ...modifierDirty, [modId]: true };
       lastAppliedPresetFingerprint = null;
+      console.log('Set to empty, new modifierValues:', modifierValues);
       return;
     }
     const sanitized = sanitizeStack(modId, raw);
@@ -1010,6 +1012,7 @@
     modifierDirty = { ...modifierDirty, [modId]: true };
     persistDefaults();
     lastAppliedPresetFingerprint = null;
+    console.log('Updated modifierValues:', modifierValues, 'sanitized:', sanitized);
     logWizardEvent('modifier_adjusted', { modifier: modId, value: sanitized });
   }
 
@@ -1091,6 +1094,7 @@
   }
 
   function computeRewardPreview(values, availableModifiers = modifiers) {
+    console.log('computeRewardPreview called:', { values, availableModifiersLength: availableModifiers?.length });
     const result = {
       foe_bonus: 0,
       player_bonus: 0,
@@ -1098,11 +1102,14 @@
       rdr_bonus: 0
     };
     if (!Array.isArray(availableModifiers) || availableModifiers.length === 0) {
+      console.log('No modifiers available, returning zero result');
       return result;
     }
     for (const entry of availableModifiers) {
       const stacks = sanitizeStack(entry.id, values[entry.id]);
+      console.log(`Processing modifier ${entry.id}: stacks=${stacks}, grants_reward_bonus=${entry.grants_reward_bonus}`);
       const contribution = computeModifierRewardContribution(entry, stacks);
+      console.log(`Contribution for ${entry.id}:`, contribution);
       result.foe_bonus += contribution.foe_bonus;
       result.player_bonus += contribution.player_bonus;
       result.exp_bonus += contribution.exp_bonus;
@@ -1112,6 +1119,7 @@
     result.player_bonus = Number(result.player_bonus.toFixed(4));
     result.exp_bonus = Number(result.exp_bonus.toFixed(4));
     result.rdr_bonus = Number(result.rdr_bonus.toFixed(4));
+    console.log('Final result:', result);
     return result;
   }
 
