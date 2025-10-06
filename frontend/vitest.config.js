@@ -24,11 +24,22 @@ const vitestEnvironmentShim = {
     resolvedEnvironments = environments;
   },
   configureServer(server) {
-    if (!server || server.environments) {
+    if (!server) {
       return;
     }
 
-    if (resolvedEnvironments) {
+    if (!resolvedEnvironments) {
+      resolvedEnvironments = {
+        client: {
+          config: {
+            consumer: 'client',
+            assetsInclude: () => false
+          }
+        }
+      };
+    }
+
+    if (!server.environments) {
       server.environments = resolvedEnvironments;
     }
   }

@@ -883,7 +883,16 @@
     }
     const stacking = definition.stacking || {};
     const minimum = Number.isFinite(Number(stacking.minimum)) ? Number(stacking.minimum) : 0;
-    const maximum = Number.isFinite(Number(stacking.maximum)) ? Number(stacking.maximum) : null;
+    let maximum = null;
+    if (typeof stacking.maximum === 'number' && Number.isFinite(stacking.maximum)) {
+      maximum = stacking.maximum;
+    } else if (
+      stacking.maximum !== null &&
+      stacking.maximum !== undefined &&
+      Number.isFinite(Number(stacking.maximum))
+    ) {
+      maximum = Number(stacking.maximum);
+    }
     const step = Number.isFinite(Number(stacking.step)) && Number(stacking.step) > 0 ? Number(stacking.step) : 1;
     let value = Number(rawValue);
     if (!Number.isFinite(value)) {
