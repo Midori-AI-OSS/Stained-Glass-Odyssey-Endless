@@ -27,6 +27,13 @@ and the overlay host both prefer `item.ui.label` over hard-coded ids when
 announcing drops so gacha tickets, seasonal items, or future upgrade bundles can
 define their own copy without frontend updates.
 
+Drops render as a horizontal row of inventory-style tiles so rewards mirror the
+materials grid from the main inventory. Each entry resolves its art through
+`getMaterialIcon`, accumulates stack counts when duplicates appear, and exposes
+both `aria-label`s and visually hidden text for assistive technologies. Failed
+lookups and network errors fall back to the shared material placeholder via
+`onMaterialIconError` so the overlay never shows broken images.
+
 Ambient effects from `EnrageIndicator.svelte` continue to render while the
 rewards overlay is shown and fade out gracefully, so the transition from
 combat to rewards remains smooth.

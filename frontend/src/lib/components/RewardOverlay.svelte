@@ -2,6 +2,7 @@
   import { createEventDispatcher, onDestroy } from 'svelte';
   import RewardCard from './RewardCard.svelte';
   import CurioChoice from './CurioChoice.svelte';
+  import { getMaterialIcon, onMaterialIconError } from '../systems/assetLoader.js';
 
   export let cards = [];
   export let relics = [];
@@ -45,6 +46,93 @@
     const stars = Number.isFinite(item.stars) ? String(item.stars) : '';
     return stars ? `${cap} Upgrade (${stars})` : `${cap} Upgrade`;
   }
+
+  const starColors = {
+    1: '#808080',
+    2: '#1E90FF',
+    3: '#228B22',
+    4: '#800080',
+    5: '#FF3B30',
+    6: '#FFD700',
+    fallback: '#708090'
+  };
+
+  function sanitizeStars(value) {
+    const num = Number(value);
+    if (!Number.isFinite(num) || num <= 0) return 1;
+    return Math.min(Math.round(num), 6);
+  }
+
+  function accentForItem(item) {
+    if (String(item?.id || '') === 'ticket') {
+      return starColors.fallback;
+    }
+    const stars = sanitizeStars(item?.stars);
+    return starColors[stars] || starColors.fallback;
+  }
+
+  function materialKeyForItem(item) {
+    const id = String(item?.id || '').trim();
+    if (!id) return '';
+    if (id === 'ticket') return 'ticket';
+    const rawStars = Number(item?.stars);
+    if (!Number.isFinite(rawStars) || rawStars <= 0) {
+      return id;
+    }
+    const stars = sanitizeStars(rawStars);
+    return `${id}_${stars}`;
+  }
+
+  function stackFromItem(item) {
+    if (!item || typeof item !== 'object') return 1;
+    const candidates = ['count', 'quantity', 'qty', 'amount'];
+    for (const key of candidates) {
+      if (key in item) {
+        const value = Number(item[key]);
+        if (Number.isFinite(value) && value > 0) {
+          return Math.max(1, Math.floor(value));
+        }
+      }
+    }
+    if (typeof item.stacks === 'number' && Number.isFinite(item.stacks)) {
+      const stacks = Number(item.stacks);
+      if (stacks > 0) return Math.floor(stacks);
+    }
+    return 1;
+  }
+
+  $: dropEntries = (() => {
+    if (!hasLootItems) return [];
+    const grouped = [];
+    const seen = new Map();
+    let fallbackIndex = 0;
+    for (const item of lootItems) {
+      if (!item || typeof item !== 'object') continue;
+      const baseKey = materialKeyForItem(item);
+      const groupKey = baseKey || `fallback-${fallbackIndex++}`;
+      const iconKey = baseKey || String(item.id || '');
+      const count = stackFromItem(item);
+      const label = titleForItem(item);
+      const accent = accentForItem(item);
+      const existing = seen.get(groupKey);
+      if (existing) {
+        existing.count += count;
+        if (label) existing.label = label;
+        continue;
+      }
+      const safeLabel = label || (iconKey ? iconKey.replace(/_/g, ' ') : 'Loot item');
+      const entry = {
+        key: `drop-${groupKey}`,
+        icon: getMaterialIcon(iconKey),
+        label: safeLabel,
+        count,
+        accent
+      };
+      seen.set(groupKey, entry);
+      grouped.push(entry);
+    }
+    return grouped;
+  })();
 
   let cardsDone = false;
   let showNextButton = false;
@@ -115,11 +203,73 @@
     text-align: center;
     color: #ddd;
   }
-  .status ul {
-    display: inline-block;
-    margin: 0.25rem 0;
-    padding-left: 1rem;
-    text-align: left;
+
+  .drops-row {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: flex-start;
+    gap: 0.75rem;
+    width: 100%;
+    max-width: 640px;
+    padding: 0.35rem 0;
+  }
+
+  .drop-tile {
+    position: relative;
+    width: 64px;
+    height: 64px;
+    border-radius: 12px;
+    background: color-mix(in oklab, var(--accent, rgba(255,255,255,0.12)) 28%, rgba(10, 12, 20, 0.92));
+    border: 1px solid color-mix(in oklab, var(--accent, rgba(255,255,255,0.2)) 38%, rgba(255,255,255,0.08));
+    box-shadow: 0 10px 22px rgba(0, 0, 0, 0.35);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px;
+    overflow: hidden;
+    transition: transform 160ms ease, box-shadow 160ms ease, opacity 160ms ease;
+    will-change: transform, opacity;
+  }
+
+  .drop-tile:hover {
+    transform: translateY(-2px) scale(1.03);
+    box-shadow: 0 14px 26px rgba(0, 0, 0, 0.45);
+  }
+
+  .drop-icon {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.4));
+  }
+
+  .drop-count {
+    position: absolute;
+    bottom: 6px;
+    right: 8px;
+    background: rgba(0, 0, 0, 0.78);
+    color: #fff;
+    border-radius: 6px;
+    padding: 0 0.4rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    line-height: 1.1rem;
+    min-width: 1.5rem;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
   }
   /* CSS-based reveal: slide the whole card, twinkles appear first, then card fades in */
   @keyframes overlay-slide {
@@ -265,12 +415,27 @@
   
   {#if hasLootItems}
     <h3 class="section-title">Drops</h3>
-    <div class="status">
-      <ul>
-        {#each lootItems as item}
-          <li>{titleForItem(item)}</li>
-        {/each}
-      </ul>
+    <div class="drops-row" role="list">
+      {#each dropEntries as entry (entry.key)}
+        <div
+          class="drop-tile"
+          role="listitem"
+          style={`--accent: ${entry.accent}`}
+          aria-label={`${entry.label}${entry.count > 1 ? ` x${entry.count}` : ''}`}
+        >
+          <img
+            class="drop-icon"
+            src={entry.icon}
+            alt=""
+            aria-hidden="true"
+            on:error={onMaterialIconError}
+          />
+          {#if entry.count > 1}
+            <span class="drop-count">x{entry.count}</span>
+          {/if}
+          <span class="sr-only">{entry.label}{entry.count > 1 ? ` x${entry.count}` : ''}</span>
+        </div>
+      {/each}
     </div>
   {/if}
   {#if gold}
