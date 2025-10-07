@@ -392,7 +392,7 @@
     <g
       class={`projectile variant-${projectile.variant}`}
       data-id={projectile.id}
-      style={`--blade-stroke:${projectile.stroke}; --blade-fill:${projectile.fill}; --blade-glow:${projectile.glow}; --blade-accent:${projectile.accent}; --blade-length:${projectile.length.toFixed(2)}; --blade-hue:${projectile.hue.toFixed(2)}; --blade-head-scale:${projectile.arrow?.scale ?? 1}; --blade-end-x:${projectile.arrow?.x ?? 0}px; --blade-end-y:${projectile.arrow?.y ?? 0}px; --blade-angle:${projectile.arrow?.angleDeg ?? 0}deg;`}
+      style={`--blade-stroke:${projectile.stroke}; --blade-fill:${projectile.fill}; --blade-glow:${projectile.glow}; --blade-accent:${projectile.accent}; --blade-length:${projectile.length.toFixed(2)}; --blade-hue:${projectile.hue.toFixed(2)}; --blade-head-scale:${projectile.arrow?.scale ?? 1}; --blade-end-x:${projectile.arrow?.x ?? 0}; --blade-end-y:${projectile.arrow?.y ?? 0}; --blade-angle:${projectile.arrow?.angleDeg ?? 0}deg;`}
     >
       <path class="projectile-path" d={projectile.path} />
       <g class="projectile-head">
@@ -468,7 +468,7 @@
   }
 
   .reduced .projectile-head {
-    transform: translate(var(--blade-end-x, 0px), var(--blade-end-y, 0px))
+    transform: translate(var(--blade-end-x, 0), var(--blade-end-y, 0))
       rotate(var(--blade-angle, 0deg))
       scale(var(--blade-head-scale, 1));
   }
@@ -492,28 +492,28 @@
   @keyframes projectile-head {
     0% {
       opacity: 0;
-      transform: translate(var(--blade-end-x, 0px), var(--blade-end-y, 0px))
+      transform: translate(var(--blade-end-x, 0), var(--blade-end-y, 0))
         rotate(var(--blade-angle, 0deg))
         scale(calc(var(--blade-head-scale, 1) * 0.35));
     }
 
     35% {
       opacity: 1;
-      transform: translate(var(--blade-end-x, 0px), var(--blade-end-y, 0px))
+      transform: translate(var(--blade-end-x, 0), var(--blade-end-y, 0))
         rotate(var(--blade-angle, 0deg))
         scale(calc(var(--blade-head-scale, 1) * 0.98));
     }
 
     70% {
       opacity: 1;
-      transform: translate(var(--blade-end-x, 0px), var(--blade-end-y, 0px))
+      transform: translate(var(--blade-end-x, 0), var(--blade-end-y, 0))
         rotate(var(--blade-angle, 0deg))
         scale(calc(var(--blade-head-scale, 1) * 1.08));
     }
 
     100% {
       opacity: 0;
-      transform: translate(var(--blade-end-x, 0px), var(--blade-end-y, 0px))
+      transform: translate(var(--blade-end-x, 0), var(--blade-end-y, 0))
         rotate(var(--blade-angle, 0deg))
         scale(calc(var(--blade-head-scale, 1) * 0.6));
     }
