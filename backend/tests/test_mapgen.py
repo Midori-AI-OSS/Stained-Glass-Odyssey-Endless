@@ -116,6 +116,31 @@ def test_generator_applies_room_quota_overrides():
     assert counts.get("rest", 0) == 1
 
 
+def test_generator_places_shops_near_end_by_default():
+    gen = MapGenerator("seed")
+    rooms = gen.generate_floor()
+    middle = MapGenerator.rooms_per_floor - 2
+    min_shop_idx = max(0, int(middle * 0.8)) if middle > 0 else 0
+    optional_rooms = rooms[1:-1]
+    shop_positions = [idx for idx, room in enumerate(optional_rooms) if room.room_type == "shop"]
+    assert shop_positions, "expected at least one shop"
+    assert all(position >= min_shop_idx for position in shop_positions)
+
+
+def test_generator_places_multiple_shops_after_threshold():
+    selection = validate_run_configuration(run_type="standard", modifiers={"pressure": 0})
+    selection.snapshot.setdefault("room_overrides", {})["shop"] = {"count": 3}
+    context = build_run_modifier_context(selection.snapshot)
+    gen = MapGenerator("seed", modifier_context=context, configuration=selection.snapshot)
+    rooms = gen.generate_floor()
+    middle = MapGenerator.rooms_per_floor - 2
+    min_shop_idx = max(0, int(middle * 0.8)) if middle > 0 else 0
+    optional_rooms = rooms[1:-1]
+    shop_positions = [idx for idx, room in enumerate(optional_rooms) if room.room_type == "shop"]
+    assert len(shop_positions) == 3
+    assert all(position >= min_shop_idx for position in shop_positions)
+
+
 def test_mapnode_tags_round_trip():
     node = MapNode(
         room_id=5,
