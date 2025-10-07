@@ -21,6 +21,7 @@
   export let reducedMotion = false;
   export let prefetchedSummary = null;
   export let initialState = null;
+  export let roomTags = [];
 
   const dispatch = createEventDispatcher();
 

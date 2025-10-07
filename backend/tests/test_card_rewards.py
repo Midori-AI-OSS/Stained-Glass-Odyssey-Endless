@@ -104,7 +104,7 @@ async def test_battle_offers_choices_and_applies_effect(app_with_db, monkeypatch
         map_state = (await map_resp.get_json())["map"]
         node = map_state["rooms"][map_state["current"]]
         room_type = node["room_type"]
-        if room_type in {"battle-weak", "battle-normal"}:
+        if room_type in {"battle-weak", "battle-normal", "battle-prime", "battle-glitched"}:
             break
         if room_type == "shop":
             await client.post(f"/rooms/{run_id}/shop")

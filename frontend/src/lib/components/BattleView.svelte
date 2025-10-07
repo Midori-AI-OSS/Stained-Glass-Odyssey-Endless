@@ -36,6 +36,7 @@
   export let showStatusTimeline = false;
   export let showTurnCounter = true;
   export let flashEnrageCounter = true;
+  export let roomTags = [];
 
   // Use granular motion settings with fallback to legacy prop
   $: motionSettings = $motionStore || {

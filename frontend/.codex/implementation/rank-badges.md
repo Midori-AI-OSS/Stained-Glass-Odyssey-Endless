@@ -24,10 +24,15 @@ Unknown ranks fall back to a bronze star with a short, auto-generated label. Com
 
 ## Integration Points
 
-- `BattleFighterCard.svelte` now drops a `RankBadge` into each combat card, reading the rank directly from `fighter.rank`.
+- `BattleFighterCard.svelte` keeps the in-battle presentation lightweight, relying on the `rank-prime` / `rank-boss` outline classes for elevated foes instead of rendering a badge.
 - `LegacyFighterPortrait.svelte` accepts a `rankTag` override so review tabs can show badges even when tab labels omit the rank text.
 - `BattleReview.svelte` stores the foe rank alongside tab metadata and forwards it into `LegacyFighterPortrait` for both the icon column and the detailed breakdown portrait.
 
 ## Tests
 
-`tests/rank-badges.vitest.js` renders Prime, Glitched Prime, and Boss foes through `BattleFighterCard` to ensure the corresponding badges and glitch state are present. The suite runs via Vitest (`bun x vitest run --config vitest.config.js`) and relies on lightweight mocks for `assetLoader`.
+`tests/rank-badges.vitest.js` verifies two layers:
+
+1. `BattleFighterCard` applies the correct outline classes for Prime and Boss variants without re-introducing badges.
+2. `RankBadge.svelte` still renders the correct data attributes and glitch animation for Prime, Glitched Prime, and Boss ranks.
+
+The suite runs via Vitest (`bun x vitest run --config vitest.config.js`) and relies on lightweight mocks for `assetLoader`.

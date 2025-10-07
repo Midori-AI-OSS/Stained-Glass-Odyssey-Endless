@@ -263,11 +263,38 @@
         runTypeId = runTypes[0]?.id || 'standard';
       }
 
+      // Preserve user modifications when metadata loads/reloads
+      const userModifiedKeys = new Set(
+        Object.entries(modifierDirty)
+          .filter(([_, isDirty]) => isDirty)
+          .map(([modId]) => modId)
+      );
+      
       const baseState = buildBaseModifierState();
-      modifierValues = baseState.values;
-      modifierDirty = baseState.dirty;
-
-      applyRunTypeDefaults(runTypeId, { resetDirty: true });
+      
+      // Start with base state
+      const nextValues = baseState.values;
+      const nextDirty = baseState.dirty;
+      
+      // Restore user-modified values
+      for (const modId of userModifiedKeys) {
+        if (modifierValues[modId] !== undefined) {
+          nextValues[modId] = sanitizeStack(modId, modifierValues[modId]);
+          nextDirty[modId] = true;
+        }
+      }
+      
+      modifierValues = nextValues;
+      modifierDirty = nextDirty;
+      
+      // Apply run type defaults, but don't reset dirty flags that are already set
+      applyRunTypeDefaults(runTypeId, { resetDirty: false });
+      
+      // Now mark user-modified values as dirty again
+      for (const modId of userModifiedKeys) {
+        modifierDirty[modId] = true;
+      }
+      
       lastAppliedPresetFingerprint = null;
 
       if (persistedDefaults?.modifiers && typeof persistedDefaults.modifiers === 'object') {
@@ -856,7 +883,16 @@
     }
     const stacking = definition.stacking || {};
     const minimum = Number.isFinite(Number(stacking.minimum)) ? Number(stacking.minimum) : 0;
-    const maximum = Number.isFinite(Number(stacking.maximum)) ? Number(stacking.maximum) : null;
+    let maximum = null;
+    if (typeof stacking.maximum === 'number' && Number.isFinite(stacking.maximum)) {
+      maximum = stacking.maximum;
+    } else if (
+      stacking.maximum !== null &&
+      stacking.maximum !== undefined &&
+      Number.isFinite(Number(stacking.maximum))
+    ) {
+      maximum = Number(stacking.maximum);
+    }
     const step = Number.isFinite(Number(stacking.step)) && Number(stacking.step) > 0 ? Number(stacking.step) : 1;
     let value = Number(rawValue);
     if (!Number.isFinite(value)) {
@@ -1494,56 +1530,65 @@
       </div>
     {:else if step === 'confirm'}
       <div class="confirm-panel step-surface">
-        <section>
-          <h3>Party</h3>
-          <ul>
-            {#each partySummary as member}
-              <li>{member}</li>
-            {/each}
-          </ul>
-        </section>
-        <section>
-          <h3>Run Type</h3>
-          <p>{activeRunType?.label || runTypeId}</p>
-          <p class="card-description">{activeRunType?.description}</p>
-        </section>
-        <section>
-          <h3>Modifiers</h3>
-          {#if selectedModifiers.some(isActiveModifier)}
+        {#if metadataLoading}
+          <p class="loading">Loading configuration...</p>
+        {:else if metadataError}
+          <div class="error">
+            <p>{metadataError}</p>
+            <button class="icon-btn" on:click={() => fetchMetadata({ forceRefresh: true })}>Retry</button>
+          </div>
+        {:else}
+          <section>
+            <h3>Party</h3>
             <ul>
-              {#each selectedModifiers.filter(isActiveModifier) as mod}
-                <li>{modifierLabel(mod)}: {mod.value}</li>
+              {#each partySummary as member}
+                <li>{member}</li>
               {/each}
             </ul>
-          {:else}
-            <p>No additional modifiers selected.</p>
-          {/if}
-        </section>
-        <section>
-          <h3>Reward Preview</h3>
-          <div class="preview-grid">
-            <div>
-              <span class="preview-label">EXP Bonus</span>
-              <span class="preview-value">{formatRewardBonus(rewardPreview.exp_bonus)}</span>
+          </section>
+          <section>
+            <h3>Run Type</h3>
+            <p>{activeRunType?.label || runTypeId}</p>
+            <p class="card-description">{activeRunType?.description}</p>
+          </section>
+          <section>
+            <h3>Modifiers</h3>
+            {#if selectedModifiers.some(isActiveModifier)}
+              <ul>
+                {#each selectedModifiers.filter(isActiveModifier) as mod}
+                  <li>{modifierLabel(mod)}: {mod.value}</li>
+                {/each}
+              </ul>
+            {:else}
+              <p>No additional modifiers selected.</p>
+            {/if}
+          </section>
+          <section>
+            <h3>Reward Preview</h3>
+            <div class="preview-grid">
+              <div>
+                <span class="preview-label">EXP Bonus</span>
+                <span class="preview-value">{formatRewardBonus(rewardPreview.exp_bonus)}</span>
+              </div>
+              <div>
+                <span class="preview-label">RDR Bonus</span>
+                <span class="preview-value">{formatRewardBonus(rewardPreview.rdr_bonus)}</span>
+              </div>
+              <div>
+                <span class="preview-label">Foe Bonus</span>
+                <span class="preview-value">{formatRewardBonus(rewardPreview.foe_bonus)}</span>
+              </div>
+              <div>
+                <span class="preview-label">Player Bonus</span>
+                <span class="preview-value">{formatRewardBonus(rewardPreview.player_bonus)}</span>
+              </div>
             </div>
-            <div>
-              <span class="preview-label">RDR Bonus</span>
-              <span class="preview-value">{formatRewardBonus(rewardPreview.rdr_bonus)}</span>
-            </div>
-            <div>
-              <span class="preview-label">Foe Bonus</span>
-              <span class="preview-value">{formatRewardBonus(rewardPreview.foe_bonus)}</span>
-            </div>
-            <div>
-              <span class="preview-label">Player Bonus</span>
-              <span class="preview-value">{formatRewardBonus(rewardPreview.player_bonus)}</span>
-            </div>
-          </div>
-        </section>
+          </section>
+        {/if}
       </div>
       <div class="navigation">
         <button class="ghost" on:click={() => goToStep('modifiers')}>Back</button>
-        <button class="primary" on:click={startRun} disabled={submitting}>Start Run</button>
+        <button class="primary" on:click={startRun} disabled={submitting || metadataLoading || metadataError}>Start Run</button>
       </div>
     {/if}
     </div>

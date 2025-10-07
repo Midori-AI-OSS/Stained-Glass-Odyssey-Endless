@@ -89,6 +89,8 @@ async def test_players_and_rooms(app_with_db):
             endpoint = {
                 "battle-weak": "battle",
                 "battle-normal": "battle",
+                "battle-prime": "battle",
+                "battle-glitched": "battle",
                 "battle-boss-floor": "boss",
                 "shop": "shop",
             }[rt]
@@ -101,7 +103,9 @@ async def test_players_and_rooms(app_with_db):
             if predicate(rt):
                 return resp
 
-    battle_resp = await advance_until(lambda rt: rt in {"battle-weak", "battle-normal"})
+    battle_resp = await advance_until(
+        lambda rt: rt in {"battle-weak", "battle-normal", "battle-prime", "battle-glitched"}
+    )
     assert battle_resp.status_code == 200
     battle_data = await battle_resp.get_json()
     assert "foes" in battle_data
@@ -132,6 +136,8 @@ async def test_room_images(app_with_db):
     assert {
         "battle-weak",
         "battle-normal",
+        "battle-prime",
+        "battle-glitched",
         "battle-boss-floor",
         "shop",
     } <= data["images"].keys()
