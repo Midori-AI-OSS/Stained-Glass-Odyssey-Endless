@@ -44,6 +44,14 @@ preferences are respected. Pop-in scale transitions mirror the sequential
 animation while guarding against prop changes by clearing timers and audio
 handles whenever the loot payload updates or the overlay unmounts.
 
+`createRewardDropSfx` now wraps the generic `createSequentialSfxPlayer`
+utility, which keeps a cached audio element ready and clones it if another
+playback request arrives mid-sound. The helper clamps volume updates, respects
+`reducedMotion`, and pulls clips from the registry's `'ui/reward/drop'` alias
+before falling back to the Kenney coin and satchel samples. The pull-results
+overlay reuses the same utility through `createDealSfx`, so both overlays share
+identical clone-and-retry behaviour when the user mashes through reward queues.
+
 Ambient effects from `EnrageIndicator.svelte` continue to render while the
 rewards overlay is shown and fade out gracefully, so the transition from
 combat to rewards remains smooth.

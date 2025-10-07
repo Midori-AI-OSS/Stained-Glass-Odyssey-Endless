@@ -596,6 +596,13 @@ registerSfxAlias('ui/pull/deal', [
   'kenney_audio/switch22'
 ]);
 
+registerSfxAlias('ui/reward/drop', [
+  'kenney_audio/handleCoins',
+  'kenney_audio/handleCoins2',
+  'kenney_audio/dropLeather',
+  'kenney_audio/impactGeneric_light_001'
+]);
+
 registerSfxAlias('ui/default', [
   'kenney_audio/click1',
   'kenney_audio/click2',
