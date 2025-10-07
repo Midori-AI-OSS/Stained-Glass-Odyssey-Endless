@@ -2,11 +2,10 @@
   // Renders a fighter portrait with HP bar, element chip, and status icons.
   import { getCharacterImage, getElementColor, getElementIcon } from '../systems/assetLoader.js';
   import StatusIcons from './StatusIcons.svelte';
-  import RankBadge from './RankBadge.svelte';
 
   export let fighter = {};
   export let reducedMotion = false;
-  // Optional rank identifier used for badge rendering
+  // Optional rank identifier retained for analytics / data attributes
   export let rankTag = null;
   function getStackCount(p) {
     const stacks = p?.stacks;
@@ -86,8 +85,6 @@
     return isLowBrightness(elColor);
   })();
 
-  $: badgeRank = rankTag != null ? rankTag : fighter?.rank;
-
   // NOTE: Do not add ult icon pulse/size logic here.
   // The Fighter UI overlays and ult gauge behavior live in BattleFighterCard.svelte.
   // This portrait component is used in multiple contexts; keep it minimal.
@@ -99,12 +96,8 @@
     class:ultimate-ready={fighter.ultimate_ready}
     title={passiveTip}
     style={`--el-color: ${elColor}`}
+    data-rank-tag={rankTag != null ? rankTag : fighter?.rank}
   >
-    <RankBadge
-      rank={badgeRank}
-      className="rank-badge-slot"
-      size="calc(var(--portrait-size) * 0.32)"
-    />
     <img
       src={getCharacterImage((fighter?.summon_type === 'phantom' && fighter?.summoner_id) ? fighter.summoner_id : (fighter?.summon_type || fighter?.id))}
       alt=""
@@ -205,13 +198,6 @@
     /* Allow pips to scale across views while staying small */
     --pip-size: clamp(4px, calc(var(--portrait-size) * 0.11), 10px);
     --pip-gap: clamp(1px, calc(var(--portrait-size) * 0.02), 3px);
-  }
-  .portrait-frame :global(.rank-badge-slot) {
-    position: absolute;
-    top: clamp(0.25rem, calc(var(--portrait-size) * 0.08), 0.6rem);
-    left: clamp(0.25rem, calc(var(--portrait-size) * 0.08), 0.6rem);
-    pointer-events: none;
-    z-index: 3;
   }
   .portrait {
     width: 100%;
