@@ -400,7 +400,7 @@
               <div class="element-effect {elementGlow.effect}"></div>
             {/if}
           </div>
-            <!-- Rank badge removed per design: outline subtly animates instead. -->
+          <!-- Rank badge removed per design: outline subtly animates instead. -->
           <!-- Overlay UI: pips (left), passives (middle), ult gauge (right) -->
           <div class="overlay-ui">
             <!-- Old "action pips" removed to avoid confusion with passive pips. -->
@@ -408,7 +408,12 @@
               <div class="passive-indicators" class:reduced={reducedMotion}>
                 {#each fighter.passives as p (p.id)}
                   {@const count = getStackCount(p)}
-                  <div class="passive" class:pips-mode={(p.display === 'pips' && count <= 5)} class:spinner-mode={(p.display === 'spinner')} class:number-mode={(p.display !== 'spinner' && !(p.display === 'pips' && count <= 5))}>
+                  <div
+                    class="passive"
+                    class:pips-mode={(p.display === 'pips' && count <= 5)}
+                    class:spinner-mode={(p.display === 'spinner')}
+                    class:number-mode={(p.display !== 'spinner' && !(p.display === 'pips' && count <= 5))}
+                  >
                     {#if p.display === 'spinner'}
                       <TripleRingSpinner color={elColor} duration="1.5s" {reducedMotion} />
                     {:else if p.display === 'pips'}
@@ -429,72 +434,17 @@
                     {:else}
                       <span class="count">{p.max_stacks ? `${count}/${p.max_stacks}` : count}</span>
                     {/if}
-        {/each}
-      </div>
-    {/if}
-  <div
-    class="element-wrapper"
-    class:element-change={elementChanged}
-    class:reduced={reducedMotion}
-    on:animationend={resetElementChange}
-  >
-    <div
-      class="fighter-portrait"
-      class:can-cycle={canCycle}
-      class:rank-prime={isPrimeRank}
-      class:rank-boss={isBossRank}
-      class:reduced={effectiveReducedMotion}
-      on:click={cyclePortraitIfAvailable}
-      style={portraitStyle}
-    >
-      <div
-        class="portrait-image"
-        class:element-glow={!isDead && Boolean(fighter?.ultimate_ready) && !disablePortraitGlows}
-        class:reduced={effectiveReducedMotion}
-        class:phantom={isPhantom && !isDead}
-        class:fading={fading}
-        class:luna-sword={showLunaSwordArt}
-        style={`background-image: url("${portraitImageUrl}")`}
-      >
-      {#if showLunaSwordArt}
-        <div class="luna-sword-overlay" style={lunaSwordOverlayStyle} aria-hidden="true"></div>
-      {/if}
-      {#if !reducedMotion && !isDead && fighter?.ultimate_ready}
-        <div class="element-effect {elementGlow.effect}"></div>
-      {/if}
-    </div>
-      <!-- Rank badge removed per design: outline subtly animates instead. -->
-    <!-- Overlay UI: pips (left), passives (middle), ult gauge (right) -->
-    <div class="overlay-ui">
-      <!-- Old "action pips" removed to avoid confusion with passive pips. -->
-      {#if (fighter.passives || []).length}
-        <div class="passive-indicators" class:reduced={reducedMotion}>
-          {#each fighter.passives as p (p.id)}
-            {@const count = getStackCount(p)}
-            <div class="passive" class:pips-mode={(p.display === 'pips' && count <= 5)} class:spinner-mode={(p.display === 'spinner')} class:number-mode={(p.display !== 'spinner' && !(p.display === 'pips' && count <= 5))}>
-              {#if p.display === 'spinner'}
-                <TripleRingSpinner color={elColor} duration="1.5s" {reducedMotion} />
-              {:else if p.display === 'pips'}
-                {#if count <= 5}
-                  <div class="pips">
-                    {#each Array(count) as _, i (i)}
-                      <PipCircle
-                        class="pip-icon filled"
-                        stroke="none"
-                        fill="currentColor"
-                        aria-hidden="true"
-                      />
-                    {/each}
                   </div>
                 {/each}
               </div>
             {/if}
+
             <div
               class="ult-gauge"
               class:ult-ready={Boolean(fighter?.ultimate_ready)}
               class:reduced={reducedMotion}
               style="--element-color: {elColor}; --p: {ultRatio}; --tilt: {tiltAngle}deg"
-            aria-label="Ultimate Gauge"
+              aria-label="Ultimate Gauge"
             >
               <div class="ult-fill"></div>
               <svelte:component
@@ -515,11 +465,11 @@
           {#if displayName}
             <div class="name-chip" aria-hidden="true">{displayName}</div>
           {/if}
-          </div>
         </div>
       </div>
     </div>
   </div>
+</div>
 
 <style>
   .modern-fighter-card {
