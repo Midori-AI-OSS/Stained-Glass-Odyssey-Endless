@@ -18,6 +18,7 @@ from runs.party_manager import load_party
 from services.asset_service import get_asset_manifest
 from services.reward_service import select_card
 from services.reward_service import select_relic
+from services.room_service import BATTLE_ROOM_TYPES
 from services.room_service import room_action
 from services.run_configuration import METADATA_VERSION
 from services.run_configuration import RunModifierContext
@@ -195,6 +196,7 @@ async def get_ui_state() -> tuple[str, int, dict[str, Any]]:
         current_room_data = None
         current_room_type = None
         next_room_type = None
+        all_battle_types = set(BATTLE_ROOM_TYPES) | {"battle-boss-floor"}
 
         if rooms and 0 <= current_index < len(rooms):
             current_node = rooms[current_index]
@@ -206,7 +208,7 @@ async def get_ui_state() -> tuple[str, int, dict[str, Any]]:
 
             # Check if there's an active battle snapshot
             snap = battle_snapshots.get(run_id)
-            is_battle_room = current_room_type in {"battle-weak", "battle-normal", "battle-boss-floor"}
+            is_battle_room = current_room_type in all_battle_types
             awaiting_flags = (
                 state.get("awaiting_next")
                 or state.get("awaiting_card")
@@ -224,6 +226,7 @@ async def get_ui_state() -> tuple[str, int, dict[str, Any]]:
             state_reports_battle = bool(state.get("battle"))
 
             if snap is not None and is_battle_room:
+                snap.setdefault("tags", list(getattr(current_node, "tags", ()) or []))
                 current_room_data = snap
             elif (
                 is_battle_room
@@ -238,6 +241,7 @@ async def get_ui_state() -> tuple[str, int, dict[str, Any]]:
                     "current_room": current_room_type,
                     "next_room": next_room_type,
                 }
+                current_room_data["tags"] = list(getattr(current_node, "tags", ()) or [])
             elif current_room_type == "shop" and not state.get("awaiting_next"):
                 stock_state = state.get("shop_stock", {})
                 stored_stock: list[dict[str, Any]] = []

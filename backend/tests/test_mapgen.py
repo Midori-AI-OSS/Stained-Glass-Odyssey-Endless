@@ -9,6 +9,7 @@ from services.run_configuration import build_run_modifier_context
 from services.run_configuration import validate_run_configuration
 
 from autofighter.mapgen import MapGenerator
+from autofighter.mapgen import MapNode
 
 
 class _BossRushParty:
@@ -27,7 +28,7 @@ def test_generator_deterministic():
     assert rooms1[0].room_type == "start"
     assert rooms1[-1].room_type == "battle-boss-floor"
     types = [n.room_type for n in rooms1[1:-1]]
-    assert set(types) <= {"shop", "battle-weak", "battle-normal"}
+    assert set(types) <= {"shop", "battle-weak", "battle-normal", "battle-prime", "battle-glitched"}
     assert "shop" in types
 
 
@@ -78,8 +79,10 @@ def test_generator_marks_prime_glitched_and_bonus_rooms():
             continue
         if "prime" in room.room_type:
             assert room.prime_bonus_pct >= context.prime_spawn_bonus_pct
+            assert room.tags == ("prime",)
         if "glitched" in room.room_type:
             assert room.glitched_bonus_pct >= context.glitched_spawn_bonus_pct
+            assert room.tags == ("glitched",)
         assert room.elite_bonus_pct >= context.elite_spawn_bonus_pct
 
 
@@ -104,3 +107,19 @@ def test_generator_applies_room_quota_overrides():
     counts = Counter(room.room_type for room in rooms)
     assert counts.get("shop", 0) == 2
     assert counts.get("rest", 0) == 1
+
+
+def test_mapnode_tags_round_trip():
+    node = MapNode(
+        room_id=5,
+        room_type="battle-prime",
+        floor=1,
+        index=5,
+        loop=1,
+        pressure=0,
+        tags=("prime",),
+    )
+    data = node.to_dict()
+    assert data["tags"] == ["prime"]
+    restored = MapNode.from_dict(data)
+    assert restored.tags == ("prime",)

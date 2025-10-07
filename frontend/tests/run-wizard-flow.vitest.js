@@ -91,7 +91,7 @@ const BASE_METADATA = {
       label: 'Enemy Buff',
       category: 'foe',
       description: 'Improve foe stats',
-      stacking: { minimum: 0, step: 1, default: 0 },
+      stacking: { minimum: 0, maximum: null, step: 1, default: 0 },
       grants_reward_bonus: true,
       reward_bonuses: {
         exp_bonus_per_stack: 0.5,
@@ -133,6 +133,23 @@ const BASE_METADATA = {
   ],
   pressure: { tooltip: 'Pressure influences encounter difficulty.' }
 };
+
+function readRewardValue(label) {
+  const headings = screen.queryAllByText('Reward Preview');
+  for (const heading of headings) {
+    const container = heading.closest('section') ?? heading.closest('.reward-preview');
+    if (!container) continue;
+    const rows = Array.from(container.querySelectorAll('.preview-grid > div'));
+    for (const row of rows) {
+      const labelNode = row.querySelector('.preview-label');
+      if (labelNode?.textContent?.trim() === label) {
+        const valueNode = row.querySelector('.preview-value');
+        return valueNode?.textContent?.trim() ?? null;
+      }
+    }
+  }
+  return null;
+}
 
 describe('RunChooser wizard flow', () => {
   beforeEach(() => {
@@ -204,6 +221,8 @@ describe('RunChooser wizard flow', () => {
     expect(screen.getByRole('heading', { name: 'Review & Start' })).toBeTruthy();
     expect(screen.getByText('Pressure: 7')).toBeTruthy();
     expect(screen.getByText('Enemy Buff: 3')).toBeTruthy();
+    expect(readRewardValue('RDR Bonus')).toBe('+150%');
+    expect(readRewardValue('EXP Bonus')).toBe('+150%');
 
     const startButton = screen.getByRole('button', { name: 'Start Run' });
     await fireEvent.click(startButton);
@@ -296,19 +315,6 @@ describe('RunChooser wizard flow', () => {
     const goToModifiers = screen.getByRole('button', { name: 'Next' });
     await fireEvent.click(goToModifiers);
     await tick();
-
-    const readRewardValue = (label) => {
-      const rewardSection = screen.getByText('Reward Preview').closest('.reward-preview');
-      if (!rewardSection) return null;
-      const rows = Array.from(rewardSection.querySelectorAll('.preview-grid > div'));
-      for (const row of rows) {
-        const labelNode = row.querySelector('.preview-label');
-        if (labelNode?.textContent?.trim() === label) {
-          return row.querySelector('.preview-value')?.textContent?.trim();
-        }
-      }
-      return null;
-    };
 
     expect(readRewardValue('RDR Bonus')).toBe('+100%');
     expect(readRewardValue('EXP Bonus')).toBe('+100%');

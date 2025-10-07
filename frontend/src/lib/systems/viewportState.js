@@ -184,15 +184,21 @@ export function roomLabel(type) {
   }
 }
 
-export function roomInfo(mapRooms, currentIndex, currentRoomType, roomData) {
+export function roomInfo(mapRooms, currentIndex, currentRoomType, roomData, roomTags = []) {
   const cur = mapRooms?.[currentIndex] || null;
   const nxt = mapRooms?.[currentIndex + 1] || null;
+  const tags = Array.isArray(roomData?.tags)
+    ? [...roomData.tags]
+    : Array.isArray(roomTags)
+      ? [...roomTags]
+      : [];
   return {
     pressure: cur?.pressure ?? roomData?.pressure ?? 0,
     floorNumber: cur?.floor ?? 1,
     roomNumber: (cur?.index ?? currentIndex ?? 0) + 1,
     currentType: currentRoomType || roomData?.current_room || '',
     nextType: nxt?.room_type || (roomData?.next_room ?? ''),
+    tags
   };
 }
 

@@ -236,6 +236,16 @@ async def _run_battle(
     rooms: list[MapNode],
     progress: Callable[[dict[str, Any]], Awaitable[None]],
 ) -> None:
+    node = getattr(room, "node", None)
+
+    def attach_tags(payload: dict[str, Any]) -> dict[str, Any]:
+        try:
+            tags = list(getattr(node, "tags", ()) or [])
+        except Exception:
+            tags = []
+        payload["tags"] = tags
+        return payload
+
     try:
         try:
             previous_pull_tokens = 0
@@ -248,17 +258,19 @@ async def _run_battle(
             state["battle"] = False
             log.exception("Battle resolution failed for %s", run_id)
             if run_id not in battle_snapshots:
-                battle_snapshots[run_id] = {
-                    "result": "error",
-                    "error": str(exc),
-                    "ended": True,
-                    "party": [],
-                    "foes": [],
-                    "awaiting_next": False,
-                    "awaiting_card": False,
-                    "awaiting_relic": False,
-                    "awaiting_loot": False,
-                }
+                battle_snapshots[run_id] = attach_tags(
+                    {
+                        "result": "error",
+                        "error": str(exc),
+                        "ended": True,
+                        "party": [],
+                        "foes": [],
+                        "awaiting_next": False,
+                        "awaiting_card": False,
+                        "awaiting_relic": False,
+                        "awaiting_loot": False,
+                    }
+                )
             try:
                 await asyncio.to_thread(save_map, run_id, state)
                 await asyncio.to_thread(save_party, run_id, party)
@@ -301,6 +313,7 @@ async def _run_battle(
             manager._auto_craft(items)
             manager._set_items(items)
             result["items"] = items
+            attach_tags(result)
             if result.get("result") != "defeat":
                 recent_entries = state.get("recent_foes", [])
                 updated: OrderedDict[str, int] = OrderedDict()
@@ -380,6 +393,7 @@ async def _run_battle(
                         "run_result": "defeat",
                     }
                 )
+                attach_tags(result)
                 await progress(result)
 
                 telemetry_logged = False

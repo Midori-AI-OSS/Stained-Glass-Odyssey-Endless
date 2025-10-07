@@ -548,14 +548,6 @@
     }
   }
   .fighter-portrait.can-cycle { cursor: pointer; }
-  .fighter-portrait :global(.card-rank-badge) {
-    position: absolute;
-    top: clamp(0.35rem, calc(var(--portrait-size) * 0.08), 0.75rem);
-    left: clamp(0.35rem, calc(var(--portrait-size) * 0.08), 0.75rem);
-    pointer-events: none;
-    z-index: 4;
-  }
-
   /* External highlight (e.g., hovering the action queue) */
   .modern-fighter-card.highlight .fighter-portrait {
     border-color: color-mix(in oklab, var(--element-color) 75%, white);
