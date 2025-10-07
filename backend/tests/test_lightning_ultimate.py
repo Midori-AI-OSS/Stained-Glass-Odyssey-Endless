@@ -100,3 +100,42 @@ async def test_lightning_ultimate_aftertaste_stacks(monkeypatch):
     await BUS.emit_async("hit_landed", attacker, target, 10, "attack")
     await asyncio.sleep(0)
     assert hits == [1]
+
+
+@pytest.mark.asyncio
+async def test_lightning_ultimate_prefers_high_aggro_targets():
+    random.seed(11)
+
+    lightning = Lightning()
+    attacker = Actor()
+    attacker._base_atk = 120
+    attacker.damage_type = lightning
+    attacker.ultimate_charge = attacker.ultimate_charge_max
+    attacker.ultimate_ready = True
+
+    foes: list[Stats] = []
+    hits: dict[str, int] = {}
+
+    async def record_damage(self, *_args, **_kwargs):
+        hits[self.id] = hits.get(self.id, 0) + 1
+        return 0
+
+    for idx, aggro in enumerate((1.0, 2.5, 5.0)):
+        foe = Stats()
+        foe.id = f"foe-{idx}"
+        foe.hp = 5_000
+        foe._base_defense = 0
+        foe.effect_manager = EffectManager(foe)
+        foe.base_aggro = aggro
+        foe.apply_damage = record_damage.__get__(foe, Stats)
+        foes.append(foe)
+
+    for _ in range(5):
+        await lightning.ultimate(attacker, [], foes)
+        attacker.ultimate_charge = attacker.ultimate_charge_max
+        attacker.ultimate_ready = True
+
+    await BUS.emit_async("battle_end", attacker)
+
+    assert sum(hits.values()) == 15
+    assert hits.get("foe-2", 0) > hits.get("foe-1", 0) >= hits.get("foe-0", 0)

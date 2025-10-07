@@ -35,6 +35,7 @@ class Lightning(DamageTypeBase):
         """Zap all foes, seed random DoTs, and build Aftertaste stacks."""
         from autofighter.rooms.battle.pacing import YIELD_MULTIPLIER
         from autofighter.rooms.battle.pacing import pace_sleep
+        from autofighter.rooms.battle.targeting import select_aggro_target
 
         if not await self.consume_ultimate(actor):
             return False
@@ -42,13 +43,17 @@ class Lightning(DamageTypeBase):
         # Lightning ultimate deals damage to all enemies and applies DoTs
         base_damage = int(getattr(actor, "atk", 0))
 
-        # Apply damage to all enemies
-        for enemy in enemies:
+        hit_budget = sum(1 for enemy in enemies if getattr(enemy, "hp", 0) > 0)
+        for _ in range(hit_budget):
+            try:
+                _, enemy = select_aggro_target(enemies)
+            except ValueError:
+                break
+
             if base_damage > 0:
                 await enemy.apply_damage(base_damage, attacker=actor, action_name="Lightning Ultimate")
                 await pace_sleep(YIELD_MULTIPLIER)
 
-            # Apply random DoTs to each enemy
             mgr = getattr(enemy, "effect_manager", None)
             if mgr is not None:
                 types = ["Fire", "Ice", "Wind", "Lightning", "Light", "Dark"]

@@ -1,3 +1,5 @@
+import random
+
 import pytest
 
 from autofighter.passives import PassiveRegistry
@@ -90,3 +92,40 @@ async def test_generic_ultimate_foe_targets_opponents():
     assert result is True
     assert player_target.hp < player_start
     assert foe.hp == foe_start
+
+
+@pytest.mark.asyncio
+async def test_generic_ultimate_prefers_high_aggro_target():
+    random.seed(1337)
+
+    actor = Actor(damage_type=Generic())
+    actor.id = "generic-actor"
+    actor._base_atk = 640
+    actor._base_defense = 0
+    actor.set_base_stat("dodge_odds", 0)
+    actor.ultimate_charge = actor.ultimate_charge_max
+    actor.ultimate_ready = True
+
+    foes: list[Stats] = []
+    for idx, aggro in enumerate((1.0, 2.5, 7.5)):
+        foe = Stats()
+        foe.id = f"foe-{idx}"
+        foe._base_defense = 0
+        foe.set_base_stat("dodge_odds", 0.0)
+        foe.base_aggro = aggro
+        foes.append(foe)
+
+    hits: dict[str, int] = {}
+
+    async def record_hit(*args) -> None:
+        target = args[1]
+        hits[target.id] = hits.get(target.id, 0) + 1
+
+    BUS.subscribe("hit_landed", record_hit)
+    try:
+        await actor.damage_type.ultimate(actor, [actor], foes)
+    finally:
+        BUS.unsubscribe("hit_landed", record_hit)
+
+    assert sum(hits.values()) == 64
+    assert hits.get("foe-2", 0) > hits.get("foe-1", 0) >= hits.get("foe-0", 0)

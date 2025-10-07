@@ -45,13 +45,18 @@ class Fire(DamageTypeBase):
         """Blast all foes for the caster's attack and try to ignite them."""
         from autofighter.rooms.battle.pacing import YIELD_MULTIPLIER
         from autofighter.rooms.battle.pacing import pace_sleep
+        from autofighter.rooms.battle.targeting import select_aggro_target
 
         await super().ultimate(actor, allies, enemies)
         base = getattr(actor, "atk", 0)
-        living = [foe for foe in enemies if getattr(foe, "hp", 0) > 0]
-        if base <= 0 or not living:
+        if base <= 0:
             return True
-        for foe in living:
+        hit_count = sum(1 for foe in enemies if getattr(foe, "hp", 0) > 0)
+        for _ in range(hit_count):
+            try:
+                _, foe = select_aggro_target(enemies)
+            except ValueError:
+                break
             dealt = await foe.apply_damage(base, attacker=actor, action_name="Fire Ultimate")
             await pace_sleep(YIELD_MULTIPLIER)
             mgr = getattr(foe, "effect_manager", None)
