@@ -433,7 +433,11 @@
     animation: glitch3 0.5s infinite;
   }
 
-  .glitched-card.glitch-reduced .glitch-content,
+  .glitched-card.glitch-reduced .glitch-content {
+    animation: none;
+    opacity: 1;
+  }
+
   .glitched-card.glitch-reduced .glitch-wrapper::before,
   .glitched-card.glitch-reduced .glitch-wrapper::after {
     animation: none;
