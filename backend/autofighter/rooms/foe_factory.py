@@ -308,6 +308,23 @@ class FoeFactory:
             cumulative_rooms=cumulative_rooms,
         )
         foe_debuff = apply_base_debuffs(obj, node, config)
+        safeguard_baselines = dict(baseline_stats)
+        if isinstance(obj, FoeBase) and foe_debuff < 1.0:
+            debuffed_snapshot: dict[str, float] = {}
+            for stat_name in baseline_stats:
+                try:
+                    current = getattr(obj, stat_name)
+                except Exception:
+                    continue
+                if isinstance(current, (int, float)):
+                    debuffed_snapshot[stat_name] = float(current)
+            if debuffed_snapshot:
+                for stat_name, current in debuffed_snapshot.items():
+                    original = safeguard_baselines.get(stat_name)
+                    if original is None:
+                        safeguard_baselines[stat_name] = current
+                    else:
+                        safeguard_baselines[stat_name] = min(original, current)
         apply_attribute_scaling(
             obj,
             base_mult,
@@ -320,7 +337,7 @@ class FoeFactory:
             cumulative_rooms=cumulative_rooms,
             foe_debuff=foe_debuff,
         )
-        for stat_name, baseline in baseline_stats.items():
+        for stat_name, baseline in safeguard_baselines.items():
             try:
                 current = getattr(obj, stat_name)
             except Exception:
