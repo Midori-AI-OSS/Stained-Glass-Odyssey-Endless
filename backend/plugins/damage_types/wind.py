@@ -114,7 +114,14 @@ class Wind(DamageTypeBase):
             except Exception:
                 pass
             try:
-                effect_managers[foe].maybe_inflict_dot(actor, dmg)
+                f_mgr = effect_managers.get(foe)
+                if f_mgr is None:
+                    f_mgr = getattr(foe, "effect_manager", None)
+                    if f_mgr is None:
+                        f_mgr = EffectManager(foe)
+                        foe.effect_manager = f_mgr
+                    effect_managers[foe] = f_mgr
+                f_mgr.maybe_inflict_dot(actor, dmg)
             except Exception:
                 pass
 
