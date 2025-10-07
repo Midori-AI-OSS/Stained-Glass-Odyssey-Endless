@@ -292,6 +292,30 @@
 
   const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
 
+  const GLITCH_HASH_MODULO = 997;
+  const GLITCH_DURATION_MIN = 0.84;
+  const GLITCH_DURATION_SPAN = 0.32;
+  const GLITCH_DELAY_MAX = 0.48;
+
+  const glitchHashUnit = (seed) => {
+    const result = stringHashIndex(seed, GLITCH_HASH_MODULO);
+    return GLITCH_HASH_MODULO > 1 ? result / (GLITCH_HASH_MODULO - 1) : 0;
+  };
+
+  $: glitchSeedBase = `${fighter?.id ?? fighter?.name ?? 'unknown'}:${position}`;
+  $: glitchDurationSeconds = (
+    GLITCH_DURATION_MIN +
+    glitchHashUnit(`${glitchSeedBase}:duration`) * GLITCH_DURATION_SPAN
+  ).toFixed(3);
+  $: glitchDelaySeconds = (
+    glitchHashUnit(`${glitchSeedBase}:delay`) * GLITCH_DELAY_MAX
+  ).toFixed(3);
+  $: glitchDurationCss = `${glitchDurationSeconds}s`;
+  $: glitchDelayCss = `${glitchDelaySeconds}s`;
+  $: glitchTimingStyle = isGlitchedRank
+    ? `--glitch-duration: ${effectiveReducedMotion ? '1s' : glitchDurationCss}; --glitch-delay: ${effectiveReducedMotion ? '0s' : glitchDelayCss};`
+    : undefined;
+
   function normalizeTickIndicator(entry, index) {
     if (!entry || typeof entry !== 'object') return null;
     const type = String(entry.type || '').toLowerCase();
@@ -358,8 +382,8 @@
     class:glitch-reduced={effectiveReducedMotion}
     style="--portrait-size: {portraitSize}; --element-color: {elColor}; --element-glow-color: {elementGlow.color}"
   >
-    <div class="glitch-wrapper">
-      <div class="glitch-content">
+    <div class="glitch-wrapper" style={glitchTimingStyle}>
+      <div class="glitch-content" style={glitchTimingStyle}>
         {#if activeTickIndicators.length}
           <div class="tick-indicator-layer" class:reduced={effectiveReducedMotion} data-position={position}>
             {#each activeTickIndicators as indicator, index (indicator.id)}
@@ -534,15 +558,18 @@
   }
 
   .glitched-card:not(.glitch-reduced) .glitch-content {
-    animation: glitch1 1s infinite;
+    animation: glitch1 var(--glitch-duration, 1s) infinite;
+    animation-delay: var(--glitch-delay, 0s);
   }
 
   .glitched-card:not(.glitch-reduced) .glitch-wrapper::before {
-    animation: glitch2 1s infinite;
+    animation: glitch2 calc(var(--glitch-duration, 1s) * 1.08) infinite;
+    animation-delay: calc(var(--glitch-delay, 0s) + 0.12s);
   }
 
   .glitched-card:not(.glitch-reduced) .glitch-wrapper::after {
-    animation: glitch3 1s infinite;
+    animation: glitch3 calc(var(--glitch-duration, 1s) * 0.92) infinite;
+    animation-delay: calc(var(--glitch-delay, 0s) + 0.24s);
   }
 
   .glitched-card.glitch-reduced .glitch-content {
