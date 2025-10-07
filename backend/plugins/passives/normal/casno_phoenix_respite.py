@@ -20,6 +20,13 @@ class _PhoenixRestInterval(HealingOverTime):
 
     owner_id: int = 0
 
+    async def tick(self, target: "Stats", *_: object) -> bool:
+        """Keep the helper active until the intercept completes."""
+
+        if getattr(target, "hp", 0) <= 0:
+            return False
+        return True
+
     async def on_action(self, target: "Stats") -> bool:
         return await CasnoPhoenixRespite._complete_rest(target, self)
 
@@ -78,7 +85,7 @@ class CasnoPhoenixRespite:
         helper_effect = _PhoenixRestInterval(
             name=f"{cls.id}_rest_interval",
             healing=0,
-            turns=1,
+            turns=-1,
             id=helper_id,
             source=target,
             owner_id=entity_id,
