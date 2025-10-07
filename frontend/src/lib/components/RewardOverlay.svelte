@@ -11,10 +11,26 @@
   export let ended = false;
   export let nextRoom = '';
   export let fullIdleMode = false;
+  export let sfxVolume = 5;
+  export let reducedMotion = false;
 
   const dispatch = createEventDispatcher();
 
   // Render immediately; CSS animations handle reveal on mount
+
+  $: normalizedSfxVolume = (() => {
+    const value = Number(sfxVolume);
+    if (!Number.isFinite(value)) return 5;
+    if (value < 0) return 0;
+    if (value > 10) return 10;
+    return value;
+  })();
+  $: iconQuiet = Boolean(reducedMotion || normalizedSfxVolume <= 0);
+  $: revealDelay = (index) => (reducedMotion ? 0 : index * 120);
+  $: lootItems = Array.isArray(items) ? items : [];
+  $: hasLootItems = lootItems.length > 0;
+  $: dataReducedMotion = reducedMotion ? 'true' : 'false';
+  $: dataSfxVolume = String(normalizedSfxVolume);
 
   function titleForItem(item) {
     if (!item) return '';
@@ -50,7 +66,7 @@
   $: {
     clearTimeout(autoTimer);
     const noChoices = remaining === 0;
-    const noLoot = (!gold || gold <= 0) && (!Array.isArray(items) || items.length === 0);
+    const noLoot = (!gold || gold <= 0) && !hasLootItems;
     if (noChoices && noLoot) {
       autoTimer = setTimeout(() => dispatch('next'), 5000);
     }
@@ -61,7 +77,7 @@
   // Show Next Room button when there's loot but no choices
   $: {
     const noChoices = remaining === 0;
-    const hasLoot = (gold > 0) || (Array.isArray(items) && items.length > 0);
+    const hasLoot = (gold > 0) || hasLootItems;
     showNextButton = noChoices && hasLoot;
   }
 
@@ -225,13 +241,13 @@
   
 </style>
 
-<div class="layout">
+<div class="layout" data-reduced-motion={dataReducedMotion} data-sfx-volume={dataSfxVolume}>
   {#if showCards}
   <h3 class="section-title">Choose a Card</h3>
   <div class="choices">
         {#each cards.slice(0,3) as card, i (card.id)}
-          <div class="reveal" style={`--delay: ${i * 120}ms`}>
-            <RewardCard entry={card} type="card" on:select={handleSelect} />
+          <div class:reveal={!reducedMotion} style={`--delay: ${revealDelay(i)}ms`}>
+            <RewardCard entry={card} type="card" quiet={iconQuiet} on:select={handleSelect} />
           </div>
         {/each}
     </div>
@@ -240,18 +256,18 @@
   <h3 class="section-title">Choose a Relic</h3>
   <div class="choices">
         {#each relics.slice(0,3) as relic, i (relic.id)}
-          <div class="reveal" style={`--delay: ${i * 120}ms`}>
-            <CurioChoice entry={relic} on:select={handleSelect} />
+          <div class:reveal={!reducedMotion} style={`--delay: ${revealDelay(i)}ms`}>
+            <CurioChoice entry={relic} quiet={iconQuiet} on:select={handleSelect} />
           </div>
         {/each}
     </div>
   {/if}
   
-  {#if items.length}
+  {#if hasLootItems}
     <h3 class="section-title">Drops</h3>
     <div class="status">
       <ul>
-        {#each items as item}
+        {#each lootItems as item}
           <li>{titleForItem(item)}</li>
         {/each}
       </ul>
