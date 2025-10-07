@@ -1,8 +1,11 @@
 <script>
   import { createEventDispatcher, onDestroy } from 'svelte';
+  import { cubicOut } from 'svelte/easing';
+  import { scale } from 'svelte/transition';
   import RewardCard from './RewardCard.svelte';
   import CurioChoice from './CurioChoice.svelte';
   import { getMaterialIcon, onMaterialIconError } from '../systems/assetLoader.js';
+  import { createRewardDropSfx } from '../systems/sfx.js';
 
   export let cards = [];
   export let relics = [];
@@ -134,6 +137,89 @@
     return grouped;
   })();
 
+  const DROP_REVEAL_INTERVAL_MS = 220;
+  let visibleDrops = [];
+  let dropRevealTimers = [];
+  let dropRevealGeneration = 0;
+  let dropSfxHandle = null;
+  let dropPopTransition = null;
+
+  $: dropPopTransition = reducedMotion
+    ? null
+    : { duration: 180, easing: cubicOut, start: 0.75 };
+
+  function clearDropRevealTimers() {
+    if (dropRevealTimers.length === 0) return;
+    for (const timer of dropRevealTimers) {
+      clearTimeout(timer);
+    }
+    dropRevealTimers = [];
+  }
+
+  function stopDropAudio(release = false) {
+    if (!dropSfxHandle) return;
+    try {
+      dropSfxHandle.pause();
+      dropSfxHandle.currentTime = 0;
+    } catch {
+      // ignore playback reset failures
+    }
+    if (release) {
+      dropSfxHandle = null;
+    }
+  }
+
+  function playRewardDropAudio() {
+    if (reducedMotion) return;
+    if (normalizedSfxVolume <= 0) {
+      stopDropAudio(true);
+      return;
+    }
+    if (!dropSfxHandle) {
+      dropSfxHandle = createRewardDropSfx(normalizedSfxVolume, { reducedMotion });
+    }
+    if (!dropSfxHandle) return;
+    const targetVolume = Math.max(0, Math.min(10, normalizedSfxVolume)) / 10;
+    try {
+      dropSfxHandle.volume = targetVolume;
+      dropSfxHandle.currentTime = 0;
+    } catch {
+      // Ignore audio property assignment failures
+    }
+    const playPromise = dropSfxHandle.play?.();
+    if (playPromise && typeof playPromise.catch === 'function') {
+      playPromise.catch(() => {});
+    }
+  }
+
+  function updateDropSequence(entries, motionReduced) {
+    dropRevealGeneration += 1;
+    const generation = dropRevealGeneration;
+    clearDropRevealTimers();
+    if (!Array.isArray(entries) || entries.length === 0) {
+      visibleDrops = [];
+      stopDropAudio(true);
+      return;
+    }
+    if (motionReduced) {
+      stopDropAudio(true);
+      visibleDrops = entries;
+      return;
+    }
+    stopDropAudio();
+    visibleDrops = [];
+    entries.forEach((_, index) => {
+      const timer = setTimeout(() => {
+        if (generation !== dropRevealGeneration) return;
+        visibleDrops = entries.slice(0, index + 1);
+        playRewardDropAudio();
+      }, index * DROP_REVEAL_INTERVAL_MS);
+      dropRevealTimers.push(timer);
+    });
+  }
+
+  $: updateDropSequence(dropEntries, reducedMotion);
+
   let cardsDone = false;
   let showNextButton = false;
   $: showCards = cards.length > 0 && !cardsDone;
@@ -160,7 +246,11 @@
     }
   }
   // Cleanup timer on unmount
-  onDestroy(() => clearTimeout(autoTimer));
+  onDestroy(() => {
+    clearTimeout(autoTimer);
+    clearDropRevealTimers();
+    stopDropAudio(true);
+  });
 
   // Show Next Room button when there's loot but no choices
   $: {
@@ -416,12 +506,13 @@
   {#if hasLootItems}
     <h3 class="section-title">Drops</h3>
     <div class="drops-row" role="list">
-      {#each dropEntries as entry (entry.key)}
+      {#each visibleDrops as entry (entry.key)}
         <div
           class="drop-tile"
           role="listitem"
           style={`--accent: ${entry.accent}`}
           aria-label={`${entry.label}${entry.count > 1 ? ` x${entry.count}` : ''}`}
+          in:scale={dropPopTransition}
         >
           <img
             class="drop-icon"

@@ -34,6 +34,16 @@ both `aria-label`s and visually hidden text for assistive technologies. Failed
 lookups and network errors fall back to the shared material placeholder via
 `onMaterialIconError` so the overlay never shows broken images.
 
+To emphasise each pickup, the component keeps a `visibleDrops` array separate
+from the aggregated `dropEntries`. When motion reduction is disabled the list
+is populated one entry at a time on a timed interval; each reveal triggers the
+shared `createRewardDropSfx` helper so coins or materials play the reward-drop
+sound at the player's current `sfxVolume`. Reduced-motion mode bypasses the
+timers, shows all icons immediately, and skips the audio so accessibility
+preferences are respected. Pop-in scale transitions mirror the sequential
+animation while guarding against prop changes by clearing timers and audio
+handles whenever the loot payload updates or the overlay unmounts.
+
 Ambient effects from `EnrageIndicator.svelte` continue to render while the
 rewards overlay is shown and fade out gracefully, so the transition from
 combat to rewards remains smooth.
