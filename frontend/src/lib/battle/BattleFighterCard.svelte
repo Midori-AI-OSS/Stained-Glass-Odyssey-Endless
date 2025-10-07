@@ -65,6 +65,102 @@
   let outlineAnimDur = `${(BASE_OUTLINE_SEC * (0.88 + Math.random() * 0.24)).toFixed(2)}s`;
   let outlineAnimDelay = `${(Math.random() * BASE_OUTLINE_SEC).toFixed(2)}s`;
 
+  const PRIME_STREAK_MIN = 3;
+  const PRIME_STREAK_MAX = 6;
+  const PRIME_BLACK_RATIO = 0.05;
+
+  function createPrimeOutlineConfig() {
+    const streakCount = Math.floor(Math.random() * (PRIME_STREAK_MAX - PRIME_STREAK_MIN + 1)) + PRIME_STREAK_MIN;
+    const totalBlackPct = PRIME_BLACK_RATIO * 100;
+
+    const blackWeights = Array.from({ length: streakCount }, () => 0.6 + Math.random() * 0.8);
+    const blackWeightSum = blackWeights.reduce((sum, value) => sum + value, 0);
+    const blackWidths = blackWeights.map((weight) => (totalBlackPct * weight) / blackWeightSum);
+
+    const colorWeights = Array.from({ length: streakCount }, () => 0.4 + Math.random());
+    const colorWeightSum = colorWeights.reduce((sum, value) => sum + value, 0);
+    const colorWidths = colorWeights.map((weight) => ((100 - totalBlackPct) * weight) / colorWeightSum);
+
+    const segments = [];
+    let cursor = 0;
+
+    for (let i = 0; i < streakCount; i += 1) {
+      const colorStart = cursor;
+      cursor += colorWidths[i];
+      const colorEnd = cursor;
+      segments.push({
+        color: 'var(--prime-outline-color)',
+        start: colorStart,
+        end: colorEnd
+      });
+
+      const blackStart = cursor;
+      cursor += blackWidths[i];
+      const blackEnd = cursor;
+      segments.push({
+        color: 'var(--prime-outline-black)',
+        start: blackStart,
+        end: blackEnd
+      });
+    }
+
+    const total = cursor;
+    if (segments.length && Math.abs(total - 100) > 0.01) {
+      const adjust = total - 100;
+      const last = segments[segments.length - 1];
+      last.start -= adjust;
+      last.end -= adjust;
+      cursor -= adjust;
+    }
+
+    if (segments.length) {
+      segments[0].start = 0;
+      segments[segments.length - 1].end = 100;
+    }
+
+    const gradientStops = segments
+      .filter((segment) => segment.end - segment.start > 0.08)
+      .map((segment) => `${segment.color} ${segment.start.toFixed(2)}% ${segment.end.toFixed(2)}%`);
+
+    if (!gradientStops.length) {
+      gradientStops.push('var(--prime-outline-color) 0% 100%');
+    }
+
+    const offset = Math.random() * 360;
+    const outlineWidth = (3 + Math.random() * 2.5).toFixed(2);
+
+    return {
+      gradient: `conic-gradient(from ${offset.toFixed(2)}deg, ${gradientStops.join(', ')})`,
+      width: `${outlineWidth}px`
+    };
+  }
+
+  let primeOutlineConfig = null;
+
+  function ensurePrimeOutlineConfig() {
+    if (!primeOutlineConfig) {
+      primeOutlineConfig = createPrimeOutlineConfig();
+    }
+    return primeOutlineConfig;
+  }
+
+  let primeOutlineGradient = '';
+  let primeOutlineWidth = '';
+
+  $: {
+    if (!isPrimeRank) {
+      primeOutlineConfig = null;
+      primeOutlineGradient = '';
+      primeOutlineWidth = '';
+    } else {
+      const config = ensurePrimeOutlineConfig();
+      primeOutlineGradient = config.gradient;
+      primeOutlineWidth = config.width;
+    }
+  }
+
+  $: portraitStyle = `--outline-anim-dur: ${outlineAnimDur}; --outline-anim-delay: ${outlineAnimDelay}; --prime-outline-gradient: ${primeOutlineGradient || 'none'}; --prime-outline-width: ${primeOutlineWidth || '3px'};`;
+
   $: if (fighter.element !== prevElement) {
     if (!reducedMotion) {
       elementChanged = true;
@@ -279,9 +375,9 @@
       class:can-cycle={canCycle}
       class:rank-prime={isPrimeRank}
       class:rank-boss={isBossRank}
-      class:reduced={reducedMotion}
+      class:reduced={effectiveReducedMotion}
       on:click={cyclePortraitIfAvailable}
-      style={`--outline-anim-dur: ${outlineAnimDur}; --outline-anim-delay: ${outlineAnimDelay};`}
+      style={portraitStyle}
     >
       <div
         class="portrait-image"
@@ -515,26 +611,64 @@
     border: 2px solid var(--element-color, rgba(255, 255, 255, 0.3));
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
     transition: border-color 0.3s ease;
+    --prime-outline-gradient: none;
+    --prime-outline-width: 3px;
+    --prime-outline-color: color-mix(in oklab, var(--element-color, rgba(255, 255, 255, 0.8)) 82%, white 18%);
+    --prime-outline-black: rgba(0, 0, 0, 0.88);
+    --prime-outline-opacity: 0.85;
   }
   /* Rank-based outline animations (very slow, subtle) */
-  .fighter-portrait.rank-prime:not(.reduced) {
-    animation: prime-outline-pulse var(--outline-anim-dur, 150s) linear infinite;
+  .fighter-portrait.rank-prime {
+    --prime-outline-color: color-mix(in oklab, var(--element-color) 88%, white 12%);
+    --prime-outline-black: rgba(0, 0, 0, 0.94);
+    --prime-outline-opacity: 0.95;
+  }
+
+  .fighter-portrait.rank-prime::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    background: var(--prime-outline-gradient, transparent);
+    opacity: var(--prime-outline-opacity, 0.9);
+    mix-blend-mode: screen;
+    transform-origin: center;
+    animation: prime-outline-rotate var(--outline-anim-dur, 150s) linear infinite;
     animation-delay: var(--outline-anim-delay, 0s);
+    will-change: transform;
+    mask: radial-gradient(
+      farthest-side,
+      transparent calc(100% - var(--prime-outline-width, 3px)),
+      rgba(0, 0, 0, 1) calc(100% - var(--prime-outline-width, 3px) + 0.6px)
+    );
+    -webkit-mask: radial-gradient(
+      farthest-side,
+      transparent calc(100% - var(--prime-outline-width, 3px)),
+      rgba(0, 0, 0, 1) calc(100% - var(--prime-outline-width, 3px) + 0.6px)
+    );
+    z-index: 1;
+  }
+
+  .fighter-portrait.rank-prime.reduced::after {
+    animation: none;
+    transform: none;
+  }
+
+  .modern-fighter-card.dead .fighter-portrait.rank-prime::after {
+    animation: none;
+    transform: none;
+    opacity: 0.25;
+  }
+
+  @keyframes prime-outline-rotate {
+    to {
+      transform: rotate(360deg);
+    }
   }
   .fighter-portrait.rank-boss:not(.reduced) {
     animation: boss-outline-shift var(--outline-anim-dur, 150s) linear infinite;
     animation-delay: var(--outline-anim-delay, 0s);
-  }
-  @keyframes prime-outline-pulse {
-    0% {
-      border-color: color-mix(in oklab, var(--element-color) 85%, white 15%);
-    }
-    50% {
-      border-color: color-mix(in oklab, var(--element-color) 100%, black 0%);
-    }
-    100% {
-      border-color: color-mix(in oklab, var(--element-color) 85%, black 15%);
-    }
   }
   @keyframes boss-outline-shift {
     0% {
@@ -552,14 +686,16 @@
   .modern-fighter-card.highlight .fighter-portrait {
     border-color: color-mix(in oklab, var(--element-color) 75%, white);
     box-shadow: 0 0 12px 4px color-mix(in oklab, var(--element-color) 65%, black);
+    --prime-outline-opacity: 0.35;
   }
 
   .portrait-image {
     width: 100%;
     height: 100%;
+    position: relative;
+    z-index: 0;
     background-size: cover;
     background-position: center;
-    position: relative;
     transition: opacity 180ms ease, filter 0.3s ease;
     opacity: 1;
   }
@@ -758,6 +894,7 @@
     align-items: flex-end;
     gap: 6px;
     pointer-events: none;
+    z-index: 3;
   }
 
   .passive-indicators {
