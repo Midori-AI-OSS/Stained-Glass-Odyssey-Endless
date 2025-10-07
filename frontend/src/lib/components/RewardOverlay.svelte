@@ -141,7 +141,7 @@
   let visibleDrops = [];
   let dropRevealTimers = [];
   let dropRevealGeneration = 0;
-  let dropSfxHandle = null;
+  let dropSfxPlayer = null;
   let dropPopTransition = null;
 
   $: dropPopTransition = reducedMotion
@@ -157,15 +157,14 @@
   }
 
   function stopDropAudio(release = false) {
-    if (!dropSfxHandle) return;
+    if (!dropSfxPlayer) return;
     try {
-      dropSfxHandle.pause();
-      dropSfxHandle.currentTime = 0;
+      dropSfxPlayer.stop?.();
     } catch {
       // ignore playback reset failures
     }
     if (release) {
-      dropSfxHandle = null;
+      dropSfxPlayer = null;
     }
   }
 
@@ -175,18 +174,14 @@
       stopDropAudio(true);
       return;
     }
-    if (!dropSfxHandle) {
-      dropSfxHandle = createRewardDropSfx(normalizedSfxVolume, { reducedMotion });
+    if (!dropSfxPlayer) {
+      dropSfxPlayer = createRewardDropSfx(normalizedSfxVolume, { reducedMotion });
     }
-    if (!dropSfxHandle) return;
-    const targetVolume = Math.max(0, Math.min(10, normalizedSfxVolume)) / 10;
-    try {
-      dropSfxHandle.volume = targetVolume;
-      dropSfxHandle.currentTime = 0;
-    } catch {
-      // Ignore audio property assignment failures
+    if (!dropSfxPlayer || typeof dropSfxPlayer.play !== 'function') return;
+    if (typeof dropSfxPlayer.setVolume === 'function') {
+      dropSfxPlayer.setVolume(normalizedSfxVolume);
     }
-    const playPromise = dropSfxHandle.play?.();
+    const playPromise = dropSfxPlayer.play();
     if (playPromise && typeof playPromise.catch === 'function') {
       playPromise.catch(() => {});
     }

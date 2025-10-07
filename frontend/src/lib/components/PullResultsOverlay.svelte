@@ -77,23 +77,12 @@
   });
 
   function playDeal() {
-    if (reducedMotion || !dealSfx) return;
+    if (reducedMotion || !dealSfx || typeof dealSfx.play !== 'function') return;
+    if (typeof dealSfx.setVolume === 'function') {
+      dealSfx.setVolume(sfxVolume);
+    }
     try {
-      const node = dealSfx.paused ? dealSfx : dealSfx.cloneNode(true);
-      if (node === dealSfx) {
-        dealSfx.currentTime = 0;
-      } else {
-        node.volume = dealSfx.volume;
-      }
-      node
-        .play()
-        .catch((error) => {
-          if (error?.name === 'AbortError') {
-            console.debug('PullResultsOverlay: playback aborted');
-          } else {
-            console.debug('PullResultsOverlay: playback failed', error);
-          }
-        });
+      dealSfx.play();
     } catch {}
   }
 
