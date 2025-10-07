@@ -1139,6 +1139,61 @@
     return Boolean(targetId && targetId !== '' && targetId !== undefined);
   }
 
+  function parseHexColorToRgb(hex) {
+    if (typeof hex !== 'string') return null;
+    let value = hex.trim();
+    if (!value) return null;
+    if (value.startsWith('#')) value = value.slice(1);
+    if (value.length === 3) {
+      value = value
+        .split('')
+        .map(ch => ch + ch)
+        .join('');
+    }
+    if (value.length !== 6 || /[^0-9a-fA-F]/.test(value)) return null;
+    const numeric = Number.parseInt(value, 16);
+    if (!Number.isFinite(numeric)) return null;
+    return {
+      r: (numeric >> 16) & 0xff,
+      g: (numeric >> 8) & 0xff,
+      b: numeric & 0xff,
+    };
+  }
+
+  function rgbToHueDegrees(r, g, b) {
+    const rn = r / 255;
+    const gn = g / 255;
+    const bn = b / 255;
+    const max = Math.max(rn, gn, bn);
+    const min = Math.min(rn, gn, bn);
+    const delta = max - min;
+    if (!Number.isFinite(delta) || delta === 0) return 0;
+    let hue;
+    if (max === rn) {
+      hue = ((gn - bn) / delta) % 6;
+    } else if (max === gn) {
+      hue = (bn - rn) / delta + 2;
+    } else {
+      hue = (rn - gn) / delta + 4;
+    }
+    hue *= 60;
+    if (hue < 0) hue += 360;
+    return hue;
+  }
+
+  function derivePaletteHue(palette) {
+    const swatches = [palette?.base, palette?.highlight, palette?.shadow];
+    for (const swatch of swatches) {
+      const rgb = parseHexColorToRgb(swatch);
+      if (!rgb) continue;
+      const hue = rgbToHueDegrees(rgb.r, rgb.g, rgb.b);
+      if (Number.isFinite(hue)) {
+        return Math.max(0, hue % 360) / 360;
+      }
+    }
+    return 0;
+  }
+
   function buildProjectilePayload(evt) {
     if (!isLunaHitEvent(evt)) return null;
     const metadata = evt.metadata && typeof evt.metadata === 'object' ? evt.metadata : {};
@@ -1162,17 +1217,23 @@
       metadata.target,
     ]);
     if (!sourceId || !targetId || sourceId === targetId) return null;
-    const damageTypeId = evt.damageTypeId || metadata.damage_type_id || metadata.element || '';
+    const rawDamageTypeId = evt.damageTypeId || metadata.damage_type_id || metadata.element || '';
+    const damageTypeId = normalizeDamageTypeId(rawDamageTypeId || 'generic');
     const palette = getDamageTypePalette(damageTypeId || 'generic');
     const sequenceKey = extractAttackSequenceToken(metadata) || `${evt.type || ''}:${targetId}:${evt.amount ?? ''}`;
+    const photonBladeSeed = `${sequenceKey || ''}:${sourceId}->${targetId}:${damageTypeId}`;
+    const photonBladeHue = derivePaletteHue(palette);
     return {
       sourceId,
       targetId,
-      damageTypeId: damageTypeId || 'generic',
+      damageTypeId,
       palette,
       metadata,
       sequenceKey,
       eventType: evt.type || '',
+      photonBladeSeed,
+      photonBladeHue,
+      variant: 'photonBlade',
     };
   }
 
@@ -2358,6 +2419,7 @@
     anchors={anchors}
     reducedMotion={effectiveReducedMotion}
     durationMs={projectileAnimationMs}
+    variant="photonBlade"
   />
   <BattleEventFloaters
     class="overlay-layer"
