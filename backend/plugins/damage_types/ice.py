@@ -25,17 +25,23 @@ class Ice(DamageTypeBase):
         """Strike all foes six times, ramping damage by 30% per target."""
         from autofighter.rooms.battle.pacing import YIELD_MULTIPLIER
         from autofighter.rooms.battle.pacing import pace_sleep
+        from autofighter.rooms.battle.targeting import select_aggro_target
 
         if not await self.consume_ultimate(actor):
             return False
 
-        if not enemies:
-            return True
-
         base = actor.atk
         for _ in range(6):
+            hits_remaining = sum(1 for foe in enemies if getattr(foe, "hp", 0) > 0)
+            if hits_remaining <= 0:
+                break
             bonus = 1.0
-            for enemy in enemies:
+            for _ in range(hits_remaining):
+                try:
+                    _, enemy = select_aggro_target(enemies)
+                except ValueError:
+                    hits_remaining = 0
+                    break
                 dmg = int(base * bonus)
                 await enemy.apply_damage(
                     dmg,

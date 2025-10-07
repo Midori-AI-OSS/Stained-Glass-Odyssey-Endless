@@ -10,9 +10,10 @@
   they act, never reducing anyone below 1 HP. The health drained contributes to
   a temporary damage multiplier on their next strike (roughly 0.0001× per HP
   siphoned with slight randomness), after which the bonus is cleared.
-- Wind damage type users strike all remaining foes after their first hit,
-  repeating the damage and rolling their Gale Erosion DoT on each target.
-- When a Wind user fires their ultimate, all existing enemy DoTs are pulled
-  onto the chosen target and detonate immediately.
+- Wind damage type users strike in rapid flurries, selecting each follow-up
+  hit using aggro-weighted targeting so high-threat foes soak the majority of
+  Gale Erosion rolls.
+- When a Wind user fires their ultimate, its hit sequence also samples
+  aggro-weighted targets on every swing instead of sweeping deterministically.
 - Frozen Wound stacks reduce actions per turn and give the afflicted unit a
   `1% × stacks` chance to miss their next action.

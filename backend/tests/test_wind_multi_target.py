@@ -42,11 +42,13 @@ async def test_wind_player_hits_all_foes(monkeypatch):
     foe2.set_base_stat('max_hp', 3)
     foe2.set_base_stat('defense', 0)
     foe2.id = "f2"
+    foe1.base_aggro = 1.0
+    foe2.base_aggro = 8.0
     party = Party(members=[player])
     random.seed(0)
     await room.resolve(party, {}, foe=[foe1, foe2])
-    assert "f1" in calls
-    assert "f2" in calls
+    assert calls
+    assert calls.count("f2") >= calls.count("f1")
 
 
 @pytest.mark.asyncio
@@ -83,6 +85,8 @@ async def test_wind_foe_hits_all_party_members(monkeypatch):
     player2.set_base_stat('mitigation', 1.0)
     player2.set_base_stat('effect_resistance', 0.0)
     player2.id = "p2"
+    player1.base_aggro = 1.0
+    player2.base_aggro = 6.0
     party = Party(members=[player1, player2])
     foe = Stats(hp=3, damage_type=Wind())
     foe.set_base_stat('max_hp', 3)
@@ -91,6 +95,6 @@ async def test_wind_foe_hits_all_party_members(monkeypatch):
     foe.id = "f1"
     random.seed(0)
     await room.resolve(party, {}, foe=foe)
-    assert "p1" in calls
-    assert calls.count("f1") >= 2
+    assert calls
+    assert calls.count("p2") >= calls.count("p1")
 

@@ -98,6 +98,7 @@ class Dark(DamageTypeBase):
 
         from autofighter.rooms.battle.pacing import YIELD_MULTIPLIER
         from autofighter.rooms.battle.pacing import pace_sleep
+        from autofighter.rooms.battle.targeting import select_aggro_target
 
         if not await self.consume_ultimate(actor):
             return False
@@ -114,8 +115,11 @@ class Dark(DamageTypeBase):
 
         multiplier = self.ULT_PER_STACK ** stacks
         dmg = int(actor.atk * multiplier)
-        target = enemies[0]
         for _ in range(6):
+            try:
+                _, target = select_aggro_target(enemies)
+            except ValueError:
+                break
             dealt = await target.apply_damage(dmg, attacker=actor, action_name="Dark Ultimate")
             await pace_sleep(YIELD_MULTIPLIER)
             await BUS.emit_async("damage", actor, target, dealt)

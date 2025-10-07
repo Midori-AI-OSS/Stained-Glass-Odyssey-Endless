@@ -4,7 +4,6 @@ import asyncio
 from contextlib import suppress
 from dataclasses import dataclass
 import logging
-import random
 from typing import Any
 
 from autofighter.effects import EffectManager
@@ -18,6 +17,7 @@ from ..pacing import YIELD_MULTIPLIER
 from ..pacing import _pace
 from ..pacing import impact_pause
 from ..pacing import pace_sleep
+from ..targeting import select_aggro_target
 from ..turn_helpers import credit_if_dead
 from ..turn_helpers import remove_dead_foes
 from ..turns import apply_enrage_bleed
@@ -239,12 +239,9 @@ async def _run_player_turn_iteration(
         )
         return PlayerTurnIterationResult(repeat=False, battle_over=True)
 
-    alive_targets = [
-        (index, foe_obj)
-        for index, foe_obj in enumerate(context.foes)
-        if getattr(foe_obj, "hp", 0) > 0
-    ]
-    if not alive_targets:
+    try:
+        target_index, target_foe = select_aggro_target(context.foes)
+    except ValueError:
         await finish_turn(
             context,
             member,
@@ -252,8 +249,6 @@ async def _run_player_turn_iteration(
             active_target_id=None,
         )
         return PlayerTurnIterationResult(repeat=False, battle_over=True)
-
-    target_index, target_foe = _select_target(alive_targets)
     await BUS.emit_async("target_acquired", member, target_foe)
     mutate_snapshot_overlay(
         context.run_id,
@@ -548,13 +543,6 @@ async def _abort_other_runs(context: TurnLoopContext, run_id: str) -> None:
 
 def _any_foes_alive(foes: list[Any]) -> bool:
     return any(getattr(foe_obj, "hp", 0) > 0 for foe_obj in foes)
-
-
-def _select_target(alive_targets: list[tuple[int, Any]]) -> tuple[int, Any]:
-    weights = [max(getattr(foe_obj, "aggro", 0.0), 0.0) for _, foe_obj in alive_targets]
-    if sum(weights) > 0:
-        return random.choices(alive_targets, weights=weights)[0]
-    return random.choice(alive_targets)
 
 
 async def _handle_ultimate(

@@ -1,3 +1,6 @@
+import random
+import types
+
 import pytest
 
 from autofighter.stats import BUS
@@ -25,12 +28,22 @@ async def test_ice_ultimate_hits_multiple_enemies_without_error():
     actor.ultimate_charge = actor.ultimate_charge_max
     actor.ultimate_ready = True
 
+    random.seed(7)
+
     foes: list[Stats] = []
-    for idx in range(3):
+    hits: dict[str, int] = {}
+
+    async def record_damage(self, *_args, **_kwargs):
+        hits[self.id] = hits.get(self.id, 0) + 1
+        return 0
+
+    for idx, aggro in enumerate((1.0, 2.0, 6.0)):
         foe = Stats()
         foe.id = f"foe-{idx}"
         foe.defense = 0
         foe.dodge_odds = 0
+        foe.apply_damage = types.MethodType(record_damage, foe)
+        foe.base_aggro = aggro
         foes.append(foe)
 
     set_battle_active(True)
@@ -40,6 +53,6 @@ async def test_ice_ultimate_hits_multiple_enemies_without_error():
         set_battle_active(False)
 
     assert result is True
-    for foe in foes:
-        assert foe.hp < foe.max_hp
-        assert foe.last_damage_taken > 0
+    assert sum(hits.values()) == 18
+    assert hits.get("foe-2", 0) > hits.get("foe-1", 0)
+    assert hits.get("foe-2", 0) > hits.get("foe-0", 0)

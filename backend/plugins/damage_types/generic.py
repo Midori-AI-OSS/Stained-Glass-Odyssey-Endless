@@ -19,6 +19,7 @@ class Generic(DamageTypeBase):
         """Split the user's attack into 64 rapid strikes on one target."""
         from autofighter.rooms.battle.pacing import YIELD_MULTIPLIER
         from autofighter.rooms.battle.pacing import pace_sleep
+        from autofighter.rooms.battle.targeting import select_aggro_target
 
         if not await self.consume_ultimate(actor):
             return False
@@ -33,13 +34,6 @@ class Generic(DamageTypeBase):
         has_luna_reservoir = bool(
             actor_passives and "luna_lunar_reservoir" in actor_passives
         )
-        target_pool = [
-            target for target in enemies if getattr(target, "hp", 0) > 0
-        ]
-        if not target_pool:
-            return True
-        target = target_pool[0]
-
         if has_luna_reservoir and old_luna_cls is LunaLunarReservoir:
             original_passives = actor_passives
             filtered_passives = [
@@ -58,6 +52,10 @@ class Generic(DamageTypeBase):
         base = actor.atk // 64
         remainder = actor.atk % 64
         for i in range(64):
+            try:
+                _, target = select_aggro_target(enemies)
+            except ValueError:
+                break
             dmg = base + (1 if i < remainder else 0)
             await target.apply_damage(dmg, attacker=actor, action_name="Generic Ultimate")
             await pace_sleep(YIELD_MULTIPLIER)

@@ -41,6 +41,7 @@ class Wind(DamageTypeBase):
         """Distribute attack across rapid hits on all foes."""
         from autofighter.rooms.battle.pacing import YIELD_MULTIPLIER
         from autofighter.rooms.battle.pacing import pace_sleep
+        from autofighter.rooms.battle.targeting import select_aggro_target
 
         # Consume ultimate; bail if not ready
         if not await self.consume_ultimate(actor):
@@ -81,39 +82,48 @@ class Wind(DamageTypeBase):
         if not living:
             return True
         total_chunks = hits * len(living)
+        if total_chunks <= 0:
+            return True
         per = base // total_chunks
         rem = base - per * total_chunks
 
+        effect_managers: dict = {}
         for foe in living:
-            if getattr(foe, "hp", 0) <= 0:
-                continue
             f_mgr = getattr(foe, "effect_manager", None)
             if f_mgr is None:
                 f_mgr = EffectManager(foe)
                 foe.effect_manager = f_mgr
-            for i in range(hits):
-                if getattr(foe, "hp", 0) <= 0:
-                    break
-                # Fair rounding across all chunks (targets x hits)
-                add_one = 1 if rem > 0 else 0
-                per_hit = per + add_one
-                if rem > 0:
-                    rem -= 1
-                # Ensure a minimum of 1 damage per hit going into the resolver
-                per_hit = max(1, int(per_hit))
-                dmg = await foe.apply_damage(per_hit, attacker=actor, action_name="Wind Ultimate")
-                # Yield using the pacing helper so TURN_PACING adjustments propagate
-                await pace_sleep(YIELD_MULTIPLIER)
-                # Emit hit event for logging/passives, mirroring battle loop behavior
-                try:
-                    await BUS.emit_async("hit_landed", actor, foe, dmg, "attack", "wind_ultimate")
-                except Exception:
-                    pass
-                # Roll Gale Erosion on each hit based on (boosted) effect hit rate
-                try:
-                    f_mgr.maybe_inflict_dot(actor, dmg)
-                except Exception:
-                    pass
+            effect_managers[foe] = f_mgr
+
+        for _ in range(total_chunks):
+            try:
+                _, foe = select_aggro_target(enemies)
+            except ValueError:
+                break
+            if getattr(foe, "hp", 0) <= 0:
+                continue
+            add_one = 1 if rem > 0 else 0
+            per_hit = per + add_one
+            if rem > 0:
+                rem -= 1
+            per_hit = max(1, int(per_hit))
+            dmg = await foe.apply_damage(per_hit, attacker=actor, action_name="Wind Ultimate")
+            await pace_sleep(YIELD_MULTIPLIER)
+            try:
+                await BUS.emit_async("hit_landed", actor, foe, dmg, "attack", "wind_ultimate")
+            except Exception:
+                pass
+            try:
+                f_mgr = effect_managers.get(foe)
+                if f_mgr is None:
+                    f_mgr = getattr(foe, "effect_manager", None)
+                    if f_mgr is None:
+                        f_mgr = EffectManager(foe)
+                        foe.effect_manager = f_mgr
+                    effect_managers[foe] = f_mgr
+                f_mgr.maybe_inflict_dot(actor, dmg)
+            except Exception:
+                pass
 
         # Clean up the temporary buff immediately after the sequence
         try:
