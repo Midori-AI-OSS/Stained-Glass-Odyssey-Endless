@@ -62,7 +62,7 @@ async def test_luna_ultimate_grants_expected_charge():
     luna = LunaActor(hp=1000, damage_type=Generic())
     luna.passives = ["luna_lunar_reservoir"]
     luna._base_atk = 64
-    luna.ultimate_charge = 15
+    luna.ultimate_charge = luna.ultimate_charge_max
     luna.ultimate_ready = True
 
     target = Stats(hp=1000, damage_type=Generic())

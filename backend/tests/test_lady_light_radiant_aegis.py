@@ -65,7 +65,7 @@ async def test_radiant_aegis_dot_cleanse_triggers_on_light_ultimate():
 
     await passive.apply(healer)
 
-    healer.add_ultimate_charge(15)
+    healer.add_ultimate_charge(healer.ultimate_charge_max)
     await healer.damage_type.ultimate(healer, [healer, ally], [])
     await asyncio.sleep(0.05)
 

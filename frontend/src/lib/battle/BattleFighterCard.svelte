@@ -169,7 +169,17 @@
     prevElement = fighter.element;
   }
 
-  $: ultRatio = Math.max(0, Math.min(1, Number(fighter?.ultimate_charge || 0) / 15));
+  const DEFAULT_ULT_CAP = 15;
+  $: ultimateMax = Math.max(
+    1,
+    Number(
+      fighter?.ultimate_max ??
+        fighter?.ultimate_charge_capacity ??
+        DEFAULT_ULT_CAP
+    )
+  );
+  $: ultimateCharge = Math.max(0, Number(fighter?.ultimate_charge ?? 0));
+  $: ultRatio = Math.max(0, Math.min(1, ultimateCharge / ultimateMax));
   $: tiltAngle = Math.min(ultRatio, 0.98) / 0.98;
 
   // Randomized, slow pulse timing for the ult icon

@@ -87,6 +87,20 @@ async def get_players() -> tuple[str, int, dict[str, str]]:
             else:
                 data[name] = str(value)
 
+        try:
+            raw_cap = getattr(obj, "ultimate_charge_max")
+        except Exception:
+            raw_cap = None
+        if raw_cap is None:
+            try:
+                raw_cap = getattr(obj, "ultimate_charge_capacity")
+            except Exception:
+                raw_cap = None
+        try:
+            data["ultimate_max"] = max(1, int(raw_cap))
+        except Exception:
+            data["ultimate_max"] = 15
+
         # Append in-run (computed) stats so the Party Picker can show live values
         try:
             data["max_hp"] = int(getattr(obj, "max_hp"))

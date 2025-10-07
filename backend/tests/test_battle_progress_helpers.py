@@ -139,6 +139,8 @@ async def test_build_battle_progress_payload_includes_snapshots_and_events():
     assert payload["turn"] == 7
     assert payload["party"][0]["id"] == "hero"
     assert payload["foes"][0]["id"] == "foe"
+    assert payload["party"][0]["ultimate_max"] == party_member.ultimate_charge_max
+    assert payload["foes"][0]["ultimate_max"] == foe.ultimate_charge_max
     assert payload["party_summons"]["hero"][0]["instance_id"] == hero_summon.instance_id
     assert payload["foe_summons"]["foe"][0]["instance_id"] == foe_summon.instance_id
     assert payload["recent_events"] == [{"id": "evt"}]

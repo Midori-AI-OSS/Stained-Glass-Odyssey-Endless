@@ -383,7 +383,7 @@ async def test_arcane_flask_shields():
     asyncio.set_event_loop(loop)
 
     async def fire():
-        a.add_ultimate_charge(15)
+        a.add_ultimate_charge(a.ultimate_charge_max)
         await a.use_ultimate()
         await asyncio.sleep(0)
 

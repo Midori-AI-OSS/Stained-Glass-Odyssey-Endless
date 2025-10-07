@@ -35,7 +35,7 @@ async def test_dark_ultimate_async_performance_with_backend_ping():
         member.id = f"dark_party_{i}"
         member._base_atk = 1000
         member.damage_type = Dark()
-        member.ultimate_charge = 15  # Ready to use ultimate
+        member.ultimate_charge = member.ultimate_charge_max  # Ready to use ultimate
         member.ultimate_ready = True
         party_members.append(member)
 

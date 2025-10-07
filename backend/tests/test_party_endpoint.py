@@ -76,3 +76,15 @@ async def test_party_validation(app_with_db):
         },
     )
     assert resp.status_code == 400
+
+
+@pytest.mark.asyncio
+async def test_players_endpoint_reports_ultimate_cap(app_with_db):
+    app, _ = app_with_db
+    client = app.test_client()
+
+    resp = await client.get("/players")
+    assert resp.status_code == 200
+    payload = await resp.get_json()
+    luna_entry = next(p for p in payload["players"] if p["id"] == "luna")
+    assert luna_entry["stats"]["ultimate_max"] == 15_000

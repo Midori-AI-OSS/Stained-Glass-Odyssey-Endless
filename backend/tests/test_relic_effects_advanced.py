@@ -106,7 +106,7 @@ async def test_killer_instinct_grants_extra_turn():
     base_atk = a.atk
     base_spd = a.spd
 
-    a.add_ultimate_charge(15)
+    a.add_ultimate_charge(a.ultimate_charge_max)
     await a.use_ultimate()
     assert a.atk > base_atk
 

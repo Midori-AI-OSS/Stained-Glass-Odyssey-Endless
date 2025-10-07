@@ -32,7 +32,7 @@ async def test_lightning_ultimate_applies_random_dots(monkeypatch):
     attacker = Actor()
     attacker._base_atk = 100
     attacker.damage_type = lightning
-    attacker.ultimate_charge = 15
+    attacker.ultimate_charge = attacker.ultimate_charge_max
     attacker.ultimate_ready = True
     target = Stats()
     target.effect_manager = EffectManager(target)
@@ -61,7 +61,7 @@ async def test_lightning_ultimate_aftertaste_stacks(monkeypatch):
     attacker = Actor()
     attacker._base_atk = 100
     attacker.damage_type = lightning
-    attacker.ultimate_charge = 15
+    attacker.ultimate_charge = attacker.ultimate_charge_max
     attacker.ultimate_ready = True
     target = Stats()
     target.effect_manager = EffectManager(target)

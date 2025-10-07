@@ -179,6 +179,7 @@ class Stats:
     # Ultimate system
     ultimate_charge: int = 0
     ultimate_ready: bool = False
+    ultimate_charge_capacity: int = 15
 
     # Overheal system (for shields from relics/cards)
     overheal_enabled: bool = field(default=False, init=False)
@@ -671,12 +672,28 @@ class Stats:
                 # If no event loop is running, skip passive triggers
                 pass
 
+    @property
+    def ultimate_charge_max(self) -> int:
+        """Return the amount of charge required to ready the ultimate."""
+
+        try:
+            raw = getattr(self, "ultimate_charge_capacity", 15)
+            value = int(raw)
+        except Exception:
+            value = 15
+        return max(1, value)
+
     def add_ultimate_charge(self, amount: int = 1) -> None:
-        """Increase ultimate charge, capping at 15."""
+        """Increase ultimate charge until the configured maximum."""
         if self.ultimate_ready:
             return
-        self.ultimate_charge = min(15, self.ultimate_charge + amount)
-        if self.ultimate_charge >= 15:
+        try:
+            increment = int(amount)
+        except Exception:
+            increment = 0
+        maximum = self.ultimate_charge_max
+        self.ultimate_charge = min(maximum, self.ultimate_charge + max(0, increment))
+        if self.ultimate_charge >= maximum:
             self.ultimate_ready = True
 
     def handle_ally_action(self, actor: "Stats") -> None:

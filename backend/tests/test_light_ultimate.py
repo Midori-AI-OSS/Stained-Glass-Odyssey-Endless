@@ -30,7 +30,7 @@ async def test_light_ultimate_heals_and_cleanses():
     ally.effect_manager = EffectManager(ally)
     enemy.effect_manager = EffectManager(enemy)
     ally.effect_manager.add_dot(Bleed(10, 3))
-    actor.add_ultimate_charge(15)
+    actor.add_ultimate_charge(actor.ultimate_charge_max)
     await light.ultimate(actor, [actor, ally], [enemy])
     assert ally.hp == ally.max_hp
     assert not ally.effect_manager.dots
@@ -45,7 +45,7 @@ async def test_light_ultimate_applies_defense_debuff():
     enemy._base_defense = 100
     actor.effect_manager = EffectManager(actor)
     enemy.effect_manager = EffectManager(enemy)
-    actor.add_ultimate_charge(15)
+    actor.add_ultimate_charge(actor.ultimate_charge_max)
     await light.ultimate(actor, [actor], [enemy])
     mods = [m for m in enemy.effect_manager.mods if m.id == "light_ultimate_def_down"]
     assert len(mods) == 1

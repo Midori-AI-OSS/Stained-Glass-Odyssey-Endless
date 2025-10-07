@@ -22,7 +22,7 @@ async def test_ice_ultimate_hits_multiple_enemies_without_error():
     actor = Actor(damage_type=Ice())
     actor.id = "ice-actor"
     actor.atk = 300
-    actor.ultimate_charge = 15
+    actor.ultimate_charge = actor.ultimate_charge_max
     actor.ultimate_ready = True
 
     foes: list[Stats] = []
