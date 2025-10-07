@@ -31,6 +31,21 @@
   let detailsController = null;
   let loadToken = 0;
 
+  const menuPanelBackground = [
+    'radial-gradient(140% 95% at 82% -10%, rgba(59, 130, 246, 0.28), transparent 65%)',
+    'radial-gradient(120% 90% at 18% -18%, rgba(236, 72, 153, 0.22), transparent 60%)',
+    'radial-gradient(160% 110% at 50% 120%, rgba(14, 116, 144, 0.32), transparent 70%)',
+    'linear-gradient(180deg, rgba(15, 23, 42, 0.96) 0%, rgba(10, 12, 24, 0.94) 52%, rgba(15, 23, 42, 0.98) 100%)'
+  ].join(', ');
+
+  const menuPanelStyle = [
+    `background: ${menuPanelBackground}`,
+    '--glass-bg: linear-gradient(140deg, rgba(12, 19, 35, 0.94) 0%, rgba(8, 12, 26, 0.9) 100%)',
+    '--glass-border: 1px solid rgba(148, 163, 184, 0.26)',
+    '--glass-shadow: 0 28px 48px rgba(2, 6, 23, 0.58), 0 1px 0 rgba(148, 163, 184, 0.12) inset'
+  ].join('; ');
+  const selectOptionStyle = 'background-color: rgba(15, 23, 42, 0.94); color: #e2e8f0;';
+
   onMount(() => {
     loadRuns();
     return () => {
@@ -232,6 +247,7 @@
   data-testid="battle-review-menu"
   padding="1rem"
   {reducedMotion}
+  style={menuPanelStyle}
 >
   <header class="menu-header">
     <h2>Battle Review Archive</h2>
@@ -253,7 +269,7 @@
       {:else}
         <select on:change={handleRunChange} bind:value={selectedRunId}>
           {#each runs as run, index (runValue(run))}
-            <option value={runValue(run)}>{runLabel(run, index)}</option>
+            <option value={runValue(run)} style={selectOptionStyle}>{runLabel(run, index)}</option>
           {/each}
         </select>
       {/if}
@@ -275,7 +291,7 @@
       {:else}
         <select on:change={handleFightChange} bind:value={selectedFightKey}>
           {#each fights as fight (String(fight.battleIndex))}
-            <option value={String(fight.battleIndex)}>{fight.label}</option>
+            <option value={String(fight.battleIndex)} style={selectOptionStyle}>{fight.label}</option>
           {/each}
         </select>
       {/if}
@@ -329,6 +345,7 @@
   :global(.battle-review-menu) {
     gap: 1rem;
     color: #e2e8f0;
+    color-scheme: dark;
   }
 
   .menu-header {
@@ -401,12 +418,9 @@
     letter-spacing: 0.02em;
   }
 
-  select {
+  :global(.battle-review-menu select) {
     appearance: none;
-    background: rgba(15, 23, 42, 0.92);
-    background-color: rgba(15, 23, 42, 0.92);
-    background: color-mix(in oklab, var(--glass-bg) 72%, rgba(148, 163, 184, 0.25) 28%);
-    background-color: color-mix(in oklab, var(--glass-bg) 72%, rgba(148, 163, 184, 0.25) 28%);
+    background-color: rgba(15, 23, 42, 0.95);
     border: 1px solid rgba(148, 163, 184, 0.45);
     box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.3);
     color: #f8fafc;
@@ -417,33 +431,31 @@
     width: 100%;
   }
 
-  select:hover {
+  :global(.battle-review-menu select:hover) {
     border-color: rgba(125, 211, 252, 0.65);
     box-shadow: inset 0 0 0 1px rgba(56, 189, 248, 0.22);
   }
 
-  select:focus-visible {
+  :global(.battle-review-menu select:focus-visible) {
     outline: 2px solid rgba(125, 211, 252, 0.9);
     outline-offset: 2px;
   }
 
-  select option,
-  select optgroup {
+  :global(.battle-review-menu select option),
+  :global(.battle-review-menu select optgroup) {
     background-color: rgba(15, 23, 42, 0.94);
-    background-color: color-mix(in oklab, var(--glass-bg) 85%, rgba(15, 23, 42, 0.55) 15%);
     color: #e2e8f0;
     font: inherit;
   }
 
-  select option:hover,
-  select option:checked,
-  select option:focus {
+  :global(.battle-review-menu select option:hover),
+  :global(.battle-review-menu select option:checked),
+  :global(.battle-review-menu select option:focus) {
     background-color: rgba(56, 189, 248, 0.28);
-    background-color: color-mix(in oklab, rgba(56, 189, 248, 0.28) 45%, var(--glass-bg) 55%);
     color: #f8fafc;
   }
 
-  select option:disabled {
+  :global(.battle-review-menu select option:disabled) {
     color: rgba(148, 163, 184, 0.65);
   }
 

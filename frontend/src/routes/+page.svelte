@@ -1382,6 +1382,8 @@
     overflow: auto;
     background: #000;
     color: #fff;
+    color-scheme: dark;
+    accent-color: #0ea5e9;
     box-sizing: border-box;
   }
 
