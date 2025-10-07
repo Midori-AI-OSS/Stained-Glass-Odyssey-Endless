@@ -403,6 +403,8 @@
 
   select {
     appearance: none;
+    background: rgba(15, 23, 42, 0.92);
+    background-color: rgba(15, 23, 42, 0.92);
     background: color-mix(in oklab, var(--glass-bg) 72%, rgba(148, 163, 184, 0.25) 28%);
     background-color: color-mix(in oklab, var(--glass-bg) 72%, rgba(148, 163, 184, 0.25) 28%);
     border: 1px solid rgba(148, 163, 184, 0.45);
@@ -427,6 +429,7 @@
 
   select option,
   select optgroup {
+    background-color: rgba(15, 23, 42, 0.94);
     background-color: color-mix(in oklab, var(--glass-bg) 85%, rgba(15, 23, 42, 0.55) 15%);
     color: #e2e8f0;
     font: inherit;
@@ -435,6 +438,7 @@
   select option:hover,
   select option:checked,
   select option:focus {
+    background-color: rgba(56, 189, 248, 0.28);
     background-color: color-mix(in oklab, rgba(56, 189, 248, 0.28) 45%, var(--glass-bg) 55%);
     color: #f8fafc;
   }
