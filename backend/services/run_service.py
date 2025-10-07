@@ -36,6 +36,7 @@ from autofighter.rooms import _choose_foe
 from autofighter.rooms import _serialize
 from plugins import characters as player_plugins
 from services.login_reward_service import record_room_completion
+from services.room_service import BATTLE_ROOM_TYPES
 from services.run_configuration import RunConfigurationSelection
 from services.run_configuration import apply_player_modifier_context
 from services.run_configuration import build_run_modifier_context
@@ -447,6 +448,7 @@ async def get_map(run_id: str) -> dict[str, object]:
     current_room_data = None
     current_room_type = None
     next_room_type = None
+    all_battle_types = set(BATTLE_ROOM_TYPES) | {"battle-boss-floor"}
 
     if rooms and 0 <= current_index < len(rooms):
         current_node = rooms[current_index]
@@ -454,11 +456,8 @@ async def get_map(run_id: str) -> dict[str, object]:
         if current_index + 1 < len(rooms):
             next_room_type = rooms[current_index + 1].room_type
         snap = battle_snapshots.get(run_id)
-        if snap is not None and current_room_type in {
-            "battle-weak",
-            "battle-normal",
-            "battle-boss-floor",
-        }:
+        if snap is not None and current_room_type in all_battle_types:
+            snap.setdefault("tags", list(getattr(current_node, "tags", ()) or []))
             current_room_data = snap
         elif state.get("awaiting_next"):
             result = (
@@ -473,6 +472,7 @@ async def get_map(run_id: str) -> dict[str, object]:
                 "current_room": current_room_type,
                 "next_room": next_room_type,
             }
+            current_room_data["tags"] = list(getattr(current_node, "tags", ()) or [])
 
     return {
         "map": state,

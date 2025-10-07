@@ -71,11 +71,12 @@
   let currentRoomType = runSnapshot.currentRoomType;
   let nextRoom = runSnapshot.nextRoom;
   let roomData = runSnapshot.roomData;
+  let roomTags = runSnapshot.roomTags;
   let battleActive = runSnapshot.battleActive;
   let lastBattleSnapshot = runSnapshot.lastBattleSnapshot;
 
   $: runSnapshot = $runState;
-  $: ({ runId, mapRooms, currentIndex, currentRoomType, nextRoom, roomData, battleActive, lastBattleSnapshot } = runSnapshot);
+  $: ({ runId, mapRooms, currentIndex, currentRoomType, nextRoom, roomData, roomTags, battleActive, lastBattleSnapshot } = runSnapshot);
 
   function partiesEqual(a, b) {
     if (a === b) return true;
@@ -1404,6 +1405,7 @@
   <GameViewport
     runId={runId}
     roomData={roomData}
+    roomTags={roomTags}
     battleSnapshot={lastBattleSnapshot}
     background={viewportBg}
     mapRooms={mapRooms}

@@ -21,6 +21,8 @@ async def room_images() -> tuple[str, int, dict[str, str]]:
     mapping = {
         "battle-weak": "textures/backgrounds/background_01.png",
         "battle-normal": "textures/backgrounds/background_01.png",
+        "battle-prime": "textures/backgrounds/background_01.png",
+        "battle-glitched": "textures/backgrounds/background_01.png",
         "battle-boss-floor": "textures/backgrounds/background_01.png",
         "shop": "textures/backgrounds/background_02.png",
         "rest": "textures/backgrounds/background_03.png",

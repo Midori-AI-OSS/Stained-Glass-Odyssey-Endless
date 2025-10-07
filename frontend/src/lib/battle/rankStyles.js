@@ -7,6 +7,15 @@ const RANK_STYLES = {
     tier: 'silver',
     slug: 'prime'
   },
+  glitched: {
+    label: 'Glitched',
+    shortLabel: 'GL',
+    icon: '◆',
+    color: '#ff9de2',
+    tier: 'gold',
+    slug: 'glitched',
+    glitch: true
+  },
   'glitched prime': {
     label: 'Glitched Prime',
     shortLabel: 'GP',
@@ -24,6 +33,14 @@ const RANK_STYLES = {
     tier: 'platinum',
     slug: 'boss'
   },
+  'prime boss': {
+    label: 'Prime Boss',
+    shortLabel: 'PB',
+    icon: '♛',
+    color: '#f0ecff',
+    tier: 'diamond',
+    slug: 'prime-boss'
+  },
   'glitched boss': {
     label: 'Glitched Boss',
     shortLabel: 'GB',
@@ -31,6 +48,15 @@ const RANK_STYLES = {
     color: '#b9f2ff',
     tier: 'diamond',
     slug: 'glitched-boss',
+    glitch: true
+  },
+  'glitched prime boss': {
+    label: 'Glitched Prime Boss',
+    shortLabel: 'GPB',
+    icon: '♛',
+    color: '#c6f3ff',
+    tier: 'diamond',
+    slug: 'glitched-prime-boss',
     glitch: true
   }
 };

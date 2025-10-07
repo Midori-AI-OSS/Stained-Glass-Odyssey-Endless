@@ -33,6 +33,7 @@
 
   export let runId = '';
   export let roomData = null;
+  export let roomTags = [];
   export let battleSnapshot = null;
   export let background = '';
   export let items = [];
@@ -96,7 +97,7 @@
   $: applyMusicVolume(musicVolume);
   $: applyVoiceVolume(voiceVolume);
   $: roomData?.voice && playVoice(roomData.voice, voiceVolume);
-  $: info = roomInfo(mapRooms, currentIndex, currentRoomType, roomData);
+  $: info = roomInfo(mapRooms, currentIndex, currentRoomType, roomData, roomTags);
   $: rewardOpen = computeRewardOpen(roomData, battleActive);
   $: reviewOpen = Boolean(roomData && (roomData.result === 'battle' || roomData.result === 'boss') && !battleActive);
 
@@ -394,6 +395,7 @@
         bind:selected
         {runId}
         {roomData}
+        {roomTags}
         {battleSnapshot}
         {shopProcessing}
         {editorState}

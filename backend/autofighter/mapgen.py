@@ -29,13 +29,23 @@ class MapNode:
     elite_bonus_pct: float = 0.0
     prime_bonus_pct: float = 0.0
     glitched_bonus_pct: float = 0.0
+    tags: tuple[str, ...] = ()
 
     def to_dict(self) -> dict:
-        return asdict(self)
+        data = asdict(self)
+        data["tags"] = list(self.tags)
+        return data
 
     @classmethod
     def from_dict(cls, data: dict) -> MapNode:
         # Provide default values for missing fields to handle legacy data
+        raw_tags = data.get("tags")
+        if isinstance(raw_tags, (list, tuple)):
+            tags: tuple[str, ...] = tuple(str(tag) for tag in raw_tags if tag)
+        elif isinstance(raw_tags, str) and raw_tags:
+            tags = (raw_tags,)
+        else:
+            tags = ()
         return cls(
             room_id=data.get('room_id', 0),
             room_type=data.get('room_type', 'battle-weak'),
@@ -50,6 +60,7 @@ class MapNode:
             elite_bonus_pct=float(data.get('elite_bonus_pct', 0.0) or 0.0),
             prime_bonus_pct=float(data.get('prime_bonus_pct', 0.0) or 0.0),
             glitched_bonus_pct=float(data.get('glitched_bonus_pct', 0.0) or 0.0),
+            tags=tags,
         )
 
 
@@ -278,6 +289,13 @@ class MapGenerator:
 
         for rt, bonus in enriched_types:
             per_room_bonus = 1 if bonus and rt.startswith("battle") else 0
+            node_tags: tuple[str, ...]
+            if rt == "battle-prime":
+                node_tags = ("prime",)
+            elif rt == "battle-glitched":
+                node_tags = ("glitched",)
+            else:
+                node_tags = ()
             nodes.append(
                 MapNode(
                     room_id=index,
@@ -293,6 +311,7 @@ class MapGenerator:
                     elite_bonus_pct=elite_bonus_pct,
                     prime_bonus_pct=prime_bonus_pct,
                     glitched_bonus_pct=glitched_bonus_pct,
+                    tags=node_tags,
                 )
             )
             index += 1

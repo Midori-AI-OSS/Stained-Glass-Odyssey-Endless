@@ -349,6 +349,7 @@ def test_enhanced_map_endpoint_with_awaiting_next():
             assert room_data["awaiting_next"] is True
             assert room_data["current_room"] == "battle-weak"
             assert room_data["next_room"] == "shop"
+            assert room_data.get("tags") == []
 
         asyncio.run(test_awaiting_next())
 

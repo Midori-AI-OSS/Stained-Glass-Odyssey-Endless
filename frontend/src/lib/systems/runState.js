@@ -12,6 +12,7 @@ const STORAGE_KEY = 'runState';
  * @property {string} currentRoomType
  * @property {string} nextRoom
  * @property {Record<string, unknown> | null} roomData
+ * @property {string[]} roomTags
  * @property {boolean} battleActive
  * @property {Record<string, unknown> | null} lastBattleSnapshot
  */
@@ -24,6 +25,7 @@ const defaultState = Object.freeze({
   currentRoomType: '',
   nextRoom: '',
   roomData: null,
+  roomTags: [],
   battleActive: false,
   lastBattleSnapshot: null
 });
@@ -141,8 +143,14 @@ export function createRunStateStore(storageCandidate) {
         const roomDataPayload = currentState.room_data;
         if (roomDataPayload == null) {
           updates.roomData = null;
+          updates.roomTags = [];
         } else {
           updates.roomData = { ...roomDataPayload };
+          if (Array.isArray(roomDataPayload.tags)) {
+            updates.roomTags = [...roomDataPayload.tags];
+          } else {
+            updates.roomTags = [];
+          }
           if (mode === 'battle' && !roomDataPayload?.snapshot_missing) {
             updates.lastBattleSnapshot = { ...roomDataPayload };
           }
@@ -202,7 +210,9 @@ export function createRunStateStore(storageCandidate) {
      * @param {Record<string, unknown> | null} roomData
      */
     setRoomData(roomData) {
-      setState({ roomData: roomData ?? null });
+      const payload = roomData ?? null;
+      const tags = Array.isArray(roomData?.tags) ? [...roomData.tags] : [];
+      setState({ roomData: payload, roomTags: tags });
     },
     /**
      * Flag the run as currently being in battle.

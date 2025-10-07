@@ -12,7 +12,13 @@ from test_app import app_with_db as _app_with_db  # noqa: F401
 app_with_db = _app_with_db
 
 
-BATTLE_ROOM_TYPES = {"battle-weak", "battle-normal", "battle-boss-floor"}
+BATTLE_ROOM_TYPES = {
+    "battle-weak",
+    "battle-normal",
+    "battle-prime",
+    "battle-glitched",
+    "battle-boss-floor",
+}
 
 
 @pytest.mark.asyncio
@@ -53,3 +59,4 @@ async def test_ui_reports_battle_mode_when_snapshot_missing(app_with_db):
     assert room_data["snapshot_missing"] is True
     assert room_data["current_index"] == current_index
     assert room_data["current_room"] == current_room.room_type
+    assert room_data.get("tags") == list(getattr(current_room, "tags", ()) or [])
