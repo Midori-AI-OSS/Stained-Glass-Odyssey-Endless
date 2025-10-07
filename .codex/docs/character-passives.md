@@ -197,8 +197,8 @@ class MultiTriggerPassive:
 #### Luna - Lunar Reservoir
 - **ID**: `luna_lunar_reservoir`
 - **Trigger**: `action_taken`
-- **Mechanic**: Charge-based attack scaling (2→4→8→16→32 attacks)
-- **Max Charge**: 200 points
+- **Mechanic**: Charge-based attack scaling (2→4→8→16→32 attacks at 350/500/700/850 thresholds)
+- **Max Charge**: 2000 points
 
 #### Graygray - Counter Maestro
 - **ID**: `graygray_counter_maestro`

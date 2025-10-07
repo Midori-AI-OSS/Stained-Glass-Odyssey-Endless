@@ -52,7 +52,7 @@ def test_luna_display_spinner_when_charged():
     # add charge above threshold
     from plugins.passives.normal.luna_lunar_reservoir import LunaLunarReservoir
 
-    LunaLunarReservoir.add_charge(fighter, amount=250)
+    LunaLunarReservoir.add_charge(fighter, amount=2500)
 
     info = registry.describe(fighter)
     passive = _get_passive(info, "luna_lunar_reservoir")

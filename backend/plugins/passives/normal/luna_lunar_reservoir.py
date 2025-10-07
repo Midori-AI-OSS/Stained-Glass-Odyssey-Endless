@@ -16,7 +16,7 @@ class LunaLunarReservoir:
     id = "luna_lunar_reservoir"
     name = "Lunar Reservoir"
     trigger = ["action_taken", "ultimate_used"]  # Respond to actions and ultimates
-    max_stacks = 200  # Show charge level 0-200
+    max_stacks = 2000  # Show charge level 0-2000
     stack_display = "number"
 
     # Class-level tracking of charge points for each entity
@@ -118,19 +118,19 @@ class LunaLunarReservoir:
     def _apply_actions(cls, charge_target: "Stats", current_charge: int) -> None:
         """Update action cadence and dodge bonuses based on charge."""
 
-        if current_charge < 35:
+        if current_charge < 350:
             charge_target.actions_per_turn = 2
-        elif current_charge < 50:
+        elif current_charge < 500:
             charge_target.actions_per_turn = 4
-        elif current_charge < 70:
+        elif current_charge < 700:
             charge_target.actions_per_turn = 8
-        elif current_charge < 85:
+        elif current_charge < 850:
             charge_target.actions_per_turn = 16
-        else:  # 85+ charge
+        else:  # 850+ charge
             charge_target.actions_per_turn = 32
 
-        if current_charge > 200:
-            stacks_past_soft_cap = current_charge - 200
+        if current_charge > 2000:
+            stacks_past_soft_cap = current_charge - 2000
             dodge_bonus = stacks_past_soft_cap * 0.00025  # 0.025% per stack
 
             dodge_effect = StatEffect(
@@ -181,9 +181,9 @@ class LunaLunarReservoir:
 
         current_charge = self._charge_points[entity_id]
 
-        # Spend 50 charge per turn when above 200 (boosted mode)
-        if current_charge > 200:
-            self._charge_points[entity_id] = max(200, current_charge - 50)
+        # Spend 500 charge per turn when above 2000 (boosted mode)
+        if current_charge > 2000:
+            self._charge_points[entity_id] = max(2000, current_charge - 500)
 
     @classmethod
     def get_charge(cls, target: "Stats") -> int:
@@ -211,11 +211,11 @@ class LunaLunarReservoir:
     @classmethod
     def get_display(cls, target: "Stats") -> str:
         """Display a spinner when charge is full and draining."""
-        return "spinner" if cls.get_charge(target) >= 200 else "number"
+        return "spinner" if cls.get_charge(target) >= 2000 else "number"
 
     @classmethod
     def get_description(cls) -> str:
         return (
-            "Gains 1 charge per action; attack count scales from 2 up to 32 at 85+ charge. "
-            "Charge beyond 200 grants 0.025% dodge per point and drains 50 charge each turn."
+            "Gains 1 charge per action; attack count scales from 2 up to 32 at 850+ charge. "
+            "Charge beyond 2000 grants 0.025% dodge per point and drains 500 charge each turn."
         )
