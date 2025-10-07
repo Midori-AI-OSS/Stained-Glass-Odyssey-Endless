@@ -71,7 +71,7 @@ await request_shutdown()
 `GET /performance/metrics` exposes the sizes of the in-memory battle tracking structures (`battle_tasks`, `battle_snapshots`, and `battle_locks`) along with current process memory usage (via `psutil` if installed or `tracemalloc` otherwise). Operators can trigger manual cleanup of completed battles with `POST /performance/gc`, which purges stale state and runs garbage collection.
 
 The root endpoint returns a simple status payload including the configured flavor. Set `UV_EXTRA` (default `"default"`) to label this instance. Additional routes support
-starting runs with a seeded 45-room map, updating the party, retrieving floor
+starting runs with a seeded 100-room map, updating the party, retrieving floor
 maps, listing available player characters, returning room background images,
 editing player pronouns and starting stats, and posting actions to battle, shop,
 rest, or floor boss rooms. The battle endpoint runs in a background task and

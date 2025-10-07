@@ -163,7 +163,7 @@ Each player and foe instance now maintains its own LangChain ChromaDB memory. Us
 
 ### Map Generation
 
-New runs begin by selecting up to four owned allies in a party picker before the map appears. Runs then progress through 45-room floors built by a seeded `MapGenerator`. Each floor includes at least two shops and two rest rooms, battle nodes marked as `battle-weak` or `battle-normal`, and ends in a `battle-boss-floor`. Chat scenes may appear after battles only when the LLM profiles are installed and do not affect room count. The frontend shows these nodes as stained-glass buttons with `lucide-svelte` icons for battles, shops, rests, and bosses.
+New runs begin by selecting up to four owned allies in a party picker before the map appears. Runs now progress through 100-room floors built by a seeded `MapGenerator`. Each floor opens with a `start` node, follows with 98 procedurally curated encounters that weave in shops, rests, primes, and glitched battles, and ends in a `battle-boss-floor`. Chat scenes may appear after battles only when the LLM profiles are installed and do not affect room count. The frontend shows these nodes as stained-glass buttons with `lucide-svelte` icons for battles, shops, rests, and bosses, and the extended floor length keeps scrolling smooth while preserving the guaranteed support room cadence.
 
 Across the broader interface, aim for a stained-glass aesthetic. Bar graphs and other visual meters should use vibrant, glass-like colors that mirror the element palette defined in `getElementBarColor` in `frontend/src/lib/BattleReview.svelte`.
 
