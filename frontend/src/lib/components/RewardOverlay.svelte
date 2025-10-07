@@ -143,6 +143,7 @@
   let dropRevealGeneration = 0;
   let dropSfxPlayer = null;
   let dropPopTransition = null;
+  let lastDropSignature = null;
 
   $: dropPopTransition = reducedMotion
     ? null
@@ -213,7 +214,38 @@
     });
   }
 
-  $: updateDropSequence(dropEntries, reducedMotion);
+  function snapshotDropSignature(entries) {
+    if (!Array.isArray(entries) || entries.length === 0) {
+      return [];
+    }
+    return entries.map((entry) => ({
+      key: String(entry?.key ?? ''),
+      count: Number.isFinite(entry?.count) ? entry.count : 0
+    }));
+  }
+
+  function dropSignaturesEqual(a, b) {
+    if (!Array.isArray(a) || !Array.isArray(b)) return false;
+    if (a.length !== b.length) return false;
+    for (let index = 0; index < a.length; index += 1) {
+      const current = a[index];
+      const other = b[index];
+      if (!other || current.key !== other.key || current.count !== other.count) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  $: {
+    const nextSignature = snapshotDropSignature(dropEntries);
+    const unchanged = Array.isArray(lastDropSignature) && dropSignaturesEqual(lastDropSignature, nextSignature);
+    if (unchanged) {
+      return;
+    }
+    updateDropSequence(dropEntries, reducedMotion);
+    lastDropSignature = nextSignature;
+  }
 
   let cardsDone = false;
   let showNextButton = false;
@@ -245,6 +277,7 @@
     clearTimeout(autoTimer);
     clearDropRevealTimers();
     stopDropAudio(true);
+    lastDropSignature = null;
   });
 
   // Show Next Room button when there's loot but no choices
