@@ -33,11 +33,9 @@ class Generic(DamageTypeBase):
         has_luna_reservoir = bool(
             actor_passives and "luna_lunar_reservoir" in actor_passives
         )
-        target_pool = (
-            [a for a in allies if a.hp > 0]
-            if getattr(actor, "plugin_type", "") == "foe"
-            else [e for e in enemies if e.hp > 0]
-        )
+        target_pool = [
+            target for target in enemies if getattr(target, "hp", 0) > 0
+        ]
         if not target_pool:
             return True
         target = target_pool[0]
