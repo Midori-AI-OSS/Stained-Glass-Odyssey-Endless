@@ -65,7 +65,7 @@ class MapNode:
 
 
 class MapGenerator:
-    rooms_per_floor: ClassVar[int] = 10
+    rooms_per_floor: ClassVar[int] = 100
 
     def __init__(
         self,

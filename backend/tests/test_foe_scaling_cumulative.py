@@ -26,10 +26,12 @@ def test_foe_scaling_cumulative_rooms():
     foe2.set_base_stat('max_hp', 1000)
     foe2.hp = 1000
 
+    rooms_per_floor = MapGenerator.rooms_per_floor
+
     # Room 1 Floor 1 (cumulative room 1)
     node1 = MapNode(room_id=1, room_type="battle-normal", floor=1, index=1, loop=1, pressure=0)
 
-    # Room 1 Floor 2 (cumulative room 46: 45 + 1)
+    # Room 1 Floor 2 (cumulative room rooms_per_floor + 1)
     node2 = MapNode(room_id=1, room_type="battle-normal", floor=2, index=1, loop=1, pressure=0)
 
     # Set random seed for reproducible results
@@ -62,11 +64,29 @@ def test_foe_scaling_room_progression_within_floor():
     foe2.set_base_stat('max_hp', 1000)
     foe2.hp = 1000
 
-    # Room 5 Floor 1
-    node1 = MapNode(room_id=5, room_type="battle-normal", floor=1, index=5, loop=1, pressure=0)
+    rooms_per_floor = MapGenerator.rooms_per_floor
+    early_index = max(2, rooms_per_floor // 4)
+    late_index = max(early_index + 1, rooms_per_floor - 2)
 
-    # Room 10 Floor 1
-    node2 = MapNode(room_id=10, room_type="battle-normal", floor=1, index=10, loop=1, pressure=0)
+    # Early room within Floor 1
+    node1 = MapNode(
+        room_id=early_index,
+        room_type="battle-normal",
+        floor=1,
+        index=early_index,
+        loop=1,
+        pressure=0,
+    )
+
+    # Late room within Floor 1
+    node2 = MapNode(
+        room_id=late_index,
+        room_type="battle-normal",
+        floor=1,
+        index=late_index,
+        loop=1,
+        pressure=0,
+    )
 
     random.seed(42)
     _scale_stats(foe1, node1)
@@ -92,7 +112,16 @@ def test_foe_level_cumulative_progression():
     foe2.set_base_stat('max_hp', 1000)
     foe2.hp = 1000
 
-    node1 = MapNode(room_id=45, room_type="battle-normal", floor=1, index=45, loop=1, pressure=0)
+    rooms_per_floor = MapGenerator.rooms_per_floor
+    last_floor_one_index = max(1, rooms_per_floor - 1)
+    node1 = MapNode(
+        room_id=last_floor_one_index,
+        room_type="battle-normal",
+        floor=1,
+        index=last_floor_one_index,
+        loop=1,
+        pressure=0,
+    )
     node2 = MapNode(room_id=1, room_type="battle-normal", floor=2, index=1, loop=1, pressure=0)
 
     random.seed(42)
@@ -109,18 +138,33 @@ def test_cumulative_room_calculation():
     """Test that cumulative room calculation matches expected values."""
     # Floor 1, Room 1 should be cumulative room 1
     node1 = MapNode(room_id=1, room_type="battle-normal", floor=1, index=1, loop=1, pressure=0)
-    cumulative1 = (node1.floor - 1) * MapGenerator.rooms_per_floor + node1.index
+    rooms_per_floor = MapGenerator.rooms_per_floor
+    cumulative1 = (node1.floor - 1) * rooms_per_floor + node1.index
     assert cumulative1 == 1, f"Floor 1 Room 1 should be cumulative room 1, got {cumulative1}"
 
-    # Floor 2, Room 1 should be cumulative room 46 (45 + 1)
+    # Floor 2, Room 1 should be cumulative room rooms_per_floor + 1
     node2 = MapNode(room_id=1, room_type="battle-normal", floor=2, index=1, loop=1, pressure=0)
-    cumulative2 = (node2.floor - 1) * MapGenerator.rooms_per_floor + node2.index
-    assert cumulative2 == 46, f"Floor 2 Room 1 should be cumulative room 46, got {cumulative2}"
+    cumulative2 = (node2.floor - 1) * rooms_per_floor + node2.index
+    expected2 = rooms_per_floor + 1
+    assert cumulative2 == expected2, (
+        f"Floor 2 Room 1 should be cumulative room {expected2}, got {cumulative2}"
+    )
 
-    # Floor 2, Room 10 should be cumulative room 55 (45 + 10)
-    node3 = MapNode(room_id=10, room_type="battle-normal", floor=2, index=10, loop=1, pressure=0)
-    cumulative3 = (node3.floor - 1) * MapGenerator.rooms_per_floor + node3.index
-    assert cumulative3 == 55, f"Floor 2 Room 10 should be cumulative room 55, got {cumulative3}"
+    # Floor 2, midway room should be cumulative room rooms_per_floor + midway index
+    midway_index = max(2, rooms_per_floor // 2)
+    node3 = MapNode(
+        room_id=midway_index,
+        room_type="battle-normal",
+        floor=2,
+        index=midway_index,
+        loop=1,
+        pressure=0,
+    )
+    cumulative3 = (node3.floor - 1) * rooms_per_floor + node3.index
+    expected3 = rooms_per_floor + midway_index
+    assert cumulative3 == expected3, (
+        f"Floor 2 Room {midway_index} should be cumulative room {expected3}, got {cumulative3}"
+    )
 
 
 if __name__ == "__main__":

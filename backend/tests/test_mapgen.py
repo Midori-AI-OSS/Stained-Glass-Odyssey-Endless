@@ -24,12 +24,19 @@ def test_generator_deterministic():
     rooms1 = gen1.generate_floor()
     rooms2 = gen2.generate_floor()
     assert [n.room_type for n in rooms1] == [n.room_type for n in rooms2]
-    assert len(rooms1) == 10
+    assert len(rooms1) == MapGenerator.rooms_per_floor
     assert rooms1[0].room_type == "start"
     assert rooms1[-1].room_type == "battle-boss-floor"
     types = [n.room_type for n in rooms1[1:-1]]
     assert set(types) <= {"shop", "battle-weak", "battle-normal", "battle-prime", "battle-glitched"}
     assert "shop" in types
+
+
+def test_generator_indexes_cover_full_floor():
+    gen = MapGenerator("seed")
+    rooms = gen.generate_floor()
+    assert len(rooms) == MapGenerator.rooms_per_floor
+    assert [room.index for room in rooms] == list(range(MapGenerator.rooms_per_floor))
 
 
 def test_generator_boss_rush_floor_all_bosses():
