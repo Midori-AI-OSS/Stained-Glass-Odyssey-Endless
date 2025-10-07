@@ -438,7 +438,9 @@
       relics={roomData.relic_choices || []}
       items={roomData.loot?.items || []}
       gold={roomData.loot?.gold || 0}
+      {sfxVolume}
       {fullIdleMode}
+      reducedMotion={overlayReducedMotion}
       on:select={(e) => dispatch('rewardSelect', e.detail)}
       on:next={() => dispatch('nextRoom')}
       on:lootAcknowledge={() => dispatch('lootAcknowledge')}
