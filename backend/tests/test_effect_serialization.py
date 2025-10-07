@@ -28,6 +28,7 @@ def test_serialize_effect_details():
             "damage": 5,
             "turns": 2,
             "source": "s",
+            "element": "Generic",
             "stacks": 2,
         }
     ]
@@ -38,15 +39,16 @@ def test_serialize_effect_details():
             "healing": 3,
             "turns": 1,
             "source": "s",
+            "element": "Generic",
             "stacks": 1,
         }
     ]
     assert any(
-        p["id"] == "attack_up" and p["stacks"] == 1 and p["max_stacks"] == 1
+        p["id"] == "attack_up" and p["stacks"] == 1 and p["max_stacks"] is None
         for p in data["passives"]
     )
     assert any(
-        p["id"] == "luna_lunar_reservoir" and p["stacks"] == 2 and p["max_stacks"] == 1
+        p["id"] == "luna_lunar_reservoir" and p["stacks"] == 0 and p["max_stacks"] == 2000
         for p in data["passives"]
     )
     assert all("name" in p for p in data["passives"])

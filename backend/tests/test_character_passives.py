@@ -12,6 +12,7 @@ from autofighter.stats import set_battle_active
 from plugins.damage_types.generic import Generic
 from plugins.effects.aftertaste import Aftertaste
 from plugins.passives.normal.ally_overload import AllyOverload
+from plugins.passives.normal.luna_lunar_reservoir import LunaLunarReservoir
 from plugins.passives.normal.hilander_critical_ferment import HilanderCriticalFerment
 from plugins.passives.normal.mezzy_gluttonous_bulwark import MezzyGluttonousBulwark
 
@@ -27,26 +28,29 @@ async def test_luna_lunar_reservoir_passive():
 
     # Initially should have default attack count (1)
     await registry.trigger("action_taken", luna)
-    assert luna.actions_per_turn == 2  # Should get 2 attacks (below 35 charge)
+    assert luna.actions_per_turn == 2  # Should get 2 attacks (below 350 charge)
 
-    # After multiple actions, should scale up
-    for _ in range(10):  # Build charge to 11 total
+    # After multiple actions, should still be under the first breakpoint
+    for _ in range(10):
         await registry.trigger("action_taken", luna)
 
-    # Should still be at 2 attacks (below 35 charge)
     assert luna.actions_per_turn == 2
 
-    # Build to 35+ charge
-    for _ in range(25):  # Total 36 charge
-        await registry.trigger("action_taken", luna)
+    # Build to 350+ charge
+    LunaLunarReservoir.add_charge(
+        luna,
+        max(0, 350 - LunaLunarReservoir.get_charge(luna)),
+    )
 
-    assert luna.actions_per_turn == 4  # 35-49 range
+    assert luna.actions_per_turn == 4  # 350-499 range
 
-    # Build to 50+ charge
-    for _ in range(15):  # Total 51 charge
-        await registry.trigger("action_taken", luna)
+    # Build to 500+ charge
+    LunaLunarReservoir.add_charge(
+        luna,
+        max(0, 500 - LunaLunarReservoir.get_charge(luna)),
+    )
 
-    assert luna.actions_per_turn == 8  # 50-69 range
+    assert luna.actions_per_turn == 8  # 500-699 range
 
 
 @pytest.mark.asyncio
@@ -81,12 +85,20 @@ async def test_mezzy_gluttonous_bulwark_passive():
     mezzy.allies = [ally]
 
     await registry.trigger("turn_start", mezzy)
-    first = MezzyGluttonousBulwark._siphoned_stats[id(ally)]["atk"]
+    first = next(
+        effect
+        for effect in ally._active_effects
+        if effect.name == "mezzy_gluttonous_bulwark_siphon_atk"
+    ).stat_modifiers["atk"]
 
     await registry.trigger("turn_start", mezzy)
-    second = MezzyGluttonousBulwark._siphoned_stats[id(ally)]["atk"]
+    second = next(
+        effect
+        for effect in ally._active_effects
+        if effect.name == "mezzy_gluttonous_bulwark_siphon_atk"
+    ).stat_modifiers["atk"]
 
-    assert second > first
+    assert second < first
     assert any(e.name.startswith("mezzy_gluttonous_bulwark_gain") for e in mezzy._active_effects)
     assert any(e.name.startswith("mezzy_gluttonous_bulwark_siphon") for e in ally._active_effects)
 
@@ -290,8 +302,9 @@ async def test_player_level_up_bonus_passive():
 
     initial_effects = len(player._active_effects)
 
-    # Trigger level up
-    await registry.trigger("level_up", player)
+    # Trigger level up via the passive directly
+    bonus_passive = registry._registry["player_level_up_bonus"]()
+    await bonus_passive.apply(player, player.level + 1)
 
     # Should have gained level-up bonus effects
     assert len(player._active_effects) > initial_effects

@@ -4,6 +4,7 @@ from autofighter.passives import PassiveRegistry
 from autofighter.stats import BUS
 from autofighter.stats import Stats
 from plugins.damage_types.generic import Generic
+from plugins.passives.normal.luna_lunar_reservoir import LunaLunarReservoir
 
 
 @pytest.mark.asyncio
@@ -23,13 +24,15 @@ async def test_passive_stack_display():
 
     luna = LunaActor(hp=1000, damage_type=Generic())
     luna.passives = ["luna_lunar_reservoir"]
+    LunaLunarReservoir._charge_points.clear()
+    LunaLunarReservoir._swords_by_owner.clear()
 
     # Initially 0 charge
     description = registry.describe(luna)
     luna_passive = next((p for p in description if p["id"] == "luna_lunar_reservoir"), None)
     assert luna_passive is not None
     assert luna_passive["stacks"] == 0
-    assert luna_passive["max_stacks"] == 200
+    assert luna_passive["max_stacks"] == 2000
 
     # After taking actions, should build charge
     for _ in range(10):  # 10 actions = 10 charge
@@ -234,9 +237,12 @@ async def test_soft_caps_luna_beyond_200():
     luna = Stats(hp=1000, damage_type=Generic())
     luna.passives = ["luna_lunar_reservoir"]
 
-    # Take enough actions to go past the soft cap of 200
-    for _ in range(220):  # 220 actions = 220 charge
-        await registry.trigger("action_taken", luna)
+    # Take enough actions to go past the soft cap of 2000
+    await registry.trigger("action_taken", luna)
+    LunaLunarReservoir.add_charge(
+        luna,
+        max(0, 2200 - LunaLunarReservoir.get_charge(luna)),
+    )
 
     description = registry.describe(luna)
     luna_passive = next((p for p in description if p["id"] == "luna_lunar_reservoir"), None)
@@ -244,9 +250,9 @@ async def test_soft_caps_luna_beyond_200():
 
     # Should show current charge (might be less due to boosted mode spending)
     current_charge = LunaLunarReservoir.get_charge(luna)
-    assert current_charge >= 200  # Should be able to go past 200
+    assert current_charge >= 2000  # Should be able to go past 2000
     assert luna_passive["stacks"] == current_charge
-    assert luna_passive["max_stacks"] == 200  # Soft cap stays at 200
+    assert luna_passive["max_stacks"] == 2000  # Soft cap stays at 2000
 
 
 @pytest.mark.asyncio
