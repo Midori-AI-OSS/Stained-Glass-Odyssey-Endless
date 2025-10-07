@@ -524,15 +524,15 @@
   }
 
   .glitched-card:not(.glitch-reduced) .glitch-content {
-    animation: glitch1 0.5s infinite;
+    animation: glitch1 1s infinite;
   }
 
   .glitched-card:not(.glitch-reduced) .glitch-wrapper::before {
-    animation: glitch2 0.5s infinite;
+    animation: glitch2 1s infinite;
   }
 
   .glitched-card:not(.glitch-reduced) .glitch-wrapper::after {
-    animation: glitch3 0.5s infinite;
+    animation: glitch3 1s infinite;
   }
 
   .glitched-card.glitch-reduced .glitch-content {
