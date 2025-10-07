@@ -47,4 +47,41 @@ describe('BattleFighterCard tick indicators', () => {
     expect(layer).not.toBeNull();
     expect(layer.classList.contains('reduced')).toBe(true);
   });
+
+  it('computes ultimate gauge progress using the provided maximum', () => {
+    const { container } = render(BattleFighterCard, {
+      props: {
+        fighter: {
+          id: 'luna',
+          name: 'Luna',
+          element: 'light',
+          ultimate_charge: 7500,
+          ultimate_max: 15000,
+        },
+        position: 'bottom',
+      },
+    });
+
+    const gauge = container.querySelector('.ult-gauge');
+    expect(gauge).not.toBeNull();
+    expect(gauge.style.getPropertyValue('--p')).toBe('0.5');
+  });
+
+  it('falls back to the legacy cap when no ultimate maximum is provided', () => {
+    const { container } = render(BattleFighterCard, {
+      props: {
+        fighter: {
+          id: 'rookie',
+          name: 'Rookie',
+          element: 'wind',
+          ultimate_charge: 3,
+        },
+        position: 'bottom',
+      },
+    });
+
+    const gauge = container.querySelector('.ult-gauge');
+    expect(gauge).not.toBeNull();
+    expect(gauge.style.getPropertyValue('--p')).toBe('0.2');
+  });
 });

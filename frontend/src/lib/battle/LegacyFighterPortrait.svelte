@@ -41,8 +41,18 @@
   $: hpHue = (hpPct / 100) * 120;
   $: hpColor = `hsl(${hpHue}, 100%, 45%)`;
 
+  const DEFAULT_ULT_CAP = 15;
   $: elColor = getElementColor(fighter.element);
-  $: ultProgress = Math.max(0, Math.min(1, Number(fighter?.ultimate_charge || 0) / 15));
+  $: ultimateMax = Math.max(
+    1,
+    Number(
+      fighter?.ultimate_max ??
+        fighter?.ultimate_charge_capacity ??
+        DEFAULT_ULT_CAP
+    )
+  );
+  $: ultimateCharge = Math.max(0, Number(fighter?.ultimate_charge ?? 0));
+  $: ultProgress = Math.max(0, Math.min(1, ultimateCharge / ultimateMax));
   let lowContrast = false;
   let prevUltReady = false;
   let showUltPulse = false;

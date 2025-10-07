@@ -181,6 +181,7 @@ class Luna(PlayerBase):
     passives: list[str] = field(default_factory=lambda: ["luna_lunar_reservoir"])
     # UI hint: show numeric actions indicator
     actions_display: str = "number"
+    ultimate_charge_capacity: int = 15_000
     spawn_weight_multiplier: ClassVar[dict[str, float]] = {"non_boss": 5.0}
     music_playlist_weights: ClassVar[dict[str, float]] = {"default": 3.0, "boss": 1.0}
 

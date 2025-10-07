@@ -23,7 +23,7 @@ async def test_fire_ultimate_stack_accumulation_and_drain():
     actor._base_defense = 0
     actor.id = "actor"
     actor.hp = actor.max_hp
-    actor.ultimate_charge = 15
+    actor.ultimate_charge = actor.ultimate_charge_max
     actor.ultimate_ready = True
     await actor.use_ultimate()
     assert actor.damage_type._drain_stacks == 1
@@ -33,7 +33,7 @@ async def test_fire_ultimate_stack_accumulation_and_drain():
     expected = actor.max_hp - int(actor.max_hp * 0.05)
     assert actor.hp == expected
 
-    actor.ultimate_charge = 15
+    actor.ultimate_charge = actor.ultimate_charge_max
     actor.ultimate_ready = True
     await actor.use_ultimate()
     assert actor.damage_type._drain_stacks == 2
@@ -51,7 +51,7 @@ async def test_fire_ultimate_resets_on_battle_end():
     actor = Actor(damage_type=Fire())
     actor._base_defense = 0
     actor.id = "actor"
-    actor.ultimate_charge = 15
+    actor.ultimate_charge = actor.ultimate_charge_max
     actor.ultimate_ready = True
     await actor.use_ultimate()
     assert actor.damage_type._drain_stacks == 1
@@ -75,7 +75,7 @@ async def test_fire_ultimate_damage_multiplier():
     target.id = "target"
     base = await target.apply_damage(100, attacker)
 
-    attacker.ultimate_charge = 15
+    attacker.ultimate_charge = attacker.ultimate_charge_max
     attacker.ultimate_ready = True
     await attacker.use_ultimate()
 

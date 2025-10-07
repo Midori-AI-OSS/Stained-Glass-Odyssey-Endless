@@ -59,6 +59,26 @@ def _get_effect_description(effect_name: str) -> str:
         return "Unknown effect"
 
 
+def _resolve_ultimate_maximum(obj: object | None) -> int:
+    """Best-effort extraction of the ultimate requirement for serialization."""
+
+    if obj is None:
+        return 15
+    try:
+        value = getattr(obj, "ultimate_charge_max")
+    except Exception:
+        value = None
+    if value is None:
+        try:
+            value = getattr(obj, "ultimate_charge_capacity")
+        except Exception:
+            value = None
+    try:
+        return max(1, int(value))
+    except Exception:
+        return 15
+
+
 def _normalize_damage_type(dt: Any) -> str:
     """Return a simple identifier for a damage type or element."""
     try:
@@ -108,6 +128,7 @@ def _serialize(obj: Stats) -> dict[str, Any]:
             "action_value": 0.0,
             "base_action_value": 0.0,
             "rank": "normal",
+            "ultimate_max": 15,
         }
 
     # Build a dict without dataclasses.asdict to avoid deepcopy of complex fields
@@ -155,6 +176,7 @@ def _serialize(obj: Stats) -> dict[str, Any]:
             "action_value": float(getattr(obj, "action_value", 0.0) or 0.0),
             "base_action_value": float(getattr(obj, "base_action_value", 0.0) or 0.0),
             "rank": getattr(obj, "rank", "normal"),
+            "ultimate_max": _resolve_ultimate_maximum(obj),
         }
 
     # Remove non-serializable fields introduced by plugins (e.g., runtime memory)
@@ -211,6 +233,7 @@ def _serialize(obj: Stats) -> dict[str, Any]:
 
     data["dots"] = dots
     data["hots"] = hots
+    data["ultimate_max"] = _resolve_ultimate_maximum(obj)
 
     # Add special effects (aftertaste, crit boost, etc.)
     active_effects = []

@@ -30,7 +30,7 @@ async def test_foe_ultimate_charge_consumption():
 
     # Add more charge to reach maximum
     foe.add_ultimate_charge(5)
-    assert foe.ultimate_charge == 15
+    assert foe.ultimate_charge == foe.ultimate_charge_max
     assert foe.ultimate_ready is True
 
     # Use ultimate and verify charge is consumed
@@ -57,11 +57,13 @@ async def test_foe_ultimate_ready_behavior():
     assert foe.ultimate_ready == player.ultimate_ready is False
 
     # Add charge to both
-    foe.add_ultimate_charge(15)
-    player.add_ultimate_charge(15)
+    foe.add_ultimate_charge(foe.ultimate_charge_max)
+    player.add_ultimate_charge(player.ultimate_charge_max)
 
     assert foe.ultimate_ready == player.ultimate_ready is True
-    assert foe.ultimate_charge == player.ultimate_charge == 15
+    assert foe.ultimate_charge == foe.ultimate_charge_max
+    assert player.ultimate_charge == player.ultimate_charge_max
+    assert foe.ultimate_charge == player.ultimate_charge
 
     # Use ultimates for both
     foe_result = await foe.use_ultimate()
@@ -78,7 +80,7 @@ async def test_foe_ultimate_events():
     foe = Stats(damage_type=Generic())
     foe.plugin_type = "foe"
     foe.use_ultimate = FoeBase.use_ultimate.__get__(foe, Stats)
-    foe.add_ultimate_charge(15)
+    foe.add_ultimate_charge(foe.ultimate_charge_max)
 
     # Track events
     events = []

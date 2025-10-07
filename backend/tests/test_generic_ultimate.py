@@ -35,7 +35,7 @@ async def test_generic_ultimate_hits_and_passive_triggers():
     target._base_defense = 0
     target.set_base_stat('dodge_odds', 0)
 
-    actor.ultimate_charge = 15
+    actor.ultimate_charge = actor.ultimate_charge_max
     actor.ultimate_ready = True
 
     hits = {"count": 0}
@@ -72,7 +72,7 @@ async def test_generic_ultimate_foe_targets_opponents():
     player_target.defense = 0
     player_target.set_base_stat("dodge_odds", 0.0)
 
-    foe.ultimate_charge = 15
+    foe.ultimate_charge = foe.ultimate_charge_max
     foe.ultimate_ready = True
 
     allies = [foe, foe_buddy]

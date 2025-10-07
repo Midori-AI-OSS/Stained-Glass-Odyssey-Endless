@@ -52,7 +52,7 @@ async def test_wind_ultimate_transfers_from_foes():
     await BUS.emit_async("battle_start", foe1)
     await BUS.emit_async("battle_start", foe2)
 
-    player.add_ultimate_charge(15)
+    player.add_ultimate_charge(player.ultimate_charge_max)
     assert await player.use_ultimate()
 
     await BUS.emit_async("hit_landed", player, foe1, 0, "attack")
@@ -101,7 +101,7 @@ async def test_wind_foe_ultimate_transfers_from_allies():
     await BUS.emit_async("battle_start", p1)
     await BUS.emit_async("battle_start", p2)
 
-    foe.add_ultimate_charge(15)
+    foe.add_ultimate_charge(foe.ultimate_charge_max)
     assert await foe.use_ultimate()
 
     await BUS.emit_async("hit_landed", foe, p1, 0, "attack")
