@@ -183,6 +183,7 @@ class MapGenerator:
         )
         index += 1
         middle = self.rooms_per_floor - 2
+        min_shop_idx = max(0, int(middle * 0.8)) if middle > 0 else 0
         suppressed: set[str] = {
             room_type
             for room_type, override in self._room_overrides.items()
@@ -258,11 +259,6 @@ class MapGenerator:
             self._rand.shuffle(bonus_flags)
         battle_pairs = list(zip(battle_types, bonus_flags or [False] * len(battle_types)))
 
-        if room_types and room_types[0] == "shop":
-            for i, rt in enumerate(room_types[1:], start=1):
-                if rt != "shop":
-                    room_types[0], room_types[i] = room_types[i], room_types[0]
-                    break
         if suppressed:
             filtered = [rt for rt in room_types if rt not in suppressed]
             removed = len(room_types) - len(filtered)
@@ -275,6 +271,15 @@ class MapGenerator:
             room_types = filtered[:middle]
         while len(room_types) < middle:
             room_types.append("battle-normal" if len(room_types) % 2 else "battle-weak")
+
+        if room_types:
+            shops = [rt for rt in room_types if rt == "shop"]
+            if shops:
+                non_shops = [rt for rt in room_types if rt != "shop"]
+                prefix_count = min(min_shop_idx, len(non_shops))
+                prefix = non_shops[:prefix_count]
+                suffix = non_shops[prefix_count:]
+                room_types = prefix + shops + suffix
 
         battle_iter = iter(battle_pairs)
         enriched_types: list[tuple[str, bool]] = []
