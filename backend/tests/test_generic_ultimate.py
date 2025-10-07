@@ -3,10 +3,12 @@ import pytest
 from autofighter.passives import PassiveRegistry
 from autofighter.stats import BUS
 from autofighter.stats import Stats
+from autofighter.stats import set_battle_active
 from plugins.damage_types.generic import Generic
 
 
 class Actor(Stats):
+    plugin_type = "player"
     async def use_ultimate(self) -> bool:  # pragma: no cover - simple helper
         if not self.ultimate_ready:
             return False
@@ -50,3 +52,41 @@ async def test_generic_ultimate_hits_and_passive_triggers():
     assert result is True
     assert hits["count"] == 64
     assert llr.get_charge(actor) == 64
+
+
+@pytest.mark.asyncio
+async def test_generic_ultimate_foe_targets_opponents():
+    foe = Actor(damage_type=Generic())
+    foe.plugin_type = "foe"
+    foe.id = "foe"
+    foe.atk = 640
+    foe.defense = 0
+    foe.set_base_stat("dodge_odds", 0.0)
+
+    foe_buddy = Stats()
+    foe_buddy.id = "foe_buddy"
+    foe_buddy.set_base_stat("dodge_odds", 0.0)
+
+    player_target = Stats()
+    player_target.id = "player"
+    player_target.defense = 0
+    player_target.set_base_stat("dodge_odds", 0.0)
+
+    foe.ultimate_charge = 15
+    foe.ultimate_ready = True
+
+    allies = [foe, foe_buddy]
+    enemies = [player_target]
+
+    player_start = player_target.hp
+    foe_start = foe.hp
+
+    set_battle_active(True)
+    try:
+        result = await foe.damage_type.ultimate(foe, allies, enemies)
+    finally:
+        set_battle_active(False)
+
+    assert result is True
+    assert player_target.hp < player_start
+    assert foe.hp == foe_start
