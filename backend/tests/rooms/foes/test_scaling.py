@@ -10,6 +10,7 @@ import pytest
 sys.path.append(str(Path(__file__).resolve().parents[3]))
 
 from autofighter.mapgen import MapNode
+from autofighter.rooms.foe_factory import FoeFactory
 from autofighter.rooms.foe_factory import ROOM_BALANCE_CONFIG
 from autofighter.rooms.foes.scaling import calculate_cumulative_rooms
 from autofighter.rooms.foes.scaling import compute_base_multiplier
@@ -132,3 +133,40 @@ def test_enforce_thresholds_clamps_vitality_and_mitigation() -> None:
 
     assert foe.get_base_stat("vitality") == pytest.approx(expected_vitality)
     assert foe.get_base_stat("mitigation") == pytest.approx(expected_mitigation)
+
+
+def test_scale_stats_retains_spawn_debuff_for_foe_base() -> None:
+    config = dict(ROOM_BALANCE_CONFIG)
+    config.update(
+        {
+            "scaling_variance": 0.0,
+            "room_growth_multiplier": 0.0,
+            "loop_growth_multiplier": 0.0,
+            "pressure_multiplier": 1.0,
+        }
+    )
+    factory = FoeFactory(config=config)
+    node = MapNode(
+        room_id=2,
+        room_type="battle-normal",
+        floor=1,
+        index=1,
+        loop=1,
+        pressure=0,
+    )
+    foe = DummyFoe()
+
+    base_hp = foe.get_base_stat("max_hp")
+    base_atk = foe.get_base_stat("atk")
+    base_defense = foe.get_base_stat("defense")
+
+    factory.scale_stats(foe, node, strength=1.0)
+
+    expected_hp = int(base_hp * config["foe_base_debuff"])
+    expected_atk = int(base_atk * config["foe_base_debuff"])
+    defense_multiplier = min((config["foe_base_debuff"] * node.floor) / 4, 1.0)
+    expected_defense = int(base_defense * defense_multiplier)
+
+    assert foe.get_base_stat("max_hp") == expected_hp
+    assert foe.get_base_stat("atk") == expected_atk
+    assert foe.get_base_stat("defense") == expected_defense

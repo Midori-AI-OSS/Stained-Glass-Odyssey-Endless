@@ -308,6 +308,27 @@ class FoeFactory:
             cumulative_rooms=cumulative_rooms,
         )
         foe_debuff = apply_base_debuffs(obj, node, config)
+        if foe_debuff < 1.0 and isinstance(obj, FoeBase):
+            for stat_name in list(baseline_stats.keys()):
+                updated_baseline: float | None = None
+                if hasattr(obj, "get_base_stat"):
+                    try:
+                        value = obj.get_base_stat(stat_name)
+                    except Exception:
+                        value = None
+                    if isinstance(value, (int, float)):
+                        updated_baseline = float(value)
+                if updated_baseline is None:
+                    try:
+                        value = getattr(obj, stat_name)
+                    except Exception:
+                        value = None
+                    if isinstance(value, (int, float)):
+                        updated_baseline = float(value)
+                if updated_baseline is not None:
+                    baseline_stats[stat_name] = updated_baseline
+                else:
+                    baseline_stats.pop(stat_name, None)
         apply_attribute_scaling(
             obj,
             base_mult,
