@@ -4,7 +4,9 @@ from dataclasses import field
 import importlib
 from itertools import count
 import logging
+import math
 import random
+import sys
 from typing import Optional
 from typing import Union
 from weakref import WeakValueDictionary
@@ -804,6 +806,13 @@ class Stats:
         vit = vit if vit > EPS else EPS
         mit = mit if mit > EPS else EPS
         denom = defense_term * vit * mit
+        try:
+            src_vit = float(src_vit)
+        except Exception:
+            src_vit = 1.0
+        src_vit = src_vit if src_vit > EPS else EPS
+        growth_term = max(src_vit / denom, 1e-12)
+        safe_cap = math.sqrt(sys.float_info.max / growth_term)
         passes = getattr(self, "damage_reduction_passes", 1)
         try:
             passes = int(passes)
@@ -812,12 +821,21 @@ class Stats:
         passes = max(1, passes)
         mitigated_amount = amount
         for _ in range(passes):
+            mitigated_amount = min(mitigated_amount, safe_cap)
             mitigated_amount = ((mitigated_amount ** 2) * src_vit) / denom
+            if not math.isfinite(mitigated_amount):
+                mitigated_amount = sys.float_info.max
+                break
         # Enrage: increase damage taken globally by N% per enrage stack
         enr = get_enrage_percent()
         if enr > 0:
-            mitigated_amount *= (1.0 + enr)
-            original_damage_before_mitigation *= (1.0 + enr)
+            enr_multiplier = 1.0 + enr
+            mitigated_amount *= enr_multiplier
+            original_damage_before_mitigation *= enr_multiplier
+        if not math.isfinite(mitigated_amount):
+            mitigated_amount = sys.float_info.max
+        if not math.isfinite(original_damage_before_mitigation):
+            original_damage_before_mitigation = sys.float_info.max
         amount = max(int(mitigated_amount), 1)
         mitigated_amount_for_event = amount
         original_damage_for_event = max(int(round(original_damage_before_mitigation)), 0)
