@@ -60,6 +60,7 @@
   $: rankKey = String(fighter?.rank || '').toLowerCase().trim();
   $: isPrimeRank = rankKey.includes('prime');
   $: isBossRank = rankKey.includes('boss');
+  $: isGlitchedRank = rankKey.includes('glitched');
   // Very slow base duration (~150s) with slight per-instance variation and offset
   const BASE_OUTLINE_SEC = 150;
   let outlineAnimDur = `${(BASE_OUTLINE_SEC * (0.88 + Math.random() * 0.24)).toFixed(2)}s`;
@@ -343,24 +344,91 @@
     class="modern-fighter-card {position} {size}"
     class:dead={isDead}
     class:highlight={highlight && !isDead && !disablePortraitGlows}
+    class:glitched-card={isGlitchedRank}
+    class:glitch-reduced={effectiveReducedMotion}
     style="--portrait-size: {portraitSize}; --element-color: {elColor}; --element-glow-color: {elementGlow.color}"
   >
-    {#if activeTickIndicators.length}
-      <div class="tick-indicator-layer" class:reduced={effectiveReducedMotion} data-position={position}>
-        {#each activeTickIndicators as indicator, index (indicator.id)}
-          <div
-            class="tick-arrow {indicator.type === 'hot_tick' ? 'hot' : 'dot'}"
-            style={`--arrow-color:${indicator.palette.base}; --arrow-highlight:${indicator.palette.highlight}; --arrow-shadow:${indicator.palette.shadow}; --stack-index:${index}; --arrow-top:${indicator.offsetY}%; --arrow-left:${indicator.offsetX}%;`}
-          >
-            <div class="arrow-visual" aria-hidden="true">
-              <span class="arrow-body"></span>
-              <span class="arrow-head"></span>
-            </div>
-            <span class="sr-only">
-              {indicator.type === 'hot_tick' ? 'Healing over time tick' : 'Damage over time tick'}
-              {indicator.amount ? ` ${indicator.amount > 0 ? '+' : ''}${indicator.amount}` : ''}
-            </span>
+    <div class="glitch-wrapper">
+      <div class="glitch-content">
+        {#if activeTickIndicators.length}
+          <div class="tick-indicator-layer" class:reduced={effectiveReducedMotion} data-position={position}>
+            {#each activeTickIndicators as indicator, index (indicator.id)}
+              <div
+                class="tick-arrow {indicator.type === 'hot_tick' ? 'hot' : 'dot'}"
+                style={`--arrow-color:${indicator.palette.base}; --arrow-highlight:${indicator.palette.highlight}; --arrow-shadow:${indicator.palette.shadow}; --stack-index:${index}; --arrow-top:${indicator.offsetY}%; --arrow-left:${indicator.offsetX}%;`}
+              >
+                <div class="arrow-visual" aria-hidden="true">
+                  <span class="arrow-body"></span>
+                  <span class="arrow-head"></span>
+                </div>
+                <span class="sr-only">
+                  {indicator.type === 'hot_tick' ? 'Healing over time tick' : 'Damage over time tick'}
+                  {indicator.amount ? ` ${indicator.amount > 0 ? '+' : ''}${indicator.amount}` : ''}
+                </span>
+              </div>
+            {/each}
           </div>
+        {/if}
+        <div
+          class="element-wrapper"
+          class:element-change={elementChanged}
+          class:reduced={reducedMotion}
+          on:animationend={resetElementChange}
+        >
+          <div
+            class="fighter-portrait"
+            class:can-cycle={canCycle}
+            class:rank-prime={isPrimeRank}
+            class:rank-boss={isBossRank}
+            class:reduced={reducedMotion}
+            on:click={cyclePortraitIfAvailable}
+            style={`--outline-anim-dur: ${outlineAnimDur}; --outline-anim-delay: ${outlineAnimDelay};`}
+          >
+            <div
+              class="portrait-image"
+              class:element-glow={!isDead && Boolean(fighter?.ultimate_ready) && !disablePortraitGlows}
+              class:reduced={effectiveReducedMotion}
+              class:phantom={isPhantom && !isDead}
+              class:fading={fading}
+              class:luna-sword={showLunaSwordArt}
+              style={`background-image: url("${portraitImageUrl}")`}
+            >
+            {#if showLunaSwordArt}
+              <div class="luna-sword-overlay" style={lunaSwordOverlayStyle} aria-hidden="true"></div>
+            {/if}
+            {#if !reducedMotion && !isDead && fighter?.ultimate_ready}
+              <div class="element-effect {elementGlow.effect}"></div>
+            {/if}
+          </div>
+            <!-- Rank badge removed per design: outline subtly animates instead. -->
+          <!-- Overlay UI: pips (left), passives (middle), ult gauge (right) -->
+          <div class="overlay-ui">
+            <!-- Old "action pips" removed to avoid confusion with passive pips. -->
+            {#if (fighter.passives || []).length}
+              <div class="passive-indicators" class:reduced={reducedMotion}>
+                {#each fighter.passives as p (p.id)}
+                  {@const count = getStackCount(p)}
+                  <div class="passive" class:pips-mode={(p.display === 'pips' && count <= 5)} class:spinner-mode={(p.display === 'spinner')} class:number-mode={(p.display !== 'spinner' && !(p.display === 'pips' && count <= 5))}>
+                    {#if p.display === 'spinner'}
+                      <TripleRingSpinner color={elColor} duration="1.5s" {reducedMotion} />
+                    {:else if p.display === 'pips'}
+                      {#if count <= 5}
+                        <div class="pips">
+                          {#each Array(count) as _, i (i)}
+                            <PipCircle
+                              class="pip-icon filled"
+                              stroke="none"
+                              fill="currentColor"
+                              aria-hidden="true"
+                            />
+                          {/each}
+                        </div>
+                      {:else}
+                        <span class="count">{count}</span>
+                      {/if}
+                    {:else}
+                      <span class="count">{p.max_stacks ? `${count}/${p.max_stacks}` : count}</span>
+                    {/if}
         {/each}
       </div>
     {/if}
@@ -418,45 +486,40 @@
                       />
                     {/each}
                   </div>
-                {:else}
-                  <span class="count">{count}</span>
-                {/if}
-              {:else}
-                <span class="count">{p.max_stacks ? `${count}/${p.max_stacks}` : count}</span>
+                {/each}
+              </div>
+            {/if}
+            <div
+              class="ult-gauge"
+              class:ult-ready={Boolean(fighter?.ultimate_ready)}
+              class:reduced={reducedMotion}
+              style="--element-color: {elColor}; --p: {ultRatio}; --tilt: {tiltAngle}deg"
+            aria-label="Ultimate Gauge"
+            >
+              <div class="ult-fill"></div>
+              <svelte:component
+                this={elIcon}
+                class="ult-icon"
+                style={`--ult-icon-pulse-delay: ${ultIconPulseDelay}s; --ult-icon-pulse-dur: ${ultIconPulseDur}s;`}
+                aria-hidden="true"
+              />
+              {#if !fighter?.ultimate_ready}
+                <div class="ult-pulse" style={`animation-duration: ${Math.max(0.4, 1.6 - 1.2 * ultRatio)}s`}></div>
+              {/if}
+              {#if fighter?.ultimate_ready && !disablePortraitGlows}
+                <div class="ult-glow"></div>
               {/if}
             </div>
-          {/each}
+          </div>
+          <!-- Hover-only name chip (bottom-left) -->
+          {#if displayName}
+            <div class="name-chip" aria-hidden="true">{displayName}</div>
+          {/if}
+          </div>
         </div>
-      {/if}
-      <div
-        class="ult-gauge"
-        class:ult-ready={Boolean(fighter?.ultimate_ready)}
-        class:reduced={reducedMotion}
-        style="--element-color: {elColor}; --p: {ultRatio}; --tilt: {tiltAngle}deg"
-      aria-label="Ultimate Gauge"
-      >
-        <div class="ult-fill"></div>
-        <svelte:component
-          this={elIcon}
-          class="ult-icon"
-          style={`--ult-icon-pulse-delay: ${ultIconPulseDelay}s; --ult-icon-pulse-dur: ${ultIconPulseDur}s;`}
-          aria-hidden="true"
-        />
-        {#if !fighter?.ultimate_ready}
-          <div class="ult-pulse" style={`animation-duration: ${Math.max(0.4, 1.6 - 1.2 * ultRatio)}s`}></div>
-        {/if}
-        {#if fighter?.ultimate_ready && !disablePortraitGlows}
-          <div class="ult-glow"></div>
-        {/if}
       </div>
     </div>
-    <!-- Hover-only name chip (bottom-left) -->
-    {#if displayName}
-      <div class="name-chip" aria-hidden="true">{displayName}</div>
-    {/if}
-    </div>
   </div>
-</div>
 
 <style>
   .modern-fighter-card {
@@ -464,6 +527,238 @@
     display: flex;
     align-items: center;
     justify-content: center;
+  }
+
+  .glitch-wrapper {
+    position: relative;
+    display: inline-block;
+  }
+
+  .glitch-content {
+    position: relative;
+    display: block;
+  }
+
+  .glitched-card .glitch-wrapper::before,
+  .glitched-card .glitch-wrapper::after {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    pointer-events: none;
+    opacity: 0;
+    z-index: 5;
+    border-radius: clamp(8px, calc(var(--portrait-size, 96px) * 0.08), 16px);
+    mix-blend-mode: screen;
+    background-size: 100% 100%;
+    background-repeat: no-repeat;
+  }
+
+  .glitched-card .glitch-wrapper::before {
+    background-image: repeating-linear-gradient(
+      180deg,
+      rgba(103, 243, 218, 0.35) 0%,
+      rgba(103, 243, 218, 0.35) 12%,
+      rgba(103, 243, 218, 0) 12%,
+      rgba(103, 243, 218, 0) 24%
+    );
+  }
+
+  .glitched-card .glitch-wrapper::after {
+    background-image: repeating-linear-gradient(
+      180deg,
+      rgba(241, 111, 111, 0.45) 0%,
+      rgba(241, 111, 111, 0.45) 16%,
+      rgba(241, 111, 111, 0) 16%,
+      rgba(241, 111, 111, 0) 32%
+    );
+  }
+
+  .glitched-card:not(.glitch-reduced) .glitch-content {
+    animation: glitch1 0.5s infinite;
+  }
+
+  .glitched-card:not(.glitch-reduced) .glitch-wrapper::before {
+    animation: glitch2 0.5s infinite;
+  }
+
+  .glitched-card:not(.glitch-reduced) .glitch-wrapper::after {
+    animation: glitch3 0.5s infinite;
+  }
+
+  .glitched-card.glitch-reduced .glitch-content {
+    animation: none;
+    opacity: 1;
+  }
+
+  .glitched-card.glitch-reduced .glitch-wrapper::before,
+  .glitched-card.glitch-reduced .glitch-wrapper::after {
+    animation: none;
+    opacity: 0;
+  }
+
+  @keyframes glitch1 {
+    0% {
+      transform: none;
+      opacity: 1;
+    }
+    7% {
+      transform: skew(-0.5deg, -0.9deg);
+      opacity: 0.75;
+    }
+    10% {
+      transform: none;
+      opacity: 1;
+    }
+    27% {
+      transform: none;
+      opacity: 1;
+    }
+    30% {
+      transform: skew(0.8deg, -0.1deg);
+      opacity: 0.75;
+    }
+    35% {
+      transform: none;
+      opacity: 1;
+    }
+    52% {
+      transform: none;
+      opacity: 1;
+    }
+    55% {
+      transform: skew(-1deg, 0.2deg);
+      opacity: 0.75;
+    }
+    50% {
+      transform: none;
+      opacity: 1;
+    }
+    72% {
+      transform: none;
+      opacity: 1;
+    }
+    75% {
+      transform: skew(0.4deg, 1deg);
+      opacity: 0.75;
+    }
+    80% {
+      transform: none;
+      opacity: 1;
+    }
+    100% {
+      transform: none;
+      opacity: 1;
+    }
+  }
+
+  @keyframes glitch2 {
+    0% {
+      transform: none;
+      opacity: 0.25;
+    }
+    7% {
+      transform: translate(-2px, -3px);
+      opacity: 0.5;
+    }
+    10% {
+      transform: none;
+      opacity: 0.25;
+    }
+    27% {
+      transform: none;
+      opacity: 0.25;
+    }
+    30% {
+      transform: translate(-5px, -2px);
+      opacity: 0.5;
+    }
+    35% {
+      transform: none;
+      opacity: 0.25;
+    }
+    52% {
+      transform: none;
+      opacity: 0.25;
+    }
+    55% {
+      transform: translate(-5px, -1px);
+      opacity: 0.5;
+    }
+    50% {
+      transform: none;
+      opacity: 0.25;
+    }
+    72% {
+      transform: none;
+      opacity: 0.25;
+    }
+    75% {
+      transform: translate(-2px, -6px);
+      opacity: 0.5;
+    }
+    80% {
+      transform: none;
+      opacity: 0.25;
+    }
+    100% {
+      transform: none;
+      opacity: 0.25;
+    }
+  }
+
+  @keyframes glitch3 {
+    0% {
+      transform: none;
+      opacity: 0.25;
+    }
+    7% {
+      transform: translate(2px, 3px);
+      opacity: 0.5;
+    }
+    10% {
+      transform: none;
+      opacity: 0.25;
+    }
+    27% {
+      transform: none;
+      opacity: 0.25;
+    }
+    30% {
+      transform: translate(5px, 2px);
+      opacity: 0.5;
+    }
+    35% {
+      transform: none;
+      opacity: 0.25;
+    }
+    52% {
+      transform: none;
+      opacity: 0.25;
+    }
+    55% {
+      transform: translate(5px, 1px);
+      opacity: 0.5;
+    }
+    50% {
+      transform: none;
+      opacity: 0.25;
+    }
+    72% {
+      transform: none;
+      opacity: 0.25;
+    }
+    75% {
+      transform: translate(2px, 6px);
+      opacity: 0.5;
+    }
+    80% {
+      transform: none;
+      opacity: 0.25;
+    }
+    100% {
+      transform: none;
+      opacity: 0.25;
+    }
   }
 
   .tick-indicator-layer {
