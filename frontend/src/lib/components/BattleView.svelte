@@ -156,6 +156,7 @@
     return Math.max(70, scaled);
   }
   let timer;
+  let isFetchingSnapshot = false;
   function clearPollTimer() {
     if (timer) {
       clearTimeout(timer);
@@ -1980,11 +1981,13 @@
   }
 
   async function fetchSnapshot() {
+    if (isFetchingSnapshot) return;
     if (!active || !runId) return;
     if (isSyncHalted()) {
       clearPollTimer();
       return;
     }
+    isFetchingSnapshot = true;
     const start = performance.now();
     dispatch('snapshot-start');
     let haltedDuringFetch = false;
@@ -2364,6 +2367,7 @@
       // Silently ignore errors to avoid spam during rapid polling
     } finally {
       dispatch('snapshot-end');
+      isFetchingSnapshot = false;
       if (isSyncHalted() || haltedDuringFetch) {
         clearPollTimer();
         return;
@@ -2390,7 +2394,7 @@
   });
 
   // Watch active state changes
-  $: if (active && runId && !timer) {
+  $: if (active && runId && !timer && !isFetchingSnapshot) {
     fetchSnapshot();
   } else if (!active && timer) {
     clearPollTimer();

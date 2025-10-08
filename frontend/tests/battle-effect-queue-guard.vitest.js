@@ -116,4 +116,66 @@ describe('BattleView effect queue guard', () => {
 
     warnSpy.mockRestore();
   });
+
+  it('prevents recursive polling when summons queue effects', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const deferred = (() => {
+      let resolve;
+      const promise = new Promise((res) => {
+        resolve = res;
+      });
+      return { promise, resolve };
+    })();
+
+    roomAction.mockResolvedValue({
+      party: [],
+      foes: [],
+      recent_events: [],
+      effects_charge: [],
+    });
+    roomAction.mockReturnValueOnce(deferred.promise);
+
+    render(BattleView, {
+      props: {
+        runId: 'RUN-123',
+        active: true,
+        framerate: 60,
+        showHud: false,
+        showFoes: false,
+      },
+    });
+
+    expect(roomAction).toHaveBeenCalledTimes(1);
+
+    deferred.resolve({
+      party: [{ id: 'hero', hp: 10, max_hp: 10 }],
+      foes: [],
+      party_summons: [
+        {
+          owner_id: 'hero',
+          id: 'sprite-001',
+          hp: 5,
+          max_hp: 5,
+        },
+      ],
+      recent_events: [],
+      effects_charge: [],
+    });
+
+    await settle();
+
+    expect(roomAction).toHaveBeenCalledTimes(1);
+    expect(
+      warnSpy.mock.calls.some(([message]) =>
+        typeof message === 'string' && message.includes('effect_update_depth_exceeded'),
+      ),
+    ).toBe(false);
+
+    vi.advanceTimersByTime(1000);
+    await settle();
+
+    expect(roomAction).toHaveBeenCalledTimes(2);
+
+    warnSpy.mockRestore();
+  });
 });
