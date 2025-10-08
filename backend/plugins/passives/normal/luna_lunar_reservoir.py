@@ -33,6 +33,18 @@ class LunaLunarReservoir:
         cls._events_registered = True
 
     @classmethod
+    def _is_glitched_nonboss(cls, target: "Stats") -> bool:
+        rank = str(getattr(target, "rank", ""))
+        if not rank:
+            return False
+        lowered = rank.lower()
+        return "glitched" in lowered and "boss" not in lowered
+
+    @classmethod
+    def _charge_multiplier(cls, charge_holder: "Stats") -> int:
+        return 2 if cls._is_glitched_nonboss(charge_holder) else 1
+
+    @classmethod
     def _resolve_charge_holder(cls, target: "Stats") -> "Stats":
         owner_attr = getattr(target, "luna_sword_owner", None)
         if owner_attr is not None:
@@ -163,10 +175,12 @@ class LunaLunarReservoir:
         charge_target = cls._resolve_charge_holder(target)
         entity_id = cls._ensure_charge_slot(charge_target)
 
+        multiplier = cls._charge_multiplier(charge_target)
+
         if event == "ultimate_used":
-            cls._charge_points[entity_id] += 64
+            cls._charge_points[entity_id] += 64 * multiplier
         else:
-            cls._charge_points[entity_id] += 1
+            cls._charge_points[entity_id] += 1 * multiplier
 
         current_charge = cls._charge_points[entity_id]
         cls._apply_actions(charge_target, current_charge)

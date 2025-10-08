@@ -54,6 +54,33 @@ async def test_luna_lunar_reservoir_passive():
 
 
 @pytest.mark.asyncio
+async def test_luna_glitched_nonboss_actions_double_charge():
+    """Glitched non-boss Luna should gain double charge from actions and ultimates."""
+    passive = LunaLunarReservoir()
+
+    LunaLunarReservoir._charge_points.clear()
+    LunaLunarReservoir._swords_by_owner.clear()
+
+    try:
+        luna = Stats(hp=1000, damage_type=Generic())
+        luna.rank = "glitched champion"
+
+        starting_charge = LunaLunarReservoir.get_charge(luna)
+        await passive.apply(luna, event="action_taken")
+        after_action = LunaLunarReservoir.get_charge(luna)
+
+        assert after_action - starting_charge == 2
+
+        await passive.apply(luna, event="ultimate_used")
+        after_ultimate = LunaLunarReservoir.get_charge(luna)
+
+        assert after_ultimate - after_action == 128
+    finally:
+        LunaLunarReservoir._charge_points.clear()
+        LunaLunarReservoir._swords_by_owner.clear()
+
+
+@pytest.mark.asyncio
 async def test_graygray_counter_maestro_passive():
     """Test Graygray's Counter Maestro passive retaliation."""
     registry = PassiveRegistry()
