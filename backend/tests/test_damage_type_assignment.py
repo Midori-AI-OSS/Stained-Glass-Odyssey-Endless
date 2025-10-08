@@ -5,12 +5,12 @@ import pytest
 from autofighter.mapgen import MapNode
 from autofighter.party import Party
 from autofighter.rooms.battle.core import BattleRoom
-from plugins.damage_types._base import DamageTypeBase
 from plugins.characters import CHARACTER_FOES
-from plugins.characters.foe_base import FoeBase
 from plugins.characters._base import PlayerBase
 from plugins.characters.carly import Carly
+from plugins.characters.foe_base import FoeBase
 from plugins.characters.slime import Slime
+from plugins.damage_types._base import DamageTypeBase
 
 
 def test_base_classes_assign_damage_type() -> None:

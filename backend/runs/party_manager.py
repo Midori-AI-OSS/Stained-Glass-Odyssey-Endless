@@ -7,6 +7,9 @@ import logging
 import math
 from typing import Any
 
+from services.run_configuration import RunModifierContext
+from services.run_configuration import apply_player_modifier_context
+
 from autofighter.effects import create_stat_buff
 from autofighter.party import Party
 from autofighter.passives import PassiveRegistry
@@ -15,8 +18,6 @@ from autofighter.stats import apply_status_hooks
 from plugins import characters as player_plugins
 from plugins.characters._base import PlayerBase
 from plugins.damage_types import load_damage_type
-from services.run_configuration import RunModifierContext
-from services.run_configuration import apply_player_modifier_context
 
 from .encryption import get_save_manager
 

@@ -12,9 +12,8 @@ from autofighter.stats import set_battle_active
 from plugins.damage_types.generic import Generic
 from plugins.effects.aftertaste import Aftertaste
 from plugins.passives.normal.ally_overload import AllyOverload
-from plugins.passives.normal.luna_lunar_reservoir import LunaLunarReservoir
 from plugins.passives.normal.hilander_critical_ferment import HilanderCriticalFerment
-from plugins.passives.normal.mezzy_gluttonous_bulwark import MezzyGluttonousBulwark
+from plugins.passives.normal.luna_lunar_reservoir import LunaLunarReservoir
 
 
 @pytest.mark.asyncio

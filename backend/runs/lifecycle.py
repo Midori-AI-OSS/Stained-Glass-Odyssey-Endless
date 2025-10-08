@@ -14,6 +14,7 @@ from typing import Any
 from typing import Mapping
 
 from battle_logging.writers import end_run_logging
+from services.run_configuration import RunModifierContext
 from tracking import log_play_session_end
 from tracking import log_run_end
 
@@ -22,7 +23,6 @@ from autofighter.mapgen import MapNode
 from autofighter.party import Party
 from autofighter.rooms import BattleRoom
 from autofighter.stats import Stats
-from services.run_configuration import RunModifierContext
 
 from .encryption import get_save_manager
 from .party_manager import save_party

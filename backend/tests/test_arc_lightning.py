@@ -9,9 +9,9 @@ from autofighter.party import Party
 from autofighter.stats import BUS
 from autofighter.stats import set_battle_active
 from plugins.cards.arc_lightning import ArcLightning
-import plugins.event_bus as event_bus_module
-from plugins.characters.foe_base import FoeBase
 from plugins.characters._base import PlayerBase
+from plugins.characters.foe_base import FoeBase
+import plugins.event_bus as event_bus_module
 
 
 @pytest.fixture(autouse=True)

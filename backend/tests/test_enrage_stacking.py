@@ -3,8 +3,8 @@ import pytest
 from autofighter import rooms
 from autofighter.mapgen import MapNode
 from autofighter.party import Party
-from plugins.characters.foe_base import FoeBase
 from plugins.characters._base import PlayerBase
+from plugins.characters.foe_base import FoeBase
 
 
 @pytest.mark.asyncio

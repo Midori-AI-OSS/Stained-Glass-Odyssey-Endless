@@ -278,7 +278,7 @@ async def get_ui_state() -> tuple[str, int, dict[str, Any]]:
                             context = RunModifierContext.from_dict(stored_context)
                         except Exception:
                             context = None
-                
+
                 shop_view = serialize_shop_payload(
                     party_snapshot,
                     stored_stock,

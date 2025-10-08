@@ -34,7 +34,6 @@ from autofighter.summons.manager import SummonManager
 from plugins import characters as foe_plugins
 from plugins.damage_types import load_damage_type
 
-
 BATTLE_ROOM_TYPES: frozenset[str] = frozenset(
     {"battle-weak", "battle-normal", "battle-prime", "battle-glitched"}
 )

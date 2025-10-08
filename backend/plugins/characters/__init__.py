@@ -1,9 +1,9 @@
 from __future__ import annotations
 
+from collections.abc import Iterable
 import importlib
 import pkgutil
 import random
-from collections.abc import Iterable
 
 from plugins import themedadj as adj_plugins
 

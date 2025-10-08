@@ -14,9 +14,9 @@ from autofighter.stats import set_battle_active
 from plugins.cards.phantom_ally import PhantomAlly
 from plugins.cards.reality_split import RealitySplit
 from plugins.cards.temporal_shield import TemporalShield
-from plugins.characters.foe_base import FoeBase
 from plugins.characters.ally import Ally
 from plugins.characters.becca import Becca
+from plugins.characters.foe_base import FoeBase
 
 
 @pytest.mark.asyncio

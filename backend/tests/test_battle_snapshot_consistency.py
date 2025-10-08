@@ -4,9 +4,9 @@ from pathlib import Path
 
 import pytest
 
+from plugins.characters.foe_base import FoeBase
 from plugins.damage_types.fire import Fire
 from plugins.damage_types.ice import Ice
-from plugins.characters.foe_base import FoeBase
 
 
 @pytest.fixture()

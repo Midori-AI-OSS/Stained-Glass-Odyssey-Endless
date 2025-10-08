@@ -2,13 +2,12 @@
 
 from __future__ import annotations
 
-import random
 from collections.abc import Awaitable
 from collections.abc import Callable
 from dataclasses import dataclass
+import random
 from typing import Any
 
-from autofighter.cards import card_choices
 from autofighter.mapgen import MapNode
 
 from ...party import Party

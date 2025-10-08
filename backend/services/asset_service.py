@@ -5,7 +5,6 @@ from __future__ import annotations
 from copy import deepcopy
 from typing import Any
 
-
 # Canonical descriptor describing how the WebUI should alias assets that live on
 # disk. The structure is intentionally lightweight so it can be serialized to
 # JSON without additional processing.

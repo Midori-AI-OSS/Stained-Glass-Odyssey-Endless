@@ -8,13 +8,13 @@ from runs.lifecycle import load_map
 from runs.lifecycle import save_map
 from runs.party_manager import load_party
 from runs.party_manager import save_party
-
-from autofighter.cards import award_card
-from autofighter.relics import award_relic
 from tracking import log_card_acquisition
 from tracking import log_deck_change
 from tracking import log_game_action
 from tracking import log_relic_acquisition
+
+from autofighter.cards import award_card
+from autofighter.relics import award_relic
 
 
 async def select_card(run_id: str, card_id: str) -> dict[str, Any]:
