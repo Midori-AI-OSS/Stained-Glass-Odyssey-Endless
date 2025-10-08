@@ -144,6 +144,7 @@
   let dropSfxPlayer = null;
   let dropPopTransition = null;
   let lastDropSignature = null;
+  let lastReducedMotion = null;
 
   $: dropPopTransition = reducedMotion
     ? null
@@ -239,12 +240,15 @@
 
   $: {
     const nextSignature = snapshotDropSignature(dropEntries);
-    const unchanged = Array.isArray(lastDropSignature) && dropSignaturesEqual(lastDropSignature, nextSignature);
-    if (unchanged) {
+    const unchangedSignature =
+      Array.isArray(lastDropSignature) && dropSignaturesEqual(lastDropSignature, nextSignature);
+    const motionUnchanged = lastReducedMotion === reducedMotion;
+    if (unchangedSignature && motionUnchanged) {
       return;
     }
     updateDropSequence(dropEntries, reducedMotion);
     lastDropSignature = nextSignature;
+    lastReducedMotion = reducedMotion;
   }
 
   let cardsDone = false;
@@ -278,6 +282,7 @@
     clearDropRevealTimers();
     stopDropAudio(true);
     lastDropSignature = null;
+    lastReducedMotion = null;
   });
 
   // Show Next Room button when there's loot but no choices
