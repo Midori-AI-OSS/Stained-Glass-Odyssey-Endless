@@ -64,12 +64,6 @@
   $: overlayReducedMotion = simplifiedTransitions ? true : effectiveReducedMotion;
 
   const dispatch = createEventDispatcher();
-  const now = () => new Date().toISOString();
-  function logOverlay(msg, extra = {}) {
-    try {
-      console.log(`[OverlayHost] ${now()} ${msg}`, { runId, result: roomData?.result, battle_index: roomData?.battle_index, ...extra });
-    } catch (e) {}
-  }
   // Determine whether to show rewards overlay based on raw room data.
   // Floating loot messages are suppressed after first display via `lootConsumed`,
   // but the overlay should remain visible until the player advances.
@@ -130,10 +124,6 @@
         reviewSummary = null;
         lastReviewKey = transition.nextKey;
         const tokenRef = { value: ++reviewLoadingToken };
-        logOverlay('reviewOpen true - starting waitForReview', {
-          token: tokenRef.value,
-          reviewKey: transition.nextKey
-        });
         if (roomData?.battle_index > 0) {
           waitForReview(roomData.battle_index, tokenRef);
         }
@@ -141,11 +131,6 @@
         lastReviewKey = transition.nextKey;
       }
     } else {
-      if (transition.shouldReset && transition.clearedKey !== null) {
-        logOverlay('reviewOpen false - clearing review cache', {
-          lastReviewKey: transition.clearedKey
-        });
-      }
       // Reset gate when review is not open
       lastReviewKey = null;
       reviewReady = false;
@@ -156,7 +141,6 @@
   // Auto-skip Battle Review when skipBattleReview is enabled
   $: if (reviewOpen && !rewardOpen && reviewReady && skipBattleReview) {
     // Battle is complete and ready for review, but user wants to skip - advance immediately
-    logOverlay('auto-skip review -> dispatch nextRoom');
     dispatch('nextRoom');
   }
 
@@ -213,8 +197,6 @@
   $: if (roomData !== lastRoom) {
     lootConsumed = false;
     lastRoom = roomData;
-    // Log room changes for debug tracing
-    try { console.log(`[OverlayHost] ${now()} roomData changed`, { runId, result: roomData?.result, battle_index: roomData?.battle_index, roomId: roomData?.id || roomData?.room_id || null }); } catch(e) {}
   }
   $: if (!lootConsumed && roomData?.loot) {
     if (roomData.loot.gold) pushLoot(`Gold +${roomData.loot.gold}`);

@@ -68,7 +68,6 @@ function getDefaultSettings() {
 // Migration logic
 function migrateSettings(data) {
   if (!data.version || data.version < SETTINGS_VERSION) {
-    console.log('Migrating settings from version', data.version || 1, 'to', SETTINGS_VERSION);
     
     // Migrate from v1 to v2: convert flat reducedMotion to hierarchical motion settings
     if (data.version !== SETTINGS_VERSION) {

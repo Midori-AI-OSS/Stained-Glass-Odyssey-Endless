@@ -699,7 +699,6 @@
     if (!runId) return;
     try {
       await roomAction('0', 'pause');
-      console.log('Combat paused');
     } catch (error) {
       console.error('Failed to pause combat:', error);
     }
@@ -710,7 +709,6 @@
     if (!runId) return;
     try {
       await roomAction('0', 'resume');
-      console.log('Combat resumed');
     } catch (error) {
       console.error('Failed to resume combat:', error);
     }

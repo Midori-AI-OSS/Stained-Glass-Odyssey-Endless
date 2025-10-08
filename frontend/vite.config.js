@@ -1,8 +1,8 @@
 import { sveltekit } from '@sveltejs/kit/vite';
-import { defineConfig } from 'vite';
+import { createLogger, defineConfig } from 'vite';
 import { viteStaticCopy } from 'vite-plugin-static-copy';
 
-async function discoverBackend() {
+async function discoverBackend(logger) {
   const services = [
     'http://backend:59002',
     'http://backend-llm-cuda:59002',
@@ -35,13 +35,13 @@ async function discoverBackend() {
     for (const url of services) {
       // eslint-disable-next-line no-await-in-loop
       if (await probe(url)) {
-        console.log(`[backend] discovered ${url}, proxying via /api`);
+        logger?.info(`[backend] discovered ${url}, proxying via /api`);
         return url;
       }
     }
     attempt += 1;
     const waitMs = Math.min(2000, 500 + attempt * 250); // 0.5s → 2s backoff
-    console.log(`[backend] not ready yet (attempt ${attempt}), retrying in ${waitMs}ms...`);
+    logger?.info(`[backend] not ready yet (attempt ${attempt}), retrying in ${waitMs}ms...`);
     // eslint-disable-next-line no-await-in-loop
     await sleep(waitMs);
   }
@@ -60,10 +60,11 @@ function backendDiscoveryPlugin() {
 }
 
 export default defineConfig(async () => {
+  const logger = createLogger(process.env.LOG_LEVEL || 'info');
   const isVitest = process.env.VITEST === 'true';
   const backendUrl = isVitest
     ? (process.env.VITE_API_BASE || 'http://localhost')
-    : await discoverBackend();
+    : await discoverBackend(logger);
   
   return {
     plugins: [
