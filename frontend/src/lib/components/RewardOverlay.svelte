@@ -278,17 +278,50 @@
   }
 
   let cardsDone = false;
+  let pendingCardSelection = null;
   let showNextButton = false;
   $: showCards = cards.length > 0 && !cardsDone;
   $: showRelics = relics.length > 0 && (cards.length === 0 || cardsDone);
   $: remaining = (showCards ? cards.length : 0) + (showRelics ? relics.length : 0);
 
-  function handleSelect(e) {
-    const detail = e.detail || {};
-    if (detail.type === 'card') {
+  async function handleSelect(e) {
+    const baseDetail = e?.detail && typeof e.detail === 'object' ? e.detail : {};
+    const detail = { ...baseDetail };
+    const isCard = detail.type === 'card';
+    const previousCardsDone = cardsDone;
+    let cardSelectionToken;
+
+    let responded = false;
+    const responsePromise = new Promise((resolve) => {
+      const respond = (value) => {
+        if (responded) return;
+        responded = true;
+        resolve(value);
+      };
+      dispatch('select', { ...detail, respond });
+    });
+
+    if (isCard) {
+      cardSelectionToken = Symbol('cardSelection');
+      pendingCardSelection = { token: cardSelectionToken, previous: previousCardsDone };
       cardsDone = true;
     }
-    dispatch('select', detail);
+
+    let response;
+    try {
+      response = await responsePromise;
+    } catch (error) {
+      response = { ok: false, error };
+    }
+
+    if (response && response.ok) {
+      if (isCard && pendingCardSelection?.token === cardSelectionToken) {
+        pendingCardSelection = null;
+      }
+    } else if (isCard && pendingCardSelection?.token === cardSelectionToken) {
+      cardsDone = pendingCardSelection.previous;
+      pendingCardSelection = null;
+    }
   }
 
   // Auto-advance when there are no selectable rewards and no visible loot/gold.
