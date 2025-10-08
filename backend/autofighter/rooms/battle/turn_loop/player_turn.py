@@ -236,6 +236,7 @@ async def _run_player_turn_iteration(
             member,
             action_start,
             active_target_id=None,
+            spent_override=0.0,
         )
         return PlayerTurnIterationResult(repeat=False, battle_over=True)
 
@@ -247,6 +248,7 @@ async def _run_player_turn_iteration(
             member,
             action_start,
             active_target_id=None,
+            spent_override=0.0,
         )
         return PlayerTurnIterationResult(repeat=False, battle_over=True)
     await BUS.emit_async("target_acquired", member, target_foe)
@@ -293,6 +295,7 @@ async def _run_player_turn_iteration(
             member,
             action_start,
             active_target_id=getattr(target_foe, "id", None),
+            spent_override=0.0,
         )
         return PlayerTurnIterationResult(repeat=False, battle_over=True)
 
