@@ -16,12 +16,18 @@
   export let processing = false;
 
   const dispatch = createEventDispatcher();
-  const now = () => new Date().toISOString();
-  function logShop(msg, extra = {}) {
+  const shopDiagnosticsEnabled =
+    typeof import.meta !== 'undefined' && import.meta.env?.VITE_DEBUG_SHOP === 'true';
+  const emitShopDiagnostic = (message, extra = {}) => {
+    if (!shopDiagnosticsEnabled) {
+      return;
+    }
     try {
-      console.log(`[ShopMenu] ${now()} ${msg}`, { gold, items_len: (items || []).length, ...extra });
-    } catch (e) {}
-  }
+      console.debug('[ShopMenu]', message, { gold, items_len: (items || []).length, ...extra });
+    } catch (error) {
+      console.debug('[ShopMenu]', message);
+    }
+  };
   // Preserve original stock ordering and keep purchased items visible until unload
   let baseList = []; // enriched entries with stable keys and idents
   let awaitingReroll = false;
@@ -145,7 +151,7 @@
     if (k) soldIds.add(k);
     // Force reactivity for Set mutation
     soldIds = new Set(soldIds);
-    logShop('buy -> dispatch', { payload });
+    emitShopDiagnostic('buy -> dispatch', { payload });
     dispatch('buy', payload);
   }
 
@@ -278,14 +284,14 @@
     selectedIds = new Set();
     
     // Start the text animation
-    logShop('reroll started');
+    emitShopDiagnostic('reroll started');
     await animateRerollText();
     
     // Add forced wait before sending request
     await new Promise(resolve => setTimeout(resolve, 500));
     
     // Now send the actual reroll request
-    logShop('dispatch reroll');
+    emitShopDiagnostic('dispatch reroll');
     dispatch('reroll');
   }
   function close() {
@@ -295,7 +301,7 @@
     rerollAnimationText = '';
     isAnimating = false;
     lastItemsSignature = '';
-    logShop('close -> dispatch');
+    emitShopDiagnostic('close -> dispatch');
     dispatch('close');
   }
 
@@ -307,7 +313,7 @@
       const [cards, relics] = await Promise.all([getCardCatalog(), getRelicCatalog()]);
       cardMeta = Object.fromEntries(cards.map(c => [c.id, c]));
       relicMeta = Object.fromEntries(relics.map(r => [r.id, r]));
-      logShop('catalog loaded', { cards: Object.keys(cardMeta).length, relics: Object.keys(relicMeta).length });
+      emitShopDiagnostic('catalog loaded', { cards: Object.keys(cardMeta).length, relics: Object.keys(relicMeta).length });
     } catch {}
   });
 
@@ -357,7 +363,7 @@
     // Handle new items arriving (could be from reroll or initial load)
     if (Array.isArray(items) && items.length) {
       const currentSignature = getItemsSignature(items);
-      logShop('items signature', { currentSignature, lastItemsSignature, awaitingReroll });
+      emitShopDiagnostic('items signature', { currentSignature, lastItemsSignature, awaitingReroll });
       // If we're awaiting reroll and items have actually changed, complete the reroll
       if (awaitingReroll && currentSignature !== lastItemsSignature && lastItemsSignature !== '') {
         baseList = buildBaseList(items);
@@ -366,13 +372,13 @@
         rerollAnimationText = '';
         isAnimating = false;
         lastItemsSignature = currentSignature;
-        logShop('reroll complete - items updated', { currentSignature });
+        emitShopDiagnostic('reroll complete - items updated', { currentSignature });
       }
       // If not awaiting reroll, just update the base list normally
       else if (!awaitingReroll) {
         baseList = buildBaseList(items);
         lastItemsSignature = currentSignature;
-        logShop('baseList updated', { currentSignature });
+        emitShopDiagnostic('baseList updated', { currentSignature });
       }
     }
   }
