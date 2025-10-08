@@ -126,7 +126,8 @@ async def build_action_queue_snapshot(
                 identifier = str(entry.get("id", ""))
                 if identifier == TURN_COUNTER_ID:
                     continue
-                if not active_consumed:
+                is_bonus = bool(entry.get("bonus"))
+                if not active_consumed and not is_bonus:
                     active_consumed = True
                     continue
 
