@@ -686,28 +686,47 @@ export function createBattleReviewState(initialProps = {}) {
   let currentToken = 0;
 
   async function loadSummary(battleIndex, runId) {
+    const logSummaryStatus = (status, extra = {}) => {
+      try {
+        if (import.meta?.env?.DEV || import.meta?.env?.VITE_BATTLE_REVIEW_DEBUG === 'true') {
+          console.debug('[battleReview][summary]', {
+            status,
+            battleIndex,
+            runId,
+            ...extra
+          });
+        }
+      } catch {}
+    };
+
+    logSummaryStatus('start');
     const token = ++currentToken;
     summaryStatus.set('loading');
     const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
     for (let attempt = 0; attempt < 10; attempt++) {
       try {
+        logSummaryStatus('attempt', { attempt: attempt + 1 });
         const res = await getBattleSummary(battleIndex, runId);
         if (currentToken !== token) {
           return;
         }
         summary.set(res || emptySummary);
         summaryStatus.set('ready');
+        logSummaryStatus('success', { attempt: attempt + 1 });
         return;
       } catch (err) {
         if (err?.status !== 404) {
           summaryStatus.set('error');
+          logSummaryStatus('error', { attempt: attempt + 1, message: err?.message });
           return;
         }
+        logSummaryStatus('retry', { attempt: attempt + 1, message: err?.message });
       }
       await sleep(attempt < 5 ? 400 : 800);
     }
     if (currentToken === token) {
       summaryStatus.set('error');
+      logSummaryStatus('timeout', { attempts: 10 });
     }
   }
 
