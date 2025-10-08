@@ -145,7 +145,7 @@
   let dropPopTransition = null;
   let lastDropSignature = null;
   let lastReducedMotion = null;
-  let lootSfxEnabled = false;
+  let lootSfxEnabled = true;
   let lootSfxBlocked = false;
   let lootSfxNoticeLogged = false;
 
