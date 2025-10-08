@@ -278,6 +278,7 @@
   }
 
   let cardsDone = false;
+  let pendingCardSelection = null;
   let showNextButton = false;
   $: showCards = cards.length > 0 && !cardsDone;
   $: showRelics = relics.length > 0 && (cards.length === 0 || cardsDone);
@@ -288,6 +289,7 @@
     const detail = { ...baseDetail };
     const isCard = detail.type === 'card';
     const previousCardsDone = cardsDone;
+    let cardSelectionToken;
 
     let responded = false;
     const responsePromise = new Promise((resolve) => {
@@ -299,6 +301,12 @@
       dispatch('select', { ...detail, respond });
     });
 
+    if (isCard) {
+      cardSelectionToken = Symbol('cardSelection');
+      pendingCardSelection = { token: cardSelectionToken, previous: previousCardsDone };
+      cardsDone = true;
+    }
+
     let response;
     try {
       response = await responsePromise;
@@ -307,11 +315,12 @@
     }
 
     if (response && response.ok) {
-      if (isCard) {
-        cardsDone = true;
+      if (isCard && pendingCardSelection?.token === cardSelectionToken) {
+        pendingCardSelection = null;
       }
-    } else if (isCard) {
-      cardsDone = previousCardsDone;
+    } else if (isCard && pendingCardSelection?.token === cardSelectionToken) {
+      cardsDone = pendingCardSelection.previous;
+      pendingCardSelection = null;
     }
   }
 
