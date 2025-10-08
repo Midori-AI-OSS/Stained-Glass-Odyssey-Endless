@@ -145,6 +145,9 @@
   let dropPopTransition = null;
   let lastDropSignature = null;
   let lastReducedMotion = null;
+  let lootSfxEnabled = false;
+  let lootSfxBlocked = false;
+  let lootSfxNoticeLogged = false;
 
   $: dropPopTransition = reducedMotion
     ? null
@@ -171,6 +174,7 @@
   }
 
   function playRewardDropAudio() {
+    if (!lootSfxEnabled || lootSfxBlocked) return;
     if (reducedMotion) return;
     if (normalizedSfxVolume <= 0) {
       stopDropAudio(true);
@@ -185,7 +189,30 @@
     }
     const playPromise = dropSfxPlayer.play();
     if (playPromise && typeof playPromise.catch === 'function') {
-      playPromise.catch(() => {});
+      playPromise.catch((error) => {
+        if (error?.name === 'NotAllowedError') {
+          lootSfxEnabled = false;
+          lootSfxBlocked = true;
+          if (!lootSfxNoticeLogged) {
+            console.info('Reward drop audio blocked until user interaction enables playback.');
+            lootSfxNoticeLogged = true;
+          }
+        }
+      });
+    }
+  }
+
+  function handleLootSfxGesture() {
+    if (lootSfxBlocked) {
+      lootSfxBlocked = false;
+    }
+    lootSfxEnabled = true;
+    lootSfxNoticeLogged = false;
+    if (dropSfxPlayer && typeof dropSfxPlayer.setVolume === 'function') {
+      dropSfxPlayer.setVolume(normalizedSfxVolume);
+    }
+    if (visibleDrops.length > 0) {
+      playRewardDropAudio();
     }
   }
 
@@ -251,17 +278,50 @@
   }
 
   let cardsDone = false;
+  let pendingCardSelection = null;
   let showNextButton = false;
   $: showCards = cards.length > 0 && !cardsDone;
   $: showRelics = relics.length > 0 && (cards.length === 0 || cardsDone);
   $: remaining = (showCards ? cards.length : 0) + (showRelics ? relics.length : 0);
 
-  function handleSelect(e) {
-    const detail = e.detail || {};
-    if (detail.type === 'card') {
+  async function handleSelect(e) {
+    const baseDetail = e?.detail && typeof e.detail === 'object' ? e.detail : {};
+    const detail = { ...baseDetail };
+    const isCard = detail.type === 'card';
+    const previousCardsDone = cardsDone;
+    let cardSelectionToken;
+
+    let responded = false;
+    const responsePromise = new Promise((resolve) => {
+      const respond = (value) => {
+        if (responded) return;
+        responded = true;
+        resolve(value);
+      };
+      dispatch('select', { ...detail, respond });
+    });
+
+    if (isCard) {
+      cardSelectionToken = Symbol('cardSelection');
+      pendingCardSelection = { token: cardSelectionToken, previous: previousCardsDone };
       cardsDone = true;
     }
-    dispatch('select', detail);
+
+    let response;
+    try {
+      response = await responsePromise;
+    } catch (error) {
+      response = { ok: false, error };
+    }
+
+    if (response && response.ok) {
+      if (isCard && pendingCardSelection?.token === cardSelectionToken) {
+        pendingCardSelection = null;
+      }
+    } else if (isCard && pendingCardSelection?.token === cardSelectionToken) {
+      cardsDone = pendingCardSelection.previous;
+      pendingCardSelection = null;
+    }
   }
 
   // Auto-advance when there are no selectable rewards and no visible loot/gold.
@@ -282,6 +342,9 @@
     stopDropAudio(true);
     lastDropSignature = null;
     lastReducedMotion = null;
+    lootSfxEnabled = false;
+    lootSfxBlocked = false;
+    lootSfxNoticeLogged = false;
   });
 
   // Show Next Room button when there's loot but no choices
@@ -513,7 +576,13 @@
   
 </style>
 
-<div class="layout" data-reduced-motion={dataReducedMotion} data-sfx-volume={dataSfxVolume}>
+<div
+  class="layout"
+  data-reduced-motion={dataReducedMotion}
+  data-sfx-volume={dataSfxVolume}
+  on:pointerdown={handleLootSfxGesture}
+  on:keydown={handleLootSfxGesture}
+>
   {#if showCards}
   <h3 class="section-title">Choose a Card</h3>
   <div class="choices">

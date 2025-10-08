@@ -941,23 +941,51 @@
   }
 
   async function handleRewardSelect(detail) {
-    let res;
-    if (detail.type === 'card') {
-      // chooseCard now routes via /ui/action and does not take runId
-      res = await chooseCard(detail.id);
-      if (roomData) {
-        runState.setRoomData({ ...roomData, card_choices: [] });
+    const selection = detail && typeof detail === 'object' ? detail : {};
+    const respond = typeof selection.respond === 'function' ? selection.respond : null;
+    const type = selection.type;
+    const id = selection.id;
+    let result = { ok: false };
+
+    try {
+      let res;
+      if (type === 'card') {
+        // chooseCard now routes via /ui/action and does not take runId
+        res = await chooseCard(id);
+        if (roomData) {
+          runState.setRoomData({ ...roomData, card_choices: [] });
+        }
+      } else if (type === 'relic') {
+        // chooseRelic now routes via /ui/action and does not take runId
+        res = await chooseRelic(id);
+        if (roomData) {
+          runState.setRoomData({ ...roomData, relic_choices: [] });
+        }
       }
-    } else if (detail.type === 'relic') {
-      // chooseRelic now routes via /ui/action and does not take runId
-      res = await chooseRelic(detail.id);
-      if (roomData) {
-        runState.setRoomData({ ...roomData, relic_choices: [] });
+      if (res && res.next_room) {
+        runState.setCurrentRoom({ nextRoomType: res.next_room });
+      }
+      result = { ok: true };
+    } catch (error) {
+      openOverlay('error', {
+        message: 'Failed to select reward.',
+        traceback: (error && error.stack) || ''
+      });
+      try {
+        if (dev || !browser) {
+          const { error: logError } = await import('$lib/systems/logger.js');
+          logError('Failed to select reward.', error);
+        }
+      } catch {}
+    } finally {
+      if (respond) {
+        try {
+          respond(result);
+        } catch {}
       }
     }
-    if (res && res.next_room) {
-      runState.setCurrentRoom({ nextRoomType: res.next_room });
-    }
+
+    return result;
     // Do not auto-advance; show Battle Review popup next.
   }
 

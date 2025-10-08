@@ -51,6 +51,11 @@ playback request arrives mid-sound. The helper clamps volume updates, respects
 before falling back to the Kenney coin and satchel samples. The pull-results
 overlay reuses the same utility through `createDealSfx`, so both overlays share
 identical clone-and-retry behaviour when the user mashes through reward queues.
+Browsers that block autoplayed media now wait for a pointer/keyboard gesture
+inside the overlay before enabling the loot SFX guard. If playback still
+rejects with a `NotAllowedError`, the overlay logs a single console info line
+and disables further attempts until the player interacts again, ensuring the
+first real click unlocks audio without spamming retries.
 
 Ambient effects from `EnrageIndicator.svelte` continue to render while the
 rewards overlay is shown and fade out gracefully, so the transition from
