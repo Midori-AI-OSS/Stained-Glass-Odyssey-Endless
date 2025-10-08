@@ -243,12 +243,11 @@
     const unchangedSignature =
       Array.isArray(lastDropSignature) && dropSignaturesEqual(lastDropSignature, nextSignature);
     const motionUnchanged = lastReducedMotion === reducedMotion;
-    if (unchangedSignature && motionUnchanged) {
-      return;
+    if (!(unchangedSignature && motionUnchanged)) {
+      updateDropSequence(dropEntries, reducedMotion);
+      lastDropSignature = nextSignature;
+      lastReducedMotion = reducedMotion;
     }
-    updateDropSequence(dropEntries, reducedMotion);
-    lastDropSignature = nextSignature;
-    lastReducedMotion = reducedMotion;
   }
 
   let cardsDone = false;
