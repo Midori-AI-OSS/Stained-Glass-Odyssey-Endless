@@ -604,6 +604,13 @@ async def get_battle_summary(run_id: str, index: int) -> dict[str, object] | Non
     summary_path = primary if primary.exists() else fallback
     if not summary_path.exists():
         return None
+
+    log.debug(
+        "Loading battle summary for run %s (index %s) from %s.",
+        run_id,
+        index,
+        summary_path,
+    )
     data = await asyncio.to_thread(summary_path.read_text)
     return json.loads(data)
 
