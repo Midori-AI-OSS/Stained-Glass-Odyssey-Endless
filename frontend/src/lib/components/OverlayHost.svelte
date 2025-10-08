@@ -31,6 +31,7 @@
   import { getBattleSummary } from '../systems/uiApi.js';
   import { motionStore } from '../systems/settingsStorage.js';
   import { setRewardOverlayOpen, setReviewOverlayState } from '../systems/overlayState.js';
+  import { filterPartyEntities } from '../systems/summonManager.js';
 
   export let selected = [];
   export let runId = '';
@@ -144,14 +145,6 @@
     dispatch('nextRoom');
   }
 
-  // Ensure Battle Review receives only true party members (exclude summons)
-  function filterPartyEntities(list) {
-    if (!Array.isArray(list)) return [];
-    return list.filter((e) => {
-      const obj = (e && typeof e === 'object') ? e : null;
-      return !(obj && (obj.summon_type || obj.type === 'summon' || obj.is_summon));
-    });
-  }
   $: reviewPartyData = (() => {
     let src = [];
     if (battleSnapshot?.party && battleSnapshot.party.length) {
