@@ -70,6 +70,11 @@
     return (value ?? '').toString().replace(/[_-]+/g, ' ');
   }
 
+  function parseFiniteNumber(value, fallback = 0) {
+    const parsed = Number(value);
+    return Number.isFinite(parsed) ? parsed : fallback;
+  }
+
   $: displayItems = (() => {
     const firstIdx = baseQueue.findIndex((e) => e.id === currentActiveId);
     const ordered = firstIdx > 0
@@ -94,7 +99,16 @@
           : (summonType || fighter?.id || entry?.id || 'generic');
       const portraitSrc = portraitKey ? getCharacterImage(portraitKey) : '';
       const hoverId = fighter?.renderKey ?? fighter?.id ?? null;
-      const actionValueDisplay = Math.round(entry?.action_value);
+      const rawActionValue = parseFiniteNumber(entry?.action_value);
+      const baseActionValue = parseFiniteNumber(entry?.base_action_value);
+      const effectiveActionValue = index === 0
+        ? rawActionValue
+        : rawActionValue > 0
+          ? rawActionValue
+          : baseActionValue > 0
+            ? baseActionValue
+            : rawActionValue;
+      const actionValueDisplay = Math.round(effectiveActionValue);
       const displayName = formatName(fighter?.name || fighter?.id || entry?.id || '');
 
       return {

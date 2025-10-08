@@ -118,6 +118,36 @@ async def build_action_queue_snapshot(
             identifier = getattr(combatant, "id", "")
             return (value, offset, identifier)
 
+        def _normalize_entries(entries: list[ActionQueueEntry]) -> list[ActionQueueEntry]:
+            """Ensure only the active combatant reports a zero action value."""
+
+            active_consumed = False
+            for entry in entries:
+                identifier = str(entry.get("id", ""))
+                if identifier == TURN_COUNTER_ID:
+                    continue
+                if not active_consumed:
+                    active_consumed = True
+                    continue
+
+                try:
+                    action_value = float(entry.get("action_value", 0.0) or 0.0)
+                except Exception:
+                    action_value = 0.0
+
+                if action_value <= 0.0:
+                    try:
+                        base_value = float(
+                            entry.get("base_action_value", 0.0) or 0.0
+                        )
+                    except Exception:
+                        base_value = 0.0
+
+                    replacement = base_value if base_value > 0.0 else 1e-6
+                    entry["action_value"] = replacement
+
+            return entries
+
         def _entry_from_snapshot(raw: MutableMapping[str, Any]) -> ActionQueueEntry:
             identifier = str(raw.get("id", ""))
 
@@ -206,7 +236,7 @@ async def build_action_queue_snapshot(
                     entries.append(_entry_from_snapshot(raw))
 
                 if entries:
-                    return entries
+                    return _normalize_entries(entries)
 
         ordered = sorted(visible_entities, key=_sort_key)
         extras: list[ActionQueueEntry] = []
@@ -222,7 +252,7 @@ async def build_action_queue_snapshot(
         base_entries: list[ActionQueueEntry] = [
             _entry_from_combatant(combatant) for combatant in ordered
         ]
-        return extras + base_entries
+        return _normalize_entries(extras + base_entries)
 
     return await asyncio.to_thread(_build)
 

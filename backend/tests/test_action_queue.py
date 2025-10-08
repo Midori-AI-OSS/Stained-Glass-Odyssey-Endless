@@ -353,6 +353,72 @@ async def test_build_action_queue_snapshot_respects_sort_offsets():
 
 
 @pytest.mark.asyncio
+async def test_build_action_queue_snapshot_normalizes_zero_values_from_visual_queue():
+    party = Stats()
+    party.id = "party"
+    party.base_action_value = 1.25
+    party.action_value = 0.0
+
+    foe = Stats()
+    foe.id = "foe"
+    foe.base_action_value = 2.0
+    foe.action_value = 0.0
+
+    class FakeQueue:
+        def snapshot(self):
+            return [
+                {
+                    "id": party.id,
+                    "action_value": 0.0,
+                    "base_action_value": party.base_action_value,
+                },
+                {
+                    "id": foe.id,
+                    "action_value": 0.0,
+                    "base_action_value": foe.base_action_value,
+                },
+            ]
+
+    snapshot = await build_action_queue_snapshot(
+        [party],
+        [foe],
+        {},
+        visual_queue=FakeQueue(),
+    )
+
+    entries = [entry for entry in snapshot if entry["id"] != TURN_COUNTER_ID]
+    assert entries[0]["action_value"] == pytest.approx(0.0)
+    assert entries[1]["action_value"] == pytest.approx(foe.base_action_value)
+    assert all(
+        index == 0 or entry["action_value"] > 0 for index, entry in enumerate(entries)
+    )
+
+
+@pytest.mark.asyncio
+async def test_build_action_queue_snapshot_normalizes_zero_values_without_visual_queue():
+    first = Stats()
+    first.id = "first"
+    first.action_value = 0.0
+    first.base_action_value = 1.0
+    first._action_sort_offset = 0
+
+    second = Stats()
+    second.id = "second"
+    second.action_value = 0.0
+    second.base_action_value = 3.0
+    second._action_sort_offset = 1
+
+    snapshot = await build_action_queue_snapshot([first], [second], {})
+
+    entries = [entry for entry in snapshot if entry["id"] != TURN_COUNTER_ID]
+    assert entries[0]["action_value"] == pytest.approx(0.0)
+    assert entries[1]["action_value"] == pytest.approx(second.base_action_value)
+    assert all(
+        index == 0 or entry["action_value"] > 0 for index, entry in enumerate(entries)
+    )
+
+
+@pytest.mark.asyncio
 async def test_turn_counter_reorders_with_action_value():
     first = Stats()
     first.id = "first"
