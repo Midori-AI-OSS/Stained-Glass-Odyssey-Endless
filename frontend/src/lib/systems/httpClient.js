@@ -7,13 +7,24 @@ import { getApiBase } from './backendDiscovery.js';
 // Cached API base to avoid repeated discovery calls
 let cachedApiBase = null;
 
+// Allow dependency overrides for testing without relying on module mocks
+let overlayHandler = openOverlay;
+let apiBaseResolver = getApiBase;
+let fetchImpl = (...args) => globalThis.fetch(...args);
+
+export function __setHttpClientTestOverrides({ openOverlay: overlay, getApiBase: resolver, fetch: fetchOverride } = {}) {
+  overlayHandler = overlay || openOverlay;
+  apiBaseResolver = resolver || getApiBase;
+  fetchImpl = fetchOverride || ((...args) => globalThis.fetch(...args));
+}
+
 /**
  * Ensure we have a valid API base URL
  * @returns {Promise<string>} The API base URL
  */
 async function ensureApiBase() {
   if (!cachedApiBase) {
-    cachedApiBase = await getApiBase();
+    cachedApiBase = await apiBaseResolver();
   }
   return cachedApiBase;
 }
@@ -45,6 +56,7 @@ function normalizeError(error, response = null, context = '') {
   let message = '';
   let traceback = '';
   let status = response?.status || 0;
+  let contextPayload = null;
 
   // Try to extract error data from response
   if (response && !response.ok) {
@@ -53,6 +65,9 @@ function normalizeError(error, response = null, context = '') {
       if (error && typeof error === 'object' && !error.message) {
         message = error.error || error.message || '';
         traceback = error.traceback || '';
+        if (error.context && typeof error.context === 'object') {
+          contextPayload = error.context;
+        }
       }
     } catch {}
   }
@@ -61,6 +76,9 @@ function normalizeError(error, response = null, context = '') {
   if (error instanceof Error) {
     message = error.message || '';
     traceback = error.stack || '';
+    if (error.context && typeof error.context === 'object') {
+      contextPayload = error.context;
+    }
   }
 
   // Handle string errors
@@ -82,6 +100,7 @@ function normalizeError(error, response = null, context = '') {
   return {
     message: message.trim(),
     traceback: traceback.trim(),
+    context: contextPayload,
     status,
     code: response ? `HTTP_${response.status}` : 'UNKNOWN'
   };
@@ -114,7 +133,7 @@ export async function httpRequest(url, options = {}, parser = null, suppressOver
 
   try {
     // Make the request
-    const response = await fetch(fullUrl, {
+    const response = await fetchImpl(fullUrl, {
       ...options,
       headers: {
         'Content-Type': 'application/json',
@@ -148,7 +167,7 @@ export async function httpRequest(url, options = {}, parser = null, suppressOver
         const overlayPayload = fatalBackendError
           ? { ...normalizedError, status: response.status }
           : normalizedError;
-        openOverlay(overlayType, overlayPayload);
+        overlayHandler(overlayType, overlayPayload);
         console.error('HTTP Error:', { url: fullUrl, fatalBackendError, ...normalizedError });
       }
 
@@ -156,6 +175,7 @@ export async function httpRequest(url, options = {}, parser = null, suppressOver
       error.status = normalizedError.status;
       error.code = normalizedError.code;
       error.traceback = normalizedError.traceback;
+      error.context = normalizedError.context;
       error.overlayShown = !suppressOverlay && response.status !== 404;
       throw error;
     }
@@ -167,7 +187,7 @@ export async function httpRequest(url, options = {}, parser = null, suppressOver
     // Handle network errors and other exceptions
     if (!error.overlayShown && !suppressOverlay) {
       const normalizedError = normalizeError(error, null, context);
-      openOverlay('error', normalizedError);
+      overlayHandler('error', normalizedError);
       console.error('Network Error:', { url: fullUrl, ...normalizedError });
     }
     throw error;

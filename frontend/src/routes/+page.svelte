@@ -742,14 +742,14 @@
   configureBattlePollingHandlers({
     onMissingSnapshotTimeout: () => {
       try {
-        openOverlay('error', { message: 'Battle state unavailable. Please reconnect.', traceback: '' });
+        openOverlay('error', { message: 'Battle state unavailable. Please reconnect.', traceback: '', context: null });
       } catch {}
       scheduleMapRefresh();
     },
     onBattleError: ({ error }) => {
       if (error) {
         try {
-          openOverlay('error', { message: error, traceback: '' });
+          openOverlay('error', { message: error, traceback: '', context: null });
         } catch {}
       }
       scheduleMapRefresh();
@@ -825,7 +825,7 @@
       runState.setRoomData(data);
       if (data?.error) {
         // Show error popup for successful-but-error payloads
-        try { openOverlay('error', { message: data.error, traceback: '' }); } catch {}
+        try { openOverlay('error', { message: data.error, traceback: '', context: null }); } catch {}
         return;
       }
       // If this response indicates a defeated run, stop syncing and show popup.
@@ -924,12 +924,13 @@
         if (!simpleRecoverable) {
           openOverlay('error', {
             message: 'Failed to enter room. Restored latest battle state.',
-            traceback: (e && e.stack) || ''
+            traceback: (e && e.stack) || '',
+            context: e?.context ?? null
           });
         }
       } catch {
         // Surface error via overlay for consistency
-        openOverlay('error', { message: 'Failed to enter room.', traceback: '' });
+        openOverlay('error', { message: 'Failed to enter room.', traceback: '', context: null });
         if (dev || !browser) {
           const { error } = await import('$lib/systems/logger.js');
           error('Failed to enter room.', e);
@@ -1274,7 +1275,7 @@
       await enterRoom();
     } catch (e) {
       // Surface via overlay for visibility
-      openOverlay('error', { message: 'Failed to force-advance room.', traceback: (e && e.stack) || '' });
+      openOverlay('error', { message: 'Failed to force-advance room.', traceback: (e && e.stack) || '', context: e?.context ?? null });
     }
   }
   let items = [];

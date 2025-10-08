@@ -3,7 +3,7 @@ from __future__ import annotations
 import asyncio
 from collections.abc import Mapping
 import json
-import traceback
+import sys
 from typing import Any
 
 from quart import Blueprint
@@ -35,12 +35,19 @@ from services.run_service import wipe_save
 from tracking import log_game_action
 from tracking import log_menu_action
 
+from error_context import format_exception_with_context
+
 from autofighter.rooms.shop import serialize_shop_payload
 
 bp = Blueprint("ui", __name__)
 
 
-def create_error_response(message: str, status_code: int = 400, include_traceback: bool = False) -> tuple[str, int, dict[str, Any]]:
+def create_error_response(
+    message: str,
+    status_code: int = 400,
+    include_traceback: bool = False,
+    exc: BaseException | None = None,
+) -> tuple[str, int, dict[str, Any]]:
     """Create a consistent error response format."""
     error_data = {
         "error": message,
@@ -48,7 +55,14 @@ def create_error_response(message: str, status_code: int = 400, include_tracebac
     }
 
     if include_traceback:
-        error_data["traceback"] = traceback.format_exc()
+        exception = exc or sys.exc_info()[1]
+        if exception is not None:
+            traceback_text, context = format_exception_with_context(exception)
+            error_data["traceback"] = traceback_text
+            if context:
+                error_data["context"] = context
+        else:
+            error_data["traceback"] = ""
 
     return jsonify(error_data), status_code
 
@@ -577,7 +591,12 @@ async def handle_ui_action() -> tuple[str, int, dict[str, Any]]:
             return create_error_response(f"Unknown action: {action}", 400)
 
     except Exception as e:
-        return create_error_response(f"Action failed: {str(e)}", 500, include_traceback=True)
+        return create_error_response(
+            f"Action failed: {str(e)}",
+            500,
+            include_traceback=True,
+            exc=e,
+        )
 
 
 @bp.get("/battles/<int:index>/summary")

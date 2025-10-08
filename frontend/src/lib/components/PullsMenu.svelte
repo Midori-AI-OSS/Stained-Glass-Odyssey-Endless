@@ -96,7 +96,7 @@
         const { error } = await import('$lib/systems/logger.js');
         error('pull failed', err);
       }
-      openOverlay('error', { message: 'Not enough tickets', traceback: err?.stack || '' });
+      openOverlay('error', { message: 'Not enough tickets', traceback: err?.stack || '', context: err?.context ?? null });
     }
     loading = false;
   }

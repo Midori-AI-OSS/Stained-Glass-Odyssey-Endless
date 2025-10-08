@@ -3,7 +3,6 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
-import traceback
 
 # Import torch checker early to perform the one-time check
 from llms.torch_checker import is_torch_available
@@ -39,6 +38,8 @@ from runs.party_manager import load_party  # noqa: F401
 from runs.party_manager import save_party  # noqa: F401
 from services.run_service import prune_runs_on_startup
 from werkzeug.exceptions import HTTPException
+
+from error_context import format_exception_with_context
 
 from autofighter.gacha import GachaManager  # noqa: F401  # re-export for tests
 from autofighter.rooms import _scale_stats  # noqa: F401
@@ -112,8 +113,11 @@ async def handle_exception(e: Exception):
         response = jsonify({"error": str(e)})
         response.status_code = e.code or 500
     else:
-        tb = traceback.format_exc()
-        response = jsonify({"error": str(e), "traceback": tb})
+        traceback_text, context = format_exception_with_context(e)
+        payload = {"error": str(e), "traceback": traceback_text}
+        if context:
+            payload["context"] = context
+        response = jsonify(payload)
         response.status_code = 500
         await request_shutdown()
 

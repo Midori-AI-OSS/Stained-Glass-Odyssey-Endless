@@ -11,7 +11,7 @@ export function handleError({ error, event }) {
       message = `Unexpected error (code ${message})`;
     }
     const traceback = error?.stack ?? '';
-    openOverlay('error', { message, traceback });
+    openOverlay('error', { message, traceback, context: error?.context ?? null });
     console.error('Client error:', message, '\n', traceback, '\nAt:', event?.url?.href);
   } catch (e) {
     console.error('Failed to open error overlay', e);
@@ -28,7 +28,7 @@ if (typeof window !== 'undefined') {
       msg = `Unexpected error (code ${msg})`;
     }
     const stack = (ev?.error?.stack || '').trim();
-    openOverlay('error', { message: msg, traceback: stack });
+    openOverlay('error', { message: msg, traceback: stack, context: ev?.error?.context ?? null });
     try { console.error('Window error event:', ev?.error || ev); } catch {}
   });
   window.addEventListener('unhandledrejection', (ev) => {
@@ -38,7 +38,7 @@ if (typeof window !== 'undefined') {
       msg = `Unhandled rejection (code ${msg})`;
     }
     const stack = reason?.stack || '';
-    openOverlay('error', { message: msg, traceback: stack });
+    openOverlay('error', { message: msg, traceback: stack, context: reason?.context ?? null });
     // Also log the raw reason object for debugging odd cases
     try { console.error('Unhandled rejection raw reason:', reason); } catch {}
   });

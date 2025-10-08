@@ -15,7 +15,7 @@
 
   onMount(() => {
     // Route the framework error through our standard popup overlay
-    openOverlay('error', { message: `[${status || 'Error'}] ${message}`.trim(), traceback });
+    openOverlay('error', { message: `[${status || 'Error'}] ${message}`.trim(), traceback, context: error?.context ?? null });
   });
 
   function backHome() {
