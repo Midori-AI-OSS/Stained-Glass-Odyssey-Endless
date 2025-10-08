@@ -23,6 +23,7 @@
   import { isCandidateLuna } from './battle/lunaUtils.js';
   import { motionStore } from '../systems/settingsStorage.js';
   import { haltSync } from '../systems/overlayState.js';
+  import { createSummonManager, isSummon } from '../systems/summonManager.js';
 
   export let runId = '';
   export let framerate = 60;
@@ -74,7 +75,6 @@
   let statusChipLifetime = 1800;
   const statusEntryMap = new Map();
   const statusRemovalTimers = new Map();
-  const summonRenderState = new Map();
   let combatantById = new Map();
   $: combatants = [
     ...(party || []),
@@ -198,6 +198,12 @@
   let tickIndicators = new Map();
   let tickIndicatorCounter = 0;
   let tickIndicatorDuration = 800;
+  const summonManager = createSummonManager({
+    combatantKey,
+    resolveEntityElement: resolveDamageTypeFromEntity,
+    applyLunaSwordVisuals,
+    normalizeOwnerId: normalizeId,
+  });
   let lastRunId = runId;
 
   function normalizeChargeIdentifier(entry, index) {
@@ -275,7 +281,7 @@
     lastPhaseToken = '';
     lastEffectSignature = '';
     phaseSequenceCounter = 0;
-    summonRenderState.clear();
+    summonManager.reset();
     pendingLayers = new Map();
     hpHistory = new Map();
     clearProjectiles();
@@ -753,7 +759,6 @@
     pendingFloaterNormalizedEvents = [];
   }
 
-  let knownSummons = new Set();
   const pendingEaseCurve = 'cubic-bezier(0.25, 0.9, 0.3, 1)';
   let hpHistory = new Map();
   let pendingLayers = new Map();
@@ -1428,17 +1433,6 @@
     return JSON.stringify(a) !== JSON.stringify(b);
   }
 
-  function getSummonIdentifier(summon) {
-    if (!summon || typeof summon !== 'object') return '';
-    const value = summon?.instance_id ?? summon?.id;
-    if (value === undefined || value === null) return '';
-    try {
-      return String(value);
-    } catch {
-      return '';
-    }
-  }
-
   function guessElementFromId(id) {
     if (!id) return 'Generic';
     const s = String(id).toLowerCase();
@@ -1449,31 +1443,6 @@
     if (s.includes('light') || s.includes('holy') || s.includes('divine')) return 'Light';
     if (s.includes('dark') || s.includes('shadow') || s.includes('void')) return 'Dark';
     return 'Generic';
-  }
-
-  function detectSummons(partySummons, foeSummons) {
-    const all = new Set(knownSummons);
-    for (const [, summons] of partySummons) {
-      for (const s of summons) {
-        const ident = getSummonIdentifier(s);
-        if (ident && !all.has(ident)) {
-          queueEffect('SummonEffect');
-          all.add(ident);
-          break;
-        }
-      }
-    }
-    for (const [, summons] of foeSummons) {
-      for (const s of summons) {
-        const ident = getSummonIdentifier(s);
-        if (ident && !all.has(ident)) {
-          queueEffect('SummonEffect');
-          all.add(ident);
-          break;
-        }
-      }
-    }
-    knownSummons = all;
   }
 
   function resolveDamageTypeFromEntity(entity, fallback = '') {
@@ -2013,8 +1982,6 @@
 
       const seenHpKeys = new Set();
       const pendingDrains = [];
-      const summonCounters = new Map();
-      const seenSummonSlots = new Map();
 
       function trackHp(key, hpValue, maxValue) {
         if (!key) return;
@@ -2025,154 +1992,26 @@
         }
       }
 
-      function prepareSummon(summon, ownerId, side) {
-        if (!summon) return null;
-        let baseId = getSummonIdentifier(summon);
-        if (!baseId) {
-          const typeLabel = summon?.summon_type || summon?.type || 'summon';
-          const ownerLabel = summon?.summoner_id || ownerId || 'owner';
-          const counterKey = `${side}:${ownerLabel}:${typeLabel}`;
-          const count = summonCounters.get(counterKey) || 0;
-          summonCounters.set(counterKey, count + 1);
-          baseId = `${typeLabel}_${ownerLabel}_${count}`;
-        }
-        const key = combatantKey(`${side}-summon`, baseId, ownerId);
-        if (key) {
-          trackHp(key, summon.hp, summon.max_hp);
-        }
-        const ownerKey = normalizeId(ownerId) || 'owner';
-        const signatureSource = baseId || summon?.summon_type || summon?.type || 'summon';
-        const signature = `${side}:${ownerKey}:${signatureSource}`;
-        const slotIndex = seenSummonSlots.get(signature) || 0;
-        seenSummonSlots.set(signature, slotIndex + 1);
-
-        let stored = summonRenderState.get(signature);
-        if (!stored) {
-          stored = [];
-          summonRenderState.set(signature, stored);
-        }
-
-        let renderKey = '';
-        const instanceKey = summon?.instance_id;
-        if (instanceKey !== undefined && instanceKey !== null && instanceKey !== '') {
-          try {
-            renderKey = String(instanceKey);
-          } catch {
-            renderKey = '';
-          }
-        }
-        if (!renderKey && summon?.renderKey) {
-          try {
-            renderKey = String(summon.renderKey);
-          } catch {
-            renderKey = '';
-          }
-        }
-        if (!renderKey && stored[slotIndex]) {
-          renderKey = stored[slotIndex];
-        }
-        if (!renderKey) {
-          const baseKey = key || signature;
-          renderKey = `${String(baseKey)}#${slotIndex}`;
-        }
-        if (!renderKey) {
-          renderKey = `${signature}#${slotIndex}`;
-        }
-        if (stored[slotIndex] !== renderKey) {
-          stored[slotIndex] = renderKey;
-        }
-
-        const aliasSet = new Set();
-        const assignAlias = (value) => {
-          if (value === undefined || value === null) return;
-          try {
-            const str = String(value);
-            if (str && str !== renderKey) aliasSet.add(str);
-          } catch {}
-        };
-        assignAlias(instanceKey);
-        assignAlias(summon?.id);
-        assignAlias(baseId);
-        const anchorIds = Array.from(aliasSet);
-
-        const baseElement = resolveDamageTypeFromEntity(summon);
-        let result = { ...summon, hpKey: key, renderKey, anchorIds };
-        if (baseElement && baseElement !== 'generic') {
-          result = { ...result, element: baseElement };
-        }
-        result = applyLunaSwordVisuals(result, ownerId, baseElement);
-        return result;
-      }
-
-      // Map summons to their owners
-      const partySummons = new Map();
-      if (snap && snap.party_summons) {
-        const arr = Array.isArray(snap.party_summons)
-          ? snap.party_summons
-          : Object.entries(snap.party_summons).flatMap(([owner, list]) =>
-              (Array.isArray(list) ? list : [list]).map(s => ({ owner_id: owner, ...s })),
-            );
-        for (const s of arr) {
-          const owner = s?.owner_id;
-          if (!owner) continue;
-          const processed = prepareSummon(s, owner, 'party');
-          if (!partySummons.has(owner)) partySummons.set(owner, []);
-          if (processed) partySummons.get(owner).push(processed);
-        }
-      }
-
-      const foeSummons = new Map();
-      if (snap && snap.foe_summons) {
-        const arr = Array.isArray(snap.foe_summons)
-          ? snap.foe_summons
-          : Object.entries(snap.foe_summons).flatMap(([owner, list]) =>
-              (Array.isArray(list) ? list : [list]).map(s => ({ owner_id: owner, ...s })),
-            );
-        for (const s of arr) {
-          const owner = s?.owner_id;
-          if (!owner) continue;
-          const processed = prepareSummon(s, owner, 'foe');
-          if (!foeSummons.has(owner)) foeSummons.set(owner, []);
-          if (processed) foeSummons.get(owner).push(processed);
-        }
-      }
-
-      detectSummons(partySummons, foeSummons);
-
-      for (const [signature, count] of seenSummonSlots) {
-        const pool = summonRenderState.get(signature);
-        if (pool && pool.length > count) {
-          pool.length = count;
-        }
-      }
-      for (const signature of Array.from(summonRenderState.keys())) {
-        if (!seenSummonSlots.has(signature)) {
-          summonRenderState.delete(signature);
-        }
-      }
+      const {
+        partySummons,
+        foeSummons,
+        partySummonIds,
+        foeSummonIds,
+      } = summonManager.processSnapshot(snap, {
+        trackHp,
+        onNewSummon: () => queueEffect('SummonEffect'),
+      });
 
       if (snap.enrage && differs(snap.enrage, enrage)) enrage = snap.enrage;
       
       if (snap.party) {
         // Build a set of summon IDs owned by party members to avoid duplicating them
-        const partySummonIds = (() => {
-          const set = new Set();
-          try {
-            for (const list of partySummons.values()) {
-              for (const s of list) {
-                const ident = getSummonIdentifier(s);
-                if (ident) set.add(ident);
-              }
-            }
-          } catch {}
-          return set;
-        })();
-
         const prevById = new Map((party || []).map(p => [p.id, p]));
         const base = (snap.party || []).filter(m => {
-          const id = (typeof m === 'object' ? m?.id : m) || '';
-          const isSummon = typeof m === 'object' && (m?.summon_type || m?.type === 'summon' || m?.is_summon);
-          return id && !isSummon && !partySummonIds.has(id);
+          const obj = m && typeof m === 'object' ? m : null;
+          const rawId = obj ? obj.id : m;
+          const id = rawId === undefined || rawId === null ? '' : String(rawId);
+          return id && !(obj && isSummon(obj)) && !partySummonIds.has(id);
         });
         const enriched = base.map(m => {
           const hpKey = combatantKey('party', m?.id);
@@ -2198,33 +2037,12 @@
       }
 
       if (snap.foes) {
-        const foeSummonIds = (() => {
-          const set = new Set();
-          try {
-            for (const list of foeSummons.values()) {
-              for (const s of list) {
-                const ident = getSummonIdentifier(s);
-                if (ident) set.add(ident);
-                if (Array.isArray(s?.anchorIds)) {
-                  for (const anchor of s.anchorIds) {
-                    if (anchor === undefined || anchor === null) continue;
-                    try {
-                      const str = String(anchor);
-                      if (str) set.add(str);
-                    } catch {}
-                  }
-                }
-              }
-            }
-          } catch {}
-          return set;
-        })();
-
         const prevById = new Map((foes || []).map(f => [f.id, f]));
         const baseFoes = (snap.foes || []).filter(f => {
-          const id = (typeof f === 'object' ? f?.id : f) || '';
-          const isSummon = typeof f === 'object' && (f?.summon_type || f?.type === 'summon' || f?.is_summon);
-          return id && !isSummon && !foeSummonIds.has(id);
+          const obj = f && typeof f === 'object' ? f : null;
+          const rawId = obj ? obj.id : f;
+          const id = rawId === undefined || rawId === null ? '' : String(rawId);
+          return id && !(obj && isSummon(obj)) && !foeSummonIds.has(id);
         });
         const enrichedFoes = baseFoes.map(f => {
           const hpKey = combatantKey('foe', f?.id);

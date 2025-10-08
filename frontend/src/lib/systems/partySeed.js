@@ -1,12 +1,6 @@
-const PLACEHOLDER_IDS = new Set(['sample_player']);
+import { isSummon } from './summonManager.js';
 
-function isSummon(entry) {
-  if (!entry || typeof entry !== 'object') return false;
-  if (entry.summon_type) return true;
-  if (entry.type === 'summon') return true;
-  if (entry.is_summon === true) return true;
-  return false;
-}
+const PLACEHOLDER_IDS = new Set(['sample_player']);
 
 function readId(entry) {
   if (typeof entry === 'string') {
