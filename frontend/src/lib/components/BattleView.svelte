@@ -102,19 +102,31 @@
         return results;
       })
   );
+  function hasCombatant(candidate) {
+    const key = normalizeId(candidate);
+    if (!key) return false;
+    return combatantById.has(key);
+  }
+
+  function resolveCombatantId(candidate) {
+    const key = normalizeId(candidate);
+    if (!key) return null;
+    return combatantById.has(key) ? key : null;
+  }
+
   // If a combatant disappears, clear stale targeting ids
-  $: if (activeId && !combatantById.has(String(activeId))) activeId = null;
-  $: if (activeTargetId && !combatantById.has(String(activeTargetId))) activeTargetId = null;
-  $: if (snapshotActiveId && !combatantById.has(String(snapshotActiveId))) {
+  $: if (activeId !== null && !hasCombatant(activeId)) activeId = null;
+  $: if (activeTargetId !== null && !hasCombatant(activeTargetId)) activeTargetId = null;
+  $: if (snapshotActiveId !== null && !hasCombatant(snapshotActiveId)) {
     snapshotActiveId = null;
   }
-  $: if (snapshotActiveTargetId && !combatantById.has(String(snapshotActiveTargetId))) {
+  $: if (snapshotActiveTargetId !== null && !hasCombatant(snapshotActiveTargetId)) {
     snapshotActiveTargetId = null;
   }
-  $: if (turnPhaseSeen && turnPhaseAttackerId && !combatantById.has(String(turnPhaseAttackerId))) {
+  $: if (turnPhaseSeen && turnPhaseAttackerId !== null && !hasCombatant(turnPhaseAttackerId)) {
     turnPhaseAttackerId = null;
   }
-  $: if (turnPhaseSeen && turnPhaseTargetId && !combatantById.has(String(turnPhaseTargetId))) {
+  $: if (turnPhaseSeen && turnPhaseTargetId !== null && !hasCombatant(turnPhaseTargetId)) {
     turnPhaseTargetId = null;
   }
 
@@ -130,18 +142,20 @@
     : null;
   $: phaseAllowsOverlays = turnPhaseSeen ? turnPhaseIsActive : true;
   $: {
-    const nextActive = turnPhaseIsActive
+    const candidateActive = turnPhaseIsActive
       ? (turnPhaseAttackerId ?? snapshotActiveId ?? null)
       : turnPhaseSeen
         ? null
         : snapshotActiveId ?? null;
+    const nextActive = resolveCombatantId(candidateActive);
     if (activeId !== nextActive) activeId = nextActive;
 
-    const nextTarget = turnPhaseIsActive
+    const candidateTarget = turnPhaseIsActive
       ? (turnPhaseTargetId ?? snapshotActiveTargetId ?? null)
       : turnPhaseSeen
         ? null
         : snapshotActiveTargetId ?? null;
+    const nextTarget = resolveCombatantId(candidateTarget);
     if (activeTargetId !== nextTarget) activeTargetId = nextTarget;
   }
   $: foeCount = (foes || []).length;

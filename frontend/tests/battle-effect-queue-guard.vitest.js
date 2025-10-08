@@ -259,4 +259,45 @@ describe('BattleView effect queue guard', () => {
 
     warnSpy.mockRestore();
   });
+
+  it('ignores stale active ids missing from combatant lists', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    roomAction.mockResolvedValueOnce({
+      party: [
+        { id: 'hero', hp: 40, max_hp: 40 },
+      ],
+      foes: [],
+      party_summons: [],
+      foe_summons: [],
+      recent_events: [],
+      effects_charge: [],
+      active_id: 'phantom-001',
+      active_target_id: 'specter-999',
+    });
+
+    const { component } = render(BattleView, {
+      props: {
+        runId: 'STALE-RUN',
+        active: true,
+        framerate: 60,
+        showHud: false,
+        showFoes: false,
+      },
+    });
+
+    await settle();
+
+    const state = component.$capture_state?.();
+    expect(state?.activeId).toBeNull();
+    expect(state?.activeTargetId).toBeNull();
+
+    expect(
+      warnSpy.mock.calls.some(([message]) =>
+        typeof message === 'string' && message.includes('effect_update_depth_exceeded'),
+      ),
+    ).toBe(false);
+
+    warnSpy.mockRestore();
+  });
 });
