@@ -20,6 +20,7 @@
   import BattleTargetingOverlay from './BattleTargetingOverlay.svelte';
   import BattleProjectileLayer from './BattleProjectileLayer.svelte';
   import EffectsChargeContainer from './battle/EffectsChargeContainer.svelte';
+  import { isCandidateLuna } from './battle/lunaUtils.js';
   import { motionStore } from '../systems/settingsStorage.js';
   import { haltSync } from '../systems/overlayState.js';
 
@@ -1087,15 +1088,6 @@
       if (trimmed) return trimmed;
     }
     return '';
-  }
-
-  function isCandidateLuna(value) {
-    const text = toTrimmedId(value);
-    if (!text) return false;
-    const normalized = text.toLowerCase();
-    if (normalized === 'luna') return true;
-    const stripped = normalized.replace(/[^a-z]/g, '');
-    return stripped === 'luna';
   }
 
   function isLunaHitEvent(evt) {
