@@ -96,9 +96,25 @@ async def build_action_queue_snapshot(
     """Capture the current visual action queue ordering."""
 
     def _build() -> list[ActionQueueEntry]:
+        def _sort_key(combatant: Stats) -> tuple[float, float, str]:
+            try:
+                value = float(getattr(combatant, "action_value", 0.0))
+            except Exception:
+                value = 0.0
+            if value < 0.0:
+                value = 0.0
+
+            try:
+                offset = float(getattr(combatant, "_action_sort_offset"))
+            except Exception:
+                offset = 0.0
+
+            identifier = getattr(combatant, "id", "")
+            return (value, offset, identifier)
+
         ordered = sorted(
             list(party_members) + list(foes),
-            key=lambda combatant: getattr(combatant, "action_value", 0.0),
+            key=_sort_key,
         )
         extras: list[ActionQueueEntry] = []
         for ent in ordered:
