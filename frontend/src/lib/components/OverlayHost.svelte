@@ -197,8 +197,6 @@
   $: if (roomData !== lastRoom) {
     lootConsumed = false;
     lastRoom = roomData;
-    // Log room changes for debug tracing
-    try { console.log(`[OverlayHost] ${now()} roomData changed`, { runId, result: roomData?.result, battle_index: roomData?.battle_index, roomId: roomData?.id || roomData?.room_id || null }); } catch(e) {}
   }
   $: if (!lootConsumed && roomData?.loot) {
     if (roomData.loot.gold) pushLoot(`Gold +${roomData.loot.gold}`);
