@@ -14,10 +14,10 @@ from autofighter.mapgen import MapNode
 from autofighter.stats import BUS
 from autofighter.summons.base import Summon
 from autofighter.summons.manager import SummonManager
+from plugins.characters._base import PlayerBase
 from plugins.damage_types import ALL_DAMAGE_TYPES
 from plugins.damage_types import load_damage_type
 from plugins.damage_types._base import DamageTypeBase
-from plugins.characters._base import PlayerBase
 
 if TYPE_CHECKING:
     from autofighter.passives import PassiveRegistry
@@ -271,18 +271,34 @@ class Luna(PlayerBase):
             previous_helper.detach()
 
         rank = str(getattr(self, "rank", ""))
-        if "boss" not in rank.lower():
+        lowered = rank.lower()
+        is_boss = "boss" in lowered
+        is_glitched = "glitched" in lowered
+
+        if not is_boss and not is_glitched:
             self._luna_sword_helper = None
             return
 
-        sword_count = 9 if "glitched" in rank.lower() else 4
-        self.ensure_permanent_summon_slots(sword_count)
+        sword_specs: list[tuple[str, DamageTypeBase]] = []
+
+        if is_glitched and not is_boss:
+            sword_count = 2
+            self.ensure_permanent_summon_slots(sword_count)
+            for _ in range(sword_count):
+                damage_label = random.choice(ALL_DAMAGE_TYPES)
+                damage_type = load_damage_type(damage_label)
+                sword_specs.append(("Lightstream", damage_type))
+        else:
+            sword_count = 9 if is_glitched else 4
+            self.ensure_permanent_summon_slots(sword_count)
+            for _ in range(sword_count):
+                label = random.choice(ALL_DAMAGE_TYPES)
+                damage_type = load_damage_type(label)
+                sword_specs.append((label, damage_type))
 
         helper = _LunaSwordCoordinator(self, registry)
         created = False
-        for _ in range(sword_count):
-            label = random.choice(ALL_DAMAGE_TYPES)
-            damage_type = load_damage_type(label)
+        for label, damage_type in sword_specs:
             summon = SummonManager.create_summon(
                 self,
                 summon_type=f"luna_sword_{label.lower()}",
