@@ -11,6 +11,7 @@
   let initializing;
   let effekseerApi;
   let mounted = false;
+  let lastProcessedCue = '';
 
   async function ensureContext() {
     if (!mounted || !enabled || !canvas) return null;
@@ -142,8 +143,13 @@
     teardown();
   }
 
-  $: if (cue) {
-    playEffect(cue);
+  $: {
+    if (cue && cue !== lastProcessedCue) {
+      lastProcessedCue = cue;
+      playEffect(cue);
+    } else if (!cue && lastProcessedCue) {
+      lastProcessedCue = '';
+    }
   }
 </script>
 
