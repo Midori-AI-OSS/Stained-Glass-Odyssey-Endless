@@ -130,18 +130,20 @@
     : null;
   $: phaseAllowsOverlays = turnPhaseSeen ? turnPhaseIsActive : true;
   $: {
-    const nextActive = turnPhaseIsActive
+    const nextActiveCandidate = turnPhaseIsActive
       ? (turnPhaseAttackerId ?? snapshotActiveId ?? null)
       : turnPhaseSeen
         ? null
         : snapshotActiveId ?? null;
+    const nextActive = canonicalizeCombatantId(nextActiveCandidate, 'activeId');
     if (activeId !== nextActive) activeId = nextActive;
 
-    const nextTarget = turnPhaseIsActive
+    const nextTargetCandidate = turnPhaseIsActive
       ? (turnPhaseTargetId ?? snapshotActiveTargetId ?? null)
       : turnPhaseSeen
         ? null
         : snapshotActiveTargetId ?? null;
+    const nextTarget = canonicalizeCombatantId(nextTargetCandidate, 'activeTargetId');
     if (activeTargetId !== nextTarget) activeTargetId = nextTarget;
   }
   $: foeCount = (foes || []).length;
@@ -1525,6 +1527,71 @@
     }
   }
 
+  function canonicalizeCombatantId(candidate, context = 'unknown') {
+    const normalized = normalizeId(candidate).trim();
+    if (!normalized) return null;
+
+    if (combatantById.has(normalized)) {
+      return normalized;
+    }
+
+    const list = Array.isArray(combatants) ? combatants : [];
+    for (const entry of list) {
+      if (!entry || typeof entry !== 'object') continue;
+
+      const aliasSet = new Set();
+      const pushAlias = (value) => {
+        const alias = normalizeId(value).trim();
+        if (alias) aliasSet.add(alias);
+      };
+
+      pushAlias(entry.id);
+      pushAlias(entry.instance_id);
+      pushAlias(entry.instanceId);
+      pushAlias(entry.renderKey);
+      pushAlias(entry.render_key);
+      pushAlias(entry.hpKey);
+      pushAlias(entry.hp_key);
+
+      const anchorAliases = entry.anchorIds ?? entry.anchor_ids;
+      if (Array.isArray(anchorAliases)) {
+        for (const value of anchorAliases) pushAlias(value);
+      } else if (anchorAliases && typeof anchorAliases === 'object') {
+        for (const value of Object.values(anchorAliases)) pushAlias(value);
+      } else {
+        pushAlias(anchorAliases);
+      }
+
+      if (!aliasSet.has(normalized)) continue;
+
+      const canonicalCandidates = new Set();
+      const pushCanonical = (value) => {
+        const key = normalizeId(value).trim();
+        if (key) canonicalCandidates.add(key);
+      };
+
+      pushCanonical(entry.instance_id);
+      pushCanonical(entry.instanceId);
+      pushCanonical(entry.id);
+
+      for (const key of canonicalCandidates) {
+        if (combatantById.has(key)) {
+          return key;
+        }
+      }
+    }
+
+    if (process.env.NODE_ENV !== 'production') {
+      console.debug('[BattleView] Unable to canonicalize combatant id', {
+        candidate,
+        normalized,
+        context,
+      });
+    }
+
+    return null;
+  }
+
   function normalizePhaseState(value) {
     if (value === undefined || value === null) return '';
     try {
@@ -1627,7 +1694,7 @@
       'active_id',
     ]);
     if (attacker !== undefined) {
-      turnPhaseAttackerId = attacker ?? null;
+      turnPhaseAttackerId = canonicalizeCombatantId(attacker ?? null, 'turnPhase.attacker');
     }
     const target = extractPhaseId(phase, [
       'target_id',
@@ -1636,7 +1703,7 @@
       'target',
     ]);
     if (target !== undefined) {
-      turnPhaseTargetId = target ?? null;
+      turnPhaseTargetId = canonicalizeCombatantId(target ?? null, 'turnPhase.target');
     }
     if (turnPhaseState === 'end') {
       turnPhaseAttackerId = null;
@@ -2089,10 +2156,13 @@
       }
 
       if ('active_id' in snap) {
-        snapshotActiveId = snap.active_id ?? null;
+        snapshotActiveId = canonicalizeCombatantId(snap.active_id ?? null, 'snapshot.active_id');
       }
       if ('active_target_id' in snap) {
-        snapshotActiveTargetId = snap.active_target_id ?? null;
+        snapshotActiveTargetId = canonicalizeCombatantId(
+          snap.active_target_id ?? null,
+          'snapshot.active_target_id',
+        );
       }
       let phaseInfo = null;
       if ('turn_phase' in snap) {
