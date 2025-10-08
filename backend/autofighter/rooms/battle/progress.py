@@ -12,6 +12,7 @@ from typing import Protocol
 from typing import Sequence
 from typing import TypedDict
 
+from autofighter.action_queue import TURN_COUNTER_ID
 from autofighter.summons.base import Summon
 from autofighter.summons.manager import SummonManager
 
@@ -96,6 +97,8 @@ async def build_action_queue_snapshot(
     """Capture the current visual action queue ordering."""
 
     def _build() -> list[ActionQueueEntry]:
+        combined_entities = list(party_members) + list(foes)
+
         def _sort_key(combatant: Stats) -> tuple[float, float, str]:
             try:
                 value = float(getattr(combatant, "action_value", 0.0))
@@ -107,55 +110,119 @@ async def build_action_queue_snapshot(
             try:
                 offset = float(getattr(combatant, "_action_sort_offset"))
             except Exception:
-                offset = 0.0
+                try:
+                    offset = float(combined_entities.index(combatant))
+                except ValueError:
+                    offset = 0.0
 
             identifier = getattr(combatant, "id", "")
             return (value, offset, identifier)
 
-        ordered = sorted(
-            list(party_members) + list(foes),
-            key=_sort_key,
-        )
-        extras: list[ActionQueueEntry] = []
-        for ent in ordered:
-            turns = extra_turns.get(id(ent), 0)
-            for _ in range(turns):
-                extras.append(
-                    {
-                        "id": getattr(ent, "id", ""),
-                        "action_gauge": getattr(ent, "action_gauge", 0),
-                        "action_value": getattr(ent, "action_value", 0.0),
-                        "base_action_value": getattr(ent, "base_action_value", 0.0),
-                        "bonus": True,
-                    }
+        def _entry_from_snapshot(raw: MutableMapping[str, Any]) -> ActionQueueEntry:
+            identifier = str(raw.get("id", ""))
+
+            try:
+                action_value = float(raw.get("action_value", 0.0) or 0.0)
+            except Exception:
+                action_value = 0.0
+            if action_value < 0.0:
+                action_value = 0.0
+
+            try:
+                base_value = float(
+                    raw.get("base_action_value", raw.get("action_value", 0.0) or 0.0)
                 )
-        base_entries: list[ActionQueueEntry] = [
-            {
+            except Exception:
+                base_value = action_value
+            if base_value < 0.0:
+                base_value = 0.0
+
+            entry: ActionQueueEntry = {
+                "id": identifier,
+                "action_gauge": raw.get("action_gauge", 0),
+                "action_value": action_value,
+                "base_action_value": base_value,
+            }
+            if raw.get("bonus"):
+                entry["bonus"] = True
+            return entry
+
+        def _entry_from_combatant(combatant: Stats) -> ActionQueueEntry:
+            try:
+                action_value = float(getattr(combatant, "action_value", 0.0))
+            except Exception:
+                action_value = 0.0
+            if action_value < 0.0:
+                action_value = 0.0
+
+            try:
+                base_value = float(
+                    getattr(
+                        combatant,
+                        "base_action_value",
+                        getattr(combatant, "action_value", 0.0),
+                    )
+                )
+            except Exception:
+                base_value = action_value
+            if base_value < 0.0:
+                base_value = 0.0
+
+            return {
                 "id": getattr(combatant, "id", ""),
                 "action_gauge": getattr(combatant, "action_gauge", 0),
-                "action_value": getattr(combatant, "action_value", 0.0),
-                "base_action_value": getattr(combatant, "base_action_value", 0.0),
+                "action_value": action_value,
+                "base_action_value": base_value,
             }
-            for combatant in ordered
+
+        visible_entities = [
+            entity for entity in combined_entities if not getattr(entity, "despawned", False)
         ]
-        turn_counter_entry: ActionQueueEntry | None = None
+
         if visual_queue is not None:
-            turn_counter = getattr(visual_queue, "turn_counter", None)
-            if turn_counter is not None:
-                turn_counter_entry = {
-                    "id": getattr(turn_counter, "id", "turn_counter"),
-                    "action_gauge": getattr(turn_counter, "action_gauge", 0),
-                    "action_value": getattr(turn_counter, "action_value", 0.0),
-                    "base_action_value": getattr(
-                        turn_counter,
-                        "base_action_value",
-                        getattr(turn_counter, "action_value", 0.0),
-                    ),
-                }
-        entries = extras + base_entries
-        if turn_counter_entry is not None:
-            entries.append(turn_counter_entry)
-        return entries
+            try:
+                queue_snapshot = list(getattr(visual_queue, "snapshot", lambda: [])())
+            except Exception:
+                queue_snapshot = []
+
+            if queue_snapshot:
+                visible_by_id: dict[str, Stats] = {}
+                for entity in visible_entities:
+                    identifier = getattr(entity, "id", None)
+                    if identifier:
+                        visible_by_id.setdefault(str(identifier), entity)
+
+                entries: list[ActionQueueEntry] = []
+                for raw in queue_snapshot:
+                    identifier = str(raw.get("id", ""))
+                    if not identifier:
+                        continue
+                    if identifier != TURN_COUNTER_ID:
+                        entity = visible_by_id.get(identifier)
+                        if entity is None:
+                            continue
+                        if getattr(entity, "despawned", False):
+                            continue
+                    entries.append(_entry_from_snapshot(raw))
+
+                if entries:
+                    return entries
+
+        ordered = sorted(visible_entities, key=_sort_key)
+        extras: list[ActionQueueEntry] = []
+        for ent in ordered:
+            if getattr(ent, "id", None) == TURN_COUNTER_ID:
+                continue
+            turns = max(int(extra_turns.get(id(ent), 0)), 0)
+            for _ in range(turns):
+                entry = _entry_from_combatant(ent)
+                entry["bonus"] = True
+                extras.append(entry)
+
+        base_entries: list[ActionQueueEntry] = [
+            _entry_from_combatant(combatant) for combatant in ordered
+        ]
+        return extras + base_entries
 
     return await asyncio.to_thread(_build)
 
