@@ -115,10 +115,17 @@ class ActionQueue:
             spent_raw = getattr(actor, "action_value", None)
             if spent_raw is None:
                 spent_raw = getattr(actor, "base_action_value", GAUGE_START)
-            spent = float(spent_raw)
-            if spent <= 0:
+            try:
+                spent = float(spent_raw)
+            except Exception:
                 spent = float(getattr(actor, "base_action_value", GAUGE_START))
             if spent <= 0:
+                base_value = float(getattr(actor, "base_action_value", GAUGE_START))
+                actor.action_value = base_value
+                self._sync_action_gauge(actor, base_value)
+                idx = self.combatants.index(actor)
+                self.combatants.append(self.combatants.pop(idx))
+                self._stabilize_action_values()
                 self.last_cycle_count = 0
                 return 0
             gauge_step = 1.0

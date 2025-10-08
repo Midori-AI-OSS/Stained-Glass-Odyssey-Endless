@@ -178,6 +178,34 @@ def test_queue_advances_one_point_at_a_time():
         assert all(value >= 0 for value in values)
 
 
+def test_advance_with_actor_resets_zero_action_value_without_affecting_others():
+    actor = Stats()
+    actor.id = "alpha"
+    actor.spd = 150
+
+    other = Stats()
+    other.id = "beta"
+    other.spd = 120
+
+    queue = ActionQueue([actor, other])
+
+    baseline_value = other.action_value
+    baseline_gauge = other.action_gauge
+
+    actor.action_value = 0
+    actor.action_gauge = 0
+
+    cycle_count = queue.advance_with_actor(actor)
+
+    assert cycle_count == 0
+    assert queue.last_cycle_count == 0
+    assert actor.action_value == pytest.approx(actor.base_action_value, abs=1e-6)
+    assert actor.action_gauge == pytest.approx(actor.action_value, abs=1e-6)
+    assert other.action_value == pytest.approx(baseline_value, abs=1e-6)
+    assert other.action_gauge == pytest.approx(baseline_gauge, abs=1e-6)
+    assert queue.combatants[-1] is actor
+
+
 def test_same_speed_combatants_have_deterministic_snapshots():
     members = []
     for name in ("alpha", "bravo", "charlie"):
