@@ -68,7 +68,10 @@ class ActionQueue:
 
         actor_index = min(
             available_indices,
-            key=lambda i: getattr(self.combatants[i], "action_value", GAUGE_START),
+            key=lambda i: self._sort_key(
+                self.combatants[i],
+                fallback_index=i,
+            ),
         )
         actor = self.combatants[actor_index]
         self.advance_with_actor(actor)
@@ -76,7 +79,7 @@ class ActionQueue:
 
     def snapshot(self) -> list[dict[str, float]]:
         """Return queue state for serialization."""
-        ordered = sorted(self.combatants, key=lambda c: c.action_value)
+        ordered = sorted(self.combatants, key=self._sort_key)
         extras = [
             {
                 "id": getattr(c, "id", ""),
@@ -141,16 +144,44 @@ class ActionQueue:
             base_value = float(getattr(actor, "base_action_value", GAUGE_START))
             actor.action_value = base_value
             self._sync_action_gauge(actor, base_value)
-            self._stabilize_action_values()
             # Rotate actor to end to reflect moving to the back of the line
             idx = self.combatants.index(actor)
             self.combatants.append(self.combatants.pop(idx))
+            self._stabilize_action_values()
             self.last_cycle_count = cycle_count
             return cycle_count
         except Exception:
             # Best-effort; never let UI queue progression break battle logic
             self.last_cycle_count = 0
             return 0
+
+    def _sort_key(
+        self,
+        combatant: Stats,
+        *,
+        fallback_index: int | None = None,
+    ) -> tuple[float, float, str]:
+        """Return the ordering key for ``combatant`` in the queue."""
+
+        try:
+            value = float(getattr(combatant, "action_value", 0.0))
+        except Exception:
+            value = 0.0
+        if value < 0.0:
+            value = 0.0
+
+        try:
+            offset = float(getattr(combatant, "_action_sort_offset"))
+        except Exception:
+            if fallback_index is None:
+                try:
+                    fallback_index = self.combatants.index(combatant)
+                except ValueError:
+                    fallback_index = 0
+            offset = float(fallback_index)
+
+        identifier = getattr(combatant, "id", "")
+        return (value, offset, identifier)
 
     def _update_turn_counter(self, spent: float) -> int:
         """Apply time advancement to the shared turn counter."""
@@ -186,43 +217,25 @@ class ActionQueue:
     def _stabilize_action_values(self) -> None:
         """Ensure non-turn counter combatants have unique action values."""
 
-        epsilon = 1e-6
-        gauge_step = 1.0
-        try:
-            ordered = sorted(
-                (
-                    combatant
-                    for combatant in self.combatants
-                    if combatant is not self.turn_counter
-                    and getattr(combatant, "id", None) != TURN_COUNTER_ID
-                ),
-                key=lambda combatant: (
-                    float(getattr(combatant, "action_value", 0.0)),
-                    getattr(combatant, "id", ""),
-                ),
-            )
-        except Exception:
-            return
+        for index, combatant in enumerate(self.combatants):
+            if combatant is self.turn_counter:
+                continue
+            if getattr(combatant, "id", None) == TURN_COUNTER_ID:
+                continue
 
-        seen: set[float] = set()
-        for combatant in ordered:
             try:
-                original = float(getattr(combatant, "action_value", 0.0))
+                value = float(getattr(combatant, "action_value", 0.0))
             except Exception:
-                original = 0.0
+                value = 0.0
+            if value < 0.0:
+                value = 0.0
 
-            adjustment = 0
-            current = original
-            while current in seen:
-                adjustment += 1
-                step = gauge_step if original >= gauge_step else epsilon
-                current = original - (step * adjustment)
-                if original >= gauge_step and current < 0.0:
-                    current = original - (epsilon * adjustment)
+            try:
+                setattr(combatant, "_action_sort_offset", float(index))
+            except Exception:
+                pass
 
-            combatant.action_value = current
-            seen.add(current)
-            self._sync_action_gauge(combatant, current)
+            self._sync_action_gauge(combatant, value)
 
     def _sync_action_gauge(self, combatant: Stats, new_value: float) -> None:
         """Mirror ``action_value`` changes onto the combatant's gauge field."""

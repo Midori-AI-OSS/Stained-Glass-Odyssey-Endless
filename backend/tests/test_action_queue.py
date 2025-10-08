@@ -67,7 +67,7 @@ def test_bonus_turn():
     assert all("bonus" not in e for e in snap)
 
 
-def test_snapshot_initial_order_unique():
+def test_snapshot_initial_order_preserves_non_negative_values():
     first = Stats()
     first.id = "first"
     first.spd = 100
@@ -92,7 +92,7 @@ def test_snapshot_initial_order_unique():
     action_values = [entry["action_value"] for entry in regular_entries]
 
     assert action_values == sorted(action_values)
-    assert len(action_values) == len(set(action_values))
+    assert all(value >= 0 for value in action_values)
 
 
 class RecordingStats(Stats):
@@ -175,7 +175,8 @@ def test_queue_advances_one_point_at_a_time():
 
         snapshot = queue.snapshot()
         values = [entry["action_value"] for entry in snapshot]
-        assert len(values) == len(set(values))
+        assert values == sorted(values)
+        assert all(value >= 0 for value in values)
 
 
 def test_same_speed_combatants_have_deterministic_snapshots():
@@ -188,42 +189,68 @@ def test_same_speed_combatants_have_deterministic_snapshots():
 
     queue = ActionQueue(list(members))
 
-    expected_snapshot = queue.snapshot()
+    baseline_snapshot = queue.snapshot()
     # Repeated snapshot calls without advancement should be identical.
-    assert queue.snapshot() == expected_snapshot
+    assert queue.snapshot() == baseline_snapshot
+
+    seen_orders: set[tuple[str, ...]] = set()
 
     for _ in range(len(members) * 2):
-        current_snapshot = expected_snapshot
-        current_ids = [entry["id"] for entry in current_snapshot]
-        current_values = [entry["action_value"] for entry in current_snapshot]
+        snapshot = queue.snapshot()
+        entries = [entry for entry in snapshot if entry["id"] != TURN_COUNTER_ID]
+        ids = [entry["id"] for entry in entries]
+        values = [entry["action_value"] for entry in entries]
 
-        assert len(current_values) == len(set(current_values))
+        assert values == sorted(values)
+        assert all(value >= 0 for value in values)
 
+        offsets = [
+            getattr(member, "_action_sort_offset", None)
+            for member in queue.combatants
+            if member is not queue.turn_counter
+        ]
+        assert all(offset is not None for offset in offsets)
+        assert len(offsets) == len(set(offsets))
+
+        seen_orders.add(tuple(ids))
+
+        first_id = ids[0]
         actor = queue.next_actor()
-        assert actor.id == current_ids[0]
+        assert actor.id == first_id
 
-        next_snapshot = queue.snapshot()
-        next_ids = [entry["id"] for entry in next_snapshot]
-        next_values = [entry["action_value"] for entry in next_snapshot]
+    assert len(seen_orders) == len(members)
 
-        assert len(next_values) == len(set(next_values))
 
-        # Snapshot order should rotate deterministically as the queue advances.
-        assert next_ids == current_ids[1:] + current_ids[:1]
+@pytest.mark.asyncio
+async def test_build_action_queue_snapshot_respects_sort_offsets():
+    first = Stats()
+    first.id = "first"
+    first.spd = 100
 
-        expected_snapshot = next_snapshot
+    second = Stats()
+    second.id = "second"
+    second.spd = 100
 
-    visual_snapshot = expected_snapshot
-    visual_ids = [entry["id"] for entry in visual_snapshot]
+    queue = ActionQueue([first, second])
 
-    progress_snapshot = asyncio.run(
-        build_action_queue_snapshot(members, [], {}, visual_queue=queue)
+    snapshot = await build_action_queue_snapshot(
+        [first],
+        [second],
+        {},
+        visual_queue=queue,
     )
+    entries = [entry for entry in snapshot if entry["id"] != TURN_COUNTER_ID]
+    assert [entry["id"] for entry in entries] == ["first", "second"]
+    assert all(entry["action_value"] >= 0 for entry in entries)
 
-    progress_ids = [
-        entry["id"]
-        for entry in progress_snapshot
-        if entry["id"] != TURN_COUNTER_ID
-    ]
+    queue.next_actor()
 
-    assert progress_ids == visual_ids
+    snapshot = await build_action_queue_snapshot(
+        [first],
+        [second],
+        {},
+        visual_queue=queue,
+    )
+    entries = [entry for entry in snapshot if entry["id"] != TURN_COUNTER_ID]
+    assert [entry["id"] for entry in entries] == ["second", "first"]
+    assert all(entry["action_value"] >= 0 for entry in entries)
