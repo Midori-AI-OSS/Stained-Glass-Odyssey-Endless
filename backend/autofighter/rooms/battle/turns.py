@@ -73,11 +73,17 @@ async def push_progress_update(
 async def _advance_visual_queue(
     visual_queue: Any,
     actor: Stats | None,
+    *,
+    spent_override: float | None = None,
 ) -> int:
     if visual_queue is None or actor is None:
         return 0
     try:
-        return await asyncio.to_thread(visual_queue.advance_with_actor, actor)
+        return await asyncio.to_thread(
+            visual_queue.advance_with_actor,
+            actor,
+            spent_override=spent_override,
+        )
     except Exception:
         log.debug("Failed to advance visual queue", exc_info=True)
     return 0
@@ -96,10 +102,15 @@ async def dispatch_turn_end_snapshot(
     run_id: str | None,
     *,
     turn_phase: str | None = "end",
+    spent_override: float | None = None,
 ) -> int:
     """Advance the visual queue and emit an updated snapshot."""
 
-    cycle_count = await _advance_visual_queue(visual_queue, actor)
+    cycle_count = await _advance_visual_queue(
+        visual_queue,
+        actor,
+        spent_override=spent_override,
+    )
     effective_turn = turn + cycle_count
     await push_progress_update(
         progress,

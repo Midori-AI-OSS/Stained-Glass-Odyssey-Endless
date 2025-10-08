@@ -19,6 +19,7 @@ async def finish_turn(
     *,
     include_summon_foes: bool = False,
     active_target_id: str | None = None,
+    spent_override: float | None = None,
 ) -> None:
     """Finalize a combatant's turn and emit post-action updates."""
 
@@ -50,6 +51,7 @@ async def finish_turn(
         context.turn,
         context.run_id,
         turn_phase="end",
+        spent_override=spent_override,
     )
     if cycle_count:
         context.turn += cycle_count

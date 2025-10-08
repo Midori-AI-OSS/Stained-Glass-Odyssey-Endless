@@ -170,6 +170,7 @@ async def _run_foe_turn_iteration(
             acting_foe,
             action_start,
             active_target_id=getattr(target, "id", None),
+            spent_override=0.0,
         )
         return FoeTurnIterationResult(repeat=False, battle_over=True)
 

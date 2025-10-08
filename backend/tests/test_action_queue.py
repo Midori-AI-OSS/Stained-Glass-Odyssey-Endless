@@ -5,6 +5,7 @@ import pytest
 from autofighter.action_queue import TURN_COUNTER_ID
 from autofighter.action_queue import ActionQueue
 from autofighter.rooms.battle.progress import build_action_queue_snapshot
+from autofighter.rooms.battle.turns import _advance_visual_queue
 from autofighter.stats import Stats
 
 
@@ -206,6 +207,48 @@ def test_advance_with_actor_resets_zero_action_value_without_affecting_others():
     assert queue.combatants[-1] is actor
 
 
+def test_advance_with_actor_honors_zero_spent_override():
+    actor = Stats()
+    actor.id = "alpha"
+    actor.spd = 200
+
+    other = Stats()
+    other.id = "beta"
+    other.spd = 150
+
+    queue = ActionQueue([actor, other])
+
+    other_initial = other.action_value
+
+    cycle_count = queue.advance_with_actor(actor, spent_override=0.0)
+
+    assert cycle_count == 0
+    assert other.action_value == pytest.approx(other_initial, abs=1e-6)
+    assert queue.combatants[-1] is actor
+    assert actor.action_value == pytest.approx(actor.base_action_value, abs=1e-6)
+
+
+def test_advance_with_actor_uses_positive_spent_override():
+    actor = Stats()
+    actor.id = "alpha"
+    actor.spd = 200
+
+    other = Stats()
+    other.id = "beta"
+    other.spd = 150
+
+    queue = ActionQueue([actor, other])
+
+    other_initial = other.action_value
+    actor.action_value = actor.base_action_value * 3
+
+    queue.advance_with_actor(actor, spent_override=10.0)
+
+    assert other.action_value == pytest.approx(max(other_initial - 10.0, 0.0), abs=1e-6)
+    assert actor.action_value == pytest.approx(actor.base_action_value, abs=1e-6)
+    assert queue.combatants[-1] is actor
+
+
 def test_same_speed_combatants_have_deterministic_snapshots():
     members = []
     for name in ("alpha", "bravo", "charlie"):
@@ -246,6 +289,32 @@ def test_same_speed_combatants_have_deterministic_snapshots():
         assert actor.id == first_id
 
     assert len(seen_orders) == len(members)
+
+
+@pytest.mark.asyncio
+async def test__advance_visual_queue_forwards_override():
+    actor = Stats()
+    actor.id = "alpha"
+
+    class DummyQueue:
+        def __init__(self) -> None:
+            self.calls: list[float | None] = []
+
+        def advance_with_actor(
+            self,
+            actor: Stats,
+            *,
+            spent_override: float | None = None,
+        ) -> int:
+            self.calls.append(spent_override)
+            return 3
+
+    queue = DummyQueue()
+
+    result = await _advance_visual_queue(queue, actor, spent_override=0.0)
+
+    assert result == 3
+    assert queue.calls == [0.0]
 
 
 @pytest.mark.asyncio

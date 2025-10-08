@@ -100,25 +100,37 @@ class ActionQueue:
             for c in ordered
         ]
 
-    def advance_with_actor(self, actor: Stats) -> int:
+    def advance_with_actor(
+        self,
+        actor: Stats,
+        *,
+        spent_override: float | None = None,
+    ) -> int:
         """Advance the queue math using the provided actor.
 
         This mirrors ``next_actor`` time advancement but does not select the
         actor by min action value. It allows external battle loops to drive the
         visual/action gauge independently while preserving consistent queue
-        dynamics for snapshots.
+        dynamics for snapshots. ``spent_override`` can be provided to explicitly
+        control the amount of action value consumed (e.g., to skip advancement).
         """
         if actor not in self.combatants:
             self.last_cycle_count = 0
             return 0
         try:
-            spent_raw = getattr(actor, "action_value", None)
-            if spent_raw is None:
-                spent_raw = getattr(actor, "base_action_value", GAUGE_START)
-            try:
-                spent = float(spent_raw)
-            except Exception:
-                spent = float(getattr(actor, "base_action_value", GAUGE_START))
+            if spent_override is not None:
+                try:
+                    spent = float(spent_override)
+                except Exception:
+                    spent = 0.0
+            else:
+                spent_raw = getattr(actor, "action_value", None)
+                if spent_raw is None:
+                    spent_raw = getattr(actor, "base_action_value", GAUGE_START)
+                try:
+                    spent = float(spent_raw)
+                except Exception:
+                    spent = float(getattr(actor, "base_action_value", GAUGE_START))
             if spent <= 0:
                 base_value = float(getattr(actor, "base_action_value", GAUGE_START))
                 actor.action_value = base_value
