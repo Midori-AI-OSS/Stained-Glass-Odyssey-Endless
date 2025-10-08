@@ -1,4 +1,3 @@
-import asyncio
 import math
 
 import pytest
@@ -83,16 +82,16 @@ def test_snapshot_initial_order_preserves_non_negative_values():
     queue = ActionQueue([first, second, turn_counter])
     snapshot = queue.snapshot()
 
-    # Turn counter should remain a sentinel entry at the end of the snapshot.
-    assert snapshot[-1]["id"] == TURN_COUNTER_ID
+    ids = [entry["id"] for entry in snapshot]
+    assert TURN_COUNTER_ID in ids
 
-    regular_entries = [
-        entry for entry in snapshot if entry["id"] != TURN_COUNTER_ID
-    ]
+    turn_entry = next(entry for entry in snapshot if entry["id"] == TURN_COUNTER_ID)
+    regular_entries = [entry for entry in snapshot if entry["id"] != TURN_COUNTER_ID]
     action_values = [entry["action_value"] for entry in regular_entries]
 
     assert action_values == sorted(action_values)
     assert all(value >= 0 for value in action_values)
+    assert turn_entry["action_value"] >= max(action_values or [0])
 
 
 class RecordingStats(Stats):
@@ -254,3 +253,71 @@ async def test_build_action_queue_snapshot_respects_sort_offsets():
     entries = [entry for entry in snapshot if entry["id"] != TURN_COUNTER_ID]
     assert [entry["id"] for entry in entries] == ["second", "first"]
     assert all(entry["action_value"] >= 0 for entry in entries)
+
+
+@pytest.mark.asyncio
+async def test_turn_counter_reorders_with_action_value():
+    first = Stats()
+    first.id = "first"
+    first.spd = 100
+
+    second = Stats()
+    second.id = "second"
+    second.spd = 90
+
+    turn_counter = Stats()
+    turn_counter.id = TURN_COUNTER_ID
+    turn_counter.spd = 1
+
+    queue = ActionQueue([first, second, turn_counter])
+
+    initial_snapshot = await build_action_queue_snapshot(
+        [first],
+        [second],
+        {},
+        visual_queue=queue,
+    )
+    assert initial_snapshot[-1]["id"] == TURN_COUNTER_ID
+
+    # Push the counter near the front by reducing its gauge.
+    if queue.turn_counter is not None:
+        queue.turn_counter.action_value = 5.0
+        queue.turn_counter.action_gauge = 5.0
+
+    updated_snapshot = await build_action_queue_snapshot(
+        [first],
+        [second],
+        {},
+        visual_queue=queue,
+    )
+
+    ids = [entry["id"] for entry in updated_snapshot]
+    assert ids[0] == TURN_COUNTER_ID
+
+
+@pytest.mark.asyncio
+async def test_despawned_combatants_are_omitted_from_snapshot():
+    first = Stats()
+    first.id = "first"
+    first.spd = 100
+
+    second = Stats()
+    second.id = "second"
+    second.spd = 90
+
+    turn_counter = Stats()
+    turn_counter.id = TURN_COUNTER_ID
+    turn_counter.spd = 1
+
+    queue = ActionQueue([first, second, turn_counter])
+
+    snapshot = await build_action_queue_snapshot(
+        [first],
+        [],
+        {},
+        visual_queue=queue,
+    )
+
+    ids = [entry["id"] for entry in snapshot]
+    assert "second" not in ids
+    assert TURN_COUNTER_ID in ids
