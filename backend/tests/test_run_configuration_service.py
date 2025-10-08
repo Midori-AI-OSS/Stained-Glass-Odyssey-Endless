@@ -23,7 +23,7 @@ def test_run_configuration_metadata_details():
     preview_five = next(item for item in foe_hp["preview"] if item["stacks"] == 5)
     assert preview_five["raw_bonus"] == pytest.approx(2.5)
     foe_speed = next(mod for mod in metadata["modifiers"] if mod["id"] == "foe_speed")
-    assert foe_speed["reward_bonuses"]["exp_bonus_per_stack"] == pytest.approx(0.5)
+    assert foe_speed["reward_bonuses"]["exp_bonus_per_stack"] == pytest.approx(0.01)
     pressure = next(mod for mod in metadata["modifiers"] if mod["id"] == "pressure")
     assert "encounter_bonus" in pressure["effects"]
     pressure_preview = next(item for item in pressure["preview"] if item["stacks"] == 10)
@@ -45,8 +45,8 @@ def test_validate_run_configuration_with_modifiers():
     )
     assert selection.modifiers["pressure"] >= 5
     bonus = selection.snapshot["modifiers"]["character_stat_down"]["details"]["bonus_rdr"]
-    assert pytest.approx(bonus, rel=1e-3) == 0.17
-    assert selection.reward_bonuses["exp_bonus"] >= bonus
+    assert pytest.approx(bonus, rel=1e-3) == 0.0034
+    assert selection.reward_bonuses["exp_bonus"] == pytest.approx(0.0434, rel=1e-3)
 
 
 def test_validate_run_configuration_rejects_unknown_modifier():
@@ -66,8 +66,8 @@ async def test_start_run_persists_configuration_snapshot(app_with_db):
     config = result["configuration"]
     assert config["run_type"]["id"] == "boss_rush"
     char_penalty = config["modifiers"]["character_stat_down"]["details"]
-    assert pytest.approx(char_penalty["bonus_rdr"], rel=1e-3) == 0.11
-    assert pytest.approx(config["reward_bonuses"]["exp_bonus"], rel=1e-3) == 2.11
+    assert pytest.approx(char_penalty["bonus_rdr"], rel=1e-3) == 0.0022
+    assert pytest.approx(config["reward_bonuses"]["exp_bonus"], rel=1e-3) == 0.0222
 
 
 @pytest.mark.asyncio

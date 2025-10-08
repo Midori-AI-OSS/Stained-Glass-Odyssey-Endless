@@ -2,9 +2,13 @@
   import { browser } from '$app/environment';
   import { createEventDispatcher, onDestroy, onMount } from 'svelte';
 
-  import MenuPanel from './MenuPanel.svelte';
-  import PartyPicker from './PartyPicker.svelte';
-  import Tooltip from './Tooltip.svelte';
+import MenuPanel from './MenuPanel.svelte';
+import PartyPicker from './PartyPicker.svelte';
+import ModifierList from './ModifierList.svelte';
+import RewardPreviewCard from './RewardPreviewCard.svelte';
+import RunTypeGrid from './RunTypeGrid.svelte';
+import RunWizardHeader from './RunWizardHeader.svelte';
+import WizardNavigation from './WizardNavigation.svelte';
   import { formatPercent } from '../utils/upgradeFormatting.js';
   import {
     getRunConfigurationMetadata,
@@ -1202,10 +1206,6 @@
     return mod?.label || mod?.id || 'Modifier';
   }
 
-  function modifierDescription(mod) {
-    return mod?.description || '';
-  }
-
   function pressureTooltip() {
     return metadata?.pressure?.tooltip || '';
   }
@@ -1255,435 +1255,344 @@
     {reducedMotion}
   >
     <div class="wizard">
-      <header class="wizard-header">
-        <h2>{stepTitle}</h2>
-        <div class="step-indicator" aria-hidden="true">
-          {#each visibleSteps as key, index}
-            <span class:selected={key === step} class:done={index < currentStepIndex}>
-              {index + 1}
-            </span>
-          {/each}
-        </div>
-      </header>
+      <RunWizardHeader
+        title={stepTitle}
+        steps={visibleSteps}
+        activeStep={step}
+        currentIndex={currentStepIndex}
+      />
 
       {#if step === 'resume'}
-      <div class="resume-panel step-surface">
-        {#if normalizedRuns.length > 0}
-          <div class="runs" role="list">
-            {#each normalizedRuns as run, i}
-              <label class="run-item" role="listitem">
-                <input
-                  type="radio"
-                  name="resume-run"
-                  bind:group={resumeIndex}
-                  value={i}
-                />
-                <div class="summary">
-                  <div class="id">{run.run_id}</div>
-                  <div class="details">
-                    Floor {run?.map?.floor || 1}, Room {run?.map?.current || 1}, Pressure {run?.map?.rooms?.[0]?.pressure ?? 0}
-                  </div>
-                </div>
-              </label>
-            {/each}
-          </div>
-          <div class="actions">
-            <button class="icon-btn" on:click={handleResume} disabled={resumeDisabled}>Resume Run</button>
-            <button class="icon-btn primary" on:click={() => goToStep('party')}>Start Guided Setup</button>
-          </div>
-        {:else}
-          <p>No active runs found.</p>
-          <div class="actions">
-            <button class="icon-btn primary" on:click={() => goToStep('party')}>Start Guided Setup</button>
-          </div>
-        {/if}
-      </div>
-    {:else if step === 'run-type'}
-      <div class="run-type-panel step-surface">
-        {#if metadataLoading}
-          <p class="loading">Loading configuration...</p>
-        {:else if metadataError}
-          <div class="error">
-            <p>{metadataError}</p>
-            <button class="icon-btn" on:click={() => fetchMetadata({ forceRefresh: true })}>Retry</button>
-          </div>
-        {:else}
-          <div class="run-types" role="list">
-            {#each runTypes as rt}
-              <button
-                type="button"
-                class="run-type-card"
-                class:active={rt.id === runTypeId}
-                on:click={() => handleRunTypeSelect(rt.id)}
-                role="listitem"
-              >
-                <div class="card-title">{rt.label}</div>
-                <p class="card-description">{rt.description}</p>
-                {#if Object.keys(rt.default_modifiers || {}).length > 0}
-                  <div class="card-defaults">
-                    <strong>Defaults</strong>
-                    <ul>
-                      {#each Object.entries(rt.default_modifiers || {}) as [key, value]}
-                        <li>{modifierMap.get(key)?.label || key}: {value}</li>
-                      {/each}
-                    </ul>
-                  </div>
-                {/if}
-              </button>
-            {/each}
-          </div>
-        {/if}
-      </div>
-      <div class="navigation">
-        <button class="ghost" on:click={() => goToStep('party')}>Back</button>
-        <button class="primary" on:click={goToModifiers} disabled={!runTypeId || metadataLoading || metadataError}>Next</button>
-      </div>
-    {:else if step === 'modifiers'}
-      <div class="modifier-panel step-surface">
-        {#if metadataLoading}
-          <p class="loading">Loading configuration...</p>
-        {:else if metadataError}
-          <div class="error">
-            <p>{metadataError}</p>
-            <button class="icon-btn" on:click={() => fetchMetadata({ forceRefresh: true })}>Retry</button>
-          </div>
-        {:else}
-          <div class="modifier-toolbar">
-            <div>
-              <strong>Pressure:</strong>
-              <span class="pressure-value">{pressureValue}</span>
-            </div>
-            {#if pressureTooltip()}
-              <p class="pressure-tooltip">{pressureTooltip()}</p>
-            {/if}
-            <button class="icon-btn" on:click={resetModifiers}>Reset to {activeRunType?.label || 'defaults'}</button>
-          </div>
-          {#if quickStartPresets.length > 0}
-            <div class="recent-presets" role="region" aria-label="Recent modifier presets">
-              <div class="recent-header">
-                <strong>Recent Presets</strong>
-                {#if metadata?.version}
-                  <span class="metadata-hash">Metadata {metadata.version}</span>
-                {/if}
-              </div>
-              <div class="preset-list" role="list">
-                {#each quickStartPresets as preset, index}
-                  <button
-                    type="button"
-                    class="preset-card"
-                    role="listitem"
-                    on:click={() => applyPreset(preset, index)}
-                    aria-label={presetButtonLabel(preset, index)}
-                  >
-                    <div class="preset-title">Preset {index + 1}</div>
-                    <div class="preset-stacks">{preset.stacks.join(' • ')}</div>
-                    <div class="preset-reward-grid">
-                      <div>
-                        <span class="preview-label">EXP</span>
-                        <span class="preview-value">{formatRewardBonus(preset.reward.exp_bonus)}</span>
-                      </div>
-                      <div>
-                        <span class="preview-label">RDR</span>
-                        <span class="preview-value">{formatRewardBonus(preset.reward.rdr_bonus)}</span>
-                      </div>
-                      <div>
-                        <span class="preview-label">Foe</span>
-                        <span class="preview-value">{formatRewardBonus(preset.reward.foe_bonus)}</span>
-                      </div>
-                      <div>
-                        <span class="preview-label">Player</span>
-                        <span class="preview-value">{formatRewardBonus(preset.reward.player_bonus)}</span>
-                      </div>
+        <section class="resume-panel step-surface">
+          {#if normalizedRuns.length > 0}
+            <div class="runs" role="list">
+              {#each normalizedRuns as run, i}
+                <label class="run-item" role="listitem">
+                  <input
+                    type="radio"
+                    name="resume-run"
+                    bind:group={resumeIndex}
+                    value={i}
+                  />
+                  <div class="summary">
+                    <div class="id">{run.run_id}</div>
+                    <div class="details">
+                      Floor {run?.map?.floor || 1}, Room {run?.map?.current || 1}, Pressure {run?.map?.rooms?.[0]?.pressure ?? 0}
                     </div>
-                    {#if preset.metadataVersion}
-                      <div
-                        class="preset-metadata"
-                        class:stale={
-                          currentMetadataHash &&
-                          preset.metadataSignature &&
-                          preset.metadataSignature !== currentMetadataHash
-                        }
-                      >
-                        Metadata {preset.metadataVersion}
-                      </div>
-                    {/if}
-                  </button>
-                {/each}
-              </div>
+                  </div>
+                </label>
+              {/each}
+            </div>
+            <div class="actions">
+              <button class="wizard-button ghost" on:click={handleResume} disabled={resumeDisabled}>Resume Run</button>
+              <button class="wizard-button primary" on:click={() => goToStep('party')}>Start Guided Setup</button>
+            </div>
+          {:else}
+            <p class="empty">No active runs found.</p>
+            <div class="actions">
+              <button class="wizard-button primary" on:click={() => goToStep('party')}>Start Guided Setup</button>
             </div>
           {/if}
-          <div class="modifiers" role="list">
-            {#each selectedModifiers as mod}
-              <div class="modifier" role="listitem">
-                <div class="modifier-header">
-                  <div class="modifier-title">
-                    <span class="modifier-label">{modifierLabel(mod)}</span>
-                    {#if mod.category}
-                      <span class="modifier-category">{mod.category}</span>
+        </section>
+      {:else if step === 'run-type'}
+        <section class="run-type-panel step-surface">
+          <RunTypeGrid
+            {runTypes}
+            activeId={runTypeId}
+            loading={metadataLoading}
+            error={metadataError}
+            onRetry={() => fetchMetadata({ forceRefresh: true })}
+            onSelect={handleRunTypeSelect}
+            getModifierLabel={(key) => modifierMap.get(key)?.label || key}
+          />
+        </section>
+        <WizardNavigation
+          backLabel="Back"
+          onBack={() => goToStep('party')}
+          onNext={goToModifiers}
+          nextDisabled={!runTypeId || metadataLoading || metadataError}
+        />
+      {:else if step === 'modifiers'}
+        <section class="modifier-panel step-surface">
+          {#if metadataLoading}
+            <p class="loading">Loading configuration...</p>
+          {:else if metadataError}
+            <div class="error">
+              <p>{metadataError}</p>
+              <button class="summary-button ghost" type="button" on:click={() => fetchMetadata({ forceRefresh: true })}>
+                Retry
+              </button>
+            </div>
+          {:else}
+            <div class="modifier-layout">
+              <div class="modifier-column">
+                <ModifierList modifiers={selectedModifiers} values={modifierValues} onChange={handleModifierChange} />
+              </div>
+              <aside class="summary-column">
+                <section class="summary-card metadata-card">
+                  <header>
+                    <h3>Run Defaults</h3>
+                    {#if metadata?.version}
+                      <span class="metadata-badge">Metadata {metadata.version}</span>
                     {/if}
+                  </header>
+                  <div class="pressure-row">
+                    <span>Pressure</span>
+                    <span class="pressure-value">{pressureValue}</span>
                   </div>
-                  <div class="modifier-controls">
-                    {#if mod.meta?.tooltipText}
-                      <Tooltip text={mod.meta.tooltipText}>
+                  {#if pressureTooltip()}
+                    <p class="pressure-tooltip">{pressureTooltip()}</p>
+                  {/if}
+                  <button
+                    type="button"
+                    class="summary-button ghost"
+                    on:click={resetModifiers}
+                  >
+                    Reset to {activeRunType?.label || 'defaults'}
+                  </button>
+                </section>
+                {#if quickStartPresets.length > 0}
+                  <section class="summary-card presets-card" role="region" aria-label="Recent modifier presets">
+                    <header>
+                      <h3>Recent Presets</h3>
+                      {#if currentMetadataHash}
+                        <span class="metadata-badge">Signature {currentMetadataHash}</span>
+                      {/if}
+                    </header>
+                    <div class="preset-list" role="list">
+                      {#each quickStartPresets as preset, index}
                         <button
                           type="button"
-                          class="info-trigger"
-                          aria-label={mod.meta.tooltipLabel}
-                          data-tooltip={mod.meta.tooltipText}
+                          class="preset-card"
+                          role="listitem"
+                          on:click={() => applyPreset(preset, index)}
+                          aria-label={presetButtonLabel(preset, index)}
                         >
-                          <span aria-hidden="true">i</span>
+                          <div class="preset-header">
+                            <span class="preset-title">Preset {index + 1}</span>
+                            {#if preset.metadataVersion}
+                              <span
+                                class="preset-metadata"
+                                class:stale={
+                                  currentMetadataHash &&
+                                  preset.metadataSignature &&
+                                  preset.metadataSignature !== currentMetadataHash
+                                }
+                              >
+                                Metadata {preset.metadataVersion}
+                              </span>
+                            {/if}
+                          </div>
+                          <div class="preset-stacks">{preset.stacks.join(' • ')}</div>
+                          <div class="preset-preview-grid">
+                            <div>
+                              <span class="preview-label">EXP</span>
+                              <span class="preview-value">{formatRewardBonus(preset.reward.exp_bonus)}</span>
+                            </div>
+                            <div>
+                              <span class="preview-label">RDR</span>
+                              <span class="preview-value">{formatRewardBonus(preset.reward.rdr_bonus)}</span>
+                            </div>
+                            <div>
+                              <span class="preview-label">Foe</span>
+                              <span class="preview-value">{formatRewardBonus(preset.reward.foe_bonus)}</span>
+                            </div>
+                            <div>
+                              <span class="preview-label">Player</span>
+                              <span class="preview-value">{formatRewardBonus(preset.reward.player_bonus)}</span>
+                            </div>
+                          </div>
                         </button>
-                      </Tooltip>
-                    {/if}
-                    <label>
-                      <span class="sr-only">Stacks</span>
-                      <input
-                        type="number"
-                        min={mod.stacking?.minimum ?? 0}
-                        step={mod.stacking?.step ?? 1}
-                        max={Number.isFinite(mod.stacking?.maximum) ? mod.stacking.maximum : undefined}
-                        value={modifierValues[mod.id] ?? ''}
-                        on:input={(event) => handleModifierChange(mod.id, event.target.value)}
-                      />
-                    </label>
-                  </div>
-                </div>
-                {#if mod.meta?.stackSummary || mod.meta?.effectsSummary || mod.meta?.rewardSummary || mod.meta?.diminishingSummary}
-                  <div class="modifier-meta">
-                    {#if mod.meta?.stackSummary}
-                      <span>{mod.meta.stackSummary}</span>
-                    {/if}
-                    {#if mod.meta?.effectsSummary}
-                      <span>{mod.meta.effectsSummary}</span>
-                    {/if}
-                    {#if mod.meta?.rewardSummary}
-                      <span>{mod.meta.rewardSummary}</span>
-                    {/if}
-                    {#if mod.meta?.diminishingSummary}
-                      <span>{mod.meta.diminishingSummary}</span>
-                    {/if}
-                  </div>
+                      {/each}
+                    </div>
+                  </section>
                 {/if}
-                {#if modifierDescription(mod)}
-                  <p class="modifier-description">{modifierDescription(mod)}</p>
-                {/if}
-                {#if mod.meta?.previewChips?.length}
-                  <div class="modifier-preview" role="list">
-                    {#each mod.meta.previewChips as chip}
-                      <div class="preview-chip" role="listitem">
-                        <span class="chip-stack">{chip.label}</span>
-                        <span class="chip-detail">{chip.detail}</span>
-                      </div>
+                <RewardPreviewCard preview={rewardPreview} formatValue={formatRewardBonus} />
+              </aside>
+            </div>
+          {/if}
+        </section>
+        <WizardNavigation
+          backLabel="Back"
+          onBack={() => goToStep('run-type')}
+          onNext={goToConfirm}
+          nextDisabled={metadataLoading || metadataError}
+        />
+      {:else if step === 'confirm'}
+        <section class="confirm-panel step-surface">
+          {#if metadataLoading}
+            <p class="loading">Loading configuration...</p>
+          {:else if metadataError}
+            <div class="error">
+              <p>{metadataError}</p>
+              <button class="summary-button ghost" type="button" on:click={() => fetchMetadata({ forceRefresh: true })}>
+                Retry
+              </button>
+            </div>
+          {:else}
+            <div class="confirm-grid">
+              <section class="confirm-card">
+                <h3>Party</h3>
+                <ul class="stacked-list">
+                  {#each partySummary as member}
+                    <li>{member}</li>
+                  {/each}
+                </ul>
+              </section>
+              <section class="confirm-card">
+                <h3>Run Type</h3>
+                <p class="confirm-primary">{activeRunType?.label || runTypeId}</p>
+                <p class="confirm-secondary">{activeRunType?.description}</p>
+              </section>
+              <section class="confirm-card">
+                <h3>Modifiers</h3>
+                {#if selectedModifiers.some(isActiveModifier)}
+                  <ul class="stacked-list">
+                    {#each selectedModifiers.filter(isActiveModifier) as mod}
+                      <li>{modifierLabel(mod)}: {mod.value}</li>
                     {/each}
-                  </div>
+                  </ul>
+                {:else}
+                  <p class="confirm-secondary">No additional modifiers selected.</p>
                 {/if}
-              </div>
-            {/each}
-          </div>
-          <div class="reward-preview">
-            <div>
-              <strong>Reward Preview</strong>
+              </section>
+              <RewardPreviewCard preview={rewardPreview} formatValue={formatRewardBonus} />
             </div>
-            <div class="preview-grid">
-              <div>
-                <span class="preview-label">EXP Bonus</span>
-                <span class="preview-value">{formatRewardBonus(rewardPreview.exp_bonus)}</span>
-              </div>
-              <div>
-                <span class="preview-label">RDR Bonus</span>
-                <span class="preview-value">{formatRewardBonus(rewardPreview.rdr_bonus)}</span>
-              </div>
-              <div>
-                <span class="preview-label">Foe Bonus</span>
-                <span class="preview-value">{formatRewardBonus(rewardPreview.foe_bonus)}</span>
-              </div>
-              <div>
-                <span class="preview-label">Player Bonus</span>
-                <span class="preview-value">{formatRewardBonus(rewardPreview.player_bonus)}</span>
-              </div>
-            </div>
-          </div>
-        {/if}
-      </div>
-      <div class="navigation">
-        <button class="ghost" on:click={() => goToStep('run-type')}>Back</button>
-        <button class="primary" on:click={goToConfirm} disabled={metadataLoading || metadataError}>Next</button>
-      </div>
-    {:else if step === 'confirm'}
-      <div class="confirm-panel step-surface">
-        {#if metadataLoading}
-          <p class="loading">Loading configuration...</p>
-        {:else if metadataError}
-          <div class="error">
-            <p>{metadataError}</p>
-            <button class="icon-btn" on:click={() => fetchMetadata({ forceRefresh: true })}>Retry</button>
-          </div>
-        {:else}
-          <section>
-            <h3>Party</h3>
-            <ul>
-              {#each partySummary as member}
-                <li>{member}</li>
-              {/each}
-            </ul>
-          </section>
-          <section>
-            <h3>Run Type</h3>
-            <p>{activeRunType?.label || runTypeId}</p>
-            <p class="card-description">{activeRunType?.description}</p>
-          </section>
-          <section>
-            <h3>Modifiers</h3>
-            {#if selectedModifiers.some(isActiveModifier)}
-              <ul>
-                {#each selectedModifiers.filter(isActiveModifier) as mod}
-                  <li>{modifierLabel(mod)}: {mod.value}</li>
-                {/each}
-              </ul>
-            {:else}
-              <p>No additional modifiers selected.</p>
-            {/if}
-          </section>
-          <section>
-            <h3>Reward Preview</h3>
-            <div class="preview-grid">
-              <div>
-                <span class="preview-label">EXP Bonus</span>
-                <span class="preview-value">{formatRewardBonus(rewardPreview.exp_bonus)}</span>
-              </div>
-              <div>
-                <span class="preview-label">RDR Bonus</span>
-                <span class="preview-value">{formatRewardBonus(rewardPreview.rdr_bonus)}</span>
-              </div>
-              <div>
-                <span class="preview-label">Foe Bonus</span>
-                <span class="preview-value">{formatRewardBonus(rewardPreview.foe_bonus)}</span>
-              </div>
-              <div>
-                <span class="preview-label">Player Bonus</span>
-                <span class="preview-value">{formatRewardBonus(rewardPreview.player_bonus)}</span>
-              </div>
-            </div>
-          </section>
-        {/if}
-      </div>
-      <div class="navigation">
-        <button class="ghost" on:click={() => goToStep('modifiers')}>Back</button>
-        <button class="primary" on:click={startRun} disabled={submitting || metadataLoading || metadataError}>Start Run</button>
-      </div>
-    {/if}
+          {/if}
+        </section>
+        <WizardNavigation
+          backLabel="Back"
+          nextLabel="Start Run"
+          onBack={() => goToStep('modifiers')}
+          onNext={startRun}
+          nextDisabled={submitting || metadataLoading || metadataError}
+        />
+      {/if}
     </div>
   </MenuPanel>
 {/if}
 
 <style>
-  .wizard {
-    --wizard-max-width: 100%;
-    --wizard-inner-max-width: 100%;
-    --wizard-section-gap: clamp(0.65rem, 1.8vw, 1.1rem);
-    --wizard-item-gap: clamp(0.45rem, 1.4vw, 0.8rem);
-    --wizard-action-gap: clamp(0.55rem, 1.6vw, 0.95rem);
+  .run-wizard {
+    --wizard-surface-bg: rgba(10, 16, 28, 0.82);
+    --wizard-surface-border: rgba(153, 201, 255, 0.18);
+    --wizard-card-bg: rgba(17, 23, 38, 0.74);
+    --wizard-card-border: rgba(153, 201, 255, 0.2);
+    --wizard-summary-bg: rgba(17, 23, 38, 0.82);
+    --wizard-summary-border: rgba(173, 211, 255, 0.26);
+    --wizard-border-muted: rgba(255, 255, 255, 0.28);
+    --wizard-border-accent: rgba(173, 211, 255, 0.65);
+    --wizard-focus-outline: rgba(180, 220, 255, 0.8);
+    --wizard-text-muted: rgba(255, 255, 255, 0.72);
     display: flex;
     flex-direction: column;
-    gap: var(--wizard-section-gap);
-    width: var(--wizard-max-width);
-    max-width: var(--wizard-max-width);
-    flex: 1 1 auto;
-    align-self: stretch;
-    margin: 0;
-    min-height: 0;
-    height: 100%;
+    gap: clamp(0.75rem, 1.9vw, 1.2rem);
+    width: 100%;
+  }
+
+  .wizard {
+    display: flex;
+    flex-direction: column;
+    gap: clamp(0.75rem, 1.9vw, 1.2rem);
+    width: 100%;
   }
 
   .wizard > * {
     min-width: 0;
   }
 
-  .wizard-header,
-  .step-surface,
-  .navigation {
-    width: min(100%, var(--wizard-inner-max-width));
-    margin-left: auto;
-    margin-right: auto;
-  }
-
-  .wizard-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: clamp(0.6rem, 1.6vw, 1rem);
-    flex-wrap: wrap;
-  }
-
-  .wizard-header h2 {
-    margin: 0;
-    font-size: clamp(1.25rem, 2.2vw, 1.6rem);
-    font-weight: 600;
-    flex: 1 1 auto;
-    min-width: min(12rem, 100%);
-  }
-
-  .step-indicator {
-    display: inline-flex;
-    flex-wrap: wrap;
-    gap: clamp(0.35rem, 1vw, 0.55rem);
-    justify-content: flex-end;
-  }
-
-  .step-indicator span {
-    width: 1.75rem;
-    height: 1.75rem;
-    border-radius: 50%;
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.85rem;
-    opacity: 0.5;
-  }
-
-  .step-indicator span.selected {
-    background: rgba(120, 180, 255, 0.3);
-    opacity: 1;
-  }
-
-  .step-indicator span.done {
-    background: rgba(120, 180, 255, 0.16);
-    opacity: 0.85;
-  }
-
   .step-surface {
-    width: 100%;
-    box-sizing: border-box;
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    padding: clamp(0.65rem, 1.8vw, 1.1rem);
+    background: var(--wizard-surface-bg);
+    border: 1px solid var(--wizard-surface-border);
+    padding: clamp(0.75rem, 1.9vw, 1.2rem);
     display: flex;
     flex-direction: column;
-    gap: var(--wizard-section-gap);
-    flex: 1 1 auto;
-    min-height: 0;
+    gap: clamp(0.65rem, 1.5vw, 0.95rem);
   }
 
-  .resume-panel {
-    padding: clamp(0.55rem, 1.6vw, 0.9rem);
+  .party-standalone {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+  }
+
+  .party-step {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .wizard-button,
+  .summary-button {
+    appearance: none;
+    border: 1px solid var(--wizard-border-muted);
+    background: rgba(255, 255, 255, 0.03);
+    color: inherit;
+    padding: clamp(0.55rem, 1.5vw, 0.85rem) clamp(1rem, 2.5vw, 1.5rem);
+    font-size: 0.95rem;
+    font-weight: 550;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    cursor: pointer;
+    border-radius: 0;
+    transition: background 160ms ease, border-color 160ms ease, transform 120ms ease;
+  }
+
+  .wizard-button:focus-visible,
+  .summary-button:focus-visible {
+    outline: 2px solid var(--wizard-focus-outline);
+    outline-offset: 2px;
+  }
+
+  .wizard-button.primary {
+    background: linear-gradient(120deg, rgba(153, 201, 255, 0.55), rgba(113, 169, 240, 0.55));
+    border-color: rgba(153, 201, 255, 0.7);
+    color: #0b0f19;
+  }
+
+  .wizard-button.primary:not(:disabled):hover {
+    transform: translateY(-1px);
+    background: linear-gradient(120deg, rgba(173, 211, 255, 0.75), rgba(133, 189, 250, 0.75));
+    border-color: rgba(173, 211, 255, 0.85);
+  }
+
+  .wizard-button.ghost,
+  .summary-button.ghost {
+    background: rgba(255, 255, 255, 0.03);
+  }
+
+  .wizard-button.ghost:not(:disabled):hover,
+  .summary-button.ghost:not(:disabled):hover {
+    border-color: var(--wizard-border-accent);
+    background: rgba(173, 211, 255, 0.12);
+  }
+
+  .wizard-button:disabled,
+  .summary-button:disabled {
+    opacity: 0.55;
+    cursor: default;
+  }
+
+  .actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: clamp(0.55rem, 1.6vw, 0.95rem);
   }
 
   .runs {
     display: flex;
     flex-direction: column;
-    gap: var(--wizard-item-gap);
-    margin: 0;
+    gap: clamp(0.55rem, 1.5vw, 0.9rem);
   }
 
   .run-item {
     display: flex;
-    gap: clamp(0.55rem, 1.4vw, 0.9rem);
+    gap: clamp(0.6rem, 1.4vw, 0.9rem);
     align-items: flex-start;
-    background: rgba(255, 255, 255, 0.06);
-    padding: clamp(0.5rem, 1.5vw, 0.85rem);
-    min-width: 0;
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: var(--wizard-card-bg);
+    border: 1px solid var(--wizard-card-border);
+    padding: clamp(0.6rem, 1.6vw, 0.95rem);
   }
 
   .run-item input {
@@ -1694,526 +1603,264 @@
     display: flex;
     flex-direction: column;
     gap: 0.2rem;
-    flex: 1 1 auto;
-    min-width: 0;
   }
 
   .id {
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
     font-size: 0.8rem;
-    opacity: 0.9;
-    word-break: break-word;
+    letter-spacing: 0.02em;
   }
 
   .details {
     font-size: 0.85rem;
-    opacity: 0.85;
     line-height: 1.35;
+    color: var(--wizard-text-muted);
   }
 
-  .actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: var(--wizard-action-gap);
-    margin-top: clamp(0.35rem, 1vw, 0.6rem);
-    flex-wrap: wrap;
-  }
-
-  .icon-btn {
-    background: rgba(255, 255, 255, 0.1);
-    border: none;
-    border-radius: 0;
-    padding: clamp(0.45rem, 1.4vw, 0.75rem) clamp(0.75rem, 2vw, 1.2rem);
-    cursor: pointer;
-    color: inherit;
-    transition: background 0.18s ease;
-  }
-
-  .actions .icon-btn {
-    flex: 1 1 160px;
-    min-width: min(220px, 100%);
-  }
-
-  .icon-btn:hover {
-    background: rgba(120, 180, 255, 0.22);
-  }
-
-  .icon-btn.primary {
-    background: rgba(120, 180, 255, 0.28);
-  }
-
-  .icon-btn:disabled {
-    opacity: 0.5;
-    cursor: default;
-  }
-
-  .party-standalone {
-    --wizard-section-gap: clamp(0.65rem, 1.8vw, 1.1rem);
-    display: flex;
-    flex: 1 1 auto;
-    width: 100%;
-    min-height: 0;
-  }
-
-  .party-step {
-    display: flex;
-    flex-direction: column;
-    flex: 1 1 auto;
-    gap: var(--wizard-section-gap, clamp(0.65rem, 1.8vw, 1.1rem));
-    width: 100%;
-    min-height: 0;
-  }
-
-  .party-step :global(.panel) {
-    flex: 1 1 auto;
-    min-height: 100%;
-  }
-
-  .navigation {
-    display: flex;
-    justify-content: flex-end;
-    align-items: center;
-    gap: var(--wizard-action-gap);
-    flex-wrap: wrap;
-    margin-top: clamp(0.35rem, 1vw, 0.6rem);
-  }
-
-  .navigation button {
-    padding: clamp(0.5rem, 1.5vw, 0.85rem) clamp(1rem, 2.6vw, 1.6rem);
-    border: none;
-    cursor: pointer;
-    border-radius: 0;
-    font-size: 0.95rem;
-    flex: 1 1 160px;
-    min-width: min(220px, 100%);
-  }
-
-  .navigation .ghost {
-    background: transparent;
-    color: inherit;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-  }
-
-  .navigation .primary {
-    background: rgba(120, 180, 255, 0.35);
-    color: inherit;
-  }
-
-  .navigation button:disabled {
-    opacity: 0.5;
-    cursor: default;
-  }
-
-  .run-types {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: var(--wizard-item-gap);
-  }
-
-  .run-type-card {
-    background: rgba(255, 255, 255, 0.06);
-    border: 1px solid transparent;
-    padding: clamp(0.65rem, 1.6vw, 1rem);
-    text-align: left;
-    cursor: pointer;
-    color: inherit;
-    display: flex;
-    flex-direction: column;
-    gap: clamp(0.35rem, 1vw, 0.6rem);
-    min-width: 0;
-  }
-
-  .run-type-card:hover,
-  .run-type-card.active {
-    border-color: rgba(120, 180, 255, 0.5);
-    background: rgba(120, 180, 255, 0.12);
-  }
-
-  .card-title {
-    font-weight: 600;
+  .empty {
     margin: 0;
-  }
-
-  .card-description {
-    font-size: 0.9rem;
-    opacity: 0.85;
-    margin: 0;
-    line-height: 1.45;
-  }
-
-  .card-defaults {
-    margin: 0;
-    font-size: 0.85rem;
-    opacity: 0.85;
-    line-height: 1.35;
-  }
-
-  .card-defaults ul {
-    margin: 0.25rem 0 0;
-    padding-left: 1rem;
+    color: var(--wizard-text-muted);
   }
 
   .modifier-panel {
     display: flex;
     flex-direction: column;
-    gap: var(--wizard-section-gap);
-    flex: 1 1 auto;
-    min-height: 0;
+    gap: clamp(0.75rem, 1.8vw, 1.15rem);
   }
 
-  .modifier-toolbar {
+  .modifier-layout {
+    display: grid;
+    gap: clamp(0.8rem, 2vw, 1.4rem);
+  }
+
+  .modifier-column,
+  .summary-column {
     display: flex;
     flex-direction: column;
-    gap: clamp(0.35rem, 1vw, 0.6rem);
-    background: rgba(255, 255, 255, 0.05);
-    padding: clamp(0.55rem, 1.6vw, 0.9rem) clamp(0.7rem, 2vw, 1.2rem);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    gap: clamp(0.75rem, 1.8vw, 1.2rem);
   }
 
-  .recent-presets {
+  .summary-card {
+    background: var(--wizard-summary-bg);
+    border: 1px solid var(--wizard-summary-border);
+    padding: clamp(0.7rem, 1.6vw, 1rem);
     display: flex;
     flex-direction: column;
-    gap: clamp(0.45rem, 1vw, 0.75rem);
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    padding: clamp(0.55rem, 1.6vw, 0.9rem) clamp(0.7rem, 2vw, 1.2rem);
+    gap: clamp(0.45rem, 1vw, 0.7rem);
   }
 
-  .recent-header {
+  .summary-card header,
+  .preset-header {
     display: flex;
-    justify-content: space-between;
     align-items: baseline;
+    justify-content: space-between;
     gap: 0.5rem;
     flex-wrap: wrap;
   }
 
-  .metadata-hash {
-    font-size: 0.75rem;
-    opacity: 0.6;
-    text-transform: uppercase;
+  .summary-card h3 {
+    margin: 0;
+    font-size: 0.95rem;
     letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .metadata-badge {
+    font-size: 0.7rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--wizard-text-muted);
+  }
+
+  .pressure-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.95rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+  }
+
+  .pressure-tooltip {
+    margin: 0;
+    font-size: 0.85rem;
+    line-height: 1.35;
+    color: var(--wizard-text-muted);
+  }
+
+  .pressure-value {
+    font-variant-numeric: tabular-nums;
   }
 
   .preset-list {
     display: grid;
-    gap: clamp(0.45rem, 1.2vw, 0.75rem);
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: clamp(0.55rem, 1.6vw, 0.95rem);
   }
 
   .preset-card {
-    text-align: left;
     display: flex;
     flex-direction: column;
-    gap: clamp(0.35rem, 1vw, 0.55rem);
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    padding: clamp(0.5rem, 1.6vw, 0.85rem);
-    color: inherit;
+    gap: clamp(0.4rem, 1vw, 0.6rem);
+    background: var(--wizard-card-bg);
+    border: 1px solid var(--wizard-card-border);
+    padding: clamp(0.55rem, 1.5vw, 0.9rem);
+    text-align: left;
     cursor: pointer;
+    color: inherit;
+    transition: border-color 160ms ease, background 160ms ease, transform 120ms ease;
   }
 
   .preset-card:hover,
   .preset-card:focus-visible {
-    border-color: rgba(120, 180, 255, 0.5);
-    background: rgba(120, 180, 255, 0.12);
     outline: none;
+    border-color: var(--wizard-border-accent);
+    background: rgba(27, 37, 58, 0.85);
   }
 
   .preset-title {
     font-weight: 600;
-    font-size: 0.95rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
   }
 
   .preset-stacks {
     font-size: 0.85rem;
-    opacity: 0.85;
+    color: var(--wizard-text-muted);
   }
 
-  .preset-reward-grid {
+  .preset-preview-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.35rem;
+    gap: clamp(0.35rem, 1vw, 0.6rem);
   }
 
-  .preset-reward-grid .preview-label {
-    font-size: 0.7rem;
-    opacity: 0.65;
+  .preview-label {
+    display: block;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--wizard-text-muted);
   }
 
-  .preset-reward-grid .preview-value {
-    font-size: 0.85rem;
+  .preview-value {
+    font-size: 0.95rem;
+    font-variant-numeric: tabular-nums;
   }
 
   .preset-metadata {
     font-size: 0.7rem;
-    opacity: 0.65;
-    text-transform: uppercase;
     letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--wizard-text-muted);
   }
 
   .preset-metadata.stale {
-    color: #f7ba61;
-    opacity: 0.95;
-  }
-
-  :global(.panel.run-wizard.modifiers-stage) {
-    overflow: hidden;
-  }
-
-  :global(.panel.run-wizard.modifiers-stage .panel-content) {
-    height: 100%;
-  }
-
-  .pressure-value {
-    font-weight: 600;
-    margin-left: 0.35rem;
-  }
-
-  .pressure-tooltip {
-    font-size: 0.85rem;
-    opacity: 0.8;
-    margin: 0;
-  }
-
-  .modifiers {
-    display: flex;
-    flex-direction: column;
-    gap: var(--wizard-item-gap);
-    flex: 1 1 auto;
-    min-height: 0;
-    overflow-y: auto;
-    padding-right: 0.35rem;
-  }
-
-  .modifier {
-    background: rgba(255, 255, 255, 0.05);
-    padding: clamp(0.6rem, 1.6vw, 1rem);
-    display: flex;
-    flex-direction: column;
-    gap: clamp(0.35rem, 1vw, 0.55rem);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-  }
-
-  .modifier-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: clamp(0.45rem, 1.2vw, 0.75rem);
-    flex-wrap: wrap;
-  }
-
-  .modifier-title {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 0.35rem;
-  }
-
-  .modifier-label {
-    font-weight: 600;
-  }
-
-  .modifier-category {
-    font-size: 0.75rem;
-    opacity: 0.7;
-    margin-left: 0.4rem;
-    text-transform: uppercase;
-  }
-
-  .modifier-controls {
-    display: flex;
-    flex-wrap: wrap;
-    gap: clamp(0.35rem, 1vw, 0.6rem);
-    align-items: center;
-  }
-
-  .modifier-controls input {
-    width: 5rem;
-    padding: 0.35rem;
-    background: rgba(0, 0, 0, 0.3);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    color: inherit;
-  }
-
-  .info-trigger {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 1.8rem;
-    height: 1.8rem;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    background: rgba(255, 255, 255, 0.06);
-    color: inherit;
-    cursor: pointer;
-    font-size: 0.9rem;
-    line-height: 1;
-  }
-
-  .info-trigger:hover,
-  .info-trigger:focus-visible {
-    background: rgba(120, 180, 255, 0.22);
-    outline: none;
-  }
-
-  .modifier-meta {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.35rem;
-    font-size: 0.75rem;
-    opacity: 0.85;
-  }
-
-  .modifier-meta span {
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    padding: 0.2rem 0.45rem;
-  }
-
-  .modifier-description {
-    font-size: 0.85rem;
-    opacity: 0.82;
-    margin: 0;
-    line-height: 1.4;
-  }
-
-  .modifier-preview {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: clamp(0.35rem, 1vw, 0.6rem);
-  }
-
-  .preview-chip {
-    display: flex;
-    flex-direction: column;
-    gap: 0.2rem;
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    padding: clamp(0.4rem, 1.2vw, 0.65rem);
-  }
-
-  .chip-stack {
-    font-size: 0.75rem;
-    opacity: 0.7;
-    text-transform: uppercase;
-  }
-
-  .chip-detail {
-    font-size: 0.85rem;
-    font-weight: 600;
-  }
-
-  .reward-preview {
-    display: flex;
-    flex-direction: column;
-    gap: clamp(0.4rem, 1.2vw, 0.7rem);
-  }
-
-  .preview-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-    gap: var(--wizard-item-gap);
-  }
-
-  .preview-label {
-    font-size: 0.75rem;
-    opacity: 0.75;
-    display: block;
-  }
-
-  .preview-value {
-    font-size: 1rem;
-    font-weight: 600;
+    color: #ffb3c1;
   }
 
   .confirm-panel {
-    display: grid;
-    gap: var(--wizard-section-gap);
+    display: flex;
+    flex-direction: column;
+    gap: clamp(0.75rem, 1.9vw, 1.2rem);
   }
 
-  .confirm-panel section {
-    background: rgba(255, 255, 255, 0.05);
+  .confirm-grid {
+    display: grid;
+    gap: clamp(0.75rem, 1.9vw, 1.2rem);
+  }
+
+  .confirm-card {
+    background: var(--wizard-summary-bg);
+    border: 1px solid var(--wizard-summary-border);
     padding: clamp(0.65rem, 1.6vw, 1rem);
     display: flex;
     flex-direction: column;
-    gap: clamp(0.35rem, 1vw, 0.6rem);
+    gap: clamp(0.4rem, 1vw, 0.6rem);
   }
 
-  .confirm-panel h3 {
-    margin: 0;
+  .confirm-grid :global(.reward-card) {
+    background: var(--wizard-summary-bg);
+    border: 1px solid var(--wizard-summary-border);
+    padding: clamp(0.65rem, 1.6vw, 1rem);
+    display: flex;
+    flex-direction: column;
+    gap: clamp(0.4rem, 1vw, 0.6rem);
   }
 
-  .confirm-panel ul,
-  .confirm-panel p {
+  .confirm-card h3 {
     margin: 0;
+    font-size: 0.95rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .confirm-primary {
+    margin: 0;
+    font-weight: 600;
+    font-size: 1rem;
+  }
+
+  .confirm-secondary {
+    margin: 0;
+    font-size: 0.9rem;
+    line-height: 1.4;
+    color: var(--wizard-text-muted);
+  }
+
+  .stacked-list {
+    margin: 0;
+    padding-left: 1.1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    font-size: 0.9rem;
+  }
+
+  .stacked-list li {
+    line-height: 1.4;
   }
 
   .loading {
-    opacity: 0.8;
+    margin: 0;
+    font-size: 0.95rem;
+    color: var(--wizard-text-muted);
   }
 
   .error {
     display: flex;
     flex-direction: column;
-    gap: clamp(0.45rem, 1.2vw, 0.7rem);
+    gap: clamp(0.45rem, 1vw, 0.65rem);
+    background: rgba(46, 12, 20, 0.78);
+    border: 1px solid rgba(255, 117, 133, 0.45);
+    padding: clamp(0.7rem, 1.6vw, 1rem);
   }
 
-  .sr-only {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    margin: -1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-    border: 0;
+  .error p {
+    margin: 0;
+    font-weight: 600;
   }
 
-  @media (min-width: 768px) {
-    .actions .icon-btn,
-    .navigation button {
-      flex: 0 0 auto;
-      min-width: 0;
+  @media (min-width: 900px) {
+    .modifier-layout {
+      grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+    }
+
+    .preset-list {
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    }
+
+    .confirm-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .confirm-grid :global(.reward-card) {
+      grid-column: span 2;
     }
   }
 
   @media (max-width: 720px) {
-    .wizard {
-      --wizard-inner-max-width: 100%;
-    }
-
-    .wizard-header {
-      align-items: flex-start;
-    }
-
-    .step-indicator {
-      justify-content: flex-start;
-    }
-
-    .actions,
-    .navigation {
-      justify-content: stretch;
-    }
-
-    .actions .icon-btn,
-    .navigation button {
-      flex: 1 1 120px;
-    }
-  }
-
-  @media (max-width: 480px) {
-    .step-indicator span {
-      width: 1.5rem;
-      height: 1.5rem;
-      font-size: 0.8rem;
-    }
-
-    .run-types {
-      grid-template-columns: minmax(0, 1fr);
-    }
-
-    .modifier-controls input {
-      width: min(100%, 5.5rem);
+    .wizard-button,
+    .summary-button {
+      flex: 1 1 100%;
     }
   }
 </style>

@@ -94,8 +94,8 @@ const BASE_METADATA = {
       stacking: { minimum: 0, maximum: null, step: 1, default: 0 },
       grants_reward_bonus: true,
       reward_bonuses: {
-        exp_bonus_per_stack: 0.5,
-        rdr_bonus_per_stack: 0.5
+        exp_bonus_per_stack: 0.01,
+        rdr_bonus_per_stack: 0.01
       },
       effects: {
         stat: 'atk',
@@ -115,10 +115,10 @@ const BASE_METADATA = {
       stacking: { minimum: 0, maximum: 5, step: 1, default: 0 },
       grants_reward_bonus: false,
       reward_bonuses: {
-        exp_bonus_first_stack: 0.05,
-        exp_bonus_additional_stack: 0.06,
-        rdr_bonus_first_stack: 0.05,
-        rdr_bonus_additional_stack: 0.06
+        exp_bonus_first_stack: 0.001,
+        exp_bonus_additional_stack: 0.0012,
+        rdr_bonus_first_stack: 0.001,
+        rdr_bonus_additional_stack: 0.0012
       },
       effects: {
         primary_penalty_per_stack: 0.001,
@@ -127,7 +127,7 @@ const BASE_METADATA = {
       },
       preview: [
         { stacks: 0, effective_multiplier: 1, bonus_rdr: 0, bonus_exp: 0 },
-        { stacks: 1, effective_multiplier: 0.999, bonus_rdr: 0.05, bonus_exp: 0.05 }
+        { stacks: 1, effective_multiplier: 0.999, bonus_rdr: 0.001, bonus_exp: 0.001 }
       ]
     }
   ],
@@ -221,8 +221,8 @@ describe('RunChooser wizard flow', () => {
     expect(screen.getByRole('heading', { name: 'Review & Start' })).toBeTruthy();
     expect(screen.getByText('Pressure: 7')).toBeTruthy();
     expect(screen.getByText('Enemy Buff: 3')).toBeTruthy();
-    expect(readRewardValue('RDR Bonus')).toBe('+150%');
-    expect(readRewardValue('EXP Bonus')).toBe('+150%');
+    expect(readRewardValue('RDR Bonus')).toBe('+3%');
+    expect(readRewardValue('EXP Bonus')).toBe('+3%');
 
     const startButton = screen.getByRole('button', { name: 'Start Run' });
     await fireEvent.click(startButton);
@@ -277,8 +277,8 @@ describe('RunChooser wizard flow', () => {
         return {
           ...entry,
           reward_bonuses: {
-            exp_bonus_per_stack: 0.75,
-            rdr_bonus_per_stack: 0.75
+            exp_bonus_per_stack: 0.015,
+            rdr_bonus_per_stack: 0.015
           }
         };
       }
@@ -316,8 +316,8 @@ describe('RunChooser wizard flow', () => {
     await fireEvent.click(goToModifiers);
     await tick();
 
-    expect(readRewardValue('RDR Bonus')).toBe('+100%');
-    expect(readRewardValue('EXP Bonus')).toBe('+100%');
+    expect(readRewardValue('RDR Bonus')).toBe('+2%');
+    expect(readRewardValue('EXP Bonus')).toBe('+2%');
 
     component.$set({ metadataHash: 'refresh-hash' });
 
@@ -325,8 +325,8 @@ describe('RunChooser wizard flow', () => {
     await tick();
 
     await waitFor(() => {
-      expect(readRewardValue('RDR Bonus')).toBe('+150%');
-      expect(readRewardValue('EXP Bonus')).toBe('+150%');
+      expect(readRewardValue('RDR Bonus')).toBe('+3%');
+      expect(readRewardValue('EXP Bonus')).toBe('+3%');
     });
   });
 
@@ -431,17 +431,17 @@ describe('RunChooser wizard flow', () => {
     const foeTooltip = screen.getByRole('button', { name: /Enemy Buff modifier details/i });
     const foeTooltipText = foeTooltip.getAttribute('data-tooltip') || '';
     expect(foeTooltipText).toContain('Each stack modifies attack by +1% Attack');
-    expect(foeTooltipText).toContain('+50% EXP');
+    expect(foeTooltipText).toContain('+1% EXP');
 
     const playerTooltip = screen.getByRole('button', { name: /Stat Down modifier details/i });
     const playerTooltipText = playerTooltip.getAttribute('data-tooltip') || '';
     expect(playerTooltipText).toContain('Each stack reduces all player stats by 0.1%');
     expect(playerTooltipText).toContain('Stacks beyond 500 reduce stats by only 0.0001%');
-    expect(playerTooltipText).toContain('+5% RDR');
+    expect(playerTooltipText).toContain('0.1% RDR');
 
     expect(container.textContent).toContain('Effects: +1% Attack/stack');
     expect(container.textContent).toContain('Effects: -0.1% stats/stack');
-    expect(container.textContent).toContain('RDR +5%');
+    expect(container.textContent).toContain('RDR +0.1%');
   });
 
   test('quick start presets surface recent modifier selections', async () => {
