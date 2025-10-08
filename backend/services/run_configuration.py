@@ -132,7 +132,7 @@ def _character_stat_penalty(stacks: int) -> dict[str, Any]:
     bonus_rdr = 0.0
     bonus_exp = 0.0
     if stacks > 0:
-        bonus_rdr = 0.05 + max(0, stacks - 1) * 0.06
+        bonus_rdr = 0.001 + max(0, stacks - 1) * 0.0012
         bonus_exp = bonus_rdr
     return {
         "stacks": stacks,
@@ -205,8 +205,8 @@ _MODIFIER_DEFINITIONS: dict[str, dict[str, Any]] = {
             "source": "autofighter.effects.calculate_diminishing_returns",
         },
         "reward_bonuses": {
-            "exp_bonus_per_stack": 0.5,
-            "rdr_bonus_per_stack": 0.5,
+            "exp_bonus_per_stack": 0.01,
+            "rdr_bonus_per_stack": 0.01,
         },
         "preview_stacks": [0, 1, 5, 10],
         "effects": lambda stacks: _percent_modifier_effect(0.01, stacks),
@@ -231,8 +231,8 @@ _MODIFIER_DEFINITIONS: dict[str, dict[str, Any]] = {
             "source": "autofighter.effects.calculate_diminishing_returns",
         },
         "reward_bonuses": {
-            "exp_bonus_per_stack": 0.5,
-            "rdr_bonus_per_stack": 0.5,
+            "exp_bonus_per_stack": 0.01,
+            "rdr_bonus_per_stack": 0.01,
         },
         "preview_stacks": [0, 1, 5, 10],
         "effects": lambda stacks: _foe_modifier_effect("max_hp", 0.5, stacks),
@@ -257,8 +257,8 @@ _MODIFIER_DEFINITIONS: dict[str, dict[str, Any]] = {
             "source": "autofighter.effects.calculate_diminishing_returns",
         },
         "reward_bonuses": {
-            "exp_bonus_per_stack": 0.5,
-            "rdr_bonus_per_stack": 0.5,
+            "exp_bonus_per_stack": 0.01,
+            "rdr_bonus_per_stack": 0.01,
         },
         "preview_stacks": [0, 1, 5, 10],
         "effects": lambda stacks: _foe_modifier_effect("mitigation", 0.00001, stacks),
@@ -283,8 +283,8 @@ _MODIFIER_DEFINITIONS: dict[str, dict[str, Any]] = {
             "source": "autofighter.effects.calculate_diminishing_returns",
         },
         "reward_bonuses": {
-            "exp_bonus_per_stack": 0.5,
-            "rdr_bonus_per_stack": 0.5,
+            "exp_bonus_per_stack": 0.01,
+            "rdr_bonus_per_stack": 0.01,
         },
         "preview_stacks": [0, 1, 5, 10],
         "effects": lambda stacks: _foe_modifier_effect("vitality", 0.00001, stacks),
@@ -304,8 +304,8 @@ _MODIFIER_DEFINITIONS: dict[str, dict[str, Any]] = {
             "scaling_type": "additive",
         },
         "reward_bonuses": {
-            "exp_bonus_per_stack": 0.5,
-            "rdr_bonus_per_stack": 0.5,
+            "exp_bonus_per_stack": 0.01,
+            "rdr_bonus_per_stack": 0.01,
         },
         "preview_stacks": [0, 1, 5, 10],
         "effects": lambda stacks: _percent_modifier_effect(0.01, stacks),
@@ -324,8 +324,8 @@ _MODIFIER_DEFINITIONS: dict[str, dict[str, Any]] = {
             "scaling_type": "additive",
         },
         "reward_bonuses": {
-            "exp_bonus_per_stack": 0.5,
-            "rdr_bonus_per_stack": 0.5,
+            "exp_bonus_per_stack": 0.01,
+            "rdr_bonus_per_stack": 0.01,
         },
         "preview_stacks": [0, 1, 5, 10],
         "effects": lambda stacks: _percent_modifier_effect(0.01, stacks),
@@ -347,10 +347,10 @@ _MODIFIER_DEFINITIONS: dict[str, dict[str, Any]] = {
             "overflow_threshold": 500,
         },
         "reward_bonuses": {
-            "exp_bonus_first_stack": 0.05,
-            "exp_bonus_additional_stack": 0.06,
-            "rdr_bonus_first_stack": 0.05,
-            "rdr_bonus_additional_stack": 0.06,
+            "exp_bonus_first_stack": 0.001,
+            "exp_bonus_additional_stack": 0.0012,
+            "rdr_bonus_first_stack": 0.001,
+            "rdr_bonus_additional_stack": 0.0012,
         },
         "preview_stacks": [0, 1, 2, 10, 100, 500, 600],
         "effects": _character_stat_penalty,
@@ -531,7 +531,7 @@ def validate_run_configuration(
         )
 
     reward_bonuses = {
-        "foe_modifier_bonus": foe_reward_stacks * 0.5,
+        "foe_modifier_bonus": foe_reward_stacks * 0.01,
         "player_modifier_bonus": player_bonus,
     }
     reward_bonuses["exp_bonus"] = reward_bonuses["foe_modifier_bonus"] + reward_bonuses["player_modifier_bonus"]

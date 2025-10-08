@@ -39,11 +39,11 @@ payload, and the legacy `pressure` fallback. The helper:
 4. Normalises stack counts, enforcing integer minimums and raising
    `ValueError` for unknown modifiers or invalid combinations.
 5. Computes reward bonuses:
-   - Foe-focused modifiers grant +50% experience and rare drop rate per stack
-     via the `foe_modifier_bonus` field.
+   - Foe-focused modifiers grant +1% experience and rare drop rate per stack via
+     the `foe_modifier_bonus` field.
    - `character_stat_down` applies the tiered stat penalty (0.001× per stack up
-     to 500 stacks, then 0.000001×) and returns the matching 5% + 1% per extra
-     stack bonus in `player_modifier_bonus`.
+     to 500 stacks, then 0.000001×) and returns the matching 0.1% + 0.12% per
+     extra stack bonus in `player_modifier_bonus`.
 6. Builds a snapshot with modifier details, pressure math, and aggregate
    rewards that is stored with the run.
 
