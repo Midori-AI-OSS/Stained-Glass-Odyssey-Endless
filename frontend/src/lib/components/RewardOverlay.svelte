@@ -145,6 +145,9 @@
   let dropPopTransition = null;
   let lastDropSignature = null;
   let lastReducedMotion = null;
+  let lootSfxEnabled = false;
+  let lootSfxBlocked = false;
+  let lootSfxNoticeLogged = false;
 
   $: dropPopTransition = reducedMotion
     ? null
@@ -171,6 +174,7 @@
   }
 
   function playRewardDropAudio() {
+    if (!lootSfxEnabled || lootSfxBlocked) return;
     if (reducedMotion) return;
     if (normalizedSfxVolume <= 0) {
       stopDropAudio(true);
@@ -185,7 +189,30 @@
     }
     const playPromise = dropSfxPlayer.play();
     if (playPromise && typeof playPromise.catch === 'function') {
-      playPromise.catch(() => {});
+      playPromise.catch((error) => {
+        if (error?.name === 'NotAllowedError') {
+          lootSfxEnabled = false;
+          lootSfxBlocked = true;
+          if (!lootSfxNoticeLogged) {
+            console.info('Reward drop audio blocked until user interaction enables playback.');
+            lootSfxNoticeLogged = true;
+          }
+        }
+      });
+    }
+  }
+
+  function handleLootSfxGesture() {
+    if (lootSfxBlocked) {
+      lootSfxBlocked = false;
+    }
+    lootSfxEnabled = true;
+    lootSfxNoticeLogged = false;
+    if (dropSfxPlayer && typeof dropSfxPlayer.setVolume === 'function') {
+      dropSfxPlayer.setVolume(normalizedSfxVolume);
+    }
+    if (visibleDrops.length > 0) {
+      playRewardDropAudio();
     }
   }
 
@@ -282,6 +309,9 @@
     stopDropAudio(true);
     lastDropSignature = null;
     lastReducedMotion = null;
+    lootSfxEnabled = false;
+    lootSfxBlocked = false;
+    lootSfxNoticeLogged = false;
   });
 
   // Show Next Room button when there's loot but no choices
@@ -513,7 +543,13 @@
   
 </style>
 
-<div class="layout" data-reduced-motion={dataReducedMotion} data-sfx-volume={dataSfxVolume}>
+<div
+  class="layout"
+  data-reduced-motion={dataReducedMotion}
+  data-sfx-volume={dataSfxVolume}
+  on:pointerdown={handleLootSfxGesture}
+  on:keydown={handleLootSfxGesture}
+>
   {#if showCards}
   <h3 class="section-title">Choose a Card</h3>
   <div class="choices">
