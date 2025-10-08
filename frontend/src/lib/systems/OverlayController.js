@@ -20,6 +20,24 @@ function normalizeErrorPayload(data = {}) {
     }
     out.message = msg;
     if (typeof out.traceback === 'string') out.traceback = out.traceback.trim();
+    const context = out.context;
+    if (context && typeof context === 'object') {
+      const source = Array.isArray(context.source)
+        ? context.source.map((line = {}) => ({
+            line: typeof line.line === 'number' ? line.line : Number.parseInt(line.line, 10) || 0,
+            code: typeof line.code === 'string' ? line.code : '',
+            highlight: Boolean(line.highlight)
+          }))
+        : [];
+      out.context = {
+        file: typeof context.file === 'string' ? context.file : '',
+        line: typeof context.line === 'number' ? context.line : Number.parseInt(context.line, 10) || 0,
+        function: typeof context.function === 'string' ? context.function : '',
+        source
+      };
+    } else {
+      out.context = null;
+    }
     // Always log normalized errors to aid debugging
     try { console.error('openOverlay(error):', out); } catch {}
     return out;

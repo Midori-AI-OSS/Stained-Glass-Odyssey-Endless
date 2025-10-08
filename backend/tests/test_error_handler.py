@@ -43,6 +43,11 @@ async def test_error_handler_returns_traceback(app_client):
     data = await response.get_json()
     assert "traceback" in data
     assert "RuntimeError" in data["traceback"]
+    assert "context" in data
+    assert data["context"]["file"].endswith("test_error_handler.py")
+    assert data["context"]["function"] == "explode"
+    assert isinstance(data["context"].get("source"), list)
+    assert any(line.get("highlight") for line in data["context"]["source"])
     assert response.headers["Access-Control-Allow-Origin"] == "*"
     assert called["flag"] is True
 
@@ -54,4 +59,5 @@ async def test_http_exception_does_not_shutdown(app_client):
     assert response.status_code == 404
     data = await response.get_json()
     assert "traceback" not in data
+    assert "context" not in data
     assert called["flag"] is False

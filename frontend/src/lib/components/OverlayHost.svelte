@@ -256,6 +256,7 @@
   <ErrorOverlay
     message={$overlayData.message || 'An unexpected error occurred.'}
     traceback={$overlayData.traceback || ''}
+    context={$overlayData.context ?? null}
     reducedMotion={overlayReducedMotion}
     on:close={() => dispatch('back')}
   />

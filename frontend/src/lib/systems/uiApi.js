@@ -21,7 +21,7 @@ export async function getUIState() {
     // Add context for UI state errors
     if (!e.overlayShown) {
       const message = e.message || 'Failed to get UI state';
-      openOverlay('error', { message, traceback: e?.stack || '' });
+      openOverlay('error', { message, traceback: e?.stack || '', context: e?.context ?? null });
       console.error('getUIState failure:', { message });
     }
     throw e;
@@ -40,7 +40,7 @@ export async function sendAction(action, params = {}, { suppressOverlay = false 
     // Add context for action errors
     if (!suppressOverlay && !e.overlayShown) {
       const message = e.message || `Failed to execute action: ${action}`;
-      openOverlay('error', { message, traceback: e?.stack || '' });
+      openOverlay('error', { message, traceback: e?.stack || '', context: e?.context ?? null });
       console.error('sendAction failure:', { action, params, message });
     }
     throw e;
@@ -290,7 +290,7 @@ export async function advanceRoom() {
   const cs = gs?.current_state || {};
   if (cs.awaiting_card || cs.awaiting_relic || cs.awaiting_loot) {
     const message = 'Cannot advance room until all rewards are collected.';
-    openOverlay('error', { message, traceback: '' });
+    openOverlay('error', { message, traceback: '', context: null });
     const err = new Error(message);
     err.status = 400;
     err.overlayShown = true;
