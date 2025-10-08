@@ -283,12 +283,36 @@
   $: showRelics = relics.length > 0 && (cards.length === 0 || cardsDone);
   $: remaining = (showCards ? cards.length : 0) + (showRelics ? relics.length : 0);
 
-  function handleSelect(e) {
-    const detail = e.detail || {};
-    if (detail.type === 'card') {
-      cardsDone = true;
+  async function handleSelect(e) {
+    const baseDetail = e?.detail && typeof e.detail === 'object' ? e.detail : {};
+    const detail = { ...baseDetail };
+    const isCard = detail.type === 'card';
+    const previousCardsDone = cardsDone;
+
+    let responded = false;
+    const responsePromise = new Promise((resolve) => {
+      const respond = (value) => {
+        if (responded) return;
+        responded = true;
+        resolve(value);
+      };
+      dispatch('select', { ...detail, respond });
+    });
+
+    let response;
+    try {
+      response = await responsePromise;
+    } catch (error) {
+      response = { ok: false, error };
     }
-    dispatch('select', detail);
+
+    if (response && response.ok) {
+      if (isCard) {
+        cardsDone = true;
+      }
+    } else if (isCard) {
+      cardsDone = previousCardsDone;
+    }
   }
 
   // Auto-advance when there are no selectable rewards and no visible loot/gold.
