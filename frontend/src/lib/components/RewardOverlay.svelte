@@ -405,8 +405,15 @@
     width: 64px;
     height: 64px;
     border-radius: 12px;
-    background: color-mix(in oklab, var(--accent, rgba(255,255,255,0.12)) 28%, rgba(10, 12, 20, 0.92));
-    border: 1px solid color-mix(in oklab, var(--accent, rgba(255,255,255,0.2)) 38%, rgba(255,255,255,0.08));
+    /* Fallback for browsers that don't support color-mix */
+    background: rgba(10, 12, 20, 0.92);
+    /* Enhanced with accent color overlay for supporting browsers */
+    background: linear-gradient(
+      to bottom,
+      rgba(255, 255, 255, 0.04),
+      rgba(10, 12, 20, 0.92)
+    );
+    border: 1px solid rgba(255, 255, 255, 0.12);
     box-shadow: 0 10px 22px rgba(0, 0, 0, 0.35);
     display: flex;
     align-items: center;

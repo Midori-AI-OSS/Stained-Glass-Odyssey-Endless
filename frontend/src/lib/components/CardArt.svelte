@@ -34,6 +34,21 @@
   $: heightStyle = fluid ? 'auto' : `${cardHeight}px`;
   $: ratioStyle = fluid ? 'aspect-ratio: 7 / 11;' : '';
   $: color = starColors[entry.stars] || starColors.fallback;
+  // Helper function to convert hex color to rgba with opacity
+  function hexToRgba(hex, alpha) {
+    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+    if (!result) return `rgba(128, 128, 128, ${alpha})`;
+    return `rgba(${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}, ${alpha})`;
+  }
+  // Compute rgba values for different alpha levels based on accent color
+  $: accentAlpha03 = hexToRgba(color, 0.03);
+  $: accentAlpha28 = hexToRgba(color, 0.28);
+  $: accentAlpha45 = hexToRgba(color, 0.45);
+  $: accentAlpha55 = hexToRgba(color, 0.55);
+  $: accentAlpha60 = hexToRgba(color, 0.60);
+  $: accentAlpha65 = hexToRgba(color, 0.65);
+  $: accentAlpha68 = hexToRgba(color, 0.68);
+  $: accentAlpha92 = hexToRgba(color, 0.92);
   // Background image for the interbox (top section)
   // Use special art for specific relics when available.
   let bg = getHourlyBackground();
@@ -82,7 +97,7 @@
   $: twinkles = quiet ? [] : makeTwinkles(twinkleCount);
 </script>
 
-<div class="card-art" class:fluid={fluid} style={`width:${widthStyle}; height:${heightStyle}; ${ratioStyle} --accent:${color}; --twA:${twinkleAlpha}` }>
+<div class="card-art" class:fluid={fluid} style={`width:${widthStyle}; height:${heightStyle}; ${ratioStyle} --accent:${color}; --twA:${twinkleAlpha}; --accent-03:${accentAlpha03}; --accent-28:${accentAlpha28}; --accent-45:${accentAlpha45}; --accent-55:${accentAlpha55}; --accent-60:${accentAlpha60}; --accent-65:${accentAlpha65}; --accent-68:${accentAlpha68}; --accent-92:${accentAlpha92};` }>
   {#if imageOnly}
     <div class="glyph full">
       <div class="glyph-bg" style={`background-image:url(${bg})`}></div>
@@ -142,7 +157,7 @@
     content: '';
     position: absolute;
     inset: 0;
-    background: color-mix(in srgb, var(--accent) 3%, transparent);
+    background: var(--accent-03);
     pointer-events: none;
     /* No z-index needed; pseudo-element paints behind normal content by default */
   }
@@ -168,14 +183,14 @@
     background-image:
       /* subtle top-to-bottom shade */
       linear-gradient(180deg, rgba(0,0,0,0.06), rgba(0,0,0,0.16)),
-      /* animated accent gradient */
+      /* animated accent gradient - mixing accent with white/black for gradient stops */
       linear-gradient(
         135deg,
-        color-mix(in srgb, var(--accent) 28%, rgba(255,255,255,0.85)) 0%,
-        color-mix(in srgb, var(--accent) 92%, rgba(0,0,0,0.85)) 50%,
-        color-mix(in srgb, var(--accent) 28%, rgba(255,255,255,0.85)) 100%
+        rgba(255,255,255,0.85) 0%,
+        var(--accent-92) 50%,
+        rgba(255,255,255,0.85) 100%
       );
-    background-color: color-mix(in srgb, var(--accent) 68%, transparent);
+    background-color: var(--accent-68);
     background-size: auto, 220% 220%;
     background-position: center, 0% 50%;
     animation: accent-pan 14s ease-in-out infinite;
@@ -287,10 +302,10 @@
     height: var(--s);
     opacity: 0;
     border-radius: 50%;
-    background: radial-gradient(circle, rgba(255,255,255, var(--twA)) 0%, color-mix(in srgb, var(--accent) 60%, transparent) 55%, transparent 70%);
+    background: radial-gradient(circle, rgba(255,255,255, var(--twA)) 0%, var(--accent-60) 55%, transparent 70%);
     box-shadow:
-      0 0 4px color-mix(in srgb, var(--accent) 65%, transparent),
-      0 0 10px color-mix(in srgb, var(--accent) 45%, transparent);
+      0 0 4px var(--accent-65),
+      0 0 10px var(--accent-45);
     animation-name: twinkle-pop;
     animation-timing-function: ease-in-out;
     animation-iteration-count: infinite;
@@ -304,8 +319,8 @@
     background:
       radial-gradient(circle at 50% 50%, rgba(255,255,255,var(--twA)) 0%, transparent 70%);
     box-shadow:
-      0 0 4px color-mix(in srgb, var(--accent) 65%, transparent),
-      0 0 10px color-mix(in srgb, var(--accent) 45%, transparent);
+      0 0 4px var(--accent-65),
+      0 0 10px var(--accent-45);
   }
   .twinkle.shape-cross::before,
   .twinkle.shape-cross::after {
@@ -317,10 +332,10 @@
     background: linear-gradient(
       to right,
       transparent,
-      color-mix(in srgb, var(--accent) 55%, rgba(255,255,255,var(--twA))),
+      var(--accent-55),
       transparent
     );
-    filter: drop-shadow(0 0 6px color-mix(in srgb, var(--accent) 55%, transparent));
+    filter: drop-shadow(0 0 6px var(--accent-55));
     border-radius: 2px;
   }
   .twinkle.shape-cross::before { width: calc(var(--s) * 1.6); height: calc(var(--s) * 0.18); }
