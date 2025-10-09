@@ -17,6 +17,12 @@ const vitestEnvironmentShim = {
           consumer: 'client',
           assetsInclude
         }
+      },
+      server: {
+        config: {
+          consumer: 'server',
+          assetsInclude
+        }
       }
     };
 
@@ -35,13 +41,21 @@ const vitestEnvironmentShim = {
             consumer: 'client',
             assetsInclude: () => false
           }
+        },
+        server: {
+          config: {
+            consumer: 'server',
+            assetsInclude: () => false
+          }
         }
       };
     }
 
-    if (!server.environments) {
-      server.environments = resolvedEnvironments;
+    if (!server.environments || typeof server.environments !== 'object') {
+      server.environments = {};
     }
+    server.environments.client = resolvedEnvironments.client;
+    server.environments.server = resolvedEnvironments.server;
   }
 };
 

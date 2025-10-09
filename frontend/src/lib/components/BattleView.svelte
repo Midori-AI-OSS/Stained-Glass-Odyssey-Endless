@@ -1401,7 +1401,7 @@
 
   // Group/dedupe recent events: show only newly increased instances per unique token
   function processRecentEvents(events) {
-    if (!Array.isArray(events)) {
+    if (!Array.isArray(events) || events.length === 0) {
       recentEventCounts = new Map();
       lastRecentEventTokens = [];
       return [];
@@ -2204,7 +2204,8 @@
       }
 
       let normalizedEvents = [];
-      if (Array.isArray(snap.recent_events)) {
+      const hasRecentEventArray = Array.isArray(snap.recent_events);
+      if (hasRecentEventArray) {
         normalizedEvents = snap.recent_events
           .map(event => normalizeRecentEvent(event))
           .filter(Boolean);
@@ -2216,11 +2217,11 @@
         const overlayList = phaseOutcome.overlayEvents || [];
         recentEvents = overlayList;
         queueTickIndicators(overlayList);
-      } else if (!Array.isArray(snap.recent_events)) {
+      } else if (!hasRecentEventArray || snap.recent_events.length === 0) {
         recentEvents = [];
       }
 
-      if (!Array.isArray(snap.recent_events)) {
+      if (!hasRecentEventArray || snap.recent_events.length === 0) {
         floaterFeed = [];
         recentEventCounts = new Map();
         lastRecentEventTokens = [];
