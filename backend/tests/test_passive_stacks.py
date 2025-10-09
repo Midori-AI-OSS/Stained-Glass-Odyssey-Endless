@@ -230,7 +230,7 @@ async def test_bubbles_burst_stack_display():
 
 @pytest.mark.asyncio
 async def test_soft_caps_luna_beyond_200():
-    """Test that Luna Lunar Reservoir can stack beyond 200 and provides dodge bonus."""
+    """Test that Luna Lunar Reservoir can stack beyond 200 and grants attack bonus scaling."""
     registry = PassiveRegistry()
     from plugins.passives.normal.luna_lunar_reservoir import LunaLunarReservoir
 
@@ -248,7 +248,7 @@ async def test_soft_caps_luna_beyond_200():
     luna_passive = next((p for p in description if p["id"] == "luna_lunar_reservoir"), None)
     assert luna_passive is not None
 
-    # Should show current charge (might be less due to boosted mode spending)
+    # Should show current charge without automatically draining below the cap
     current_charge = LunaLunarReservoir.get_charge(luna)
     assert current_charge >= 2000  # Should be able to go past 2000
     assert luna_passive["stacks"] == current_charge

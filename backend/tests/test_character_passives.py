@@ -19,38 +19,114 @@ from plugins.passives.normal.mezzy_gluttonous_bulwark import MezzyGluttonousBulw
 
 @pytest.mark.asyncio
 async def test_luna_lunar_reservoir_passive():
-    """Test Luna's Lunar Reservoir passive charging system."""
-    registry = PassiveRegistry()
+    """Test Luna's Lunar Reservoir passive doubling cadence."""
+    LunaLunarReservoir._charge_points.clear()
+    LunaLunarReservoir._swords_by_owner.clear()
 
-    # Create Luna with the passive
-    luna = Stats(hp=1000, damage_type=Generic())
-    luna.passives = ["luna_lunar_reservoir"]
+    try:
+        # Create Luna with the passive
+        luna = Stats(hp=1000, damage_type=Generic())
+        luna.passives = ["luna_lunar_reservoir"]
 
-    # Initially should have default attack count (1)
-    await registry.trigger("action_taken", luna)
-    assert luna.actions_per_turn == 2  # Should get 2 attacks (below 350 charge)
+        passive = LunaLunarReservoir()
+        await passive.apply(luna, event="action_taken")
+        assert LunaLunarReservoir.get_charge(luna) == 1
+        assert luna.actions_per_turn == 2
 
-    # After multiple actions, should still be under the first breakpoint
-    for _ in range(10):
-        await registry.trigger("action_taken", luna)
+        # Each 25 charge should double the actions per turn
+        LunaLunarReservoir.add_charge(luna, 24)
+        assert LunaLunarReservoir.get_charge(luna) == 25
+        assert luna.actions_per_turn == 4
 
-    assert luna.actions_per_turn == 2
+        LunaLunarReservoir.add_charge(luna, 25)
+        assert LunaLunarReservoir.get_charge(luna) == 50
+        assert luna.actions_per_turn == 8
 
-    # Build to 350+ charge
-    LunaLunarReservoir.add_charge(
-        luna,
-        max(0, 350 - LunaLunarReservoir.get_charge(luna)),
-    )
+        LunaLunarReservoir.add_charge(luna, 25)
+        assert LunaLunarReservoir.get_charge(luna) == 75
+        assert luna.actions_per_turn == 16
 
-    assert luna.actions_per_turn == 4  # 350-499 range
+        LunaLunarReservoir.add_charge(luna, 25)
+        assert LunaLunarReservoir.get_charge(luna) == 100
+        assert luna.actions_per_turn == 32
 
-    # Build to 500+ charge
-    LunaLunarReservoir.add_charge(
-        luna,
-        max(0, 500 - LunaLunarReservoir.get_charge(luna)),
-    )
+        # After hitting 32 actions, each additional 25 charge should add +1 action
+        LunaLunarReservoir.add_charge(luna, 25)
+        assert LunaLunarReservoir.get_charge(luna) == 125
+        assert luna.actions_per_turn == 33
 
-    assert luna.actions_per_turn == 8  # 500-699 range
+        LunaLunarReservoir.add_charge(luna, 75)
+        assert LunaLunarReservoir.get_charge(luna) == 200
+        assert luna.actions_per_turn == 36
+    finally:
+        LunaLunarReservoir._charge_points.clear()
+        LunaLunarReservoir._swords_by_owner.clear()
+
+
+@pytest.mark.asyncio
+async def test_luna_lunar_reservoir_attack_bonus_scaling():
+    """Stacks beyond 2000 should grant permanent ATK scaling."""
+    LunaLunarReservoir._charge_points.clear()
+    LunaLunarReservoir._swords_by_owner.clear()
+
+    try:
+        luna = Stats(hp=1000, damage_type=Generic())
+        luna.passives = ["luna_lunar_reservoir"]
+        luna._base_atk = 200
+
+        slot = LunaLunarReservoir._ensure_charge_slot(luna)
+        LunaLunarReservoir._charge_points[slot] = 2100
+        LunaLunarReservoir.sync_actions(luna)
+
+        atk_effect = next(
+            (e for e in luna.get_active_effects() if e.name == "luna_lunar_reservoir_atk_bonus"),
+            None,
+        )
+        assert atk_effect is not None
+        assert atk_effect.stat_modifiers["atk"] == 30
+
+        LunaLunarReservoir._charge_points[slot] = 2500
+        LunaLunarReservoir.sync_actions(luna)
+
+        atk_effect = next(
+            (e for e in luna.get_active_effects() if e.name == "luna_lunar_reservoir_atk_bonus"),
+            None,
+        )
+        assert atk_effect is not None
+        assert atk_effect.stat_modifiers["atk"] == 150
+
+        LunaLunarReservoir._charge_points[slot] = 2000
+        LunaLunarReservoir.sync_actions(luna)
+
+        atk_effect = next(
+            (e for e in luna.get_active_effects() if e.name == "luna_lunar_reservoir_atk_bonus"),
+            None,
+        )
+        assert atk_effect is None
+    finally:
+        LunaLunarReservoir._charge_points.clear()
+        LunaLunarReservoir._swords_by_owner.clear()
+
+
+@pytest.mark.asyncio
+async def test_luna_lunar_reservoir_no_turn_end_drain():
+    """Turn end should no longer drain excess charge."""
+    passive = LunaLunarReservoir()
+    LunaLunarReservoir._charge_points.clear()
+    LunaLunarReservoir._swords_by_owner.clear()
+
+    try:
+        luna = Stats(hp=1000, damage_type=Generic())
+        luna.passives = ["luna_lunar_reservoir"]
+
+        LunaLunarReservoir.add_charge(luna, 2600)
+        before = LunaLunarReservoir.get_charge(luna)
+        await passive.on_turn_end(luna)
+        after = LunaLunarReservoir.get_charge(luna)
+        assert after == before
+    finally:
+        LunaLunarReservoir._charge_points.clear()
+        LunaLunarReservoir._swords_by_owner.clear()
 
 
 @pytest.mark.asyncio
