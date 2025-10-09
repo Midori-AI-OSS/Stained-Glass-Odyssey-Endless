@@ -524,6 +524,230 @@ ITEM_UNIT_SCALE = {
 MATERIAL_STAR_LEVEL = 1
 
 
+class InsufficientMaterialsError(RuntimeError):
+    """Raised when the player does not have enough upgrade materials."""
+
+
+def _parse_star_level(material_id: str | None) -> int | None:
+    if not material_id:
+        return None
+    try:
+        _, star_raw = str(material_id).rsplit("_", 1)
+    except ValueError:
+        return None
+    try:
+        return int(star_raw)
+    except (TypeError, ValueError):
+        return None
+
+
+def _canonical_material_breakdown(element_key: str, units: int) -> dict[str, int]:
+    """Return a per-tier breakdown for the requested unit cost."""
+
+    breakdown: dict[str, int] = {}
+    remaining = max(0, int(units or 0))
+    for tier in sorted(ITEM_UNIT_SCALE.keys(), reverse=True):
+        item_key = f"{element_key}_{tier}"
+        scale = ITEM_UNIT_SCALE[tier]
+        if tier == MATERIAL_STAR_LEVEL:
+            breakdown[item_key] = remaining
+            break
+        if scale <= 0 or remaining <= 0:
+            breakdown[item_key] = 0
+            continue
+        count = remaining // scale
+        breakdown[item_key] = count
+        remaining -= count * scale
+    if f"{element_key}_{MATERIAL_STAR_LEVEL}" not in breakdown:
+        breakdown[f"{element_key}_{MATERIAL_STAR_LEVEL}"] = remaining
+    return breakdown
+
+
+def _sanitize_breakdown_map(raw_map: dict[str, object] | None) -> dict[str, int]:
+    if not raw_map:
+        return {}
+    cleaned: dict[str, int] = {}
+    for key, value in raw_map.items():
+        try:
+            qty = int(value)
+        except (TypeError, ValueError):
+            continue
+        if qty <= 0:
+            continue
+        cleaned[str(key)] = qty
+    return cleaned
+
+
+def _sum_breakdown_units(breakdown: dict[str, int]) -> int:
+    total = 0
+    for material_id, quantity in breakdown.items():
+        tier = _parse_star_level(material_id)
+        if tier is None:
+            continue
+        scale = ITEM_UNIT_SCALE.get(tier)
+        if not scale:
+            continue
+        total += quantity * scale
+    return total
+
+
+def _parse_material_request(
+    element_key: str,
+    request: object,
+) -> tuple[int | None, dict[str, int]]:
+    """Extract expected unit totals and per-tier breakdown from a request payload."""
+
+    if request is None:
+        return None, {}
+
+    if isinstance(request, (int, float)) and not isinstance(request, bool):
+        units = int(request)
+        return units if units >= 0 else None, {}
+
+    if isinstance(request, str):
+        try:
+            units = int(request.strip())
+        except (TypeError, ValueError):
+            return None, {}
+        return units if units >= 0 else None, {}
+
+    if not isinstance(request, dict):
+        return None, {}
+
+    breakdown_source: dict[str, object] | None = None
+    for key in ("breakdown", "per_tier", "materials"):
+        value = request.get(key)
+        if isinstance(value, dict):
+            breakdown_source = value
+            break
+
+    if breakdown_source is None:
+        # Treat the dict as a direct map, omitting metadata keys.
+        candidate: dict[str, object] = {}
+        for key, value in request.items():
+            if key in {"units", "count", "item", "material", "id", "expected"}:
+                continue
+            candidate[key] = value
+        breakdown_source = candidate
+
+    breakdown = _sanitize_breakdown_map(breakdown_source or {})
+
+    units_value = request.get("units")
+    if units_value is None:
+        units_value = request.get("count")
+    if units_value is None and breakdown:
+        units_value = _sum_breakdown_units(breakdown)
+
+    if units_value is None:
+        return None, breakdown
+
+    try:
+        units = int(units_value)
+    except (TypeError, ValueError):
+        return None, breakdown
+
+    return (units if units >= 0 else None), breakdown
+
+
+def _get_total_material_units(conn, element_key: str) -> int:
+    cur = conn.execute(
+        "SELECT id, count FROM upgrade_items WHERE id LIKE ?",
+        (f"{element_key}_%",),
+    )
+    total = 0
+    for material_id, count in cur.fetchall():
+        tier = _parse_star_level(material_id)
+        if tier is None:
+            continue
+        scale = ITEM_UNIT_SCALE.get(tier)
+        if not scale:
+            continue
+        try:
+            quantity = int(count)
+        except (TypeError, ValueError):
+            continue
+        if quantity <= 0:
+            continue
+        total += quantity * scale
+    return total
+
+
+def _consume_material_units(conn, element_key: str, units: int) -> dict[str, int]:
+    """Deduct the requested number of 1★ units, converting higher tiers if needed."""
+
+    if units <= 0:
+        return {}
+
+    total_available = _get_total_material_units(conn, element_key)
+    if total_available < units:
+        raise InsufficientMaterialsError
+
+    spent: dict[str, int] = {}
+    remaining = int(units)
+    base_key = f"{element_key}_{MATERIAL_STAR_LEVEL}"
+
+    while remaining > 0:
+        candidate: tuple[int, str, int] | None = None
+        for tier in sorted(ITEM_UNIT_SCALE.keys(), reverse=True):
+            key = f"{element_key}_{tier}"
+            scale = ITEM_UNIT_SCALE[tier]
+            available_row = conn.execute(
+                "SELECT count FROM upgrade_items WHERE id = ?",
+                (key,),
+            ).fetchone()
+            available = int(available_row[0]) if available_row else 0
+            if available <= 0:
+                continue
+            if scale <= remaining or tier == MATERIAL_STAR_LEVEL:
+                candidate = (tier, key, scale)
+                break
+
+        if candidate:
+            tier, key, scale = candidate
+            conn.execute(
+                "UPDATE upgrade_items SET count = count - 1 WHERE id = ?",
+                (key,),
+            )
+            spent[key] = spent.get(key, 0) + 1
+            remaining -= scale
+            continue
+
+        # No direct tier matched the remaining amount; convert one higher-tier item.
+        convert_candidate: tuple[int, str] | None = None
+        for tier in sorted(ITEM_UNIT_SCALE.keys(), reverse=True):
+            if tier == MATERIAL_STAR_LEVEL:
+                continue
+            key = f"{element_key}_{tier}"
+            available_row = conn.execute(
+                "SELECT count FROM upgrade_items WHERE id = ?",
+                (key,),
+            ).fetchone()
+            available = int(available_row[0]) if available_row else 0
+            if available > 0:
+                convert_candidate = (tier, key)
+                break
+
+        if convert_candidate is None:
+            raise InsufficientMaterialsError
+
+        tier, key = convert_candidate
+        scale = ITEM_UNIT_SCALE[tier]
+        conn.execute(
+            "UPDATE upgrade_items SET count = count - 1 WHERE id = ?",
+            (key,),
+        )
+        conn.execute(
+            "INSERT OR IGNORE INTO upgrade_items (id, count) VALUES (?, 0)",
+            (base_key,),
+        )
+        conn.execute(
+            "UPDATE upgrade_items SET count = count + ? WHERE id = ?",
+            (scale, base_key),
+        )
+
+    return spent
+
+
 def _resolve_player_element(conn, player_id: str) -> str:
     """Resolve the active element for a player identifier."""
 
@@ -756,7 +980,7 @@ def _calculate_next_cost(last_cost: int | None) -> int:
     return max(1, math.ceil(last_cost * 1.05))
 
 
-def _determine_next_costs(stat_upgrades: List[Dict], element_key: str) -> Dict[str, dict[str, int | str]]:
+def _determine_next_costs(stat_upgrades: List[Dict], element_key: str) -> Dict[str, dict[str, object]]:
     last_costs: Dict[str, int] = {}
     for upgrade in stat_upgrades:
         stat_name = upgrade.get("stat_name")
@@ -773,21 +997,24 @@ def _determine_next_costs(stat_upgrades: List[Dict], element_key: str) -> Dict[s
         except (TypeError, ValueError):
             last_costs[stat_name] = 0
 
-    next_costs: Dict[str, dict[str, int | str]] = {}
-    seen_stats = set(UPGRADEABLE_STATS)
-    item_key = f"{element_key}_{MATERIAL_STAR_LEVEL}"
-    for stat in UPGRADEABLE_STATS:
-        next_costs[stat] = {
-            "item": item_key,
-            "count": _calculate_next_cost(last_costs.get(stat)),
+    def _build_cost_payload(units: int) -> dict[str, object]:
+        breakdown = _canonical_material_breakdown(element_key, units)
+        return {
+            "item": f"{element_key}_{MATERIAL_STAR_LEVEL}",
+            "units": units,
+            "breakdown": breakdown,
         }
+
+    next_costs: Dict[str, dict[str, object]] = {}
+    seen_stats = set(UPGRADEABLE_STATS)
+    for stat in UPGRADEABLE_STATS:
+        units = _calculate_next_cost(last_costs.get(stat))
+        next_costs[stat] = _build_cost_payload(units)
     for stat, last_cost in last_costs.items():
         if stat in seen_stats:
             continue
-        next_costs[stat] = {
-            "item": item_key,
-            "count": _calculate_next_cost(last_cost),
-        }
+        units = _calculate_next_cost(last_cost)
+        next_costs[stat] = _build_cost_payload(units)
     return next_costs
 
 
@@ -865,13 +1092,13 @@ def _build_player_upgrade_payload(player_id: str) -> Dict:
 
     for stat in UPGRADEABLE_STATS:
         stat_totals.setdefault(stat, 0.0)
-        next_costs.setdefault(
-            stat,
-            {
+        if stat not in next_costs:
+            units = _calculate_next_cost(None)
+            next_costs[stat] = {
                 "item": f"{element}_{MATERIAL_STAR_LEVEL}",
-                "count": _calculate_next_cost(None),
-            },
-        )
+                "units": units,
+                "breakdown": _canonical_material_breakdown(element, units),
+            }
 
     return {
         "stat_upgrades": stat_upgrades,
@@ -1058,13 +1285,6 @@ async def upgrade_player_stat(pid: str):
     requested_materials = data.get("materials")
     if requested_materials is None:
         requested_materials = data.get("points")
-    if requested_materials is not None:
-        try:
-            requested_materials = int(requested_materials)
-        except (TypeError, ValueError):
-            return jsonify({"error": "materials must be an integer >= 1"}), 400
-        if requested_materials < 1:
-            return jsonify({"error": "materials must be at least 1"}), 400
     raw_repeat = data.get("repeat", data.get("repeats"))
     raw_total_materials = data.get("total_materials")
     if raw_total_materials is None:
@@ -1072,6 +1292,16 @@ async def upgrade_player_stat(pid: str):
 
     if stat_name not in UPGRADEABLE_STATS:
         return jsonify({"error": f"invalid stat, must be one of: {UPGRADEABLE_STATS}"}), 400
+
+    if isinstance(requested_materials, str):
+        try:
+            int(requested_materials.strip())
+        except (TypeError, ValueError):
+            return jsonify({"error": "materials must be numeric or a breakdown map"}), 400
+    elif requested_materials is not None and not isinstance(
+        requested_materials, (int, float, dict)
+    ):
+        return jsonify({"error": "materials must be numeric or a breakdown map"}), 400
 
     try:
         repeat = int(raw_repeat) if raw_repeat is not None else 1
@@ -1098,55 +1328,85 @@ async def upgrade_player_stat(pid: str):
         total_percent = 0.0
         budget_remaining = material_budget
         last_cost = None
+        remaining_units_total = 0
 
         with get_save_manager().connection() as conn:
             _ensure_upgrade_tables(conn)
             element = _resolve_player_element(conn, pid)
             material_key = f"{element}_{MATERIAL_STAR_LEVEL}"
+            expected_units, requested_breakdown = _parse_material_request(
+                element, requested_materials
+            )
+            if expected_units is not None and expected_units < 1:
+                return {
+                    "error": "materials must be at least 1",
+                }
 
             while completed < repeat:
                 cost_to_spend = _get_next_cost_for_stat(pid, stat_name, conn=conn)
                 last_cost = cost_to_spend
 
-                if (
-                    not validated_cost
-                    and requested_materials is not None
-                    and int(requested_materials) != cost_to_spend
-                ):
-                    payload = _build_player_upgrade_payload(pid)
-                    payload.update({
-                        "error": "invalid material cost",
-                        "expected_materials": cost_to_spend,
-                    })
-                    return payload
+                expected_payload_breakdown = _canonical_material_breakdown(
+                    element, cost_to_spend
+                )
+                expected_clean = _sanitize_breakdown_map(expected_payload_breakdown)
 
-                validated_cost = True
+                if not validated_cost:
+                    if expected_units is not None and expected_units != cost_to_spend:
+                        payload = _build_player_upgrade_payload(pid)
+                        payload.update(
+                            {
+                                "error": "invalid material cost",
+                                "expected_units": cost_to_spend,
+                                "expected_materials": {
+                                    "units": cost_to_spend,
+                                    "breakdown": expected_payload_breakdown,
+                                },
+                            }
+                        )
+                        return payload
+
+                    if requested_breakdown and requested_breakdown != expected_clean:
+                        payload = _build_player_upgrade_payload(pid)
+                        payload.update(
+                            {
+                                "error": "invalid material cost",
+                                "expected_units": cost_to_spend,
+                                "expected_materials": {
+                                    "units": cost_to_spend,
+                                    "breakdown": expected_payload_breakdown,
+                                },
+                            }
+                        )
+                        return payload
+
+                    validated_cost = True
 
                 if budget_remaining is not None and cost_to_spend > budget_remaining:
                     break
 
-                row = conn.execute(
-                    "SELECT count FROM upgrade_items WHERE id = ?",
-                    (material_key,),
-                ).fetchone()
-                available = int(row[0]) if row else 0
-                if available < cost_to_spend:
+                try:
+                    _consume_material_units(conn, element, cost_to_spend)
+                except InsufficientMaterialsError:
                     payload = _build_player_upgrade_payload(pid)
-                    payload.update({
-                        "error": "insufficient materials",
-                        "required_materials": cost_to_spend,
-                        "attempted_upgrades": repeat,
-                        "completed_upgrades": completed,
-                        "materials_spent": total_spent,
-                        "upgrade_percent": total_percent,
-                        "materials_available": available,
-                    })
+                    available_units = _get_total_material_units(conn, element)
+                    payload.update(
+                        {
+                            "error": "insufficient materials",
+                            "required_units": cost_to_spend,
+                            "required_materials": {
+                                "units": cost_to_spend,
+                                "breakdown": expected_payload_breakdown,
+                            },
+                            "attempted_upgrades": repeat,
+                            "completed_upgrades": completed,
+                            "materials_spent": total_spent,
+                            "upgrade_percent": total_percent,
+                            "materials_available": available_units,
+                            "materials_available_units": available_units,
+                        }
+                    )
                     return payload
-
-                conn.execute(
-                    "UPDATE upgrade_items SET count = count - ? WHERE id = ?",
-                    (cost_to_spend, material_key),
-                )
 
                 upgrade_percent = cost_to_spend * 0.001
                 conn.execute(
@@ -1168,6 +1428,7 @@ async def upgrade_player_stat(pid: str):
                 (material_key,),
             ).fetchone()
             remaining_materials = int(remaining_row[0]) if remaining_row else 0
+            remaining_units_total = _get_total_material_units(conn, element)
             conn.commit()
 
         payload = _build_player_upgrade_payload(pid)
@@ -1178,6 +1439,7 @@ async def upgrade_player_stat(pid: str):
             "completed_upgrades": completed,
             "attempted_upgrades": repeat,
             "materials_remaining": remaining_materials,
+            "materials_remaining_units": remaining_units_total,
         }
         response.update(payload)
 

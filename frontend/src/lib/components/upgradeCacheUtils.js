@@ -45,6 +45,10 @@ export function mergeUpgradePayload(previousData, result) {
     base.materials_remaining = result.materials_remaining;
   }
 
+  if (result && Object.prototype.hasOwnProperty.call(result, 'materials_remaining_units')) {
+    base.materials_remaining_units = result.materials_remaining_units;
+  }
+
   return base;
 }
 

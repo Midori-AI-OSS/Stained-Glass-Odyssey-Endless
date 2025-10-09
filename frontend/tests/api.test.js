@@ -188,7 +188,12 @@ describe('api calls', () => {
   test('upgradeStat spends materials', async () => {
     const fetchMock = mock(async (url, options) => {
       expect(url).toBe('http://backend.test/players/player/upgrade-stat');
-      expect(JSON.parse(options.body)).toEqual({ stat_name: 'atk', materials: 2, repeat: 3, total_materials: 12 });
+      expect(JSON.parse(options.body)).toEqual({
+        stat_name: 'atk',
+        materials: { units: 2, breakdown: { light_1: 2 } },
+        repeat: 3,
+        total_materials: 12
+      });
       return {
         ok: true,
         status: 200,
@@ -196,7 +201,11 @@ describe('api calls', () => {
       };
     });
     global.fetch = fetchMock;
-    const result = await upgradeStat('player', 'atk', { repeat: 3, expectedMaterials: 2, totalMaterials: 12 });
+    const result = await upgradeStat('player', 'atk', {
+      repeat: 3,
+      expectedMaterials: { units: 2, breakdown: { light_1: 2 } },
+      totalMaterials: 12
+    });
     expect(result).toEqual({ stat_upgraded: 'atk', materials_spent: 5, completed_upgrades: 3 });
   });
 });

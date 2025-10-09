@@ -1,7 +1,11 @@
 # Player Upgrade Endpoint
 
 `GET /players/<id>/upgrade` returns the current upgrade level for the
-specified character and the full inventory of element-based upgrade items.
+specified character, the full inventory of element-based upgrade items, and a
+per-stat material breakdown. Each entry in `next_costs` exposes the total
+1★ units (`units`) alongside a `breakdown` map keyed by material id (such as
+`fire_2`, `fire_1`) so clients can surface mixed-star requirements and echo
+the exact payload back to the server when requesting an upgrade.
 
 `POST /players/<id>/upgrade` consumes 20×4★ (or 100×3★/500×2★/1000×1★) items
 matching the character's damage type and increments their stored level. Each
