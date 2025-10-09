@@ -1,4 +1,5 @@
 import asyncio
+import math
 import random
 
 import pytest
@@ -151,6 +152,44 @@ async def test_luna_glitched_nonboss_actions_double_charge():
         after_ultimate = LunaLunarReservoir.get_charge(luna)
 
         assert after_ultimate - after_action == 128
+    finally:
+        LunaLunarReservoir._charge_points.clear()
+        LunaLunarReservoir._swords_by_owner.clear()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("rank", "expected_multiplier", "damage"),
+    [
+        ("prime", 5, 1),
+        ("glitched prime champion", 10, 2_500_000),
+        ("prime boss", 5, 12_345_678_901),
+    ],
+)
+async def test_luna_prime_hit_landed_heals_and_stacks(rank, expected_multiplier, damage):
+    """Prime Luna variants should lifesteal and gain multiplied charge on hits."""
+
+    passive = LunaLunarReservoir()
+
+    LunaLunarReservoir._charge_points.clear()
+    LunaLunarReservoir._swords_by_owner.clear()
+
+    try:
+        luna = Stats(hp=1000, damage_type=Generic())
+        luna.passives = ["luna_lunar_reservoir"]
+        luna.rank = rank
+        luna.hp = luna.max_hp - 100
+
+        before_charge = LunaLunarReservoir.get_charge(luna)
+        before_hp = luna.hp
+
+        await passive.apply(luna, event="hit_landed", damage=damage)
+
+        after_charge = LunaLunarReservoir.get_charge(luna)
+        expected_heal = max(1, min(32, math.ceil(damage * 0.000001)))
+
+        assert after_charge - before_charge == expected_multiplier
+        assert luna.hp - before_hp == expected_heal
     finally:
         LunaLunarReservoir._charge_points.clear()
         LunaLunarReservoir._swords_by_owner.clear()

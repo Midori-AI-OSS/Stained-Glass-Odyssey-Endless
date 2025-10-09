@@ -1,3 +1,5 @@
+import math
+
 import pytest
 
 from autofighter.mapgen import MapNode
@@ -48,6 +50,10 @@ def _normal_node() -> MapNode:
         loop=1,
         pressure=0,
     )
+
+
+def _expected_prime_heal(damage: int) -> int:
+    return max(1, min(32, math.ceil(damage * 0.000001)))
 
 
 @pytest.mark.asyncio
@@ -133,6 +139,42 @@ async def test_glitched_luna_sword_hits_double_charge():
 
     assert after - before == 8
 
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("rank", "node_factory", "expected_gain", "damage"),
+    [
+        ("prime boss", _boss_node, 20, 1),
+        ("glitched prime boss", _boss_node, 40, 6_400_000_000),
+        ("glitched prime champion", _normal_node, 40, 2_500_000),
+    ],
+)
+async def test_prime_luna_sword_hits_gain_stacks_and_heal(rank, node_factory, expected_gain, damage):
+    node = node_factory()
+    party = _basic_party()
+    luna = Luna()
+    luna.id = f"luna_prime_{rank.replace(' ', '_')}"
+    luna.rank = rank
+
+    await setup_battle(node, party, foe=luna)
+
+    swords = SummonManager.get_summons(luna.id)
+    assert swords, f"{rank} Luna should summon swords"
+    sword = swords[0]
+
+    target = Stats()
+    target.id = "prime_target"
+    target.hp = target.max_hp
+
+    luna.hp = luna.max_hp - 100
+    before_hp = luna.hp
+    before_charge = LunaLunarReservoir.get_charge(luna)
+
+    await BUS.emit_async("hit_landed", sword, target, damage, "attack", "prime_test")
+
+    after_charge = LunaLunarReservoir.get_charge(luna)
+    assert after_charge - before_charge == expected_gain
+    assert luna.hp - before_hp == _expected_prime_heal(damage)
 
 @pytest.mark.asyncio
 async def test_luna_non_glitched_ranks_detach_helper():

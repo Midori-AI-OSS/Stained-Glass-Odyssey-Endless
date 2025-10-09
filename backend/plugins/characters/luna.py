@@ -118,13 +118,13 @@ class _LunaSwordCoordinator:
             "sword_identifier": getattr(attacker, "id", None),
             "source_identifier": identifier,
         }
-        per_hit = 4
-        rank = str(getattr(owner, "rank", ""))
-        if "glitched" in rank.lower():
-            per_hit = 8
-        _register_luna_sword(owner, attacker, label or "")
         passive = _get_luna_passive()
+        per_hit = passive._sword_charge_amount(owner)  # type: ignore[attr-defined]
+        _register_luna_sword(owner, attacker, label or "")
         passive.add_charge(owner, amount=per_hit)  # type: ignore[attr-defined]
+        healed = await passive._apply_prime_healing(owner, amount or 0)  # type: ignore[attr-defined]
+        metadata["prime_heal_handled"] = True
+        metadata["prime_heal_success"] = healed
         try:
             helper = getattr(owner, "_luna_sword_helper", None)
             if helper is not None and hasattr(helper, "sync_actions_per_turn"):

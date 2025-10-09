@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from math import ceil
 from typing import TYPE_CHECKING
 from typing import ClassVar
 
@@ -15,7 +16,7 @@ class LunaLunarReservoir:
     plugin_type = "passive"
     id = "luna_lunar_reservoir"
     name = "Lunar Reservoir"
-    trigger = ["action_taken", "ultimate_used"]  # Respond to actions and ultimates
+    trigger = ["action_taken", "ultimate_used", "hit_landed"]  # Respond to actions, ultimates, and hits
     max_stacks = 2000  # Show charge level 0-2000
     stack_display = "number"
 
@@ -33,16 +34,56 @@ class LunaLunarReservoir:
         cls._events_registered = True
 
     @classmethod
-    def _is_glitched_nonboss(cls, target: "Stats") -> bool:
-        rank = str(getattr(target, "rank", ""))
+    def _rank_lower(cls, target: "Stats | None") -> str:
+        if target is None:
+            return ""
+        rank = getattr(target, "rank", "")
         if not rank:
-            return False
-        lowered = rank.lower()
+            return ""
+        return str(rank).lower()
+
+    @classmethod
+    def _is_glitched_nonboss(cls, target: "Stats") -> bool:
+        lowered = cls._rank_lower(target)
         return "glitched" in lowered and "boss" not in lowered
 
     @classmethod
+    def _is_prime(cls, target: "Stats") -> bool:
+        return "prime" in cls._rank_lower(target)
+
+    @classmethod
     def _charge_multiplier(cls, charge_holder: "Stats") -> int:
-        return 2 if cls._is_glitched_nonboss(charge_holder) else 1
+        multiplier = 2 if cls._is_glitched_nonboss(charge_holder) else 1
+        if cls._is_prime(charge_holder):
+            multiplier *= 5
+        return multiplier
+
+    @classmethod
+    def _sword_charge_amount(cls, owner: "Stats | None") -> int:
+        if owner is None:
+            return 0
+        per_hit = 4
+        lowered = cls._rank_lower(owner)
+        if "glitched" in lowered:
+            per_hit *= 2
+        if "prime" in lowered:
+            per_hit *= 5
+        return per_hit
+
+    @classmethod
+    async def _apply_prime_healing(cls, owner: "Stats", damage: int | None) -> bool:
+        if not cls._is_prime(owner):
+            return False
+        amount = damage or 0
+        heal = ceil(amount * 0.000001)
+        heal = max(1, min(32, heal))
+        await owner.apply_healing(
+            heal,
+            healer=owner,
+            source_type="passive",
+            source_name=cls.id,
+        )
+        return True
 
     @classmethod
     def _resolve_charge_holder(cls, target: "Stats") -> "Stats":
@@ -97,11 +138,10 @@ class LunaLunarReservoir:
     ) -> None:
         actual_owner = owner
         handled = False
+        metadata_dict = metadata if isinstance(metadata, dict) else {}
         if owner is not None:
-            label = None
-            if metadata and isinstance(metadata, dict):
-                label = metadata.get("sword_label")
-                handled = bool(metadata.get("charge_handled"))
+            label = metadata_dict.get("sword_label") if metadata_dict else None
+            handled = bool(metadata_dict.get("charge_handled"))
             cls.register_sword(owner, sword, label if isinstance(label, str) else None)
             actual_owner = owner
         elif getattr(sword, "luna_sword_owner", None) is not None:
@@ -109,10 +149,14 @@ class LunaLunarReservoir:
         if actual_owner is None:
             return
         cls._ensure_charge_slot(actual_owner)
-        rank = str(getattr(actual_owner, "rank", ""))
-        per_hit = 8 if "glitched" in rank.lower() else 4
+        per_hit = cls._sword_charge_amount(actual_owner)
         if not handled:
             cls.add_charge(actual_owner, per_hit)
+        if not bool(metadata_dict.get("prime_heal_handled")):
+            healed = await cls._apply_prime_healing(actual_owner, amount)
+            if isinstance(metadata, dict):
+                metadata["prime_heal_handled"] = True
+                metadata["prime_heal_success"] = healed
         helper = getattr(actual_owner, "_luna_sword_helper", None)
         try:
             if helper is not None and hasattr(helper, "sync_actions_per_turn"):
@@ -165,7 +209,7 @@ class LunaLunarReservoir:
         current_charge = cls._charge_points.get(entity_id, 0)
         cls._apply_actions(charge_target, current_charge)
 
-    async def apply(self, target: "Stats", event: str = "action_taken", **_: object) -> None:
+    async def apply(self, target: "Stats", event: str = "action_taken", **kwargs: object) -> None:
         """Apply charge mechanics for Luna.
 
         Args:
@@ -179,14 +223,22 @@ class LunaLunarReservoir:
         entity_id = cls._ensure_charge_slot(charge_target)
 
         multiplier = cls._charge_multiplier(charge_target)
+        damage = kwargs.get("damage")
+        try:
+            damage_value = int(damage)
+        except (TypeError, ValueError):
+            damage_value = 0
 
         if event == "ultimate_used":
             cls._charge_points[entity_id] += 64 * multiplier
-        else:
+        elif event != "hit_landed":
             cls._charge_points[entity_id] += 1 * multiplier
 
         current_charge = cls._charge_points[entity_id]
         cls._apply_actions(charge_target, current_charge)
+
+        if event == "hit_landed":
+            await cls._apply_prime_healing(charge_target, damage_value)
 
     async def on_turn_end(self, target: "Stats") -> None:
         """Keep the owner's action cadence in sync at turn end."""
