@@ -71,7 +71,6 @@ class _LunaSwordCoordinator:
             return
         self._sword_refs[id(sword)] = weakref.ref(sword)
         sword.actions_per_turn = owner.actions_per_turn
-        sword.summon_type = f"luna_sword_{label.lower()}"
         sword.summon_source = "luna_sword"
         sword.is_temporary = False
         tags = set(getattr(sword, "tags", set()))
@@ -298,10 +297,16 @@ class Luna(PlayerBase):
 
         helper = _LunaSwordCoordinator(self, registry)
         created = False
+        label_counts: dict[str, int] = {}
         for label, damage_type in sword_specs:
+            key = label.lower()
+            count = label_counts.get(key, 0) + 1
+            label_counts[key] = count
+            summon_type_base = f"luna_sword_{key}"
+            summon_type = summon_type_base if count == 1 else f"{summon_type_base}_{count}"
             summon = SummonManager.create_summon(
                 self,
-                summon_type=f"luna_sword_{label.lower()}",
+                summon_type=summon_type,
                 source="luna_sword",
                 stat_multiplier=1.0,
                 override_damage_type=damage_type,
