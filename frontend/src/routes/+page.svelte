@@ -40,7 +40,7 @@
     syncBattlePolling,
     syncMapPolling
   } from '$lib';
-  import { updateParty, acknowledgeLoot } from '$lib/systems/uiApi.js';
+  import { updateParty, acknowledgeLoot, resetRunConfigurationMetadataCache } from '$lib/systems/uiApi.js';
   import { getPlayers } from '$lib/systems/api.js';
   import { deriveSeedParty, sanitizePartyIds } from '$lib/systems/partySeed.js';
   import { buildRunMenu } from '$lib/components/RunButtons.svelte';
@@ -609,7 +609,18 @@
     // Ensure we truly start fresh: end any active runs first
     try { await endAllRuns(); } catch {}
     await primePartySeed();
-    openOverlay('run-choose', { runs: [], metadataHash: null });
+
+    let metadataHash = null;
+    try {
+      const data = await getActiveRuns();
+      metadataHash = data?.metadataHash ?? null;
+    } catch {}
+
+    if (!metadataHash) {
+      resetRunConfigurationMetadataCache();
+    }
+
+    openOverlay('run-choose', { runs: [], metadataHash });
   }
 
   async function handleParty() {
