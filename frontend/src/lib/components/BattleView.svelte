@@ -2221,7 +2221,18 @@
         recentEvents = [];
       }
 
-      if (!hasRecentEventArray || snap.recent_events.length === 0) {
+      const hasOverlayEvents = Array.isArray(recentEvents) && recentEvents.length > 0;
+      const hasFloaterEvents = Array.isArray(floaterFeed) && floaterFeed.length > 0;
+      const hasPendingFloaterState =
+        (Array.isArray(pendingFloaterRawEvents) && pendingFloaterRawEvents.length > 0) ||
+        (Array.isArray(pendingFloaterNormalizedEvents) && pendingFloaterNormalizedEvents.length > 0);
+
+      if (
+        (!hasRecentEventArray || snap.recent_events.length === 0) &&
+        !hasOverlayEvents &&
+        !hasFloaterEvents &&
+        !hasPendingFloaterState
+      ) {
         floaterFeed = [];
         recentEventCounts = new Map();
         lastRecentEventTokens = [];
