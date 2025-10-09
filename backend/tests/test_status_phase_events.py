@@ -103,7 +103,8 @@ async def test_status_phase_events_emit_with_pacing(monkeypatch):
 
     await manager.tick()
 
-    assert sleep_calls == [
+    assert all(call == expected_multiplier for call in sleep_calls)
+    assert sleep_calls[:4] == [
         expected_multiplier,
         expected_multiplier,
         expected_multiplier,

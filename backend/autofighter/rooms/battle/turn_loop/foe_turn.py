@@ -19,6 +19,7 @@ from ..pacing import _pace
 from ..pacing import impact_pause
 from ..pacing import pace_sleep
 from ..turn_helpers import credit_if_dead
+from ..turns import canonical_entity_pair
 from ..turns import mutate_snapshot_overlay
 from ..turns import push_progress_update
 from ..turns import register_snapshot_entities
@@ -109,6 +110,8 @@ async def _run_foe_turn_iteration(
     context.action_turn += 1
     actor_turn_index = context.action_turn
 
+    acting_id, acting_legacy_id = canonical_entity_pair(acting_foe)
+
     alive_targets = [
         (index, target)
         for index, target in enumerate(context.combat_party.members)
@@ -118,11 +121,14 @@ async def _run_foe_turn_iteration(
         return FoeTurnIterationResult(repeat=False, battle_over=True)
 
     _, target = _select_target(alive_targets)
+    target_id, target_legacy_id = canonical_entity_pair(target)
     await BUS.emit_async("target_acquired", acting_foe, target)
     mutate_snapshot_overlay(
         context.run_id,
-        active_id=getattr(acting_foe, "id", None),
-        active_target_id=getattr(target, "id", None),
+        active_id=acting_id,
+        legacy_active_id=acting_legacy_id,
+        active_target_id=target_id,
+        legacy_active_target_id=target_legacy_id,
     )
     await push_progress_update(
         context.progress,
@@ -133,8 +139,10 @@ async def _run_foe_turn_iteration(
         _EXTRA_TURNS,
         context.turn,
         run_id=context.run_id,
-        active_id=getattr(acting_foe, "id", None),
-        active_target_id=getattr(target, "id", None),
+        active_id=acting_id,
+        legacy_active_id=acting_legacy_id,
+        active_target_id=target_id,
+        legacy_active_target_id=target_legacy_id,
         include_summon_foes=True,
         visual_queue=context.visual_queue,
         turn_phase="start",
@@ -169,7 +177,8 @@ async def _run_foe_turn_iteration(
             context,
             acting_foe,
             action_start,
-            active_target_id=getattr(target, "id", None),
+            active_target_id=target_id,
+            legacy_active_target_id=target_legacy_id,
             spent_override=0.0,
         )
         return FoeTurnIterationResult(repeat=False, battle_over=True)
@@ -223,8 +232,10 @@ async def _run_foe_turn_iteration(
                 _EXTRA_TURNS,
                 context.turn,
                 run_id=context.run_id,
-                active_id=getattr(acting_foe, "id", None),
-                active_target_id=getattr(target, "id", None),
+                active_id=acting_id,
+                legacy_active_id=acting_legacy_id,
+                active_target_id=target_id,
+                legacy_active_target_id=target_legacy_id,
                 include_summon_foes=True,
                 visual_queue=context.visual_queue,
                 turn_phase="resolve",
@@ -237,7 +248,8 @@ async def _run_foe_turn_iteration(
             context,
             acting_foe,
             action_start,
-            active_target_id=getattr(target, "id", None),
+            active_target_id=target_id,
+            legacy_active_target_id=target_legacy_id,
         )
         return FoeTurnIterationResult(repeat=False, battle_over=battle_over)
 
@@ -321,8 +333,10 @@ async def _run_foe_turn_iteration(
                 _EXTRA_TURNS,
                 context.turn,
                 run_id=context.run_id,
-                active_id=getattr(acting_foe, "id", None),
-                active_target_id=getattr(target, "id", None),
+                active_id=acting_id,
+                legacy_active_id=acting_legacy_id,
+                active_target_id=target_id,
+                legacy_active_target_id=target_legacy_id,
                 include_summon_foes=True,
                 visual_queue=context.visual_queue,
                 turn_phase="resolve",
@@ -359,8 +373,10 @@ async def _run_foe_turn_iteration(
             _EXTRA_TURNS,
             context.turn,
             run_id=context.run_id,
-            active_id=getattr(acting_foe, "id", None),
-            active_target_id=getattr(target, "id", None),
+            active_id=acting_id,
+            legacy_active_id=acting_legacy_id,
+            active_target_id=target_id,
+            legacy_active_target_id=target_legacy_id,
             include_summon_foes=True,
             visual_queue=context.visual_queue,
             turn_phase="resolve",
@@ -374,7 +390,8 @@ async def _run_foe_turn_iteration(
         context,
         acting_foe,
         action_start,
-        active_target_id=getattr(target, "id", None),
+        active_target_id=target_id,
+        legacy_active_target_id=target_legacy_id,
     )
 
     return FoeTurnIterationResult(repeat=False, battle_over=battle_over)

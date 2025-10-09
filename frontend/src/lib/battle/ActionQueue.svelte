@@ -30,7 +30,21 @@
   $: enragePulse = showEnrageChip && !motionDisabled && flashEnrageCounter;
 
   function findCombatant(id) {
-    return combatants.find((c) => c.id === id) || null;
+    if (id === null || id === undefined) return null;
+    const target = String(id);
+    if (!target) return null;
+    return (
+      combatants.find((c) => {
+        if (!c) return false;
+        const baseId = c.id === null || c.id === undefined ? null : String(c.id);
+        if (baseId === target) {
+          return true;
+        }
+        const instanceId =
+          c.instance_id === null || c.instance_id === undefined ? null : String(c.instance_id);
+        return instanceId === target;
+      }) || null
+    );
   }
 
   const TURN_COUNTER_ID = 'turn_counter';
