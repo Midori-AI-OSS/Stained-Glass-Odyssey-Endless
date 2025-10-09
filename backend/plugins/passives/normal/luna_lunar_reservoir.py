@@ -133,7 +133,10 @@ class LunaLunarReservoir:
         setattr(charge_target, "luna_sword_charge", current_charge)
 
         doubles = min(current_charge // 25, 2000)
-        charge_target.actions_per_turn = 2 << doubles
+        if doubles <= 4:
+            charge_target.actions_per_turn = 2 << doubles
+        else:
+            charge_target.actions_per_turn = 32 + (doubles - 4)
 
         bonus_effect_name = "luna_lunar_reservoir_atk_bonus"
         if current_charge > 2000:

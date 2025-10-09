@@ -49,6 +49,15 @@ async def test_luna_lunar_reservoir_passive():
         LunaLunarReservoir.add_charge(luna, 25)
         assert LunaLunarReservoir.get_charge(luna) == 100
         assert luna.actions_per_turn == 32
+
+        # After hitting 32 actions, each additional 25 charge should add +1 action
+        LunaLunarReservoir.add_charge(luna, 25)
+        assert LunaLunarReservoir.get_charge(luna) == 125
+        assert luna.actions_per_turn == 33
+
+        LunaLunarReservoir.add_charge(luna, 75)
+        assert LunaLunarReservoir.get_charge(luna) == 200
+        assert luna.actions_per_turn == 36
     finally:
         LunaLunarReservoir._charge_points.clear()
         LunaLunarReservoir._swords_by_owner.clear()
