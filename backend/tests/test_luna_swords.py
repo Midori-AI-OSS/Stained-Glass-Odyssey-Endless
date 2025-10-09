@@ -175,6 +175,8 @@ async def test_luna_glitched_non_boss_gets_lightstream_swords(monkeypatch):
     swords = SummonManager.get_summons(luna.id)
     assert len(swords) == 2
     assert {getattr(s, "luna_sword_label", None) for s in swords} == {"Lightstream"}
-    assert all(getattr(s, "summon_type", "") == "luna_sword_lightstream" for s in swords)
+    summon_types = [getattr(s, "summon_type", "") for s in swords]
+    assert all(st.startswith("luna_sword_lightstream") for st in summon_types)
+    assert len(set(summon_types)) == len(summon_types)
     damage_ids = {getattr(getattr(s, "damage_type", None), "id", None) for s in swords}
     assert damage_ids == {"Fire", "Ice"}

@@ -28,6 +28,8 @@ log = logging.getLogger(__name__)
 register_snapshot_entities = _snapshots.register_snapshot_entities
 prepare_snapshot_overlay = _snapshots.prepare_snapshot_overlay
 mutate_snapshot_overlay = _snapshots.mutate_snapshot_overlay
+canonical_entity_id = _snapshots.canonical_entity_id
+canonical_entity_pair = _snapshots.canonical_entity_pair
 
 register_event_handlers()
 
@@ -43,6 +45,8 @@ async def push_progress_update(
     run_id: str | None,
     active_id: str | None,
     active_target_id: str | None = None,
+    legacy_active_id: str | None = None,
+    legacy_active_target_id: str | None = None,
     include_summon_foes: bool = False,
     visual_queue: Any | None = None,
     ended: bool | None = None,
@@ -62,6 +66,8 @@ async def push_progress_update(
         run_id=run_id,
         active_id=active_id,
         active_target_id=active_target_id,
+        legacy_active_id=legacy_active_id,
+        legacy_active_target_id=legacy_active_target_id,
         include_summon_foes=include_summon_foes,
         visual_queue=visual_queue,
         ended=ended,
@@ -101,7 +107,7 @@ async def dispatch_turn_end_snapshot(
     turn: int,
     run_id: str | None,
     *,
-    turn_phase: str | None = "end",
+    turn_phase: str | None = "turn_end",
     spent_override: float | None = None,
 ) -> int:
     """Advance the visual queue and emit an updated snapshot."""
@@ -112,6 +118,8 @@ async def dispatch_turn_end_snapshot(
         spent_override=spent_override,
     )
     effective_turn = turn + cycle_count
+    canonical_id, legacy_id = canonical_entity_pair(actor)
+
     await push_progress_update(
         progress,
         party_members,
@@ -121,7 +129,8 @@ async def dispatch_turn_end_snapshot(
         extra_turns,
         effective_turn,
         run_id=run_id,
-        active_id=getattr(actor, "id", None),
+        active_id=canonical_id,
+        legacy_active_id=legacy_id,
         active_target_id=None,
         visual_queue=visual_queue,
         turn_phase=turn_phase,

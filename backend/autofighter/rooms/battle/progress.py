@@ -35,6 +35,7 @@ class ActionQueueEntry(TypedDict, total=False):
     """Representation of a combatant in the visual action queue."""
 
     id: str
+    legacy_id: NotRequired[str]
     action_gauge: int
     action_value: float
     base_action_value: float
@@ -60,6 +61,8 @@ class BattleProgressPayload(TypedDict, total=False):
     action_queue: list[ActionQueueEntry]
     active_id: str | None
     active_target_id: str | None
+    legacy_active_id: str | None
+    legacy_active_target_id: str | None
     recent_events: list[dict[str, Any]]
     status_phase: dict[str, Any]
     ended: bool
@@ -99,6 +102,33 @@ async def build_action_queue_snapshot(
     def _build() -> list[ActionQueueEntry]:
         combined_entities = list(party_members) + list(foes)
 
+        identifier_cache: dict[int, tuple[str, str | None, str | None]] = {}
+
+        def _identifiers(combatant: Stats) -> tuple[str, str | None, str | None]:
+            cached = identifier_cache.get(id(combatant))
+            if cached is not None:
+                return cached
+
+            canonical, legacy = _snapshots.canonical_entity_pair(combatant)
+
+            canonical_id = canonical or None
+            raw_identifier = getattr(combatant, "id", None)
+            raw_id = None
+            if raw_identifier is not None:
+                try:
+                    raw_id = str(raw_identifier)
+                except Exception:
+                    raw_id = None
+                if canonical_id is None:
+                    canonical_id = raw_id
+
+            if canonical_id is None:
+                canonical_id = str(id(combatant))
+
+            bundle = (canonical_id, legacy, raw_id)
+            identifier_cache[id(combatant)] = bundle
+            return bundle
+
         def _sort_key(combatant: Stats) -> tuple[float, float, str]:
             try:
                 value = float(getattr(combatant, "action_value", 0.0))
@@ -115,7 +145,7 @@ async def build_action_queue_snapshot(
                 except ValueError:
                     offset = 0.0
 
-            identifier = getattr(combatant, "id", "")
+            identifier, _, _ = _identifiers(combatant)
             return (value, offset, identifier)
 
         def _normalize_entries(entries: list[ActionQueueEntry]) -> list[ActionQueueEntry]:
@@ -149,8 +179,23 @@ async def build_action_queue_snapshot(
 
             return entries
 
-        def _entry_from_snapshot(raw: MutableMapping[str, Any]) -> ActionQueueEntry:
-            identifier = str(raw.get("id", ""))
+        def _entry_from_snapshot(
+            raw: MutableMapping[str, Any], *, entity: Stats | None
+        ) -> ActionQueueEntry:
+            source_identifier = str(raw.get("id", ""))
+
+            canonical_id = source_identifier
+            legacy_id: str | None = None
+            if entity is not None:
+                resolved_id, legacy_identifier, raw_identifier = _identifiers(entity)
+                canonical_id = resolved_id or canonical_id
+                if legacy_identifier:
+                    legacy_id = legacy_identifier
+                elif raw_identifier and raw_identifier != canonical_id:
+                    legacy_id = raw_identifier
+
+            if not canonical_id:
+                canonical_id = source_identifier
 
             try:
                 action_value = float(raw.get("action_value", 0.0) or 0.0)
@@ -169,11 +214,13 @@ async def build_action_queue_snapshot(
                 base_value = 0.0
 
             entry: ActionQueueEntry = {
-                "id": identifier,
+                "id": canonical_id,
                 "action_gauge": raw.get("action_gauge", 0),
                 "action_value": action_value,
                 "base_action_value": base_value,
             }
+            if legacy_id:
+                entry["legacy_id"] = legacy_id
             if raw.get("bonus"):
                 entry["bonus"] = True
             return entry
@@ -199,16 +246,30 @@ async def build_action_queue_snapshot(
             if base_value < 0.0:
                 base_value = 0.0
 
-            return {
-                "id": getattr(combatant, "id", ""),
+            canonical_id, legacy_id, raw_identifier = _identifiers(combatant)
+            entry: ActionQueueEntry = {
+                "id": canonical_id,
                 "action_gauge": getattr(combatant, "action_gauge", 0),
                 "action_value": action_value,
                 "base_action_value": base_value,
             }
+            if legacy_id:
+                entry["legacy_id"] = legacy_id
+            elif raw_identifier and raw_identifier != canonical_id:
+                entry["legacy_id"] = raw_identifier
+            return entry
 
         visible_entities = [
             entity for entity in combined_entities if not getattr(entity, "despawned", False)
         ]
+
+        visible_by_identifier: dict[str, Stats] = {}
+        for entity in visible_entities:
+            primary_id, legacy_identifier, raw_identifier = _identifiers(entity)
+            for identifier in (primary_id, legacy_identifier, raw_identifier):
+                if not identifier:
+                    continue
+                visible_by_identifier.setdefault(identifier, entity)
 
         if visual_queue is not None:
             try:
@@ -217,24 +278,20 @@ async def build_action_queue_snapshot(
                 queue_snapshot = []
 
             if queue_snapshot:
-                visible_by_id: dict[str, Stats] = {}
-                for entity in visible_entities:
-                    identifier = getattr(entity, "id", None)
-                    if identifier:
-                        visible_by_id.setdefault(str(identifier), entity)
-
                 entries: list[ActionQueueEntry] = []
                 for raw in queue_snapshot:
                     identifier = str(raw.get("id", ""))
                     if not identifier:
                         continue
                     if identifier != TURN_COUNTER_ID:
-                        entity = visible_by_id.get(identifier)
+                        entity = visible_by_identifier.get(identifier)
                         if entity is None:
                             continue
                         if getattr(entity, "despawned", False):
                             continue
-                    entries.append(_entry_from_snapshot(raw))
+                    else:
+                        entity = visible_by_identifier.get(identifier)
+                    entries.append(_entry_from_snapshot(raw, entity=entity))
 
                 if entries:
                     return _normalize_entries(entries)
@@ -269,6 +326,8 @@ async def build_battle_progress_payload(
     run_id: str | None,
     active_id: str | None,
     active_target_id: str | None,
+    legacy_active_id: str | None = None,
+    legacy_active_target_id: str | None = None,
     include_summon_foes: bool = False,
     visual_queue: "ActionQueue" | None = None,
     ended: bool | None = None,
@@ -317,6 +376,11 @@ async def build_battle_progress_payload(
         "active_id": active_id,
         "active_target_id": active_target_id,
     }
+
+    if legacy_active_id is not None:
+        payload["legacy_active_id"] = legacy_active_id
+    if legacy_active_target_id is not None:
+        payload["legacy_active_target_id"] = legacy_active_target_id
 
     if turn_phase is not None:
         payload["turn_phase"] = turn_phase

@@ -19,8 +19,27 @@
   let combatantById = new Map();
   $: combatantById = new Map(
     (combatants || [])
-      .filter(entry => entry && entry.id !== undefined && entry.id !== null)
-      .map(entry => [String(entry.id), entry])
+      .filter(entry => entry)
+      .flatMap(entry => {
+        const pairs = [];
+        const baseId = entry?.id;
+        if (baseId !== undefined && baseId !== null) {
+          try {
+            pairs.push([String(baseId), entry]);
+          } catch {}
+        }
+        const instanceKey = entry?.instance_id ?? entry?.instanceId;
+        if (
+          instanceKey !== undefined &&
+          instanceKey !== null &&
+          instanceKey !== baseId
+        ) {
+          try {
+            pairs.push([String(instanceKey), entry]);
+          } catch {}
+        }
+        return pairs;
+      })
   );
 
   function normalizeId(value) {

@@ -13,6 +13,8 @@ __all__ = [
     "register_snapshot_entities",
     "prepare_snapshot_overlay",
     "mutate_snapshot_overlay",
+    "canonical_entity_id",
+    "canonical_entity_pair",
     "resolve_run_id",
     "set_effect_charges",
     "get_effect_charges",
@@ -33,6 +35,53 @@ _party_refs: dict[int, weakref.ref[Party]] = {}
 _recent_events: dict[str, deque[dict[str, Any]]] = {}
 _status_phases: dict[str, dict[str, Any] | None] = {}
 _effect_charges: dict[str, list[dict[str, Any]]] = {}
+
+
+def canonical_entity_id(entity: Any) -> str | None:
+    """Return a canonical identifier for a combatant.
+
+    Prefers ``instance_id`` to disambiguate duplicate summons while falling
+    back to the legacy ``id`` attribute for non-summoned entities. All values
+    are normalised to strings to simplify downstream comparisons.
+    """
+
+    if entity is None:
+        return None
+
+    identifier = getattr(entity, "instance_id", None)
+    if identifier is None:
+        identifier = getattr(entity, "id", None)
+    if identifier is None:
+        return None
+
+    try:
+        return str(identifier)
+    except Exception:
+        return None
+
+
+def canonical_entity_pair(entity: Any) -> tuple[str | None, str | None]:
+    """Return canonical and legacy identifiers for a combatant."""
+
+    canonical = canonical_entity_id(entity)
+
+    legacy: str | None
+    if entity is None:
+        legacy = None
+    else:
+        raw_legacy = getattr(entity, "id", None)
+        if raw_legacy is None:
+            legacy = None
+        else:
+            try:
+                legacy = str(raw_legacy)
+            except Exception:
+                legacy = None
+
+    if legacy == canonical:
+        legacy = None
+
+    return canonical, legacy
 
 
 def resolve_run_id(*entities: Any) -> str | None:
@@ -141,6 +190,8 @@ def mutate_snapshot_overlay(
     *,
     active_id: str | None | object = _MISSING,
     active_target_id: str | None | object = _MISSING,
+    legacy_active_id: str | None | object = _MISSING,
+    legacy_active_target_id: str | None | object = _MISSING,
     status_phase: dict[str, Any] | None | object = _MISSING,
     event: dict[str, Any] | None = None,
 ) -> None:
@@ -151,6 +202,10 @@ def mutate_snapshot_overlay(
         snapshot["active_id"] = active_id
     if active_target_id is not _MISSING:
         snapshot["active_target_id"] = active_target_id
+    if legacy_active_id is not _MISSING:
+        snapshot["legacy_active_id"] = legacy_active_id
+    if legacy_active_target_id is not _MISSING:
+        snapshot["legacy_active_target_id"] = legacy_active_target_id
     if status_phase is not _MISSING:
         _status_phases[run_id] = status_phase
         snapshot["status_phase"] = status_phase

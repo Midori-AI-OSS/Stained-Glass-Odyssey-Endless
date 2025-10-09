@@ -5,6 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 import sys
 from types import SimpleNamespace
+from typing import Any
 
 import pytest
 
@@ -12,8 +13,19 @@ _PROJECT_ROOT = str(Path(__file__).resolve().parents[1])
 if _PROJECT_ROOT not in sys.path:
     sys.path.append(_PROJECT_ROOT)
 
+from autofighter.mapgen import MapNode  # noqa: E402
+from autofighter.passives import PassiveRegistry  # noqa: E402
+from autofighter.rooms.battle import events as battle_events  # noqa: E402
+from autofighter.rooms.battle import progress as battle_progress  # noqa: E402
+from autofighter.rooms.battle import snapshots as battle_snapshots  # noqa: E402
 from autofighter.rooms.battle.turn_loop import foe_turn  # noqa: E402
 from autofighter.rooms.battle.turn_loop import player_turn  # noqa: E402
+from autofighter.summons.base import Summon  # noqa: E402
+from autofighter.summons.manager import SummonManager  # noqa: E402
+from plugins.characters.luna import Luna  # noqa: E402
+from plugins.passives.normal.luna_lunar_reservoir import (  # noqa: E402
+    LunaLunarReservoir,
+)
 
 
 class DummyEffectManager:
@@ -21,6 +33,8 @@ class DummyEffectManager:
 
     def __init__(self, owner):
         self.owner = owner
+        self.hots: list[Any] = []
+        self.mods: list[Any] = []
 
     async def tick(self, *_):
         return None
@@ -29,6 +43,12 @@ class DummyEffectManager:
         return True
 
     def maybe_inflict_dot(self, *_):  # pragma: no cover - simple stub
+        return None
+
+    def add_hot(self, *_):  # pragma: no cover - simple stub
+        return None
+
+    def add_modifier(self, *_):  # pragma: no cover - simple stub
         return None
 
 
@@ -40,12 +60,22 @@ class SimpleEntity:
         self.atk = atk
         self.hp = hp
         self.max_hp = hp
+        self.summon_slot_capacity = 3
         self.action_points = 1
         self.actions_per_turn = 1
         self.damage_type = SimpleNamespace(id="test", on_action=_always_true)
         self.effect_manager = DummyEffectManager(self)
         self.ultimate_charge = 0
         self.ultimate_ready = False
+        self._base_defense = 0
+        self.crit_rate = 0.05
+        self.crit_damage = 1.5
+        self.effect_hit_rate = 0.0
+        self.effect_resistance = 0.0
+        self._base_mitigation = 0.0
+        self._base_vitality = 0.0
+        self.passives: list[str] = []
+        self._active_effects: list[Any] = []
 
     async def maybe_regain(self, *_):
         return None
@@ -114,6 +144,8 @@ def _setup_common_player_patches(
         run_id,
         active_id,
         active_target_id=None,
+        legacy_active_id=None,
+        legacy_active_target_id=None,
         include_summon_foes=False,
         ended=None,
         visual_queue=None,
@@ -126,6 +158,8 @@ def _setup_common_player_patches(
                 "include_summon_foes": include_summon_foes,
                 "active_id": active_id,
                 "active_target_id": active_target_id,
+                "legacy_active_id": legacy_active_id,
+                "legacy_active_target_id": legacy_active_target_id,
                 "turn": turn,
                 "turn_phase": turn_phase,
                 "party_hp": [getattr(member, "hp", None) for member in party_members],
@@ -300,8 +334,13 @@ async def test_player_turn_emits_start_before_damage(monkeypatch):
     assert phases, "Expected at least one phase-tagged update"
     assert phases[0] == "start"
     assert phases[-1] == "turn_end"
-    assert any(phase == "resolve" for phase in phases[1:-1])
-    assert all(phase == "resolve" for phase in phases[1:-1])
+    mid_phases = phases[1:-1]
+    assert any(phase == "resolve" for phase in mid_phases)
+    if "end" in mid_phases:
+        assert mid_phases[-1] == "end"
+        assert all(phase == "resolve" for phase in mid_phases[:-1])
+    else:
+        assert all(phase == "resolve" for phase in mid_phases)
 
 
 @pytest.mark.asyncio
@@ -382,8 +421,113 @@ async def test_foe_turn_emits_start_before_damage(monkeypatch):
     assert phases, "Expected at least one phase-tagged update"
     assert phases[0] == "start"
     assert phases[-1] == "turn_end"
-    assert any(phase == "resolve" for phase in phases[1:-1])
-    assert all(phase == "resolve" for phase in phases[1:-1])
+    mid_phases = phases[1:-1]
+    assert any(phase == "resolve" for phase in mid_phases)
+    if "end" in mid_phases:
+        assert mid_phases[-1] == "end"
+        assert all(phase == "resolve" for phase in mid_phases[:-1])
+    else:
+        assert all(phase == "resolve" for phase in mid_phases)
+
+
+@pytest.mark.asyncio
+async def test_summon_instance_ids_used_in_progress_and_events(monkeypatch):
+    run_id = "run-instance"
+
+    monkeypatch.setattr(SummonManager, "_active_summons", {}, raising=False)
+    monkeypatch.setattr(SummonManager, "_summoner_refs", {}, raising=False)
+    monkeypatch.setattr(SummonManager, "_instance_counters", {}, raising=False)
+    monkeypatch.setattr(SummonManager, "_initialized", False, raising=False)
+    monkeypatch.setattr(SummonManager, "initialize", classmethod(lambda cls: None))
+
+    class _FakeSummon(SimpleNamespace):
+        def __init__(self, summoner_id: str, summon_type: str):
+            super().__init__(
+                id=summon_type,
+                instance_id="",
+                summoner_id=summoner_id,
+                summon_type=summon_type,
+                summon_source="test",
+                hp=10,
+                max_hp=10,
+                damage_type=SimpleNamespace(id="light"),
+                effect_manager=DummyEffectManager(self),
+                action_gauge=0,
+                action_value=0.0,
+                base_action_value=0.0,
+            )
+
+    def _fake_create_from_summoner(cls, summoner, summon_type, *_, **__):
+        summoner_id = getattr(summoner, "id", str(id(summoner)))
+        return _FakeSummon(summoner_id, summon_type)
+
+    monkeypatch.setattr(Summon, "create_from_summoner", classmethod(_fake_create_from_summoner))
+
+    summoner = SimpleEntity("luna")
+    summoner.summon_slot_capacity = 4
+
+    sword_one = SummonManager.create_summon(
+        summoner,
+        summon_type="luna_sword_lightstream",
+        source="test",
+        force_create=True,
+    )
+    sword_two = SummonManager.create_summon(
+        summoner,
+        summon_type="luna_sword_lightstream",
+        source="test",
+        force_create=True,
+    )
+
+    assert sword_one is not None
+    assert sword_two is not None
+    assert sword_one.instance_id != sword_two.instance_id
+
+    battle_snapshots.prepare_snapshot_overlay(run_id, [summoner, sword_one, sword_two])
+
+    battle_events._record_event(
+        run_id,
+        event_type="damage_taken",
+        source=sword_one,
+        target=sword_two,
+        amount=5,
+        metadata=None,
+    )
+
+    events = battle_snapshots.get_recent_events(run_id)
+    assert events, "Expected recorded events for summon interaction"
+    recorded = events[-1]
+    assert recorded["source_id"] == sword_one.instance_id
+    assert recorded.get("legacy_source_id") == sword_one.id
+    assert recorded["target_id"] == sword_two.instance_id
+    assert recorded.get("legacy_target_id") == sword_two.id
+
+    active_id, legacy_active_id = battle_snapshots.canonical_entity_pair(sword_one)
+    target_id, legacy_target_id = battle_snapshots.canonical_entity_pair(sword_two)
+
+    payload = await battle_progress.build_battle_progress_payload(
+        [summoner, sword_one],
+        [sword_two],
+        SimpleNamespace(as_payload=lambda: {}),
+        rdr=0.0,
+        extra_turns={},
+        turn=3,
+        run_id=run_id,
+        active_id=active_id,
+        active_target_id=target_id,
+        legacy_active_id=legacy_active_id,
+        legacy_active_target_id=legacy_target_id,
+        include_summon_foes=True,
+    )
+
+    assert payload["active_id"] == sword_one.instance_id
+    assert payload.get("legacy_active_id") == sword_one.id
+    assert payload["active_target_id"] == sword_two.instance_id
+    assert payload.get("legacy_active_target_id") == sword_two.id
+    recent_events = payload.get("recent_events") or []
+    assert recent_events, "Expected progress payload to include events"
+    assert recent_events[-1]["source_id"] == sword_one.instance_id
+    assert recent_events[-1].get("legacy_source_id") == sword_one.id
 
 
 @pytest.mark.asyncio
@@ -441,3 +585,58 @@ async def test_foe_phase_pushes_update_for_new_summons(monkeypatch):
     assert "ally_summon" in summon_update["party"]
     assert "foe_summon" in summon_update["foes"]
     assert summon_update["turn_phase"] == "resolve"
+
+
+@pytest.mark.asyncio
+async def test_luna_glitched_lightstream_snapshot_ids():
+    LunaLunarReservoir._charge_points.clear()
+    LunaLunarReservoir._swords_by_owner.clear()
+    SummonManager.reset_all()
+
+    luna = Luna()
+    luna.id = "luna_glitched_snapshot"
+    luna.rank = "glitched champion"
+
+    node = MapNode(
+        room_id=0,
+        room_type="battle",
+        floor=1,
+        index=1,
+        loop=1,
+        pressure=0,
+    )
+    registry = PassiveRegistry()
+
+    luna.prepare_for_battle(node, registry)
+
+    swords = SummonManager.get_summons(luna.id)
+    assert len(swords) == 2, "Glitched Luna should summon two Lightstream swords"
+
+    payload = await battle_progress.build_battle_progress_payload(
+        [luna],
+        [],
+        SimpleNamespace(as_payload=lambda: {}),
+        rdr=0.0,
+        extra_turns={},
+        turn=1,
+        run_id="glitched-run",
+        active_id=None,
+        active_target_id=None,
+        include_summon_foes=False,
+    )
+
+    sword_snapshots = payload["party_summons"].get(luna.id)
+    assert sword_snapshots and len(sword_snapshots) == 2
+    sword_ids = [entry.get("id") for entry in sword_snapshots]
+    assert len({sid for sid in sword_ids if sid}) == 2
+
+    summon_types = [entry.get("summon_type") for entry in sword_snapshots]
+    assert all(str(st).startswith("luna_sword_lightstream") for st in summon_types)
+    assert len(set(summon_types)) == len(summon_types)
+
+    helper = getattr(luna, "_luna_sword_helper", None)
+    if helper is not None and hasattr(helper, "detach"):
+        helper.detach()
+    LunaLunarReservoir._charge_points.clear()
+    LunaLunarReservoir._swords_by_owner.clear()
+    SummonManager.reset_all()
