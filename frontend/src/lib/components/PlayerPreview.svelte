@@ -74,11 +74,6 @@
   $: upgradeMaterialKey = `${upgradeElementKey}_1`;
   $: availableMaterials = Number(upgradeItems?.[upgradeMaterialKey] ?? 0);
   $: pendingAction = Boolean(upgradeContext?.pendingStat);
-  $: levelsSummary = UPGRADE_STATS.map((entry) => {
-    const level = Number(upgradeCounts?.[entry.key] ?? 0);
-    const percent = upgradeTotals?.[entry.key] ?? 0;
-    return `${entry.label} L${level} (${formatPercent(percent)})`;
-  }).join(', ');
   $: activeStatKey = highlightedStat || UPGRADE_STATS[0]?.key || null;
   $: activeStatLevel = activeStatKey ? statLevel(activeStatKey) : 0;
   $: activeStatLabel = activeStatKey ? statLabel(activeStatKey) : '';
@@ -473,7 +468,6 @@
             <div class="row row2">
               <span class="next-cost">Next {activeStatLabel || 'upgrade'}: {formatCost(activeNextCost)}</span>
               <span class="level">Level {activeStatLevel}</span>
-              <span class="summary">{levelsSummary}</span>
             </div>
           </div>
         </div>
