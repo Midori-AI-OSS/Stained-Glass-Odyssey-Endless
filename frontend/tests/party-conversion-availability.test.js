@@ -29,6 +29,29 @@ describe('upgrade cache merging', () => {
     expect(shouldRefreshRoster(result)).toBe(true);
   });
 
+  test('drops stale higher-tier entries when backend aggregates', () => {
+    const previousData = {
+      items: {
+        light_1: 2,
+        light_2: 4,
+        light_3: 1,
+        fire_3: 7,
+      },
+      element: 'light'
+    };
+
+    const result = {
+      materials_remaining: 6,
+      materials_remaining_units: 10,
+      element: 'light'
+    };
+
+    const merged = mergeUpgradePayload(previousData, result);
+    expect(merged.items).toEqual({ light_1: 6, fire_3: 7 });
+    expect(merged.materials_remaining).toBe(6);
+    expect(merged.materials_remaining_units).toBe(10);
+  });
+
   test('formats material quantities for hover text', () => {
     expect(formatMaterialQuantity(3, 'fire_1')).toBe('3× Fire 1★');
     expect(formatMaterialQuantity(0, 'light_1')).toBe('0× Light 1★');

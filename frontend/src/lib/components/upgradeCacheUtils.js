@@ -36,11 +36,21 @@ export function mergeUpgradePayload(previousData, result) {
   }
 
   if (result && Object.prototype.hasOwnProperty.call(result, 'materials_remaining')) {
+    const hasItems = Object.prototype.hasOwnProperty.call(result, 'items');
     const elementKey = String(result.element || base.element || '').toLowerCase();
-    if (elementKey) {
+    if (elementKey && !hasItems) {
       const materialKey = `${elementKey}_1`;
-      base.items = { ...(base.items || {}) };
-      base.items[materialKey] = result.materials_remaining;
+      const tierPrefix = `${elementKey}_`;
+      const nextItems = { ...(base.items || {}) };
+
+      for (const key of Object.keys(nextItems)) {
+        if (key.startsWith(tierPrefix) && key !== materialKey) {
+          delete nextItems[key];
+        }
+      }
+
+      nextItems[materialKey] = result.materials_remaining;
+      base.items = nextItems;
     }
     base.materials_remaining = result.materials_remaining;
   }
