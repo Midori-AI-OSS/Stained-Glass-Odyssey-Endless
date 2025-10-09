@@ -13,13 +13,19 @@ _PROJECT_ROOT = str(Path(__file__).resolve().parents[1])
 if _PROJECT_ROOT not in sys.path:
     sys.path.append(_PROJECT_ROOT)
 
-from autofighter.rooms.battle.turn_loop import foe_turn  # noqa: E402
-from autofighter.rooms.battle.turn_loop import player_turn  # noqa: E402
+from autofighter.mapgen import MapNode  # noqa: E402
+from autofighter.passives import PassiveRegistry  # noqa: E402
 from autofighter.rooms.battle import events as battle_events  # noqa: E402
 from autofighter.rooms.battle import progress as battle_progress  # noqa: E402
 from autofighter.rooms.battle import snapshots as battle_snapshots  # noqa: E402
+from autofighter.rooms.battle.turn_loop import foe_turn  # noqa: E402
+from autofighter.rooms.battle.turn_loop import player_turn  # noqa: E402
 from autofighter.summons.base import Summon  # noqa: E402
 from autofighter.summons.manager import SummonManager  # noqa: E402
+from plugins.characters.luna import Luna  # noqa: E402
+from plugins.passives.normal.luna_lunar_reservoir import (  # noqa: E402
+    LunaLunarReservoir,
+)
 
 
 class DummyEffectManager:
@@ -579,3 +585,58 @@ async def test_foe_phase_pushes_update_for_new_summons(monkeypatch):
     assert "ally_summon" in summon_update["party"]
     assert "foe_summon" in summon_update["foes"]
     assert summon_update["turn_phase"] == "resolve"
+
+
+@pytest.mark.asyncio
+async def test_luna_glitched_lightstream_snapshot_ids():
+    LunaLunarReservoir._charge_points.clear()
+    LunaLunarReservoir._swords_by_owner.clear()
+    SummonManager.reset_all()
+
+    luna = Luna()
+    luna.id = "luna_glitched_snapshot"
+    luna.rank = "glitched champion"
+
+    node = MapNode(
+        room_id=0,
+        room_type="battle",
+        floor=1,
+        index=1,
+        loop=1,
+        pressure=0,
+    )
+    registry = PassiveRegistry()
+
+    luna.prepare_for_battle(node, registry)
+
+    swords = SummonManager.get_summons(luna.id)
+    assert len(swords) == 2, "Glitched Luna should summon two Lightstream swords"
+
+    payload = await battle_progress.build_battle_progress_payload(
+        [luna],
+        [],
+        SimpleNamespace(as_payload=lambda: {}),
+        rdr=0.0,
+        extra_turns={},
+        turn=1,
+        run_id="glitched-run",
+        active_id=None,
+        active_target_id=None,
+        include_summon_foes=False,
+    )
+
+    sword_snapshots = payload["party_summons"].get(luna.id)
+    assert sword_snapshots and len(sword_snapshots) == 2
+    sword_ids = [entry.get("id") for entry in sword_snapshots]
+    assert len({sid for sid in sword_ids if sid}) == 2
+
+    summon_types = [entry.get("summon_type") for entry in sword_snapshots]
+    assert all(str(st).startswith("luna_sword_lightstream") for st in summon_types)
+    assert len(set(summon_types)) == len(summon_types)
+
+    helper = getattr(luna, "_luna_sword_helper", None)
+    if helper is not None and hasattr(helper, "detach"):
+        helper.detach()
+    LunaLunarReservoir._charge_points.clear()
+    LunaLunarReservoir._swords_by_owner.clear()
+    SummonManager.reset_all()
