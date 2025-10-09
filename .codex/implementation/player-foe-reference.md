@@ -62,7 +62,7 @@ first spawn and reuse it for future sessions unless customized.
 | LadyOfFire | B | 5★ | Fire | `lady_of_fire_infernal_momentum` converts defeated foes into escalating heat-wave stacks for overwhelming fire damage. | Standard gacha recruit. |
 | LadyStorm | B | 6★ | Wind / Lightning (randomized) | `lady_storm_supercell` weaves slipstreams into charge detonations that grant tailwinds and shred mitigation. | 6★ gacha headliner. |
 | LadyWind | B | 5★ | Wind | `lady_wind_tempest_guard` sustains a permanent slipstream of dodge and mitigation, feeding on critical hits. | Standard gacha recruit. |
-| Luna | B | Story | Generic | `luna_lunar_reservoir` charges astral swords; boss-ranked variants pre-summon blades that mirror her actions, while glitched non-boss ranks cache twin Lightstream swords before combat. | Story antagonist only; cannot be unlocked or recruited. |
+| Luna | B | Story | Generic | `luna_lunar_reservoir` charges astral swords, doubling actions up to 32 per turn before adding +1 per extra 25 charge; boss-ranked variants pre-summon blades that mirror her actions, while glitched non-boss ranks cache twin Lightstream swords before combat. | Story antagonist only; cannot be unlocked or recruited. |
 | Mezzy | B | 5★ | Any (randomized) | `mezzy_gluttonous_bulwark` devours incoming attacks, siphoning stats and reducing damage taken. | Standard gacha recruit. |
 | Mimic | C | 0★ | Any (randomized) | `mimic_player_copy` mirrors allied passives and stat gains. | Mirrors an active party member during scripted mirror fights; non-selectable. |
 | PersonaIce | A | 5★ | Ice | `persona_ice_cryo_cycle` layers mitigation and thaws stored frost into end-of-turn healing barriers. | Standard gacha recruit. |
