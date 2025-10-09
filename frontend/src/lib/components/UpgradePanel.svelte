@@ -3,7 +3,15 @@
   import { getUpgrade, upgradeStat } from '../systems/api.js';
   import { createEventDispatcher } from 'svelte';
   import { getElementColor } from '../systems/assetLoader.js';
-  import { formatCost, formatPercent, formatMaterialQuantity, formatMaterialName } from '../utils/upgradeFormatting.js';
+  import {
+    formatCost,
+    formatPercent,
+    formatMaterialQuantity,
+    formatMaterialName,
+    extractElementBreakdown,
+    computeUnitsFromBreakdown,
+    prepareMaterialRequest
+  } from '../utils/upgradeFormatting.js';
 
   export let id;
   export let element; // e.g. 'Light', 'Fire'
@@ -40,7 +48,15 @@
   $: elementKey = String(resolvedElement || 'Generic').toLowerCase();
   $: materialKey = `${elementKey}_1`;
   $: accent = getElementColor(resolvedElement || 'Generic');
-  $: availableMaterials = Number(items?.[materialKey] ?? 0);
+  $: elementInventory = extractElementBreakdown(items, elementKey);
+  $: availableMaterials = computeUnitsFromBreakdown(elementInventory);
+  $: availableSummary = (() => {
+    const summary = formatCost({ item: materialKey, units: availableMaterials, breakdown: elementInventory });
+    if (summary === '—') {
+      return formatMaterialQuantity(availableMaterials, materialKey);
+    }
+    return summary;
+  })();
   $: nextCostForStat = nextCosts?.[spendStat] || null;
   $: levelForStat = Number(statCounts?.[spendStat] ?? 0);
   $: totalPercentForStat = statTotals?.[spendStat] ?? 0;
@@ -79,8 +95,9 @@
     submitting = true;
     try {
       const options = { repeat: repeats };
-      if (nextCostForStat?.count != null) {
-        options.materials = nextCostForStat.count;
+      const materialRequest = prepareMaterialRequest(nextCostForStat);
+      if (materialRequest) {
+        options.materials = materialRequest;
       }
       const result = await upgradeStat(id, String(spendStat), options);
       await load({ resetStatus: false });
@@ -127,7 +144,7 @@
     </div>
     <div class="row">
       <div class="label">Available</div>
-      <div class="value">{formatMaterialQuantity(availableMaterials, materialKey)}</div>
+      <div class="value">{availableSummary}</div>
     </div>
 
     <div class="section">

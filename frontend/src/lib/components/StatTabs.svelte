@@ -3,7 +3,14 @@
   import { fly } from 'svelte/transition';
   import { quintOut } from 'svelte/easing';
   import { getElementIcon, getElementColor } from '../systems/assetLoader.js';
-  import { formatPercent, formatMaterialQuantity, formatCost } from '../utils/upgradeFormatting.js';
+  import {
+    formatPercent,
+    formatMaterialQuantity,
+    formatCost,
+    extractElementBreakdown,
+    computeUnitsFromBreakdown,
+    prepareMaterialRequest
+  } from '../utils/upgradeFormatting.js';
 
   export let roster = [];
   export let previewId;
@@ -40,8 +47,17 @@
   $: nextCosts = upgradeData?.next_costs || {};
   $: upgradeItems = upgradeData?.items || {};
   $: resolvedElement = upgradeData?.element || previewChar?.element || 'generic';
-  $: upgradeMaterialKey = `${String(resolvedElement || 'generic').toLowerCase()}_1`;
-  $: availableMaterials = Number(upgradeItems?.[upgradeMaterialKey] ?? 0);
+  $: resolvedElementKey = String(resolvedElement || 'generic').toLowerCase();
+  $: upgradeMaterialKey = `${resolvedElementKey}_1`;
+  $: elementInventory = extractElementBreakdown(upgradeItems, resolvedElementKey);
+  $: availableMaterials = computeUnitsFromBreakdown(elementInventory);
+  $: availableSummary = (() => {
+    const summary = formatCost({ item: upgradeMaterialKey, units: availableMaterials, breakdown: elementInventory });
+    if (summary === '—') {
+      return formatMaterialQuantity(availableMaterials, upgradeMaterialKey);
+    }
+    return summary;
+  })();
   $: resolvedSelectedStat = (() => {
     if (selectedStat) return selectedStat;
     if (upgradeContext?.pendingStat) return upgradeContext.pendingStat;
@@ -55,9 +71,10 @@
   $: activeStatLevel = Number(upgradeCounts?.[resolvedSelectedStat] ?? 0);
   $: activeNextCost = nextCosts?.[resolvedSelectedStat] ?? null;
   $: activeImpactNow = formatPercent(Number(upgradeTotals?.[resolvedSelectedStat] ?? 0));
+  $: nextCostUnits = Number(activeNextCost?.units ?? activeNextCost?.count ?? 0);
   $: impactAfterValue = (() => {
     const current = Number(upgradeTotals?.[resolvedSelectedStat] ?? 0);
-    const increment = Number(activeNextCost?.count ?? 0) * 0.001;
+    const increment = nextCostUnits * 0.001;
     return current + (Number.isFinite(increment) ? increment : 0);
   })();
   $: activeImpactAfter = formatPercent(impactAfterValue);
@@ -131,11 +148,12 @@
 
   function requestUpgrade() {
     if (!previewId || !resolvedSelectedStat) return;
-    const nextCostCount = activeNextCost?.count ?? null;
+    const materialRequest = prepareMaterialRequest(activeNextCost);
     dispatch('request-upgrade', {
       id: previewId,
       stat: resolvedSelectedStat,
-      expectedMaterials: nextCostCount,
+      expectedMaterials: materialRequest ?? nextCostUnits,
+      expectedUnits: nextCostUnits,
       availableMaterials
     });
   }
@@ -196,7 +214,7 @@
               </div>
               <div>
                 <span class="label">Materials</span>
-                <span class="value">{formatMaterialQuantity(availableMaterials, upgradeMaterialKey)}</span>
+                <span class="value">{availableSummary}</span>
               </div>
             </div>
             <div class="upgrade-costs">

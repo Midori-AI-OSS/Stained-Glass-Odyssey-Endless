@@ -8,7 +8,15 @@
   import { getElementIcon, getElementColor } from '../systems/assetLoader.js';
   import { savePlayerConfig } from '../systems/api.js';
   import { Heart, Sword, Shield, Crosshair, Zap, HeartPulse, ShieldPlus } from 'lucide-svelte';
-  import { formatCost, formatPercent, formatMaterialQuantity, formatMaterialName } from '../utils/upgradeFormatting.js';
+  import {
+    formatCost,
+    formatPercent,
+    formatMaterialQuantity,
+    formatMaterialName,
+    extractElementBreakdown,
+    computeUnitsFromBreakdown,
+    prepareMaterialRequest
+  } from '../utils/upgradeFormatting.js';
 
   export let roster = [];
   export let previewId;
@@ -72,7 +80,15 @@
   $: resolvedUpgradeElement = (upgradeData?.element || elementName || 'generic');
   $: upgradeElementKey = String(resolvedUpgradeElement || 'generic').toLowerCase();
   $: upgradeMaterialKey = `${upgradeElementKey}_1`;
-  $: availableMaterials = Number(upgradeItems?.[upgradeMaterialKey] ?? 0);
+  $: elementInventory = extractElementBreakdown(upgradeItems, upgradeElementKey);
+  $: availableMaterials = computeUnitsFromBreakdown(elementInventory);
+  $: availableSummary = (() => {
+    const summary = formatCost({ item: upgradeMaterialKey, units: availableMaterials, breakdown: elementInventory });
+    if (summary === '—') {
+      return formatMaterialQuantity(availableMaterials, upgradeMaterialKey);
+    }
+    return summary;
+  })();
   $: pendingAction = Boolean(upgradeContext?.pendingStat);
   $: activeStatKey = highlightedStat || UPGRADE_STATS[0]?.key || null;
   $: activeStatLevel = activeStatKey ? statLevel(activeStatKey) : 0;
@@ -264,12 +280,14 @@
 
   function requestUpgrade(stat) {
     if (!selected || !stat || pendingAction) return;
-    const nextCost = upgradeCosts?.[stat]?.count ?? null;
+    const materialRequest = prepareMaterialRequest(upgradeCosts?.[stat]);
+    const nextUnits = Number(upgradeCosts?.[stat]?.units ?? upgradeCosts?.[stat]?.count ?? 0);
     dispatch('request-upgrade', {
       id: selected.id,
       stat,
       repeats: upgradeRepeat,
-      expectedMaterials: nextCost,
+      expectedMaterials: materialRequest ?? nextUnits,
+      expectedUnits: nextUnits,
       availableMaterials
     });
   }
@@ -448,7 +466,7 @@
               {:else if upgradeErrorMessage}
                 <span class="status error">{upgradeErrorMessage}</span>
               {/if}
-              <span class="materials">Available: {formatMaterialQuantity(availableMaterials, upgradeMaterialKey)}</span>
+              <span class="materials">Available: {availableSummary}</span>
             </div>
             <div class="repeat-controls" aria-label="Upgrade repeats" on:click|stopPropagation>
               {#each REPEAT_OPTIONS as option}

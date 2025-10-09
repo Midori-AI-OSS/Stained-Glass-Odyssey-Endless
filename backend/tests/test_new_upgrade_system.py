@@ -130,6 +130,45 @@ async def test_upgrade_borrows_higher_tier_materials(app_with_db):
 
 
 @pytest.mark.asyncio
+async def test_upgrade_consumes_auto_crafted_stock(app_with_db):
+    app, db_path = app_with_db
+    client = app.test_client()
+
+    conn = sqlcipher3.connect(db_path)
+    conn.execute("PRAGMA key = 'testkey'")
+    conn.execute(
+        "INSERT OR REPLACE INTO upgrade_items (id, count) VALUES (?, ?)",
+        ("light_1", 0),
+    )
+    conn.execute(
+        "INSERT OR REPLACE INTO upgrade_items (id, count) VALUES (?, ?)",
+        ("light_3", 1),
+    )
+    conn.commit()
+    conn.close()
+
+    resp = await client.post(
+        "/players/player/upgrade-stat",
+        json={"stat_name": "atk"},
+    )
+    data = await resp.get_json()
+
+    assert resp.status_code == 200
+    assert data["materials_spent"] == 1
+    assert data["materials_remaining"] == STAR_TO_MATERIALS[3] - 1
+    assert data["materials_remaining_units"] == STAR_TO_MATERIALS[3] - 1
+    assert {
+        key: value
+        for key, value in data["next_costs"]["atk"]["breakdown"].items()
+        if value > 0
+    } == {"light_1": 2}
+
+    inventory = _fetch_item_counts(db_path)
+    assert inventory.get("light_3", 0) == 0
+    assert inventory.get("light_1", 0) == STAR_TO_MATERIALS[3] - 1
+
+
+@pytest.mark.asyncio
 async def test_player_conversion_uses_active_element(app_with_db):
     app, db_path = app_with_db
     client = app.test_client()
@@ -173,8 +212,13 @@ async def test_upgrade_spends_materials_and_scales_cost(app_with_db):
     assert first_upgrade["materials_spent"] == 1
     assert first_upgrade["upgrade_percent"] == pytest.approx(0.001)
     assert first_upgrade["completed_upgrades"] == 1
-    assert first_upgrade["next_costs"]["max_hp"]["count"] == 2
+    assert first_upgrade["next_costs"]["max_hp"]["units"] == 2
     assert first_upgrade["next_costs"]["max_hp"]["item"] == "light_1"
+    assert {
+        key: value
+        for key, value in first_upgrade["next_costs"]["max_hp"]["breakdown"].items()
+        if value > 0
+    } == {"light_1": 2}
 
     resp = await client.post(
         "/players/player/upgrade-stat",
@@ -184,8 +228,14 @@ async def test_upgrade_spends_materials_and_scales_cost(app_with_db):
 
     assert second_upgrade["materials_spent"] == 2
     assert second_upgrade["completed_upgrades"] == 1
-    assert second_upgrade["next_costs"]["max_hp"]["count"] == 3
+    assert second_upgrade["next_costs"]["max_hp"]["units"] == 3
+    assert {
+        key: value
+        for key, value in second_upgrade["next_costs"]["max_hp"]["breakdown"].items()
+        if value > 0
+    } == {"light_1": 3}
     assert second_upgrade["materials_remaining"] == first_upgrade["materials_remaining"] - 2
+    assert second_upgrade["materials_remaining_units"] >= second_upgrade["materials_remaining"]
 
 
 @pytest.mark.asyncio
@@ -229,7 +279,13 @@ async def test_invalid_material_cost_error(app_with_db):
 
     assert resp.status_code == 400
     assert data["error"] == "invalid material cost"
-    assert data["expected_materials"] == 1
+    assert data["expected_units"] == 1
+    assert data["expected_materials"]["units"] == 1
+    assert {
+        key: value
+        for key, value in data["expected_materials"]["breakdown"].items()
+        if value > 0
+    } == {"light_1": 1}
 
 
 @pytest.mark.asyncio
@@ -257,7 +313,14 @@ async def test_insufficient_materials_error(app_with_db):
 
     assert resp.status_code == 400
     assert data["error"] == "insufficient materials"
-    assert data["required_materials"] == 1
+    assert data["required_units"] == 1
+    assert data["required_materials"]["units"] == 1
+    assert {
+        key: value
+        for key, value in data["required_materials"]["breakdown"].items()
+        if value > 0
+    } == {"light_1": 1}
+    assert data["materials_available_units"] == data["materials_available"]
 
 
 @pytest.mark.asyncio
@@ -280,7 +343,8 @@ async def test_get_endpoint_payload_structure(app_with_db):
     assert resp.status_code == 200
     assert "upgrade_points" not in data
     assert data["next_costs"]["atk"]["item"] == "fire_1"
-    assert isinstance(data["next_costs"]["atk"]["count"], int)
+    assert isinstance(data["next_costs"]["atk"]["units"], int)
+    assert "breakdown" in data["next_costs"]["atk"]
     assert data["stat_counts"]["atk"] == 1
     assert data["element"] == "fire"
 
