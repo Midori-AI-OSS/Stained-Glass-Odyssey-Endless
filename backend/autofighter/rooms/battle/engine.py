@@ -156,9 +156,9 @@ async def run_battle(
         except Exception:
             pass
 
-    effects_charge = _snapshots.get_effect_charges(run_id)
-
     await handle_battle_end(foes, combat_party.members)
+
+    effects_charge = _snapshots.get_effect_charges(run_id)
 
     battle_result = (
         "defeat"
