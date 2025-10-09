@@ -129,12 +129,6 @@
     return character.stats?.base_stats?.[statName];
   }
 
-  function selectStat(stat) {
-    if (!previewId || !stat) return;
-    dispatch('select-upgrade', { id: previewId, stat });
-    dispatch('open-upgrade', { id: previewId, stat });
-  }
-
   function requestUpgrade() {
     if (!previewId || !resolvedSelectedStat) return;
     const nextCostCount = activeNextCost?.count ?? null;
@@ -146,15 +140,6 @@
     });
   }
 
-  function computeImpactNow(statKey) {
-    return formatPercent(Number(upgradeTotals?.[statKey] ?? 0));
-  }
-
-  function computeImpactAfter(statKey) {
-    const current = Number(upgradeTotals?.[statKey] ?? 0);
-    const increment = Number(nextCosts?.[statKey]?.count ?? 0) * 0.001;
-    return formatPercent(current + (Number.isFinite(increment) ? increment : 0));
-  }
 </script>
 
 <div class="stats-panel" data-testid="stats-panel" class:upgrade-active={upgradeMode}>
@@ -223,25 +208,6 @@
                 <span class="label">Status</span>
                 <span class="value status">{upgradeStatusMessage || 'Ready'}</span>
               </div>
-            </div>
-            <div class="upgrade-options" role="listbox" aria-label="Select stat to upgrade">
-              {#each UPGRADE_STATS as entry}
-                {#key entry.key}
-                  <button
-                    type="button"
-                    class="upgrade-option"
-                    class:active={resolvedSelectedStat === entry.key}
-                    on:click={() => selectStat(entry.key)}
-                  >
-                    <span class="option-title">{entry.label}</span>
-                    <span class="option-impact">
-                      <span class="now" aria-label="Impact now">{computeImpactNow(entry.key)}</span>
-                      <span class="after" aria-label="After upgrade">{computeImpactAfter(entry.key)}</span>
-                    </span>
-                    <span class="option-cost">{formatCost(nextCosts?.[entry.key])}</span>
-                  </button>
-                {/key}
-              {/each}
             </div>
             <div class="upgrade-actions">
               <button type="button" class="secondary" on:click={() => handleUpgradeDismiss('cancel')}>
@@ -458,45 +424,6 @@
     opacity: 0.65;
   }
   .upgrade-costs .status { color: #ffdca8; font-weight: 500; }
-  .upgrade-options {
-    display: flex;
-    flex-direction: column;
-    gap: 0.4rem;
-    overflow-y: auto;
-    max-height: 12rem;
-  }
-  .upgrade-option {
-    background: linear-gradient(0deg, rgba(255,255,255,0.03), rgba(255,255,255,0.03)), rgba(6, 12, 24, 0.55);
-    border: var(--glass-border);
-    border-radius: 8px;
-    padding: 0.55rem 0.6rem;
-    display: grid;
-    grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr) minmax(0, 1fr);
-    gap: 0.5rem;
-    align-items: center;
-    color: #eee;
-    cursor: pointer;
-    transition: border-color 150ms ease-in-out, background 150ms ease-in-out, box-shadow 150ms ease-in-out;
-    box-shadow: var(--glass-shadow);
-    backdrop-filter: var(--glass-filter);
-  }
-  .upgrade-option .option-impact {
-    display: flex;
-    flex-direction: column;
-    gap: 0.15rem;
-    font-size: 0.85rem;
-  }
-  .upgrade-option .option-impact .after { color: #80ffb0; }
-  .upgrade-option .option-cost { font-size: 0.85rem; opacity: 0.8; }
-  .upgrade-option.active {
-    border-color: rgba(56, 189, 248, 0.65);
-    background: linear-gradient(0deg, rgba(56, 189, 248, 0.18), rgba(56, 189, 248, 0.08)), var(--glass-bg);
-    box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.35), var(--glass-shadow);
-  }
-  .upgrade-option:hover {
-    border-color: rgba(255,255,255,0.55);
-    background: linear-gradient(0deg, rgba(255,255,255,0.08), rgba(255,255,255,0.08)), rgba(10, 18, 34, 0.6);
-  }
   .upgrade-actions {
     display: flex;
     justify-content: flex-end;
