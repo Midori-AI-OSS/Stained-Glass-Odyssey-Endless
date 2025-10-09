@@ -36,8 +36,9 @@ export function mergeUpgradePayload(previousData, result) {
   }
 
   if (result && Object.prototype.hasOwnProperty.call(result, 'materials_remaining')) {
+    const hasItems = Object.prototype.hasOwnProperty.call(result, 'items');
     const elementKey = String(result.element || base.element || '').toLowerCase();
-    if (elementKey) {
+    if (elementKey && !hasItems) {
       const materialKey = `${elementKey}_1`;
       const tierPrefix = `${elementKey}_`;
       const nextItems = { ...(base.items || {}) };
