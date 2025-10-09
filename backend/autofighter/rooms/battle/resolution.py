@@ -214,9 +214,11 @@ async def resolve_rewards(
         "action_queue": action_queue_snapshot,
         "ended": True,
     }
-    charges = effects_charge
-    if charges is None:
+    charges: list[dict[str, Any]] | None = None
+    if run_id:
         charges = _snapshots.get_effect_charges(run_id)
-    if charges is not None:
+    if charges is None:
+        charges = effects_charge
+    if charges:
         result["effects_charge"] = charges
     return result

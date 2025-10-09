@@ -1,16 +1,19 @@
-import asyncio
 import sys
 import types
+import asyncio
 
 import pytest
 from runs import lifecycle as lifecycle_module
 
+from autofighter.mapgen import MapNode
 from autofighter.party import Party
+from autofighter.rooms import BattleRoom
 from autofighter.rooms.battle import events as battle_events
 from autofighter.rooms.battle import snapshots as battle_snapshots_module
 import autofighter.stats as stats
 from plugins.characters._base import PlayerBase
 from plugins.characters.foe_base import FoeBase
+from plugins.characters.player import Player
 from plugins.effects.aftertaste import Aftertaste
 import plugins.event_bus as event_bus_module
 import plugins.relics.rusty_buckle as rb
@@ -258,3 +261,127 @@ async def test_effect_charge_snapshot_updates_and_clears(bus):
 
     assert "effects_charge" not in lifecycle_module.battle_snapshots[run_id]
     lifecycle_module.battle_snapshots.clear()
+
+
+@pytest.mark.asyncio
+async def test_battle_result_omits_stale_rusty_buckle_progress(monkeypatch, bus):
+    lifecycle_module.battle_snapshots.clear()
+    run_id = "rusty-battle-run"
+
+    node = MapNode(room_id=0, room_type="battle", floor=1, index=0, loop=1, pressure=0)
+    room = BattleRoom(node)
+
+    player = Player()
+    party = Party(members=[player], relics=["rusty_buckle"])
+
+    class DummyFoe(FoeBase):
+        id = "dummy"
+        name = "Dummy"
+
+    foe = DummyFoe()
+    foe.hp = 1
+    foe.max_hp = 1
+    foe.actions_per_turn = 0
+
+    monkeypatch.setattr("autofighter.rooms.utils._scale_stats", lambda *args, **kwargs: None)
+
+    captured_charges: list[list[dict[str, object]]] = []
+
+    async def fake_run_turn_loop(
+        *,
+        room,
+        party,
+        combat_party,
+        registry,
+        foes,
+        foe_effects,
+        enrage_mods,
+        enrage_state,
+        progress,
+        visual_queue,
+        temp_rdr,
+        exp_reward,
+        run_id,
+        battle_tasks,
+        abort,
+    ) -> tuple[int, float, int]:
+        battle_snapshots_module.prepare_snapshot_overlay(
+            run_id,
+            [combat_party, *combat_party.members, *foes],
+        )
+        battle_snapshots_module.register_snapshot_entities(
+            run_id,
+            [combat_party, *combat_party.members, *foes],
+        )
+        battle_snapshots_module.set_effect_charges(
+            run_id,
+            [
+                {
+                    "id": "rusty_buckle",
+                    "name": "Rusty Buckle",
+                    "stacks": 1,
+                    "progress": 0.5,
+                }
+            ],
+        )
+        snapshot = battle_snapshots_module.get_effect_charges(run_id)
+        if snapshot:
+            captured_charges.append(snapshot)
+        for foe_obj in foes:
+            foe_obj.hp = 0
+        return 1, temp_rdr, exp_reward
+
+    monkeypatch.setattr(
+        "autofighter.rooms.battle.engine.run_turn_loop",
+        fake_run_turn_loop,
+    )
+
+    card_counter = {"count": 0}
+
+    def fake_card_choices(*_args, **_kwargs):
+        card_counter["count"] += 1
+        return [
+            types.SimpleNamespace(
+                id=f"card_{card_counter['count']}",
+                name=f"Card {card_counter['count']}",
+                stars=1,
+                about="Test card",
+            )
+        ]
+
+    monkeypatch.setattr(
+        "autofighter.rooms.battle.resolution.card_choices",
+        fake_card_choices,
+    )
+    monkeypatch.setattr(
+        "autofighter.rooms.battle.resolution._pick_card_stars",
+        lambda _room: 1,
+    )
+    monkeypatch.setattr(
+        "autofighter.rooms.battle.resolution._apply_rdr_to_stars",
+        lambda stars, _rdr: stars,
+    )
+    monkeypatch.setattr(
+        "autofighter.rooms.battle.resolution._calc_gold",
+        lambda _room, _temp_rdr: 0,
+    )
+    monkeypatch.setattr(
+        "autofighter.rooms.battle.resolution._pick_item_stars",
+        lambda _room: 0,
+    )
+    monkeypatch.setattr(
+        "autofighter.rooms.battle.resolution._roll_relic_drop",
+        lambda _room, _rdr: False,
+    )
+    monkeypatch.setattr(
+        "autofighter.rooms.battle.resolution.random.random",
+        lambda: 0.0,
+    )
+
+    result = await room.resolve(party, {}, foe=foe, run_id=run_id)
+
+    assert captured_charges, "expected rusty buckle progress to be cached before cleanup"
+    assert battle_snapshots_module.get_effect_charges(run_id) is None
+    assert "effects_charge" not in result
+
+    lifecycle_module.battle_snapshots.pop(run_id, None)
