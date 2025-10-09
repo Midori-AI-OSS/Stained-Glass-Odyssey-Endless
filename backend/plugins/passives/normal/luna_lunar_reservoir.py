@@ -128,30 +128,30 @@ class LunaLunarReservoir:
 
     @classmethod
     def _apply_actions(cls, charge_target: "Stats", current_charge: int) -> None:
-        """Update action cadence and dodge bonuses based on charge."""
+        """Update action cadence and attack bonus based on charge."""
 
-        if current_charge < 350:
-            charge_target.actions_per_turn = 2
-        elif current_charge < 500:
-            charge_target.actions_per_turn = 4
-        elif current_charge < 700:
-            charge_target.actions_per_turn = 8
-        elif current_charge < 850:
-            charge_target.actions_per_turn = 16
-        else:  # 850+ charge
-            charge_target.actions_per_turn = 32
+        setattr(charge_target, "luna_sword_charge", current_charge)
 
+        doubles = min(current_charge // 25, 2000)
+        charge_target.actions_per_turn = 2 << doubles
+
+        bonus_effect_name = "luna_lunar_reservoir_atk_bonus"
         if current_charge > 2000:
-            stacks_past_soft_cap = current_charge - 2000
-            dodge_bonus = stacks_past_soft_cap * 0.00025  # 0.025% per stack
-
-            dodge_effect = StatEffect(
-                name=f"{cls.id}_dodge_bonus",
-                stat_modifiers={"dodge_odds": dodge_bonus},
-                duration=-1,
-                source=cls.id,
-            )
-            charge_target.add_effect(dodge_effect)
+            excess_charge = current_charge - 2000
+            bonus_tiers = excess_charge // 100
+            if bonus_tiers > 0:
+                base_atk = getattr(charge_target, "_base_atk", 0)
+                atk_bonus = int(base_atk * 0.15 * bonus_tiers)
+                if atk_bonus:
+                    atk_effect = StatEffect(
+                        name=bonus_effect_name,
+                        stat_modifiers={"atk": atk_bonus},
+                        duration=-1,
+                        source=cls.id,
+                    )
+                    charge_target.add_effect(atk_effect)
+                    return
+        charge_target.remove_effect_by_name(bonus_effect_name)
 
     @classmethod
     def sync_actions(cls, target: "Stats") -> None:
@@ -186,18 +186,9 @@ class LunaLunarReservoir:
         cls._apply_actions(charge_target, current_charge)
 
     async def on_turn_end(self, target: "Stats") -> None:
-        """Handle charge spending at end of turn when in boosted mode."""
+        """Keep the owner's action cadence in sync at turn end."""
         holder = type(self)._resolve_charge_holder(target)
-        entity_id = id(holder)
-
-        if entity_id not in self._charge_points:
-            return
-
-        current_charge = self._charge_points[entity_id]
-
-        # Spend 500 charge per turn when above 2000 (boosted mode)
-        if current_charge > 2000:
-            self._charge_points[entity_id] = max(2000, current_charge - 500)
+        type(self).sync_actions(holder)
 
     @classmethod
     def get_charge(cls, target: "Stats") -> int:
@@ -213,7 +204,6 @@ class LunaLunarReservoir:
         # Remove hard cap - allow unlimited stacking
         cls._charge_points[entity_id] += amount
         holder = cls._resolve_charge_holder(target)
-        setattr(holder, "luna_sword_charge", getattr(holder, "luna_sword_charge", 0) + amount)
         cls.sync_actions(holder)
 
     @classmethod
@@ -224,12 +214,12 @@ class LunaLunarReservoir:
 
     @classmethod
     def get_display(cls, target: "Stats") -> str:
-        """Display a spinner when charge is full and draining."""
+        """Display a spinner when charge meets or exceeds the soft cap."""
         return "spinner" if cls.get_charge(target) >= 2000 else "number"
 
     @classmethod
     def get_description(cls) -> str:
         return (
-            "Gains 1 charge per action; attack count scales from 2 up to 32 at 850+ charge. "
-            "Charge beyond 2000 grants 0.025% dodge per point and drains 500 charge each turn."
+            "Gains 1 charge per action. Every 25 charge doubles actions per turn (capped after 2000 doublings). "
+            "Stacks above 2000 grant +15% of Luna's base ATK per 100 excess charge with no automatic drain."
         )
