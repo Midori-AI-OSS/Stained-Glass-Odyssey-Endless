@@ -21,6 +21,7 @@ from ..targeting import select_aggro_target
 from ..turn_helpers import credit_if_dead
 from ..turn_helpers import remove_dead_foes
 from ..turns import apply_enrage_bleed
+from ..turns import canonical_entity_pair
 from ..turns import mutate_snapshot_overlay
 from ..turns import push_progress_update
 from ..turns import register_snapshot_entities
@@ -193,6 +194,8 @@ async def _run_player_turn_iteration(
     context.action_turn += 1
     actor_turn_index = context.action_turn
 
+    member_id, member_legacy_id = canonical_entity_pair(member)
+
     enrage_update = await update_enrage_state(
         context.turn,
         context.enrage_state,
@@ -207,14 +210,16 @@ async def _run_player_turn_iteration(
             context.combat_party.members,
             context.foes,
             context.enrage_state,
-            context.temp_rdr,
-            _EXTRA_TURNS,
-            context.turn,
-            run_id=context.run_id,
-            active_id=getattr(member, "id", None),
-            active_target_id=None,
-            visual_queue=context.visual_queue,
-        )
+        context.temp_rdr,
+        _EXTRA_TURNS,
+        context.turn,
+        run_id=context.run_id,
+        active_id=member_id,
+        legacy_active_id=member_legacy_id,
+        active_target_id=None,
+        legacy_active_target_id=None,
+        visual_queue=context.visual_queue,
+    )
         await pace_sleep(YIELD_MULTIPLIER)
     await context.registry.trigger("turn_start", member)
     if context.run_id is not None:
@@ -251,11 +256,16 @@ async def _run_player_turn_iteration(
             spent_override=0.0,
         )
         return PlayerTurnIterationResult(repeat=False, battle_over=True)
+
+    target_id, target_legacy_id = canonical_entity_pair(target_foe)
+
     await BUS.emit_async("target_acquired", member, target_foe)
     mutate_snapshot_overlay(
         context.run_id,
-        active_id=getattr(member, "id", None),
-        active_target_id=getattr(target_foe, "id", None),
+        active_id=member_id,
+        legacy_active_id=member_legacy_id,
+        active_target_id=target_id,
+        legacy_active_target_id=target_legacy_id,
     )
     await push_progress_update(
         context.progress,
@@ -266,8 +276,10 @@ async def _run_player_turn_iteration(
         _EXTRA_TURNS,
         context.turn,
         run_id=context.run_id,
-        active_id=getattr(member, "id", None),
-        active_target_id=getattr(target_foe, "id", None),
+        active_id=member_id,
+        legacy_active_id=member_legacy_id,
+        active_target_id=target_id,
+        legacy_active_target_id=target_legacy_id,
         include_summon_foes=True,
         visual_queue=context.visual_queue,
         turn_phase="start",
@@ -294,7 +306,8 @@ async def _run_player_turn_iteration(
             context,
             member,
             action_start,
-            active_target_id=getattr(target_foe, "id", None),
+            active_target_id=target_id,
+            legacy_active_target_id=target_legacy_id,
             spent_override=0.0,
         )
         return PlayerTurnIterationResult(repeat=False, battle_over=True)
@@ -341,8 +354,10 @@ async def _run_player_turn_iteration(
                 _EXTRA_TURNS,
                 context.turn,
                 run_id=context.run_id,
-                active_id=getattr(member, "id", None),
-                active_target_id=getattr(target_foe, "id", None),
+                active_id=member_id,
+                legacy_active_id=member_legacy_id,
+                active_target_id=target_id,
+                legacy_active_target_id=target_legacy_id,
                 include_summon_foes=True,
                 visual_queue=context.visual_queue,
                 turn_phase="resolve",
@@ -354,7 +369,8 @@ async def _run_player_turn_iteration(
             member,
             action_start,
             include_summon_foes=True,
-            active_target_id=getattr(target_foe, "id", None),
+            active_target_id=target_id,
+            legacy_active_target_id=target_legacy_id,
         )
         return PlayerTurnIterationResult(
             repeat=False,
@@ -469,8 +485,10 @@ async def _run_player_turn_iteration(
                 _EXTRA_TURNS,
                 context.turn,
                 run_id=context.run_id,
-                active_id=getattr(member, "id", None),
-                active_target_id=getattr(target_foe, "id", None),
+                active_id=member_id,
+                legacy_active_id=member_legacy_id,
+                active_target_id=target_id,
+                legacy_active_target_id=target_legacy_id,
                 include_summon_foes=True,
                 visual_queue=context.visual_queue,
                 turn_phase="resolve",
@@ -526,7 +544,8 @@ async def _run_player_turn_iteration(
         context,
         member,
         action_start,
-        active_target_id=getattr(target_foe, "id", None),
+        active_target_id=target_id,
+        legacy_active_target_id=target_legacy_id,
     )
 
     return PlayerTurnIterationResult(repeat=False, battle_over=battle_over)

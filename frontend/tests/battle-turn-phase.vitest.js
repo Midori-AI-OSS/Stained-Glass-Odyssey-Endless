@@ -767,4 +767,81 @@ describe('BattleView turn phase handling', () => {
     expect(goblinCard.dataset.ticks).toBe('0');
     expect(heroCard.dataset.ticks).toBe('0');
   });
+
+  it('highlights summons using instance identifiers from progress snapshots', async () => {
+    const snapshot = {
+      party: [
+        {
+          id: 'luna',
+          name: 'Luna',
+          hp: 120,
+          max_hp: 120,
+          damage_types: ['light'],
+        },
+      ],
+      foes: [
+        {
+          id: 'goblin',
+          name: 'Goblin',
+          hp: 60,
+          max_hp: 60,
+          damage_types: ['earth'],
+        },
+      ],
+      party_summons: {
+        luna: [
+          {
+            id: 'luna_sword_lightstream',
+            instance_id: 'luna#1',
+            summon_type: 'luna_sword_lightstream',
+            hp: 30,
+            max_hp: 30,
+          },
+          {
+            id: 'luna_sword_lightstream',
+            instance_id: 'luna#2',
+            summon_type: 'luna_sword_lightstream',
+            hp: 28,
+            max_hp: 30,
+          },
+        ],
+      },
+      action_queue: [
+        { id: 'luna#2', action_gauge: 0, action_value: 0, base_action_value: 0 },
+        { id: 'goblin', action_gauge: 0, action_value: 10, base_action_value: 10 },
+      ],
+      recent_events: [
+        {
+          type: 'damage_taken',
+          source_id: 'luna#2',
+          legacy_source_id: 'luna_sword_lightstream',
+          target_id: 'goblin',
+          amount: 12,
+        },
+      ],
+      active_id: 'luna#2',
+      active_target_id: 'goblin',
+      turn: 7,
+    };
+
+    roomAction.mockImplementation(() => Promise.resolve(clone(snapshot)));
+
+    render(BattleView, {
+      props: {
+        runId: 'summon-instance',
+        active: true,
+        framerate: 120,
+        showHud: false,
+        showFoes: true,
+      },
+    });
+
+    await settle();
+
+    await waitFor(() => {
+      const overlayProbe = screen.getByTestId('overlay-probe');
+      expect(overlayProbe.dataset.attacker).toBe('luna#2');
+      expect(overlayProbe.dataset.target).toBe('goblin');
+    });
+  });
 });

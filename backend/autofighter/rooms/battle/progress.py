@@ -60,6 +60,8 @@ class BattleProgressPayload(TypedDict, total=False):
     action_queue: list[ActionQueueEntry]
     active_id: str | None
     active_target_id: str | None
+    legacy_active_id: str | None
+    legacy_active_target_id: str | None
     recent_events: list[dict[str, Any]]
     status_phase: dict[str, Any]
     ended: bool
@@ -269,6 +271,8 @@ async def build_battle_progress_payload(
     run_id: str | None,
     active_id: str | None,
     active_target_id: str | None,
+    legacy_active_id: str | None = None,
+    legacy_active_target_id: str | None = None,
     include_summon_foes: bool = False,
     visual_queue: "ActionQueue" | None = None,
     ended: bool | None = None,
@@ -317,6 +321,11 @@ async def build_battle_progress_payload(
         "active_id": active_id,
         "active_target_id": active_target_id,
     }
+
+    if legacy_active_id is not None:
+        payload["legacy_active_id"] = legacy_active_id
+    if legacy_active_target_id is not None:
+        payload["legacy_active_target_id"] = legacy_active_target_id
 
     if turn_phase is not None:
         payload["turn_phase"] = turn_phase

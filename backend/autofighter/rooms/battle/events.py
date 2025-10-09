@@ -15,6 +15,8 @@ from .pacing import YIELD_MULTIPLIER
 from .pacing import pace_sleep
 
 mutate_snapshot_overlay = _snapshots.mutate_snapshot_overlay
+canonical_entity_id = _snapshots.canonical_entity_id
+canonical_entity_pair = _snapshots.canonical_entity_pair
 
 __all__ = [
     "handle_battle_start",
@@ -99,7 +101,10 @@ def _status_payload(
     data = dict(payload)
     data["phase"] = phase
     data["state"] = state
-    data.setdefault("target_id", getattr(stats, "id", None))
+    canonical_id, legacy_id = canonical_entity_pair(stats)
+    data.setdefault("target_id", canonical_id)
+    if legacy_id is not None:
+        data.setdefault("legacy_target_id", legacy_id)
     return data
 
 
@@ -209,11 +214,18 @@ def _record_event(
     amount: int | None,
     metadata: dict[str, Any] | None = None,
 ) -> None:
+    source_id, legacy_source_id = canonical_entity_pair(source)
+    target_id, legacy_target_id = canonical_entity_pair(target)
+
     event_payload: dict[str, Any] = {
         "type": event_type,
-        "source_id": getattr(source, "id", None),
-        "target_id": getattr(target, "id", None),
+        "source_id": source_id,
+        "target_id": target_id,
     }
+    if legacy_source_id is not None:
+        event_payload["legacy_source_id"] = legacy_source_id
+    if legacy_target_id is not None:
+        event_payload["legacy_target_id"] = legacy_target_id
     if amount is not None:
         event_payload["amount"] = int(amount)
     normalized = _normalize_metadata(metadata)
@@ -265,9 +277,13 @@ def _on_hit_landed(
     if attacker is not None or target is not None:
         kwargs: dict[str, Any] = {}
         if attacker is not None:
-            kwargs["active_id"] = getattr(attacker, "id", None)
+            attacker_id, attacker_legacy = canonical_entity_pair(attacker)
+            kwargs["active_id"] = attacker_id
+            kwargs["legacy_active_id"] = attacker_legacy
         if target is not None:
-            kwargs["active_target_id"] = getattr(target, "id", None)
+            target_id, target_legacy = canonical_entity_pair(target)
+            kwargs["active_target_id"] = target_id
+            kwargs["legacy_active_target_id"] = target_legacy
         if kwargs:
             mutate_snapshot_overlay(run_id, **kwargs)
 
@@ -305,9 +321,13 @@ def _on_damage_taken(
     )
     kwargs: dict[str, Any] = {}
     if attacker is not None:
-        kwargs["active_id"] = getattr(attacker, "id", None)
+        attacker_id, attacker_legacy = canonical_entity_pair(attacker)
+        kwargs["active_id"] = attacker_id
+        kwargs["legacy_active_id"] = attacker_legacy
     if target is not None:
-        kwargs["active_target_id"] = getattr(target, "id", None)
+        target_id, target_legacy = canonical_entity_pair(target)
+        kwargs["active_target_id"] = target_id
+        kwargs["legacy_active_target_id"] = target_legacy
     if kwargs:
         mutate_snapshot_overlay(run_id, **kwargs)
 
@@ -342,9 +362,13 @@ def _on_heal_received(
     )
     kwargs: dict[str, Any] = {}
     if healer is not None:
-        kwargs["active_id"] = getattr(healer, "id", None)
+        healer_id, healer_legacy = canonical_entity_pair(healer)
+        kwargs["active_id"] = healer_id
+        kwargs["legacy_active_id"] = healer_legacy
     if target is not None:
-        kwargs["active_target_id"] = getattr(target, "id", None)
+        target_id, target_legacy = canonical_entity_pair(target)
+        kwargs["active_target_id"] = target_id
+        kwargs["legacy_active_target_id"] = target_legacy
     if kwargs:
         mutate_snapshot_overlay(run_id, **kwargs)
 
@@ -485,11 +509,13 @@ async def _on_card_effect(
         metadata=metadata,
     )
     if target is not None:
-        ident = getattr(target, "id", None)
+        ident, legacy_ident = canonical_entity_pair(target)
         mutate_snapshot_overlay(
             run_id,
             active_id=ident,
+            legacy_active_id=legacy_ident,
             active_target_id=ident,
+            legacy_active_target_id=legacy_ident,
         )
     await pace_sleep(YIELD_MULTIPLIER)
 
@@ -524,11 +550,16 @@ async def _on_relic_effect(
     )
     kwargs: dict[str, Any] = {}
     if source is not None:
-        kwargs["active_id"] = getattr(source, "id", None)
+        source_id, source_legacy = canonical_entity_pair(source)
+        kwargs["active_id"] = source_id
+        kwargs["legacy_active_id"] = source_legacy
     if target is not None:
-        kwargs["active_target_id"] = getattr(target, "id", None)
+        target_id, target_legacy = canonical_entity_pair(target)
+        kwargs["active_target_id"] = target_id
+        kwargs["legacy_active_target_id"] = target_legacy
         if "active_id" not in kwargs:
-            kwargs["active_id"] = getattr(target, "id", None)
+            kwargs["active_id"] = target_id
+            kwargs["legacy_active_id"] = target_legacy
     if kwargs:
         mutate_snapshot_overlay(run_id, **kwargs)
     await pace_sleep(YIELD_MULTIPLIER)
@@ -552,9 +583,11 @@ def _on_effect_applied(
         metadata=metadata,
     )
     if entity is not None:
+        target_id, target_legacy = canonical_entity_pair(entity)
         mutate_snapshot_overlay(
             run_id,
-            active_target_id=getattr(entity, "id", None),
+            active_target_id=target_id,
+            legacy_active_target_id=target_legacy,
         )
 
 
@@ -578,9 +611,13 @@ def _on_effect_resisted(
     )
     kwargs: dict[str, Any] = {}
     if source is not None:
-        kwargs["active_id"] = getattr(source, "id", None)
+        source_id, source_legacy = canonical_entity_pair(source)
+        kwargs["active_id"] = source_id
+        kwargs["legacy_active_id"] = source_legacy
     if target is not None:
-        kwargs["active_target_id"] = getattr(target, "id", None)
+        target_id, target_legacy = canonical_entity_pair(target)
+        kwargs["active_target_id"] = target_id
+        kwargs["legacy_active_target_id"] = target_legacy
     if kwargs:
         mutate_snapshot_overlay(run_id, **kwargs)
 
@@ -603,9 +640,11 @@ def _on_effect_expired(
         metadata=metadata,
     )
     if entity is not None:
+        target_id, target_legacy = canonical_entity_pair(entity)
         mutate_snapshot_overlay(
             run_id,
-            active_target_id=getattr(entity, "id", None),
+            active_target_id=target_id,
+            legacy_active_target_id=target_legacy,
         )
 
 
