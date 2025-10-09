@@ -105,11 +105,20 @@
   // If a combatant disappears, clear stale targeting ids
   $: if (activeId && !combatantById.has(String(activeId))) activeId = null;
   $: if (activeTargetId && !combatantById.has(String(activeTargetId))) activeTargetId = null;
-  $: if (snapshotActiveId && !combatantById.has(String(snapshotActiveId))) {
-    snapshotActiveId = null;
+  $: if (
+    !isFetchingSnapshot &&
+    snapshotActiveId &&
+    !combatantById.has(String(snapshotActiveId))
+  ) {
+    snapshotActiveId = canonicalizeCombatantId(snapshotActiveId, 'snapshotActiveId.guard') ?? null;
   }
-  $: if (snapshotActiveTargetId && !combatantById.has(String(snapshotActiveTargetId))) {
-    snapshotActiveTargetId = null;
+  $: if (
+    !isFetchingSnapshot &&
+    snapshotActiveTargetId &&
+    !combatantById.has(String(snapshotActiveTargetId))
+  ) {
+    snapshotActiveTargetId =
+      canonicalizeCombatantId(snapshotActiveTargetId, 'snapshotActiveTargetId.guard') ?? null;
   }
   $: if (turnPhaseSeen && turnPhaseAttackerId && !combatantById.has(String(turnPhaseAttackerId))) {
     turnPhaseAttackerId = null;
@@ -2155,14 +2164,18 @@
         serverShowActionValues = Boolean(snap.show_action_values);
       }
 
+      let pendingSnapshotActiveCandidate = undefined;
+      let pendingSnapshotActiveTargetCandidate = undefined;
+
       if ('active_id' in snap) {
-        snapshotActiveId = canonicalizeCombatantId(snap.active_id ?? null, 'snapshot.active_id');
+        pendingSnapshotActiveCandidate = snap.active_id ?? null;
+        const normalizedActiveId = normalizeId(pendingSnapshotActiveCandidate).trim();
+        snapshotActiveId = normalizedActiveId || null;
       }
       if ('active_target_id' in snap) {
-        snapshotActiveTargetId = canonicalizeCombatantId(
-          snap.active_target_id ?? null,
-          'snapshot.active_target_id',
-        );
+        pendingSnapshotActiveTargetCandidate = snap.active_target_id ?? null;
+        const normalizedTargetId = normalizeId(pendingSnapshotActiveTargetCandidate).trim();
+        snapshotActiveTargetId = normalizedTargetId || null;
       }
       let phaseInfo = null;
       if ('turn_phase' in snap) {
@@ -2250,6 +2263,32 @@
       // After applying snapshot updates, re-measure anchors because layout may have shifted
       // (e.g., foes/party removed) which doesn’t trigger node ResizeObserver.
       await tick();
+
+      if (pendingSnapshotActiveCandidate !== undefined) {
+        const canonicalActiveId = canonicalizeCombatantId(
+          pendingSnapshotActiveCandidate,
+          'snapshot.active_id',
+        );
+        if (canonicalActiveId) {
+          snapshotActiveId = canonicalActiveId;
+        } else {
+          const normalizedActiveId = normalizeId(pendingSnapshotActiveCandidate).trim();
+          snapshotActiveId = normalizedActiveId || null;
+        }
+      }
+      if (pendingSnapshotActiveTargetCandidate !== undefined) {
+        const canonicalTargetId = canonicalizeCombatantId(
+          pendingSnapshotActiveTargetCandidate,
+          'snapshot.active_target_id',
+        );
+        if (canonicalTargetId) {
+          snapshotActiveTargetId = canonicalTargetId;
+        } else {
+          const normalizedTargetId = normalizeId(pendingSnapshotActiveTargetCandidate).trim();
+          snapshotActiveTargetId = normalizedTargetId || null;
+        }
+      }
+
       recomputeAllAnchors();
     } catch (e) {
       // Silently ignore errors to avoid spam during rapid polling
