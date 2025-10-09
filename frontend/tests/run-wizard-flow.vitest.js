@@ -417,10 +417,6 @@ describe('RunChooser wizard flow', () => {
     await fireEvent.click(screen.getByRole('button', { name: 'Next' }));
     await tick();
 
-    const previewChips = Array.from(container.querySelectorAll('.preview-chip'));
-    const pressureChip = previewChips.find((chip) => chip.textContent?.includes('Shop ×'));
-    expect(pressureChip?.textContent).toContain('Shop ×3.2');
-
     const pressureTooltip = screen.getByRole('button', { name: /Pressure modifier details/i });
     const pressureTooltipText = pressureTooltip.getAttribute('data-tooltip') || '';
     expect(pressureTooltipText).toContain('Stacks are uncapped');

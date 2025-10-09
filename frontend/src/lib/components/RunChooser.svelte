@@ -1408,16 +1408,24 @@ import WizardNavigation from './WizardNavigation.svelte';
                   </section>
                 {/if}
                 <RewardPreviewCard preview={rewardPreview} formatValue={formatRewardBonus} />
+                <WizardNavigation
+                  backLabel="Back"
+                  onBack={() => goToStep('run-type')}
+                  onNext={goToConfirm}
+                  nextDisabled={metadataLoading || metadataError}
+                />
               </aside>
             </div>
           {/if}
         </section>
-        <WizardNavigation
-          backLabel="Back"
-          onBack={() => goToStep('run-type')}
-          onNext={goToConfirm}
-          nextDisabled={metadataLoading || metadataError}
-        />
+        {#if metadataLoading || metadataError}
+          <WizardNavigation
+            backLabel="Back"
+            onBack={() => goToStep('run-type')}
+            onNext={goToConfirm}
+            nextDisabled={metadataLoading || metadataError}
+          />
+        {/if}
       {:else if step === 'confirm'}
         <section class="confirm-panel step-surface">
           {#if metadataLoading}
@@ -1638,6 +1646,11 @@ import WizardNavigation from './WizardNavigation.svelte';
     display: flex;
     flex-direction: column;
     gap: clamp(0.75rem, 1.8vw, 1.2rem);
+  }
+
+  .summary-column :global(.wizard-navigation) {
+    margin-top: clamp(0.65rem, 1.6vw, 0.95rem);
+    justify-content: flex-end;
   }
 
   .summary-card {

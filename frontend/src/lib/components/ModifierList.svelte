@@ -62,28 +62,15 @@
       {#if mod.description}
         <p class="modifier-description">{mod.description}</p>
       {/if}
-      {#if mod.meta?.previewChips?.length}
-        <div class="modifier-preview" role="list">
-          {#each mod.meta.previewChips as chip}
-            <div class="preview-chip" role="listitem">
-              <span class="chip-stack">{chip.label}</span>
-              <span class="chip-detail">{chip.detail}</span>
-            </div>
-          {/each}
-        </div>
-        {#if mod.meta?.previewSentence}
-          <p class="preview-sentence">{mod.meta.previewSentence}</p>
-        {/if}
-      {/if}
     </article>
   {/each}
 </div>
 
 <style>
   .modifiers {
-    display: flex;
-    flex-direction: column;
+    display: grid;
     gap: clamp(0.65rem, 1.5vw, 0.9rem);
+    grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
   }
 
   .modifier {
@@ -94,6 +81,12 @@
     background: var(--wizard-card-bg, rgba(17, 23, 38, 0.7));
     border: 1px solid var(--wizard-card-border, rgba(153, 201, 255, 0.18));
     color: inherit;
+  }
+
+  @media (max-width: 720px) {
+    .modifiers {
+      grid-template-columns: 1fr;
+    }
   }
 
   .modifier-header {
@@ -184,30 +177,4 @@
     opacity: 0.85;
   }
 
-  .modifier-preview {
-    display: flex;
-    flex-direction: column;
-    gap: 0.35rem;
-  }
-
-  .preview-chip {
-    display: flex;
-    gap: 0.5rem;
-    font-size: 0.85rem;
-    line-height: 1.35;
-  }
-
-  .chip-stack {
-    font-weight: 600;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
-    opacity: 0.8;
-  }
-
-  .preview-sentence {
-    margin: 0;
-    font-size: 0.85rem;
-    line-height: 1.35;
-    opacity: 0.8;
-  }
 </style>
