@@ -205,7 +205,7 @@ _MODIFIER_DEFINITIONS: dict[str, dict[str, Any]] = {
             "source": "autofighter.effects.calculate_diminishing_returns",
         },
         "reward_bonuses": {
-            "exp_bonus_per_stack": 50,
+            "exp_bonus_per_stack": 0.50,
             "rdr_bonus_per_stack": 0.01,
         },
         "preview_stacks": [0, 1, 5, 10],
@@ -231,7 +231,7 @@ _MODIFIER_DEFINITIONS: dict[str, dict[str, Any]] = {
             "source": "autofighter.effects.calculate_diminishing_returns",
         },
         "reward_bonuses": {
-            "exp_bonus_per_stack": 50,
+            "exp_bonus_per_stack": 0.50,
             "rdr_bonus_per_stack": 0.01,
         },
         "preview_stacks": [0, 1, 5, 10],
@@ -257,7 +257,7 @@ _MODIFIER_DEFINITIONS: dict[str, dict[str, Any]] = {
             "source": "autofighter.effects.calculate_diminishing_returns",
         },
         "reward_bonuses": {
-            "exp_bonus_per_stack": 50,
+            "exp_bonus_per_stack": 0.50,
             "rdr_bonus_per_stack": 0.01,
         },
         "preview_stacks": [0, 1, 5, 10],
@@ -283,7 +283,7 @@ _MODIFIER_DEFINITIONS: dict[str, dict[str, Any]] = {
             "source": "autofighter.effects.calculate_diminishing_returns",
         },
         "reward_bonuses": {
-            "exp_bonus_per_stack": 50,
+            "exp_bonus_per_stack": 0.50,
             "rdr_bonus_per_stack": 0.01,
         },
         "preview_stacks": [0, 1, 5, 10],
@@ -304,7 +304,7 @@ _MODIFIER_DEFINITIONS: dict[str, dict[str, Any]] = {
             "scaling_type": "additive",
         },
         "reward_bonuses": {
-            "exp_bonus_per_stack": 50,
+            "exp_bonus_per_stack": 0.50,
             "rdr_bonus_per_stack": 0.01,
         },
         "preview_stacks": [0, 1, 5, 10],
@@ -324,7 +324,7 @@ _MODIFIER_DEFINITIONS: dict[str, dict[str, Any]] = {
             "scaling_type": "additive",
         },
         "reward_bonuses": {
-            "exp_bonus_per_stack": 50,
+            "exp_bonus_per_stack": 0.50,
             "rdr_bonus_per_stack": 0.01,
         },
         "preview_stacks": [0, 1, 5, 10],
