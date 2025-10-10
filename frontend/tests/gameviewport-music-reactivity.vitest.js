@@ -5,7 +5,10 @@ import { tick } from 'svelte';
 import BasicStub from './__fixtures__/BasicComponent.stub.svelte';
 
 const startGameMusic = vi.fn();
-const selectBattleMusic = vi.fn(() => ['battle-track']);
+const selectBattleMusic = vi.fn(({ foes = [] } = {}) => {
+  const hasLuna = foes.some((foe) => foe && (foe.id === 'luna' || foe.name === 'Luna'));
+  return hasLuna ? ['luna-track'] : ['battle-track'];
+});
 const loadInitialState = vi.fn(async () => ({
   settings: {
     sfxVolume: 5,
@@ -165,6 +168,44 @@ describe('GameViewport battle music reactivity', () => {
     await flush();
 
     expect(startGameMusic).toHaveBeenCalledTimes(1);
-    expect(selectBattleMusic).toHaveBeenCalledTimes(1);
+    expect(selectBattleMusic).toHaveBeenCalledTimes(2);
+  });
+
+  it('switches to Luna playlist when she arrives mid-battle', async () => {
+    const baseRoom = {
+      current_room: 'battle-normal',
+      battle_index: 9,
+      party: [
+        { id: 'hero', name: 'Hero' },
+      ],
+      foes: [],
+    };
+
+    const { component } = render(GameViewport, {
+      props: {
+        roomData: baseRoom,
+        currentRoomType: 'battle-normal',
+        battleActive: true,
+      },
+    });
+
+    await flush();
+
+    expect(startGameMusic).toHaveBeenCalledTimes(1);
+    expect(startGameMusic.mock.calls[0][1]).toEqual(['battle-track']);
+
+    const lunaSnapshot = {
+      ...baseRoom,
+      foes: [
+        { id: 'luna', name: 'Luna' },
+      ],
+    };
+
+    component.$set({ roomData: lunaSnapshot });
+    await flush();
+
+    expect(selectBattleMusic).toHaveBeenCalledTimes(2);
+    expect(startGameMusic).toHaveBeenCalledTimes(2);
+    expect(startGameMusic.mock.calls[1][1]).toEqual(['luna-track']);
   });
 });

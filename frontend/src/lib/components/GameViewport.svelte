@@ -105,6 +105,7 @@
   let lastBattleId = '';
   let battlePartySnapshot = [];
   let battleFoeSnapshot = [];
+  let lastPlaylistSignature = '';
 
   const cloneRosterEntities = (list) => {
     if (!Array.isArray(list)) return [];
@@ -192,24 +193,33 @@
     const currentRosterKey = buildRosterKey(battlePartySnapshot, battleFoeSnapshot);
     const nextRosterKey = buildRosterKey(nextParty, nextFoes);
     const shouldRefreshBattleId = battleId !== lastBattleId;
-    const shouldRefreshIdleRoster = !battleActive && nextRosterKey !== currentRosterKey;
+    const shouldRefreshRoster = nextRosterKey !== currentRosterKey;
 
-    if (shouldRefreshBattleId || shouldRefreshIdleRoster) {
+    if (shouldRefreshBattleId || shouldRefreshRoster) {
       battlePartySnapshot = cloneRosterEntities(nextParty);
       battleFoeSnapshot = cloneRosterEntities(nextFoes);
       lastBattleId = battleId;
     }
 
-    const rosterKey = shouldRefreshBattleId || shouldRefreshIdleRoster ? nextRosterKey : currentRosterKey;
+    const rosterKey = shouldRefreshBattleId || shouldRefreshRoster ? nextRosterKey : currentRosterKey;
     const key = `${battleId}|${rosterKey}`;
-    if (key !== lastMusicKey) {
-      lastMusicKey = key;
+
+    if (shouldRefreshBattleId || shouldRefreshRoster || key !== lastMusicKey) {
       const playlist = selectBattleMusic({
         roomType: typeKey,
         party: battlePartySnapshot,
         foes: battleFoeSnapshot,
       });
-      startGameMusic(musicVolume, playlist, true, { reducedMotion });
+
+      const playlistSignature = JSON.stringify(playlist || []);
+      const shouldRestartMusic = shouldRefreshBattleId || playlistSignature !== lastPlaylistSignature;
+
+      if (shouldRestartMusic) {
+        startGameMusic(musicVolume, playlist, true, { reducedMotion });
+      }
+
+      lastMusicKey = key;
+      lastPlaylistSignature = playlistSignature;
     }
   }
 </script>
