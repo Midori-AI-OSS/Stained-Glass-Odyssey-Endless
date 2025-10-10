@@ -205,7 +205,7 @@ _MODIFIER_DEFINITIONS: dict[str, dict[str, Any]] = {
             "source": "autofighter.effects.calculate_diminishing_returns",
         },
         "reward_bonuses": {
-            "exp_bonus_per_stack": 0.01,
+            "exp_bonus_per_stack": 0.50,
             "rdr_bonus_per_stack": 0.01,
         },
         "preview_stacks": [0, 1, 5, 10],
@@ -231,7 +231,7 @@ _MODIFIER_DEFINITIONS: dict[str, dict[str, Any]] = {
             "source": "autofighter.effects.calculate_diminishing_returns",
         },
         "reward_bonuses": {
-            "exp_bonus_per_stack": 0.01,
+            "exp_bonus_per_stack": 0.50,
             "rdr_bonus_per_stack": 0.01,
         },
         "preview_stacks": [0, 1, 5, 10],
@@ -257,7 +257,7 @@ _MODIFIER_DEFINITIONS: dict[str, dict[str, Any]] = {
             "source": "autofighter.effects.calculate_diminishing_returns",
         },
         "reward_bonuses": {
-            "exp_bonus_per_stack": 0.01,
+            "exp_bonus_per_stack": 0.50,
             "rdr_bonus_per_stack": 0.01,
         },
         "preview_stacks": [0, 1, 5, 10],
@@ -283,7 +283,7 @@ _MODIFIER_DEFINITIONS: dict[str, dict[str, Any]] = {
             "source": "autofighter.effects.calculate_diminishing_returns",
         },
         "reward_bonuses": {
-            "exp_bonus_per_stack": 0.01,
+            "exp_bonus_per_stack": 0.50,
             "rdr_bonus_per_stack": 0.01,
         },
         "preview_stacks": [0, 1, 5, 10],
@@ -304,7 +304,7 @@ _MODIFIER_DEFINITIONS: dict[str, dict[str, Any]] = {
             "scaling_type": "additive",
         },
         "reward_bonuses": {
-            "exp_bonus_per_stack": 0.01,
+            "exp_bonus_per_stack": 0.50,
             "rdr_bonus_per_stack": 0.01,
         },
         "preview_stacks": [0, 1, 5, 10],
@@ -324,7 +324,7 @@ _MODIFIER_DEFINITIONS: dict[str, dict[str, Any]] = {
             "scaling_type": "additive",
         },
         "reward_bonuses": {
-            "exp_bonus_per_stack": 0.01,
+            "exp_bonus_per_stack": 0.50,
             "rdr_bonus_per_stack": 0.01,
         },
         "preview_stacks": [0, 1, 5, 10],
@@ -479,8 +479,10 @@ def validate_run_configuration(
 
     normalized: dict[str, int] = {}
     modifier_snapshots: dict[str, Any] = {}
-    foe_reward_stacks = 0
-    player_bonus = 0.0
+    foe_exp_bonus = 0.0
+    foe_rdr_bonus = 0.0
+    player_exp_bonus = 0.0
+    player_rdr_bonus = 0.0
     char_penalty_snapshot: dict[str, Any] | None = None
 
     for key, value in combined.items():
@@ -511,11 +513,16 @@ def validate_run_configuration(
         }
 
         if definition.get("grants_reward_bonus"):
-            foe_reward_stacks += stacks
+            reward_info = definition.get("reward_bonuses") or {}
+            exp_per_stack = _numeric(reward_info.get("exp_bonus_per_stack"))
+            rdr_per_stack = _numeric(reward_info.get("rdr_bonus_per_stack"))
+            foe_exp_bonus += exp_per_stack * stacks
+            foe_rdr_bonus += rdr_per_stack * stacks
 
         if mod_id == "character_stat_down":
             char_penalty_snapshot = details
-            player_bonus = details.get("bonus_rdr", 0.0)
+            player_exp_bonus = _numeric(details.get("bonus_exp"))
+            player_rdr_bonus = _numeric(details.get("bonus_rdr"))
 
     pressure_value = int(normalized.get("pressure", 0))
     if char_penalty_snapshot is None:
@@ -529,15 +536,19 @@ def validate_run_configuration(
                 "details": char_penalty_snapshot,
             },
         )
+        player_exp_bonus = _numeric(char_penalty_snapshot.get("bonus_exp"))
+        player_rdr_bonus = _numeric(char_penalty_snapshot.get("bonus_rdr"))
 
     reward_bonuses = {
-        "foe_modifier_bonus": foe_reward_stacks * 0.01,
-        "player_modifier_bonus": player_bonus,
+        "foe_modifier_bonus": foe_rdr_bonus,
+        "player_modifier_bonus": player_rdr_bonus,
     }
-    reward_bonuses["exp_bonus"] = reward_bonuses["foe_modifier_bonus"] + reward_bonuses["player_modifier_bonus"]
-    reward_bonuses["rdr_bonus"] = reward_bonuses["exp_bonus"]
-    reward_bonuses["exp_multiplier"] = 1.0 + reward_bonuses["exp_bonus"]
-    reward_bonuses["rdr_multiplier"] = 1.0 + reward_bonuses["rdr_bonus"]
+    total_exp_bonus = foe_exp_bonus + player_exp_bonus
+    total_rdr_bonus = foe_rdr_bonus + player_rdr_bonus
+    reward_bonuses["exp_bonus"] = total_exp_bonus
+    reward_bonuses["rdr_bonus"] = total_rdr_bonus
+    reward_bonuses["exp_multiplier"] = 1.0 + total_exp_bonus
+    reward_bonuses["rdr_multiplier"] = 1.0 + total_rdr_bonus
 
     room_overrides = run_type_entry.get("room_overrides", {}) or {}
 
