@@ -164,6 +164,7 @@ class StatModifier:
         """Remove the effect from stats if it was applied."""
         if self._effect_applied:
             self.stats.remove_effect_by_name(self.id)
+            self._effect_applied = False
 
     def tick(self) -> bool:
         """Decrement remaining turns and remove when expired."""
@@ -420,17 +421,25 @@ class EffectManager:
         """Attach a stat modifier to the tracked stats."""
         from autofighter.stats import BUS  # Import here to avoid circular imports
 
-        if effect in self.mods:
-            self.mods.remove(effect)
+        if any(existing is effect for existing in self.mods):
+            self.mods[:] = [mod for mod in self.mods if mod is not effect]
 
         duplicates = [
             existing for existing in self.mods if existing.id == effect.id
         ]
+        duplicates_removed = False
         for existing in duplicates:
             existing.remove()
+            duplicates_removed = True
 
         if duplicates:
             self.mods[:] = [mod for mod in self.mods if mod not in duplicates]
+
+        if duplicates_removed:
+            effect._effect_applied = False
+
+        if not effect._effect_applied:
+            effect.apply()
 
         while effect.id in self.stats.mods:
             self.stats.mods.remove(effect.id)

@@ -75,6 +75,37 @@ async def test_dot_applies_with_hit_rate():
 
 
 @pytest.mark.asyncio
+async def test_reapplying_active_modifier_retains_bonus():
+    stats = Stats()
+    manager = EffectManager(stats)
+    base_atk = stats.atk
+
+    first = effects.create_stat_buff(
+        stats,
+        name="refresh_buff",
+        id="refresh_buff",
+        atk=10,
+        turns=3,
+    )
+    await call_maybe_async(manager.add_modifier, first)
+    assert stats.atk == base_atk + 10
+
+    second = effects.create_stat_buff(
+        stats,
+        name="refresh_buff",
+        id="refresh_buff",
+        atk=10,
+        turns=3,
+    )
+    await call_maybe_async(manager.add_modifier, second)
+
+    assert stats.atk == base_atk + 10
+    assert manager.mods == [second]
+    assert not first._effect_applied
+    assert second._effect_applied
+
+
+@pytest.mark.asyncio
 async def test_blazing_torment_stacks():
     attacker = Stats(damage_type=Fire())
     attacker.set_base_stat('atk', 50)
