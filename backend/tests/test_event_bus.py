@@ -147,16 +147,18 @@ async def test_dynamic_batch_interval_thresholds():
         bus = EventBus()
         internal = event_bus_module.bus
         intervals: list[float] = []
+        triggered = asyncio.Event()
 
         async def capture(interval: float) -> None:
             intervals.append(interval)
+            triggered.set()
 
         original = internal._process_batches_with_interval
         try:
             internal._process_batches_with_interval = capture  # type: ignore[assignment]
             internal._batched_events["test"] = [()] * existing
             bus.emit_batched("test", ())
-            await asyncio.sleep(0)
+            await asyncio.wait_for(triggered.wait(), timeout=1)
             internal._batch_timer = None
         finally:
             internal._process_batches_with_interval = original
@@ -171,14 +173,28 @@ async def test_dynamic_batch_interval_thresholds():
     assert interval_101 == YIELD_DELAY
 
 
-def test_emit_batched_without_loop_logs_debug(caplog):
+@pytest.mark.asyncio
+async def test_emit_batched_async_flushes_with_stored_loop(caplog):
     bus = EventBus()
-    with caplog.at_level(logging.DEBUG, logger=event_bus_module.__name__):
-        bus.emit_batched("test", ())
+    loop = asyncio.get_running_loop()
+    bus.set_loop(loop)
 
-    messages = [record.getMessage() for record in caplog.records]
-    assert any("No running event loop" in msg for msg in messages)
-    assert all("RuntimeError" not in msg for msg in messages)
+    seen = asyncio.Event()
+
+    async def handler(value: int) -> None:
+        seen.set()
+
+    bus.subscribe("test", handler)
+
+    with caplog.at_level(logging.WARNING, logger=event_bus_module.__name__):
+        await bus.emit_batched_async("test", 1)
+        await asyncio.wait_for(seen.wait(), timeout=1)
+
+    assert [
+        record for record in caplog.records if record.levelno >= logging.WARNING
+    ] == []
+
+    bus.unsubscribe("test", handler)
 
 
 @pytest.mark.asyncio
