@@ -27,7 +27,7 @@ if TYPE_CHECKING:
 _LUNA_PASSIVE: "type[LunaLunarReservoir] | None" = None
 
 _DEFAULT_ANIMATION_DURATION = 0.045
-_DEFAULT_ANIMATION_PER_TARGET = 0.15
+_DEFAULT_ANIMATION_PER_TARGET = 0.25 * 1.2
 
 
 def _get_luna_passive() -> "type[LunaLunarReservoir]":

@@ -188,7 +188,7 @@ class LunaLunarReservoir:
             bonus_tiers = excess_charge // 100
             if bonus_tiers > 0:
                 base_atk = getattr(charge_target, "_base_atk", 0)
-                atk_bonus = int(base_atk * 0.15 * bonus_tiers)
+                atk_bonus = int(base_atk * 0.55 * bonus_tiers)
                 if atk_bonus:
                     atk_effect = StatEffect(
                         name=bonus_effect_name,
