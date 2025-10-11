@@ -48,7 +48,7 @@ class DummyEffectManager:
     def add_hot(self, *_):  # pragma: no cover - simple stub
         return None
 
-    def add_modifier(self, *_):  # pragma: no cover - simple stub
+    async def add_modifier(self, *_):  # pragma: no cover - simple stub
         return None
 
 

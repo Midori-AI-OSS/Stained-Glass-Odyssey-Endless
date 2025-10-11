@@ -39,7 +39,7 @@ class ElementalSpark(CardBase):
                 turns=9999,
                 effect_hit_rate_mult=1.05,
             )
-            mgr.add_modifier(mod)
+            await mgr.add_modifier(mod)
             chosen["mod"] = (mgr, mod)
             await BUS.emit_async(
                 "card_effect",

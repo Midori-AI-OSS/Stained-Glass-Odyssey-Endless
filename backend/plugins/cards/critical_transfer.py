@@ -46,7 +46,7 @@ class CriticalTransfer(CardBase):
                 turns=1,
                 atk_mult=1 + 0.04 * total,
             )
-            mgr.add_modifier(mod)
+            await mgr.add_modifier(mod)
             await BUS.emit_async(
                 "card_effect",
                 self.id,

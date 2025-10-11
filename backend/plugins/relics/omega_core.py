@@ -3,6 +3,7 @@
 from dataclasses import dataclass
 from dataclasses import field
 
+from autofighter.effects import EffectManager
 from autofighter.effects import create_stat_buff
 from autofighter.stats import BUS
 from plugins.relics._base import RelicBase
@@ -44,6 +45,11 @@ class OmegaCore(RelicBase):
                     "stacks": stacks
                 })
 
+                mgr = getattr(member, "effect_manager", None)
+                if mgr is None:
+                    mgr = EffectManager(member)
+                    member.effect_manager = mgr
+
                 mod = create_stat_buff(
                     member,
                     name=f"{self.id}_{id(member)}",
@@ -59,7 +65,7 @@ class OmegaCore(RelicBase):
                     vitality_mult=mult,
                     mitigation_mult=mult,
                 )
-                member.effect_manager.add_modifier(mod)
+                await mgr.add_modifier(mod)
                 safe_async_task(member.apply_healing(member.max_hp))
                 state["mods"][id(member)] = mod
             state["turn"] = 0

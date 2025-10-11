@@ -35,7 +35,7 @@ class DummyEffectManager:
     async def on_action(self, *_: object) -> bool:  # pragma: no cover - unused
         return True
 
-    def add_modifier(self, mod: DummyMod) -> None:
+    async def add_modifier(self, mod: DummyMod) -> None:
         self.mods.append(mod)
 
 
