@@ -1018,13 +1018,17 @@ class Stats:
         self_type = _ensure(self)
         amount = self_type.on_heal_received(amount, healer, self)
         src_vit = healer.vitality if healer is not None else 1.0
+        positive_request = amount > 0
         # Healing is amplified by both source and target vitality
         amount = amount * src_vit * self.vitality
         # Enrage: reduce healing output globally by N% per enrage stack
         enr = get_enrage_percent()
         if enr > 0:
             amount *= max(1.0 - enr, 0.0)
-        amount = int(amount)
+        if positive_request:
+            amount = max(1, math.floor(amount))
+        else:
+            amount = int(amount)
 
         # Handle overheal/shields if enabled
         if self.overheal_enabled:
