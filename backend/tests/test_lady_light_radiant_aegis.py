@@ -33,7 +33,7 @@ async def test_radiant_aegis_hot_event_applies_shields():
 
     await passive.apply(healer)
 
-    hot = RadiantRegeneration()
+    hot = RadiantRegeneration(healer)
     hot.healing = 8  # Boost base healing so scaling is visible
     hot.source = healer
     ally.effect_manager.add_hot(hot)

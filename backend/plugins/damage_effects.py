@@ -5,6 +5,7 @@ import logging
 
 from autofighter.effects import DamageOverTime
 from autofighter.effects import HealingOverTime
+from autofighter.stats import Stats
 from plugins.dots.abyssal_corruption import AbyssalCorruption
 from plugins.dots.blazing_torment import BlazingTorment
 from plugins.dots.celestial_atrophy import CelestialAtrophy
@@ -31,8 +32,10 @@ DOT_FACTORIES: dict[str, Callable[[float, object], DamageOverTime]] = {
     "Wind": lambda dmg, src: _set_source(GaleErosion(int(dmg * 0.25), 3), src),
 }
 
-HOT_FACTORIES: dict[str, Callable[[object], HealingOverTime]] = {
-    "Light": lambda src: _set_source(RadiantRegeneration(), src),
+# RadiantRegeneration(source: Stats) requires the caster instance so the HoT can
+# scale its base healing from the source's attack and vitality.
+HOT_FACTORIES: dict[str, Callable[[Stats], HealingOverTime]] = {
+    "Light": lambda src: _set_source(RadiantRegeneration(src), src),
 }
 
 
