@@ -20,10 +20,7 @@ class EchoBell(RelicBase):
     name: str = "Echo Bell"
     stars: int = 2
     effects: dict[str, float] = field(default_factory=dict)
-    about: str = (
-        "First action each battle has 15% chance per stack to trigger Aftertaste "
-        "(overflow converts every +100% into a guaranteed extra hit)."
-    )
+    about: str = "First action each battle gains +15% Aftertaste chance per stack; every 100% becomes a guaranteed extra hit."
 
     async def apply(self, party) -> None:
         await super().apply(party)
