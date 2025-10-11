@@ -178,26 +178,42 @@ class LunaLunarReservoir:
 
         doubles = min(current_charge // 25, 2000)
         if doubles <= 4:
-            charge_target.actions_per_turn = 2 << doubles
+            base_actions = 2 << doubles
         else:
-            charge_target.actions_per_turn = 32 + (doubles - 4)
+            base_actions = 32 + (doubles - 4)
 
-        bonus_effect_name = "luna_lunar_reservoir_atk_bonus"
+        bonus_tiers = 0
+        bonus_multiplier = 1.0
         if current_charge > 2000:
             excess_charge = current_charge - 2000
             bonus_tiers = excess_charge // 100
             if bonus_tiers > 0:
-                base_atk = getattr(charge_target, "_base_atk", 0)
-                atk_bonus = int(base_atk * 0.55 * bonus_tiers)
-                if atk_bonus:
-                    atk_effect = StatEffect(
-                        name=bonus_effect_name,
-                        stat_modifiers={"atk": atk_bonus},
-                        duration=-1,
-                        source=cls.id,
-                    )
-                    charge_target.add_effect(atk_effect)
-                    return
+                bonus_multiplier += 0.01 * bonus_tiers
+
+        scaled_actions = base_actions
+        if bonus_tiers > 0:
+            scaled_actions = max(base_actions, int(base_actions * bonus_multiplier))
+        charge_target.actions_per_turn = scaled_actions
+
+        bonus_effect_name = "luna_lunar_reservoir_atk_bonus"
+        if bonus_tiers > 0:
+            base_atk = getattr(charge_target, "_base_atk", 0)
+            base_spd = getattr(charge_target, "_base_spd", 0)
+            atk_bonus = int(base_atk * 55 * (bonus_multiplier - 1))
+            spd_bonus = base_spd * (bonus_multiplier - 1)
+            modifiers = {
+                "atk": atk_bonus,
+                "spd": spd_bonus,
+            }
+            if any(modifiers.values()):
+                overflow_effect = StatEffect(
+                    name=bonus_effect_name,
+                    stat_modifiers=modifiers,
+                    duration=-1,
+                    source=cls.id,
+                )
+                charge_target.add_effect(overflow_effect)
+                return
         charge_target.remove_effect_by_name(bonus_effect_name)
 
     @classmethod
@@ -276,5 +292,5 @@ class LunaLunarReservoir:
     def get_description(cls) -> str:
         return (
             "Gains 1 charge per action. Every 25 charge doubles actions per turn (capped after 2000 doublings). "
-            "Stacks above 2000 grant +15% of Luna's base ATK per 100 excess charge with no automatic drain."
+            "Stacks above 2000 grant +15% of Luna's base ATK, +1% of her base SPD, and +1% additional actions from the doubled cadence per 100 excess charge with no automatic drain."
         )

@@ -66,7 +66,7 @@ async def test_luna_lunar_reservoir_passive():
 
 @pytest.mark.asyncio
 async def test_luna_lunar_reservoir_attack_bonus_scaling():
-    """Stacks beyond 2000 should grant permanent ATK scaling."""
+    """Overflow tiers should scale ATK, SPD, and actions per turn."""
     LunaLunarReservoir._charge_points.clear()
     LunaLunarReservoir._swords_by_owner.clear()
 
@@ -74,27 +74,40 @@ async def test_luna_lunar_reservoir_attack_bonus_scaling():
         luna = Stats(hp=1000, damage_type=Generic())
         luna.passives = ["luna_lunar_reservoir"]
         luna._base_atk = 200
+        luna._base_spd = 150
 
         slot = LunaLunarReservoir._ensure_charge_slot(luna)
-        LunaLunarReservoir._charge_points[slot] = 2100
-        LunaLunarReservoir.sync_actions(luna)
-
-        atk_effect = next(
-            (e for e in luna.get_active_effects() if e.name == "luna_lunar_reservoir_atk_bonus"),
-            None,
+        scenarios = (
+            (2100, 1),
+            (2500, 5),
         )
-        assert atk_effect is not None
-        assert atk_effect.stat_modifiers["atk"] == 30
 
-        LunaLunarReservoir._charge_points[slot] = 2500
-        LunaLunarReservoir.sync_actions(luna)
+        for charge, expected_tiers in scenarios:
+            LunaLunarReservoir._charge_points[slot] = charge
+            LunaLunarReservoir.sync_actions(luna)
 
-        atk_effect = next(
-            (e for e in luna.get_active_effects() if e.name == "luna_lunar_reservoir_atk_bonus"),
-            None,
-        )
-        assert atk_effect is not None
-        assert atk_effect.stat_modifiers["atk"] == 150
+            atk_effect = next(
+                (e for e in luna.get_active_effects() if e.name == "luna_lunar_reservoir_atk_bonus"),
+                None,
+            )
+            assert atk_effect is not None
+
+            bonus_multiplier = 1 + 0.01 * expected_tiers
+            base_doubles = min(charge // 25, 2000)
+            if base_doubles <= 4:
+                base_actions = 2 << base_doubles
+            else:
+                base_actions = 32 + (base_doubles - 4)
+
+            expected_atk = int(luna._base_atk * 55 * (bonus_multiplier - 1))
+            expected_spd_bonus = luna._base_spd * (bonus_multiplier - 1)
+            expected_actions = max(base_actions, int(base_actions * bonus_multiplier))
+            expected_runtime_spd = int(max(1, luna._base_spd + expected_spd_bonus))
+
+            assert atk_effect.stat_modifiers["atk"] == expected_atk
+            assert atk_effect.stat_modifiers["spd"] == pytest.approx(expected_spd_bonus)
+            assert luna.actions_per_turn == expected_actions
+            assert luna.spd == expected_runtime_spd
 
         LunaLunarReservoir._charge_points[slot] = 2000
         LunaLunarReservoir.sync_actions(luna)
@@ -104,6 +117,10 @@ async def test_luna_lunar_reservoir_attack_bonus_scaling():
             None,
         )
         assert atk_effect is None
+        base_doubles = min(2000 // 25, 2000)
+        base_actions = 32 + (base_doubles - 4)
+        assert luna.actions_per_turn == base_actions
+        assert luna.spd == luna._base_spd
     finally:
         LunaLunarReservoir._charge_points.clear()
         LunaLunarReservoir._swords_by_owner.clear()
