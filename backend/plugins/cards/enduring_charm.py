@@ -44,7 +44,7 @@ class EnduringCharm(CardBase):
                         turns=2,
                         vitality_mult=1.03,
                     )
-                    effect_manager.add_modifier(vit_mod)
+                    await effect_manager.add_modifier(vit_mod)
 
                     log = logging.getLogger(__name__)
                     log.debug(
@@ -68,7 +68,7 @@ class EnduringCharm(CardBase):
 
         self.subscribe("turn_start", _check_low_hp)
 
-        def _on_damage_taken(target, attacker, damage, *_: object):
-            _check_low_hp()
+        async def _on_damage_taken(target, attacker, damage, *_: object):
+            await _check_low_hp()
 
         self.subscribe("damage_taken", _on_damage_taken)

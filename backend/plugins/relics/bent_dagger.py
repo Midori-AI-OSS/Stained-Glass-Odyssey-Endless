@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from dataclasses import field
 
+from autofighter.effects import EffectManager
 from autofighter.effects import create_stat_buff
 from autofighter.stats import BUS
 from plugins.relics._base import RelicBase
@@ -34,8 +35,17 @@ class BentDagger(RelicBase):
             })
 
             for member in party.members:
-                mod = create_stat_buff(member, name=f"{self.id}_kill", atk_mult=1.01, turns=9999)
-                member.effect_manager.add_modifier(mod)
+                mgr = getattr(member, "effect_manager", None)
+                if mgr is None:
+                    mgr = EffectManager(member)
+                    member.effect_manager = mgr
+                mod = create_stat_buff(
+                    member,
+                    name=f"{self.id}_kill",
+                    atk_mult=1.01,
+                    turns=9999,
+                )
+                await mgr.add_modifier(mod)
 
                 # Track the ATK buff application
                 await BUS.emit_async("relic_effect", "bent_dagger", member, "atk_boost_applied", 1, {

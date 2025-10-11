@@ -305,6 +305,7 @@ async def test_stat_modifier_applies_and_expires():
         defense_mult=2,
     )
     await call_maybe_async(manager.add_modifier, mod)
+    await manager.add_modifier(mod)
     assert stats.atk == 15
     assert stats.defense == 40
     await manager.tick()

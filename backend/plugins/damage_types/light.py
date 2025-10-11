@@ -100,7 +100,7 @@ class Light(DamageTypeBase):
                 turns=10,
                 defense_mult=0.75,
             )
-            mgr.add_modifier(mod)
+            await mgr.add_modifier(mod)
             await pace_sleep(YIELD_MULTIPLIER)
 
         await BUS.emit_async("light_ultimate", actor)

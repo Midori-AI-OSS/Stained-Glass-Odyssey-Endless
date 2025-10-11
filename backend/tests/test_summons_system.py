@@ -678,6 +678,7 @@ async def test_summon_inherits_beneficial_effects(monkeypatch):
         multipliers={"crit_damage": 1.5}  # 1.5x crit damage - beneficial
     )
     await call_maybe_async(summoner.effect_manager.add_modifier, stat_mod)
+    await summoner.effect_manager.add_modifier(stat_mod)
 
     # Create summon with 50% stat inheritance
     summon = Summon.create_from_summoner(
@@ -775,6 +776,7 @@ async def test_summon_does_not_inherit_harmful_effects(monkeypatch):
         multipliers={"crit_damage": 0.5}  # 0.5x crit damage - harmful
     )
     await call_maybe_async(summoner.effect_manager.add_modifier, harmful_mod)
+    await summoner.effect_manager.add_modifier(harmful_mod)
 
     # Create summon
     summon = Summon.create_from_summoner(

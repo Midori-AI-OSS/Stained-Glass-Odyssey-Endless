@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from dataclasses import field
 
+from autofighter.effects import EffectManager
 from autofighter.effects import create_stat_buff
 from autofighter.stats import BUS
 from plugins.relics._base import RelicBase
@@ -72,6 +73,11 @@ class NullLantern(RelicBase):
             if current_stacks <= 0:
                 return
             mult = 1 + 1.5 * current_state["cleared"] * current_stacks
+            mgr = getattr(entity, "effect_manager", None)
+            if mgr is None:
+                mgr = EffectManager(entity)
+                entity.effect_manager = mgr
+
             mod = create_stat_buff(
                 entity,
                 name=f"{self.id}_foe_{current_state['cleared']}",
@@ -81,7 +87,7 @@ class NullLantern(RelicBase):
                 max_hp_mult=mult,
                 hp_mult=mult,
             )
-            entity.effect_manager.add_modifier(mod)
+            await mgr.add_modifier(mod)
 
             await BUS.emit_async(
                 "relic_effect",

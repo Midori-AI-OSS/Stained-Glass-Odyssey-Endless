@@ -49,7 +49,7 @@ class SwiftFootwork(CardBase):
                     turns=2,
                     spd_mult=1.3,
                 )
-                mgr.add_modifier(burst)
+                await mgr.add_modifier(burst)
                 await BUS.emit_async(
                     "card_effect",
                     self.id,

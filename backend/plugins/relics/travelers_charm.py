@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from dataclasses import field
 
+from autofighter.effects import EffectManager
 from autofighter.effects import create_stat_buff
 from autofighter.stats import BUS
 from plugins.characters._base import PlayerBase
@@ -56,6 +57,11 @@ class TravelersCharm(RelicBase):
                 member = next((m for m in party.members if id(m) == pid), None)
                 if member is None:
                     continue
+                mgr = getattr(member, "effect_manager", None)
+                if mgr is None:
+                    mgr = EffectManager(member)
+                    member.effect_manager = mgr
+
                 mod = create_stat_buff(
                     member,
                     name=f"{self.id}_{pid}",
@@ -63,7 +69,7 @@ class TravelersCharm(RelicBase):
                     defense_mult=1 + d_pct,
                     mitigation_mult=1 + m_pct,
                 )
-                member.effect_manager.add_modifier(mod)
+                await mgr.add_modifier(mod)
                 active[pid] = (member, mod)
                 applied_count += 1
 

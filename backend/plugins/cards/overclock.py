@@ -59,7 +59,7 @@ class Overclock(CardBase):
                 _refresh_action_timings(ally)
 
             modifier.remove = _remove_and_refresh  # type: ignore[assignment]
-            manager.add_modifier(modifier)
+            await manager.add_modifier(modifier)
 
             await BUS.emit_async(
                 "card_effect",

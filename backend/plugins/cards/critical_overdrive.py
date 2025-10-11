@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from dataclasses import field
 
+from autofighter.effects import EffectManager
 from autofighter.effects import create_stat_buff
 from autofighter.party import Party
 from autofighter.stats import BUS
@@ -29,8 +30,9 @@ class CriticalOverdrive(CardBase):
             mod = state.pop(pid, None)
             if mod is not None:
                 mod.remove()
-                if mod in target.effect_manager.mods:
-                    target.effect_manager.mods.remove(mod)
+                mgr = getattr(target, "effect_manager", None)
+                if mgr is not None and mod in mgr.mods:
+                    mgr.mods.remove(mod)
             if stacks > 0:
                 extra_rate = 0.10
                 # Use base crit rate to avoid compounding with other effects
@@ -43,7 +45,11 @@ class CriticalOverdrive(CardBase):
                     crit_rate=extra_rate,
                     crit_damage=excess * 2,
                 )
-                target.effect_manager.add_modifier(new_mod)
+                mgr = getattr(target, "effect_manager", None)
+                if mgr is None:
+                    mgr = EffectManager(target)
+                    target.effect_manager = mgr
+                await mgr.add_modifier(new_mod)
                 state[pid] = new_mod
                 await BUS.emit_async(
                     "card_effect",

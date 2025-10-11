@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from dataclasses import field
 
+from autofighter.effects import EffectManager
 from autofighter.effects import create_stat_buff
 from autofighter.stats import BUS
 from plugins.characters._base import PlayerBase
@@ -45,6 +46,11 @@ class WoodenIdol(RelicBase):
                 if member is None:
                     continue
 
+                mgr = getattr(member, "effect_manager", None)
+                if mgr is None:
+                    mgr = EffectManager(member)
+                    member.effect_manager = mgr
+
                 # Create a temporary stat buff for the resistance bonus
                 mod = create_stat_buff(
                     member,
@@ -52,7 +58,7 @@ class WoodenIdol(RelicBase):
                     effect_resistance=bonus,
                     turns=1,
                 )
-                member.effect_manager.add_modifier(mod)
+                await mgr.add_modifier(mod)
                 active[pid] = (member, mod)
                 applied_count += 1
 
