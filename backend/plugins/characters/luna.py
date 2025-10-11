@@ -26,6 +26,9 @@ if TYPE_CHECKING:
 
 _LUNA_PASSIVE: "type[LunaLunarReservoir] | None" = None
 
+_DEFAULT_ANIMATION_DURATION = 0.045
+_DEFAULT_ANIMATION_PER_TARGET = 0.01
+
 
 def _get_luna_passive() -> "type[LunaLunarReservoir]":
     """Import Luna's passive lazily to avoid circular dependencies."""
@@ -71,6 +74,16 @@ class _LunaSwordCoordinator:
             return
         self._sword_refs[id(sword)] = weakref.ref(sword)
         sword.actions_per_turn = owner.actions_per_turn
+        sword.animation_duration = getattr(
+            owner,
+            "animation_duration",
+            _DEFAULT_ANIMATION_DURATION,
+        )
+        sword.animation_per_target = getattr(
+            owner,
+            "animation_per_target",
+            _DEFAULT_ANIMATION_PER_TARGET,
+        )
         sword.summon_source = "luna_sword"
         sword.is_temporary = False
         tags = set(getattr(sword, "tags", set()))
@@ -180,6 +193,8 @@ class Luna(PlayerBase):
     passives: list[str] = field(default_factory=lambda: ["luna_lunar_reservoir"])
     # UI hint: show numeric actions indicator
     actions_display: str = "number"
+    animation_duration: float = _DEFAULT_ANIMATION_DURATION
+    animation_per_target: float = _DEFAULT_ANIMATION_PER_TARGET
     ultimate_charge_capacity: int = 15_000
     spawn_weight_multiplier: ClassVar[dict[str, float]] = {"non_boss": 5.0}
     music_playlist_weights: ClassVar[dict[str, float]] = {"default": 3.0, "boss": 1.0}
