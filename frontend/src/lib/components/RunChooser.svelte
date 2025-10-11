@@ -451,12 +451,6 @@ import WizardNavigation from './WizardNavigation.svelte';
     if (Number.isFinite(reward.rdr_bonus) && reward.rdr_bonus !== 0) {
       rewardSegments.push(`RDR ${formatRewardBonus(reward.rdr_bonus)}`);
     }
-    if (Number.isFinite(reward.foe_bonus) && reward.foe_bonus !== 0) {
-      rewardSegments.push(`Foe ${formatRewardBonus(reward.foe_bonus)}`);
-    }
-    if (Number.isFinite(reward.player_bonus) && reward.player_bonus !== 0) {
-      rewardSegments.push(`Player ${formatRewardBonus(reward.player_bonus)}`);
-    }
     const rewardText = rewardSegments.length ? `. Reward preview ${rewardSegments.join(', ')}` : '';
     return `Apply preset ${index + 1}: ${stackText}${rewardText}`;
   }
@@ -1316,14 +1310,6 @@ import WizardNavigation from './WizardNavigation.svelte';
                             <div>
                               <span class="preview-label">RDR</span>
                               <span class="preview-value">{formatRewardBonus(preset.reward.rdr_bonus)}</span>
-                            </div>
-                            <div>
-                              <span class="preview-label">Foe</span>
-                              <span class="preview-value">{formatRewardBonus(preset.reward.foe_bonus)}</span>
-                            </div>
-                            <div>
-                              <span class="preview-label">Player</span>
-                              <span class="preview-value">{formatRewardBonus(preset.reward.player_bonus)}</span>
                             </div>
                           </div>
                         </button>
