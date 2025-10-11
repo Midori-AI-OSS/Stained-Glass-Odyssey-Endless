@@ -383,7 +383,7 @@ class EffectManager:
             "current_stacks": len([d for d in self.dots if d.id == effect.id])
         })
 
-    def add_hot(self, effect: HealingOverTime) -> None:
+    async def add_hot(self, effect: HealingOverTime) -> None:
         """Attach a HoT instance to the tracked stats.
 
         Healing effects simply accumulate; each copy heals separately every
@@ -399,13 +399,18 @@ class EffectManager:
         self.stats.hots.append(effect.id)
 
         # Emit effect applied event - batched for performance
-        BUS.emit_batched("effect_applied", effect.name, self.stats, {
-            "effect_type": "hot",
-            "effect_id": effect.id,
-            "healing": effect.healing,
-            "turns": effect.turns,
-            "current_stacks": len([h for h in self.hots if h.id == effect.id])
-        })
+        await BUS.emit_batched_async(
+            "effect_applied",
+            effect.name,
+            self.stats,
+            {
+                "effect_type": "hot",
+                "effect_id": effect.id,
+                "healing": effect.healing,
+                "turns": effect.turns,
+                "current_stacks": len([h for h in self.hots if h.id == effect.id]),
+            },
+        )
 
     def add_modifier(self, effect: StatModifier) -> Awaitable[None]:
         """Attach a stat modifier to the tracked stats and return an awaitable."""

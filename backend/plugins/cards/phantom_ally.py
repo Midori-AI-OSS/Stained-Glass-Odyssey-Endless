@@ -79,7 +79,7 @@ class PhantomAlly(CardBase):
                 override_damage_type = None
         else:
             override_damage_type = original_damage_type
-        summon = SummonManager.create_summon(
+        summon = await SummonManager.create_summon(
             summoner=original,
             summon_type="phantom",
             source=self.id,

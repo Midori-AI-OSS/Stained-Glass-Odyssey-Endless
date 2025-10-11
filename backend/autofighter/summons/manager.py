@@ -41,7 +41,7 @@ class SummonManager:
         log.debug("SummonManager initialized")
 
     @classmethod
-    def create_summon(
+    async def create_summon(
         cls,
         summoner: Stats,
         summon_type: str = "generic",
@@ -101,7 +101,7 @@ class SummonManager:
 
         active_list = cls._active_summons.setdefault(summoner_id, [])
 
-        summon = Summon.create_from_summoner(
+        summon = await Summon.create_from_summoner(
             summoner,
             summon_type,
             source,
@@ -113,7 +113,7 @@ class SummonManager:
         cls._instance_counters[summoner_id] = counter
         summon.instance_id = f"{summoner_id}#{counter}"
         cls._active_summons[summoner_id].append(summon)
-        BUS.emit_batched("summon_created", summoner, summon, source)
+        await BUS.emit_batched_async("summon_created", summoner, summon, source)
         log.info("Created %s summon for %s from %s", summon_type, summoner_id, source)
         return summon
 

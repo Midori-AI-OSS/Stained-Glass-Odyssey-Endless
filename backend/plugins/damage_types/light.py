@@ -27,7 +27,7 @@ class Light(DamageTypeBase):
             if mgr is not None:
                 hot = damage_effects.create_hot(self.id, actor)
                 if hot is not None:
-                    mgr.add_hot(hot)
+                    await mgr.add_hot(hot)
             await pace_sleep(YIELD_MULTIPLIER)
 
         for ally in allies:
