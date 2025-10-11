@@ -1,12 +1,15 @@
 import pytest
 
+from autofighter.stats import BUS
+from autofighter.stats import Stats
+from autofighter.stats import calc_animation_time
+from autofighter.stats import set_battle_active
+from plugins.characters import luna as luna_module
+from plugins.characters.luna import Luna
+from plugins.characters.luna import _LunaSwordCoordinator
 from autofighter.rooms.battle.turn_loop.player_turn import (
     prepare_action_attack_metadata,
 )
-from autofighter.stats import BUS
-from autofighter.stats import Stats
-from autofighter.stats import set_battle_active
-from plugins.characters.luna import Luna
 
 
 @pytest.mark.asyncio
@@ -58,3 +61,36 @@ async def test_luna_consecutive_hits_emit_unique_attack_metadata(monkeypatch):
     assert first_details.get("attack_sequence") != second_details.get("attack_sequence")
     assert isinstance(first_details.get("attack_sequence"), int)
     assert isinstance(second_details.get("attack_sequence"), int)
+
+
+def test_luna_animation_metadata_propagates_to_summons(monkeypatch):
+    luna = Luna()
+
+    assert calc_animation_time(luna, 1) > 0
+    expected_multi_target = (
+        luna.animation_duration
+        + luna.animation_per_target * max(3 - 1, 0)
+    )
+    assert calc_animation_time(luna, 3) == pytest.approx(expected_multi_target)
+
+    helper = _LunaSwordCoordinator(luna, None)
+
+    class _StubSword:
+        def __init__(self) -> None:
+            self.actions_per_turn = 0
+            self.tags = set()
+
+    stub_sword = _StubSword()
+
+    monkeypatch.setattr(luna_module, "_register_luna_sword", lambda *_, **__: None)
+
+    try:
+        helper.add_sword(stub_sword, "Lumen")
+        assert stub_sword.animation_duration == pytest.approx(
+            luna.animation_duration
+        )
+        assert stub_sword.animation_per_target == pytest.approx(
+            luna.animation_per_target
+        )
+    finally:
+        helper.detach()
