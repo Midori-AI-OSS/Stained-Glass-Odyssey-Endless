@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, test, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/svelte';
 import { tick } from 'svelte';
+import { computeRewardPreview as computeRewardPreviewUtil } from '../src/lib/utils/rewardPreview.js';
 
 vi.mock('$app/environment', () => ({
   browser: true,
@@ -94,7 +95,7 @@ const BASE_METADATA = {
       stacking: { minimum: 0, maximum: null, step: 1, default: 0 },
       grants_reward_bonus: true,
       reward_bonuses: {
-        exp_bonus_per_stack: 0.01,
+        exp_bonus_per_stack: 0.5,
         rdr_bonus_per_stack: 0.01
       },
       effects: {
@@ -160,6 +161,27 @@ describe('RunChooser wizard flow', () => {
     logMenuAction.mockResolvedValue();
   });
 
+  test('computeRewardPreview distinguishes foe EXP and RDR bonuses', () => {
+    const modifiers = [
+      {
+        id: 'enemy_buff',
+        label: 'Enemy Buff',
+        grants_reward_bonus: true,
+        reward_bonuses: {
+          exp_bonus_per_stack: 0.5,
+          rdr_bonus_per_stack: 0.01
+        }
+      }
+    ];
+
+    const preview = computeRewardPreviewUtil({ enemy_buff: 4 }, modifiers);
+
+    expect(preview.exp_bonus).toBe(2);
+    expect(preview.rdr_bonus).toBe(0.04);
+    expect(preview.foe_bonus).toBe(2);
+    expect(preview.exp_bonus).not.toBeCloseTo(preview.rdr_bonus);
+  });
+
   test('numbers steps sequentially when resume is skipped', async () => {
     const { container } = render(RunChooser, { props: { runs: [] } });
 
@@ -222,7 +244,7 @@ describe('RunChooser wizard flow', () => {
     expect(screen.getByText('Pressure: 7')).toBeTruthy();
     expect(screen.getByText('Enemy Buff: 3')).toBeTruthy();
     expect(readRewardValue('RDR Bonus')).toBe('+3%');
-    expect(readRewardValue('EXP Bonus')).toBe('+3%');
+    expect(readRewardValue('EXP Bonus')).toBe('+150%');
 
     const startButton = screen.getByRole('button', { name: 'Start Run' });
     await fireEvent.click(startButton);
@@ -277,7 +299,7 @@ describe('RunChooser wizard flow', () => {
         return {
           ...entry,
           reward_bonuses: {
-            exp_bonus_per_stack: 0.015,
+            exp_bonus_per_stack: 0.75,
             rdr_bonus_per_stack: 0.015
           }
         };
@@ -317,7 +339,7 @@ describe('RunChooser wizard flow', () => {
     await tick();
 
     expect(readRewardValue('RDR Bonus')).toBe('+2%');
-    expect(readRewardValue('EXP Bonus')).toBe('+2%');
+    expect(readRewardValue('EXP Bonus')).toBe('+100%');
 
     component.$set({ metadataHash: 'refresh-hash' });
 
@@ -326,7 +348,7 @@ describe('RunChooser wizard flow', () => {
 
     await waitFor(() => {
       expect(readRewardValue('RDR Bonus')).toBe('+3%');
-      expect(readRewardValue('EXP Bonus')).toBe('+3%');
+      expect(readRewardValue('EXP Bonus')).toBe('+150%');
     });
   });
 

@@ -10,6 +10,7 @@ import RunTypeGrid from './RunTypeGrid.svelte';
 import RunWizardHeader from './RunWizardHeader.svelte';
 import WizardNavigation from './WizardNavigation.svelte';
   import { formatPercent } from '../utils/upgradeFormatting.js';
+  import { computeRewardPreview as calculateRewardPreview } from '../utils/rewardPreview.js';
   import {
     getRunConfigurationMetadata,
     logMenuAction
@@ -1120,86 +1121,9 @@ import WizardNavigation from './WizardNavigation.svelte';
   }
 
   function computeRewardPreview(values, availableModifiers = modifiers) {
-    const result = {
-      foe_bonus: 0,
-      player_bonus: 0,
-      exp_bonus: 0,
-      rdr_bonus: 0
-    };
-    if (!Array.isArray(availableModifiers) || availableModifiers.length === 0) {
-      return result;
-    }
-    for (const entry of availableModifiers) {
-      const stacks = sanitizeStack(entry.id, values[entry.id]);
-      const contribution = computeModifierRewardContribution(entry, stacks);
-      result.foe_bonus += contribution.foe_bonus;
-      result.player_bonus += contribution.player_bonus;
-      result.exp_bonus += contribution.exp_bonus;
-      result.rdr_bonus += contribution.rdr_bonus;
-    }
-    result.foe_bonus = Number(result.foe_bonus.toFixed(4));
-    result.player_bonus = Number(result.player_bonus.toFixed(4));
-    result.exp_bonus = Number(result.exp_bonus.toFixed(4));
-    result.rdr_bonus = Number(result.rdr_bonus.toFixed(4));
-    return result;
-  }
-
-  function computeModifierRewardContribution(mod, stacks) {
-    const totals = {
-      foe_bonus: 0,
-      player_bonus: 0,
-      exp_bonus: 0,
-      rdr_bonus: 0
-    };
-    if (!mod || !mod.reward_bonuses || typeof mod.reward_bonuses !== 'object') {
-      return totals;
-    }
-
-    const bonuses = mod.reward_bonuses;
-    const perStackReward = toNumber(bonuses.exp_bonus_per_stack ?? bonuses.rdr_bonus_per_stack);
-    if (perStackReward && mod.grants_reward_bonus) {
-      totals.foe_bonus += stacks * perStackReward;
-    }
-
-    const perStackExp = toNumber(bonuses.exp_bonus_per_stack);
-    if (perStackExp) {
-      totals.exp_bonus += stacks * perStackExp;
-    }
-
-    const perStackRdr = toNumber(bonuses.rdr_bonus_per_stack);
-    if (perStackRdr) {
-      totals.rdr_bonus += stacks * perStackRdr;
-    }
-
-    const firstExp = toNumber(bonuses.exp_bonus_first_stack);
-    if (firstExp && stacks > 0) {
-      totals.exp_bonus += firstExp;
-      const additionalExp = toNumber(bonuses.exp_bonus_additional_stack);
-      if (additionalExp && stacks > 1) {
-        totals.exp_bonus += (stacks - 1) * additionalExp;
-      }
-    }
-
-    const firstRdr = toNumber(bonuses.rdr_bonus_first_stack);
-    if (firstRdr && stacks > 0) {
-      totals.rdr_bonus += firstRdr;
-      const additionalRdr = toNumber(bonuses.rdr_bonus_additional_stack);
-      if (additionalRdr && stacks > 1) {
-        totals.rdr_bonus += (stacks - 1) * additionalRdr;
-      }
-      if (!mod.grants_reward_bonus) {
-        totals.player_bonus += firstRdr;
-        if (additionalRdr && stacks > 1) {
-          totals.player_bonus += (stacks - 1) * additionalRdr;
-        }
-      }
-    }
-
-    if (!mod.grants_reward_bonus && mod.id === 'character_stat_down') {
-      totals.player_bonus = totals.rdr_bonus;
-    }
-
-    return totals;
+    return calculateRewardPreview(values, availableModifiers, {
+      sanitizeStack: (modId, rawValue) => sanitizeStack(modId, rawValue)
+    });
   }
 
   function modifierLabel(mod) {
