@@ -48,7 +48,7 @@ async def test_radiant_aegis_hot_event_applies_shields():
     resistance_name = f"{passive.id}_hot_resistance"
     assert any(effect.name == resistance_name for effect in ally.get_active_effects())
 
-    BUS.emit_batched("battle_end", healer)
+    await BUS.emit_batched_async("battle_end", healer)
     await asyncio.sleep(0.05)
 
 
@@ -75,5 +75,5 @@ async def test_radiant_aegis_dot_cleanse_triggers_on_light_ultimate():
     cleanse_effect_name = f"{passive.id}_cleanse_attack_{id(healer)}"
     assert any(effect.name == cleanse_effect_name for effect in healer.get_active_effects())
 
-    BUS.emit_batched("battle_end", healer)
+    await BUS.emit_batched_async("battle_end", healer)
     await asyncio.sleep(0.05)

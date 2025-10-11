@@ -15,7 +15,7 @@ def setup_event_loop():
 
 def flush_bus_tasks(loop):
     batch_task = getattr(_bus, "_batch_timer", None)
-    if isinstance(batch_task, asyncio.Task):
+    if isinstance(batch_task, asyncio.Task) and batch_task.get_loop() is loop:
         loop.run_until_complete(batch_task)
 
 
