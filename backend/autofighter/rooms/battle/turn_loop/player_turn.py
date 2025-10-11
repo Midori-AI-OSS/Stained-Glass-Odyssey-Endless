@@ -419,7 +419,7 @@ async def _run_player_turn_iteration(
             foes=context.foes,
         )
 
-    target_manager.maybe_inflict_dot(member, damage)
+    await target_manager.maybe_inflict_dot(member, damage)
     targets_hit = 1
     if getattr(member.damage_type, "id", "").lower() == "wind":
         targets_hit += await _handle_wind_spread(
@@ -676,7 +676,7 @@ async def _handle_wind_spread(
                 party=context.combat_party.members,
                 foes=context.foes,
             )
-        extra_manager.maybe_inflict_dot(member, extra_damage)
+        await extra_manager.maybe_inflict_dot(member, extra_damage)
         context.exp_reward, context.temp_rdr = await credit_if_dead(
             foe_obj=extra_foe,
             exp_reward=context.exp_reward,
