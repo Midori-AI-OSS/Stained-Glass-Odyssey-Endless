@@ -121,7 +121,7 @@ class Wind(DamageTypeBase):
                         f_mgr = EffectManager(foe)
                         foe.effect_manager = f_mgr
                     effect_managers[foe] = f_mgr
-                f_mgr.maybe_inflict_dot(actor, dmg)
+                await f_mgr.maybe_inflict_dot(actor, dmg)
             except Exception:
                 pass
 

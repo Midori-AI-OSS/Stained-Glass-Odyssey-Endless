@@ -61,7 +61,7 @@ class Lightning(DamageTypeBase):
                 for _ in range(10):
                     effect = damage_effects.create_dot(random.choice(types), dmg, actor)
                     if effect is not None:
-                        mgr.add_dot(effect)
+                        await mgr.add_dot(effect)
                     await pace_sleep(YIELD_MULTIPLIER)
 
         # Set up aftertaste stacks

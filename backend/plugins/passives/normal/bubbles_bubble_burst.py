@@ -113,7 +113,7 @@ class BubblesBubbleBurst:
                 if mgr is None:
                     mgr = EffectManager(combatant)
                     combatant.effect_manager = mgr
-                mgr.maybe_inflict_dot(bubbles, damage, turns=2)
+                await mgr.maybe_inflict_dot(bubbles, damage, turns=2)
 
     @classmethod
     def get_bubble_stacks(cls, bubbles: "Stats", enemy: "Stats") -> int:
