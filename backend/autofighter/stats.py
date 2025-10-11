@@ -1091,6 +1091,33 @@ STATUS_HOOKS: list[StatusHook] = []
 BUS = EventBus()
 
 
+def _advance_temporary_effects(
+    actor: Optional["Stats"] = None,
+    *_args: object,
+    **_kwargs: object,
+) -> None:
+    """Tick down temporary stat effects at the start of each turn.
+
+    ``turn_start`` events are fired by both the automated battle loop and
+    various tests. Wiring this here ensures temporary ``StatEffect`` instances
+    like relic buffs expire in real battles without relying on tests calling
+    :meth:`Stats.tick_effects` manually.
+    """
+
+    if actor is None:
+        return
+    tick_effects = getattr(actor, "tick_effects", None)
+    if not callable(tick_effects):
+        return
+    try:
+        tick_effects()
+    except Exception:
+        log.exception(
+            "Failed ticking temporary effects for %s",
+            getattr(actor, "id", actor),
+        )
+
+
 def _reset_temporary_slots_on_battle_end(*_args, **__):
     """Clear temporary summon slots for all tracked stats instances."""
 
@@ -1098,6 +1125,7 @@ def _reset_temporary_slots_on_battle_end(*_args, **__):
         stats.reset_temporary_summon_slots()
 
 
+BUS.subscribe("turn_start", _advance_temporary_effects)
 BUS.subscribe("battle_end", _reset_temporary_slots_on_battle_end)
 
 def _log_damage_taken(
