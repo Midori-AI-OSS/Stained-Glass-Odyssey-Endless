@@ -292,5 +292,5 @@ class LunaLunarReservoir:
     def get_description(cls) -> str:
         return (
             "Gains 1 charge per action. Every 25 charge doubles actions per turn (capped after 2000 doublings). "
-            "Stacks above 2000 grant +15% of Luna's base ATK, +1% of her base SPD, and +1% additional actions from the doubled cadence per 100 excess charge with no automatic drain."
+            "Stacks above 2000 grant +55% of Luna's base ATK, +1% of her base SPD, and +1% additional actions from the doubled cadence per 100 excess charge with no automatic drain."
         )
