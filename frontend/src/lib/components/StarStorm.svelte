@@ -102,11 +102,45 @@
     opacity: 0.85;
     mix-blend-mode: screen;
     --orb-tint: color-mix(in srgb, var(--orb-base-color) 48%, var(--storm-tint) 52%);
-    background:
-      radial-gradient(circle at 28% 26%, color-mix(in srgb, var(--orb-tint) 70%, white 30%) 0%, transparent 60%),
-      radial-gradient(circle at 72% 70%, color-mix(in srgb, var(--orb-tint) 80%, transparent) 0%, transparent 80%),
-      radial-gradient(circle, color-mix(in srgb, var(--orb-tint) 55%, transparent) 0%, transparent 92%);
+    transition: opacity 1200ms ease;
+  }
+
+  .orb::before,
+  .orb::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    mix-blend-mode: inherit;
+  }
+
+  .orb::before {
+    background: radial-gradient(
+      circle at 30% 28%,
+      color-mix(in srgb, var(--orb-tint) 72%, white 28%) 0%,
+      color-mix(in srgb, var(--orb-tint) 85%, transparent) 62%,
+      color-mix(in srgb, var(--orb-tint) 40%, transparent) 100%
+    );
     transition: background 1500ms ease, opacity 1200ms ease;
+    mask-image: radial-gradient(circle, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.45) 58%, transparent 88%);
+    mask-repeat: no-repeat;
+    mask-size: 100% 100%;
+    -webkit-mask-image: radial-gradient(circle, rgba(255, 255, 255, 0.9) 0%, rgba(255, 255, 255, 0.45) 58%, transparent 88%);
+    -webkit-mask-repeat: no-repeat;
+    -webkit-mask-size: 100% 100%;
+  }
+
+  .orb::after {
+    inset: calc(var(--orb-radius) * -0.22);
+    background: var(--orb-tint);
+    opacity: 0.45;
+    filter: blur(calc(var(--orb-radius) * 0.22));
+    mask-image: radial-gradient(circle, rgba(255, 255, 255, 0.6) 0%, transparent 75%);
+    mask-repeat: no-repeat;
+    mask-size: 100% 100%;
+    -webkit-mask-image: radial-gradient(circle, rgba(255, 255, 255, 0.6) 0%, transparent 75%);
+    -webkit-mask-repeat: no-repeat;
+    -webkit-mask-size: 100% 100%;
   }
 
   .orb-shell:nth-of-type(3n) .orb {
