@@ -422,8 +422,15 @@ class EffectManager:
 
         if effect in self.mods:
             self.mods.remove(effect)
-        else:
-            self.mods[:] = [existing for existing in self.mods if existing.id != effect.id]
+
+        duplicates = [
+            existing for existing in self.mods if existing.id == effect.id
+        ]
+        for existing in duplicates:
+            existing.remove()
+
+        if duplicates:
+            self.mods[:] = [mod for mod in self.mods if mod not in duplicates]
 
         while effect.id in self.stats.mods:
             self.stats.mods.remove(effect.id)
