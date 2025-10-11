@@ -203,6 +203,7 @@
   }
 
   function handleLootSfxGesture() {
+    const wasBlocked = lootSfxBlocked;
     if (lootSfxBlocked) {
       lootSfxBlocked = false;
     }
@@ -211,7 +212,7 @@
     if (dropSfxPlayer && typeof dropSfxPlayer.setVolume === 'function') {
       dropSfxPlayer.setVolume(normalizedSfxVolume);
     }
-    if (visibleDrops.length > 0) {
+    if (wasBlocked && visibleDrops.length > 0) {
       playRewardDropAudio();
     }
   }
