@@ -165,7 +165,7 @@
     selectedRunSummary?.configuration ||
     null;
   $: modifierEntries = configurationEntries(runConfiguration?.modifiers);
-  $: rewardEntries = configurationEntries(
+  $: rewardEntries = rewardConfigurationEntries(
     runConfiguration?.rewardBonuses ?? runConfiguration?.reward_bonuses
   );
 
@@ -200,6 +200,58 @@
       return Object.entries(source);
     }
     return [['value', source]];
+  }
+
+  function rewardConfigurationEntries(source) {
+    if (!source) {
+      return [];
+    }
+    if (!isPlainObject(source)) {
+      return configurationEntries(source);
+    }
+
+    const normalized = source;
+    const consumed = new Set();
+    const rows = [];
+
+    const lookupKey = (key) => {
+      if (key in normalized) {
+        return [key, normalized[key]];
+      }
+      const camel = key.replace(/_([a-z])/g, (_, ch) => ch.toUpperCase());
+      if (camel in normalized) {
+        return [camel, normalized[camel]];
+      }
+      return null;
+    };
+
+    const pushEntry = (key, label) => {
+      const resolved = lookupKey(key);
+      if (!resolved) {
+        return;
+      }
+      const [resolvedKey, value] = resolved;
+      rows.push([label, value]);
+      consumed.add(resolvedKey);
+    };
+
+    pushEntry('foe_modifier_bonus', 'Foe EXP Bonus');
+    pushEntry('player_modifier_bonus', 'Player EXP Bonus');
+    pushEntry('foe_rdr_bonus', 'Foe RDR Bonus');
+    pushEntry('player_rdr_bonus', 'Player RDR Bonus');
+    pushEntry('exp_bonus', 'Total EXP Bonus');
+    pushEntry('rdr_bonus', 'Total RDR Bonus');
+    pushEntry('exp_multiplier', 'EXP Multiplier');
+    pushEntry('rdr_multiplier', 'RDR Multiplier');
+
+    for (const [key, value] of Object.entries(normalized)) {
+      if (consumed.has(key)) {
+        continue;
+      }
+      rows.push([formatRunTypeLabel(key), value]);
+    }
+
+    return rows;
   }
 
   function formatConfigValue(value) {

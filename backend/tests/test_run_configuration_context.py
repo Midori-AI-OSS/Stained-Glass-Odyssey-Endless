@@ -40,6 +40,10 @@ def test_build_run_modifier_context_matches_snapshot_metadata():
     assert context.prime_spawn_bonus_pct == pytest.approx(prime_bonus)
     player_multiplier = selection.snapshot["modifiers"]["character_stat_down"]["details"]["effective_multiplier"]
     assert context.player_stat_multiplier == pytest.approx(player_multiplier)
+    assert context.foe_exp_bonus == pytest.approx(selection.reward_bonuses["foe_modifier_bonus"])
+    assert context.player_exp_bonus == pytest.approx(selection.reward_bonuses["player_modifier_bonus"])
+    assert context.foe_rdr_bonus == pytest.approx(selection.reward_bonuses["foe_rdr_bonus"])
+    assert context.player_rdr_bonus == pytest.approx(selection.reward_bonuses["player_rdr_bonus"])
     assert context.encounter_slot_bonus == 1
     assert context.pressure_defense_floor == pytest.approx(70.0)
     assert context.pressure_defense_min_roll == pytest.approx(0.82)
@@ -53,10 +57,18 @@ def test_build_run_modifier_context_matches_snapshot_metadata():
     assert serialized["metadata_hash"] == context.metadata_hash
     assert serialized["foe_stat_multipliers"]["max_hp"] == context.foe_stat_multipliers["max_hp"]
     assert serialized["foe_strength_score"] == pytest.approx(context.foe_strength_score)
+    assert serialized["foe_exp_bonus"] == pytest.approx(context.foe_exp_bonus)
+    assert serialized["player_exp_bonus"] == pytest.approx(context.player_exp_bonus)
+    assert serialized["foe_rdr_bonus"] == pytest.approx(context.foe_rdr_bonus)
+    assert serialized["player_rdr_bonus"] == pytest.approx(context.player_rdr_bonus)
     hydrated = RunModifierContext.from_dict(serialized)
     assert hydrated.shop_multiplier == pytest.approx(context.shop_multiplier)
     assert hydrated.encounter_slot_bonus == context.encounter_slot_bonus
     assert hydrated.foe_strength_score == pytest.approx(context.foe_strength_score)
+    assert hydrated.foe_exp_bonus == pytest.approx(context.foe_exp_bonus)
+    assert hydrated.player_exp_bonus == pytest.approx(context.player_exp_bonus)
+    assert hydrated.foe_rdr_bonus == pytest.approx(context.foe_rdr_bonus)
+    assert hydrated.player_rdr_bonus == pytest.approx(context.player_rdr_bonus)
 
 
 def test_get_modifier_snapshot_normalises_entries():

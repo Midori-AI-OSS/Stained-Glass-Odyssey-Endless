@@ -50,6 +50,8 @@ class RunConfigurationSelection:
                 "rdr_bonus": self.reward_bonuses.get("rdr_bonus", 0.0),
                 "foe_modifier_bonus": self.reward_bonuses.get("foe_modifier_bonus", 0.0),
                 "player_modifier_bonus": self.reward_bonuses.get("player_modifier_bonus", 0.0),
+                "foe_rdr_bonus": self.reward_bonuses.get("foe_rdr_bonus", 0.0),
+                "player_rdr_bonus": self.reward_bonuses.get("player_rdr_bonus", 0.0),
             },
         }
 
@@ -540,8 +542,10 @@ def validate_run_configuration(
         player_rdr_bonus = _numeric(char_penalty_snapshot.get("bonus_rdr"))
 
     reward_bonuses = {
-        "foe_modifier_bonus": foe_rdr_bonus,
-        "player_modifier_bonus": player_rdr_bonus,
+        "foe_modifier_bonus": foe_exp_bonus,
+        "player_modifier_bonus": player_exp_bonus,
+        "foe_rdr_bonus": foe_rdr_bonus,
+        "player_rdr_bonus": player_rdr_bonus,
     }
     total_exp_bonus = foe_exp_bonus + player_exp_bonus
     total_rdr_bonus = foe_rdr_bonus + player_rdr_bonus
@@ -608,6 +612,10 @@ class RunModifierContext:
     foe_strength_score: float
     foe_spawn_multiplier: float
     modifier_stacks: dict[str, int]
+    foe_exp_bonus: float
+    player_exp_bonus: float
+    foe_rdr_bonus: float
+    player_rdr_bonus: float
     metadata_hash: str
 
     def to_dict(self) -> dict[str, object]:
@@ -631,6 +639,10 @@ class RunModifierContext:
             "foe_strength_score": self.foe_strength_score,
             "foe_spawn_multiplier": self.foe_spawn_multiplier,
             "modifier_stacks": dict(self.modifier_stacks),
+            "foe_exp_bonus": self.foe_exp_bonus,
+            "player_exp_bonus": self.player_exp_bonus,
+            "foe_rdr_bonus": self.foe_rdr_bonus,
+            "player_rdr_bonus": self.player_rdr_bonus,
             "metadata_hash": self.metadata_hash,
         }
 
@@ -653,6 +665,10 @@ class RunModifierContext:
             "elite_spawn_bonus_pct": self.elite_spawn_bonus_pct,
             "prime_spawn_bonus_pct": self.prime_spawn_bonus_pct,
             "glitched_spawn_bonus_pct": self.glitched_spawn_bonus_pct,
+            "foe_exp_bonus": self.foe_exp_bonus,
+            "player_exp_bonus": self.player_exp_bonus,
+            "foe_rdr_bonus": self.foe_rdr_bonus,
+            "player_rdr_bonus": self.player_rdr_bonus,
         }
 
     @classmethod
@@ -687,6 +703,10 @@ class RunModifierContext:
             foe_strength_score=float(mapping.get("foe_strength_score", 1.0) or 1.0),
             foe_spawn_multiplier=float(mapping.get("foe_spawn_multiplier", 1.0) or 1.0),
             modifier_stacks=dict(mapping.get("modifier_stacks", {})),
+            foe_exp_bonus=float(mapping.get("foe_exp_bonus", mapping.get("foe_modifier_bonus", 0.0)) or 0.0),
+            player_exp_bonus=float(mapping.get("player_exp_bonus", mapping.get("player_modifier_bonus", 0.0)) or 0.0),
+            foe_rdr_bonus=float(mapping.get("foe_rdr_bonus", 0.0) or 0.0),
+            player_rdr_bonus=float(mapping.get("player_rdr_bonus", 0.0) or 0.0),
             metadata_hash=str(mapping.get("metadata_hash", "")) or "",
         )
 
@@ -962,14 +982,17 @@ def build_run_modifier_context(snapshot: Mapping[str, Any]) -> RunModifierContex
         shop_tax_multiplier = 1.0
 
     reward_info = _coerce_mapping(source.get("reward_bonuses"))
-    foe_reward_bonus = _numeric(reward_info.get("foe_modifier_bonus"))
+    foe_exp_bonus = _numeric(reward_info.get("foe_modifier_bonus"))
+    foe_rdr_bonus = _numeric(reward_info.get("foe_rdr_bonus"))
+    player_exp_bonus = _numeric(reward_info.get("player_modifier_bonus"))
+    player_rdr_bonus = _numeric(reward_info.get("player_rdr_bonus"))
 
     hp_multiplier = foe_stat_multipliers.get("max_hp", 1.0) or 1.0
     speed_multiplier = foe_stat_multipliers.get("spd", 1.0) or 1.0
     mitigation_effect = foe_stat_deltas.get("mitigation", 0.0) or 0.0
     vitality_effect = foe_stat_deltas.get("vitality", 0.0) or 0.0
 
-    spawn_pressure = 1.0 + max(0.0, foe_reward_bonus) * 0.25
+    spawn_pressure = 1.0 + max(0.0, foe_exp_bonus) * 0.25
     spawn_pressure += max(0.0, hp_multiplier - 1.0) * 0.3
     spawn_pressure += max(0.0, speed_multiplier - 1.0) * 0.2
     spawn_pressure += max(0.0, mitigation_effect) * 2500.0
@@ -1003,6 +1026,10 @@ def build_run_modifier_context(snapshot: Mapping[str, Any]) -> RunModifierContex
         foe_strength_score=spawn_pressure,
         foe_spawn_multiplier=spawn_pressure,
         modifier_stacks=modifier_stacks,
+        foe_exp_bonus=foe_exp_bonus,
+        player_exp_bonus=player_exp_bonus,
+        foe_rdr_bonus=foe_rdr_bonus,
+        player_rdr_bonus=player_rdr_bonus,
         metadata_hash=metadata_hash,
     )
 
