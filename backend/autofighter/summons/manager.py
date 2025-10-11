@@ -92,10 +92,10 @@ class SummonManager:
                         active_list,
                         key=lambda s: s.hp / s.max_hp if s.max_hp > 0 else 0,
                     )
-                    cls.remove_summon(worst, "replaced_by_healthier_summon")
+                    await cls.remove_summon(worst, "replaced_by_healthier_summon")
             else:
                 if active_list:
-                    cls.remove_summon(active_list[0], "forced_replacement")
+                    await cls.remove_summon(active_list[0], "forced_replacement")
                 else:
                     return None
 
@@ -206,11 +206,11 @@ class SummonManager:
         }
 
     @classmethod
-    def remove_summon(cls, summon: Summon, reason: str = "unknown") -> bool:
+    async def remove_summon(cls, summon: Summon, reason: str = "unknown") -> bool:
         sid = summon.summoner_id
         if sid in cls._active_summons and summon in cls._active_summons[sid]:
             cls._active_summons[sid].remove(summon)
-            BUS.emit_batched("summon_removed", summon, reason)
+            await BUS.emit_batched_async("summon_removed", summon, reason)
             if not cls._active_summons[sid]:
                 del cls._active_summons[sid]
                 cls._summoner_refs.pop(sid, None)
@@ -219,11 +219,12 @@ class SummonManager:
         return False
 
     @classmethod
-    def remove_all_summons(cls, summoner_id: str, reason: str = "cleanup") -> int:
+    async def remove_all_summons(cls, summoner_id: str, reason: str = "cleanup") -> int:
         count = 0
         if summoner_id in cls._active_summons:
             for summon in cls._active_summons[summoner_id].copy():
-                if cls.remove_summon(summon, reason):
+                removed = await cls.remove_summon(summon, reason)
+                if removed:
                     count += 1
         return count
 
@@ -239,29 +240,30 @@ class SummonManager:
         log.debug("Battle started - summon tracking active")
 
     @classmethod
-    def _on_battle_end(cls, *_, **__):
+    async def _on_battle_end(cls, *_, **__):
         total_removed = 0
         for sid in list(cls._active_summons.keys()):
             for summon in cls._active_summons[sid].copy():
                 if summon.is_temporary:
-                    cls.remove_summon(summon, "battle_end")
-                    total_removed += 1
+                    removed = await cls.remove_summon(summon, "battle_end")
+                    if removed:
+                        total_removed += 1
         cls._cleanup_empty_entries()
         if total_removed > 0:
             log.debug("Cleaned up %s temporary summons at battle end", total_removed)
 
     @classmethod
-    def _on_turn_start(cls, entity, **__):
+    async def _on_turn_start(cls, entity, **__):
         eid = getattr(entity, "id", str(id(entity)))
         if eid in cls._active_summons:
             for summon in cls._active_summons[eid].copy():
                 if not summon.tick_turn():
-                    cls.remove_summon(summon, "expired")
+                    await cls.remove_summon(summon, "expired")
 
     @classmethod
-    def _on_entity_defeat(cls, entity, **__):
+    async def _on_entity_defeat(cls, entity, **__):
         eid = getattr(entity, "id", str(id(entity)))
-        removed = cls.remove_all_summons(eid, "summoner_defeated")
+        removed = await cls.remove_all_summons(eid, "summoner_defeated")
         if removed:
             log.debug("Removed %s summons due to summoner defeat", removed)
 
@@ -269,7 +271,7 @@ class SummonManager:
     async def _on_entity_killed(cls, victim, *_, **__):
         if isinstance(victim, Summon):
             summoner = cls._summoner_refs.get(victim.summoner_id)
-            cls.remove_summon(victim, "defeated")
+            await cls.remove_summon(victim, "defeated")
             if summoner is not None:
                 await BUS.emit_async("summon_defeated", summoner, victim)
                 if getattr(victim, "summon_source", "") == "becca_menagerie_bond":
