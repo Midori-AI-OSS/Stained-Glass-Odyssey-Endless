@@ -3,6 +3,7 @@ from math import isclose
 
 import pytest
 
+import autofighter.stats as stats_module
 from autofighter.party import Party
 from autofighter.relics import apply_relics
 from autofighter.relics import award_relic
@@ -86,8 +87,59 @@ async def test_vengeful_pendant_reflects(copies: int) -> None:
     for _ in range(copies):
         award_relic(party, "vengeful_pendant")
     await apply_relics(party)
-    await BUS.emit_async("damage_taken", ally, enemy, 20)
-    assert enemy.hp == 100 - int(20 * 0.15 * copies)
+    events: list[tuple] = []
+
+    def capture(*args: object) -> None:
+        events.append(args)
+
+    BUS.subscribe("relic_effect", capture)
+    original_state = stats_module._BATTLE_ACTIVE
+    stats_module._BATTLE_ACTIVE = True
+    try:
+        await BUS.emit_async("damage_taken", ally, enemy, 20)
+        await asyncio.sleep(0)
+    finally:
+        BUS.unsubscribe("relic_effect", capture)
+        stats_module._BATTLE_ACTIVE = original_state
+    assert events
+    assert events[0][0] == "vengeful_pendant"
+    assert events[0][2] == "damage_reflection"
+    assert events[0][3] == max(1, int(20 * 0.15 * copies))
+
+
+@pytest.mark.asyncio
+async def test_vengeful_pendant_reflects_minimum_damage() -> None:
+    event_bus_module.bus._subs.clear()
+    party = Party()
+    ally = PlayerBase()
+    enemy = PlayerBase()
+    ally.id = "ally"
+    enemy.id = "enemy"
+    ally.hp = 100
+    enemy.hp = 100
+    party.members.append(ally)
+    award_relic(party, "vengeful_pendant")
+    await apply_relics(party)
+    events: list[tuple] = []
+
+    def capture(*args: object) -> None:
+        events.append(args)
+
+    BUS.subscribe("relic_effect", capture)
+    original_state = stats_module._BATTLE_ACTIVE
+    stats_module._BATTLE_ACTIVE = True
+    try:
+        await BUS.emit_async("damage_taken", ally, enemy, 1)
+        await asyncio.sleep(0)
+    finally:
+        BUS.unsubscribe("relic_effect", capture)
+        stats_module._BATTLE_ACTIVE = original_state
+
+    assert events
+    assert events[0][0] == "vengeful_pendant"
+    assert events[0][2] == "damage_reflection"
+    assert events[0][3] == 1
+    assert enemy.hp == 99
 
 
 @pytest.mark.asyncio

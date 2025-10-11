@@ -35,7 +35,7 @@ class VengefulPendant(RelicBase):
             current_stacks = current_state.get("stacks", 0)
             if current_stacks <= 0:
                 return
-            dmg = int(amount * 0.15 * current_stacks)
+            dmg = max(1, int(amount * 0.15 * current_stacks))
 
             # Emit relic effect event for damage reflection
             await BUS.emit_async(
