@@ -1,5 +1,7 @@
 import asyncio
 
+import asyncio
+
 import pytest
 
 from autofighter.effects import EffectManager
@@ -9,6 +11,7 @@ from plugins.damage_types.light import Light
 from plugins.dots.bleed import Bleed
 from plugins.hots.radiant_regeneration import RadiantRegeneration
 from plugins.passives.normal.lady_light_radiant_aegis import LadyLightRadiantAegis
+from tests.helpers import call_maybe_async
 
 
 class DummyLightUser(Stats):
@@ -36,7 +39,7 @@ async def test_radiant_aegis_hot_event_applies_shields():
     hot = RadiantRegeneration(healer)
     hot.healing = 8  # Boost base healing so scaling is visible
     hot.source = healer
-    ally.effect_manager.add_hot(hot)
+    await call_maybe_async(ally.effect_manager.add_hot, hot)
 
     await asyncio.sleep(0.05)
 
@@ -61,7 +64,7 @@ async def test_radiant_aegis_dot_cleanse_triggers_on_light_ultimate():
     ally.hp = ally.max_hp - 100
     healer.effect_manager = EffectManager(healer)
     ally.effect_manager = EffectManager(ally)
-    ally.effect_manager.add_dot(Bleed(10, 3))
+    await call_maybe_async(ally.effect_manager.add_dot, Bleed(10, 3))
 
     await passive.apply(healer)
 

@@ -1,11 +1,15 @@
+import pytest
+
 from autofighter.effects import DamageOverTime
 from autofighter.effects import EffectManager
 from autofighter.effects import HealingOverTime
 from autofighter.rooms.utils import _serialize
 from autofighter.stats import Stats
+from tests.helpers import call_maybe_async
 
 
-def test_serialize_effect_details():
+@pytest.mark.asyncio
+async def test_serialize_effect_details():
     target = Stats()
     target.id = "t"
     mgr = EffectManager(target)
@@ -13,9 +17,9 @@ def test_serialize_effect_details():
 
     source = Stats()
     source.id = "s"
-    mgr.add_dot(DamageOverTime("burn", 5, 2, "burn", source))
-    mgr.add_dot(DamageOverTime("burn", 5, 1, "burn", source))
-    mgr.add_hot(HealingOverTime("regen", 3, 1, "regen", source))
+    await call_maybe_async(mgr.add_dot, DamageOverTime("burn", 5, 2, "burn", source))
+    await call_maybe_async(mgr.add_dot, DamageOverTime("burn", 5, 1, "burn", source))
+    await call_maybe_async(mgr.add_hot, HealingOverTime("regen", 3, 1, "regen", source))
 
     target.passives = ["attack_up", "luna_lunar_reservoir", "luna_lunar_reservoir"]
 

@@ -6,6 +6,7 @@ from autofighter.effects import DamageOverTime
 from autofighter.effects import EffectManager
 from autofighter.stats import Stats
 from plugins.passives.normal.lady_echo_resonant_static import LadyEchoResonantStatic
+from tests.helpers import call_maybe_async
 
 
 @pytest.mark.asyncio
@@ -17,8 +18,14 @@ async def test_chain_bonus_counts_effect_manager_dots():
 
     target = Stats()
     target.effect_manager = EffectManager(target)
-    target.effect_manager.add_dot(DamageOverTime("d1", 1, 1, "d1"))
-    target.effect_manager.add_dot(DamageOverTime("d2", 1, 1, "d2"))
+    await call_maybe_async(
+        target.effect_manager.add_dot,
+        DamageOverTime("d1", 1, 1, "d1"),
+    )
+    await call_maybe_async(
+        target.effect_manager.add_dot,
+        DamageOverTime("d2", 1, 1, "d2"),
+    )
 
     passive = LadyEchoResonantStatic()
     await passive.apply(attacker, hit_target=target)

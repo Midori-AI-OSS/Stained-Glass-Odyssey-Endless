@@ -7,6 +7,7 @@ from autofighter.stats import BUS
 from autofighter.stats import Stats
 from plugins.damage_types.wind import Wind
 from plugins.dots.blazing_torment import BlazingTorment
+from tests.helpers import call_maybe_async
 
 
 async def _use_ultimate(self):
@@ -44,7 +45,7 @@ async def test_wind_ultimate_transfers_from_foes():
 
     dot = BlazingTorment(1, 3)
     dot.source = player
-    foe2.effect_manager.add_dot(dot)
+    await call_maybe_async(foe2.effect_manager.add_dot, dot)
 
     player.use_ultimate = _use_ultimate.__get__(player, Stats)
 
@@ -93,7 +94,7 @@ async def test_wind_foe_ultimate_transfers_from_allies():
 
     dot = BlazingTorment(1, 3)
     dot.source = foe
-    p2.effect_manager.add_dot(dot)
+    await call_maybe_async(p2.effect_manager.add_dot, dot)
 
     foe.use_ultimate = _use_ultimate.__get__(foe, Stats)
 

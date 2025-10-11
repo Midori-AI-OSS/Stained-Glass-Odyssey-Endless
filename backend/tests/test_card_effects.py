@@ -13,6 +13,7 @@ from autofighter.rooms import battle as battle_module
 from autofighter.stats import BUS
 from autofighter.stats import GAUGE_START
 from plugins.characters._base import PlayerBase
+from tests.helpers import call_maybe_async
 
 
 def setup_event_loop():
@@ -190,7 +191,7 @@ async def test_mindful_tassel_boosts_first_debuff():
         id="bleed",
         source=ally,
     )
-    mgr.add_dot(bleed)
+    await call_maybe_async(mgr.add_dot, bleed)
     loop.run_until_complete(asyncio.sleep(0))
     assert bleed.damage == 105
     assert bleed.turns == 11
@@ -202,7 +203,7 @@ async def test_mindful_tassel_boosts_first_debuff():
         id="poison",
         source=ally,
     )
-    mgr.add_dot(poison)
+    await call_maybe_async(mgr.add_dot, poison)
     loop.run_until_complete(asyncio.sleep(0))
     assert poison.damage == 100
     assert poison.turns == 10
