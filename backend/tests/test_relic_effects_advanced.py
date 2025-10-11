@@ -39,6 +39,80 @@ class DummyPlayer(Stats):
 
 
 @pytest.mark.asyncio
+async def test_echoing_drum_grants_temporary_attack_buff(monkeypatch):
+    event_bus_module.bus._subs.clear()
+
+    party = Party()
+    attacker = PlayerBase()
+    attacker.id = "echoing-hero"
+    target = PlayerBase()
+    party.members.append(attacker)
+
+    award_relic(party, "echoing_drum")
+    award_relic(party, "echoing_drum")
+    await apply_relics(party)
+
+    base_atk = attacker.get_base_stat("atk")
+    assert attacker.atk == base_atk
+
+    relic_events: list[tuple[int, dict[str, object]]] = []
+
+    def _capture_relic_effect(
+        relic_id: str,
+        recipient: Stats,
+        event_name: str,
+        value: int,
+        payload: dict[str, object],
+        *_extra: object,
+    ) -> None:
+        if relic_id == "echoing_drum" and event_name == "aftertaste_attack_buff":
+            relic_events.append((value, payload))
+
+    BUS.subscribe("relic_effect", _capture_relic_effect)
+
+    monkeypatch.setattr(echoing_drum_module.random, "random", lambda: 0.0)
+
+    await BUS.emit_async("attack_used", attacker, target, 100)
+    await asyncio.sleep(0)
+
+    expected_buff = int(base_atk * 1.5 * 2)
+    assert attacker.atk == base_atk + expected_buff
+
+    matching_effects = [
+        effect
+        for effect in attacker.get_active_effects()
+        if effect.name == "echoing_drum_aftertaste_atk_buff"
+    ]
+    assert len(matching_effects) == 1
+    effect = matching_effects[0]
+    assert effect.duration == 5
+    assert effect.stat_modifiers["atk"] == expected_buff
+
+    assert relic_events
+    value, payload = relic_events[-1]
+    assert value == expected_buff
+    assert payload["stacks"] == 2
+    assert payload["buff_amount"] == expected_buff
+    assert payload["base_atk"] == base_atk
+    assert payload["duration"] == 5
+    assert payload["target"] == attacker.id
+
+    for _ in range(4):
+        attacker.tick_effects()
+        assert attacker.atk == base_atk + expected_buff
+
+    attacker.tick_effects()
+    assert attacker.atk == base_atk
+    assert not [
+        effect
+        for effect in attacker.get_active_effects()
+        if effect.name == "echoing_drum_aftertaste_atk_buff"
+    ]
+
+    BUS.unsubscribe("relic_effect", _capture_relic_effect)
+
+
+@pytest.mark.asyncio
 async def test_frost_sigil_applies_chill(monkeypatch):
     event_bus_module.bus._subs.clear()
     party = Party()

@@ -3,6 +3,7 @@ from dataclasses import field
 from math import ceil
 import random
 
+from autofighter.stat_effect import StatEffect
 from autofighter.stats import BUS
 from plugins.effects.aftertaste import Aftertaste
 from plugins.relics._base import RelicBase
@@ -68,6 +69,31 @@ class EchoingDrum(RelicBase):
 
             if total_hits <= 0:
                 return
+
+            base_atk = int(attacker.get_base_stat("atk"))
+            buff_amount = int(base_atk * 1.5 * current_stacks)
+            if buff_amount > 0:
+                buff_effect = StatEffect(
+                    name=f"{self.id}_aftertaste_atk_buff",
+                    stat_modifiers={"atk": buff_amount},
+                    duration=5,
+                    source=self.id,
+                )
+                attacker.add_effect(buff_effect)
+                await BUS.emit_async(
+                    "relic_effect",
+                    self.id,
+                    attacker,
+                    "aftertaste_attack_buff",
+                    buff_amount,
+                    {
+                        "stacks": current_stacks,
+                        "buff_amount": buff_amount,
+                        "base_atk": base_atk,
+                        "target": getattr(attacker, "id", str(attacker)),
+                        "duration": 5,
+                    },
+                )
 
             base_amount = float(amount)
             base_pot = max(1, int(ceil(base_amount / 0.8)))
@@ -141,4 +167,10 @@ class EchoingDrum(RelicBase):
         else:
             overflow_sentence += " with no leftover chance beyond the guaranteed hits"
 
-        return f"{base_sentence} {overflow_sentence}."
+        buff_percentage = 150 * stacks
+        buff_sentence = (
+            "After Aftertaste triggers, the attacker gains "
+            f"+{buff_percentage}% of their base ATK for 5 turns."
+        )
+
+        return f"{base_sentence} {overflow_sentence}. {buff_sentence}"
