@@ -66,7 +66,7 @@ class Wind(DamageTypeBase):
             turns=1,
             effect_hit_rate_mult=1.5,
         )
-        a_mgr.add_modifier(eh_mod)
+        await a_mgr.add_modifier(eh_mod)
 
         # Determine dynamic hit count (allow cards/relics to override via attributes)
         hits = int(getattr(actor, "wind_ultimate_hits", getattr(actor, "ultimate_hits", 25)) or 25)

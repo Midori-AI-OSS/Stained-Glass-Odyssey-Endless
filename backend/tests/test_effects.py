@@ -57,7 +57,9 @@ stats_module = importlib.import_module("autofighter.stats")
 Stats = getattr(stats_module, "Stats")
 set_battle_active = getattr(stats_module, "set_battle_active")
 Fire = getattr(importlib.import_module("plugins.damage_types.fire"), "Fire")
-EventBus = getattr(importlib.import_module("plugins.event_bus"), "EventBus")
+event_bus_module = importlib.import_module("plugins.event_bus")
+EventBus = getattr(event_bus_module, "EventBus")
+GLOBAL_EVENT_BUS = getattr(event_bus_module, "bus")
 
 
 def test_dot_applies_with_hit_rate():
@@ -111,14 +113,17 @@ async def test_damage_and_heal_events():
     bus.subscribe("damage_taken", _dmg)
     bus.subscribe("heal_received", _heal)
     attacker = Stats(damage_type=Fire())
+    attacker.id = "attacker"
     attacker.set_base_stat('atk', 10)
     target = Stats(hp=50)
+    target.id = "target"
     target.set_base_stat('max_hp', 100)
     set_battle_active(True)
     try:
         await target.apply_damage(10, attacker=attacker)
         await target.apply_healing(5, healer=attacker)
         await asyncio.sleep(0.05)
+        await GLOBAL_EVENT_BUS._process_batches_internal()
     finally:
         set_battle_active(False)
         bus.unsubscribe("damage_taken", _dmg)
@@ -147,12 +152,13 @@ async def test_hot_ticks_before_dot():
     target.set_base_stat('defense', 0)
     target.id = "t"
     manager = EffectManager(target)
-    manager.add_hot(effects.HealingOverTime("regen", 10, 1, "h"))
+    await manager.add_hot(effects.HealingOverTime("regen", 10, 1, "h"))
     manager.add_dot(effects.DamageOverTime("burn", 1, 1, "d"))
     set_battle_active(True)
     try:
         await manager.tick()
         await asyncio.sleep(0.05)
+        await GLOBAL_EVENT_BUS._process_batches_internal()
     finally:
         set_battle_active(False)
         bus.unsubscribe("damage_taken", _dmg)
@@ -180,12 +186,13 @@ async def test_hot_minimum_tick_healing():
     manager = EffectManager(target)
     healer = Stats()
 
-    manager.add_hot(effects.HealingOverTime("regen", 0, 1, "hot_min", source=healer))
+    await manager.add_hot(effects.HealingOverTime("regen", 0, 1, "hot_min", source=healer))
 
     set_battle_active(True)
     try:
         await manager.tick()
         await asyncio.sleep(0.05)
+        await GLOBAL_EVENT_BUS._process_batches_internal()
     finally:
         set_battle_active(False)
         bus.unsubscribe("hot_tick", _hot_tick)
@@ -205,7 +212,7 @@ async def test_hot_effects_removed_when_target_is_dead():
     healer = Stats()
 
     hot = effects.HealingOverTime("regen", healing=5, turns=3, id="dead_hot", source=healer)
-    manager.add_hot(hot)
+    await manager.add_hot(hot)
     assert manager.hots
 
     set_battle_active(True)
@@ -234,8 +241,8 @@ async def test_zero_damage_dot_deals_minimum_one_per_stack():
     bus.subscribe("dot_tick", _dot_tick)
 
     attacker = Stats()
-    target = Stats()
     attacker.id = "attacker"
+    target = Stats()
     target.id = "target"
     target.set_base_stat('max_hp', 10)
     target.hp = 10
@@ -283,7 +290,7 @@ async def test_stat_modifier_applies_and_expires():
         atk=5,
         defense_mult=2,
     )
-    manager.add_modifier(mod)
+    await manager.add_modifier(mod)
     assert stats.atk == 15
     assert stats.defense == 40
     await manager.tick()

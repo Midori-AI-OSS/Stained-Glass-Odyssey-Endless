@@ -42,7 +42,7 @@ class StellarCompass(RelicBase):
                 atk_mult=atk_mult,
                 turns=9999,
             )
-            attacker.effect_manager.add_modifier(mod)
+            await attacker.effect_manager.add_modifier(mod)
             current_state["gold"] += 0.015 * copies
 
             # Track critical hit buff application

@@ -63,7 +63,7 @@ class TravelersCharm(RelicBase):
                     defense_mult=1 + d_pct,
                     mitigation_mult=1 + m_pct,
                 )
-                member.effect_manager.add_modifier(mod)
+                await member.effect_manager.add_modifier(mod)
                 active[pid] = (member, mod)
                 applied_count += 1
 

@@ -42,7 +42,7 @@ class InspiringBanner(CardBase):
                         turns=2,
                         atk_mult=1.02  # +2% ATK
                     )
-                    effect_manager.add_modifier(atk_mod)
+                    await effect_manager.add_modifier(atk_mod)
 
                     import logging
                     log = logging.getLogger(__name__)

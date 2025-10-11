@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import asyncio
 import copy
+import inspect
 from dataclasses import dataclass
 from typing import Sequence
 
@@ -83,7 +84,9 @@ async def setup_battle(
         _scale_stats(stats, node, strength)
         prepare = getattr(stats, "prepare_for_battle", None)
         if callable(prepare):
-            prepare(node, registry)
+            maybe_coro = prepare(node, registry)
+            if inspect.isawaitable(maybe_coro):
+                await maybe_coro
 
     members = await _clone_members(party.members)
     combat_party = Party(
@@ -125,7 +128,9 @@ async def setup_battle(
         member.effect_manager = manager
         prepare = getattr(member, "prepare_for_battle", None)
         if callable(prepare):
-            prepare(node, registry)
+            maybe_coro = prepare(node, registry)
+            if inspect.isawaitable(maybe_coro):
+                await maybe_coro
 
     try:
         entities = list(combat_party.members) + list(foes)

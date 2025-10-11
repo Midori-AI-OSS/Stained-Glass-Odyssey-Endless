@@ -34,7 +34,7 @@ class BalancedDiet(CardBase):
                     turns=1,
                     defense_mult=1.02  # +2% DEF
                 )
-                effect_manager.add_modifier(def_mod)
+                await effect_manager.add_modifier(def_mod)
 
                 import logging
                 log = logging.getLogger(__name__)

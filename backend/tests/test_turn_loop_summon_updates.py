@@ -45,10 +45,10 @@ class DummyEffectManager:
     def maybe_inflict_dot(self, *_):  # pragma: no cover - simple stub
         return None
 
-    def add_hot(self, *_):  # pragma: no cover - simple stub
+    async def add_hot(self, *_):  # pragma: no cover - simple stub
         return None
 
-    def add_modifier(self, *_):  # pragma: no cover - simple stub
+    async def add_modifier(self, *_):  # pragma: no cover - simple stub
         return None
 
 
@@ -457,7 +457,7 @@ async def test_summon_instance_ids_used_in_progress_and_events(monkeypatch):
                 base_action_value=0.0,
             )
 
-    def _fake_create_from_summoner(cls, summoner, summon_type, *_, **__):
+    async def _fake_create_from_summoner(cls, summoner, summon_type, *_, **__):
         summoner_id = getattr(summoner, "id", str(id(summoner)))
         return _FakeSummon(summoner_id, summon_type)
 
@@ -466,13 +466,13 @@ async def test_summon_instance_ids_used_in_progress_and_events(monkeypatch):
     summoner = SimpleEntity("luna")
     summoner.summon_slot_capacity = 4
 
-    sword_one = SummonManager.create_summon(
+    sword_one = await SummonManager.create_summon(
         summoner,
         summon_type="luna_sword_lightstream",
         source="test",
         force_create=True,
     )
-    sword_two = SummonManager.create_summon(
+    sword_two = await SummonManager.create_summon(
         summoner,
         summon_type="luna_sword_lightstream",
         source="test",
@@ -607,7 +607,7 @@ async def test_luna_glitched_lightstream_snapshot_ids():
     )
     registry = PassiveRegistry()
 
-    luna.prepare_for_battle(node, registry)
+    await luna.prepare_for_battle(node, registry)
 
     swords = SummonManager.get_summons(luna.id)
     assert len(swords) == 2, "Glitched Luna should summon two Lightstream swords"

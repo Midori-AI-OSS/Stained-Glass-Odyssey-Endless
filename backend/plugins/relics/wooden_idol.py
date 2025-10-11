@@ -52,7 +52,7 @@ class WoodenIdol(RelicBase):
                     effect_resistance=bonus,
                     turns=1,
                 )
-                member.effect_manager.add_modifier(mod)
+                await member.effect_manager.add_modifier(mod)
                 active[pid] = (member, mod)
                 applied_count += 1
 

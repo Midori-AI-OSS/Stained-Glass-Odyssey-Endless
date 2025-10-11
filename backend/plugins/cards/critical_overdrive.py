@@ -43,7 +43,7 @@ class CriticalOverdrive(CardBase):
                     crit_rate=extra_rate,
                     crit_damage=excess * 2,
                 )
-                target.effect_manager.add_modifier(new_mod)
+                await target.effect_manager.add_modifier(new_mod)
                 state[pid] = new_mod
                 await BUS.emit_async(
                     "card_effect",

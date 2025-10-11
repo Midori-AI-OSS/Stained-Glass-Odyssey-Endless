@@ -48,7 +48,7 @@ class Summon(Stats):
             self.instance_id = ""
 
     @classmethod
-    def create_from_summoner(
+    async def create_from_summoner(
         cls,
         summoner: Stats,
         summon_type: str = "generic",
@@ -120,14 +120,14 @@ class Summon(Stats):
             summon.passives = [p for p in summoner.passives if any(sp in p for sp in safe_passives)]
 
         # Share beneficial effects (buffs and HOTs) from summoner but not debuffs or DOTs
-        cls._share_beneficial_effects(summoner, summon, stat_multiplier)
+        await cls._share_beneficial_effects(summoner, summon, stat_multiplier)
 
         log.debug(f"Created {summon_type} summon for {summoner.id} with {stat_multiplier*100}% stats")
 
         return summon
 
     @classmethod
-    def _share_beneficial_effects(
+    async def _share_beneficial_effects(
         cls,
         summoner: Stats,
         summon: "Summon",
@@ -161,7 +161,7 @@ class Summon(Stats):
             # Copy all HOTs (healing over time effects are inherently beneficial)
             for hot in effect_mgr.hots:
                 scaled_hot = cls._scale_hot_effect(hot, stat_multiplier)
-                summon.effect_manager.add_hot(scaled_hot)
+                await summon.effect_manager.add_hot(scaled_hot)
                 log.debug(f"Shared HOT '{hot.name}' to summon {summon.id}")
 
             # Copy beneficial StatModifiers (buffs)
@@ -169,7 +169,7 @@ class Summon(Stats):
                 if cls._is_beneficial_stat_modifier(mod):
                     scaled_mod = cls._scale_stat_modifier(mod, summon, stat_multiplier)
                     scaled_mod.apply()  # Apply the modifier to ensure it affects the summon's stats
-                    summon.effect_manager.add_modifier(scaled_mod)
+                    await summon.effect_manager.add_modifier(scaled_mod)
                     log.debug(f"Shared beneficial StatModifier '{mod.name}' to summon {summon.id}")
 
     @classmethod

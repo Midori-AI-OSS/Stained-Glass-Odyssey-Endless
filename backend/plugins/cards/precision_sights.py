@@ -36,7 +36,7 @@ class PrecisionSights(CardBase):
                     turns=2,
                     crit_damage_mult=1.02  # +2% crit damage
                 )
-                effect_manager.add_modifier(crit_damage_mod)
+                await effect_manager.add_modifier(crit_damage_mod)
 
                 import logging
                 log = logging.getLogger(__name__)

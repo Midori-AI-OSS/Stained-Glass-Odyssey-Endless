@@ -75,7 +75,7 @@ async def test_mixed_dots_and_hots():
         dot = DamageOverTime(f"dot_{i}", damage=2, turns=3, id=f"dot_{i}", source=target)
         hot = HealingOverTime(f"hot_{i}", healing=1, turns=3, id=f"hot_{i}", source=target)
         manager.add_dot(dot)
-        manager.add_hot(hot)
+        await manager.add_hot(hot)
 
     initial_hp = target.hp
     await manager.tick()
@@ -133,7 +133,7 @@ async def test_dead_characters_dont_receive_dots_or_hots():
 
     # Try to add HOT to dead character
     hot = HealingOverTime("test_hot", healing=5, turns=2, id="test_hot", source=source)
-    manager.add_hot(hot)
+    await manager.add_hot(hot)
 
     # Verify no effects were added
     assert len(manager.dots) == 0
@@ -161,7 +161,7 @@ async def test_living_characters_can_still_receive_effects():
 
     # Add HOT to living character
     hot = HealingOverTime("test_hot", healing=5, turns=2, id="test_hot", source=source)
-    manager.add_hot(hot)
+    await manager.add_hot(hot)
 
     # Verify effects were added
     assert len(manager.dots) == 1

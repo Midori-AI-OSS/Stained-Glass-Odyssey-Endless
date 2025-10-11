@@ -64,10 +64,10 @@ class CasnoPhoenixRespite:
             return
 
         cls._action_counts[entity_id] = 0
-        cls._schedule_rest(target)
+        await cls._schedule_rest(target)
 
     @classmethod
-    def _schedule_rest(cls, target: "Stats") -> None:
+    async def _schedule_rest(cls, target: "Stats") -> None:
         if getattr(target, "hp", 0) <= 0:
             return
 
@@ -93,7 +93,7 @@ class CasnoPhoenixRespite:
 
         cls._pending_rest[entity_id] = True
         cls._helper_effect_ids[entity_id] = helper_id
-        effect_manager.add_hot(helper_effect)
+        await effect_manager.add_hot(helper_effect)
         cls._register_battle_end(target)
 
     @classmethod

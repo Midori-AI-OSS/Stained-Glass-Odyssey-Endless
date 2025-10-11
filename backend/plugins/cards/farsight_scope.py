@@ -37,7 +37,7 @@ class FarsightScope(CardBase):
                         turns=1,
                         crit_rate=0.06,
                     )
-                    effect_manager.add_modifier(crit_mod)
+                    await effect_manager.add_modifier(crit_mod)
 
                     log.debug(
                         "Farsight Scope low HP bonus: %s gains +6%% crit rate vs %s",

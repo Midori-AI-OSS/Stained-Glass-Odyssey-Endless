@@ -42,7 +42,7 @@ class ShinyPebble(RelicBase):
                 mitigation=target.mitigation * (mit_mult - 1),
                 turns=1,
             )
-            target.effect_manager.add_modifier(mod)
+            await target.effect_manager.add_modifier(mod)
             current_state["active"][id(target)] = (target, mod)
 
             # Track mitigation burst application

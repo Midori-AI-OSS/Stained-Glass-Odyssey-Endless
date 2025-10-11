@@ -54,7 +54,7 @@ async def test_collect_summon_snapshots_groups_by_owner():
     summoner = Stats(hp=1_000)
     summoner.id = "summoner"
     summoner.ensure_permanent_summon_slots(1)
-    summon = SummonManager.create_summon(summoner, summon_type="test", source="unit_test")
+    summon = await SummonManager.create_summon(summoner, summon_type="test", source="unit_test")
     assert summon is not None
 
     snapshots = await collect_summon_snapshots([summoner])
@@ -98,7 +98,7 @@ async def test_build_battle_progress_payload_includes_snapshots_and_events():
     party_member = Stats(hp=1_000)
     party_member.id = "hero"
     party_member.ensure_permanent_summon_slots(1)
-    hero_summon = SummonManager.create_summon(
+    hero_summon = await SummonManager.create_summon(
         party_member,
         summon_type="sprite",
         source="unit_test",
@@ -108,7 +108,7 @@ async def test_build_battle_progress_payload_includes_snapshots_and_events():
     foe = Stats(hp=900)
     foe.id = "foe"
     foe.ensure_permanent_summon_slots(1)
-    foe_summon = SummonManager.create_summon(
+    foe_summon = await SummonManager.create_summon(
         foe,
         summon_type="minion",
         source="unit_test",

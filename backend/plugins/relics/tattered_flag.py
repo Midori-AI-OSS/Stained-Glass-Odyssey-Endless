@@ -38,7 +38,7 @@ class TatteredFlag(RelicBase):
 
             for member in survivors:
                 mod = create_stat_buff(member, name=f"{self.id}_buff", atk_mult=1.03, turns=9999)
-                member.effect_manager.add_modifier(mod)
+                await member.effect_manager.add_modifier(mod)
 
         self.subscribe(party, "damage_taken", _fallen)
 

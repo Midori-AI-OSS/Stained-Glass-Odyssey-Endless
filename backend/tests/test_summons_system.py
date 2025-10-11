@@ -55,7 +55,7 @@ async def test_summon_creation_basic(monkeypatch):
     summoner._base_defense = 50
 
     # Create summon
-    summon = Summon.create_from_summoner(
+    summon = await Summon.create_from_summoner(
         summoner=summoner,
         summon_type="test",
         source="test_source",
@@ -88,7 +88,7 @@ async def test_summon_manager_creation_and_tracking(monkeypatch):
     summoner.ensure_permanent_summon_slots(1)
 
     # Create summon via manager
-    summon = SummonManager.create_summon(
+    summon = await SummonManager.create_summon(
         summoner=summoner,
         summon_type="test",
         source="test_source"
@@ -117,7 +117,7 @@ async def test_summon_manager_limits(monkeypatch):
     summoner.ensure_permanent_summon_slots(1)
 
     # Create first summon (should succeed)
-    summon1 = SummonManager.create_summon(
+    summon1 = await SummonManager.create_summon(
         summoner=summoner,
         summon_type="test1",
         source="test_source",
@@ -125,7 +125,7 @@ async def test_summon_manager_limits(monkeypatch):
     assert summon1 is not None
 
     # Try to create second summon (should fail due to limit)
-    summon2 = SummonManager.create_summon(
+    summon2 = await SummonManager.create_summon(
         summoner=summoner,
         summon_type="test2",
         source="test_source",
@@ -149,7 +149,7 @@ async def test_summon_battle_lifecycle(monkeypatch):
     summoner.ensure_permanent_summon_slots(1)
 
     # Create temporary summon
-    summon = SummonManager.create_summon(
+    summon = await SummonManager.create_summon(
         summoner=summoner,
         summon_type="temporary",
         source="test_source",
@@ -179,7 +179,7 @@ async def test_summon_turn_expiration(monkeypatch):
     summoner.ensure_permanent_summon_slots(1)
 
     # Create summon with 2 turn duration
-    summon = SummonManager.create_summon(
+    summon = await SummonManager.create_summon(
         summoner=summoner,
         summon_type="timed",
         source="test_source",
@@ -464,7 +464,7 @@ async def test_damage_type_inheritance(monkeypatch):
     total_summons = 20
 
     for i in range(total_summons):
-        summon = Summon.create_from_summoner(
+        summon = await Summon.create_from_summoner(
             summoner=summoner,
             summon_type=f"test_{i}",
             source="test"
@@ -491,7 +491,7 @@ async def test_summon_party_integration(monkeypatch):
     party = Party(members=[ally])
 
     # Create summon
-    summon = SummonManager.create_summon(
+    summon = await SummonManager.create_summon(
         summoner=ally,
         summon_type="test",
         source="test_source"
@@ -518,7 +518,7 @@ async def test_summon_defeat_cleanup(monkeypatch):
     summoner.hp = 1
 
     # Create summon
-    SummonManager.create_summon(
+    await SummonManager.create_summon(
         summoner=summoner,
         summon_type="test",
         source="test_source"
@@ -551,7 +551,7 @@ async def test_summons_reset_before_new_battle(monkeypatch):
     summoner = Ally()
     summoner.id = "test_summoner"
 
-    SummonManager.create_summon(
+    await SummonManager.create_summon(
         summoner=summoner,
         summon_type="test",
         source="test_source",
@@ -608,7 +608,7 @@ async def test_summon_inheritance_with_effects(monkeypatch):
     assert summoner.vitality == 2.0  # 1.5 base + 0.5 effect
 
     # Create summon with 50% stat inheritance
-    summon = Summon.create_from_summoner(
+    summon = await Summon.create_from_summoner(
         summoner=summoner,
         summon_type="test",
         source="test_source",
@@ -665,7 +665,7 @@ async def test_summon_inherits_beneficial_effects(monkeypatch):
         id="test_hot_id",
         source=summoner
     )
-    summoner.effect_manager.add_hot(hot)
+    await summoner.effect_manager.add_hot(hot)
 
     # Add beneficial StatModifier
     stat_mod = StatModifier(
@@ -676,10 +676,10 @@ async def test_summon_inherits_beneficial_effects(monkeypatch):
         deltas={"crit_rate": 0.1},  # +10% crit rate - beneficial
         multipliers={"crit_damage": 1.5}  # 1.5x crit damage - beneficial
     )
-    summoner.effect_manager.add_modifier(stat_mod)
+    await summoner.effect_manager.add_modifier(stat_mod)
 
     # Create summon with 50% stat inheritance
-    summon = Summon.create_from_summoner(
+    summon = await Summon.create_from_summoner(
         summoner=summoner,
         summon_type="test",
         source="test_source",
@@ -773,10 +773,10 @@ async def test_summon_does_not_inherit_harmful_effects(monkeypatch):
         deltas={"crit_rate": -0.1},  # -10% crit rate - harmful
         multipliers={"crit_damage": 0.5}  # 0.5x crit damage - harmful
     )
-    summoner.effect_manager.add_modifier(harmful_mod)
+    await summoner.effect_manager.add_modifier(harmful_mod)
 
     # Create summon
-    summon = Summon.create_from_summoner(
+    summon = await Summon.create_from_summoner(
         summoner=summoner,
         summon_type="test",
         source="test_source",
@@ -838,7 +838,7 @@ async def test_summon_inherits_mixed_effects_correctly(monkeypatch):
     summoner.effect_manager = EffectManager(summoner)
 
     # Create summon
-    summon = Summon.create_from_summoner(
+    summon = await Summon.create_from_summoner(
         summoner=summoner,
         summon_type="test",
         source="test_source",

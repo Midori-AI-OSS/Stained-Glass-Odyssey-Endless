@@ -43,6 +43,6 @@ class IronGuard(CardBase):
                     turns=1,
                     defense_mult=1.10,
                 )
-                mgr.add_modifier(mod)
+                await mgr.add_modifier(mod)
 
         self.subscribe("damage_taken", _damage_taken)

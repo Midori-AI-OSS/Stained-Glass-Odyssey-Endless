@@ -44,7 +44,7 @@ class GuardianCharm(RelicBase):
         mod = create_stat_buff(
             member, name=self.id, defense_mult=1 + 0.2 * stacks, turns=9999
         )
-        member.effect_manager.add_modifier(mod)
+        await member.effect_manager.add_modifier(mod)
 
     def describe(self, stacks: int) -> str:
         pct = 20 * stacks

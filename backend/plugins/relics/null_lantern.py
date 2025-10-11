@@ -81,7 +81,7 @@ class NullLantern(RelicBase):
                 max_hp_mult=mult,
                 hp_mult=mult,
             )
-            entity.effect_manager.add_modifier(mod)
+            await entity.effect_manager.add_modifier(mod)
 
             await BUS.emit_async(
                 "relic_effect",

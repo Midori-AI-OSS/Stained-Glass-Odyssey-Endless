@@ -59,7 +59,7 @@ class OmegaCore(RelicBase):
                     vitality_mult=mult,
                     mitigation_mult=mult,
                 )
-                member.effect_manager.add_modifier(mod)
+                await member.effect_manager.add_modifier(mod)
                 safe_async_task(member.apply_healing(member.max_hp))
                 state["mods"][id(member)] = mod
             state["turn"] = 0

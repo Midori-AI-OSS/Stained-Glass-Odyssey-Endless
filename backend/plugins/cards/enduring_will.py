@@ -63,7 +63,7 @@ class EnduringWill(CardBase):
                             member, name=f"{self.id}_mitigation_bonus", turns=20,
                             mitigation_mult=1.002  # +0.2% mitigation
                         )
-                        mgr.add_modifier(mod)
+                        await mgr.add_modifier(mod)
 
                         import logging
                         log = logging.getLogger(__name__)

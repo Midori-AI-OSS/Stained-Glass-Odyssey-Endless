@@ -35,7 +35,7 @@ class VitalSurge(CardBase):
                     atk_mult=1.55,
                 )
                 active[pid] = mod
-                mgr.add_modifier(mod)
+                await mgr.add_modifier(mod)
                 await BUS.emit_async(
                     "card_effect",
                     self.id,
@@ -53,17 +53,17 @@ class VitalSurge(CardBase):
                     if hasattr(member, "mods") and mod.id in member.mods:
                         member.mods.remove(mod.id)
 
-        def _turn_start() -> None:
+        async def _turn_start(*_) -> None:
             for m in party.members:
-                _check(m)
+                await _check(m)
 
-        def _damage_taken(victim, *_args) -> None:
+        async def _damage_taken(victim, *_args) -> None:
             if victim in party.members:
-                _check(victim)
+                await _check(victim)
 
-        def _heal_received(member, *_args) -> None:
+        async def _heal_received(member, *_args) -> None:
             if member in party.members:
-                _check(member)
+                await _check(member)
 
         self.subscribe("turn_start", _turn_start)
         self.subscribe("damage_taken", _damage_taken)

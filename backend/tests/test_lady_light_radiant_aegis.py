@@ -4,6 +4,7 @@ import pytest
 
 from autofighter.effects import EffectManager
 from autofighter.stats import BUS
+from plugins.event_bus import bus as EVENT_BUS
 from autofighter.stats import Stats
 from plugins.damage_types.light import Light
 from plugins.dots.bleed import Bleed
@@ -36,8 +37,8 @@ async def test_radiant_aegis_hot_event_applies_shields():
     hot = RadiantRegeneration(healer)
     hot.healing = 8  # Boost base healing so scaling is visible
     hot.source = healer
-    ally.effect_manager.add_hot(hot)
-
+    await ally.effect_manager.add_hot(hot)
+    await EVENT_BUS._process_batches_internal()
     await asyncio.sleep(0.05)
 
     expected_hot = int(hot.healing * healer.vitality * ally.vitality)
@@ -67,6 +68,7 @@ async def test_radiant_aegis_dot_cleanse_triggers_on_light_ultimate():
 
     healer.add_ultimate_charge(healer.ultimate_charge_max)
     await healer.damage_type.ultimate(healer, [healer, ally], [])
+    await EVENT_BUS._process_batches_internal()
     await asyncio.sleep(0.05)
 
     expected_attack_bonus = int(healer.atk * 0.02)

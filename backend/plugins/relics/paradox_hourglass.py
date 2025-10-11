@@ -41,7 +41,7 @@ class ParadoxHourglass(RelicBase):
                     defense=new_def - base_def,
                     turns=9999,
                 )
-                entity.effect_manager.add_modifier(mod)
+                await entity.effect_manager.add_modifier(mod)
                 state["foe"][id(entity)] = mod
 
                 # Track foe defense reduction
@@ -102,7 +102,7 @@ class ParadoxHourglass(RelicBase):
                     vitality_mult=mult,
                     mitigation_mult=mult,
                 )
-                m.effect_manager.add_modifier(mod)
+                await m.effect_manager.add_modifier(mod)
                 m.hp = m.max_hp
                 state["buffs"][id(m)] = mod
 

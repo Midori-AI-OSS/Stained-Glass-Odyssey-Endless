@@ -57,7 +57,7 @@ class SoulPrism(RelicBase):
                     mitigation_mult=1 + buff,
                     turns=9999,
                 )
-                member.effect_manager.add_modifier(mod)
+                await member.effect_manager.add_modifier(mod)
                 heal = max(1, int(member.max_hp * 0.01))
 
                 # Track the revival

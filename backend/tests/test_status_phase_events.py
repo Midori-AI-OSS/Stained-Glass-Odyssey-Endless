@@ -79,7 +79,7 @@ async def test_status_phase_events_emit_with_pacing(monkeypatch):
     hot = HealingOverTime("regen", healing=10, turns=1, id="hot_1", source=target)
     dot = DamageOverTime("burn", damage=10, turns=1, id="dot_1", source=target)
 
-    manager.add_hot(hot)
+    await manager.add_hot(hot)
     manager.add_dot(dot)
 
     captured_events: list[tuple[str, tuple[object, ...]]] = []
@@ -285,7 +285,7 @@ async def test_status_phase_events_update_snapshot_queue(monkeypatch):
     hot = HealingOverTime("regen", healing=10, turns=1, id="hot_1", source=target)
     dot = DamageOverTime("burn", damage=10, turns=1, id="dot_1", source=target)
 
-    manager.add_hot(hot)
+    await manager.add_hot(hot)
     manager.add_dot(dot)
 
     set_battle_active(True)
@@ -346,7 +346,7 @@ async def test_status_phase_events_update_snapshot_queue(monkeypatch):
         "chance": 25,
         "roll": 99,
     }
-    BUS.emit_batched("effect_resisted", "burn", target, attacker, resist_details)
+    await BUS.emit_batched_async("effect_resisted", "burn", target, attacker, resist_details)
     await bus._process_batches_internal()
 
     events_after_resist = list(battle_snapshots[run_id]["recent_events"])

@@ -23,7 +23,7 @@ async def test_summon_viability_evaluation(monkeypatch):
     summoner._base_defense = 50
     summoner.ensure_permanent_summon_slots(1)
 
-    summon = Summon.create_from_summoner(
+    summon = await Summon.create_from_summoner(
         summoner=summoner,
         summon_type="test",
         source="test_source",
@@ -80,7 +80,7 @@ async def test_resummon_decision_logic(monkeypatch):
     assert decision['viable_count'] == 0
 
     # Create a healthy summon
-    summon = SummonManager.create_summon(
+    summon = await SummonManager.create_summon(
         summoner=summoner,
         summon_type="test",
         source="test_source",
@@ -119,7 +119,7 @@ async def test_smart_summon_creation(monkeypatch):
     summoner.ensure_permanent_summon_slots(1)
 
     # Create first summon (should succeed)
-    summon1 = SummonManager.create_summon(
+    summon1 = await SummonManager.create_summon(
         summoner=summoner,
         summon_type="test1",
         source="test_source",
@@ -128,7 +128,7 @@ async def test_smart_summon_creation(monkeypatch):
     summon1.hp = summon1.max_hp  # Ensure healthy
 
     # Try to create second summon with healthy first summon (should fail due to smart logic)
-    summon2 = SummonManager.create_summon(
+    summon2 = await SummonManager.create_summon(
         summoner=summoner,
         summon_type="test2",
         source="test_source",
@@ -139,7 +139,7 @@ async def test_smart_summon_creation(monkeypatch):
     summon1.hp = int(summon1.max_hp * 0.1)  # 10% health
 
     # Try to create second summon with damaged first summon (should succeed and replace)
-    summon3 = SummonManager.create_summon(
+    summon3 = await SummonManager.create_summon(
         summoner=summoner,
         summon_type="test3",
         source="test_source",
@@ -167,7 +167,7 @@ async def test_force_create_bypasses_logic(monkeypatch):
     summoner.ensure_permanent_summon_slots(1)
 
     # Create first summon
-    summon1 = SummonManager.create_summon(
+    summon1 = await SummonManager.create_summon(
         summoner=summoner,
         summon_type="test1",
         source="test_source",
@@ -176,7 +176,7 @@ async def test_force_create_bypasses_logic(monkeypatch):
     summon1.hp = summon1.max_hp  # Ensure healthy
 
     # Force create second summon even with healthy first summon
-    summon2 = SummonManager.create_summon(
+    summon2 = await SummonManager.create_summon(
         summoner=summoner,
         summon_type="test2",
         source="test_source",
@@ -205,7 +205,7 @@ async def test_health_threshold_customization(monkeypatch):
     summoner.ensure_permanent_summon_slots(1)
 
     # Create summon with 40% health
-    summon = SummonManager.create_summon(
+    summon = await SummonManager.create_summon(
         summoner=summoner,
         summon_type="test",
         source="test_source"

@@ -68,7 +68,7 @@ class KillerInstinct(RelicBase):
             })
 
             mod = create_stat_buff(user, name=f"{self.id}_atk", atk_mult=atk_mult, turns=1)
-            user.effect_manager.add_modifier(mod)
+            await user.effect_manager.add_modifier(mod)
             _remove_buff(ultimate_buffs, id(user))
             ultimate_buffs[id(user)] = (user, mod)
 
@@ -108,7 +108,7 @@ class KillerInstinct(RelicBase):
                     spd_mult=speed_mult,
                     turns=2,
                 )
-                attacker.effect_manager.add_modifier(mod)
+                await attacker.effect_manager.add_modifier(mod)
                 speed_buffs[id(attacker)] = (attacker, mod)
 
         def _turn_end(*_args) -> None:

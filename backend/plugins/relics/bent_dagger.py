@@ -35,7 +35,7 @@ class BentDagger(RelicBase):
 
             for member in party.members:
                 mod = create_stat_buff(member, name=f"{self.id}_kill", atk_mult=1.01, turns=9999)
-                member.effect_manager.add_modifier(mod)
+                await member.effect_manager.add_modifier(mod)
 
                 # Track the ATK buff application
                 await BUS.emit_async("relic_effect", "bent_dagger", member, "atk_boost_applied", 1, {
