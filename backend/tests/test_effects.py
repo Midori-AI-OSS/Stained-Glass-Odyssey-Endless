@@ -283,7 +283,7 @@ async def test_stat_modifier_applies_and_expires():
         atk=5,
         defense_mult=2,
     )
-    manager.add_modifier(mod)
+    await manager.add_modifier(mod)
     assert stats.atk == 15
     assert stats.defense == 40
     await manager.tick()

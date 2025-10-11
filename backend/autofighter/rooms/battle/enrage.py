@@ -132,7 +132,7 @@ async def update_enrage_state(
                 atk_mult=mult,
                 turns=9999,
             )
-            mgr.add_modifier(mod)
+            await mgr.add_modifier(mod)
             enrage_mods[idx] = mod
         state.stacks = new_stacks
         if turn > catastrophic_turn_threshold:

@@ -80,7 +80,7 @@ class TimekeepersHourglass(RelicBase):
                         spd_mult=boost,
                         turns=2,
                     )
-                    mgr.add_modifier(mod)
+                    await mgr.add_modifier(mod)
                     active_mods[id(member)] = mod
 
         def _battle_end(_entity) -> None:

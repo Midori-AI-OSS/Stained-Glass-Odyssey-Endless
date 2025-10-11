@@ -36,7 +36,7 @@ class TemporalShield(CardBase):
                         turns=1,
                         mitigation_mult=100.0,
                     )
-                    mgr.add_modifier(mod)
+                    await mgr.add_modifier(mod)
                     await BUS.emit_async(
                         "card_effect",
                         self.id,

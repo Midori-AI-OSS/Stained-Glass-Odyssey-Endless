@@ -7,6 +7,7 @@ characters, passives, cards, and relics.
 
 from __future__ import annotations
 
+import asyncio
 from dataclasses import dataclass
 import logging
 import random
@@ -169,7 +170,13 @@ class Summon(Stats):
                 if cls._is_beneficial_stat_modifier(mod):
                     scaled_mod = cls._scale_stat_modifier(mod, summon, stat_multiplier)
                     scaled_mod.apply()  # Apply the modifier to ensure it affects the summon's stats
-                    summon.effect_manager.add_modifier(scaled_mod)
+                    coro = summon.effect_manager.add_modifier(scaled_mod)
+                    try:
+                        loop = asyncio.get_running_loop()
+                    except RuntimeError:
+                        asyncio.run(coro)
+                    else:
+                        loop.create_task(coro)
                     log.debug(f"Shared beneficial StatModifier '{mod.name}' to summon {summon.id}")
 
     @classmethod

@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from dataclasses import field
 import random
 
+from autofighter.effects import EffectManager
 from autofighter.effects import create_stat_buff
 from autofighter.stats import BUS
 from plugins.relics._base import RelicBase
@@ -35,13 +36,18 @@ class ParadoxHourglass(RelicBase):
                 base_def = entity.defense
                 div = 4 + (stacks - 1)
                 new_def = max(100, int(base_def / div))
+                mgr = getattr(entity, "effect_manager", None)
+                if mgr is None:
+                    mgr = EffectManager(entity)
+                    entity.effect_manager = mgr
+
                 mod = create_stat_buff(
                     entity,
                     name=f"{self.id}_foe_{id(entity)}",
                     defense=new_def - base_def,
                     turns=9999,
                 )
-                entity.effect_manager.add_modifier(mod)
+                await mgr.add_modifier(mod)
                 state["foe"][id(entity)] = mod
 
                 # Track foe defense reduction
@@ -87,6 +93,11 @@ class ParadoxHourglass(RelicBase):
             mult = 3 + (stacks - 1)
 
             for m in survivors:
+                mgr = getattr(m, "effect_manager", None)
+                if mgr is None:
+                    mgr = EffectManager(m)
+                    m.effect_manager = mgr
+
                 mod = create_stat_buff(
                     m,
                     name=f"{self.id}_ally_{id(m)}",
@@ -102,7 +113,7 @@ class ParadoxHourglass(RelicBase):
                     vitality_mult=mult,
                     mitigation_mult=mult,
                 )
-                m.effect_manager.add_modifier(mod)
+                await mgr.add_modifier(mod)
                 m.hp = m.max_hp
                 state["buffs"][id(m)] = mod
 

@@ -32,7 +32,7 @@ class DummyEffectManager:
         self.mods: list[Any] = []
         self.dots: list[Any] = []
 
-    def add_modifier(self, mod: Any) -> None:
+    async def add_modifier(self, mod: Any) -> None:
         self.mods.append(mod)
 
     def add_dot(self, dot: Any) -> None:

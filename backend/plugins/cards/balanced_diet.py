@@ -32,9 +32,9 @@ class BalancedDiet(CardBase):
                     target,
                     name=f"{self.id}_heal_def",
                     turns=1,
-                    defense_mult=1.02  # +2% DEF
+                    defense_mult=1.02,  # +2% DEF
                 )
-                effect_manager.add_modifier(def_mod)
+                await effect_manager.add_modifier(def_mod)
 
                 import logging
                 log = logging.getLogger(__name__)

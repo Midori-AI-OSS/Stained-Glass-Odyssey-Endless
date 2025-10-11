@@ -2,6 +2,7 @@ import asyncio
 from dataclasses import dataclass
 from dataclasses import field
 import random
+from typing import Awaitable
 from typing import Optional
 from typing import Union
 
@@ -406,21 +407,26 @@ class EffectManager:
             "current_stacks": len([h for h in self.hots if h.id == effect.id])
         })
 
-    def add_modifier(self, effect: StatModifier) -> None:
-        """Attach a stat modifier to the tracked stats."""
+    def add_modifier(self, effect: StatModifier) -> Awaitable[None]:
+        """Attach a stat modifier to the tracked stats and return an awaitable."""
         from autofighter.stats import BUS  # Import here to avoid circular imports
 
         self.mods.append(effect)
         self.stats.mods.append(effect.id)
 
         # Emit effect applied event - batched for performance
-        BUS.emit_batched("effect_applied", effect.name, self.stats, {
-            "effect_type": "stat_modifier",
-            "effect_id": effect.id,
-            "turns": effect.turns,
-            "deltas": effect.deltas,
-            "multipliers": effect.multipliers
-        })
+        return BUS.emit_batched_async(
+            "effect_applied",
+            effect.name,
+            self.stats,
+            {
+                "effect_type": "stat_modifier",
+                "effect_id": effect.id,
+                "turns": effect.turns,
+                "deltas": effect.deltas,
+                "multipliers": effect.multipliers,
+            },
+        )
 
     def maybe_inflict_dot(
         self, attacker: Stats, damage: int, turns: Optional[int] = None
