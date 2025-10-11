@@ -2,11 +2,14 @@ import asyncio
 import random
 import types
 
+import pytest
+
 from autofighter.effects import DamageOverTime
 from autofighter.effects import EffectManager
 from autofighter.stats import BUS
 from autofighter.stats import Stats
 from plugins.damage_types.dark import Dark
+from tests.helpers import call_maybe_async
 
 
 class DummyPlayer(Stats):
@@ -18,7 +21,8 @@ class DummyPlayer(Stats):
         return True
 
 
-def test_dark_ultimate_dot_scaling(monkeypatch):
+@pytest.mark.asyncio
+async def test_dark_ultimate_dot_scaling(monkeypatch):
     actor = DummyPlayer()
     actor.damage_type = Dark()
     actor._base_atk = 100
@@ -27,8 +31,8 @@ def test_dark_ultimate_dot_scaling(monkeypatch):
     ally = Stats()
     actor.effect_manager = EffectManager(actor)
     ally.effect_manager = EffectManager(ally)
-    actor.effect_manager.add_dot(DamageOverTime("d1", 1, 1, "d1"))
-    ally.effect_manager.add_dot(DamageOverTime("d2", 1, 1, "d2"))
+    await call_maybe_async(actor.effect_manager.add_dot, DamageOverTime("d1", 1, 1, "d1"))
+    await call_maybe_async(ally.effect_manager.add_dot, DamageOverTime("d2", 1, 1, "d2"))
 
     target = Stats()
     actor.allies = [actor, ally]
@@ -49,15 +53,14 @@ def test_dark_ultimate_dot_scaling(monkeypatch):
     hits: list[int] = []
     BUS.subscribe("damage", lambda a, t, d: hits.append(d))
 
-    asyncio.get_event_loop().run_until_complete(
-        actor.damage_type.ultimate(actor, actor.allies, actor.enemies)
-    )
+    await actor.damage_type.ultimate(actor, actor.allies, actor.enemies)
 
     expected = int(100 * (Dark.ULT_PER_STACK ** 2))
     assert hits and all(h == expected for h in hits)
 
 
-def test_dark_ultimate_six_hits(monkeypatch):
+@pytest.mark.asyncio
+async def test_dark_ultimate_six_hits(monkeypatch):
     actor = DummyPlayer()
     actor.damage_type = Dark()
     actor._base_atk = 100
@@ -82,14 +85,13 @@ def test_dark_ultimate_six_hits(monkeypatch):
     hits: list[int] = []
     BUS.subscribe("damage", lambda a, t, d: hits.append(d))
 
-    asyncio.get_event_loop().run_until_complete(
-        actor.damage_type.ultimate(actor, actor.allies, actor.enemies)
-    )
+    await actor.damage_type.ultimate(actor, actor.allies, actor.enemies)
 
     assert len(hits) == 6
 
 
-def test_dark_ultimate_prefers_high_aggro_targets(monkeypatch):
+@pytest.mark.asyncio
+async def test_dark_ultimate_prefers_high_aggro_targets(monkeypatch):
     random.seed(99)
 
     actor = DummyPlayer()
@@ -117,9 +119,8 @@ def test_dark_ultimate_prefers_high_aggro_targets(monkeypatch):
     actor.allies = allies
     actor.enemies = foes
 
-    loop = asyncio.get_event_loop()
     for _ in range(5):
-        loop.run_until_complete(actor.damage_type.ultimate(actor, actor.allies, actor.enemies))
+        await actor.damage_type.ultimate(actor, actor.allies, actor.enemies)
         actor.ultimate_ready = True
         actor.ultimate_charge = actor.ultimate_charge_max
 

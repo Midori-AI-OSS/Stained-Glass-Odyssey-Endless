@@ -10,6 +10,7 @@ from autofighter.effects import EffectManager
 from autofighter.effects import HealingOverTime
 import autofighter.stats as stats
 from autofighter.stats import Stats
+from tests.helpers import call_maybe_async
 
 
 @pytest.mark.asyncio
@@ -26,7 +27,7 @@ async def test_small_dot_count_still_logs_individually():
     # Add 5 DOTs (below the 10 threshold)
     for i in range(5):
         dot = DamageOverTime(f"dot_{i}", damage=1, turns=2, id=f"dot_{i}", source=target)
-        manager.add_dot(dot)
+        await call_maybe_async(manager.add_dot, dot)
 
     # Should still log individually
     await manager.tick()
@@ -48,7 +49,7 @@ async def test_large_dot_count_uses_batch_processing():
     # Add 100 DOTs (above the 20 threshold for parallel processing)
     for i in range(100):
         dot = DamageOverTime(f"dot_{i}", damage=1, turns=2, id=f"dot_{i}", source=target)
-        manager.add_dot(dot)
+        await call_maybe_async(manager.add_dot, dot)
 
     initial_hp = target.hp
     await manager.tick()
@@ -74,8 +75,8 @@ async def test_mixed_dots_and_hots():
     for i in range(30):
         dot = DamageOverTime(f"dot_{i}", damage=2, turns=3, id=f"dot_{i}", source=target)
         hot = HealingOverTime(f"hot_{i}", healing=1, turns=3, id=f"hot_{i}", source=target)
-        manager.add_dot(dot)
-        manager.add_hot(hot)
+        await call_maybe_async(manager.add_dot, dot)
+        await call_maybe_async(manager.add_hot, hot)
 
     initial_hp = target.hp
     await manager.tick()
@@ -103,7 +104,7 @@ async def test_dot_expiration_with_optimizations():
     for i in range(25):
         turns = 1 if i < 10 else 2  # 10 expire after 1 tick, 15 after 2 ticks
         dot = DamageOverTime(f"dot_{i}", damage=1, turns=turns, id=f"dot_{i}", source=target)
-        manager.add_dot(dot)
+        await call_maybe_async(manager.add_dot, dot)
 
     # First tick - 10 should expire
     await manager.tick()
@@ -129,11 +130,11 @@ async def test_dead_characters_dont_receive_dots_or_hots():
 
     # Try to add DOT to dead character
     dot = DamageOverTime("test_dot", damage=10, turns=3, id="test_dot", source=source)
-    manager.add_dot(dot)
+    await call_maybe_async(manager.add_dot, dot)
 
     # Try to add HOT to dead character
     hot = HealingOverTime("test_hot", healing=5, turns=2, id="test_hot", source=source)
-    manager.add_hot(hot)
+    await call_maybe_async(manager.add_hot, hot)
 
     # Verify no effects were added
     assert len(manager.dots) == 0
@@ -157,11 +158,11 @@ async def test_living_characters_can_still_receive_effects():
 
     # Add DOT to living character
     dot = DamageOverTime("test_dot", damage=10, turns=3, id="test_dot", source=source)
-    manager.add_dot(dot)
+    await call_maybe_async(manager.add_dot, dot)
 
     # Add HOT to living character
     hot = HealingOverTime("test_hot", healing=5, turns=2, id="test_hot", source=source)
-    manager.add_hot(hot)
+    await call_maybe_async(manager.add_hot, hot)
 
     # Verify effects were added
     assert len(manager.dots) == 1

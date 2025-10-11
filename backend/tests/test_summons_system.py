@@ -25,6 +25,7 @@ from plugins.characters.becca import Becca
 from plugins.characters.foe_base import FoeBase
 from plugins.damage_types.lightning import Lightning
 from plugins.passives.normal.becca_menagerie_bond import BeccaMenagerieBond
+from tests.helpers import call_maybe_async
 
 
 def _reset_becca_passive_state() -> None:
@@ -665,7 +666,7 @@ async def test_summon_inherits_beneficial_effects(monkeypatch):
         id="test_hot_id",
         source=summoner
     )
-    summoner.effect_manager.add_hot(hot)
+    await call_maybe_async(summoner.effect_manager.add_hot, hot)
 
     # Add beneficial StatModifier
     stat_mod = StatModifier(
@@ -676,6 +677,7 @@ async def test_summon_inherits_beneficial_effects(monkeypatch):
         deltas={"crit_rate": 0.1},  # +10% crit rate - beneficial
         multipliers={"crit_damage": 1.5}  # 1.5x crit damage - beneficial
     )
+    await call_maybe_async(summoner.effect_manager.add_modifier, stat_mod)
     await summoner.effect_manager.add_modifier(stat_mod)
 
     # Create summon with 50% stat inheritance
@@ -762,7 +764,7 @@ async def test_summon_does_not_inherit_harmful_effects(monkeypatch):
         id="test_dot_id",
         source=summoner
     )
-    summoner.effect_manager.add_dot(dot)
+    await call_maybe_async(summoner.effect_manager.add_dot, dot)
 
     # Add harmful StatModifier
     harmful_mod = StatModifier(
@@ -773,6 +775,7 @@ async def test_summon_does_not_inherit_harmful_effects(monkeypatch):
         deltas={"crit_rate": -0.1},  # -10% crit rate - harmful
         multipliers={"crit_damage": 0.5}  # 0.5x crit damage - harmful
     )
+    await call_maybe_async(summoner.effect_manager.add_modifier, harmful_mod)
     await summoner.effect_manager.add_modifier(harmful_mod)
 
     # Create summon

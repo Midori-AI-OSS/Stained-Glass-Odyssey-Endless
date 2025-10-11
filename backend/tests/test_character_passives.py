@@ -16,6 +16,7 @@ from plugins.passives.normal.ally_overload import AllyOverload
 from plugins.passives.normal.luna_lunar_reservoir import LunaLunarReservoir
 from plugins.passives.normal.hilander_critical_ferment import HilanderCriticalFerment
 from plugins.passives.normal.mezzy_gluttonous_bulwark import MezzyGluttonousBulwark
+from tests.helpers import call_maybe_async
 
 
 @pytest.mark.asyncio
@@ -309,7 +310,7 @@ async def test_ally_overload_battle_end_restores_hots():
     assert ally.effect_manager.add_hot is not original_add_hot
 
     blocked_hot = HealingOverTime("blocked", 5, 2, "blocked")
-    ally.effect_manager.add_hot(blocked_hot)
+    await call_maybe_async(ally.effect_manager.add_hot, blocked_hot)
     assert not ally.effect_manager.hots
     assert not ally.hots
 
@@ -320,7 +321,7 @@ async def test_ally_overload_battle_end_restores_hots():
     assert ally.effect_manager.add_hot.__func__ is original_add_hot.__func__
 
     restored_hot = HealingOverTime("restored", 7, 3, "restored")
-    ally.effect_manager.add_hot(restored_hot)
+    await call_maybe_async(ally.effect_manager.add_hot, restored_hot)
 
     assert ally.effect_manager.hots == [restored_hot]
     assert ally.hots == [restored_hot.id]

@@ -1,10 +1,13 @@
 import pytest
 
+import pytest
+
 from autofighter.effects import EffectManager
 from autofighter.stats import BUS
 from autofighter.stats import Stats
 from plugins.damage_types.light import Light
 from plugins.dots.bleed import Bleed
+from tests.helpers import call_maybe_async
 
 
 class DummyPlayer(Stats):
@@ -29,7 +32,7 @@ async def test_light_ultimate_heals_and_cleanses():
     actor.effect_manager = EffectManager(actor)
     ally.effect_manager = EffectManager(ally)
     enemy.effect_manager = EffectManager(enemy)
-    ally.effect_manager.add_dot(Bleed(10, 3))
+    await call_maybe_async(ally.effect_manager.add_dot, Bleed(10, 3))
     actor.add_ultimate_charge(actor.ultimate_charge_max)
     await light.ultimate(actor, [actor, ally], [enemy])
     assert ally.hp == ally.max_hp

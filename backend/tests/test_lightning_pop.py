@@ -7,6 +7,7 @@ from autofighter.effects import EffectManager
 from autofighter.stats import Stats
 from autofighter.stats import set_battle_active
 from plugins.damage_types.lightning import Lightning
+from tests.helpers import call_maybe_async
 
 
 @pytest.mark.asyncio
@@ -27,8 +28,8 @@ async def test_lightning_pop_damage_and_stacks():
 
     dot1 = DamageOverTime("Test", 40, 3, "t1", attacker)
     dot2 = DamageOverTime("Test2", 20, 5, "t2", attacker)
-    target.effect_manager.add_dot(dot1)
-    target.effect_manager.add_dot(dot2)
+    await call_maybe_async(target.effect_manager.add_dot, dot1)
+    await call_maybe_async(target.effect_manager.add_dot, dot2)
     initial_turns = [d.turns for d in target.effect_manager.dots]
     initial_count = len(target.effect_manager.dots)
     start_hp = target.hp
@@ -68,7 +69,7 @@ async def test_lightning_dot_ticks_do_not_trigger_on_hit():
     target.effect_manager = EffectManager(target)
 
     dot = DamageOverTime("Lightning DoT", 20, 2, "lightning_dot", attacker)
-    target.effect_manager.add_dot(dot)
+    await call_maybe_async(target.effect_manager.add_dot, dot)
 
     calls: list[bool] = []
     original_apply_damage = target.__class__.apply_damage
