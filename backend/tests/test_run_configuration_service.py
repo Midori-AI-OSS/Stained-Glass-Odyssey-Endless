@@ -24,6 +24,11 @@ def test_run_configuration_metadata_details():
     assert preview_five["raw_bonus"] == pytest.approx(2.5)
     foe_speed = next(mod for mod in metadata["modifiers"] if mod["id"] == "foe_speed")
     assert foe_speed["reward_bonuses"]["exp_bonus_per_stack"] == pytest.approx(0.5)
+    assert foe_speed["reward_bonuses"]["rdr_bonus_per_stack"] == pytest.approx(0.01)
+    assert (
+        foe_speed["reward_bonuses"]["rdr_bonus_per_stack"]
+        < foe_speed["reward_bonuses"]["exp_bonus_per_stack"]
+    )
     pressure = next(mod for mod in metadata["modifiers"] if mod["id"] == "pressure")
     assert "encounter_bonus" in pressure["effects"]
     pressure_preview = next(item for item in pressure["preview"] if item["stacks"] == 10)
