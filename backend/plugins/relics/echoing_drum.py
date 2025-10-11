@@ -20,10 +20,7 @@ class EchoingDrum(RelicBase):
     name: str = "Echoing Drum"
     stars: int = 3
     effects: dict[str, float] = field(default_factory=dict)
-    about: str = (
-        "First attack each battle has 25% chance per stack to trigger Aftertaste "
-        "(overflow converts every +100% into a guaranteed extra hit)."
-    )
+    about: str = "First attack each battle gains +25% Aftertaste chance per stack; every full 100% guarantees another hit."
 
     async def apply(self, party) -> None:
         await super().apply(party)
