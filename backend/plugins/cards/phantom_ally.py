@@ -43,7 +43,7 @@ class PhantomAlly(CardBase):
             if phantom_viable:
                 return
             for phantom in active_phantoms:
-                SummonManager.remove_summon(phantom, "phantom_ally_replaced")
+                await SummonManager.remove_summon(phantom, "phantom_ally_replaced")
                 if phantom in party.members:
                     party.members.remove(phantom)
 
@@ -155,7 +155,7 @@ class PhantomAlly(CardBase):
                 )
                 if not remaining_phantoms:
                     setattr(original, phantom_slot_tracker, 0)
-            SummonManager.remove_summon(summon, "phantom_ally_cleanup")
+            await SummonManager.remove_summon(summon, "phantom_ally_cleanup")
             self.cleanup_subscriptions()
 
         self.subscribe("battle_end", _cleanup)
