@@ -281,7 +281,7 @@ async def _run_foe_turn_iteration(
             f"foe_{damage_type_id}_attack",
         )
 
-    target_effect.maybe_inflict_dot(acting_foe, damage)
+    await asyncio.to_thread(target_effect.maybe_inflict_dot, acting_foe, damage)
     targets_hit = 1
     await BUS.emit_async("action_used", acting_foe, target, damage)
     duration = calc_animation_time(acting_foe, targets_hit)

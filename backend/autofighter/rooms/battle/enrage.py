@@ -132,7 +132,7 @@ async def update_enrage_state(
                 atk_mult=mult,
                 turns=9999,
             )
-            mgr.add_modifier(mod)
+            await asyncio.to_thread(mgr.add_modifier, mod)
             enrage_mods[idx] = mod
         state.stacks = new_stacks
         if turn > catastrophic_turn_threshold:
@@ -177,25 +177,27 @@ async def apply_enrage_bleed(
         max_hp = max(getattr(mgr.stats, "max_hp", 1), 1)
         for _ in range(stacks_to_add):
             dmg_per_tick = int(max_hp * party_bleed_ratio)
-            mgr.add_dot(
+            await asyncio.to_thread(
+                mgr.add_dot,
                 damage_over_time_factory(
                     "Enrage Bleed",
                     dmg_per_tick,
                     10,
                     "enrage_bleed",
-                )
+                ),
             )
     for mgr, foe_obj in zip(foe_effects, foes, strict=False):
         max_hp = max(getattr(foe_obj, "max_hp", 1), 1)
         for _ in range(stacks_to_add):
             dmg_per_tick = int(max_hp * foe_bleed_ratio)
-            mgr.add_dot(
+            await asyncio.to_thread(
+                mgr.add_dot,
                 damage_over_time_factory(
                     "Enrage Bleed",
                     dmg_per_tick,
                     10,
                     "enrage_bleed",
-                )
+                ),
             )
     state.bleed_applies += 1
 
