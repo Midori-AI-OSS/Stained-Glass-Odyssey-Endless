@@ -35,6 +35,10 @@ def test_validate_run_configuration_defaults():
     assert selection.run_type["id"] == "standard"
     assert selection.pressure == 4
     assert selection.reward_bonuses["exp_multiplier"] >= 1.0
+    assert selection.reward_bonuses.get("foe_modifier_bonus", 0.0) == pytest.approx(0.0)
+    assert selection.reward_bonuses.get("player_modifier_bonus", 0.0) == pytest.approx(0.0)
+    assert selection.reward_bonuses.get("foe_rdr_bonus", 0.0) == pytest.approx(0.0)
+    assert selection.reward_bonuses.get("player_rdr_bonus", 0.0) == pytest.approx(0.0)
     assert selection.snapshot["pressure"]["tooltip"]
 
 
@@ -46,10 +50,14 @@ def test_validate_run_configuration_with_modifiers():
     assert selection.modifiers["pressure"] >= 5
     bonus = selection.snapshot["modifiers"]["character_stat_down"]["details"]["bonus_rdr"]
     assert pytest.approx(bonus, rel=1e-3) == 0.0034
-    assert selection.reward_bonuses["exp_bonus"] == pytest.approx(2.0034, rel=1e-6)
-    assert selection.reward_bonuses["rdr_bonus"] == pytest.approx(0.0434, rel=1e-6)
-    assert selection.reward_bonuses["exp_multiplier"] == pytest.approx(3.0034, rel=1e-6)
-    assert selection.reward_bonuses["rdr_multiplier"] == pytest.approx(1.0434, rel=1e-6)
+    assert selection.reward_bonuses["foe_modifier_bonus"] == pytest.approx(3.0, rel=1e-6)
+    assert selection.reward_bonuses["player_modifier_bonus"] == pytest.approx(0.0034, rel=1e-6)
+    assert selection.reward_bonuses["foe_rdr_bonus"] == pytest.approx(0.06, rel=1e-6)
+    assert selection.reward_bonuses["player_rdr_bonus"] == pytest.approx(0.0034, rel=1e-6)
+    assert selection.reward_bonuses["exp_bonus"] == pytest.approx(3.0034, rel=1e-6)
+    assert selection.reward_bonuses["rdr_bonus"] == pytest.approx(0.0634, rel=1e-6)
+    assert selection.reward_bonuses["exp_multiplier"] == pytest.approx(4.0034, rel=1e-6)
+    assert selection.reward_bonuses["rdr_multiplier"] == pytest.approx(1.0634, rel=1e-6)
 
 
 def test_validate_run_configuration_rejects_unknown_modifier():
@@ -70,10 +78,14 @@ async def test_start_run_persists_configuration_snapshot(app_with_db):
     assert config["run_type"]["id"] == "boss_rush"
     char_penalty = config["modifiers"]["character_stat_down"]["details"]
     assert pytest.approx(char_penalty["bonus_rdr"], rel=1e-3) == 0.0022
-    assert pytest.approx(config["reward_bonuses"]["exp_bonus"], rel=1e-6) == 1.0022
-    assert pytest.approx(config["reward_bonuses"]["rdr_bonus"], rel=1e-6) == 0.0222
-    assert pytest.approx(config["reward_bonuses"]["exp_multiplier"], rel=1e-6) == 2.0022
-    assert pytest.approx(config["reward_bonuses"]["rdr_multiplier"], rel=1e-6) == 1.0222
+    assert pytest.approx(config["reward_bonuses"]["foe_modifier_bonus"], rel=1e-6) == 2.0
+    assert pytest.approx(config["reward_bonuses"]["player_modifier_bonus"], rel=1e-6) == 0.0022
+    assert pytest.approx(config["reward_bonuses"]["foe_rdr_bonus"], rel=1e-6) == 0.04
+    assert pytest.approx(config["reward_bonuses"]["player_rdr_bonus"], rel=1e-6) == 0.0022
+    assert pytest.approx(config["reward_bonuses"]["exp_bonus"], rel=1e-6) == 2.0022
+    assert pytest.approx(config["reward_bonuses"]["rdr_bonus"], rel=1e-6) == 0.0422
+    assert pytest.approx(config["reward_bonuses"]["exp_multiplier"], rel=1e-6) == 3.0022
+    assert pytest.approx(config["reward_bonuses"]["rdr_multiplier"], rel=1e-6) == 1.0422
 
 
 @pytest.mark.asyncio
