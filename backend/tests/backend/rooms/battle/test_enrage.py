@@ -35,8 +35,9 @@ class DummyEffectManager:
     async def add_modifier(self, mod: Any) -> None:
         self.mods.append(mod)
 
-    def add_dot(self, dot: Any) -> None:
+    async def add_dot(self, dot: Any) -> None:
         self.dots.append(dot)
+        return
 
 
 class DummyCombatant:
