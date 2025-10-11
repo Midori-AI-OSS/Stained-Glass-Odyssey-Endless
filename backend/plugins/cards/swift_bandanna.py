@@ -34,7 +34,7 @@ class SwiftBandanna(CardBase):
                     turns=1,
                     crit_rate_mult=1.01  # +1% crit rate
                 )
-                effect_manager.add_modifier(crit_mod)
+                await effect_manager.add_modifier(crit_mod)
 
                 import logging
                 log = logging.getLogger(__name__)

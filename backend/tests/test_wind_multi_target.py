@@ -16,9 +16,9 @@ async def test_wind_player_hits_all_foes(monkeypatch):
 
     original = EffectManager.maybe_inflict_dot
 
-    def spy(self, attacker, damage, turns=None):
+    async def spy(self, attacker, damage, turns=None):
         calls.append(self.stats.id)
-        return original(self, attacker, damage, turns)
+        return await original(self, attacker, damage, turns)
 
     monkeypatch.setattr(EffectManager, "maybe_inflict_dot", spy)
     node = MapNode(
@@ -57,9 +57,9 @@ async def test_wind_foe_hits_all_party_members(monkeypatch):
 
     original = EffectManager.maybe_inflict_dot
 
-    def spy(self, attacker, damage, turns=None):
+    async def spy(self, attacker, damage, turns=None):
         calls.append(self.stats.id)
-        return original(self, attacker, damage, turns)
+        return await original(self, attacker, damage, turns)
 
     monkeypatch.setattr(EffectManager, "maybe_inflict_dot", spy)
     node = MapNode(

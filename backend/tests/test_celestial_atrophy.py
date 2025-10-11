@@ -14,7 +14,7 @@ async def test_celestial_atrophy_stacks_and_cleans_up():
     target.effect_manager = manager
 
     dot = CelestialAtrophy(0, 3)
-    manager.add_dot(dot)
+    await manager.add_dot(dot)
 
     await manager.tick()
     assert target.atk == 9

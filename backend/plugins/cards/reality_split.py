@@ -54,7 +54,7 @@ class RealitySplit(CardBase):
             if entity is None or entity in members or entity is party:
                 _cleanup()
 
-        def _turn_start_handler(*_args) -> None:
+        async def _turn_start_handler(*_args) -> None:
             if not party.members:
                 return
             target = random.choice(party.members)
@@ -69,7 +69,7 @@ class RealitySplit(CardBase):
                 turns=1,
                 crit_rate=0.5,
             )
-            mgr.add_modifier(mod)
+            await mgr.add_modifier(mod)
 
         async def _hit_landed(attacker, _target, amount, *_args) -> None:
             if attacker is not state["active"]:

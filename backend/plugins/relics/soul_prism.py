@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from dataclasses import field
 
+from autofighter.effects import EffectManager
 from autofighter.effects import create_stat_buff
 from autofighter.stats import BUS
 from plugins.relics._base import RelicBase
@@ -39,13 +40,14 @@ class SoulPrism(RelicBase):
                 base = getattr(member, "_soul_prism_hp", member.max_hp)
                 member._soul_prism_hp = base
                 mod_id = f"{self.id}_{id(member)}"
-                existing = next(
-                    (m for m in member.effect_manager.mods if m.id == mod_id),
-                    None,
-                )
+                mgr = getattr(member, "effect_manager", None)
+                if mgr is None:
+                    mgr = EffectManager(member)
+                    member.effect_manager = mgr
+                existing = next((m for m in mgr.mods if m.id == mod_id), None)
                 if existing:
                     existing.remove()
-                    member.effect_manager.mods.remove(existing)
+                    mgr.mods.remove(existing)
                     if existing.id in member.mods:
                         member.mods.remove(existing.id)
                 mod = create_stat_buff(
@@ -57,7 +59,7 @@ class SoulPrism(RelicBase):
                     mitigation_mult=1 + buff,
                     turns=9999,
                 )
-                member.effect_manager.add_modifier(mod)
+                await mgr.add_modifier(mod)
                 heal = max(1, int(member.max_hp * 0.01))
 
                 # Track the revival

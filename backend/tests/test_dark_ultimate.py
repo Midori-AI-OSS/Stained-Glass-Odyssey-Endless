@@ -27,8 +27,9 @@ def test_dark_ultimate_dot_scaling(monkeypatch):
     ally = Stats()
     actor.effect_manager = EffectManager(actor)
     ally.effect_manager = EffectManager(ally)
-    actor.effect_manager.add_dot(DamageOverTime("d1", 1, 1, "d1"))
-    ally.effect_manager.add_dot(DamageOverTime("d2", 1, 1, "d2"))
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(actor.effect_manager.add_dot(DamageOverTime("d1", 1, 1, "d1")))
+    loop.run_until_complete(ally.effect_manager.add_dot(DamageOverTime("d2", 1, 1, "d2")))
 
     target = Stats()
     actor.allies = [actor, ally]

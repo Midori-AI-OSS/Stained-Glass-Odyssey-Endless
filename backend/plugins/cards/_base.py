@@ -66,7 +66,7 @@ class CardBase:
                 mod = create_stat_buff(
                     member, name=f"{self.id}_{attr}", turns=9999, **changes
                 )
-                mgr.add_modifier(mod)
+                await mgr.add_modifier(mod)
 
                 # Emit card effect event
                 await BUS.emit_async(

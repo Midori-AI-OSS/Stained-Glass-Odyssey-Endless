@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from dataclasses import field
 
+from autofighter.effects import EffectManager
 from autofighter.effects import create_stat_buff
 from autofighter.stats import BUS
 from plugins.relics._base import RelicBase
@@ -42,7 +43,11 @@ class ShinyPebble(RelicBase):
                 mitigation=target.mitigation * (mit_mult - 1),
                 turns=1,
             )
-            target.effect_manager.add_modifier(mod)
+            mgr = getattr(target, "effect_manager", None)
+            if mgr is None:
+                mgr = EffectManager(target)
+                target.effect_manager = mgr
+            await mgr.add_modifier(mod)
             current_state["active"][id(target)] = (target, mod)
 
             # Track mitigation burst application

@@ -37,7 +37,7 @@ class SteelBangles(CardBase):
                         turns=1,  # Lasts for 1 turn
                         atk_mult=0.97  # 3% damage reduction
                     )
-                    effect_manager.add_modifier(attack_debuff)
+                    await effect_manager.add_modifier(attack_debuff)
 
                     import logging
                     log = logging.getLogger(__name__)

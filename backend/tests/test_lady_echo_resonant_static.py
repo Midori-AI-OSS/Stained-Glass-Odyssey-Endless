@@ -17,8 +17,8 @@ async def test_chain_bonus_counts_effect_manager_dots():
 
     target = Stats()
     target.effect_manager = EffectManager(target)
-    target.effect_manager.add_dot(DamageOverTime("d1", 1, 1, "d1"))
-    target.effect_manager.add_dot(DamageOverTime("d2", 1, 1, "d2"))
+    await target.effect_manager.add_dot(DamageOverTime("d1", 1, 1, "d1"))
+    await target.effect_manager.add_dot(DamageOverTime("d2", 1, 1, "d2"))
 
     passive = LadyEchoResonantStatic()
     await passive.apply(attacker, hit_target=target)

@@ -29,7 +29,7 @@ async def test_light_ultimate_heals_and_cleanses():
     actor.effect_manager = EffectManager(actor)
     ally.effect_manager = EffectManager(ally)
     enemy.effect_manager = EffectManager(enemy)
-    ally.effect_manager.add_dot(Bleed(10, 3))
+    await ally.effect_manager.add_dot(Bleed(10, 3))
     actor.add_ultimate_charge(actor.ultimate_charge_max)
     await light.ultimate(actor, [actor, ally], [enemy])
     assert ally.hp == ally.max_hp

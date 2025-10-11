@@ -5,6 +5,7 @@ from autofighter.effects import EffectManager
 from autofighter.effects import create_stat_buff
 from autofighter.stats import BUS
 from plugins.cards._base import CardBase
+from plugins.cards._base import safe_async_task
 
 
 @dataclass
@@ -35,7 +36,7 @@ class VitalSurge(CardBase):
                     atk_mult=1.55,
                 )
                 active[pid] = mod
-                mgr.add_modifier(mod)
+                await mgr.add_modifier(mod)
                 await BUS.emit_async(
                     "card_effect",
                     self.id,
@@ -55,15 +56,15 @@ class VitalSurge(CardBase):
 
         def _turn_start() -> None:
             for m in party.members:
-                _check(m)
+                safe_async_task(_check(m))
 
         def _damage_taken(victim, *_args) -> None:
             if victim in party.members:
-                _check(victim)
+                safe_async_task(_check(victim))
 
         def _heal_received(member, *_args) -> None:
             if member in party.members:
-                _check(member)
+                safe_async_task(_check(member))
 
         self.subscribe("turn_start", _turn_start)
         self.subscribe("damage_taken", _damage_taken)

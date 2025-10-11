@@ -47,7 +47,8 @@ def _trigger_resist(target: Stats, attacker: Stats) -> None:
         target.effect_manager = manager
 
     with patch("autofighter.effects.random.random", return_value=1.0):
-        manager.maybe_inflict_dot(attacker, 100)
+        loop = asyncio.get_event_loop()
+        loop.run_until_complete(manager.maybe_inflict_dot(attacker, 100))
 
 
 def test_calm_beads_grants_charge_on_resist():

@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from dataclasses import field
 
+from autofighter.effects import EffectManager
 from autofighter.effects import create_stat_buff
 from autofighter.stats import BUS
 from plugins.relics._base import RelicBase
@@ -38,7 +39,11 @@ class TatteredFlag(RelicBase):
 
             for member in survivors:
                 mod = create_stat_buff(member, name=f"{self.id}_buff", atk_mult=1.03, turns=9999)
-                member.effect_manager.add_modifier(mod)
+                mgr = getattr(member, "effect_manager", None)
+                if mgr is None:
+                    mgr = EffectManager(member)
+                    member.effect_manager = mgr
+                await mgr.add_modifier(mod)
 
         self.subscribe(party, "damage_taken", _fallen)
 

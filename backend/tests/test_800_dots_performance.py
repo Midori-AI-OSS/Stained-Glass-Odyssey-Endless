@@ -39,7 +39,7 @@ async def test_many_dots_performance():
             id=f"dot_{i}",
             source=target
         )
-        manager.add_dot(dot)
+        await manager.add_dot(dot)
 
     print(f"Added {len(manager.dots)} DOT effects")
     print(f"Target HP: {target.hp}/{target.max_hp}")

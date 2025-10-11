@@ -75,7 +75,7 @@ class KeenGoggles(CardBase):
                 crit_rate_mult=1 + (new_stacks * 0.01),
             )
             setattr(crit_mod, "source", source)
-            effect_manager.add_modifier(crit_mod)
+            await effect_manager.add_modifier(crit_mod)
 
             import logging
 

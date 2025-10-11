@@ -44,7 +44,7 @@ async def test_wind_ultimate_transfers_from_foes():
 
     dot = BlazingTorment(1, 3)
     dot.source = player
-    foe2.effect_manager.add_dot(dot)
+    await foe2.effect_manager.add_dot(dot)
 
     player.use_ultimate = _use_ultimate.__get__(player, Stats)
 
@@ -93,7 +93,7 @@ async def test_wind_foe_ultimate_transfers_from_allies():
 
     dot = BlazingTorment(1, 3)
     dot.source = foe
-    p2.effect_manager.add_dot(dot)
+    await p2.effect_manager.add_dot(dot)
 
     foe.use_ultimate = _use_ultimate.__get__(foe, Stats)
 

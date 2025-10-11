@@ -1,4 +1,5 @@
 import asyncio
+import inspect
 from dataclasses import dataclass
 from dataclasses import field
 import random
@@ -353,7 +354,7 @@ class EffectManager:
         """Write a log message without blocking the main loop."""
         await asyncio.to_thread(self._console.log, message)
 
-    def add_dot(self, effect: DamageOverTime, max_stacks: int | None = None) -> None:
+    async def add_dot(self, effect: DamageOverTime, max_stacks: int | None = None) -> None:
         """Attach a DoT instance to the tracked stats.
 
         DoTs with the same ``id`` stack independently, allowing multiple
@@ -382,7 +383,7 @@ class EffectManager:
             "current_stacks": len([d for d in self.dots if d.id == effect.id])
         })
 
-    def add_hot(self, effect: HealingOverTime) -> None:
+    async def add_hot(self, effect: HealingOverTime) -> None:
         """Attach a HoT instance to the tracked stats.
 
         Healing effects simply accumulate; each copy heals separately every
@@ -406,7 +407,7 @@ class EffectManager:
             "current_stacks": len([h for h in self.hots if h.id == effect.id])
         })
 
-    def add_modifier(self, effect: StatModifier) -> None:
+    async def add_modifier(self, effect: StatModifier) -> None:
         """Attach a stat modifier to the tracked stats."""
         from autofighter.stats import BUS  # Import here to avoid circular imports
 
@@ -422,7 +423,7 @@ class EffectManager:
             "multipliers": effect.multipliers
         })
 
-    def maybe_inflict_dot(
+    async def maybe_inflict_dot(
         self, attacker: Stats, damage: int, turns: Optional[int] = None
     ) -> None:
         """Attempt to apply one or more DoT stacks based on effect hit rate.
@@ -511,7 +512,7 @@ class EffectManager:
             if turns is not None:
                 dot.turns = turns
 
-            self.add_dot(dot)
+            await self.add_dot(dot)
             remaining -= 1.0
 
     async def tick(self, others: Optional["EffectManager"] = None) -> None:
@@ -937,7 +938,9 @@ class EffectManager:
             for eff in list(self.dots):
                 on_death = getattr(eff, "on_death", None)
                 if callable(on_death):
-                    on_death(others)
+                    result = on_death(others)
+                    if inspect.isawaitable(result):
+                        await result
 
     async def on_action(self) -> bool:
         """Run any per-action hooks on attached effects.

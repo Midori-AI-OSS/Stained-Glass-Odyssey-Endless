@@ -79,8 +79,8 @@ async def test_status_phase_events_emit_with_pacing(monkeypatch):
     hot = HealingOverTime("regen", healing=10, turns=1, id="hot_1", source=target)
     dot = DamageOverTime("burn", damage=10, turns=1, id="dot_1", source=target)
 
-    manager.add_hot(hot)
-    manager.add_dot(dot)
+    await manager.add_hot(hot)
+    await manager.add_dot(dot)
 
     captured_events: list[tuple[str, tuple[object, ...]]] = []
 
@@ -285,8 +285,8 @@ async def test_status_phase_events_update_snapshot_queue(monkeypatch):
     hot = HealingOverTime("regen", healing=10, turns=1, id="hot_1", source=target)
     dot = DamageOverTime("burn", damage=10, turns=1, id="dot_1", source=target)
 
-    manager.add_hot(hot)
-    manager.add_dot(dot)
+    await manager.add_hot(hot)
+    await manager.add_dot(dot)
 
     set_battle_active(True)
     try:

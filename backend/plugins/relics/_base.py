@@ -56,7 +56,7 @@ class RelicBase:
             if not changes:
                 continue
             mod = create_stat_buff(member, name=self.id, turns=9999, **changes)
-            mgr.add_modifier(mod)
+            await mgr.add_modifier(mod)
             mods.append(mod)
 
             # Emit relic effect tracking for stat modifications

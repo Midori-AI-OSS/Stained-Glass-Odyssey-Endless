@@ -190,7 +190,7 @@ async def test_mindful_tassel_boosts_first_debuff():
         id="bleed",
         source=ally,
     )
-    mgr.add_dot(bleed)
+    await mgr.add_dot(bleed)
     loop.run_until_complete(asyncio.sleep(0))
     assert bleed.damage == 105
     assert bleed.turns == 11
@@ -202,7 +202,7 @@ async def test_mindful_tassel_boosts_first_debuff():
         id="poison",
         source=ally,
     )
-    mgr.add_dot(poison)
+    await mgr.add_dot(poison)
     loop.run_until_complete(asyncio.sleep(0))
     assert poison.damage == 100
     assert poison.turns == 10

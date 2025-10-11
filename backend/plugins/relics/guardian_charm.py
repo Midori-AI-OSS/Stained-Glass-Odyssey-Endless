@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from dataclasses import field
 
+from autofighter.effects import EffectManager
 from autofighter.effects import create_stat_buff
 from plugins.relics._base import RelicBase
 
@@ -44,7 +45,11 @@ class GuardianCharm(RelicBase):
         mod = create_stat_buff(
             member, name=self.id, defense_mult=1 + 0.2 * stacks, turns=9999
         )
-        member.effect_manager.add_modifier(mod)
+        mgr = getattr(member, "effect_manager", None)
+        if mgr is None:
+            mgr = EffectManager(member)
+            member.effect_manager = mgr
+        await mgr.add_modifier(mod)
 
     def describe(self, stacks: int) -> str:
         pct = 20 * stacks

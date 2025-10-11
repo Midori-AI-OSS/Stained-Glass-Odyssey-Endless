@@ -7,11 +7,13 @@ characters, passives, cards, and relics.
 
 from __future__ import annotations
 
+import asyncio
 from dataclasses import dataclass
 import logging
 import random
 from typing import TYPE_CHECKING
 from typing import Optional
+from typing import Awaitable
 
 from autofighter.stats import Stats
 from plugins.damage_types import get_damage_type
@@ -161,7 +163,7 @@ class Summon(Stats):
             # Copy all HOTs (healing over time effects are inherently beneficial)
             for hot in effect_mgr.hots:
                 scaled_hot = cls._scale_hot_effect(hot, stat_multiplier)
-                summon.effect_manager.add_hot(scaled_hot)
+                cls._schedule_effect_application(summon.effect_manager.add_hot(scaled_hot))
                 log.debug(f"Shared HOT '{hot.name}' to summon {summon.id}")
 
             # Copy beneficial StatModifiers (buffs)
@@ -169,7 +171,7 @@ class Summon(Stats):
                 if cls._is_beneficial_stat_modifier(mod):
                     scaled_mod = cls._scale_stat_modifier(mod, summon, stat_multiplier)
                     scaled_mod.apply()  # Apply the modifier to ensure it affects the summon's stats
-                    summon.effect_manager.add_modifier(scaled_mod)
+                    cls._schedule_effect_application(summon.effect_manager.add_modifier(scaled_mod))
                     log.debug(f"Shared beneficial StatModifier '{mod.name}' to summon {summon.id}")
 
     @classmethod
@@ -276,6 +278,17 @@ class Summon(Stats):
         )
 
         return scaled_mod
+
+    @staticmethod
+    def _schedule_effect_application(coro: Awaitable[None]) -> None:
+        """Execute an effect-manager coroutine immediately when possible."""
+
+        try:
+            loop = asyncio.get_running_loop()
+        except RuntimeError:
+            asyncio.run(coro)
+        else:
+            loop.create_task(coro)
 
     def tick_turn(self) -> bool:
         """Process a turn for this summon. Returns False if summon should be removed."""

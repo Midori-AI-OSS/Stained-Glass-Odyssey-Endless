@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from dataclasses import field
 
+from autofighter.effects import EffectManager
 from autofighter.effects import create_stat_buff
 from autofighter.stats import BUS
 from plugins.relics._base import RelicBase
@@ -42,7 +43,11 @@ class StellarCompass(RelicBase):
                 atk_mult=atk_mult,
                 turns=9999,
             )
-            attacker.effect_manager.add_modifier(mod)
+            mgr = getattr(attacker, "effect_manager", None)
+            if mgr is None:
+                mgr = EffectManager(attacker)
+                attacker.effect_manager = mgr
+            await mgr.add_modifier(mod)
             current_state["gold"] += 0.015 * copies
 
             # Track critical hit buff application

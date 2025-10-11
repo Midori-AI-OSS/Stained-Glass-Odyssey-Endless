@@ -58,6 +58,7 @@ Stats = getattr(stats_module, "Stats")
 set_battle_active = getattr(stats_module, "set_battle_active")
 Fire = getattr(importlib.import_module("plugins.damage_types.fire"), "Fire")
 EventBus = getattr(importlib.import_module("plugins.event_bus"), "EventBus")
+event_bus_module = importlib.import_module("plugins.event_bus")
 
 
 def test_dot_applies_with_hit_rate():
@@ -67,7 +68,7 @@ def test_dot_applies_with_hit_rate():
     target = Stats()
     target.set_base_stat('effect_resistance', 0.0)
     manager = EffectManager(target)
-    manager.maybe_inflict_dot(attacker, 50)
+    asyncio.run(manager.maybe_inflict_dot(attacker, 50))
     assert target.dots
 
 
@@ -78,8 +79,8 @@ def test_blazing_torment_stacks():
     target = Stats()
     target.set_base_stat('effect_resistance', 0.0)
     manager = EffectManager(target)
-    manager.maybe_inflict_dot(attacker, 50)
-    manager.maybe_inflict_dot(attacker, 50)
+    asyncio.run(manager.maybe_inflict_dot(attacker, 50))
+    asyncio.run(manager.maybe_inflict_dot(attacker, 50))
     assert target.dots.count("blazing_torment") >= 2
 
 
@@ -91,7 +92,7 @@ def test_high_hit_rate_applies_multiple_stacks(monkeypatch):
     target.set_base_stat('effect_resistance', 0.1)
     manager = EffectManager(target)
     monkeypatch.setattr(effects.random, "random", lambda: 0.0)
-    manager.maybe_inflict_dot(attacker, 50)
+    asyncio.run(manager.maybe_inflict_dot(attacker, 50))
     assert target.dots.count("blazing_torment") >= 3
 
 
@@ -119,6 +120,7 @@ async def test_damage_and_heal_events():
         await target.apply_damage(10, attacker=attacker)
         await target.apply_healing(5, healer=attacker)
         await asyncio.sleep(0.05)
+        await event_bus_module.bus._process_batches_internal()
     finally:
         set_battle_active(False)
         bus.unsubscribe("damage_taken", _dmg)
@@ -147,12 +149,13 @@ async def test_hot_ticks_before_dot():
     target.set_base_stat('defense', 0)
     target.id = "t"
     manager = EffectManager(target)
-    manager.add_hot(effects.HealingOverTime("regen", 10, 1, "h"))
-    manager.add_dot(effects.DamageOverTime("burn", 1, 1, "d"))
+    await manager.add_hot(effects.HealingOverTime("regen", 10, 1, "h"))
+    await manager.add_dot(effects.DamageOverTime("burn", 1, 1, "d"))
     set_battle_active(True)
     try:
         await manager.tick()
         await asyncio.sleep(0.05)
+        await event_bus_module.bus._process_batches_internal()
     finally:
         set_battle_active(False)
         bus.unsubscribe("damage_taken", _dmg)
@@ -180,7 +183,7 @@ async def test_hot_minimum_tick_healing():
     manager = EffectManager(target)
     healer = Stats()
 
-    manager.add_hot(effects.HealingOverTime("regen", 0, 1, "hot_min", source=healer))
+    await manager.add_hot(effects.HealingOverTime("regen", 0, 1, "hot_min", source=healer))
 
     set_battle_active(True)
     try:
@@ -205,7 +208,7 @@ async def test_hot_effects_removed_when_target_is_dead():
     healer = Stats()
 
     hot = effects.HealingOverTime("regen", healing=5, turns=3, id="dead_hot", source=healer)
-    manager.add_hot(hot)
+    await manager.add_hot(hot)
     assert manager.hots
 
     set_battle_active(True)
@@ -241,8 +244,8 @@ async def test_zero_damage_dot_deals_minimum_one_per_stack():
     target.hp = 10
     manager = EffectManager(target)
 
-    manager.add_dot(effects.DamageOverTime("zero_dot", 0, 1, "zero_dot", source=attacker))
-    manager.add_dot(effects.DamageOverTime("zero_dot", 0, 1, "zero_dot", source=attacker))
+    await manager.add_dot(effects.DamageOverTime("zero_dot", 0, 1, "zero_dot", source=attacker))
+    await manager.add_dot(effects.DamageOverTime("zero_dot", 0, 1, "zero_dot", source=attacker))
 
     set_battle_active(True)
     try:
@@ -265,7 +268,7 @@ def test_dot_has_minimum_chance(monkeypatch):
     manager = EffectManager(target)
     monkeypatch.setattr(effects.random, "uniform", lambda a, b: 1.0)
     monkeypatch.setattr(effects.random, "random", lambda: 0.0)
-    manager.maybe_inflict_dot(attacker, 10)
+    asyncio.run(manager.maybe_inflict_dot(attacker, 10))
     assert target.dots
 
 
@@ -283,7 +286,7 @@ async def test_stat_modifier_applies_and_expires():
         atk=5,
         defense_mult=2,
     )
-    manager.add_modifier(mod)
+    await manager.add_modifier(mod)
     assert stats.atk == 15
     assert stats.defense == 40
     await manager.tick()
@@ -366,7 +369,7 @@ async def test_parallel_dot_ticks_respect_pacing(monkeypatch):
 
     manager = EffectManager(target)
     for idx in range(25):
-        manager.add_dot(effects.DamageOverTime(f"burn{idx}", damage=1, turns=1, id=f"burn{idx}"))
+        await manager.add_dot(effects.DamageOverTime(f"burn{idx}", damage=1, turns=1, id=f"burn{idx}"))
 
     set_battle_active(True)
     try:
@@ -402,7 +405,7 @@ async def test_self_inflicted_dot_uses_none_attacker(monkeypatch):
 
     monkeypatch.setattr(PassiveRegistry, "trigger_damage_taken", _record)
 
-    manager.add_dot(effects.DamageOverTime("Self Burn", 10, 1, "self_burn", source=target))
+    await manager.add_dot(effects.DamageOverTime("Self Burn", 10, 1, "self_burn", source=target))
 
     set_battle_active(True)
     try:

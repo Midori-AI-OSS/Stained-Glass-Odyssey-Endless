@@ -44,7 +44,7 @@ class EnduringCharm(CardBase):
                         turns=2,
                         vitality_mult=1.03,
                     )
-                    effect_manager.add_modifier(vit_mod)
+                    await effect_manager.add_modifier(vit_mod)
 
                     log = logging.getLogger(__name__)
                     log.debug(

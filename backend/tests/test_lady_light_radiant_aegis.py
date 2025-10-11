@@ -36,7 +36,7 @@ async def test_radiant_aegis_hot_event_applies_shields():
     hot = RadiantRegeneration(healer)
     hot.healing = 8  # Boost base healing so scaling is visible
     hot.source = healer
-    ally.effect_manager.add_hot(hot)
+    await ally.effect_manager.add_hot(hot)
 
     await asyncio.sleep(0.05)
 
@@ -61,7 +61,7 @@ async def test_radiant_aegis_dot_cleanse_triggers_on_light_ultimate():
     ally.hp = ally.max_hp - 100
     healer.effect_manager = EffectManager(healer)
     ally.effect_manager = EffectManager(ally)
-    ally.effect_manager.add_dot(Bleed(10, 3))
+    await ally.effect_manager.add_dot(Bleed(10, 3))
 
     await passive.apply(healer)
 

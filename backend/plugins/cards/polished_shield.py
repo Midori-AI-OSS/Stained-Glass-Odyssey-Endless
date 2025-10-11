@@ -46,7 +46,7 @@ class PolishedShield(CardBase):
                 turns=1,
                 defense=3
             )
-            effect_manager.add_modifier(def_mod)
+            await effect_manager.add_modifier(def_mod)
 
             import logging
             log = logging.getLogger(__name__)
