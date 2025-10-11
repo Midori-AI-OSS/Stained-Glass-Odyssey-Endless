@@ -2,9 +2,7 @@
   export let title = 'Reward Preview';
   export let preview = {
     exp_bonus: 0,
-    rdr_bonus: 0,
-    foe_bonus: 0,
-    player_bonus: 0
+    rdr_bonus: 0
   };
   export let formatValue = (value) => value;
 </script>
@@ -21,14 +19,6 @@
     <div>
       <span class="preview-label">RDR Bonus</span>
       <span class="preview-value">{formatValue(preview.rdr_bonus)}</span>
-    </div>
-    <div>
-      <span class="preview-label">Foe Bonus</span>
-      <span class="preview-value">{formatValue(preview.foe_bonus)}</span>
-    </div>
-    <div>
-      <span class="preview-label">Player Bonus</span>
-      <span class="preview-value">{formatValue(preview.player_bonus)}</span>
     </div>
   </div>
 </section>

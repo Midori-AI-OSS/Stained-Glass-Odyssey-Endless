@@ -161,7 +161,7 @@ describe('RunChooser wizard flow', () => {
     logMenuAction.mockResolvedValue();
   });
 
-  test('computeRewardPreview distinguishes foe EXP and RDR bonuses', () => {
+  test('computeRewardPreview calculates EXP and RDR bonuses', () => {
     const modifiers = [
       {
         id: 'enemy_buff',
@@ -178,7 +178,6 @@ describe('RunChooser wizard flow', () => {
 
     expect(preview.exp_bonus).toBe(2);
     expect(preview.rdr_bonus).toBe(0.04);
-    expect(preview.foe_bonus).toBe(2);
     expect(preview.exp_bonus).not.toBeCloseTo(preview.rdr_bonus);
   });
 
