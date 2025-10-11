@@ -347,7 +347,7 @@ async def test_status_phase_events_update_snapshot_queue(monkeypatch):
         "chance": 25,
         "roll": 99,
     }
-    BUS.emit_batched("effect_resisted", "burn", target, attacker, resist_details)
+    await BUS.emit_batched_async("effect_resisted", "burn", target, attacker, resist_details)
     await bus._process_batches_internal()
 
     events_after_resist = list(battle_snapshots[run_id]["recent_events"])

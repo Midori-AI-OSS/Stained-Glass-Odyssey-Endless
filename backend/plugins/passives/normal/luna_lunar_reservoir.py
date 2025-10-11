@@ -247,7 +247,9 @@ class LunaLunarReservoir:
 
         if event == "ultimate_used":
             cls._charge_points[entity_id] += 64 * multiplier
-        elif event != "hit_landed":
+        elif event == "hit_landed":
+            cls._charge_points[entity_id] += 1 * multiplier
+        else:
             cls._charge_points[entity_id] += 1 * multiplier
 
         current_charge = cls._charge_points[entity_id]

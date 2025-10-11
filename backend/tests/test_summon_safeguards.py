@@ -29,7 +29,7 @@ async def test_summons_cannot_create_more_summons(monkeypatch):
     original_summoner.ensure_permanent_summon_slots(1)
 
     # Create a summon from the original summoner
-    first_summon = SummonManager.create_summon(
+    first_summon = await SummonManager.create_summon(
         summoner=original_summoner,
         summon_type="first_summon",
         source="test_source"
@@ -39,7 +39,7 @@ async def test_summons_cannot_create_more_summons(monkeypatch):
     assert isinstance(first_summon, Summon)
 
     # Now try to create a summon from the first summon (this should be blocked)
-    second_summon = SummonManager.create_summon(
+    second_summon = await SummonManager.create_summon(
         summoner=first_summon,  # Summon trying to create another summon
         summon_type="second_summon",
         source="test_source"
@@ -72,13 +72,13 @@ async def test_regular_entities_can_still_create_summons(monkeypatch):
     player2.ensure_permanent_summon_slots(1)
 
     # Both should be able to create summons
-    summon1 = SummonManager.create_summon(
+    summon1 = await SummonManager.create_summon(
         summoner=player1,
         summon_type="summon1",
         source="test_source"
     )
 
-    summon2 = SummonManager.create_summon(
+    summon2 = await SummonManager.create_summon(
         summoner=player2,
         summon_type="summon2",
         source="test_source"
@@ -107,7 +107,7 @@ async def test_summon_identification_works(monkeypatch):
     player.id = "player"
     player.ensure_permanent_summon_slots(1)
 
-    summon = SummonManager.create_summon(
+    summon = await SummonManager.create_summon(
         summoner=player,
         summon_type="test_summon",
         source="test_source"
@@ -143,7 +143,7 @@ async def test_summon_safeguard_logging(monkeypatch, caplog):
     player.id = "test_player"
     player.ensure_permanent_summon_slots(1)
 
-    first_summon = SummonManager.create_summon(
+    first_summon = await SummonManager.create_summon(
         summoner=player,
         summon_type="first_summon",
         source="test_source"
@@ -152,7 +152,7 @@ async def test_summon_safeguard_logging(monkeypatch, caplog):
     assert first_summon is not None
 
     # Try to create summon from summon (should be blocked and logged)
-    second_summon = SummonManager.create_summon(
+    second_summon = await SummonManager.create_summon(
         summoner=first_summon,
         summon_type="second_summon",
         source="test_source"

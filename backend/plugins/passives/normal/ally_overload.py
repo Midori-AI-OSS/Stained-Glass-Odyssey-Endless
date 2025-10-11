@@ -94,7 +94,7 @@ class AllyOverload:
             em.hots.clear()
             target.hots.clear()
 
-            def _block_hot(self_em, *_: object, **__: object) -> None:
+            async def _block_hot(self_em, *_: object, **__: object) -> None:
                 return None
 
             self._add_hot_backup[entity_id] = em.add_hot
