@@ -8,6 +8,7 @@ from autofighter.party import Party
 from autofighter.rooms.battle.core import BattleRoom
 from autofighter.stats import Stats
 from plugins.damage_types.wind import Wind
+from tests.helpers import ensure_coroutine
 
 
 @pytest.mark.asyncio
@@ -18,7 +19,7 @@ async def test_wind_player_hits_all_foes(monkeypatch):
 
     def spy(self, attacker, damage, turns=None):
         calls.append(self.stats.id)
-        return original(self, attacker, damage, turns)
+        return ensure_coroutine(original(self, attacker, damage, turns))
 
     monkeypatch.setattr(EffectManager, "maybe_inflict_dot", spy)
     node = MapNode(
@@ -59,7 +60,7 @@ async def test_wind_foe_hits_all_party_members(monkeypatch):
 
     def spy(self, attacker, damage, turns=None):
         calls.append(self.stats.id)
-        return original(self, attacker, damage, turns)
+        return ensure_coroutine(original(self, attacker, damage, turns))
 
     monkeypatch.setattr(EffectManager, "maybe_inflict_dot", spy)
     node = MapNode(

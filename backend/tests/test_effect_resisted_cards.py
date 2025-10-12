@@ -2,6 +2,8 @@ import asyncio
 from types import SimpleNamespace
 from unittest.mock import patch
 
+import pytest
+
 from autofighter.effects import EffectManager
 from autofighter.stats import BUS
 from autofighter.stats import Stats
@@ -9,11 +11,11 @@ from plugins.cards.calm_beads import CalmBeads
 from plugins.cards.polished_shield import PolishedShield
 from plugins.damage_types.fire import Fire
 import plugins.event_bus as event_bus_module
+from tests.helpers import call_maybe_async
 
 
-def _setup_ally_with_card(card_cls: type) -> tuple[asyncio.AbstractEventLoop, Stats]:
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
+async def _setup_ally_with_card(card_cls: type) -> Stats:
+    loop = asyncio.get_running_loop()
     BUS.set_loop(loop)
 
     ally = Stats()
@@ -24,12 +26,12 @@ def _setup_ally_with_card(card_cls: type) -> tuple[asyncio.AbstractEventLoop, St
     ally.set_base_stat("effect_resistance", 0.6)
 
     party = SimpleNamespace(members=[ally])
-    loop.run_until_complete(card_cls().apply(party))
+    await card_cls().apply(party)
 
     if getattr(ally, "effect_manager", None) is None:
         ally.effect_manager = EffectManager(ally)
 
-    return loop, ally
+    return ally
 
 
 def _create_attacker() -> Stats:
@@ -39,81 +41,74 @@ def _create_attacker() -> Stats:
     foe.change_damage_type(Fire())
     return foe
 
-
-def _trigger_resist(target: Stats, attacker: Stats) -> None:
+async def _trigger_resist(target: Stats, attacker: Stats) -> None:
     manager = getattr(target, "effect_manager", None)
     if manager is None:
         manager = EffectManager(target)
         target.effect_manager = manager
 
     with patch("autofighter.effects.random.random", return_value=1.0):
-        manager.maybe_inflict_dot(attacker, 100)
+        await call_maybe_async(manager.maybe_inflict_dot, attacker, 100)
 
 
-def test_calm_beads_grants_charge_on_resist():
-    loop, ally = _setup_ally_with_card(CalmBeads)
+@pytest.mark.asyncio
+async def test_calm_beads_grants_charge_on_resist():
+    ally = await _setup_ally_with_card(CalmBeads)
+    attacker = _create_attacker()
+    baseline_charge = ally.ultimate_charge
+    assert attacker.effect_hit_rate >= 0.99
+    assert ally.effect_resistance > 0.5
+
+    events: list[tuple[str | None, Stats, Stats, dict | None]] = []
+
+    def _recorder(effect_name, target, source, details=None):
+        events.append((effect_name, target, source, details))
+
+    BUS.subscribe("effect_resisted", _recorder)
     try:
-        attacker = _create_attacker()
-        baseline_charge = ally.ultimate_charge
-        assert attacker.effect_hit_rate >= 0.99
-        assert ally.effect_resistance > 0.5
-
-        events: list[tuple[str | None, Stats, Stats, dict | None]] = []
-
-        def _recorder(effect_name, target, source, details=None):
-            events.append((effect_name, target, source, details))
-
-        BUS.subscribe("effect_resisted", _recorder)
-        try:
-            _trigger_resist(ally, attacker)
-            loop.run_until_complete(asyncio.sleep(0.05))
-            loop.run_until_complete(event_bus_module.bus._process_batches_internal())
-        finally:
-            BUS.unsubscribe("effect_resisted", _recorder)
-
-        assert not ally.effect_manager.dots
-        assert events, "effect_resisted event did not fire"
-        _, recorded_target, recorded_source, metadata = events[-1]
-        assert recorded_target is ally
-        assert recorded_source is attacker
-        assert (metadata or {}).get("effect_type") == "dot"
-
-        assert ally.ultimate_charge == baseline_charge + 1
-        assert not ally.ultimate_ready
+        await _trigger_resist(ally, attacker)
+        await asyncio.sleep(0.05)
+        await event_bus_module.bus._process_batches_internal()
     finally:
-        asyncio.set_event_loop(None)
-        loop.close()
+        BUS.unsubscribe("effect_resisted", _recorder)
+
+    assert not ally.effect_manager.dots
+    assert events, "effect_resisted event did not fire"
+    _, recorded_target, recorded_source, metadata = events[-1]
+    assert recorded_target is ally
+    assert recorded_source is attacker
+    assert (metadata or {}).get("effect_type") == "dot"
+
+    assert ally.ultimate_charge == baseline_charge + 1
+    assert not ally.ultimate_ready
 
 
-def test_polished_shield_grants_defense_on_resist():
-    loop, ally = _setup_ally_with_card(PolishedShield)
+@pytest.mark.asyncio
+async def test_polished_shield_grants_defense_on_resist():
+    ally = await _setup_ally_with_card(PolishedShield)
+    attacker = _create_attacker()
+    baseline_defense = ally.defense
+    assert attacker.effect_hit_rate >= 0.99
+    assert ally.effect_resistance > 0.5
+
+    events: list[tuple[str | None, Stats, Stats, dict | None]] = []
+
+    def _recorder(effect_name, target, source, details=None):
+        events.append((effect_name, target, source, details))
+
+    BUS.subscribe("effect_resisted", _recorder)
     try:
-        attacker = _create_attacker()
-        baseline_defense = ally.defense
-        assert attacker.effect_hit_rate >= 0.99
-        assert ally.effect_resistance > 0.5
-
-        events: list[tuple[str | None, Stats, Stats, dict | None]] = []
-
-        def _recorder(effect_name, target, source, details=None):
-            events.append((effect_name, target, source, details))
-
-        BUS.subscribe("effect_resisted", _recorder)
-        try:
-            _trigger_resist(ally, attacker)
-            loop.run_until_complete(asyncio.sleep(0.05))
-            loop.run_until_complete(event_bus_module.bus._process_batches_internal())
-        finally:
-            BUS.unsubscribe("effect_resisted", _recorder)
-
-        assert not ally.effect_manager.dots
-        assert events, "effect_resisted event did not fire"
-
-        assert ally.defense == baseline_defense + 3
-        assert any(
-            mod.name == "polished_shield_resist_def"
-            for mod in ally.effect_manager.mods
-        )
+        await _trigger_resist(ally, attacker)
+        await asyncio.sleep(0.05)
+        await event_bus_module.bus._process_batches_internal()
     finally:
-        asyncio.set_event_loop(None)
-        loop.close()
+        BUS.unsubscribe("effect_resisted", _recorder)
+
+    assert not ally.effect_manager.dots
+    assert events, "effect_resisted event did not fire"
+
+    assert ally.defense == baseline_defense + 3
+    assert any(
+        mod.name == "polished_shield_resist_def"
+        for mod in ally.effect_manager.mods
+    )

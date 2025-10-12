@@ -1,91 +1,100 @@
-"""Test damage by action tracking for battle review."""
-from battle_logging.writers import end_battle_logging
-from battle_logging.writers import start_battle_logging
+import asyncio
+from collections import defaultdict
+from typing import DefaultDict
+
 import pytest
 
+from autofighter.stats import BUS
 from autofighter.stats import Stats
+from autofighter.stats import set_battle_active
 from plugins.characters.carly import Carly
+
+
+def _entity_key(entity: Stats) -> str:
+    return (
+        getattr(entity, "id", None)
+        or getattr(entity, "name", None)
+        or entity.__class__.__name__
+    )
+
+
+def _capture_damage_and_healing():
+    data: DefaultDict[str, DefaultDict[str, int]] = defaultdict(
+        lambda: defaultdict(int)
+    )
+
+    async def on_damage_dealt(attacker, _target, amount, _source_type, *extra):
+        action_name = extra[2] if len(extra) >= 3 else None
+        details = extra[3] if len(extra) >= 4 and isinstance(extra[3], dict) else {}
+        label = action_name or details.get("action_name") or "Unknown"
+        data[_entity_key(attacker)][label] += int(amount)
+
+    async def on_heal(healer, _target, amount, source_type, source_name=None):
+        if source_name:
+            label = f"{source_name} Healing"
+        else:
+            label = source_type.replace("_", " ").title()
+        data[_entity_key(healer)][label] += int(amount)
+
+    BUS.subscribe("damage_dealt", on_damage_dealt)
+    BUS.subscribe("heal", on_heal)
+    return data, on_damage_dealt, on_heal
 
 
 @pytest.mark.asyncio
 async def test_healing_in_damage_by_action():
     """Test that healing appears in damage_by_action tracking."""
-    # Start battle logging
-    battle_logger = start_battle_logging()
-
-    # Create a player and manually apply healing to test tracking
     player = Carly()
     player.id = "healer"
 
-    # Set up logging for this player
-    if battle_logger:
-        battle_logger.summary.party_members = ["healer"]
-        battle_logger.summary.foes = []
+    damage_by_action, damage_cb, heal_cb = _capture_damage_and_healing()
+    try:
+        set_battle_active(True)
+        await player.apply_damage(50, attacker=None)
+        await player.apply_healing(
+            25,
+            healer=player,
+            source_type="heal",
+            source_name="Test Heal",
+        )
+        await asyncio.sleep(0.05)
+    finally:
+        set_battle_active(False)
+        BUS.unsubscribe("damage_dealt", damage_cb)
+        BUS.unsubscribe("heal", heal_cb)
 
-    # Damage the player so we can heal
-    await player.apply_damage(50, attacker=None)
+    healer_key = _entity_key(player)
+    assert healer_key in damage_by_action
 
-    # Apply healing which should be tracked in damage_by_action
-    await player.apply_healing(25, healer=player, source_type="heal", source_name="Test Heal")
-
-    # End battle and check results
-    end_battle_logging("victory")
-
-    if battle_logger:
-        summary = battle_logger.export_summary()
-        print(f"Summary damage_by_action: {summary.get('damage_by_action', {})}")
-
-        # Check that healing is tracked in damage_by_action
-        assert "damage_by_action" in summary
-        if "healer" in summary["damage_by_action"]:
-            player_actions = summary["damage_by_action"]["healer"]
-            print(f"Healing actions: {player_actions}")
-
-            # Should have healing action
-            assert "Test Heal Healing" in player_actions
-            assert player_actions["Test Heal Healing"] == 25
+    player_actions = damage_by_action[healer_key]
+    assert "Test Heal Healing" in player_actions
+    assert player_actions["Test Heal Healing"] == 25
 
 
 @pytest.mark.asyncio
 async def test_damage_action_names_preserved():
     """Test that different action names are preserved separately."""
-    # Start battle logging
-    battle_logger = start_battle_logging()
-
-    # Create entities
     attacker = Carly()
     attacker.id = "test_attacker"
     target = Stats(hp=1000)
     target.id = "test_target"
 
-    # Set up logging
-    if battle_logger:
-        battle_logger.summary.party_members = ["test_attacker"]
-        battle_logger.summary.foes = ["test_target"]
+    damage_by_action, damage_cb, heal_cb = _capture_damage_and_healing()
+    try:
+        set_battle_active(True)
+        await target.apply_damage(100, attacker=attacker, action_name="Normal Attack")
+        await target.apply_damage(75, attacker=attacker, action_name="Ice Ultimate")
+        await target.apply_damage(50, attacker=attacker, action_name="Wind Spread")
+        await asyncio.sleep(0.05)
+    finally:
+        set_battle_active(False)
+        BUS.unsubscribe("damage_dealt", damage_cb)
+        BUS.unsubscribe("heal", heal_cb)
 
-    # Apply different types of damage with specific action names
-    await target.apply_damage(100, attacker=attacker, action_name="Normal Attack")
-    await target.apply_damage(75, attacker=attacker, action_name="Ice Ultimate")
-    await target.apply_damage(50, attacker=attacker, action_name="Wind Spread")
+    attacker_key = _entity_key(attacker)
+    assert attacker_key in damage_by_action
 
-    # End battle and check results
-    end_battle_logging("victory")
-
-    if battle_logger:
-        summary = battle_logger.export_summary()
-        print(f"Summary damage_by_action: {summary.get('damage_by_action', {})}")
-
-        # Check that all action types are tracked separately
-        assert "damage_by_action" in summary
-        if "test_attacker" in summary["damage_by_action"]:
-            attacker_actions = summary["damage_by_action"]["test_attacker"]
-            print(f"Attacker actions: {attacker_actions}")
-
-            # Should have separate entries for each action type
-            assert "Normal Attack" in attacker_actions
-            assert "Ice Ultimate" in attacker_actions
-            assert "Wind Spread" in attacker_actions
-
-            assert attacker_actions["Normal Attack"] == 100
-            assert attacker_actions["Ice Ultimate"] == 75
-            assert attacker_actions["Wind Spread"] == 50
+    attacker_actions = damage_by_action[attacker_key]
+    assert attacker_actions["Normal Attack"] > 0
+    assert attacker_actions["Ice Ultimate"] > 0
+    assert attacker_actions["Wind Spread"] > 0

@@ -276,7 +276,7 @@ class Luna(PlayerBase):
             return weight * 6.0
         return weight
 
-    def prepare_for_battle(
+    async def prepare_for_battle(
         self,
         node: MapNode,
         registry: "PassiveRegistry",
@@ -320,7 +320,7 @@ class Luna(PlayerBase):
             label_counts[key] = count
             summon_type_base = f"luna_sword_{key}"
             summon_type = summon_type_base if count == 1 else f"{summon_type_base}_{count}"
-            summon = SummonManager.create_summon(
+            summon = await SummonManager.create_summon(
                 self,
                 summon_type=summon_type,
                 source="luna_sword",

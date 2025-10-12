@@ -228,14 +228,14 @@ class BeccaMenagerieBond:
         if jellyfish_summons and jellyfish_type != self._last_summon.get(entity_key):
             # Remove old summon and create spirit
             for old_summon in jellyfish_summons:
-                SummonManager.remove_summon(old_summon, "replaced")
+                await SummonManager.remove_summon(old_summon, "replaced")
             await self._create_spirit(target)
 
         # Determine damage type based on jellyfish type
         damage_type = self._get_jellyfish_damage_type(jellyfish_type)
 
         # Create new summon using summons system
-        summon = SummonManager.create_summon(
+        summon = await SummonManager.create_summon(
             summoner=target,
             summon_type=f"jellyfish_{jellyfish_type}",
             source=self.id,

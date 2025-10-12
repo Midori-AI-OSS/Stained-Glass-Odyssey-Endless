@@ -44,9 +44,9 @@ class PolishedShield(CardBase):
                 target,
                 name=f"{self.id}_resist_def",
                 turns=1,
-                defense=3
+                defense=3,
             )
-            effect_manager.add_modifier(def_mod)
+            await effect_manager.add_modifier(def_mod)
 
             import logging
             log = logging.getLogger(__name__)

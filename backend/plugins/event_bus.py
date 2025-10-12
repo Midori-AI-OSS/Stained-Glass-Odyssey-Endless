@@ -13,7 +13,6 @@ try:
 except Exception:  # pragma: no cover - fallback when Rich is missing
     RichHandler = logging.StreamHandler
 
-
 class EventMetrics:
     """Track event bus performance metrics."""
 
@@ -44,6 +43,25 @@ class EventMetrics:
                     'errors': self.error_counts[event]
                 }
         return stats
+
+
+_FAST_BATCH_INTERVAL: float | None = None
+
+
+def _get_fast_batch_interval() -> float:
+    """Resolve the fastest batch interval without introducing import cycles."""
+
+    global _FAST_BATCH_INTERVAL
+
+    if _FAST_BATCH_INTERVAL is None:
+        try:
+            from autofighter.rooms.battle.pacing import YIELD_DELAY as pacing_yield_delay
+        except Exception:  # pragma: no cover - fallback when dependency unavailable
+            pacing_yield_delay = 0.001
+
+        _FAST_BATCH_INTERVAL = pacing_yield_delay
+
+    return _FAST_BATCH_INTERVAL
 
 
 class _Bus:
@@ -121,32 +139,55 @@ class _Bus:
 
     def send_batched(self, event: str, args) -> None:
         """Add event to batch for high-frequency events."""
+        loop = None
+        with contextlib.suppress(RuntimeError):
+            loop = asyncio.get_running_loop()
+
+        if loop is None:
+            log.debug(
+                "No running event loop available for send_batched('%s')",
+                event,
+            )
+            return
+
+        self.send_batched_async(event, args, loop)
+
+    def send_batched_async(
+        self,
+        event: str,
+        args,
+        loop: asyncio.AbstractEventLoop,
+    ) -> None:
+        """Schedule batched processing on *loop* without synchronous fallback."""
+
         self._batched_events[event].append(args)
 
-        if self._batch_timer is None:
-            try:
-                loop = asyncio.get_running_loop()
-            except RuntimeError:
-                log.debug("No running event loop; processing batched events synchronously")
-                self._process_batches_sync()
-            else:
-                # Adaptive batching: reduce interval under high load
-                if self._dynamic_batch_interval:
-                    total_queued = sum(len(events) for events in self._batched_events.values())
-                    if total_queued > 100:
-                        interval = 0.001  # Very fast processing under very high load
-                    elif total_queued > 50:
-                        interval = max(0.005, self._batch_interval * 0.5)  # Faster processing under load
-                    else:
-                        interval = self._batch_interval
-                else:
-                    interval = self._batch_interval
+        if self._batch_timer is not None:
+            return
 
-                # Schedule batch processing
-                self._batch_timer = loop.create_task(
-                    self._process_batches_with_interval(interval)
-                )
+        if self._dynamic_batch_interval:
+            total_queued = sum(len(events) for events in self._batched_events.values())
+            if total_queued > 100:
+                interval = _get_fast_batch_interval()
+            elif total_queued > 50:
+                interval = max(0.005, self._batch_interval * 0.5)
+            else:
+                interval = self._batch_interval
+        else:
+            interval = self._batch_interval
+
+        def _schedule() -> None:
+            if self._batch_timer is not None:
                 return
+
+            self._batch_timer = loop.create_task(
+                self._process_batches_with_interval(interval)
+            )
+
+        if loop.is_running():
+            _schedule()
+        else:
+            loop.call_soon_threadsafe(_schedule)
 
     async def _process_batches_with_interval(self, interval: float):
         """Process batched events with adaptive interval."""
@@ -313,6 +354,11 @@ class EventBus:
 
         return True
 
+    def _schedule_emit_batched(self, event: str, args: tuple[Any, ...]) -> None:
+        """Schedule batched emission on the stored loop."""
+
+        asyncio.create_task(self.emit_batched_async(event, *args))
+
     def subscribe(self, event: str, callback: Callable[..., Any]) -> None:
         def _prepare_args(args: Any) -> list[Any]:
             sig = inspect.signature(callback)
@@ -367,17 +413,42 @@ class EventBus:
         self._capture_current_loop()
         await bus.send_async(event, args)
 
+    async def emit_batched_async(self, event: str, *args: Any) -> None:
+        """Async helper that ensures batched events are processed by the active loop."""
+
+        loop = self._capture_current_loop()
+        if loop is None:
+            loop = self._loop
+            if loop is not None and loop.is_closed():
+                self._loop = None
+                loop = None
+
+        if loop is None:
+            log.warning(
+                "No event loop available for batched event '%s'; emitting synchronously",
+                event,
+            )
+            await bus.send_async(event, args)
+            return
+
+        bus.send_batched_async(event, args, loop)
+        await asyncio.sleep(0)
+
     def emit_batched(self, event: str, *args: Any) -> None:
         """Emit high-frequency events in batches to reduce blocking."""
         loop = self._capture_current_loop()
         if loop is not None:
-            bus.send_batched(event, args)
+            asyncio.create_task(self.emit_batched_async(event, *args))
             return
 
-        if self._dispatch_to_loop(bus.send_batched, event, args):
+        if self._dispatch_to_loop(self._schedule_emit_batched, event, args):
             return
 
-        bus.send_batched(event, args)
+        log.warning(
+            "No event loop available for batched event '%s'; emitting synchronously",
+            event,
+        )
+        bus.send(event, args)
 
     def get_performance_metrics(self) -> dict:
         """Get event bus performance metrics."""

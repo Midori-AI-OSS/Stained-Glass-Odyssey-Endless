@@ -64,7 +64,7 @@ class Fire(DamageTypeBase):
                 mgr = EffectManager(foe)
                 foe.effect_manager = mgr
             try:
-                mgr.maybe_inflict_dot(actor, dealt)
+                await mgr.maybe_inflict_dot(actor, dealt)
             except Exception:
                 pass
         return True

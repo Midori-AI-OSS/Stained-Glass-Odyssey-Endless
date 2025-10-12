@@ -10,7 +10,7 @@ class AbyssalWeakness(DamageOverTime):
         super().__init__("Abyssal Weakness", damage, turns, self.id)
         self._applied = False
 
-    def tick(self, target, *_):
+    async def tick(self, target, *_):
         if not self._applied:
             effect = StatEffect(
                 name=f"{self.id}_defense_down",
@@ -20,7 +20,7 @@ class AbyssalWeakness(DamageOverTime):
             target.add_effect(effect)
             target.defense = max(target.defense, 0)
             self._applied = True
-        active = super().tick(target)
+        active = await super().tick(target, *_)
         if not active:
             target.remove_effect_by_name(f"{self.id}_defense_down")
         return active

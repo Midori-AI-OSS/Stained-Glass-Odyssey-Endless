@@ -22,7 +22,7 @@ class DummyEffectManager:
     def __init__(self) -> None:
         self.dot_calls: list[tuple[object, float]] = []
 
-    def maybe_inflict_dot(self, member, damage: float) -> None:
+    async def maybe_inflict_dot(self, member, damage: float) -> None:
         self.dot_calls.append((member, damage))
 
 

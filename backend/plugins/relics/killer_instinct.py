@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from dataclasses import field
 
+from autofighter.effects import EffectManager
 from autofighter.effects import create_stat_buff
 from autofighter.stats import BUS
 from plugins.characters._base import PlayerBase
@@ -67,8 +68,18 @@ class KillerInstinct(RelicBase):
                 "stacks": current_stacks
             })
 
-            mod = create_stat_buff(user, name=f"{self.id}_atk", atk_mult=atk_mult, turns=1)
-            user.effect_manager.add_modifier(mod)
+            mgr = getattr(user, "effect_manager", None)
+            if mgr is None:
+                mgr = EffectManager(user)
+                user.effect_manager = mgr
+
+            mod = create_stat_buff(
+                user,
+                name=f"{self.id}_atk",
+                atk_mult=atk_mult,
+                turns=1,
+            )
+            await mgr.add_modifier(mod)
             _remove_buff(ultimate_buffs, id(user))
             ultimate_buffs[id(user)] = (user, mod)
 
@@ -102,13 +113,18 @@ class KillerInstinct(RelicBase):
                 )
 
                 _remove_buff(speed_buffs, id(attacker))
+                mgr = getattr(attacker, "effect_manager", None)
+                if mgr is None:
+                    mgr = EffectManager(attacker)
+                    attacker.effect_manager = mgr
+
                 mod = create_stat_buff(
                     attacker,
                     name=f"{self.id}_spd",
                     spd_mult=speed_mult,
                     turns=2,
                 )
-                attacker.effect_manager.add_modifier(mod)
+                await mgr.add_modifier(mod)
                 speed_buffs[id(attacker)] = (attacker, mod)
 
         def _turn_end(*_args) -> None:

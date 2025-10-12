@@ -27,7 +27,7 @@ class Light(DamageTypeBase):
             if mgr is not None:
                 hot = damage_effects.create_hot(self.id, actor)
                 if hot is not None:
-                    mgr.add_hot(hot)
+                    await mgr.add_hot(hot)
             await pace_sleep(YIELD_MULTIPLIER)
 
         for ally in allies:
@@ -100,7 +100,7 @@ class Light(DamageTypeBase):
                 turns=10,
                 defense_mult=0.75,
             )
-            mgr.add_modifier(mod)
+            await mgr.add_modifier(mod)
             await pace_sleep(YIELD_MULTIPLIER)
 
         await BUS.emit_async("light_ultimate", actor)

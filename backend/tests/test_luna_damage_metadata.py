@@ -17,11 +17,11 @@ async def test_luna_consecutive_hits_emit_unique_attack_metadata(monkeypatch):
     set_battle_active(True)
     events: list[tuple] = []
 
-    def _capture(event: str, *args):
+    async def _capture(event: str, *args):
         if event == "damage_taken":
             events.append(args)
 
-    monkeypatch.setattr(BUS, "emit_batched", _capture)
+    monkeypatch.setattr(BUS, "emit_batched_async", _capture)
 
     attacker = Luna()
     attacker.id = "luna_test_attacker"

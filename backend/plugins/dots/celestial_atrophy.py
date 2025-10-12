@@ -22,7 +22,7 @@ class CelestialAtrophy(DamageOverTime):
                 turns=self.turns,
                 atk=-1,
             )
-            manager.add_modifier(mod)
+            await manager.add_modifier(mod)
             self._mods.append(mod)
         alive = await super().tick(target)
         if not alive and manager is not None:

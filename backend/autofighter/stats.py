@@ -939,7 +939,7 @@ class Stats:
         }
         damage_details.update(attack_metadata)
 
-        BUS.emit_batched(
+        await BUS.emit_batched_async(
             "damage_taken",
             self,
             attacker_obj,
@@ -952,7 +952,7 @@ class Stats:
         )
         if attacker_obj is not None:
             attacker_obj.damage_dealt += hp_damage
-            BUS.emit_batched(
+            await BUS.emit_batched_async(
                 "damage_dealt",
                 attacker_obj,
                 self,
@@ -989,7 +989,7 @@ class Stats:
             except Exception as e:  # pragma: no cover - defensive
                 log.warning("Error triggering damage_taken passives: %s", e)
         post_hit_hp = self.hp
-        BUS.emit_batched(
+        await BUS.emit_batched_async(
             "damage_taken",
             self,
             None,
@@ -1058,9 +1058,23 @@ class Stats:
             self.hp = min(self.hp + amount, self.max_hp)
 
         # Use batched emission for high-frequency healing events
-        BUS.emit_batched("heal_received", self, healer, amount, source_type, source_name)
+        await BUS.emit_batched_async(
+            "heal_received",
+            self,
+            healer,
+            amount,
+            source_type,
+            source_name,
+        )
         if healer is not None:
-            BUS.emit_batched("heal", healer, self, amount, source_type, source_name)
+            await BUS.emit_batched_async(
+                "heal",
+                healer,
+                self,
+                amount,
+                source_type,
+                source_name,
+            )
         return amount
 
     def enable_overheal(self) -> None:

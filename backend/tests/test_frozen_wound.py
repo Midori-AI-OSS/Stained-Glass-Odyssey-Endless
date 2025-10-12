@@ -1,8 +1,11 @@
 import pytest
 
+import pytest
+
 from autofighter.effects import EffectManager
 from autofighter.stats import Stats
 from plugins.dots.frozen_wound import FrozenWound
+from tests.helpers import call_maybe_async
 
 
 @pytest.mark.asyncio
@@ -26,7 +29,7 @@ async def test_frozen_wound_miss_chance(stacks, roll, expect_miss, monkeypatch):
     actor.effect_manager = EffectManager(actor)
     target.effect_manager = EffectManager(target)
     for _ in range(stacks):
-        actor.effect_manager.add_dot(FrozenWound(1, 1))
+        await call_maybe_async(actor.effect_manager.add_dot, FrozenWound(1, 1))
     monkeypatch.setattr("plugins.dots.frozen_wound.random.random", lambda: roll)
     proceed = await actor.effect_manager.on_action()
     if proceed:

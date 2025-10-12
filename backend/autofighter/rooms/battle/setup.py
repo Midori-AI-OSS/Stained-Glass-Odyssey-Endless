@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import asyncio
 import copy
+import inspect
 from dataclasses import dataclass
 from typing import Sequence
 
@@ -48,6 +49,15 @@ async def _clone_members(members: Sequence[Stats]) -> list[Stats]:
     return await asyncio.to_thread(_copy_members)
 
 
+async def _call_maybe_async(func, *args, **kwargs):
+    """Invoke ``func`` and await the result when it returns a coroutine."""
+
+    result = func(*args, **kwargs)
+    if inspect.isawaitable(result):
+        return await result
+    return result
+
+
 async def _apply_relics_async(party: Party) -> None:
     """Asynchronously apply relic effects to a party."""
 
@@ -83,7 +93,7 @@ async def setup_battle(
         _scale_stats(stats, node, strength)
         prepare = getattr(stats, "prepare_for_battle", None)
         if callable(prepare):
-            prepare(node, registry)
+            await _call_maybe_async(prepare, node, registry)
 
     members = await _clone_members(party.members)
     combat_party = Party(
@@ -125,7 +135,7 @@ async def setup_battle(
         member.effect_manager = manager
         prepare = getattr(member, "prepare_for_battle", None)
         if callable(prepare):
-            prepare(node, registry)
+            await _call_maybe_async(prepare, node, registry)
 
     try:
         entities = list(combat_party.members) + list(foes)

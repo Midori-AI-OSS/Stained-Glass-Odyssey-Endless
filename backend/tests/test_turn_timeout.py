@@ -34,7 +34,7 @@ class DummyEffectManager:
     async def on_action(self):
         return True
 
-    def maybe_inflict_dot(self, *_):  # pragma: no cover - simple stub
+    async def maybe_inflict_dot(self, *_):  # pragma: no cover - simple stub
         return None
 
 

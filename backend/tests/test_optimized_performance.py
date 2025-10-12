@@ -11,6 +11,7 @@ import time
 from autofighter.effects import DamageOverTime
 from autofighter.effects import EffectManager
 from autofighter.stats import Stats
+from tests.helpers import call_maybe_async
 
 
 @pytest.mark.asyncio
@@ -38,7 +39,7 @@ async def test_optimized_performance():
             id=f"dot_{i}",
             source=target
         )
-        manager.add_dot(dot)
+        await call_maybe_async(manager.add_dot, dot)
 
     print(f"Added {len(manager.dots)} DOT effects")
     print(f"Target HP: {target.hp}/{target.max_hp}")

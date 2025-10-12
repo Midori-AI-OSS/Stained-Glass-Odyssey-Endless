@@ -40,9 +40,9 @@ class InspiringBanner(CardBase):
                         random_ally,
                         name=f"{self.id}_battle_start",
                         turns=2,
-                        atk_mult=1.02  # +2% ATK
+                        atk_mult=1.02,  # +2% ATK
                     )
-                    effect_manager.add_modifier(atk_mod)
+                    await effect_manager.add_modifier(atk_mod)
 
                     import logging
                     log = logging.getLogger(__name__)

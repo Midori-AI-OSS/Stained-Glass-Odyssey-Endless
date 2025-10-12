@@ -6,6 +6,8 @@ import types
 
 import pytest
 
+from tests.helpers import call_maybe_async
+
 battle_logging = types.ModuleType("battle_logging")
 battle_logging_writers = types.ModuleType("battle_logging.writers")
 battle_logging_writers.end_battle_logging = lambda *_, **__: None
@@ -60,30 +62,64 @@ Fire = getattr(importlib.import_module("plugins.damage_types.fire"), "Fire")
 EventBus = getattr(importlib.import_module("plugins.event_bus"), "EventBus")
 
 
-def test_dot_applies_with_hit_rate():
+@pytest.mark.asyncio
+async def test_dot_applies_with_hit_rate():
     attacker = Stats(damage_type=Fire())
     attacker.set_base_stat('atk', 50)
     attacker.set_base_stat('effect_hit_rate', 2.0)
     target = Stats()
     target.set_base_stat('effect_resistance', 0.0)
     manager = EffectManager(target)
-    manager.maybe_inflict_dot(attacker, 50)
+    await call_maybe_async(manager.maybe_inflict_dot, attacker, 50)
     assert target.dots
 
 
-def test_blazing_torment_stacks():
+@pytest.mark.asyncio
+async def test_reapplying_active_modifier_retains_bonus():
+    stats = Stats()
+    manager = EffectManager(stats)
+    base_atk = stats.atk
+
+    first = effects.create_stat_buff(
+        stats,
+        name="refresh_buff",
+        id="refresh_buff",
+        atk=10,
+        turns=3,
+    )
+    await call_maybe_async(manager.add_modifier, first)
+    assert stats.atk == base_atk + 10
+
+    second = effects.create_stat_buff(
+        stats,
+        name="refresh_buff",
+        id="refresh_buff",
+        atk=10,
+        turns=3,
+    )
+    await call_maybe_async(manager.add_modifier, second)
+
+    assert stats.atk == base_atk + 10
+    assert manager.mods == [second]
+    assert not first._effect_applied
+    assert second._effect_applied
+
+
+@pytest.mark.asyncio
+async def test_blazing_torment_stacks():
     attacker = Stats(damage_type=Fire())
     attacker.set_base_stat('atk', 50)
     attacker.set_base_stat('effect_hit_rate', 2.0)
     target = Stats()
     target.set_base_stat('effect_resistance', 0.0)
     manager = EffectManager(target)
-    manager.maybe_inflict_dot(attacker, 50)
-    manager.maybe_inflict_dot(attacker, 50)
+    await call_maybe_async(manager.maybe_inflict_dot, attacker, 50)
+    await call_maybe_async(manager.maybe_inflict_dot, attacker, 50)
     assert target.dots.count("blazing_torment") >= 2
 
 
-def test_high_hit_rate_applies_multiple_stacks(monkeypatch):
+@pytest.mark.asyncio
+async def test_high_hit_rate_applies_multiple_stacks(monkeypatch):
     attacker = Stats(damage_type=Fire())
     attacker.set_base_stat('atk', 50)
     attacker.set_base_stat('effect_hit_rate', 3.5)
@@ -91,7 +127,7 @@ def test_high_hit_rate_applies_multiple_stacks(monkeypatch):
     target.set_base_stat('effect_resistance', 0.1)
     manager = EffectManager(target)
     monkeypatch.setattr(effects.random, "random", lambda: 0.0)
-    manager.maybe_inflict_dot(attacker, 50)
+    await call_maybe_async(manager.maybe_inflict_dot, attacker, 50)
     assert target.dots.count("blazing_torment") >= 3
 
 
@@ -147,8 +183,14 @@ async def test_hot_ticks_before_dot():
     target.set_base_stat('defense', 0)
     target.id = "t"
     manager = EffectManager(target)
-    manager.add_hot(effects.HealingOverTime("regen", 10, 1, "h"))
-    manager.add_dot(effects.DamageOverTime("burn", 1, 1, "d"))
+    await call_maybe_async(
+        manager.add_hot,
+        effects.HealingOverTime("regen", 10, 1, "h"),
+    )
+    await call_maybe_async(
+        manager.add_dot,
+        effects.DamageOverTime("burn", 1, 1, "d"),
+    )
     set_battle_active(True)
     try:
         await manager.tick()
@@ -180,7 +222,10 @@ async def test_hot_minimum_tick_healing():
     manager = EffectManager(target)
     healer = Stats()
 
-    manager.add_hot(effects.HealingOverTime("regen", 0, 1, "hot_min", source=healer))
+    await call_maybe_async(
+        manager.add_hot,
+        effects.HealingOverTime("regen", 0, 1, "hot_min", source=healer),
+    )
 
     set_battle_active(True)
     try:
@@ -205,7 +250,7 @@ async def test_hot_effects_removed_when_target_is_dead():
     healer = Stats()
 
     hot = effects.HealingOverTime("regen", healing=5, turns=3, id="dead_hot", source=healer)
-    manager.add_hot(hot)
+    await call_maybe_async(manager.add_hot, hot)
     assert manager.hots
 
     set_battle_active(True)
@@ -241,8 +286,14 @@ async def test_zero_damage_dot_deals_minimum_one_per_stack():
     target.hp = 10
     manager = EffectManager(target)
 
-    manager.add_dot(effects.DamageOverTime("zero_dot", 0, 1, "zero_dot", source=attacker))
-    manager.add_dot(effects.DamageOverTime("zero_dot", 0, 1, "zero_dot", source=attacker))
+    await call_maybe_async(
+        manager.add_dot,
+        effects.DamageOverTime("zero_dot", 0, 1, "zero_dot", source=attacker),
+    )
+    await call_maybe_async(
+        manager.add_dot,
+        effects.DamageOverTime("zero_dot", 0, 1, "zero_dot", source=attacker),
+    )
 
     set_battle_active(True)
     try:
@@ -257,7 +308,8 @@ async def test_zero_damage_dot_deals_minimum_one_per_stack():
     assert target.hp == 8
 
 
-def test_dot_has_minimum_chance(monkeypatch):
+@pytest.mark.asyncio
+async def test_dot_has_minimum_chance(monkeypatch):
     attacker = Stats(damage_type=Fire())
     attacker.set_base_stat('effect_hit_rate', 0.0)
     target = Stats()
@@ -265,7 +317,7 @@ def test_dot_has_minimum_chance(monkeypatch):
     manager = EffectManager(target)
     monkeypatch.setattr(effects.random, "uniform", lambda a, b: 1.0)
     monkeypatch.setattr(effects.random, "random", lambda: 0.0)
-    manager.maybe_inflict_dot(attacker, 10)
+    await call_maybe_async(manager.maybe_inflict_dot, attacker, 10)
     assert target.dots
 
 
@@ -283,7 +335,8 @@ async def test_stat_modifier_applies_and_expires():
         atk=5,
         defense_mult=2,
     )
-    manager.add_modifier(mod)
+    await call_maybe_async(manager.add_modifier, mod)
+    await manager.add_modifier(mod)
     assert stats.atk == 15
     assert stats.defense == 40
     await manager.tick()
@@ -366,7 +419,12 @@ async def test_parallel_dot_ticks_respect_pacing(monkeypatch):
 
     manager = EffectManager(target)
     for idx in range(25):
-        manager.add_dot(effects.DamageOverTime(f"burn{idx}", damage=1, turns=1, id=f"burn{idx}"))
+        await call_maybe_async(
+            manager.add_dot,
+            effects.DamageOverTime(
+                f"burn{idx}", damage=1, turns=1, id=f"burn{idx}"
+            ),
+        )
 
     set_battle_active(True)
     try:
@@ -402,7 +460,10 @@ async def test_self_inflicted_dot_uses_none_attacker(monkeypatch):
 
     monkeypatch.setattr(PassiveRegistry, "trigger_damage_taken", _record)
 
-    manager.add_dot(effects.DamageOverTime("Self Burn", 10, 1, "self_burn", source=target))
+    await call_maybe_async(
+        manager.add_dot,
+        effects.DamageOverTime("Self Burn", 10, 1, "self_burn", source=target),
+    )
 
     set_battle_active(True)
     try:

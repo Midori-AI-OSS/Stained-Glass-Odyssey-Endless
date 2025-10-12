@@ -164,6 +164,7 @@ class StatModifier:
         """Remove the effect from stats if it was applied."""
         if self._effect_applied:
             self.stats.remove_effect_by_name(self.id)
+            self._effect_applied = False
 
     def tick(self) -> bool:
         """Decrement remaining turns and remove when expired."""
@@ -353,7 +354,7 @@ class EffectManager:
         """Write a log message without blocking the main loop."""
         await asyncio.to_thread(self._console.log, message)
 
-    def add_dot(self, effect: DamageOverTime, max_stacks: int | None = None) -> None:
+    async def add_dot(self, effect: DamageOverTime, max_stacks: int | None = None) -> None:
         """Attach a DoT instance to the tracked stats.
 
         DoTs with the same ``id`` stack independently, allowing multiple
@@ -374,15 +375,20 @@ class EffectManager:
         self.stats.dots.append(effect.id)
 
         # Emit effect applied event - batched for performance
-        BUS.emit_batched("effect_applied", effect.name, self.stats, {
-            "effect_type": "dot",
-            "effect_id": effect.id,
-            "damage": effect.damage,
-            "turns": effect.turns,
-            "current_stacks": len([d for d in self.dots if d.id == effect.id])
-        })
+        await BUS.emit_batched_async(
+            "effect_applied",
+            effect.name,
+            self.stats,
+            {
+                "effect_type": "dot",
+                "effect_id": effect.id,
+                "damage": effect.damage,
+                "turns": effect.turns,
+                "current_stacks": len([d for d in self.dots if d.id == effect.id]),
+            },
+        )
 
-    def add_hot(self, effect: HealingOverTime) -> None:
+    async def add_hot(self, effect: HealingOverTime) -> None:
         """Attach a HoT instance to the tracked stats.
 
         Healing effects simply accumulate; each copy heals separately every
@@ -398,31 +404,64 @@ class EffectManager:
         self.stats.hots.append(effect.id)
 
         # Emit effect applied event - batched for performance
-        BUS.emit_batched("effect_applied", effect.name, self.stats, {
-            "effect_type": "hot",
-            "effect_id": effect.id,
-            "healing": effect.healing,
-            "turns": effect.turns,
-            "current_stacks": len([h for h in self.hots if h.id == effect.id])
-        })
+        await BUS.emit_batched_async(
+            "effect_applied",
+            effect.name,
+            self.stats,
+            {
+                "effect_type": "hot",
+                "effect_id": effect.id,
+                "healing": effect.healing,
+                "turns": effect.turns,
+                "current_stacks": len([h for h in self.hots if h.id == effect.id]),
+            },
+        )
 
-    def add_modifier(self, effect: StatModifier) -> None:
+    async def add_modifier(self, effect: StatModifier) -> None:
         """Attach a stat modifier to the tracked stats."""
         from autofighter.stats import BUS  # Import here to avoid circular imports
+
+        if any(existing is effect for existing in self.mods):
+            self.mods[:] = [mod for mod in self.mods if mod is not effect]
+
+        duplicates = [
+            existing for existing in self.mods if existing.id == effect.id
+        ]
+        duplicates_removed = False
+        for existing in duplicates:
+            existing.remove()
+            duplicates_removed = True
+
+        if duplicates:
+            self.mods[:] = [mod for mod in self.mods if mod not in duplicates]
+
+        if duplicates_removed:
+            effect._effect_applied = False
+
+        if not effect._effect_applied:
+            effect.apply()
+
+        while effect.id in self.stats.mods:
+            self.stats.mods.remove(effect.id)
 
         self.mods.append(effect)
         self.stats.mods.append(effect.id)
 
         # Emit effect applied event - batched for performance
-        BUS.emit_batched("effect_applied", effect.name, self.stats, {
-            "effect_type": "stat_modifier",
-            "effect_id": effect.id,
-            "turns": effect.turns,
-            "deltas": effect.deltas,
-            "multipliers": effect.multipliers
-        })
+        await BUS.emit_batched_async(
+            "effect_applied",
+            effect.name,
+            self.stats,
+            {
+                "effect_type": "stat_modifier",
+                "effect_id": effect.id,
+                "turns": effect.turns,
+                "deltas": effect.deltas,
+                "multipliers": effect.multipliers,
+            },
+        )
 
-    def maybe_inflict_dot(
+    async def maybe_inflict_dot(
         self, attacker: Stats, damage: int, turns: Optional[int] = None
     ) -> None:
         """Attempt to apply one or more DoT stacks based on effect hit rate.
@@ -495,7 +534,7 @@ class EffectManager:
                 if predicted_turns is not None:
                     details["predicted_turns"] = predicted_turns
 
-                BUS.emit_batched(
+                await BUS.emit_batched_async(
                     "effect_resisted",
                     effect_name,
                     self.stats,
@@ -511,7 +550,7 @@ class EffectManager:
             if turns is not None:
                 dot.turns = turns
 
-            self.add_dot(dot)
+            await self.add_dot(dot)
             remaining -= 1.0
 
     async def tick(self, others: Optional["EffectManager"] = None) -> None:
@@ -937,7 +976,9 @@ class EffectManager:
             for eff in list(self.dots):
                 on_death = getattr(eff, "on_death", None)
                 if callable(on_death):
-                    on_death(others)
+                    result = on_death(others)
+                    if hasattr(result, "__await"):
+                        await result
 
     async def on_action(self) -> bool:
         """Run any per-action hooks on attached effects.
