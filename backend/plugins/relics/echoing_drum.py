@@ -46,6 +46,9 @@ class EchoingDrum(RelicBase):
             if _echo_processing:
                 return
 
+            if attacker is None or attacker not in getattr(party, "members", ()):  # type: ignore[arg-type]
+                return
+
             pid = id(attacker)
             if pid in used:
                 return
@@ -134,9 +137,14 @@ class EchoingDrum(RelicBase):
             if getattr(party, "_echoing_drum_state", None) is state:
                 delattr(party, "_echoing_drum_state")
 
+        def _on_defeat(entity, *_args) -> None:
+            if entity in getattr(party, "members", ()):  # type: ignore[arg-type]
+                used.discard(id(entity))
+
         self.subscribe(party, "battle_start", _battle_start)
         self.subscribe(party, "action_used", _attack)
         self.subscribe(party, "attack_used", _attack)
+        self.subscribe(party, "entity_defeat", _on_defeat)
         self.subscribe(party, "battle_end", _cleanup)
 
     def describe(self, stacks: int) -> str:

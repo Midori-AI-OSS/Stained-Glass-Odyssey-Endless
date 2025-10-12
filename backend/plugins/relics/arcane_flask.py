@@ -29,6 +29,8 @@ class ArcaneFlask(RelicBase):
             state["stacks"] = stacks
 
         async def _ultimate(user) -> None:
+            if user is None or user not in getattr(party, "members", ()):  # type: ignore[arg-type]
+                return
             current_state = getattr(party, "_arcane_flask_state", {})
             current_stacks = current_state.get("stacks", 0)
             if current_stacks <= 0:

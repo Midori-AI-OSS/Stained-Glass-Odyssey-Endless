@@ -48,6 +48,9 @@ class EchoBell(RelicBase):
             if _echo_processing:
                 return
 
+            if actor is None or actor not in getattr(party, "members", ()):  # type: ignore[arg-type]
+                return
+
             pid = id(actor)
             if pid in used:
                 return

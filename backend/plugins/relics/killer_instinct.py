@@ -53,6 +53,8 @@ class KillerInstinct(RelicBase):
                 _remove_buff(speed_buffs, member_id)
 
         async def _ultimate(user) -> None:
+            if user is None or user not in getattr(party, "members", ()):  # type: ignore[arg-type]
+                return
             current_state = getattr(party, "_killer_instinct_state", state)
             current_stacks = current_state.get("stacks", 0)
             if current_stacks <= 0:
@@ -84,7 +86,7 @@ class KillerInstinct(RelicBase):
             ultimate_buffs[id(user)] = (user, mod)
 
         async def _damage(target, attacker, amount, *_: object) -> None:
-            if attacker is None:
+            if attacker is None or attacker not in getattr(party, "members", ()):  # type: ignore[arg-type]
                 return
             if target.hp <= 0 and id(attacker) in ultimate_buffs:
                 current_state = getattr(party, "_killer_instinct_state", state)

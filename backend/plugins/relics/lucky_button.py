@@ -24,6 +24,8 @@ class LuckyButton(RelicBase):
         active: dict[int, tuple[PlayerBase, CriticalBoost]] = {}
 
         async def _crit_missed(attacker, target) -> None:
+            if attacker is None or attacker not in getattr(party, "members", ()):  # type: ignore[arg-type]
+                return
             pid = id(attacker)
             pending[pid] = pending.get(pid, 0) + 1
 
