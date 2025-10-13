@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Mapping as MappingABC
 from dataclasses import dataclass
 import random
 from typing import Any
@@ -175,18 +176,6 @@ class FoeFactory:
                 foe.rank = "glitched boss"
             else:
                 foe.rank = "boss"
-            if context is not None:
-                apply_permanent_scaling(
-                    foe,
-                    multipliers=context.foe_stat_multipliers,
-                    deltas=context.foe_stat_deltas,
-                    name="Run modifier scaling",
-                    modifier_id=f"{config.get('scaling_modifier_id', 'foe_room_scaling')}_run_mod",
-                )
-                try:
-                    foe.hp = foe.max_hp
-                except Exception:
-                    pass
             return [foe]
 
         desired = _desired_count(
@@ -215,18 +204,6 @@ class FoeFactory:
                 foe.rank = "prime"
             elif is_glitched:
                 foe.rank = "glitched"
-            if context is not None:
-                apply_permanent_scaling(
-                    foe,
-                    multipliers=context.foe_stat_multipliers,
-                    deltas=context.foe_stat_deltas,
-                    name="Run modifier scaling",
-                    modifier_id=f"{config.get('scaling_modifier_id', 'foe_room_scaling')}_run_mod",
-                )
-                try:
-                    foe.hp = foe.max_hp
-                except Exception:
-                    pass
             foes.append(foe)
         return foes
 
@@ -276,8 +253,18 @@ class FoeFactory:
     def scale_stats(
         self, obj: Stats, node: MapNode, strength: float = 1.0, context: RunModifierContext | None = None
     ) -> None:
-        if context is None:
-            context = getattr(node, "run_modifier_context", None)
+        context_candidate: RunModifierContext | Mapping[str, Any] | None = context
+        if context_candidate is None:
+            context_candidate = getattr(node, "run_modifier_context", None)
+        if isinstance(context_candidate, RunModifierContext):
+            context = context_candidate
+        elif isinstance(context_candidate, MappingABC):
+            try:
+                context = RunModifierContext.from_dict(context_candidate)
+            except Exception:
+                context = None
+        else:
+            context = None
 
         cumulative_rooms = calculate_cumulative_rooms(node)
         baseline_stats: dict[str, float] = {}
@@ -352,13 +339,14 @@ class FoeFactory:
                 except Exception:
                     continue
         if context is not None:
-            apply_permanent_scaling(
-                obj,
-                multipliers=context.foe_stat_multipliers,
-                deltas=context.foe_stat_deltas,
-                name="Run modifier scaling",
-                modifier_id=f"{config.get('scaling_modifier_id', 'foe_room_scaling')}_run_mod",
-            )
+            if context.foe_stat_multipliers or context.foe_stat_deltas:
+                apply_permanent_scaling(
+                    obj,
+                    multipliers=context.foe_stat_multipliers,
+                    deltas=context.foe_stat_deltas,
+                    name="Run modifier scaling",
+                    modifier_id=f"{config.get('scaling_modifier_id', 'foe_room_scaling')}_run_mod",
+                )
             try:
                 obj.hp = obj.max_hp
             except Exception:
