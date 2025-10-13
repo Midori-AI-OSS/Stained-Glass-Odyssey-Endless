@@ -9,9 +9,12 @@ from autofighter.relics import apply_relics
 from autofighter.relics import award_relic
 from autofighter.stats import BUS
 from autofighter.stats import Stats
+from autofighter.summons.manager import SummonManager
 from plugins.effects.aftertaste import Aftertaste
 import plugins.event_bus as event_bus_module
 from plugins.characters._base import PlayerBase
+from plugins.characters.becca import Becca
+from plugins.characters.luna import Luna
 import plugins.relics._base as relic_base_module
 import plugins.relics.echo_bell as echo_bell_module
 
@@ -481,3 +484,112 @@ async def test_echo_bell_aftertaste_trigger(monkeypatch):
         await asyncio.gather(*created_tasks)
         created_tasks.clear()
     assert triggered_hits == [1]
+
+
+@pytest.mark.asyncio
+async def test_arcane_flask_ignores_foe_summons():
+    event_bus_module.bus._subs.clear()
+    SummonManager.initialize()
+    party = Party()
+    ally = PlayerBase()
+    ally.set_base_stat('max_hp', 500)
+    ally.hp = ally.max_hp
+    party.members.append(ally)
+    award_relic(party, "arcane_flask")
+    await apply_relics(party)
+
+    foe = Luna()
+    foe.set_base_stat('max_hp', 800)
+    foe.hp = foe.max_hp
+    foe.hp -= 100
+    sword = await SummonManager.create_summon(
+        foe,
+        summon_type="luna_sword_test",
+        source="luna_sword",
+        stat_multiplier=1.0,
+        force_create=True,
+    )
+    assert sword is not None
+    foe_hp_before = foe.hp
+    sword_hp_before = sword.hp
+    events: list[tuple] = []
+
+    def capture(*args: object) -> None:
+        events.append(args)
+
+    BUS.subscribe("relic_effect", capture)
+    try:
+        await BUS.emit_async("ultimate_used", foe)
+        await asyncio.sleep(0)
+    finally:
+        BUS.unsubscribe("relic_effect", capture)
+        await SummonManager.remove_summon(sword, "test_cleanup")
+
+    assert not events
+    assert foe.hp == foe_hp_before
+    assert sword.hp == sword_hp_before
+
+
+@pytest.mark.asyncio
+async def test_echoing_drum_ignores_foe_attack_buffs():
+    event_bus_module.bus._subs.clear()
+    SummonManager.initialize()
+    party = Party()
+    ally = PlayerBase()
+    party.members.append(ally)
+    award_relic(party, "echoing_drum")
+    await apply_relics(party)
+
+    foe = Becca()
+    foe.set_base_stat('atk', 120)
+    target = PlayerBase()
+    target.set_base_stat('max_hp', 300)
+    target.hp = target.max_hp
+
+    events: list[tuple] = []
+
+    def capture(*args: object) -> None:
+        events.append(args)
+
+    BUS.subscribe("relic_effect", capture)
+    try:
+        await BUS.emit_async("attack_used", foe, target, 80)
+        await BUS.emit_async("action_used", foe, target, 80)
+        await asyncio.sleep(0)
+    finally:
+        BUS.unsubscribe("relic_effect", capture)
+
+    assert not events
+
+    foe_effects = getattr(foe, "_active_effects", [])
+    assert not any(
+        getattr(effect, "name", "").startswith("echoing_drum") for effect in foe_effects
+    )
+    foe_manager = getattr(foe, "effect_manager", None)
+    if foe_manager is not None:
+        assert not any(
+            getattr(mod, "name", "").startswith("echoing_drum") for mod in foe_manager.mods
+        )
+
+    summon = await SummonManager.create_summon(
+        foe,
+        summon_type="becca_jellyfish_test",
+        source="becca_menagerie_bond",
+        stat_multiplier=1.0,
+        force_create=True,
+    )
+    assert summon is not None
+    try:
+        summon_effects = getattr(summon, "_active_effects", [])
+        assert not any(
+            getattr(effect, "name", "").startswith("echoing_drum") for effect in summon_effects
+        )
+        summon_manager = getattr(summon, "effect_manager", None)
+        if summon_manager is not None:
+            assert not any(
+                getattr(mod, "name", "").startswith("echoing_drum")
+                for mod in getattr(summon_manager, "mods", [])
+            )
+    finally:
+        await SummonManager.remove_summon(summon, "test_cleanup")
+

@@ -25,6 +25,8 @@ class BentDagger(RelicBase):
         async def _on_death(target, attacker, amount, *_: object) -> None:
             if target in party.members or target.hp > 0:
                 return
+            if attacker is None or attacker not in getattr(party, "members", ()):  # type: ignore[arg-type]
+                return
 
             # Track the kill trigger
             await BUS.emit_async("relic_effect", "bent_dagger", attacker, "foe_killed", amount, {
