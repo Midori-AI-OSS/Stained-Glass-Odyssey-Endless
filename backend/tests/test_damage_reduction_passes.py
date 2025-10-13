@@ -8,7 +8,7 @@ from plugins.characters.carly import Carly
 def _calculate_expected_damage(stats: Carly, raw_amount: float, passes: int) -> int:
     src_vit = 1.0
     eps = 1e-6
-    defense_term = max(stats.defense ** 2, 1)
+    defense_term = max(stats.defense ** 3, 1)
     vit = float(stats.vitality)
     vit = vit if vit > eps else eps
     mit = float(stats.mitigation)

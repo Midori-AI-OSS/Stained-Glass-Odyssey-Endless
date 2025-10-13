@@ -820,7 +820,7 @@ class Stats:
         src_vit = attacker_obj.vitality if attacker_obj is not None else 1.0
         original_damage_before_mitigation = amount
         # Guard against division by zero if vitality/mitigation are driven to 0 by effects
-        defense_term = max(self.defense ** 2, 1)
+        defense_term = max(self.defense ** 3, 1)
         vit = float(self.vitality) if isinstance(self.vitality, (int, float)) else 1.0
         mit = float(self.mitigation) if isinstance(self.mitigation, (int, float)) else 1.0
         # Clamp to a tiny positive epsilon to avoid zero/NaN

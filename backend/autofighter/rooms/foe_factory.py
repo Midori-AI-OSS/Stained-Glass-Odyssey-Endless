@@ -35,8 +35,8 @@ class SpawnResult:
 
 
 ROOM_BALANCE_CONFIG: dict[str, Any] = {
-    "foe_base_debuff": 0.5,
-    "room_growth_multiplier": 0.85,
+    "foe_base_debuff": 0.85,
+    "room_growth_multiplier": 1.15,
     "loop_growth_multiplier": 1.30,
     "pressure_multiplier": 1.0,
     "scaling_variance": 0.05,
