@@ -11,7 +11,10 @@ import weakref
 
 from autofighter.character import CharacterType
 from autofighter.mapgen import MapNode
+from autofighter.stats import ANIMATION_OFFSET as _GLOBAL_ANIMATION_OFFSET
 from autofighter.stats import BUS
+from autofighter.stats import DEFAULT_ANIMATION_DURATION
+from autofighter.stats import DEFAULT_ANIMATION_PER_TARGET
 from autofighter.summons.base import Summon
 from autofighter.summons.manager import SummonManager
 from plugins.characters._base import PlayerBase
@@ -26,9 +29,9 @@ if TYPE_CHECKING:
 
 _LUNA_PASSIVE: "type[LunaLunarReservoir] | None" = None
 
-ANIMATION_OFFSET = 2.6
-_DEFAULT_ANIMATION_DURATION = 0.045 * ANIMATION_OFFSET
-_DEFAULT_ANIMATION_PER_TARGET = 0.15 * ANIMATION_OFFSET
+ANIMATION_OFFSET = _GLOBAL_ANIMATION_OFFSET
+_DEFAULT_ANIMATION_DURATION = DEFAULT_ANIMATION_DURATION
+_DEFAULT_ANIMATION_PER_TARGET = DEFAULT_ANIMATION_PER_TARGET
 
 
 def _get_luna_passive() -> "type[LunaLunarReservoir]":
