@@ -85,7 +85,10 @@
     const segments = [];
     let cursor = 0;
 
-    const primeColorStop = 'color-mix(in oklab, var(--prime-outline-color) var(--prime-outline-opacity, 90%), transparent calc(100% - var(--prime-outline-opacity, 90%)))';
+    const primeOpacityValue = 'var(--prime-outline-opacity, 90%)';
+    const primeOpacityInverse = 'calc(100% - var(--prime-outline-opacity, 90%))';
+    const primeColorStop = `color-mix(in oklab, var(--prime-outline-color) ${primeOpacityValue}, transparent ${primeOpacityInverse})`;
+    const primeBlackStop = `color-mix(in oklab, var(--prime-outline-black) ${primeOpacityValue}, transparent ${primeOpacityInverse})`;
 
     for (let i = 0; i < streakCount; i += 1) {
       const colorStart = cursor;
@@ -101,7 +104,7 @@
       cursor += blackWidths[i];
       const blackEnd = cursor;
       segments.push({
-        color: 'var(--prime-outline-black)',
+        color: primeBlackStop,
         start: blackStart,
         end: blackEnd
       });
