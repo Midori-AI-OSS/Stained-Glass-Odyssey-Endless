@@ -3,7 +3,6 @@ from __future__ import annotations
 from typing import Any
 
 from ..pacing import _EXTRA_TURNS
-from ..pacing import TURN_PACING
 from ..pacing import YIELD_MULTIPLIER
 from ..pacing import _pace
 from ..pacing import pace_sleep
@@ -78,5 +77,6 @@ async def finish_turn(
     )
     if cycle_count:
         context.turn += cycle_count
-    await pace_sleep(2.2 * TURN_PACING)
+    # ``pace_sleep`` multiplies the provided value by ``TURN_PACING`` internally.
+    await pace_sleep(2.2)
     await pace_sleep(YIELD_MULTIPLIER)

@@ -61,6 +61,63 @@ class DummyActor:
 
 
 @pytest.mark.asyncio
+async def test_finish_turn_uses_multiplier(monkeypatch: pytest.MonkeyPatch) -> None:
+    from autofighter.rooms.battle.turn_loop import turn_end as turn_end_module
+
+    recorded_sleeps: list[float] = []
+
+    async def fake_push_progress_update(*_args, **_kwargs):
+        return None
+
+    async def fake_dispatch_turn_end_snapshot(*_args, **_kwargs):
+        return 0
+
+    async def fake_pace_sleep(multiplier: float) -> None:
+        recorded_sleeps.append(multiplier)
+
+    async def fake__pace(*_args, **_kwargs):
+        return None
+
+    monkeypatch.setattr(turn_end_module, "push_progress_update", fake_push_progress_update)
+    monkeypatch.setattr(turn_end_module, "dispatch_turn_end_snapshot", fake_dispatch_turn_end_snapshot)
+    monkeypatch.setattr(turn_end_module, "pace_sleep", fake_pace_sleep)
+    monkeypatch.setattr(turn_end_module, "_pace", fake__pace)
+
+    context = TurnLoopContext(
+        room=SimpleNamespace(),
+        party=DummyParty(members=[]),
+        combat_party=DummyParty(members=[]),
+        registry=DummyRegistry(),
+        foes=[],
+        foe_effects=[],
+        enrage_mods=[],
+        enrage_state=SimpleNamespace(active=False),
+        progress=None,
+        visual_queue=None,
+        temp_rdr=0.0,
+        exp_reward=0,
+        run_id="run-id",
+        battle_tasks={},
+        abort=lambda _run_id: None,
+        credited_foe_ids=set(),
+        turn=1,
+        action_turn=0,
+    )
+
+    await turn_end_module.finish_turn(
+        context,
+        DummyActor("hero"),
+        action_start=0.0,
+        include_summon_foes=False,
+        active_target_id=None,
+    )
+
+    assert len(recorded_sleeps) == 2
+    assert recorded_sleeps[0] == pytest.approx(2.2)
+    assert recorded_sleeps[1] == turn_end_module.YIELD_MULTIPLIER
+
+
+@pytest.mark.asyncio
 async def test_player_turn_finishes_when_no_foes(monkeypatch: pytest.MonkeyPatch) -> None:
     finish_calls: list[tuple[DummyActor, str | None]] = []
 
