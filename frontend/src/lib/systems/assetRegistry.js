@@ -719,8 +719,15 @@ const pickMusicPlaylist = (entry, category) => {
   if (!entry) return [];
   const normalized = normalizeMusicCategory(category, 'normal');
   const candidates = [normalized];
-  if (entry.defaultCategory && !candidates.includes(entry.defaultCategory)) {
-    candidates.push(entry.defaultCategory);
+  const defaultCategory = entry.defaultCategory
+    ? normalizeMusicCategory(entry.defaultCategory, 'normal')
+    : null;
+  if (
+    defaultCategory &&
+    !candidates.includes(defaultCategory) &&
+    (normalized === 'boss' || defaultCategory !== 'boss')
+  ) {
+    candidates.push(defaultCategory);
   }
   if (!candidates.includes('normal')) {
     candidates.push('normal');
