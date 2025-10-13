@@ -21,36 +21,67 @@ class CriticalOverdrive(CardBase):
 
     async def apply(self, party: Party) -> None:
         await super().apply(party)
-        state: dict[int, object] = {}
+        active_targets: set[int] = set()
+
+        def _remove_effect(entity) -> None:
+            pid = id(entity)
+            effect_id = f"{self.id}_{pid}"
+            mgr = getattr(entity, "effect_manager", None)
+            if mgr is not None:
+                for existing in list(getattr(mgr, "mods", [])):
+                    if existing.id == effect_id:
+                        existing.remove()
+                        mgr.mods.remove(existing)
+                        break
+            mods = getattr(entity, "mods", None)
+            if mods is not None:
+                while effect_id in mods:
+                    mods.remove(effect_id)
+            if hasattr(entity, "remove_effect_by_name"):
+                try:
+                    entity.remove_effect_by_name(effect_id)
+                except Exception:
+                    pass
+            active_targets.discard(pid)
 
         async def _change(target, stacks) -> None:
             if target not in party.members:
                 return
             pid = id(target)
-            mod = state.pop(pid, None)
-            if mod is not None:
-                mod.remove()
-                mgr = getattr(target, "effect_manager", None)
-                if mgr is not None and mod in mgr.mods:
-                    mgr.mods.remove(mod)
+            if stacks <= 0:
+                _remove_effect(target)
+                if not active_targets:
+                    self.cleanup_subscriptions()
+                return
+
+            effect_id = f"{self.id}_{pid}"
+            mgr = getattr(target, "effect_manager", None)
+            if mgr is None:
+                mgr = EffectManager(target)
+                target.effect_manager = mgr
             if stacks > 0:
                 extra_rate = 0.10
                 # Use base crit rate to avoid compounding with other effects
-                base_crit = getattr(target, 'base_crit_rate', 0.05)  # Default 5% base crit rate
+                if hasattr(target, "get_base_stat"):
+                    base_crit = float(target.get_base_stat("crit_rate"))
+                else:
+                    base_crit = float(getattr(target, "_base_crit_rate", 0.05))
                 excess = max(0.0, base_crit + extra_rate - 1.0)
                 new_mod = create_stat_buff(
                     target,
-                    name=f"{self.id}_{pid}",
+                    name=effect_id,
+                    id=effect_id,
                     turns=9999,
+                    bypass_diminishing=True,
                     crit_rate=extra_rate,
                     crit_damage=excess * 2,
                 )
-                mgr = getattr(target, "effect_manager", None)
-                if mgr is None:
-                    mgr = EffectManager(target)
-                    target.effect_manager = mgr
-                await mgr.add_modifier(new_mod)
-                state[pid] = new_mod
+                active_targets.add(pid)
+                try:
+                    await mgr.add_modifier(new_mod)
+                except Exception:
+                    active_targets.discard(pid)
+                    raise
                 await BUS.emit_async(
                     "card_effect",
                     self.id,
@@ -68,12 +99,9 @@ class CriticalOverdrive(CardBase):
             if entity not in party.members:
                 return
             pid = id(entity)
-            mod = state.pop(pid, None)
-            if mod is not None:
-                mod.remove()
-                if mod in entity.effect_manager.mods:
-                    entity.effect_manager.mods.remove(mod)
-            if not state:
+            if pid in active_targets:
+                _remove_effect(entity)
+            if not active_targets:
                 self.cleanup_subscriptions()
 
         self.subscribe("critical_boost_change", _change)

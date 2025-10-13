@@ -19,9 +19,12 @@ async def test_critical_overdrive_boosts_and_converts() -> None:
     boost = CriticalBoost()
     for _ in range(200):
         await boost.apply(member)
+    assert member.get_base_stat("crit_rate") == pytest.approx(1.05)
+    assert member.get_base_stat("crit_damage") == pytest.approx(12.0)
     assert member.atk == int(100 * 3.55)
     assert member.crit_rate == pytest.approx(1.15)
     assert member.crit_damage == pytest.approx(12.3)
+    assert member.crit_damage - member.get_base_stat("crit_damage") == pytest.approx(0.3)
     await boost._on_damage_taken(member)
     await asyncio.sleep(0)
     assert member.crit_rate == pytest.approx(0.05)
