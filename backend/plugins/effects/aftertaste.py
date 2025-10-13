@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from dataclasses import field
 import random
 
+from autofighter.stats import DEFAULT_ANIMATION_DURATION
 from autofighter.stats import Stats
 from plugins.damage_types.dark import Dark
 from plugins.damage_types.fire import Fire
@@ -65,10 +66,16 @@ class Aftertaste:
         return [int(self.base_pot * self.rng.uniform(0.1, 1.5)) for _ in range(self.hits)]
 
     async def apply(self, attacker: Stats, target: Stats) -> list[int]:
-        from autofighter.rooms.battle.pacing import YIELD_MULTIPLIER
+        from autofighter.rooms.battle.pacing import TURN_PACING
         from autofighter.rooms.battle.pacing import pace_sleep
 
         results: list[int] = []
+        try:
+            base_pacing = max(float(TURN_PACING), 1e-09)
+        except Exception:
+            base_pacing = 1.0
+        animation_delay_multiplier = (DEFAULT_ANIMATION_DURATION * 2) / base_pacing
+
         for amount in self.rolls():
             # Create a temporary attacker with random damage type for this hit
             random_damage_type = self._get_random_damage_type(attacker)
@@ -111,7 +118,8 @@ class Aftertaste:
                 attacker,
             )
 
+            await pace_sleep(animation_delay_multiplier)
             dmg = await target.apply_damage(amount, temp_attacker, action_name="Aftertaste")
             results.append(dmg)
-            await pace_sleep(YIELD_MULTIPLIER)
+            await pace_sleep(animation_delay_multiplier)
         return results
