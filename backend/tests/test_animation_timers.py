@@ -7,6 +7,8 @@ sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 from autofighter.rooms.battle.pacing import YIELD_MULTIPLIER
 from autofighter.rooms.battle.pacing import impact_pause
+from autofighter.stats import DEFAULT_ANIMATION_DURATION
+from autofighter.stats import DEFAULT_ANIMATION_PER_TARGET
 from autofighter.stats import Stats
 from autofighter.stats import calc_animation_time
 
@@ -17,6 +19,14 @@ def test_animation_time_scaling() -> None:
     actor.animation_per_target = 0.25
     assert calc_animation_time(actor, 1) == 0.5
     assert calc_animation_time(actor, 3) == 1.0
+
+
+def test_stats_use_standard_animation_defaults() -> None:
+    actor = Stats()
+    assert actor.animation_duration == pytest.approx(DEFAULT_ANIMATION_DURATION)
+    assert actor.animation_per_target == pytest.approx(DEFAULT_ANIMATION_PER_TARGET)
+    expected = DEFAULT_ANIMATION_DURATION + DEFAULT_ANIMATION_PER_TARGET * 2
+    assert calc_animation_time(actor, 3) == pytest.approx(expected)
 
 
 @pytest.mark.asyncio

@@ -18,6 +18,11 @@ from plugins.event_bus import EventBus
 
 log = logging.getLogger(__name__)
 
+# Shared animation timing defaults used by combatants and summons.
+ANIMATION_OFFSET: float = 2.8
+DEFAULT_ANIMATION_DURATION: float = 0.045 * ANIMATION_OFFSET
+DEFAULT_ANIMATION_PER_TARGET: float = 0.15 * ANIMATION_OFFSET
+
 # Global enrage percentage applied during battles.
 # Set by battle rooms when enrage is active, used in damage/heal calculations.
 _ENRAGE_PERCENT: float = 0.0
@@ -173,8 +178,8 @@ class Stats:
     base_action_value: float = field(default=0.0, init=False)
 
     # Animation timing
-    animation_duration: float = 0.0
-    animation_per_target: float = 0.0
+    animation_duration: float = DEFAULT_ANIMATION_DURATION
+    animation_per_target: float = DEFAULT_ANIMATION_PER_TARGET
 
     # Ultimate system
     ultimate_charge: int = 0
@@ -1095,8 +1100,8 @@ class Stats:
 def calc_animation_time(actor: "Stats", targets: int) -> float:
     """Compute total animation wait time for an action."""
 
-    base = getattr(actor, "animation_duration", 0.0)
-    per = getattr(actor, "animation_per_target", 0.0)
+    base = getattr(actor, "animation_duration", DEFAULT_ANIMATION_DURATION)
+    per = getattr(actor, "animation_per_target", DEFAULT_ANIMATION_PER_TARGET)
     return base + per * max(targets - 1, 0)
 
 

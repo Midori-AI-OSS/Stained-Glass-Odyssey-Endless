@@ -20,7 +20,6 @@
   import BattleTargetingOverlay from './BattleTargetingOverlay.svelte';
   import BattleProjectileLayer from './BattleProjectileLayer.svelte';
   import EffectsChargeContainer from './battle/EffectsChargeContainer.svelte';
-  import { isCandidateLuna } from './battle/lunaUtils.js';
   import { motionStore } from '../systems/settingsStorage.js';
   import { haltSync } from '../systems/overlayState.js';
   import { createSummonManager, isSummon } from '../systems/summonManager.js';
@@ -1107,35 +1106,25 @@
     return '';
   }
 
-  function isLunaHitEvent(evt) {
+  function isProjectileAttackEvent(evt) {
     if (!evt || typeof evt !== 'object') return false;
     const type = String(evt.type || '').toLowerCase();
     if (type !== 'damage_taken') return false;
     const metadata = evt.metadata && typeof evt.metadata === 'object' ? evt.metadata : {};
-    const sourceCandidates = [
+    const hasAttackToken = Boolean(extractAttackSequenceToken(metadata));
+    if (!hasAttackToken) return false;
+    const sourceId = findFirstId([
       evt.source_id,
       evt.sourceId,
       metadata.source_id,
       metadata.sourceId,
-      metadata.source,
-      metadata.source_name,
-      metadata.sourceName,
       metadata.card_owner_id,
       metadata.card_ownerId,
-      metadata.card_owner,
-      metadata.card_owner_name,
-      metadata.cardOwnerName,
       metadata.owner_id,
       metadata.ownerId,
-      metadata.owner_name,
-      metadata.ownerName,
       metadata.attacker_id,
       metadata.attackerId,
-      metadata.attacker,
-      metadata.attacker_name,
-      metadata.attackerName,
-    ];
-    if (!sourceCandidates.some(isCandidateLuna)) return false;
+    ]);
     const targetId = findFirstId([
       evt.target_id,
       evt.targetId,
@@ -1145,7 +1134,8 @@
       metadata.target_name,
       metadata.targetName,
     ]);
-    return Boolean(targetId && targetId !== '' && targetId !== undefined);
+    if (!sourceId || !targetId) return false;
+    return sourceId !== targetId;
   }
 
   function parseHexColorToRgb(hex) {
@@ -1204,7 +1194,7 @@
   }
 
   function buildProjectilePayload(evt) {
-    if (!isLunaHitEvent(evt)) return null;
+    if (!isProjectileAttackEvent(evt)) return null;
     const metadata = evt.metadata && typeof evt.metadata === 'object' ? evt.metadata : {};
     const sourceId = findFirstId([
       evt.source_id,
