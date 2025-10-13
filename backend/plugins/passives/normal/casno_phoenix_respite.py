@@ -15,8 +15,8 @@ if TYPE_CHECKING:
 
 
 @dataclass
-class _PhoenixRestInterval(HealingOverTime):
-    """Helper HoT effect that intercepts the next action for Phoenix Respite."""
+class _RelaxedMomentumPause(HealingOverTime):
+    """Helper HoT that intercepts the next action for Relaxed momentum upkeep."""
 
     owner_id: int = 0
 
@@ -28,12 +28,12 @@ class _PhoenixRestInterval(HealingOverTime):
         return True
 
     async def on_action(self, target: "Stats") -> bool:
-        return await CasnoPhoenixRespite._complete_rest(target, self)
+        return await CasnoPhoenixRespite._complete_relaxed_cycle(target, self)
 
 
 @dataclass
 class CasnoPhoenixRespite:
-    """Casno's Phoenix Respite passive enabling restorative downtime."""
+    """Casno's Phoenix Respite passive empowering Relaxed battle pacing."""
 
     plugin_type = "passive"
     id = "casno_phoenix_respite"
@@ -41,9 +41,10 @@ class CasnoPhoenixRespite:
     trigger = "action_taken"
     stack_display = "number"
 
-    _action_counts: ClassVar[dict[int, int]] = {}
-    _rest_stacks: ClassVar[dict[int, int]] = {}
-    _pending_rest: ClassVar[dict[int, bool]] = {}
+    _attack_counts: ClassVar[dict[int, int]] = {}
+    _relaxed_stacks: ClassVar[dict[int, int]] = {}
+    _relaxed_converted: ClassVar[dict[int, int]] = {}
+    _pending_relaxed: ClassVar[dict[int, bool]] = {}
     _helper_effect_ids: ClassVar[dict[int, str]] = {}
     _battle_end_handlers: ClassVar[dict[int, Callable[..., None]]] = {}
 
@@ -54,20 +55,27 @@ class CasnoPhoenixRespite:
         cls = type(self)
 
         cls._register_battle_end(target)
-        cls._rest_stacks.setdefault(entity_id, 0)
-        cls._action_counts[entity_id] = cls._action_counts.get(entity_id, 0) + 1
+        cls._relaxed_stacks.setdefault(entity_id, 0)
+        cls._relaxed_converted.setdefault(entity_id, 0)
+        cls._attack_counts[entity_id] = cls._attack_counts.get(entity_id, 0) + 1
 
-        if cls._pending_rest.get(entity_id):
+        if cls._pending_relaxed.get(entity_id):
             return
 
-        if cls._action_counts[entity_id] < 5:
+        if cls._attack_counts[entity_id] < 5:
             return
 
-        cls._action_counts[entity_id] = 0
-        await cls._schedule_rest(target)
+        cls._attack_counts[entity_id] = 0
+        stacks = cls._relaxed_stacks.get(entity_id, 0) + 1
+        cls._relaxed_stacks[entity_id] = stacks
+
+        if stacks <= 50:
+            return
+
+        await cls._schedule_relaxed_pause(target)
 
     @classmethod
-    async def _schedule_rest(cls, target: "Stats") -> None:
+    async def _schedule_relaxed_pause(cls, target: "Stats") -> None:
         if getattr(target, "hp", 0) <= 0:
             return
 
@@ -79,11 +87,11 @@ class CasnoPhoenixRespite:
         helper_id = cls._helper_effect_name(entity_id)
         for hot in list(getattr(effect_manager, "hots", [])):
             if getattr(hot, "id", "") == helper_id:
-                cls._pending_rest[entity_id] = True
+                cls._pending_relaxed[entity_id] = True
                 return
 
-        helper_effect = _PhoenixRestInterval(
-            name=f"{cls.id}_rest_interval",
+        helper_effect = _RelaxedMomentumPause(
+            name=f"{cls.id}_relaxed_interval",
             healing=0,
             turns=-1,
             id=helper_id,
@@ -91,20 +99,20 @@ class CasnoPhoenixRespite:
             owner_id=entity_id,
         )
 
-        cls._pending_rest[entity_id] = True
+        cls._pending_relaxed[entity_id] = True
         cls._helper_effect_ids[entity_id] = helper_id
         await effect_manager.add_hot(helper_effect)
         cls._register_battle_end(target)
 
     @classmethod
-    async def _complete_rest(
+    async def _complete_relaxed_cycle(
         cls,
         target: "Stats",
-        helper: _PhoenixRestInterval,
+        helper: _RelaxedMomentumPause,
     ) -> bool:
         entity_id = id(target)
 
-        cls._pending_rest[entity_id] = False
+        cls._pending_relaxed[entity_id] = False
 
         effect_manager = getattr(target, "effect_manager", None)
         if effect_manager is not None:
@@ -133,17 +141,22 @@ class CasnoPhoenixRespite:
                 )
             except Exception:
                 pass
+
+        available = cls._relaxed_stacks.get(entity_id, 0)
+        consumed = min(5, available)
+        if consumed:
+            cls._relaxed_stacks[entity_id] = max(available - consumed, 0)
+
+        total_converted = cls._relaxed_converted.get(entity_id, 0) + consumed
+        cls._relaxed_converted[entity_id] = total_converted
+
+        cls._apply_relaxed_boost(target, total_converted)
         target.hp = target.max_hp
-
-        stacks = cls._rest_stacks.get(entity_id, 0) + 1
-        cls._rest_stacks[entity_id] = stacks
-
-        cls._apply_rest_boost(target, stacks)
 
         return False
 
     @classmethod
-    def _apply_rest_boost(cls, target: "Stats", stacks: int) -> None:
+    def _apply_relaxed_boost(cls, target: "Stats", converted_stacks: int) -> None:
         effect_name = cls._boost_effect_name(id(target))
         target.remove_effect_by_name(effect_name)
 
@@ -163,9 +176,10 @@ class CasnoPhoenixRespite:
         ]
 
         modifiers: dict[str, float | int] = {}
+        multiplier = 0.15 * converted_stacks
         for stat in stat_names:
             base_value = target.get_base_stat(stat)
-            bonus = base_value * 0.55 * stacks
+            bonus = base_value * multiplier
             if isinstance(base_value, int):
                 bonus = int(bonus)
             modifiers[stat] = bonus
@@ -177,6 +191,11 @@ class CasnoPhoenixRespite:
             source=cls.id,
         )
         target.add_effect(effect)
+
+    @classmethod
+    def get_display(cls, target: "Stats") -> str:  # noqa: ARG003 - required signature
+        """Expose Relaxed momentum as a numeric stack counter for the UI."""
+        return "number"
 
     @classmethod
     def _register_battle_end(cls, target: "Stats") -> None:
@@ -205,8 +224,10 @@ class CasnoPhoenixRespite:
             BUS.unsubscribe("battle_end", handler)
 
         helper_id = cls._helper_effect_ids.pop(entity_id, None)
-        cls._pending_rest.pop(entity_id, None)
-        cls._action_counts.pop(entity_id, None)
+        cls._pending_relaxed.pop(entity_id, None)
+        cls._attack_counts.pop(entity_id, None)
+        cls._relaxed_stacks.pop(entity_id, None)
+        cls._relaxed_converted.pop(entity_id, None)
 
         effect_manager = getattr(target, "effect_manager", None)
         if effect_manager is not None and helper_id is not None:
@@ -224,15 +245,15 @@ class CasnoPhoenixRespite:
 
     @classmethod
     def get_stacks(cls, target: "Stats") -> int:
-        return cls._rest_stacks.get(id(target), 0)
+        return cls._relaxed_stacks.get(id(target), 0)
 
     @classmethod
     def _helper_effect_name(cls, entity_id: int) -> str:
-        return f"{cls.id}_rest_helper_{entity_id}"
+        return f"{cls.id}_relaxed_helper_{entity_id}"
 
     @classmethod
     def _boost_effect_name(cls, entity_id: int) -> str:
-        return f"{cls.id}_rest_boost_{entity_id}"
+        return f"{cls.id}_relaxed_boost_{entity_id}"
 
 
 def get_stacks(target: "Stats") -> int:

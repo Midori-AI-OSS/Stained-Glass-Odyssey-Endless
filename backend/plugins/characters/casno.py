@@ -19,9 +19,9 @@ class Casno(PlayerBase):
     passives: list[str] = field(default_factory=lambda: ["casno_phoenix_respite"])
     about: str = (
         "A stoic veteran pyrokinetic who has learned to weaponize recovery. "
-        "Casno rotates through five-action battle cycles, deliberately canceling "
-        "his sixth move to enter a phoenix-like rest that restores his strength "
-        "and adds lasting boons before rejoining the fray."
+        "Casno tallies Relaxed stacks with every five attacks; once the gauge "
+        "overflows, he skips his next strike to breathe, cashing in five stacks "
+        "for a self-heal and 15% base-stat boons per stack before erupting back into combat."
     )
     voice_gender = "male"
 
