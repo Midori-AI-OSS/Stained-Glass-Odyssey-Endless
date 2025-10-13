@@ -146,7 +146,7 @@ class Stats:
     _base_dodge_odds: float = field(default=0.05, init=False)
     _base_effect_resistance: float = field(default=0.05, init=False)
     _base_vitality: float = field(default=1.0, init=False)
-    _base_spd: int = field(default=10, init=False)
+    _base_spd: int = field(default=2, init=False)
     damage_reduction_passes: int = 1
 
     # Damage type and other permanent attributes
