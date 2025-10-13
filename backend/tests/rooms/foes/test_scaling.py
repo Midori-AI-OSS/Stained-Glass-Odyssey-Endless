@@ -9,9 +9,11 @@ import pytest
 
 sys.path.append(str(Path(__file__).resolve().parents[3]))
 
+from services.run_configuration import RunModifierContext
+
 from autofighter.mapgen import MapNode
-from autofighter.rooms.foe_factory import FoeFactory
 from autofighter.rooms.foe_factory import ROOM_BALANCE_CONFIG
+from autofighter.rooms.foe_factory import FoeFactory
 from autofighter.rooms.foes.scaling import calculate_cumulative_rooms
 from autofighter.rooms.foes.scaling import compute_base_multiplier
 from autofighter.rooms.foes.scaling import enforce_thresholds
@@ -170,3 +172,47 @@ def test_scale_stats_retains_spawn_debuff_for_foe_base() -> None:
     assert foe.get_base_stat("max_hp") == expected_hp
     assert foe.get_base_stat("atk") == expected_atk
     assert foe.get_base_stat("defense") == expected_defense
+
+
+def test_scale_stats_applies_run_modifier_after_debuff() -> None:
+    config = dict(ROOM_BALANCE_CONFIG)
+    config.update(
+        {
+            "scaling_variance": 0.0,
+            "room_growth_multiplier": 0.0,
+            "loop_growth_multiplier": 0.0,
+            "pressure_multiplier": 1.0,
+        }
+    )
+    factory = FoeFactory(config=config)
+    node = MapNode(
+        room_id=3,
+        room_type="battle-normal",
+        floor=1,
+        index=1,
+        loop=1,
+        pressure=0,
+    )
+    context = RunModifierContext.from_dict(
+        {
+            "pressure": node.pressure,
+            "foe_stat_multipliers": {"max_hp": 1.2},
+            "pressure_defense_floor": config["pressure_defense_floor"],
+            "pressure_defense_min_roll": config["pressure_defense_min_roll"],
+            "pressure_defense_max_roll": config["pressure_defense_max_roll"],
+            "metadata_hash": "unit-test",
+        }
+    )
+    setattr(node, "run_modifier_context", context)
+    foe = DummyFoe()
+    foe.set_base_stat("max_hp", 100)
+
+    base_hp = foe.get_base_stat("max_hp")
+
+    factory.scale_stats(foe, node, strength=1.0)
+
+    debuffed_hp = int(base_hp * config["foe_base_debuff"])
+    expected_hp = int(debuffed_hp * context.foe_stat_multipliers["max_hp"])
+
+    assert foe.get_base_stat("max_hp") == expected_hp
+    assert foe.hp == expected_hp
