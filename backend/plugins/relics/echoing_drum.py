@@ -153,32 +153,29 @@ class EchoingDrum(RelicBase):
         remainder = total_chance % 100
 
         stack_text = "stack" if stacks == 1 else "stacks"
-        base_sentence = (
-            "First attack each battle has "
-            f"{total_chance}% total chance to trigger Aftertaste "
-            f"(25% per stack, {stacks} {stack_text})."
+
+        guaranteed_text = (
+            f"{guaranteed_hits} guaranteed extra hit"
+            f"{'s' if guaranteed_hits != 1 else ''}"
+            if guaranteed_hits
+            else "no guaranteed extra hits"
+        )
+        overflow_text = (
+            f"{remainder}% overflow chance"
+            if remainder
+            else "no overflow chance"
         )
 
-        overflow_sentence = "Overflow converts every +100% into a guaranteed extra hit"
-        if guaranteed_hits:
-            overflow_sentence += (
-                f", currently guaranteeing {guaranteed_hits} extra hit"
-                f"{'s' if guaranteed_hits != 1 else ''}"
-            )
-        else:
-            overflow_sentence += ", though no extra hits are guaranteed yet"
-
-        if remainder:
-            overflow_sentence += (
-                f" and leaving a {remainder}% chance toward one more"
-            )
-        else:
-            overflow_sentence += " with no leftover chance beyond the guaranteed hits"
+        chance_sentence = (
+            "Aftertaste: "
+            f"{total_chance}% total chance (25% per stack, {stacks} {stack_text}); "
+            f"{guaranteed_text}; {overflow_text}."
+        )
 
         buff_percentage = 150 * stacks
         buff_sentence = (
-            "After Aftertaste triggers, the attacker gains "
-            f"+{buff_percentage}% of their base ATK for 5 turns."
+            "ATK buff: "
+            f"+{buff_percentage}% base ATK for 5 turns after it triggers."
         )
 
-        return f"{base_sentence} {overflow_sentence}. {buff_sentence}"
+        return f"{chance_sentence} {buff_sentence}"
