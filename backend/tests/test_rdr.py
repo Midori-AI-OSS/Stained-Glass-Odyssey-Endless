@@ -1,3 +1,5 @@
+from collections import deque
+
 import pytest
 
 from autofighter.mapgen import MapNode
@@ -175,3 +177,75 @@ async def test_floor_boss_guarantees_ticket_drop(monkeypatch):
     )
     tickets = [item for item in result["loot"]["items"] if item["id"] == "ticket"]
     assert tickets and tickets[0]["stars"] == 0
+
+
+@pytest.mark.asyncio
+async def test_card_rewards_fall_back_to_lower_stars(monkeypatch):
+    node = MapNode(
+        room_id=1,
+        room_type="battle-normal",
+        floor=1,
+        index=1,
+        loop=1,
+        pressure=0,
+    )
+    room = rooms_module.BattleRoom(node)
+    party = Party()
+    combat_party = Party()
+    card_pool: dict[int, deque] = {
+        2: deque(
+            [
+                type("C", (), {"id": "two-a", "name": "Two A", "stars": 2, "about": ""})(),
+                type("C", (), {"id": "two-b", "name": "Two B", "stars": 2, "about": ""})(),
+            ]
+        ),
+        1: deque(
+            [
+                type("C", (), {"id": "one-a", "name": "One A", "stars": 1, "about": ""})(),
+            ]
+        ),
+    }
+
+    def fake_card_choices(_party: Party, stars: int, *, count: int = 1):
+        pool = card_pool.get(stars)
+        if not pool:
+            return []
+        selected = []
+        for _ in range(min(count, len(pool))):
+            selected.append(pool.popleft())
+        return selected
+
+    monkeypatch.setattr(resolution_module, "card_choices", fake_card_choices)
+    monkeypatch.setattr(resolution_module, "relic_choices", lambda *a, **k: [])
+    monkeypatch.setattr(resolution_module, "_roll_relic_drop", lambda *a, **k: False)
+    monkeypatch.setattr(resolution_module, "_pick_card_stars", lambda *_: 4)
+    monkeypatch.setattr(
+        resolution_module,
+        "_apply_rdr_to_stars",
+        lambda base, rdr: base,
+    )
+    monkeypatch.setattr(resolution_module.random, "choice", lambda seq: seq[0])
+    monkeypatch.setattr(resolution_module.random, "random", lambda: 0.0)
+
+    rewards = await resolution_module.resolve_rewards(
+        room=room,
+        party=party,
+        combat_party=combat_party,
+        foes=[],
+        foes_data=[],
+        enrage_payload={"active": False, "stacks": 0},
+        start_gold=party.gold,
+        temp_rdr=10.0,
+        party_data=[],
+        party_summons={},
+        foe_summons={},
+        action_queue_snapshot={},
+        battle_logger=None,
+        exp_reward=0,
+        run_id=None,
+    )
+
+    card_choices_payload = rewards["card_choices"]
+    assert len(card_choices_payload) == 3
+    assert {choice["id"] for choice in card_choices_payload} == {"two-a", "two-b", "one-a"}
+    assert {choice["stars"] for choice in card_choices_payload} == {1, 2}
