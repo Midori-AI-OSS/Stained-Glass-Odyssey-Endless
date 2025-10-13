@@ -166,6 +166,8 @@ class EchoingDrum(RelicBase):
             else "no overflow chance"
         )
 
+        intro_sentence = "Only the first attack each battle can trigger this relic."
+
         chance_sentence = (
             "Aftertaste: "
             f"{total_chance}% total chance (25% per stack, {stacks} {stack_text}); "
@@ -178,4 +180,4 @@ class EchoingDrum(RelicBase):
             f"+{buff_percentage}% base ATK for 5 turns after it triggers."
         )
 
-        return f"{chance_sentence} {buff_sentence}"
+        return f"{intro_sentence} {chance_sentence} {buff_sentence}"
