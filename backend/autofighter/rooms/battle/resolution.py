@@ -78,7 +78,24 @@ async def resolve_rewards(
         log.debug("  card_choices returned %d options", len(choices))
         if not choices:
             log.debug("  No cards available for star level %d", card_stars)
-            continue
+            for fallback_stars in range(card_stars - 1, 0, -1):
+                log.debug(
+                    "  Attempting fallback star level %d for card selection",
+                    fallback_stars,
+                )
+                choices = card_choices(combat_party, fallback_stars, count=1)
+                log.debug(
+                    "    card_choices returned %d options for fallback",
+                    len(choices),
+                )
+                if choices:
+                    break
+                log.debug(
+                    "    No cards available for fallback star level %d",
+                    fallback_stars,
+                )
+            else:
+                continue
         candidate = choices[0]
         log.debug(
             "  Candidate card: %s (%s) - %d stars",
