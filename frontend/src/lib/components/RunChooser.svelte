@@ -62,6 +62,7 @@ import WizardNavigation from './WizardNavigation.svelte';
     mitigation: 'Mitigation',
     vitality: 'Vitality',
     atk: 'Attack',
+    spd: 'Speed',
     max_hp: 'Max HP',
     glitched_chance: 'Glitched odds',
     prime_chance: 'Prime odds'

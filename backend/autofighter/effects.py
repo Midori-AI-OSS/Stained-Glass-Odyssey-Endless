@@ -17,6 +17,7 @@ DIMINISHING_RETURNS_CONFIG = {
     'hp': {'threshold': 500, 'scaling_factor': 1.05, 'base_offset': 50000},
 
     'atk': {'threshold': 100, 'scaling_factor': 2.0, 'base_offset': 1000},
+    'spd': {'threshold': 100, 'scaling_factor': 2.0, 'base_offset': 1000},
     'defense': {'threshold': 100, 'scaling_factor': 2.0, 'base_offset': 1000},
 
     'mitigation': {'threshold': 0.01, 'scaling_factor': 100.0, 'base_offset': 2},
@@ -35,6 +36,7 @@ def get_current_stat_value(stats: Stats, stat_name: str) -> Union[int, float]:
         'hp': lambda s: s.max_hp,  # Use max_hp for HP calculations
         'atk': lambda s: s.atk,
         'defense': lambda s: s.defense,
+        'spd': lambda s: s.spd,
         'crit_rate': lambda s: s.crit_rate,
         'crit_damage': lambda s: s.crit_damage,
         'mitigation': lambda s: s.mitigation,
