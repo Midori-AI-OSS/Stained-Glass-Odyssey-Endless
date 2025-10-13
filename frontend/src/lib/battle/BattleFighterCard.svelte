@@ -416,7 +416,7 @@
             class:rank-boss={isBossRank}
             class:reduced={reducedMotion}
             on:click={cyclePortraitIfAvailable}
-            style={`--outline-anim-dur: ${outlineAnimDur}; --outline-anim-delay: ${outlineAnimDelay};`}
+            style={portraitStyle}
           >
             <div
               class="portrait-image"
