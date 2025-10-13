@@ -197,13 +197,13 @@ _MODIFIER_DEFINITIONS: dict[str, dict[str, Any]] = {
         "grants_reward_bonus": True,
         "description": "Boosts foe action speed and initiative by +0.01× per stack before diminishing returns.",
         "effects_metadata": {
-            "stat": "atk",
+            "stat": "spd",
             "per_stack": 0.01,
             "scaling_type": "additive",
         },
         "diminishing_returns": {
             "applies": True,
-            "stat": "atk",
+            "stat": "spd",
             "source": "autofighter.effects.calculate_diminishing_returns",
         },
         "reward_bonuses": {
@@ -212,7 +212,7 @@ _MODIFIER_DEFINITIONS: dict[str, dict[str, Any]] = {
         },
         "preview_stacks": [0, 1, 5, 10],
         "effects": lambda stacks: _percent_modifier_effect(0.01, stacks),
-        "diminishing_stat": "atk",
+        "diminishing_stat": "spd",
     },
     "foe_hp": {
         "id": "foe_hp",
