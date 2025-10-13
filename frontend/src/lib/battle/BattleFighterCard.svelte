@@ -85,12 +85,14 @@
     const segments = [];
     let cursor = 0;
 
+    const primeColorStop = 'color-mix(in oklab, var(--prime-outline-color) var(--prime-outline-opacity, 90%), transparent calc(100% - var(--prime-outline-opacity, 90%)))';
+
     for (let i = 0; i < streakCount; i += 1) {
       const colorStart = cursor;
       cursor += colorWidths[i];
       const colorEnd = cursor;
       segments.push({
-        color: 'var(--prime-outline-color)',
+        color: primeColorStop,
         start: colorStart,
         end: colorEnd
       });
@@ -129,9 +131,10 @@
 
     const offset = Math.random() * 360;
     const outlineWidth = (3 + Math.random() * 2.5).toFixed(2);
+    const gradientStopsText = gradientStops.join(', ');
 
     return {
-      gradient: `conic-gradient(from ${offset.toFixed(2)}deg, ${gradientStops.join(', ')})`,
+      gradient: `conic-gradient(from calc(var(--prime-outline-angle, 0deg) + ${offset.toFixed(2)}deg), ${gradientStopsText})`,
       width: `${outlineWidth}px`
     };
   }
@@ -877,6 +880,12 @@
     transition: none;
   }
 
+  @property --prime-outline-angle {
+    syntax: '<angle>';
+    inherits: false;
+    initial-value: 0deg;
+  }
+
   @keyframes element-change {
     0% { filter: brightness(1); transform: scale(1); }
     50% { filter: brightness(1.4); transform: scale(1.05); }
@@ -897,56 +906,47 @@
     --prime-outline-width: 3px;
     --prime-outline-color: color-mix(in oklab, var(--element-color, rgba(255, 255, 255, 0.8)) 82%, white 18%);
     --prime-outline-black: rgba(0, 0, 0, 0.88);
-    --prime-outline-opacity: 0.85;
+    --prime-outline-opacity: 90%;
   }
   /* Rank-based outline animations (very slow, subtle) */
   .fighter-portrait.rank-prime {
     --prime-outline-color: color-mix(in oklab, var(--element-color) 88%, white 12%);
     --prime-outline-black: rgba(0, 0, 0, 0.94);
-    --prime-outline-opacity: 0.95;
-  }
-
-  .fighter-portrait.rank-prime::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    pointer-events: none;
-    background: var(--prime-outline-gradient, transparent);
-    opacity: var(--prime-outline-opacity, 0.9);
-    mix-blend-mode: screen;
-    transform-origin: center;
+    --prime-outline-opacity: 96%;
+    --prime-outline-angle: 0deg;
+    border-color: transparent;
+    border-width: var(--prime-outline-width, 3px);
+    border-style: solid;
+    border-image: var(--prime-outline-gradient, none) 1;
+    border-image-slice: 1;
     animation: prime-outline-rotate var(--outline-anim-dur, 150s) linear infinite;
     animation-delay: var(--outline-anim-delay, 0s);
-    will-change: transform;
-    mask: radial-gradient(
-      farthest-side,
-      transparent calc(100% - var(--prime-outline-width, 3px)),
-      rgba(0, 0, 0, 1) calc(100% - var(--prime-outline-width, 3px) + 0.6px)
-    );
-    -webkit-mask: radial-gradient(
-      farthest-side,
-      transparent calc(100% - var(--prime-outline-width, 3px)),
-      rgba(0, 0, 0, 1) calc(100% - var(--prime-outline-width, 3px) + 0.6px)
-    );
-    z-index: 1;
+    box-shadow:
+      0 2px 8px rgba(0, 0, 0, 0.3),
+      0 0 18px 6px color-mix(
+        in oklab,
+        var(--prime-outline-color) var(--prime-outline-opacity, 96%),
+        transparent calc(100% - var(--prime-outline-opacity, 96%))
+      ),
+      inset 0 0 12px rgba(0, 0, 0, 0.55);
   }
 
-  .fighter-portrait.rank-prime.reduced::after {
+  .fighter-portrait.rank-prime.reduced {
     animation: none;
-    transform: none;
   }
 
-  .modern-fighter-card.dead .fighter-portrait.rank-prime::after {
+  .modern-fighter-card.dead .fighter-portrait.rank-prime {
+    --prime-outline-opacity: 48%;
     animation: none;
-    transform: none;
-    opacity: 0.25;
+    --prime-outline-angle: 0deg;
+    box-shadow:
+      0 2px 6px rgba(0, 0, 0, 0.35),
+      inset 0 0 10px rgba(0, 0, 0, 0.6);
   }
 
   @keyframes prime-outline-rotate {
-    to {
-      transform: rotate(360deg);
-    }
+    from { --prime-outline-angle: 0deg; }
+    to { --prime-outline-angle: 360deg; }
   }
   .fighter-portrait.rank-boss:not(.reduced) {
     animation: boss-outline-shift var(--outline-anim-dur, 150s) linear infinite;
@@ -968,7 +968,7 @@
   .modern-fighter-card.highlight .fighter-portrait {
     border-color: color-mix(in oklab, var(--element-color) 75%, white);
     box-shadow: 0 0 12px 4px color-mix(in oklab, var(--element-color) 65%, black);
-    --prime-outline-opacity: 0.35;
+    --prime-outline-opacity: 35%;
   }
 
   .portrait-image {
