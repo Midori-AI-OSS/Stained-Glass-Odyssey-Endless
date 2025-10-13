@@ -796,9 +796,10 @@ class EffectManager:
                 "expired_naturally": True
             })
 
-            self.mods.remove(mod)
-            if mod.id in self.stats.mods:
-                self.stats.mods.remove(mod.id)
+            if mod in self.mods:
+                self.mods.remove(mod)
+                if mod.id in self.stats.mods:
+                    self.stats.mods.remove(mod.id)
 
         mod_phase_payload.update(
             {

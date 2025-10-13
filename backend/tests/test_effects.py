@@ -346,6 +346,54 @@ async def test_stat_modifier_applies_and_expires():
 
 
 @pytest.mark.asyncio
+async def test_stat_modifier_reapplied_during_tick_is_preserved():
+    stats = Stats()
+    stats.id = "reapply_target"
+    manager = EffectManager(stats)
+    stats.effect_manager = manager
+
+    class ReapplyingModifier(effects.StatModifier):
+        def __init__(self, stats_obj, effect_manager):
+            super().__init__(
+                stats=stats_obj,
+                name="reapply_buff",
+                turns=1,
+                id="reapply_buff",
+            )
+            self._manager = effect_manager
+            self._reapplied = False
+
+        def tick(self) -> bool:
+            if not self._reapplied:
+                self._reapplied = True
+                replacement = effects.StatModifier(
+                    stats=self.stats,
+                    name=self.name,
+                    turns=2,
+                    id=self.id,
+                )
+                asyncio.create_task(self._manager.add_modifier(replacement))
+            return super().tick()
+
+    initial = ReapplyingModifier(stats, manager)
+    await call_maybe_async(manager.add_modifier, initial)
+
+    set_battle_active(True)
+    try:
+        await manager.tick()
+        await asyncio.sleep(0.05)
+    finally:
+        set_battle_active(False)
+
+    assert len(manager.mods) == 1
+    assert initial not in manager.mods
+    assert manager.mods[0].id == initial.id
+    assert manager.mods[0] is not initial
+    assert manager.mods[0].turns == 2
+    assert stats.mods.count(initial.id) == 1
+
+
+@pytest.mark.asyncio
 async def test_damage_over_time_tick_awaits_pacing(monkeypatch):
     pacing = importlib.import_module("autofighter.rooms.battle.pacing")
     calls: list[tuple[str, float]] = []
