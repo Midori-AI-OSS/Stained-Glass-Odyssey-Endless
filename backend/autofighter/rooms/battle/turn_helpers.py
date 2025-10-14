@@ -7,6 +7,8 @@ from typing import Any
 
 from autofighter.stats import BUS
 
+from .pacing import clear_extra_turns_for
+
 if TYPE_CHECKING:
     from ...party import Party
     from .core import BattleRoom
@@ -69,6 +71,7 @@ def remove_dead_foes(
 
     for index in range(len(foes) - 1, -1, -1):
         if getattr(foes[index], "hp", 1) <= 0:
-            foes.pop(index)
+            foe = foes.pop(index)
             foe_effects.pop(index)
             enrage_mods.pop(index)
+            clear_extra_turns_for(foe)

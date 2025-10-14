@@ -89,6 +89,20 @@ def _grant_extra_turn(entity: Stats) -> None:
         pass
 
 
+def clear_extra_turns_for(entity: Stats | None) -> None:
+    """Remove pacing entries for a departing entity."""
+
+    try:
+        ident = id(entity)
+    except Exception:
+        return
+
+    try:
+        _EXTRA_TURNS.pop(ident, None)
+    except Exception:
+        pass
+
+
 def _clear_extra_turns(_entity: Stats) -> None:
     _EXTRA_TURNS.clear()
     set_visual_queue(None)
