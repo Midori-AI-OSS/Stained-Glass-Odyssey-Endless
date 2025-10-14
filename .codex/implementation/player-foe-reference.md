@@ -67,6 +67,7 @@ first spawn and reuse it for future sessions unless customized.
 | Mimic | C | 0★ | Any (randomized) | `mimic_player_copy` mirrors allied passives and stat gains. | Mirrors an active party member during scripted mirror fights; non-selectable. |
 | PersonaIce | A | 5★ | Ice | `persona_ice_cryo_cycle` layers mitigation and thaws stored frost into end-of-turn healing barriers. | Standard gacha recruit. |
 | PersonaLightAndDark | A | 6★ | Light / Dark (alternating) | `persona_light_and_dark_duality` flips elements every action, pulsing Light-form heals before Dark-form crit bursts that strip defenses. | 6★ gacha headliner. |
+| Ryne | B | 6★ | Light | `ryne_oracle_of_balance` channels the Oracle of Light's senses to stabilize aetheric anomalies while her twin-blade style shields allies through agile counterplay. | 6★ gacha headliner. |
 | Player | C | Story | Chosen (player-selected) | `player_level_up_bonus` scales with run progress, representing the customizable avatar. | Always available starter. |
 | Slime | C | 0★ | Any (randomized) | Baseline stat template that tags in as a helper for foe lineups, including boss slots. | Non-selectable foe support unit that appears when encounters need a fallback combatant. |
 
