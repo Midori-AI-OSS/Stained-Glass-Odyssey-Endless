@@ -16,3 +16,17 @@ Both the burn and HoT rely on `StatEffect` modifiers targeting `"hp"`. The stats
 - Attacking Lady of Fire while the passive is active inflicts damage consistent with the description.
 - Fire drain produces healing ticks that actually restore HP.
 - Automated tests cover both retaliation and self-heal paths.
+
+## Implementation Summary
+- Replaced `{"hp": -burn_damage}` StatEffect with proper DamageOverTime using EffectManager.add_dot
+- Replaced `{"hp": hot_amount}` StatEffect with proper HealingOverTime using EffectManager.add_hot
+- Burn damage: 25% of incoming damage as 1-turn DoT
+- Self-damage HoT: 50% of self-damage as 2-turn HoT
+- Added comprehensive tests in `tests/test_lady_of_fire_infernal_momentum.py`:
+  - Test burn retaliation is applied as DoT
+  - Test burn works without effect_manager (creates one)
+  - Test self-damage grants HoT
+  - Test self-damage HoT works without effect_manager
+  - Test burn damage scales with incoming damage
+
+ready for review
