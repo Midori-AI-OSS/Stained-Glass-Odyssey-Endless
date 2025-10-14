@@ -1,8 +1,12 @@
+import logging
 from dataclasses import dataclass
 from dataclasses import field
 
 from autofighter.stats import BUS
 from plugins.cards._base import CardBase
+
+
+log = logging.getLogger(__name__)
 
 
 @dataclass
@@ -16,42 +20,38 @@ class GuidingCompass(CardBase):
     async def apply(self, party) -> None:  # type: ignore[override]
         await super().apply(party)
 
-        first_battle_bonus_used = False
+        flag_name = "guiding_compass_bonus_used"
+        if not hasattr(party, flag_name):
+            setattr(party, flag_name, False)
 
         async def _on_battle_start(target, *_args):
-            nonlocal first_battle_bonus_used
-            # Only trigger once for the first battle of the run
-            if not first_battle_bonus_used and target in party.members:
-                first_battle_bonus_used = True
-                # Grant extra XP bonus for all party members
-                extra_xp = 10  # Small extra XP amount
-                for member in party.members:
-                    import logging
+            if target not in party.members:
+                return
 
-                    log = logging.getLogger(__name__)
-                    log.debug(
-                        "Guiding Compass first battle bonus: +%d XP to %s",
-                        extra_xp,
-                        member.id,
-                    )
-                    member.exp += extra_xp
-                    await BUS.emit_async(
-                        "card_effect",
-                        self.id,
-                        member,
-                        "first_battle_xp",
-                        extra_xp,
-                        {
-                            "bonus_xp": extra_xp,
-                            "trigger_event": "first_battle",
-                        },
-                    )
+            already_used = bool(getattr(party, flag_name, False))
+            if already_used:
+                return
+
+            setattr(party, flag_name, True)
+
+            extra_xp = 10  # Small extra XP amount
+            for member in party.members:
+                log.debug(
+                    "Guiding Compass first battle bonus: +%d XP to %s",
+                    extra_xp,
+                    member.id,
+                )
+                member.exp += extra_xp
+                await BUS.emit_async(
+                    "card_effect",
+                    self.id,
+                    member,
+                    "first_battle_xp",
+                    extra_xp,
+                    {
+                        "bonus_xp": extra_xp,
+                        "trigger_event": "first_battle",
+                    },
+                )
 
         self.subscribe("battle_start", _on_battle_start)
-
-        async def _on_battle_end(*_args):
-            nonlocal first_battle_bonus_used
-            first_battle_bonus_used = False
-            self.cleanup_subscriptions()
-
-        self.subscribe("battle_end", _on_battle_end)

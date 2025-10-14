@@ -53,15 +53,9 @@ async def test_guiding_compass_first_battle_xp_only_once() -> None:
     assert member1.exp == base_exp + 10
     assert member2.exp == base_exp + 10
     assert len(events) == 2
+    assert getattr(party, "guiding_compass_bonus_used", False) is True
 
-    await BUS.emit_async("battle_start", member1)
-    await asyncio.sleep(0.05)
-
-    assert member1.exp == base_exp + 10
-    assert member2.exp == base_exp + 10
-    assert len(events) == 2
-
-    await BUS.emit_async("battle_end")
+    await BUS.emit_async("battle_end", member1)
     await asyncio.sleep(0.05)
 
     assert len(event_bus_module.bus._subs.get("battle_start", [])) == pre_battle_start
@@ -73,11 +67,38 @@ async def test_guiding_compass_first_battle_xp_only_once() -> None:
     assert len(event_bus_module.bus._subs.get("battle_start", [])) == pre_battle_start + 1
     assert len(event_bus_module.bus._subs.get("battle_end", [])) == pre_battle_end + 1
 
-    await BUS.emit_async("battle_end")
+    await BUS.emit_async("battle_start", member1)
+    await asyncio.sleep(0.05)
+
+    assert member1.exp == base_exp + 10
+    assert member2.exp == base_exp + 10
+    assert len(events) == 2
+
+    await BUS.emit_async("battle_end", member1)
     await asyncio.sleep(0.05)
 
     assert len(event_bus_module.bus._subs.get("battle_start", [])) == pre_battle_start
     assert len(event_bus_module.bus._subs.get("battle_end", [])) == pre_battle_end
+
+    new_member1 = PlayerBase()
+    new_member1.id = "n1"
+    new_member2 = PlayerBase()
+    new_member2.id = "n2"
+    new_party = Party([new_member1, new_member2])
+    new_base_exp = new_member1.exp
+
+    third_card = GuidingCompass()
+    await third_card.apply(new_party)
+
+    await BUS.emit_async("battle_start", new_member1)
+    await asyncio.sleep(0.05)
+
+    assert new_member1.exp == new_base_exp + 10
+    assert new_member2.exp == new_base_exp + 10
+    assert len(events) == 4
+
+    await BUS.emit_async("battle_end", new_member1)
+    await asyncio.sleep(0.05)
 
     BUS.unsubscribe("card_effect", _on_card_effect)
 

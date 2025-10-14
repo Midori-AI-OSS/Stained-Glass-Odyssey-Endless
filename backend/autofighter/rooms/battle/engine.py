@@ -189,6 +189,12 @@ async def run_battle(
     if hasattr(combat_party, "_null_lantern_cleared"):
         cleared = getattr(combat_party, "_null_lantern_cleared", 0)
         setattr(party, "_null_lantern_cleared", cleared)
+    if hasattr(combat_party, "guiding_compass_bonus_used"):
+        setattr(
+            party,
+            "guiding_compass_bonus_used",
+            bool(getattr(combat_party, "guiding_compass_bonus_used", False)),
+        )
 
     if any(member.hp > 0 for member in party.members) and exp_reward > 0:
         for member in party.members:

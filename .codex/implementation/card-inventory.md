@@ -37,7 +37,7 @@ detail pane.
 - Bulwark Totem – +2% DEF & +2% HP; When lethal damage would drop an ally to 0 HP, siphon 5% of that hit from a healthy teammate to restore the victim (tiny soak)
 - Farsight Scope – +3% Crit Rate; Attacks against enemies under 50% HP gain +6% crit rate
 - Coated Armor – +3% Mitigation & +3% DEF; When mitigation reduces incoming damage, heal 1% HP
-- Guiding Compass – +3% EXP Gain & +3% Effect Hit Rate; First battle of a run grants a small extra XP bonus
+- Guiding Compass – +3% EXP Gain & +3% Effect Hit Rate; grants a one-time +10 XP party bonus during the first battle of each run
 - Swift Bandanna – +3% Crit Rate & +3% Dodge Odds; On dodge, gain +1% crit rate for next action
 - Reinforced Cloak – +3% DEF & +3% Effect Res; 30% chance to reduce the starting duration of long debuffs by 1
 - Vital Core – +3% Vitality & +3% HP; When below 30% HP, gain +3% Vitality for 2 turns

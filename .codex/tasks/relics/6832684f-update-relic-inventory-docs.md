@@ -14,3 +14,4 @@ The implementation guide at `.codex/implementation/relic-inventory.md` is out of
 - All outdated claims about extra turns or placeholder status are removed or corrected.
 - Any supplementary docs touched by the changes remain internally consistent.
 - The update passes repository documentation checks (linting/formatting, if applicable).
+ready for review
