@@ -21,7 +21,7 @@ from plugins.characters._base import PlayerBase
 
 
 @pytest.mark.asyncio
-async def test_guiding_compass_first_battle_xp_only_once() -> None:
+async def test_guiding_compass_levels_party_only_once() -> None:
     event_bus_module.bus._subs.clear()
 
     member1 = PlayerBase()
@@ -29,76 +29,49 @@ async def test_guiding_compass_first_battle_xp_only_once() -> None:
     member2 = PlayerBase()
     member2.id = "m2"
     party = Party([member1, member2])
-    base_exp = member1.exp
-    pre_battle_start = len(event_bus_module.bus._subs.get("battle_start", []))
-    pre_battle_end = len(event_bus_module.bus._subs.get("battle_end", []))
+    base_levels = [member.level for member in party.members]
 
-    card = GuidingCompass()
-    await card.apply(party)
-
-    assert len(event_bus_module.bus._subs.get("battle_start", [])) == pre_battle_start + 1
-    assert len(event_bus_module.bus._subs.get("battle_end", [])) == pre_battle_end + 1
-
-    events: list[tuple[str, str, int]] = []
+    events: list[tuple[str, str, str, int, int]] = []
 
     async def _on_card_effect(card_id, member, effect, amount, extra):
-        if effect == "first_battle_xp":
-            events.append((card_id, member.id, amount))
+        if effect == "instant_level_up":
+            events.append((card_id, member.id, effect, extra.get("previous_level", 0), extra.get("new_level", 0)))
 
     BUS.subscribe("card_effect", _on_card_effect)
 
-    await BUS.emit_async("battle_start", member1)
+    card = GuidingCompass()
+    await card.apply(party)
     await asyncio.sleep(0.05)
 
-    assert member1.exp == base_exp + 10
-    assert member2.exp == base_exp + 10
+    assert [member.level for member in party.members] == [level + 1 for level in base_levels]
+    assert getattr(party, "guiding_compass_level_up_awarded", False) is True
     assert len(events) == 2
-    assert getattr(party, "guiding_compass_bonus_used", False) is True
-
-    await BUS.emit_async("battle_end", member1)
-    await asyncio.sleep(0.05)
-
-    assert len(event_bus_module.bus._subs.get("battle_start", [])) == pre_battle_start
-    assert len(event_bus_module.bus._subs.get("battle_end", [])) == pre_battle_end
+    for idx, ((_, member_id, _, previous_level, new_level), member) in enumerate(zip(events, party.members)):
+        assert member_id == member.id
+        assert previous_level == base_levels[idx]
+        assert new_level == member.level
 
     second_card = GuidingCompass()
     await second_card.apply(party)
-
-    assert len(event_bus_module.bus._subs.get("battle_start", [])) == pre_battle_start + 1
-    assert len(event_bus_module.bus._subs.get("battle_end", [])) == pre_battle_end + 1
-
-    await BUS.emit_async("battle_start", member1)
     await asyncio.sleep(0.05)
 
-    assert member1.exp == base_exp + 10
-    assert member2.exp == base_exp + 10
+    assert [member.level for member in party.members] == [level + 1 for level in base_levels]
     assert len(events) == 2
-
-    await BUS.emit_async("battle_end", member1)
-    await asyncio.sleep(0.05)
-
-    assert len(event_bus_module.bus._subs.get("battle_start", [])) == pre_battle_start
-    assert len(event_bus_module.bus._subs.get("battle_end", [])) == pre_battle_end
 
     new_member1 = PlayerBase()
     new_member1.id = "n1"
     new_member2 = PlayerBase()
     new_member2.id = "n2"
     new_party = Party([new_member1, new_member2])
-    new_base_exp = new_member1.exp
+    new_base_levels = [member.level for member in new_party.members]
 
     third_card = GuidingCompass()
     await third_card.apply(new_party)
-
-    await BUS.emit_async("battle_start", new_member1)
     await asyncio.sleep(0.05)
 
-    assert new_member1.exp == new_base_exp + 10
-    assert new_member2.exp == new_base_exp + 10
+    assert [member.level for member in new_party.members] == [level + 1 for level in new_base_levels]
+    assert getattr(new_party, "guiding_compass_level_up_awarded", False) is True
     assert len(events) == 4
-
-    await BUS.emit_async("battle_end", new_member1)
-    await asyncio.sleep(0.05)
 
     BUS.unsubscribe("card_effect", _on_card_effect)
 

@@ -15,43 +15,40 @@ class GuidingCompass(CardBase):
     name: str = "Guiding Compass"
     stars: int = 1
     effects: dict[str, float] = field(default_factory=lambda: {"exp_multiplier": 0.03, "effect_hit_rate": 0.03})
-    about: str = "+3% EXP Gain & +3% Effect Hit Rate; First battle of a run grants a small extra XP bonus"
+    about: str = "+3% EXP Gain & +3% Effect Hit Rate; Grants a one-time full level up when acquired"
 
     async def apply(self, party) -> None:  # type: ignore[override]
         await super().apply(party)
 
-        flag_name = "guiding_compass_bonus_used"
-        if not hasattr(party, flag_name):
-            setattr(party, flag_name, False)
+        flag_name = "guiding_compass_level_up_awarded"
+        if getattr(party, flag_name, False):
+            return
 
-        async def _on_battle_start(target, *_args):
-            if target not in party.members:
-                return
+        setattr(party, flag_name, True)
 
-            already_used = bool(getattr(party, flag_name, False))
-            if already_used:
-                return
+        for member in party.members:
+            previous_level = getattr(member, "level", 0)
+            member.level = previous_level + 1
+            log.debug(
+                "Guiding Compass instant level up applied to %s (level %d -> %d)",
+                getattr(member, "id", "member"),
+                previous_level,
+                member.level,
+            )
 
-            setattr(party, flag_name, True)
+            member._on_level_up()
 
-            extra_xp = 10  # Small extra XP amount
-            for member in party.members:
-                log.debug(
-                    "Guiding Compass first battle bonus: +%d XP to %s",
-                    extra_xp,
-                    member.id,
-                )
-                member.exp += extra_xp
-                await BUS.emit_async(
-                    "card_effect",
-                    self.id,
-                    member,
-                    "first_battle_xp",
-                    extra_xp,
-                    {
-                        "bonus_xp": extra_xp,
-                        "trigger_event": "first_battle",
-                    },
-                )
+            await member._trigger_level_up_passives()
 
-        self.subscribe("battle_start", _on_battle_start)
+            await BUS.emit_async(
+                "card_effect",
+                self.id,
+                member,
+                "instant_level_up",
+                member.level,
+                {
+                    "trigger_event": "card_pickup",
+                    "new_level": member.level,
+                    "previous_level": previous_level,
+                },
+            )
