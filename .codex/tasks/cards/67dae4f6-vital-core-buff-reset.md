@@ -15,3 +15,4 @@ Vital Core prevents reapplying its low-HP vitality buff by storing member IDs in
 - Ensure the buff can reapply promptly if a member dips below 30% HP again after the original buff duration.
 - Avoid leaking tasks or depending on `call_later` so the logic stays deterministic under asyncio.
 - Add automated coverage demonstrating that the buff re-applies after expiring and that no wall-clock assumptions remain.
+ready for review
