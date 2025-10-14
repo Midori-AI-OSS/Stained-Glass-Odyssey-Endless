@@ -31,3 +31,7 @@ Both the burn and HoT rely on `StatEffect` modifiers targeting `"hp"`. The stats
 
 ready for review
 requesting review from the Task Master
+
+## Task Master Review (2025-10-14)
+- `on_self_damage` is never invoked by the passive runtime—`PassiveRegistry` does not call that hook, so the new HoT will never fire in-game. We need either a subscription to the relevant BUS event or integration with an existing callback that runs when self-drain happens.【F:backend/plugins/passives/normal/lady_of_fire_infernal_momentum.py†L73-L94】【F:backend/autofighter/passives.py†L42-L120】
+- Please update the implementation so the HoT path is actually reachable during gameplay before resubmitting.
