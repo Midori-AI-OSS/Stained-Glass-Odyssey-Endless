@@ -31,6 +31,10 @@ class VitalCore(CardBase):
                 current_hp = getattr(member, "hp", 0)
                 max_hp = getattr(member, "max_hp", 1)
 
+                if current_hp <= 0:
+                    active_boosts.discard(member_id)
+                    continue
+
                 if current_hp / max_hp < 0.30 and member_id not in active_boosts:
                     active_boosts.add(member_id)
 
