@@ -61,7 +61,9 @@ class TimekeepersHourglass(RelicBase):
                         continue
                     mgr = getattr(member, "effect_manager", None)
                     if mgr is None:
-                        continue
+                        from autofighter.effects import EffectManager
+                        mgr = EffectManager(member)
+                        member.effect_manager = mgr
 
                     existing = active_mods.pop(id(member), None)
                     if existing is not None:

@@ -2,6 +2,8 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 from typing import Optional
 
+from autofighter.effects import DamageOverTime
+from autofighter.effects import HealingOverTime
 from autofighter.stat_effect import StatEffect
 
 if TYPE_CHECKING:
@@ -41,20 +43,32 @@ class LadyOfFireInfernalMomentum:
 
         if attacker is not None:
             await self.counter_attack(target, attacker, damage)
+        elif damage > 0:
+            await self.on_self_damage(target, damage)
 
     async def counter_attack(self, target: "Stats", attacker: "Stats", damage: int) -> None:
         """Apply burn DoT to attacker when Lady of Fire takes damage."""
         # Apply a short burn DoT to the attacker
-        burn_damage = int(damage * 0.25)  # 25% of damage taken as burn
+        burn_damage = max(1, int(damage * 0.25))  # 25% of damage taken as burn
 
-        # This would normally use the DoT system, but for now apply as a stat effect
-        burn_effect = StatEffect(
-            name=f"{self.id}_burn_counter",
-            stat_modifiers={"hp": -burn_damage},  # Direct damage
-            duration=1,  # One turn burn
-            source=self.id,
+        # Use proper DoT system
+        burn_dot = DamageOverTime(
+            name="Infernal Momentum Burn",
+            damage=burn_damage,
+            turns=1,
+            id=f"{self.id}_burn_{id(attacker)}",
+            source=target,
         )
-        attacker.add_effect(burn_effect)
+
+        # Apply DoT through effect manager if available
+        mgr = getattr(attacker, "effect_manager", None)
+        if mgr is None:
+            from autofighter.effects import EffectManager
+
+            mgr = EffectManager(attacker)
+            attacker.effect_manager = mgr
+
+        await mgr.add_dot(burn_dot)
 
         try:
             from autofighter.rooms.battle.pacing import impact_pause as _impact_pause
@@ -67,15 +81,25 @@ class LadyOfFireInfernalMomentum:
     async def on_self_damage(self, target: "Stats", self_damage: int) -> None:
         """Grant HoT when taking self-damage from Fire drain."""
         # Apply HoT equal to half the self-damage for two turns
-        hot_amount = int(self_damage * 0.5)
+        hot_amount = max(1, int(self_damage * 0.5))
 
-        hot_effect = StatEffect(
-            name=f"{self.id}_fire_drain_hot",
-            stat_modifiers={"hp": hot_amount},  # Healing over time
-            duration=2,  # Two turns
-            source=self.id,
+        hot = HealingOverTime(
+            name="Infernal Momentum Regen",
+            healing=hot_amount,
+            turns=2,
+            id=f"{self.id}_hot_{id(target)}",
+            source=target,
         )
-        target.add_effect(hot_effect)
+
+        # Apply HoT through effect manager if available
+        mgr = getattr(target, "effect_manager", None)
+        if mgr is None:
+            from autofighter.effects import EffectManager
+
+            mgr = EffectManager(target)
+            target.effect_manager = mgr
+
+        await mgr.add_hot(hot)
 
     @classmethod
     def get_description(cls) -> str:

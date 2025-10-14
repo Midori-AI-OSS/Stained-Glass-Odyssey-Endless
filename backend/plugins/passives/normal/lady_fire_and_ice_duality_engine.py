@@ -3,6 +3,7 @@ from typing import TYPE_CHECKING
 from typing import ClassVar
 from typing import Iterable
 
+from autofighter.effects import HealingOverTime
 from autofighter.stat_effect import StatEffect
 
 if TYPE_CHECKING:
@@ -92,15 +93,26 @@ class LadyFireAndIceDualityEngine:
         stacks_to_consume = self._flux_stacks[entity_id]
 
         if stacks_to_consume > 0:
-            ally_hot_amount = stacks_to_consume * 10  # 10 HP per stack
+            ally_hot_amount = max(1, stacks_to_consume * 10)  # 10 HP per stack
 
-            ally_hot_effect = StatEffect(
-                name=f"{self.id}_flux_ally_hot",
-                stat_modifiers={"hp": ally_hot_amount},
-                duration=3,  # Three turns of HoT
-                source=self.id,
+            # Use proper HoT system
+            hot = HealingOverTime(
+                name="Duality Engine Flux",
+                healing=ally_hot_amount,
+                turns=3,
+                id=f"{self.id}_hot_{entity_id}",
+                source=target,
             )
-            target.add_effect(ally_hot_effect)
+
+            # Apply HoT through effect manager if available
+            mgr = getattr(target, "effect_manager", None)
+            if mgr is None:
+                from autofighter.effects import EffectManager
+
+                mgr = EffectManager(target)
+                target.effect_manager = mgr
+
+            await mgr.add_hot(hot)
 
             if foes:
                 mitigation_reduction = stacks_to_consume * 0.02
@@ -113,10 +125,8 @@ class LadyFireAndIceDualityEngine:
                     )
                     foe.add_effect(debuff)
 
-            target._active_effects = [
-                effect for effect in target._active_effects
-                if effect.name != f"{self.id}_flux_potency"
-            ]
+            # Clean up flux potency effects using proper API
+            target.remove_effect_by_name(f"{self.id}_flux_potency")
 
             self._flux_stacks[entity_id] = 0
 
