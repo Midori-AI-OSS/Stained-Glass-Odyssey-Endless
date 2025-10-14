@@ -35,6 +35,14 @@ class RyneOracleOfBalance:
     SOFT_CAP: ClassVar[int] = 120
     POST_CAP_EFFICIENCY: ClassVar[float] = 0.5
 
+    OWNER_ATK_RATIO: ClassVar[float] = 0.18
+    OWNER_MITIGATION_RATIO: ClassVar[float] = 0.15
+    OWNER_EFFECT_RES_RATIO: ClassVar[float] = 0.12
+    OWNER_CRIT_RATIO: ClassVar[float] = 0.05
+    LUNA_ATK_RATIO: ClassVar[float] = 0.1
+    LUNA_MITIGATION_RATIO: ClassVar[float] = 0.08
+    LUNA_EFFECT_RES_RATIO: ClassVar[float] = 0.08
+
     _balance_points: ClassVar[dict[int, int]] = {}
     _balance_totals: ClassVar[dict[int, int]] = {}
     _balance_carry: ClassVar[dict[int, float]] = {}
@@ -84,10 +92,7 @@ class RyneOracleOfBalance:
         cls._balance_carry.setdefault(owner_id, 0.0)
         cls._register_bus_handlers(owner)
         await cls._maybe_cache_party(owner, party)
-        cls._apply_owner_aura(owner)
-        luna = cls._resolve_luna(owner_id)
-        if luna is not None:
-            cls._apply_link_aura(owner, luna)
+        cls._refresh_auras(owner)
 
     @classmethod
     async def _handle_turn_start(
@@ -144,6 +149,7 @@ class RyneOracleOfBalance:
             return
 
         cls._balance_points[owner_id] = current + gained
+        cls._refresh_auras(owner)
         await cls._check_threshold(owner)
 
     @classmethod
@@ -154,8 +160,11 @@ class RyneOracleOfBalance:
         while current >= threshold:
             current -= threshold
             cls._balance_points[owner_id] = current
+            cls._refresh_auras(owner)
             await cls._trigger_surge(owner)
             current = cls._balance_points.get(owner_id, 0)
+        cls._balance_points[owner_id] = current
+        cls._refresh_auras(owner)
 
     @classmethod
     async def _trigger_surge(cls, owner: "Stats") -> None:
@@ -189,6 +198,14 @@ class RyneOracleOfBalance:
     @classmethod
     def _apply_owner_aura(cls, owner: "Stats") -> None:
         owner_id = id(owner)
+        stacks = max(0, cls._balance_points.get(owner_id, 0))
+        effect_name = f"{cls.id}_oracle_aura_{owner_id}"
+        if stacks <= 0:
+            try:
+                owner.remove_effect_by_name(effect_name)
+            except Exception:
+                pass
+            return
         attack_base = getattr(owner, "get_base_stat", None)
         base_atk = 0
         if callable(attack_base):
@@ -198,13 +215,14 @@ class RyneOracleOfBalance:
                 base_atk = int(getattr(owner, "_base_atk", getattr(owner, "atk", 0)))
         else:
             base_atk = int(getattr(owner, "_base_atk", getattr(owner, "atk", 0)))
+        scale = stacks / max(1, cls.THRESHOLD)
         aura_effect = StatEffect(
-            name=f"{cls.id}_oracle_aura_{owner_id}",
+            name=effect_name,
             stat_modifiers={
-                "atk": max(1, int(base_atk * 0.18)),
-                "mitigation": 0.15,
-                "effect_resistance": 0.12,
-                "crit_rate": 0.05,
+                "atk": max(1, int(base_atk * cls.OWNER_ATK_RATIO * scale)),
+                "mitigation": cls.OWNER_MITIGATION_RATIO * scale,
+                "effect_resistance": cls.OWNER_EFFECT_RES_RATIO * scale,
+                "crit_rate": cls.OWNER_CRIT_RATIO * scale,
             },
             duration=-1,
             source=cls.id,
@@ -214,17 +232,42 @@ class RyneOracleOfBalance:
     @classmethod
     def _apply_link_aura(cls, owner: "Stats", luna: "Stats") -> None:
         owner_id = id(owner)
+        stacks = max(0, cls._balance_points.get(owner_id, 0))
+        effect_name = f"{cls.id}_luna_link_{owner_id}"
+        if stacks <= 0:
+            try:
+                luna.remove_effect_by_name(effect_name)
+            except Exception:
+                pass
+            return
+        attack_base = getattr(luna, "get_base_stat", None)
+        base_atk = 0
+        if callable(attack_base):
+            try:
+                base_atk = int(attack_base("atk"))
+            except Exception:
+                base_atk = int(getattr(luna, "_base_atk", getattr(luna, "atk", 0)))
+        else:
+            base_atk = int(getattr(luna, "_base_atk", getattr(luna, "atk", 0)))
+        scale = stacks / max(1, cls.THRESHOLD)
         aura_effect = StatEffect(
-            name=f"{cls.id}_luna_link_{owner_id}",
+            name=effect_name,
             stat_modifiers={
-                "atk": max(1, int(getattr(luna, "atk", 0) * 0.1)),
-                "mitigation": 0.08,
-                "effect_resistance": 0.08,
+                "atk": max(1, int(base_atk * cls.LUNA_ATK_RATIO * scale)),
+                "mitigation": cls.LUNA_MITIGATION_RATIO * scale,
+                "effect_resistance": cls.LUNA_EFFECT_RES_RATIO * scale,
             },
             duration=-1,
             source=cls.id,
         )
         luna.add_effect(aura_effect)
+
+    @classmethod
+    def _refresh_auras(cls, owner: "Stats") -> None:
+        cls._apply_owner_aura(owner)
+        luna = cls._resolve_luna(id(owner))
+        if luna is not None:
+            cls._apply_link_aura(owner, luna)
 
     @classmethod
     async def _pulse_support(
@@ -309,7 +352,7 @@ class RyneOracleOfBalance:
         if luna is not None:
             cls._luna_links[owner_id] = ref(luna)
             cls._ensure_luna_tracked(owner_id, luna)
-            cls._apply_link_aura(owner, luna)
+        cls._refresh_auras(owner)
 
     @classmethod
     def _normalize_party(cls, party: Sequence[object]) -> list["Stats"]:
@@ -471,13 +514,13 @@ class RyneOracleOfBalance:
     @classmethod
     def get_description(cls) -> str:
         return (
-            "Starts battle with a permanent balance aura granting +18% of Ryne's base ATK, +15% mitigation, "
-            "+12% Effect RES, and +5% crit rate. Links to Luna to share +10% of her base ATK along with +8% "
-            "mitigation and Effect RES whenever she's present. Gains 2 balance from actions, 1 from hits, 4 "
-            "from ultimates, and 2 whenever Luna's sword strikes; at 6 balance triggers a surge that grants "
-            "Ryne +22% of her base ATK, +10% crit rate, and +1 SPD for 2 turns. Each surge pulses 8% "
-            "mitigation, 5% Effect RES, +2 ultimate charge, and a 3% Max HP heal to other allies while "
-            "refreshing Luna with 12% mitigation, 10% Effect RES, and a 4% Max HP heal. Balance stacks "
-            "beyond 120 accrue at half speed but continue climbing without a hard cap; stack display switches "
-            "to a numeric counter once past the soft cap."
+            "Each balance stack grants one-sixth of a growing aura—up to +18% of Ryne's base ATK, +15% mitigation, "
+            "+12% Effect RES, and +5% crit rate before the surge resets. Luna shares the same fractional link "
+            "(up to +10% ATK and +8% mitigation/Effect RES when she's present). Gains 2 balance from actions, 1 "
+            "from hits, 4 from ultimates, and 2 whenever Luna's sword strikes; at 6 balance triggers a surge "
+            "that grants Ryne +22% of her base ATK, +10% crit rate, and +1 SPD for 2 turns. Each surge pulses "
+            "8% mitigation, 5% Effect RES, +2 ultimate charge, and a 3% Max HP heal to other allies while "
+            "refreshing Luna with 12% mitigation, 10% Effect RES, and a 4% Max HP heal. Balance stacks beyond "
+            "120 accrue at half speed but continue climbing without a hard cap; stack display switches to a "
+            "numeric counter once past the soft cap."
         )
