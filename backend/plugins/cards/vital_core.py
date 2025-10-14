@@ -28,6 +28,13 @@ class VitalCore(CardBase):
 
                 member_key = id(member)
 
+                if current_hp <= 0:
+                    active_boosts.discard(member_id)
+                    continue
+
+                if current_hp / max_hp < 0.30 and member_id not in active_boosts:
+                    active_boosts.add(member_id)
+                    
                 if max_hp <= 0:
                     active_boosts.pop(member_key, None)
                     continue
