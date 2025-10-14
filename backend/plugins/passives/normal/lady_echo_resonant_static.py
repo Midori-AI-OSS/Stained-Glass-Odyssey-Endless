@@ -70,33 +70,37 @@ class LadyEchoResonantStatic:
             )
             target.add_effect(party_crit_effect)
 
-    async def on_hit_target(self, attacker: "Stats", target_hit: "Stats") -> None:
-        """Track consecutive hits on the same target."""
+    async def on_hit_landed(
+        self,
+        attacker: "Stats",
+        target_hit: "Stats",
+        damage: int = 0,
+        action_type: str = "attack",
+        **_: object,
+    ) -> None:
+        """Track consecutive hits on the same target when an attack lands."""
+        del damage, action_type  # Parameters reserved for future use
+
         attacker_id = id(attacker)
         target_id = id(target_hit)
 
-        # Check if this is the same target as last hit
-        if (attacker_id in self._current_target and
-                self._current_target[attacker_id] == target_id):
-            # Consecutive hit on same target
-            self._consecutive_hits[attacker_id] += 1
+        previous_target = self._current_target.get(attacker_id)
+        hit_count = self._consecutive_hits.get(attacker_id, 0)
+        crit_stacks = self._party_crit_stacks.get(attacker_id, 0)
 
-            # Grant party +2% crit rate (stacking up to 10 times)
-            if self._consecutive_hits[attacker_id] <= 10:
-                self._party_crit_stacks[attacker_id] += 1
-
+        if previous_target == target_id and hit_count:
+            # Consecutive hit on the same target.
+            hit_count += 1
+            if hit_count <= 10:
+                crit_stacks = min(crit_stacks + 1, 10)
         else:
-            # Changed targets - reset consecutive hits and crit stacks
-            self._consecutive_hits[attacker_id] = 1
-            self._party_crit_stacks[attacker_id] = 0
+            # Target changed (or this is the first tracked hit) - reset stacks.
+            hit_count = 1
+            crit_stacks = 0
+            attacker.remove_effect_by_name(f"{self.id}_party_crit")
 
-            # Remove previous party crit effects
-            attacker._active_effects = [
-                effect for effect in attacker._active_effects
-                if effect.name != f"{self.id}_party_crit"
-            ]
-
-        # Update current target
+        self._consecutive_hits[attacker_id] = hit_count
+        self._party_crit_stacks[attacker_id] = crit_stacks
         self._current_target[attacker_id] = target_id
 
     @classmethod

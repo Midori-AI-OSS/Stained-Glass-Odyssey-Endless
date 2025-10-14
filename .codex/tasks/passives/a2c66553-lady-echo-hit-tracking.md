@@ -15,3 +15,4 @@ The `LadyEchoResonantStatic` passive is supposed to scale party crit rate when L
 - Automated tests cover the crit stack growth and reset behavior for Lady Echo's passive.
 - No regressions to the existing DoT scaling effect (chain bonus should still apply based on DoTs present).
 - Documentation or in-file docstring updated if behavior notes change.
+ready for review
