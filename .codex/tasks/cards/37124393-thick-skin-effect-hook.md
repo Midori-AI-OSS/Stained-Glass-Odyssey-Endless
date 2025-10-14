@@ -12,3 +12,5 @@ Thick Skin still listens to the legacy `effect_applied(target, effect_name, dura
 - Update the subscription to match the current `effect_applied` payload, including checking `details` to confirm a bleed DoT.
 - Inspect the correct EffectManager collections (e.g., `dots`) to locate active bleed effects and safely adjust their `turns` counters.
 - Emit the card effect event after a successful reduction and add automated coverage demonstrating that at least one bleed stack loses a turn when the 50% roll succeeds.
+
+ready for review
