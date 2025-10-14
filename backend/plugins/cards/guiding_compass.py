@@ -1,8 +1,12 @@
+import logging
 from dataclasses import dataclass
 from dataclasses import field
 
 from autofighter.stats import BUS
 from plugins.cards._base import CardBase
+
+
+log = logging.getLogger(__name__)
 
 
 @dataclass
@@ -11,47 +15,40 @@ class GuidingCompass(CardBase):
     name: str = "Guiding Compass"
     stars: int = 1
     effects: dict[str, float] = field(default_factory=lambda: {"exp_multiplier": 0.03, "effect_hit_rate": 0.03})
-    about: str = "+3% EXP Gain & +3% Effect Hit Rate; First battle of a run grants a small extra XP bonus"
+    about: str = "+3% EXP Gain & +3% Effect Hit Rate; Grants a one-time full level up when acquired"
 
     async def apply(self, party) -> None:  # type: ignore[override]
         await super().apply(party)
 
-        first_battle_bonus_used = False
+        flag_name = "guiding_compass_level_up_awarded"
+        if getattr(party, flag_name, False):
+            return
 
-        async def _on_battle_start(target, *_args):
-            nonlocal first_battle_bonus_used
-            # Only trigger once for the first battle of the run
-            if not first_battle_bonus_used and target in party.members:
-                first_battle_bonus_used = True
-                # Grant extra XP bonus for all party members
-                extra_xp = 10  # Small extra XP amount
-                for member in party.members:
-                    import logging
+        setattr(party, flag_name, True)
 
-                    log = logging.getLogger(__name__)
-                    log.debug(
-                        "Guiding Compass first battle bonus: +%d XP to %s",
-                        extra_xp,
-                        member.id,
-                    )
-                    member.exp += extra_xp
-                    await BUS.emit_async(
-                        "card_effect",
-                        self.id,
-                        member,
-                        "first_battle_xp",
-                        extra_xp,
-                        {
-                            "bonus_xp": extra_xp,
-                            "trigger_event": "first_battle",
-                        },
-                    )
+        for member in party.members:
+            previous_level = getattr(member, "level", 0)
+            member.level = previous_level + 1
+            log.debug(
+                "Guiding Compass instant level up applied to %s (level %d -> %d)",
+                getattr(member, "id", "member"),
+                previous_level,
+                member.level,
+            )
 
-        self.subscribe("battle_start", _on_battle_start)
+            member._on_level_up()
 
-        async def _on_battle_end(*_args):
-            nonlocal first_battle_bonus_used
-            first_battle_bonus_used = False
-            self.cleanup_subscriptions()
+            await member._trigger_level_up_passives()
 
-        self.subscribe("battle_end", _on_battle_end)
+            await BUS.emit_async(
+                "card_effect",
+                self.id,
+                member,
+                "instant_level_up",
+                member.level,
+                {
+                    "trigger_event": "card_pickup",
+                    "new_level": member.level,
+                    "previous_level": previous_level,
+                },
+            )

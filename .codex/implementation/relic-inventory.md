@@ -26,15 +26,15 @@ text via the `about` field returned by the backend.
 - 2★ Frost Sigil – Hits apply chill dealing 5% ATK as Aftertaste per stack.
 - 2★ Ember Stone – Below 25% HP, allies burn their attacker for 50% ATK.
 - 2★ Guardian Charm – Lowest-HP ally gains +20% DEF at battle start.
-- 2★ Killer Instinct – Ultimates grant +75% ATK for the turn; kills grant another turn.
+- 2★ Killer Instinct – Ultimates grant +75% ATK for the turn; killing blows upgrade that bonus into +50% SPD for two turns per stack.
 - 3★ Greed Engine – Party loses 1% HP per turn, gains +50% gold, and raises rare drop rate by 0.5% plus 0.1% per extra stack.
 - 3★ Stellar Compass – Critical hits grant permanent +1.5% ATK and gold rate.
 - 3★ Echoing Drum – First attack each battle repeats at 25% power.
 - 4★ Null Lantern – Removes shops; fights drop additional pulls.
 - 4★ Traveler's Charm – When hit, gain +25% DEF and +10% mitigation next turn per stack.
-- 4★ Timekeeper's Hourglass – Each turn, 10% +1% per stack chance for extra turns.
+- 4★ Timekeeper's Hourglass – Each turn, 10% base chance (+1% per additional stack) for ready allies to gain a 2-turn +20% SPD buff per stack.
 - 5★ Paradox Hourglass – 60% chance to sacrifice up to one ally per stack (max 4); survivors gain huge stat multipliers and foes lose defense.
-- 5★ Soul Prism – Revives fallen allies at 1% HP with penalties (placeholder).
+- 5★ Soul Prism – After battles, revives fallen allies at 1% HP, applies a stack-scaling Max HP penalty (75% minus 5% per extra stack), and grants +5% DEF/+5% mitigation plus +2% per additional stack.
 - 5★ Omega Core – Multiplies all stats by 6x plus 1x per stack for 10 turns +2 per stack before draining escalating HP.
 
 ## Testing
