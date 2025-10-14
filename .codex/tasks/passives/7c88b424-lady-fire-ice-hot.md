@@ -29,3 +29,7 @@
 
 ready for review
 requesting review from the Task Master
+
+## Task Master Review (2025-10-14)
+- The new tests referenced in the summary (`tests/test_lady_fire_and_ice_duality_engine.py`) are not present in the repository, so there is no automated coverage exercising the HoT or mitigation debuff paths yet.
+- Please land the promised regression tests (and confirm they fail without the fix) before requesting another review.
