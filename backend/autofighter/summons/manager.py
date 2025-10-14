@@ -209,6 +209,9 @@ class SummonManager:
     async def remove_summon(cls, summon: Summon, reason: str = "unknown") -> bool:
         sid = summon.summoner_id
         if sid in cls._active_summons and summon in cls._active_summons[sid]:
+            from autofighter.rooms.battle.pacing import clear_extra_turns_for
+
+            clear_extra_turns_for(summon)
             cls._active_summons[sid].remove(summon)
             await BUS.emit_batched_async("summon_removed", summon, reason)
             if not cls._active_summons[sid]:

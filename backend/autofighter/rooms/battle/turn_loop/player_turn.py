@@ -15,6 +15,7 @@ from ..logging import queue_log
 from ..pacing import _EXTRA_TURNS
 from ..pacing import YIELD_MULTIPLIER
 from ..pacing import _pace
+from ..pacing import clear_extra_turns_for
 from ..pacing import impact_pause
 from ..pacing import pace_sleep
 from ..targeting import select_aggro_target
@@ -188,6 +189,7 @@ async def _run_player_turn_iteration(
 ) -> PlayerTurnIterationResult:
     action_start = asyncio.get_event_loop().time()
     if member.hp <= 0:
+        clear_extra_turns_for(member)
         await pace_sleep(YIELD_MULTIPLIER)
         return PlayerTurnIterationResult(repeat=False, battle_over=False)
 
@@ -313,6 +315,7 @@ async def _run_player_turn_iteration(
         return PlayerTurnIterationResult(repeat=False, battle_over=True)
 
     if member.hp <= 0:
+        clear_extra_turns_for(member)
         await context.registry.trigger(
             "turn_end",
             member,
