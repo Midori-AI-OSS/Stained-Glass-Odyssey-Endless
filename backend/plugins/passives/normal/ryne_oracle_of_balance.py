@@ -411,3 +411,15 @@ class RyneOracleOfBalance:
     @classmethod
     def get_stacks(cls, owner: "Stats") -> int:
         return cls.get_balance(owner)
+
+    @classmethod
+    def get_description(cls) -> str:
+        return (
+            "Starts battle with a permanent balance aura granting +18% of Ryne's base ATK, +15% mitigation, "
+            "+12% Effect RES, and +5% crit rate. Links to Luna to share +10% of her base ATK along with +8% "
+            "mitigation and Effect RES whenever she's present. Gains 2 balance from actions, 1 from hits, 4 "
+            "from ultimates, and 2 whenever Luna's sword strikes; at 6 balance triggers a surge that grants "
+            "Ryne +22% of her base ATK, +10% crit rate, and +1 SPD for 2 turns. Each surge pulses 8% "
+            "mitigation, 5% Effect RES, +2 ultimate charge, and a 3% Max HP heal to other allies while "
+            "refreshing Luna with 12% mitigation, 10% Effect RES, and a 4% Max HP heal."
+        )
