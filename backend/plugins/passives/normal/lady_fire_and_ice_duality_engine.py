@@ -105,14 +105,14 @@ class LadyFireAndIceDualityEngine:
             )
 
             # Apply HoT through effect manager if available
-            if hasattr(target, "effect_manager") and target.effect_manager:
-                await target.effect_manager.add_hot(hot)
-            else:
-                # Fallback: create effect manager if needed
+            mgr = getattr(target, "effect_manager", None)
+            if mgr is None:
                 from autofighter.effects import EffectManager
-                if not hasattr(target, "effect_manager"):
-                    target.effect_manager = EffectManager(target)
-                await target.effect_manager.add_hot(hot)
+
+                mgr = EffectManager(target)
+                target.effect_manager = mgr
+
+            await mgr.add_hot(hot)
 
             if foes:
                 mitigation_reduction = stacks_to_consume * 0.02

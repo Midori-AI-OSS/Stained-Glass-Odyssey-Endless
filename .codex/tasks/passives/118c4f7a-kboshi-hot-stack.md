@@ -26,3 +26,4 @@ The effect contains an empty `stat_modifiers` dict, so nothing ever heals. There
   - Test HoT healing scales with stacks
 
 ready for review
+requesting review from the Task Master

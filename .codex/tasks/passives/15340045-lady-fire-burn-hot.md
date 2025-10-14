@@ -30,3 +30,4 @@ Both the burn and HoT rely on `StatEffect` modifiers targeting `"hp"`. The stats
   - Test burn damage scales with incoming damage
 
 ready for review
+requesting review from the Task Master

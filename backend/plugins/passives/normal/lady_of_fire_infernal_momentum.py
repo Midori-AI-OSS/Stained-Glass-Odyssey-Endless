@@ -59,14 +59,14 @@ class LadyOfFireInfernalMomentum:
         )
 
         # Apply DoT through effect manager if available
-        if hasattr(attacker, "effect_manager") and attacker.effect_manager:
-            await attacker.effect_manager.add_dot(burn_dot)
-        else:
-            # Fallback: create effect manager if needed
+        mgr = getattr(attacker, "effect_manager", None)
+        if mgr is None:
             from autofighter.effects import EffectManager
-            if not hasattr(attacker, "effect_manager"):
-                attacker.effect_manager = EffectManager(attacker)
-            await attacker.effect_manager.add_dot(burn_dot)
+
+            mgr = EffectManager(attacker)
+            attacker.effect_manager = mgr
+
+        await mgr.add_dot(burn_dot)
 
         try:
             from autofighter.rooms.battle.pacing import impact_pause as _impact_pause
@@ -90,14 +90,14 @@ class LadyOfFireInfernalMomentum:
         )
 
         # Apply HoT through effect manager if available
-        if hasattr(target, "effect_manager") and target.effect_manager:
-            await target.effect_manager.add_hot(hot)
-        else:
-            # Fallback: create effect manager if needed
+        mgr = getattr(target, "effect_manager", None)
+        if mgr is None:
             from autofighter.effects import EffectManager
-            if not hasattr(target, "effect_manager"):
-                target.effect_manager = EffectManager(target)
-            await target.effect_manager.add_hot(hot)
+
+            mgr = EffectManager(target)
+            target.effect_manager = mgr
+
+        await mgr.add_hot(hot)
 
     @classmethod
     def get_description(cls) -> str:

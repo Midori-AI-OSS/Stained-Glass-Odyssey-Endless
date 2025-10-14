@@ -26,3 +26,4 @@ See the direct access in `backend/plugins/relics/soul_prism.py` lines 43-55.【F
   - Test that living allies are not affected
 
 ready for review
+requesting review from the Task Master
