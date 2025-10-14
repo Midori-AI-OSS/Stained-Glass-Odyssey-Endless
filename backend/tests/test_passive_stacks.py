@@ -4,14 +4,13 @@ from autofighter.passives import PassiveRegistry
 from autofighter.stats import BUS
 from autofighter.stats import Stats
 from plugins.damage_types.generic import Generic
-from plugins.passives.normal.luna_lunar_reservoir import LunaLunarReservoir
-from plugins.passives.normal.ryne_oracle_of_balance import RyneOracleOfBalance
 
 
 @pytest.mark.asyncio
 async def test_passive_stack_display():
     """Test that passives correctly report stack counts for the UI."""
     registry = PassiveRegistry()
+    luna_cls = registry._registry["luna_lunar_reservoir"]
 
     # Test Luna Lunar Reservoir - should show charge points
     class LunaActor(Stats):
@@ -25,8 +24,8 @@ async def test_passive_stack_display():
 
     luna = LunaActor(hp=1000, damage_type=Generic())
     luna.passives = ["luna_lunar_reservoir"]
-    LunaLunarReservoir._charge_points.clear()
-    LunaLunarReservoir._swords_by_owner.clear()
+    luna_cls._charge_points.clear()
+    luna_cls._swords_by_owner.clear()
 
     # Initially 0 charge
     description = registry.describe(luna)
@@ -42,6 +41,94 @@ async def test_passive_stack_display():
     description = registry.describe(luna)
     luna_passive = next((p for p in description if p["id"] == "luna_lunar_reservoir"), None)
     assert luna_passive["stacks"] == 10
+
+
+@pytest.mark.asyncio
+async def test_ryne_balance_stacks_apply_scaling_aura():
+    """Ryne's balance stacks should scale her aura and Luna's link bonuses."""
+    registry = PassiveRegistry()
+    ryne_cls = registry._registry["ryne_oracle_of_balance"]
+
+    ryne_cls._balance_points.clear()
+    ryne_cls._balance_totals.clear()
+    ryne_cls._balance_carry.clear()
+    ryne_cls._luna_links.clear()
+    ryne_cls._ally_refs.clear()
+    ryne_cls._bus_handlers.clear()
+
+    ryne = Stats(hp=1000, damage_type=Generic())
+    luna = Stats(hp=1000, damage_type=Generic())
+    setattr(luna, "id", "luna")
+
+    ryne.passives = ["ryne_oracle_of_balance"]
+    ryne.set_base_stat("atk", 300)
+    luna.set_base_stat("atk", 150)
+
+    await registry.trigger("battle_start", ryne, party=[ryne, luna])
+
+    owner_id = id(ryne)
+    aura_name = f"{ryne_cls.id}_oracle_aura_{owner_id}"
+    link_name = f"{ryne_cls.id}_luna_link_{owner_id}"
+
+    assert not any(effect.name == aura_name for effect in ryne.get_active_effects())
+    assert not any(effect.name == link_name for effect in luna.get_active_effects())
+
+    await registry.trigger("action_taken", ryne, party=[ryne, luna])
+
+    scale = ryne_cls.get_balance(ryne) / max(1, ryne_cls.THRESHOLD)
+    aura_effect = next(effect for effect in ryne.get_active_effects() if effect.name == aura_name)
+    link_effect = next(effect for effect in luna.get_active_effects() if effect.name == link_name)
+
+    owner_base_atk = int(ryne.get_base_stat("atk"))
+    luna_base_atk = int(luna.get_base_stat("atk"))
+
+    assert aura_effect.stat_modifiers["atk"] == max(
+        1,
+        int(owner_base_atk * ryne_cls.OWNER_ATK_RATIO * scale),
+    )
+    assert aura_effect.stat_modifiers["mitigation"] == pytest.approx(
+        ryne_cls.OWNER_MITIGATION_RATIO * scale
+    )
+    assert aura_effect.stat_modifiers["effect_resistance"] == pytest.approx(
+        ryne_cls.OWNER_EFFECT_RES_RATIO * scale
+    )
+    assert aura_effect.stat_modifiers["crit_rate"] == pytest.approx(
+        ryne_cls.OWNER_CRIT_RATIO * scale
+    )
+
+    assert link_effect.stat_modifiers["atk"] == max(
+        1,
+        int(luna_base_atk * ryne_cls.LUNA_ATK_RATIO * scale),
+    )
+    assert link_effect.stat_modifiers["mitigation"] == pytest.approx(
+        ryne_cls.LUNA_MITIGATION_RATIO * scale
+    )
+    assert link_effect.stat_modifiers["effect_resistance"] == pytest.approx(
+        ryne_cls.LUNA_EFFECT_RES_RATIO * scale
+    )
+
+    await registry.trigger("action_taken", ryne, party=[ryne, luna])
+
+    scale = ryne_cls.get_balance(ryne) / max(1, ryne_cls.THRESHOLD)
+    aura_effect = next(effect for effect in ryne.get_active_effects() if effect.name == aura_name)
+    link_effect = next(effect for effect in luna.get_active_effects() if effect.name == link_name)
+
+    assert aura_effect.stat_modifiers["atk"] == max(
+        1,
+        int(owner_base_atk * ryne_cls.OWNER_ATK_RATIO * scale),
+    )
+    assert link_effect.stat_modifiers["atk"] == max(
+        1,
+        int(luna_base_atk * ryne_cls.LUNA_ATK_RATIO * scale),
+    )
+
+    await registry.trigger("action_taken", ryne, party=[ryne, luna])
+
+    assert ryne_cls.get_balance(ryne) == 0
+    assert not any(effect.name == aura_name for effect in ryne.get_active_effects())
+    assert not any(effect.name == link_name for effect in luna.get_active_effects())
+
+    await ryne_cls().on_defeat(ryne)
 
 
 @pytest.mark.asyncio
@@ -72,7 +159,9 @@ async def test_luna_ultimate_grants_expected_charge():
     result = await luna.damage_type.ultimate(luna, [luna], [target])
 
     assert result is True
-    assert luna_cls.get_charge(luna) == 64
+    # Ultimate should grant 64 charge from the event and 64 more from the 64
+    # rapid strikes, without any additional fallback charge being applied.
+    assert luna_cls.get_charge(luna) == 64 * 2
 
 
 @pytest.mark.asyncio
@@ -233,16 +322,19 @@ async def test_bubbles_burst_stack_display():
 async def test_soft_caps_luna_beyond_200():
     """Test that Luna Lunar Reservoir can stack beyond 200 and grants attack bonus scaling."""
     registry = PassiveRegistry()
-    from plugins.passives.normal.luna_lunar_reservoir import LunaLunarReservoir
+    luna_cls = registry._registry["luna_lunar_reservoir"]
+
+    luna_cls._charge_points.clear()
+    luna_cls._swords_by_owner.clear()
 
     luna = Stats(hp=1000, damage_type=Generic())
     luna.passives = ["luna_lunar_reservoir"]
 
     # Take enough actions to go past the soft cap of 2000
     await registry.trigger("action_taken", luna)
-    LunaLunarReservoir.add_charge(
+    luna_cls.add_charge(
         luna,
-        max(0, 2200 - LunaLunarReservoir.get_charge(luna)),
+        max(0, 2200 - luna_cls.get_charge(luna)),
     )
 
     description = registry.describe(luna)
@@ -250,7 +342,7 @@ async def test_soft_caps_luna_beyond_200():
     assert luna_passive is not None
 
     # Should show current charge without automatically draining below the cap
-    current_charge = LunaLunarReservoir.get_charge(luna)
+    current_charge = luna_cls.get_charge(luna)
     assert current_charge >= 2000  # Should be able to go past 2000
     assert luna_passive["stacks"] == current_charge
     assert luna_passive["max_stacks"] == 2000  # Soft cap stays at 2000
@@ -284,32 +376,33 @@ async def test_soft_caps_ally_beyond_120():
 async def test_soft_caps_ryne_beyond_120():
     """Ryne's balance stacks should overflow the soft cap with halved gains."""
     registry = PassiveRegistry()
+    ryne_cls = registry._registry["ryne_oracle_of_balance"]
 
     ryne = Stats(hp=1000, damage_type=Generic())
     ryne.passives = ["ryne_oracle_of_balance"]
 
-    RyneOracleOfBalance._balance_points.clear()
-    RyneOracleOfBalance._balance_totals.clear()
-    RyneOracleOfBalance._balance_carry.clear()
+    ryne_cls._balance_points.clear()
+    ryne_cls._balance_totals.clear()
+    ryne_cls._balance_carry.clear()
 
     await registry.trigger("battle_start", ryne, party=[ryne])
 
     for _ in range(60):
         await registry.trigger("action_taken", ryne, party=[ryne])
 
-    assert RyneOracleOfBalance.get_total_balance(ryne) == RyneOracleOfBalance.SOFT_CAP
-    assert RyneOracleOfBalance.get_balance(ryne) == 0
+    assert ryne_cls.get_total_balance(ryne) == ryne_cls.SOFT_CAP
+    assert ryne_cls.get_balance(ryne) == 0
 
     await registry.trigger("action_taken", ryne, party=[ryne])
 
-    assert RyneOracleOfBalance.get_total_balance(ryne) == RyneOracleOfBalance.SOFT_CAP + 2
-    assert RyneOracleOfBalance.get_balance(ryne) == 1
+    assert ryne_cls.get_total_balance(ryne) == ryne_cls.SOFT_CAP + 2
+    assert ryne_cls.get_balance(ryne) == 1
 
     description = registry.describe(ryne)
     ryne_passive = next((p for p in description if p["id"] == "ryne_oracle_of_balance"), None)
     assert ryne_passive is not None
-    assert ryne_passive["stacks"] == RyneOracleOfBalance.get_total_balance(ryne)
-    assert ryne_passive["max_stacks"] == RyneOracleOfBalance.SOFT_CAP
+    assert ryne_passive["stacks"] == ryne_cls.get_total_balance(ryne)
+    assert ryne_passive["max_stacks"] == ryne_cls.SOFT_CAP
     assert ryne_passive["display"] == "number"
 
 
