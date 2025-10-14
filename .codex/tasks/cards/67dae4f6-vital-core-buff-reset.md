@@ -23,4 +23,4 @@ ready for review
   - The Vital Core listener raises a `NameError` because `member_id` is undefined and `active_boosts` is treated like a set despite being declared as a dictionary, so the emergency vitality modifier never applies.【F:backend/plugins/cards/vital_core.py†L23-L87】【144758†L1-L41】
   - The test therefore fails to observe the expected temporary buff reapplication, leaving the task incomplete.【144758†L1-L41】
 
-status: changes requested
+status: ready for review

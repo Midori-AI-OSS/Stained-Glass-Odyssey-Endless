@@ -25,51 +25,52 @@ class VitalCore(CardBase):
             for member in party.members:
                 current_hp = getattr(member, "hp", 0)
                 max_hp = getattr(member, "max_hp", 0)
-
                 member_key = id(member)
 
-                if current_hp <= 0:
-                    active_boosts.discard(member_id)
-                    continue
-
-                if current_hp / max_hp < 0.30 and member_id not in active_boosts:
-                    active_boosts.add(member_id)
-                    
                 if max_hp <= 0:
                     active_boosts.pop(member_key, None)
                     continue
 
-                if current_hp / max_hp < 0.30 and member_key not in active_boosts:
-                    effect_manager = getattr(member, "effect_manager", None)
-                    if effect_manager is None:
-                        effect_manager = EffectManager(member)
-                        member.effect_manager = effect_manager
+                if current_hp <= 0:
+                    active_boosts.pop(member_key, None)
+                    continue
 
-                    effect_id = f"{self.id}_low_hp_vit_{id(member)}"
-                    vit_mod = create_stat_buff(
-                        member,
-                        name=f"{self.id}_low_hp_vit",
-                        id=effect_id,
-                        turns=2,
-                        vitality_mult=1.03,
-                    )
-                    await effect_manager.add_modifier(vit_mod)
+                if current_hp / max_hp >= 0.30:
+                    continue
 
-                    active_boosts[member_key] = effect_id
+                if member_key in active_boosts:
+                    continue
 
-                    log = logging.getLogger(__name__)
-                    log.debug(
-                        "Vital Core activated vitality boost for %s: +3% vitality for 2 turns",
-                        getattr(member, "id", "member"),
-                    )
-                    await BUS.emit_async(
-                        "card_effect",
-                        self.id,
-                        member,
-                        "vitality_boost",
-                        3,
-                        {"vitality_boost": 3, "duration": 2, "trigger_threshold": 0.30},
-                    )
+                effect_manager = getattr(member, "effect_manager", None)
+                if effect_manager is None:
+                    effect_manager = EffectManager(member)
+                    member.effect_manager = effect_manager
+
+                effect_id = f"{self.id}_low_hp_vit_{member_key}"
+                vit_mod = create_stat_buff(
+                    member,
+                    name=f"{self.id}_low_hp_vit",
+                    id=effect_id,
+                    turns=2,
+                    vitality_mult=1.03,
+                )
+                await effect_manager.add_modifier(vit_mod)
+
+                active_boosts[member_key] = effect_id
+
+                log = logging.getLogger(__name__)
+                log.debug(
+                    "Vital Core activated vitality boost for %s: +3% vitality for 2 turns",
+                    getattr(member, "id", "member"),
+                )
+                await BUS.emit_async(
+                    "card_effect",
+                    self.id,
+                    member,
+                    "vitality_boost",
+                    3,
+                    {"vitality_boost": 3, "duration": 2, "trigger_threshold": 0.30},
+                )
 
         async def _on_damage_taken(target, attacker, damage, *_: object):
             await _check_low_hp()
