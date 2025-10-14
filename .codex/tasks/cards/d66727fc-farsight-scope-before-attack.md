@@ -17,3 +17,5 @@ This leaves the card functionally inert in real matches.
 - Add or update automated coverage to prove the fix (e.g., integration test that runs a real battle frame and confirms the buff applies when a target is under 50% HP).
 - Document any combat event changes (if added) in the relevant `.codex/implementation` docs.
 ready for review
+
+requesting review from the Task Master
