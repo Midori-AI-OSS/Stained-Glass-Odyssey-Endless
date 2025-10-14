@@ -5,6 +5,7 @@ from autofighter.stats import BUS
 from autofighter.stats import Stats
 from plugins.damage_types.generic import Generic
 from plugins.passives.normal.luna_lunar_reservoir import LunaLunarReservoir
+from plugins.passives.normal.ryne_oracle_of_balance import RyneOracleOfBalance
 
 
 @pytest.mark.asyncio
@@ -277,6 +278,39 @@ async def test_soft_caps_ally_beyond_120():
         overload_passive = next((p for p in description if p["id"] == "ally_overload"), None)
         assert overload_passive["stacks"] == current_charge
         assert overload_passive["max_stacks"] == 120  # Soft cap stays at 120
+
+
+@pytest.mark.asyncio
+async def test_soft_caps_ryne_beyond_120():
+    """Ryne's balance stacks should overflow the soft cap with halved gains."""
+    registry = PassiveRegistry()
+
+    ryne = Stats(hp=1000, damage_type=Generic())
+    ryne.passives = ["ryne_oracle_of_balance"]
+
+    RyneOracleOfBalance._balance_points.clear()
+    RyneOracleOfBalance._balance_totals.clear()
+    RyneOracleOfBalance._balance_carry.clear()
+
+    await registry.trigger("battle_start", ryne, party=[ryne])
+
+    for _ in range(60):
+        await registry.trigger("action_taken", ryne, party=[ryne])
+
+    assert RyneOracleOfBalance.get_total_balance(ryne) == RyneOracleOfBalance.SOFT_CAP
+    assert RyneOracleOfBalance.get_balance(ryne) == 0
+
+    await registry.trigger("action_taken", ryne, party=[ryne])
+
+    assert RyneOracleOfBalance.get_total_balance(ryne) == RyneOracleOfBalance.SOFT_CAP + 2
+    assert RyneOracleOfBalance.get_balance(ryne) == 1
+
+    description = registry.describe(ryne)
+    ryne_passive = next((p for p in description if p["id"] == "ryne_oracle_of_balance"), None)
+    assert ryne_passive is not None
+    assert ryne_passive["stacks"] == RyneOracleOfBalance.get_total_balance(ryne)
+    assert ryne_passive["max_stacks"] == RyneOracleOfBalance.SOFT_CAP
+    assert ryne_passive["display"] == "number"
 
 
 @pytest.mark.asyncio

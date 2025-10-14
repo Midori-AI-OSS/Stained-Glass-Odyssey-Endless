@@ -30,9 +30,14 @@ class RyneOracleOfBalance:
         "ultimate_used",
     ]
     stack_display = "pips"
-    max_stacks = 120
+    max_stacks = 120  # Soft cap for display; balance can exceed this value
+
+    SOFT_CAP: ClassVar[int] = 120
+    POST_CAP_EFFICIENCY: ClassVar[float] = 0.5
 
     _balance_points: ClassVar[dict[int, int]] = {}
+    _balance_totals: ClassVar[dict[int, int]] = {}
+    _balance_carry: ClassVar[dict[int, float]] = {}
     _luna_links: ClassVar[dict[int, ReferenceType["Stats"]]] = {}
     _ally_refs: ClassVar[dict[int, list[ReferenceType["Stats"]]]] = {}
     _bus_handlers: ClassVar[dict[int, dict[str, object]]] = {}
@@ -75,6 +80,8 @@ class RyneOracleOfBalance:
     ) -> None:
         owner_id = id(owner)
         cls._balance_points.setdefault(owner_id, 0)
+        cls._balance_totals.setdefault(owner_id, 0)
+        cls._balance_carry.setdefault(owner_id, 0.0)
         cls._register_bus_handlers(owner)
         await cls._maybe_cache_party(owner, party)
         cls._apply_owner_aura(owner)
@@ -100,7 +107,43 @@ class RyneOracleOfBalance:
             return
         owner_id = id(owner)
         current = cls._balance_points.get(owner_id, 0)
-        cls._balance_points[owner_id] = current + amount
+        total_before = cls._balance_totals.get(owner_id, 0)
+        total_after = total_before + amount
+        cls._balance_totals[owner_id] = total_after
+
+        soft_cap = max(0, cls.SOFT_CAP)
+        carry = cls._balance_carry.get(owner_id, 0.0)
+        gained = 0
+
+        if soft_cap == 0:
+            gained = amount
+        elif total_before >= soft_cap:
+            carry += amount * cls.POST_CAP_EFFICIENCY
+            rounded = int(carry)
+            if rounded:
+                carry -= rounded
+                gained += rounded
+        elif total_after <= soft_cap:
+            gained = amount
+        else:
+            normal_gain = soft_cap - total_before
+            if normal_gain > 0:
+                gained += normal_gain
+            overflow = amount - max(normal_gain, 0)
+            if overflow > 0:
+                carry += overflow * cls.POST_CAP_EFFICIENCY
+                rounded = int(carry)
+                if rounded:
+                    carry -= rounded
+                    gained += rounded
+
+        cls._balance_carry[owner_id] = carry
+
+        if gained <= 0:
+            cls._balance_points[owner_id] = current
+            return
+
+        cls._balance_points[owner_id] = current + gained
         await cls._check_threshold(owner)
 
     @classmethod
@@ -378,6 +421,8 @@ class RyneOracleOfBalance:
             except Exception:
                 pass
         cls._balance_points.pop(owner_id, None)
+        cls._balance_totals.pop(owner_id, None)
+        cls._balance_carry.pop(owner_id, None)
         refs = cls._ally_refs.pop(owner_id, [])
         luna = cls._luna_links.pop(owner_id, None)
         if owner is not None:
@@ -409,8 +454,19 @@ class RyneOracleOfBalance:
         return cls._balance_points.get(id(owner), 0)
 
     @classmethod
+    def get_total_balance(cls, owner: "Stats") -> int:
+        return cls._balance_totals.get(id(owner), 0)
+
+    @classmethod
     def get_stacks(cls, owner: "Stats") -> int:
-        return cls.get_balance(owner)
+        total = cls.get_total_balance(owner)
+        if total <= cls.SOFT_CAP:
+            return cls.get_balance(owner)
+        return total
+
+    @classmethod
+    def get_display(cls, owner: "Stats") -> str:
+        return "number" if cls.get_total_balance(owner) > cls.SOFT_CAP else cls.stack_display
 
     @classmethod
     def get_description(cls) -> str:
@@ -421,5 +477,7 @@ class RyneOracleOfBalance:
             "from ultimates, and 2 whenever Luna's sword strikes; at 6 balance triggers a surge that grants "
             "Ryne +22% of her base ATK, +10% crit rate, and +1 SPD for 2 turns. Each surge pulses 8% "
             "mitigation, 5% Effect RES, +2 ultimate charge, and a 3% Max HP heal to other allies while "
-            "refreshing Luna with 12% mitigation, 10% Effect RES, and a 4% Max HP heal."
+            "refreshing Luna with 12% mitigation, 10% Effect RES, and a 4% Max HP heal. Balance stacks "
+            "beyond 120 accrue at half speed but continue climbing without a hard cap; stack display switches "
+            "to a numeric counter once past the soft cap."
         )
