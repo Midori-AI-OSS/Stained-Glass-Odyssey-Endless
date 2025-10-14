@@ -16,3 +16,14 @@ See the guard in the relic implementation: `backend/plugins/relics/timekeepers_h
 - Unit tests cover the case where a brand-new ally is buffed successfully.
 - No orphaned modifiers remain on party members after battle end.
 - Documentation accurately reflects the corrected behavior.
+
+## Implementation Summary
+- Changed `continue` to instantiate EffectManager when missing
+- Effect manager is now created before applying speed buff modifiers
+- Added comprehensive tests in `tests/test_timekeepers_hourglass.py`:
+  - Test buffing ally without effect_manager (regression case)
+  - Test buffing ally with existing effect_manager
+  - Test that dead allies are not buffed
+  - Test that stacks increase the buff magnitude
+
+ready for review
