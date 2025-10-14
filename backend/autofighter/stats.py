@@ -783,6 +783,14 @@ class Stats:
         attack_metadata["attack_sequence"] = max(sequence_value, 1)
         if attacker_obj is not None:
             setattr(attacker_obj, "_attack_sequence_counter", attack_metadata["attack_sequence"])
+        if attacker_obj is not None and trigger_on_hit:
+            await BUS.emit_async(
+                "before_attack",
+                attacker_obj,
+                self,
+                dict(attack_metadata),
+                action_name or "attack",
+            )
         critical = False
         if attacker_obj is not None:
             if random.random() < self.dodge_odds:
