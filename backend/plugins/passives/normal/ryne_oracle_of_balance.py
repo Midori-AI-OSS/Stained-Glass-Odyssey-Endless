@@ -459,7 +459,10 @@ class RyneOracleOfBalance:
 
     @classmethod
     def get_stacks(cls, owner: "Stats") -> int:
-        return cls.get_total_balance(owner)
+        total = cls.get_total_balance(owner)
+        if total <= cls.SOFT_CAP:
+            return cls.get_balance(owner)
+        return total
 
     @classmethod
     def get_display(cls, owner: "Stats") -> str:
