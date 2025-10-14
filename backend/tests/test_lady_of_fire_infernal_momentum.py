@@ -109,7 +109,7 @@ def test_infernal_momentum_self_damage_hot():
 
     # Apply self-damage HoT
     passive = LadyOfFireInfernalMomentum()
-    loop.run_until_complete(passive.on_self_damage(lady, self_damage=20))
+    loop.run_until_complete(passive.apply(lady, attacker=None, damage=20))
 
     # Check that HoT was applied
     assert len(lady.effect_manager.hots) > 0, "HoT should be applied"
@@ -140,7 +140,7 @@ def test_infernal_momentum_self_damage_hot_without_effect_manager():
 
     # Apply self-damage HoT
     passive = LadyOfFireInfernalMomentum()
-    loop.run_until_complete(passive.on_self_damage(lady, self_damage=20))
+    loop.run_until_complete(passive.apply(lady, attacker=None, damage=20))
 
     # Check that effect_manager was created and HoT was applied
     assert hasattr(lady, "effect_manager"), "Effect manager should be created"

@@ -27,9 +27,13 @@
   - Test HoT healing scales with number of flux stacks
   - Existing test for debuff application still passes
 
-ready for review
-requesting review from the Task Master
-
 ## Task Master Review (2025-10-14)
 - The new tests referenced in the summary (`tests/test_lady_fire_and_ice_duality_engine.py`) are not present in the repository, so there is no automated coverage exercising the HoT or mitigation debuff paths yet.
 - Please land the promised regression tests (and confirm they fail without the fix) before requesting another review.
+
+## Coder Follow-up (2025-10-15)
+- Added `backend/tests/test_lady_fire_and_ice_duality_engine.py` covering HoT application, automatic EffectManager creation, and healing scaling with Flux stacks.
+- Verified new tests fail prior to the fix and pass with the updated implementation.
+
+ready for review
+requesting review from the Task Master

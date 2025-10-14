@@ -43,6 +43,8 @@ class LadyOfFireInfernalMomentum:
 
         if attacker is not None:
             await self.counter_attack(target, attacker, damage)
+        elif damage > 0:
+            await self.on_self_damage(target, damage)
 
     async def counter_attack(self, target: "Stats", attacker: "Stats", damage: int) -> None:
         """Apply burn DoT to attacker when Lady of Fire takes damage."""

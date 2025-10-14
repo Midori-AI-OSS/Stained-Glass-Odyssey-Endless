@@ -65,25 +65,14 @@ class KboshiFluxCycle:
             if self._damage_stacks[entity_id] > 0 or self._hot_stacks[entity_id] > 0:
                 stacks = self._damage_stacks[entity_id]
 
-                # Remove existing bonus effects
-                target._active_effects = [
-                    effect
-                    for effect in target._active_effects
-                    if not effect.name.startswith(f"{self.id}_damage_bonus")
-                ]
+                # Remove existing bonus effects using the public API
+                target.remove_effect_by_source(self.id)
 
                 # Clear any active HoTs from flux cycle
                 if hasattr(target, "effect_manager") and target.effect_manager:
-                    target.effect_manager.hots = [
-                        hot for hot in target.effect_manager.hots
-                        if not hot.id.startswith(f"{self.id}_hot_{entity_id}")
-                    ]
-                    # Also clear from the stats hots list
-                    if hasattr(target, "hots"):
-                        target.hots = [
-                            hot_id for hot_id in target.hots
-                            if not hot_id.startswith(f"{self.id}_hot_{entity_id}")
-                        ]
+                    await target.effect_manager.remove_hots(
+                        lambda hot: hot.id.startswith(f"{self.id}_hot_{entity_id}")
+                    )
 
                 # Reset stacks
                 self._damage_stacks[entity_id] = 0
@@ -106,9 +95,15 @@ class KboshiFluxCycle:
             self._hot_stacks[entity_id] += 1
 
             # Apply 20% damage bonus per stack
+            base_attack = (
+                int(target.get_base_stat("atk"))
+                if hasattr(target, "get_base_stat")
+                else int(getattr(target, "_base_atk", target.atk))
+            )
+            bonus_amount = max(1, int(base_attack * 0.2))
             damage_bonus = StatEffect(
                 name=f"{self.id}_damage_bonus_{self._damage_stacks[entity_id]}",
-                stat_modifiers={"atk": int(target.atk * 0.2)},
+                stat_modifiers={"atk": bonus_amount},
                 duration=-1,  # Until element changes
                 source=self.id,
             )
