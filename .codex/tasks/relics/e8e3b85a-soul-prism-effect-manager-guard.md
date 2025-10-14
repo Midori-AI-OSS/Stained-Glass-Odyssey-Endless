@@ -16,3 +16,13 @@ See the direct access in `backend/plugins/relics/soul_prism.py` lines 43-55.【F
 - Unit tests capture the previously crashing scenario.
 - Existing functionality (max HP penalty, defense/mitigation buffs, telemetry) remains intact.
 - Documentation references stay accurate.
+
+## Implementation Summary
+- Moved effect_manager existence check BEFORE attempting to access mods
+- Effect manager is now instantiated before looking for existing modifiers
+- Added comprehensive tests in `tests/test_soul_prism.py`:
+  - Test revival of ally without effect_manager (regression case)
+  - Test revival of ally with existing effect_manager
+  - Test that living allies are not affected
+
+ready for review
