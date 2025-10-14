@@ -81,11 +81,15 @@ class VitalCore(CardBase):
 
             effect_id = payload.get("effect_id")
             member_key = id(target)
-            if effect_id is None or member_key not in active_boosts:
+
+            if effect_id is None:
                 return
 
-            if active_boosts.get(member_key) == effect_id:
-                active_boosts.pop(member_key, None)
+            if active_boosts.get(member_key) != effect_id:
+                return
+
+            active_boosts.pop(member_key, None)
+            await _check_low_hp()
 
         async def _on_entity_defeat(target, *_: object):
             active_boosts.pop(id(target), None)
