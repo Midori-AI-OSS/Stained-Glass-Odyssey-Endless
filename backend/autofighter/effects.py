@@ -2,6 +2,7 @@ import asyncio
 from dataclasses import dataclass
 from dataclasses import field
 import random
+from typing import Callable
 from typing import Optional
 from typing import Union
 
@@ -418,6 +419,43 @@ class EffectManager:
                 "current_stacks": len([h for h in self.hots if h.id == effect.id]),
             },
         )
+
+    async def remove_hots(
+        self,
+        predicate: Callable[[HealingOverTime], bool],
+    ) -> int:
+        """Remove HoT instances matching ``predicate``.
+
+        Returns the number of removed effects and emits ``effect_expired``
+        events for each removal so UI hooks stay in sync.
+        """
+        from autofighter.stats import BUS  # Import here to avoid circular imports
+
+        matching = [hot for hot in list(self.hots) if predicate(hot)]
+        if not matching:
+            return 0
+
+        for hot in matching:
+            if hot in self.hots:
+                self.hots.remove(hot)
+
+            if hasattr(self.stats, "hots"):
+                while hot.id in self.stats.hots:
+                    self.stats.hots.remove(hot.id)
+
+        for hot in matching:
+            await BUS.emit_async(
+                "effect_expired",
+                hot.name,
+                self.stats,
+                {
+                    "effect_type": "hot",
+                    "effect_id": hot.id,
+                    "expired_naturally": False,
+                },
+            )
+
+        return len(matching)
 
     async def add_modifier(self, effect: StatModifier) -> None:
         """Attach a stat modifier to the tracked stats."""

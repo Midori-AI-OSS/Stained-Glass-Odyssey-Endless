@@ -25,10 +25,14 @@ The effect contains an empty `stat_modifiers` dict, so nothing ever heals. There
   - Test HoT is cleared when element successfully switches
   - Test HoT healing scales with stacks
 
-ready for review
-requesting review from the Task Master
-
 ## Task Master Review (2025-10-14)
 - The new damage bonus stacks compute their value from `target.atk`, which already includes prior stack modifiers. Each failed switch therefore increases the next stack by 20% of the *buffed* attack instead of the base value, overshooting the intended per-stack bonus.【F:backend/plugins/passives/normal/kboshi_flux_cycle.py†L63-L82】
 - Clearing stacks on a successful element change is implemented by mutating `_active_effects` directly. Prefer using `remove_effect_by_name`/`remove_effect_by_source` to avoid bypassing `Stats` bookkeeping and future hooks.【F:backend/plugins/passives/normal/kboshi_flux_cycle.py†L54-L75】
 - Please address the stacking math (and clean removal path) before resubmitting.
+
+## Coder Follow-up (2025-10-15)
+- Damage bonus stacks now use the character's base attack (`get_base_stat('atk')`) so each increment applies the intended 20% bonus regardless of existing buffs.
+- Stack cleanup leverages `remove_effect_by_source` and a new `EffectManager.remove_hots` helper to clear Flux Cycle HoTs without mutating private collections.
+
+ready for review
+requesting review from the Task Master
