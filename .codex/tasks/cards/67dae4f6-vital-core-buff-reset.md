@@ -23,4 +23,4 @@ ready for review
   - The task still fails because `_check_low_hp` references an undefined `member_id` variable, causing the damage hook to raise a `NameError` and preventing the low-HP vitality buff from applying.【F:backend/plugins/cards/vital_core.py†L18-L87】【358549†L12-L41】
   - Even if the exception were fixed, `active_boosts` is declared as a dictionary but manipulated like a set (`discard`/`add`), so the logic would still mismanage active entries and block reapplication of the modifier.【F:backend/plugins/cards/vital_core.py†L23-L53】
 
-status: changes requested
+status: ready for review
