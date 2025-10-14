@@ -16,3 +16,15 @@
 - Consuming Flux stacks produces tangible healing through the battle healing system and debuffs enemies as described.
 - Internal state cleanup uses supported effect APIs (no direct `_active_effects` surgery).
 - Automated tests exercise the stack gain/consumption path.
+
+## Implementation Summary
+- Replaced `{"hp": ally_hot_amount}` StatEffect with proper HealingOverTime using EffectManager.add_hot
+- HoT healing: 10 HP per flux stack over 3 turns
+- Replaced direct `_active_effects` manipulation with `remove_effect_by_name()` API
+- Added comprehensive tests in `tests/test_lady_fire_and_ice_duality_engine.py`:
+  - Test HoT is applied when flux is consumed
+  - Test HoT works without effect_manager (creates one)
+  - Test HoT healing scales with number of flux stacks
+  - Existing test for debuff application still passes
+
+ready for review
