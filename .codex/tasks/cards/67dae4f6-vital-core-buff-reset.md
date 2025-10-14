@@ -17,10 +17,10 @@ Vital Core prevents reapplying its low-HP vitality buff by storing member IDs in
 - Add automated coverage demonstrating that the buff re-applies after expiring and that no wall-clock assumptions remain.
 ready for review
 
-## Audit (2025-10-14)
+## Audit (2025-02-14)
 
 - ❌ `uv run pytest tests/test_vital_core.py`
-  - The Vital Core listener raises a `NameError` because `member_id` is undefined and `active_boosts` is treated like a set despite being declared as a dictionary, so the emergency vitality modifier never applies.【F:backend/plugins/cards/vital_core.py†L23-L87】【144758†L1-L41】
-  - The test therefore fails to observe the expected temporary buff reapplication, leaving the task incomplete.【144758†L1-L41】
+  - The task still fails because `_check_low_hp` references an undefined `member_id` variable, causing the damage hook to raise a `NameError` and preventing the low-HP vitality buff from applying.【F:backend/plugins/cards/vital_core.py†L18-L87】【358549†L12-L41】
+  - Even if the exception were fixed, `active_boosts` is declared as a dictionary but manipulated like a set (`discard`/`add`), so the logic would still mismanage active entries and block reapplication of the modifier.【F:backend/plugins/cards/vital_core.py†L23-L53】
 
 status: changes requested
