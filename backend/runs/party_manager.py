@@ -345,6 +345,12 @@ def load_party(run_id: str) -> Party:
     except Exception:
         tokens = 0
     setattr(party, "pull_tokens", tokens)
+    if "guiding_compass_bonus_used" in data:
+        setattr(
+            party,
+            "guiding_compass_bonus_used",
+            bool(data.get("guiding_compass_bonus_used", False)),
+        )
     return party
 
 def save_party(run_id: str, party: Party) -> None:
@@ -396,6 +402,9 @@ def save_party(run_id: str, party: Party) -> None:
                 "no_rests": bool(getattr(party, "no_rests", False)),
                 "null_lantern_cleared": int(getattr(party, "_null_lantern_cleared", 0) or 0),
                 "pull_tokens": int(getattr(party, "pull_tokens", 0) or 0),
+                "guiding_compass_bonus_used": bool(
+                    getattr(party, "guiding_compass_bonus_used", False)
+                ),
                 "player": snapshot,
             }
         )

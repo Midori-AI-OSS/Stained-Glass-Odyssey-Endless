@@ -13,3 +13,4 @@ Guiding Compass is intended to grant a one-time XP bonus on the first battle of 
 - Ensure multiple party members with the card don't double-award the bonus.
 - Add regression coverage proving the bonus does **not** trigger on the second battle of the same run but does on a brand new run.
 - Update any relevant documentation that mentions the Guiding Compass bonus behavior.
+ready for review
