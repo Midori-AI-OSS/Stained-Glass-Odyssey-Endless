@@ -14,6 +14,7 @@ from battle_logging.writers import start_run_logging
 from runs.encryption import get_fernet
 from runs.encryption import get_save_manager
 from runs.lifecycle import battle_snapshots
+from runs.lifecycle import empty_reward_staging
 from runs.lifecycle import emit_battle_end_for_runs
 from runs.lifecycle import load_map
 from runs.lifecycle import purge_all_run_state
@@ -243,6 +244,7 @@ async def start_run(
         "awaiting_relic": False,
         "awaiting_loot": False,
         "awaiting_next": False,
+        "reward_staging": empty_reward_staging(),
         "total_rooms_cleared": 0,
         "floors_cleared": 0,
         "current_pressure": int(pressure_value or 0),
