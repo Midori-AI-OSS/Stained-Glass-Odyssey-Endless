@@ -1,6 +1,8 @@
 from pathlib import Path
 import random
 
+from collections.abc import Collection
+
 from plugins import PluginLoader
 from plugins.relics._base import RelicBase
 
@@ -21,6 +23,8 @@ def award_relic(party: Party, relic_id: str) -> RelicBase | None:
     if relic_cls is None:
         return None
     party.relics.append(relic_id)
+    if hasattr(party, "clear_loadout_cache"):
+        party.clear_loadout_cache()
     return relic_cls()
 
 
@@ -42,9 +46,12 @@ def relic_choices(party: Party, stars: int, count: int = 3) -> list[RelicBase]:
     k = min(count, len(available))
     return random.sample(available, k=k)
 
-async def apply_relics(party: Party) -> None:
+async def apply_relics(party: Party, *, only: Collection[str] | None = None) -> None:
     registry = _registry()
+    allowed = set(only) if only is not None else None
     for rid in party.relics:
+        if allowed is not None and rid not in allowed:
+            continue
         relic_cls = registry.get(rid)
         if relic_cls:
             await relic_cls().apply(party)

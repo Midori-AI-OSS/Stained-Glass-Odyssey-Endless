@@ -1,6 +1,8 @@
 from pathlib import Path
 import random
 
+from collections.abc import Collection
+
 from plugins import PluginLoader
 from plugins.cards._base import CardBase
 
@@ -28,11 +30,16 @@ def award_card(party: Party, card_id: str) -> CardBase | None:
     if card_cls is None or card_id in party.cards:
         return None
     party.cards.append(card_id)
+    if hasattr(party, "clear_loadout_cache"):
+        party.clear_loadout_cache()
     return card_cls()
 
-async def apply_cards(party: Party) -> None:
+async def apply_cards(party: Party, *, only: Collection[str] | None = None) -> None:
     registry = _registry()
+    allowed = set(only) if only is not None else None
     for cid in party.cards:
+        if allowed is not None and cid not in allowed:
+            continue
         card_cls = registry.get(cid)
         if card_cls:
             await card_cls().apply(party)

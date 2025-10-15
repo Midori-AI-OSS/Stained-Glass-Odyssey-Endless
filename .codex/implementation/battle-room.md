@@ -14,6 +14,25 @@ the forty most recent entries per run—enough to preserve multiple turns of
 effect ticks, relic triggers, and combat results—while still capping payloads
 so websocket updates stay lightweight.
 
+## Loadout caching
+
+Battle setup now skips redundant stat refresh work when the party's cards and
+relic stacks have not changed. After each setup call the persistent `Party`
+object records a lightweight cache of the active loadout, allowing subsequent
+setups to bypass reapplying the permanent modifiers emitted by `CardBase` and
+`RelicBase`. New helper flags let the base classes detect when a modifier is
+already active and avoid re-emitting the heavy `EffectManager` operations while
+still reattaching per-battle event hooks.【F:backend/autofighter/party.py†L1-L52】【F:backend/plugins/cards/_base.py†L58-L128】【F:backend/plugins/relics/_base.py†L26-L82】
+
+If the deck or relic roster changes, `setup_battle` automatically invalidates
+the cache so the next setup replays the full loadout pipeline. Regression tests
+exercise two consecutive setups and verify that a newly acquired card still
+applies on the following fight while existing modifiers persist.【F:backend/autofighter/rooms/battle/setup.py†L87-L129】【F:backend/tests/test_loadout_cache.py†L1-L64】
+
+An ad-hoc benchmark with eight mid-game cards and four relics shows the first
+setup taking roughly 0.18 s while the cached follow-up drops to 4 ms, easily
+meeting the "under five seconds" target for repeat battles.【b9dac9†L1-L19】
+
 ## Action Queue Flow
 
 Turn order is governed by an Action Gauge system. Each combatant starts the

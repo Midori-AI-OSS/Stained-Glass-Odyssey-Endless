@@ -13,3 +13,6 @@ Every battle deep-copies the party, re-applies every learned card and relic, and
 - Ensure stateful plugins that expect per-battle hooks still fire correctly (document how to opt into “always re-run” behavior if needed).
 - Benchmark setup time before/after on a mid-game deck and record the improvement target (e.g., reduce setup to <5 s).
 - Update documentation in `.codex/implementation` describing the new lifecycle, and add regression coverage that a newly acquired card still applies its effect the next fight.
+
+Caching system implemented with loadout cache, runtime hooks preserved, tests and docs updated.
+ready for review

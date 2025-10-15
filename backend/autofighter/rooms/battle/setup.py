@@ -4,6 +4,7 @@ from __future__ import annotations
 import asyncio
 import copy
 import inspect
+from collections import Counter
 from dataclasses import dataclass
 from typing import Sequence
 
@@ -117,8 +118,39 @@ async def setup_battle(
             bool(getattr(party, "guiding_compass_bonus_used", False)),
         )
 
-    await apply_cards(combat_party)
-    await _apply_relics_async(combat_party)
+    loadout_cache = getattr(party, "_loadout_cache", None)
+    cards_unchanged = False
+    relics_unchanged = False
+    if loadout_cache is not None:
+        cards_unchanged = tuple(combat_party.cards) == loadout_cache.card_ids
+        relics_unchanged = (
+            Counter(combat_party.relics) == Counter(loadout_cache.relic_counts)
+        )
+
+    if cards_unchanged:
+        setattr(combat_party, "_skip_card_stat_refresh", True)
+    if relics_unchanged:
+        setattr(combat_party, "_skip_relic_stat_refresh", True)
+        setattr(
+            combat_party,
+            "_expected_relic_stacks",
+            dict(Counter(combat_party.relics)),
+        )
+
+    try:
+        await apply_cards(combat_party)
+        await _apply_relics_async(combat_party)
+    finally:
+        for attr in (
+            "_skip_card_stat_refresh",
+            "_skip_relic_stat_refresh",
+            "_expected_relic_stacks",
+        ):
+            if hasattr(combat_party, attr):
+                delattr(combat_party, attr)
+
+    if hasattr(party, "record_loadout_cache"):
+        party.record_loadout_cache()
     party.rdr = combat_party.rdr
 
     foe_effects: list[EffectManager] = []

@@ -55,6 +55,8 @@ class CardBase:
         from autofighter.stats import BUS  # Import here to avoid circular imports
 
         log.info("Applying card %s to party", self.id)
+        skip_refresh = bool(getattr(party, "_skip_card_stat_refresh", False))
+
         for member in party.members:
             log.debug("Applying effects to %s", getattr(member, "id", "member"))
             mgr = getattr(member, "effect_manager", None)
@@ -62,9 +64,19 @@ class CardBase:
                 mgr = EffectManager(member)
                 member.effect_manager = mgr
             for attr, pct in self.effects.items():
+                effect_id = f"{self.id}_{attr}"
+                already_applied = effect_id in getattr(member, "mods", [])
+                if skip_refresh and already_applied:
+                    log.debug(
+                        "Skipping refresh of %s on %s; modifier already active",
+                        effect_id,
+                        getattr(member, "id", "member"),
+                    )
+                    continue
+
                 changes = {f"{attr}_mult": 1 + pct}
                 mod = create_stat_buff(
-                    member, name=f"{self.id}_{attr}", turns=9999, **changes
+                    member, name=effect_id, turns=9999, **changes
                 )
                 await mgr.add_modifier(mod)
 
@@ -78,7 +90,7 @@ class CardBase:
                     {
                         "stat_affected": attr,
                         "percentage_change": pct * 100,
-                        "new_modifier": f"{self.id}_{attr}",
+                        "new_modifier": effect_id,
                     },
                 )
 
