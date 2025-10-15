@@ -20,6 +20,8 @@ text via the `about` field returned by the backend.
  - 1★ Tattered Flag – +3% party Max HP; when an ally falls, survivors gain +3% ATK.
 - 1★ Wooden Idol – +3% Effect Res; resisting a debuff grants +1% Effect Res next turn.
 - 1★ Pocket Manual – +3% ATK; every 10th hit deals an extra 3% damage.
+- 1★ Featherweight Anklet – +2% SPD per stack; First action each battle grants +6% SPD per stack for 1 turn
+- 1★ Field Rations – After each battle, heal 2% Max HP per stack and grant +1 ultimate charge per stack to all allies
 - 2★ Vengeful Pendant – Reflects 15% of damage taken back to the attacker.
 - 2★ Arcane Flask – After an Ultimate, grant a shield equal to 20% Max HP per stack.
 - 2★ Echo Bell – First action each battle repeats at 15% power per stack.

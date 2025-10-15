@@ -45,6 +45,8 @@ detail pane.
 - Battle Meditation – +3% EXP Gain & +3% Vitality; If all allies start at full HP, grant +2% energy for the first turn
 - Guardian Shard – +2% DEF & +2% Mitigation; At battle end, if no allies died, grant +1 small mitigation for the next battle
 - Spiked Shield – +3% ATK & +3% DEF; When mitigation triggers (block threshold), deal small retaliatory damage (3% of attack)
+- Oracle Prayer Charm – +3% Effect Res & +3% Vitality; First time each ally drops below 45% HP in battle, grant 2-turn Radiant Regeneration HoT
+- Dynamo Wristbands – +3% ATK; When an ally deals Lightning damage, grant them +3% Crit Rate for 1 turn, stacking up to 2 times
 - 
 ## 2★ Cards
 - Critical Focus – +55% ATK; start of turn grants Critical Boost stack

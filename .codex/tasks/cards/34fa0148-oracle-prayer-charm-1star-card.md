@@ -13,3 +13,7 @@ The 1★ catalog leans on flat stat bumps or tiny reactive procs, but none of th
 - Extend backend card tests to cover edge cases: multiple allies dipping under the threshold, ensuring once-per-ally limits reset after `battle_end`, and verifying Radiant Regeneration is applied using the shared HoT class.
 - Update `.codex/implementation/card-inventory.md` and `.codex/planning/archive/726d03ae-card-plan.md` with the new entry and tuning notes.【F:.codex/implementation/card-inventory.md†L12-L69】【F:.codex/planning/archive/726d03ae-card-plan.md†L5-L69】
 - Supply a placeholder icon (`oracleprayercharm.png`) under `frontend/src/lib/assets/cards/Art/` and confirm the asset registry picks it up with the usual glob scan.【F:frontend/src/lib/systems/assetRegistry.js†L245-L253】
+
+---
+
+ready for review
