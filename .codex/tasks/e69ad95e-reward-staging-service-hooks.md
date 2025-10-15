@@ -15,3 +15,5 @@ Complete `431efb19-reward-staging-schema.md` first so the persistence layer is r
 
 ## Out of scope
 Confirmation/cancellation cleanup and duplicate-prevention guardrails belong to follow-up tasks.
+
+ready for review
