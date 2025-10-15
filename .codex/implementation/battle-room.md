@@ -1,6 +1,6 @@
 # Battle Rooms
 
-`BattleRoom` resolves turn-based encounters against scaled foes drawn from player plugins you haven't selected. Passives fire on room entry, battle start, and at the beginning and end of each turn. Combat continues until either every party member or the foe is defeated. All damage, healing, and regeneration helpers are awaitable, and each turn is padded to last at least `TURN_PACING` (0.5 s) before waiting another `TURN_PACING` to keep updates visible. The `EffectManager` applies damage-over-time and healing-over-time ticks on each combatant before actions take place, and the async loop yields with `await asyncio.sleep(0.001)` between steps so DoTs and HoTs remain non-blocking.
+`BattleRoom` resolves turn-based encounters against scaled foes drawn from player plugins you haven't selected. Passives fire on room entry, battle start, and at the beginning and end of each turn. Combat continues until either every party member or the foe is defeated. All damage, healing, and regeneration helpers are awaitable, and each turn is padded to last at least `TURN_PACING` (0.5 s) before waiting another `TURN_PACING` to keep updates visible. The pacing default is shared with the `/config/turn_pacing` API and Settings UI slider so refreshing configuration no longer snaps players to different values. The `EffectManager` applies damage-over-time and healing-over-time ticks on each combatant before actions take place, and the async loop yields with `await asyncio.sleep(0.001)` between steps so DoTs and HoTs remain non-blocking.
 
 The room deep-copies the run's party for combat. When the fight ends, remaining
 HP and accumulated experience are synced back so level-ups and damage persist
@@ -50,6 +50,10 @@ animations do not clip subsequent turns.
 
 For example, a skill with a 1.2 s animation blocks the queue for roughly
 1.7 s (``1.2 + TURN_PACING``) before the next combatant acts.
+
+### Intro pacing
+
+Room introductions now derive their delay from the staged cinematic queue rather than a fixed ``3 / TURN_PACING`` sleep. When cinematics are queued, `_intro_pause_seconds` multiplies the number of combatants by ``0.25`` seconds, caps the wait at ``1.75`` seconds, and then delegates to `pace_sleep` so the delay respects turn pacing adjustments. If the queue is empty, the helper returns immediately and the intro banner is skipped, eliminating the 15 s pause players previously encountered at the old backend default.
 
 Developers can preview numeric action values by enabling the debug toggle
 documented in [Action Value Display instructions](../instructions/action-value-display.md).

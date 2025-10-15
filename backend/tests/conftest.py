@@ -1,5 +1,7 @@
 """Test configuration for backend suite."""
 
+import asyncio
+from enum import Enum
 from pathlib import Path
 import sys
 import types
@@ -115,6 +117,52 @@ def _ensure_tracking_stub() -> None:
     tracking.get_tracking_manager = lambda: _TrackingManager()  # noqa: E731
 
 
+def _ensure_rich_stub() -> None:
+    if "rich.console" in sys.modules:
+        return
+
+    rich = sys.modules.get("rich")
+    if rich is None:
+        rich = types.ModuleType("rich")
+        rich.__path__ = []  # type: ignore[attr-defined]
+        sys.modules["rich"] = rich
+
+    console = types.ModuleType("rich.console")
+
+    class _Console:
+        def print(self, *_args, **_kwargs):  # noqa: ANN002, D401
+            return None
+
+        def log(self, *_args, **_kwargs):  # noqa: ANN002, D401
+            return None
+
+    console.Console = _Console  # type: ignore[attr-defined]
+    sys.modules["rich.console"] = console
+    setattr(rich, "console", console)
+
+    logging_module = types.ModuleType("rich.logging")
+
+    class _RichHandler:
+        def __init__(self, *_args, **_kwargs):  # noqa: ANN002, D401
+            self.level = 0
+
+        def setFormatter(self, *_args, **_kwargs):  # noqa: ANN002, D401, N802
+            return None
+
+        def setLevel(self, level):  # noqa: D401, ANN001
+            self.level = level
+
+        def handle(self, _record):  # noqa: D401, ANN001
+            return None
+
+        def emit(self, _record):  # noqa: D401, ANN001
+            return None
+
+    logging_module.RichHandler = _RichHandler  # type: ignore[attr-defined]
+    sys.modules["rich.logging"] = logging_module
+    setattr(rich, "logging", logging_module)
+
+
 def _ensure_options_stub() -> None:
     if "options" in sys.modules:
         return
@@ -122,12 +170,22 @@ def _ensure_options_stub() -> None:
     options = types.ModuleType("options")
 
     class OptionKey(str):
-        pass
+        """Lightweight stand-in for :class:`backend.options.OptionKey`."""
 
-    def get_option(*_args, default=None, **_kwargs):  # noqa: ANN001, D401 - simple stub
-        return default
+        def __new__(cls, value: str):  # noqa: D401
+            return str.__new__(cls, value)
 
-    def set_option(*_args, **_kwargs):  # noqa: ANN001, D401 - simple stub
+
+    OptionKey.LRM_MODEL = OptionKey("lrm_model")
+    OptionKey.TURN_PACING = OptionKey("turn_pacing")
+
+    _store: dict[str, str] = {}
+
+    def get_option(key, default=None):  # noqa: ANN001, D401 - simple stub
+        return _store.get(str(key), default)
+
+    def set_option(key, value):  # noqa: ANN001, D401 - simple stub
+        _store[str(key)] = value
         return None
 
     options.OptionKey = OptionKey  # type: ignore[attr-defined]
@@ -147,8 +205,10 @@ def _ensure_llm_stub() -> None:
 
     loader = types.ModuleType("llms.loader")
 
-    class ModelName(str):
-        pass
+    class ModelName(str, Enum):
+        DEEPSEEK = "deepseek-ai/DeepSeek-R1-Distill-Qwen-7B"
+        GEMMA = "google/gemma-3-4b-it"
+        GGUF = "gguf"
 
     loader.ModelName = ModelName  # type: ignore[attr-defined]
     loader.pipeline = lambda *args, **kwargs: None  # noqa: E731
@@ -176,6 +236,7 @@ def _ensure_tts_stub() -> None:
 _ensure_battle_logging_stub()
 _ensure_user_level_stub()
 _ensure_tracking_stub()
+_ensure_rich_stub()
 _ensure_options_stub()
 _ensure_llm_stub()
 _ensure_tts_stub()
@@ -185,9 +246,99 @@ def _ensure_runs_module() -> None:
     if "runs" in sys.modules:
         return
 
-    import importlib
+    runs = types.ModuleType("runs")
+    sys.modules["runs"] = runs
 
-    importlib.import_module("runs")
+    encryption = types.ModuleType("runs.encryption")
+
+    class _DummyFernet:
+        def encrypt(self, data):  # noqa: D401, ANN001
+            return data
+
+        def decrypt(self, token):  # noqa: D401, ANN001
+            return token
+
+    class _SaveConnection:
+        def __enter__(self):  # noqa: D401
+            return self
+
+        def __exit__(self, exc_type, exc, tb):  # noqa: D401, ANN001
+            return False
+
+        def execute(self, *_args, **_kwargs):  # noqa: ANN002, D401
+            class _Cursor:
+                def fetchone(self):  # noqa: D401
+                    return None
+
+                def fetchall(self):  # noqa: D401
+                    return []
+
+            return _Cursor()
+
+    class _SaveManager:
+        def connection(self):  # noqa: D401
+            return _SaveConnection()
+
+    encryption.get_fernet = lambda *_args, **_kwargs: _DummyFernet()  # noqa: E731
+    encryption.get_save_manager = lambda *_args, **_kwargs: _SaveManager()  # noqa: E731
+    sys.modules["runs.encryption"] = encryption
+    setattr(runs, "encryption", encryption)
+
+    lifecycle = types.ModuleType("runs.lifecycle")
+
+    async def _noop_async(*_args, **_kwargs):  # noqa: ANN001, D401
+        return None
+
+    def _noop_sync(*_args, **_kwargs):  # noqa: ANN001, D401
+        return None
+
+    lifecycle._run_battle = _noop_async  # type: ignore[attr-defined]
+    lifecycle.battle_snapshots = {}
+    lifecycle.battle_tasks = {}
+    lifecycle.battle_locks = {}
+    lifecycle.cleanup_battle_state = _noop_async  # type: ignore[attr-defined]
+    lifecycle.purge_all_run_state = _noop_sync  # type: ignore[attr-defined]
+    lifecycle.purge_run_state = _noop_sync  # type: ignore[attr-defined]
+    lifecycle.load_map = lambda *_args, **_kwargs: ({}, [])  # noqa: E731
+    lifecycle.save_map = _noop_sync
+    lifecycle.emit_battle_end_for_runs = _noop_async  # type: ignore[attr-defined]
+    lifecycle.get_battle_state_sizes = lambda: {  # noqa: E731
+        "tasks": 0,
+        "snapshots": 0,
+        "locks": 0,
+    }
+    sys.modules["runs.lifecycle"] = lifecycle
+    setattr(runs, "lifecycle", lifecycle)
+
+    party_manager = types.ModuleType("runs.party_manager")
+    party_manager._apply_player_customization = _noop_sync  # type: ignore[attr-defined]
+    party_manager._apply_character_customization = _noop_sync  # type: ignore[attr-defined]
+    party_manager._assign_damage_type = _noop_sync  # type: ignore[attr-defined]
+    party_manager._apply_player_upgrades = _noop_sync  # type: ignore[attr-defined]
+    party_manager._describe_passives = _noop_sync  # type: ignore[attr-defined]
+    party_manager._load_player_customization = lambda: ("", {})  # noqa: E731
+    party_manager._load_character_customization = lambda *_args, **_kwargs: {}  # noqa: E731
+    party_manager._load_individual_stat_upgrades = lambda *_args, **_kwargs: {}  # noqa: E731
+    party_manager.load_party = _noop_sync
+    party_manager.save_party = _noop_sync
+    sys.modules["runs.party_manager"] = party_manager
+    setattr(runs, "party_manager", party_manager)
+
 
 
 _ensure_runs_module()
+
+
+def pytest_configure(config):  # noqa: D401
+    config.addinivalue_line("markers", "asyncio: mark test as running in asyncio loop")
+
+
+def pytest_pyfunc_call(pyfuncitem):  # noqa: D401
+    if asyncio.iscoroutinefunction(pyfuncitem.obj):
+        loop = asyncio.new_event_loop()
+        try:
+            loop.run_until_complete(pyfuncitem.obj(**pyfuncitem.funcargs))
+        finally:
+            loop.close()
+        return True
+    return None
