@@ -110,3 +110,26 @@ def test_prepare_snapshot_overlay_clears_effect_charges(snapshot_env) -> None:
 
     assert snapshots_module.get_effect_charges(run_id) is None
     assert "effects_charge" not in battle_snapshots[run_id]
+
+
+def test_recent_event_history_survives_bursts(snapshot_env) -> None:
+    snapshots_module, battle_snapshots = snapshot_env
+    run_id = "snapshot-burst"
+
+    combatant = Stats()
+    combatant.id = "burst-tester"
+
+    snapshots_module.prepare_snapshot_overlay(run_id, [combatant])
+
+    burst_events = [
+        {"type": "burst", "sequence": index}
+        for index in range(24)
+    ]
+
+    for payload in burst_events:
+        snapshots_module.mutate_snapshot_overlay(run_id, event=payload)
+
+    stored_events = battle_snapshots[run_id]["recent_events"]
+    assert len(stored_events) == len(burst_events)
+    assert stored_events[0]["sequence"] == 0
+    assert stored_events[-1]["sequence"] == burst_events[-1]["sequence"]

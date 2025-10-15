@@ -8,6 +8,12 @@ into subsequent rooms. `SummonManager.reset_all()` runs at battle start so all
 summons and related tracking are cleared, preventing leftovers from leaking
 into later encounters.
 
+Snapshot overlays keep a rolling record of the latest combat events so the
+frontend can poll without missing bursts of activity. The backend now retains
+the forty most recent entries per run—enough to preserve multiple turns of
+effect ticks, relic triggers, and combat results—while still capping payloads
+so websocket updates stay lightweight.
+
 ## Action Queue Flow
 
 Turn order is governed by an Action Gauge system. Each combatant starts the

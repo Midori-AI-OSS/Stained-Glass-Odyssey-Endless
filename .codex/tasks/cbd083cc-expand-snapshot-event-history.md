@@ -12,3 +12,6 @@ The snapshot overlay only keeps the six most recent events per run. When pacing 
 - Update the overlay mutation logic and any consumers to handle the deeper history efficiently (avoid ballooning payloads for marathon runs).
 - Add regression coverage ensuring at least N events survive a burst (e.g., simulate 20 quick emits and assert the client-visible list keeps them).
 - Document the new retention policy for UI developers.
+
+## Status
+ready for review — Expanded the snapshot queue to keep forty events per run, ensured queues rescale when the limit changes, ignored invalid status payloads to avoid stale sentinels, added burst-retention coverage, and documented the new history guarantee.

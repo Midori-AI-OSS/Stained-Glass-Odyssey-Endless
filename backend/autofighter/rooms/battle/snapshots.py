@@ -26,7 +26,10 @@ __all__ = [
 ]
 
 _MISSING = object()
-_RECENT_EVENT_LIMIT = 6
+# Retain enough combat log entries to cover large bursts between
+# frontend polls. Forty events captures multiple turns of activity while
+# keeping payload sizes small enough for websocket updates.
+_RECENT_EVENT_LIMIT = 40
 
 _entity_run_ids: dict[int, str] = {}
 _entity_refs: dict[int, weakref.ref[Stats]] = {}
@@ -173,7 +176,7 @@ def prepare_snapshot_overlay(run_id: str | None, entities: Iterable[Any]) -> Non
         return
     register_snapshot_entities(run_id, entities)
     queue = _recent_events.get(run_id)
-    if queue is None:
+    if queue is None or queue.maxlen != _RECENT_EVENT_LIMIT:
         queue = deque(maxlen=_RECENT_EVENT_LIMIT)
         _recent_events[run_id] = queue
     else:
@@ -206,7 +209,9 @@ def mutate_snapshot_overlay(
         snapshot["legacy_active_id"] = legacy_active_id
     if legacy_active_target_id is not _MISSING:
         snapshot["legacy_active_target_id"] = legacy_active_target_id
-    if status_phase is not _MISSING:
+    if status_phase is not _MISSING and (
+        status_phase is None or isinstance(status_phase, dict)
+    ):
         _status_phases[run_id] = status_phase
         snapshot["status_phase"] = status_phase
     elif run_id in _status_phases:
@@ -274,8 +279,8 @@ def clear_effect_charges(run_id: str | None) -> None:
 
 def _ensure_event_queue(run_id: str) -> deque[dict[str, Any]]:
     queue = _recent_events.get(run_id)
-    if queue is None:
-        queue = deque(maxlen=_RECENT_EVENT_LIMIT)
+    if queue is None or queue.maxlen != _RECENT_EVENT_LIMIT:
+        queue = deque(queue or (), maxlen=_RECENT_EVENT_LIMIT)
         _recent_events[run_id] = queue
     return queue
 
