@@ -129,9 +129,9 @@ async def test_select_card_stages_without_modifying_party() -> None:
 
     assert result["card"]["id"] == "arc_lightning"
     assert result["cards"] == []  # party deck unchanged
-    assert result["awaiting_card"] is True
-    assert result["awaiting_next"] is False
-    assert result["reward_progression"]["current_step"] == "card"
+    assert result["awaiting_card"] is False
+    assert result["awaiting_next"] is True
+    assert result["reward_progression"] is None
     staged_cards = result["reward_staging"]["cards"]
     assert len(staged_cards) == 1
     assert staged_cards[0]["id"] == "arc_lightning"
@@ -142,13 +142,15 @@ async def test_select_card_stages_without_modifying_party() -> None:
 
     assert lifecycle is not None
     state, _ = lifecycle.load_map(run_id)
-    assert state["awaiting_card"] is True
+    assert state["awaiting_card"] is False
+    assert state["awaiting_next"] is True
     assert state["reward_staging"]["cards"][0]["id"] == "arc_lightning"
-    assert lifecycle.battle_snapshots[run_id]["card_choices"] == []
-    assert (
-        lifecycle.battle_snapshots[run_id]["reward_staging"]["cards"][0]["id"]
-        == "arc_lightning"
-    )
+    snapshot = lifecycle.battle_snapshots[run_id]
+    assert snapshot["card_choices"] == []
+    assert snapshot["awaiting_card"] is False
+    assert snapshot["awaiting_next"] is True
+    assert snapshot.get("reward_progression") is None
+    assert snapshot["reward_staging"]["cards"][0]["id"] == "arc_lightning"
 
 
 @pytest.mark.asyncio()
@@ -205,9 +207,9 @@ async def test_select_relic_stages_without_duplicate_application() -> None:
     assert result["relic"]["id"] == "old_coin"
     assert result["relic"]["stacks"] == 1
     assert result["relics"] == ["old_coin"]
-    assert result["awaiting_relic"] is True
-    assert result["awaiting_next"] is False
-    assert result["reward_progression"]["current_step"] == "relic"
+    assert result["awaiting_relic"] is False
+    assert result["awaiting_next"] is True
+    assert result["reward_progression"] is None
     staged_relics = result["reward_staging"]["relics"]
     assert len(staged_relics) == 1
     assert staged_relics[0]["id"] == "old_coin"
@@ -218,10 +220,12 @@ async def test_select_relic_stages_without_duplicate_application() -> None:
 
     assert lifecycle is not None
     state, _ = lifecycle.load_map(run_id)
-    assert state["awaiting_relic"] is True
+    assert state["awaiting_relic"] is False
+    assert state["awaiting_next"] is True
     assert state["reward_staging"]["relics"][0]["id"] == "old_coin"
-    assert lifecycle.battle_snapshots[run_id]["relic_choices"] == []
-    assert (
-        lifecycle.battle_snapshots[run_id]["reward_staging"]["relics"][0]["id"]
-        == "old_coin"
-    )
+    snapshot = lifecycle.battle_snapshots[run_id]
+    assert snapshot["relic_choices"] == []
+    assert snapshot["awaiting_relic"] is False
+    assert snapshot["awaiting_next"] is True
+    assert snapshot.get("reward_progression") is None
+    assert snapshot["reward_staging"]["relics"][0]["id"] == "old_coin"
