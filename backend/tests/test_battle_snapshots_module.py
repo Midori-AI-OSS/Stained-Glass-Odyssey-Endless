@@ -133,3 +133,42 @@ def test_recent_event_history_survives_bursts(snapshot_env) -> None:
     assert len(stored_events) == len(burst_events)
     assert stored_events[0]["sequence"] == 0
     assert stored_events[-1]["sequence"] == burst_events[-1]["sequence"]
+
+
+def test_recent_event_limit_bonuses_extend_and_contract(snapshot_env) -> None:
+    snapshots_module, _ = snapshot_env
+    run_id = "snapshot-limit-bonus"
+
+    combatant = Stats()
+    combatant.id = "limit-tester"
+
+    snapshots_module.prepare_snapshot_overlay(run_id, [combatant])
+
+    base_limit = snapshots_module.get_recent_event_limit()
+    for index in range(base_limit):
+        snapshots_module.mutate_snapshot_overlay(
+            run_id,
+            event={"type": "baseline", "index": index},
+        )
+
+    snapshots_module.register_recent_event_limit_bonus("relic:test", 5)
+    assert snapshots_module.get_recent_event_limit() == base_limit + 5
+
+    for index in range(base_limit, base_limit + 5):
+        snapshots_module.mutate_snapshot_overlay(
+            run_id,
+            event={"type": "bonus", "index": index},
+        )
+
+    events = snapshots_module.get_recent_events(run_id)
+    assert len(events) == base_limit + 5
+    assert events[0]["index"] == 0
+    assert events[-1]["index"] == base_limit + 5 - 1
+
+    snapshots_module.clear_recent_event_limit_bonus("relic:test")
+    assert snapshots_module.get_recent_event_limit() == base_limit
+
+    trimmed_events = snapshots_module.get_recent_events(run_id)
+    assert len(trimmed_events) == base_limit
+    assert trimmed_events[0]["index"] == 5
+    assert trimmed_events[-1]["index"] == base_limit + 5 - 1
