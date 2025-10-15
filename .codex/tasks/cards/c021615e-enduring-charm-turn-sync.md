@@ -14,3 +14,5 @@ Enduring Charm mirrors Vital Core's low-HP vitality buff but still uses a hard-c
 - Add regression coverage showing the boost re-triggers correctly across rapid and prolonged fights without relying on `call_later`.
 
 ready for review
+
+requesting review from the Task Master

@@ -15,3 +15,5 @@ The EventBus injects 2 ms `asyncio.sleep` calls for every batched event and ev
 - Update or add tests covering batched dispatch and async subscribers so CI exercises the new pacing rules.
 
 ready for review
+
+requesting review from the Task Master
