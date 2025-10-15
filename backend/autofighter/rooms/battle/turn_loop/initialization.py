@@ -6,6 +6,7 @@ from typing import Any
 from typing import Awaitable
 from typing import Callable
 
+from autofighter.action_queue import TURN_COUNTER_ID
 from autofighter.stats import BUS
 
 from ..pacing import _EXTRA_TURNS
@@ -113,6 +114,43 @@ async def initialize_turn_loop(
     return context
 
 
+_INTRO_BASE_SECONDS = 0.75
+_INTRO_PER_ACTOR_SECONDS = 0.15
+_INTRO_MAX_SECONDS = 1.75
+
+
+def _intro_pause_seconds(context: TurnLoopContext) -> float:
+    """Return the amount of time to hold the intro banner."""
+
+    queue = context.visual_queue
+    if queue is None:
+        return 0.0
+
+    try:
+        combatants = list(getattr(queue, "combatants", ()))
+    except Exception:
+        return 0.0
+
+    visible = []
+    for combatant in combatants:
+        try:
+            ident = getattr(combatant, "id", None)
+        except Exception:
+            ident = None
+        if ident == TURN_COUNTER_ID:
+            continue
+        visible.append(combatant)
+
+    if len(visible) < 2:
+        return 0.0
+
+    extra = max(0, len(visible) - 2)
+    duration = _INTRO_BASE_SECONDS + (extra * _INTRO_PER_ACTOR_SECONDS)
+    if duration > _INTRO_MAX_SECONDS:
+        duration = _INTRO_MAX_SECONDS
+    return duration
+
+
 async def _prepare_entities(context: TurnLoopContext) -> None:
     """Set action point counts and emit extra turn events for all entities."""
 
@@ -150,4 +188,16 @@ async def _send_initial_progress(context: TurnLoopContext) -> None:
         include_summon_foes=True,
         visual_queue=context.visual_queue,
     )
-    await pace_sleep(3 / TURN_PACING)
+    hold_seconds = _intro_pause_seconds(context)
+    if hold_seconds <= 0:
+        return
+
+    try:
+        pacing = float(TURN_PACING)
+    except Exception:
+        pacing = 1e-6
+
+    if pacing <= 0:
+        pacing = 1e-6
+
+    await pace_sleep(hold_seconds / pacing)

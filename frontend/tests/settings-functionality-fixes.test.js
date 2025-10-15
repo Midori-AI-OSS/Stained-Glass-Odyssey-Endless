@@ -6,6 +6,7 @@ describe('Settings functionality fixes', () => {
   const battleEventFloatersFile = join(import.meta.dir, '../src/lib/components/BattleEventFloaters.svelte');
   const overlayHostFile = join(import.meta.dir, '../src/lib/components/OverlayHost.svelte');
   const uiSettingsFile = join(import.meta.dir, '../src/lib/components/UISettings.svelte');
+  const settingsMenuFile = join(import.meta.dir, '../src/lib/components/SettingsMenu.svelte');
   const settingsMenuDocFile = join(import.meta.dir, '../.codex/implementation/settings-menu.md');
 
   test('BattleEventFloaters prevents rendering when disabled', () => {
@@ -34,5 +35,11 @@ describe('Settings functionality fixes', () => {
     expect(content).toContain('Allows custom background upload via file picker');
     expect(content).toContain('Custom Background**: File picker for uploading');
     expect(content).not.toContain('future feature');
+  });
+
+  test('Settings menu pacing default matches backend constant', () => {
+    const content = readFileSync(settingsMenuFile, 'utf8');
+    expect(content).toContain('const DEFAULT_TURN_PACING = 0.5;');
+    expect(content).toContain('const MIN_ANIMATION_SPEED = 0.1;');
   });
 });

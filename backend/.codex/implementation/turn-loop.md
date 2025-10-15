@@ -7,7 +7,11 @@ modules:
 
 - `initialization.py` builds a `TurnLoopContext`, primes action points for all
   participants, and emits the initial progress update before the battle loop
-  begins.
+  begins. After dispatching the first snapshot it now consults
+  `_intro_pause_seconds` to decide whether to briefly hold the intro banner for
+  the UI. The delay scales from 0.75s up to 1.75s based on the number of visible
+  combatants and is skipped entirely when no visual queue is active so fast
+  battles are not artificially throttled.
 - `player_turn.py` processes the party phase, including enrage updates, damage
   resolution, summon management, and progress/visual updates. The helper mutates
   the shared context with revised turn counts, rewards, and pacing data.
