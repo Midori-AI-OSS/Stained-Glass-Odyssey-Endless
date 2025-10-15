@@ -20,6 +20,9 @@ __all__ = [
     "get_effect_charges",
     "clear_effect_charges",
     "get_recent_events",
+    "get_recent_event_limit",
+    "register_recent_event_limit_bonus",
+    "clear_recent_event_limit_bonus",
     "get_status_phase",
     "get_registered_entities",
     "get_registered_run_ids",
@@ -28,8 +31,11 @@ __all__ = [
 _MISSING = object()
 # Retain enough combat log entries to cover large bursts between
 # frontend polls. Forty events captures multiple turns of activity while
-# keeping payload sizes small enough for websocket updates.
+# keeping payload sizes small enough for websocket updates. Additional
+# systems can contribute to the retention budget via
+# ``register_recent_event_limit_bonus``.
 _RECENT_EVENT_LIMIT = 40
+_recent_event_limit_bonuses: dict[str, int] = {}
 
 _entity_run_ids: dict[int, str] = {}
 _entity_refs: dict[int, weakref.ref[Stats]] = {}
@@ -176,8 +182,9 @@ def prepare_snapshot_overlay(run_id: str | None, entities: Iterable[Any]) -> Non
         return
     register_snapshot_entities(run_id, entities)
     queue = _recent_events.get(run_id)
-    if queue is None or queue.maxlen != _RECENT_EVENT_LIMIT:
-        queue = deque(maxlen=_RECENT_EVENT_LIMIT)
+    limit = get_recent_event_limit()
+    if queue is None or queue.maxlen != limit:
+        queue = deque(maxlen=limit)
         _recent_events[run_id] = queue
     else:
         queue.clear()
@@ -233,6 +240,51 @@ def get_recent_events(run_id: str | None) -> list[dict[str, Any]] | None:
     return list(queue)
 
 
+def get_recent_event_limit() -> int:
+    """Return the current retention window for recent battle events."""
+
+    limit = int(_RECENT_EVENT_LIMIT)
+    bonus = sum(value for value in _recent_event_limit_bonuses.values() if value > 0)
+    limit += bonus
+    if limit < 1:
+        return 1
+    return limit
+
+
+def register_recent_event_limit_bonus(source: str, amount: int | float) -> None:
+    """Register an additional retention contribution from a gameplay system."""
+
+    if not source:
+        return
+    try:
+        normalized = int(amount)
+    except (TypeError, ValueError):
+        normalized = 0
+    if normalized <= 0:
+        if _recent_event_limit_bonuses.pop(source, None) is not None:
+            _refresh_recent_event_queue_limits()
+        return
+    previous = _recent_event_limit_bonuses.get(source)
+    if previous == normalized:
+        return
+    _recent_event_limit_bonuses[source] = normalized
+    _refresh_recent_event_queue_limits()
+
+
+def clear_recent_event_limit_bonus(source: str | None = None) -> None:
+    """Clear retention contributions from one or all gameplay systems."""
+
+    if source is None:
+        if not _recent_event_limit_bonuses:
+            return
+        _recent_event_limit_bonuses.clear()
+        _refresh_recent_event_queue_limits()
+        return
+    if _recent_event_limit_bonuses.pop(source, None) is None:
+        return
+    _refresh_recent_event_queue_limits()
+
+
 def get_status_phase(run_id: str | None) -> dict[str, Any] | None:
     if not run_id:
         return None
@@ -279,8 +331,9 @@ def clear_effect_charges(run_id: str | None) -> None:
 
 def _ensure_event_queue(run_id: str) -> deque[dict[str, Any]]:
     queue = _recent_events.get(run_id)
-    if queue is None or queue.maxlen != _RECENT_EVENT_LIMIT:
-        queue = deque(queue or (), maxlen=_RECENT_EVENT_LIMIT)
+    limit = get_recent_event_limit()
+    if queue is None or queue.maxlen != limit:
+        queue = deque(queue or (), maxlen=limit)
         _recent_events[run_id] = queue
     return queue
 
@@ -293,3 +346,11 @@ def _get_snapshot(run_id: str) -> dict[str, Any]:
         snap = {"result": "battle"}
         battle_snapshots[run_id] = snap
     return snap
+
+
+def _refresh_recent_event_queue_limits() -> None:
+    limit = get_recent_event_limit()
+    for run_id, queue in list(_recent_events.items()):
+        if queue.maxlen == limit:
+            continue
+        _recent_events[run_id] = deque(queue, maxlen=limit)
