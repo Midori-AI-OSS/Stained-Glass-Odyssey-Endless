@@ -25,4 +25,7 @@ Adding a lightning-centric 1★ option expands early-run build variety by lettin
 
 ---
 
-ready for review
+## Audit notes (2025-02-15)
+- ✅ Implementation meets the mechanical requirements: the card grants +3% ATK by default and listens for Lightning damage to award up to two 1-turn crit-rate buffs, with matching telemetry hooks and cleanup.【F:backend/plugins/cards/dynamo_wristbands.py†L15-L100】
+- ✅ New regression coverage exercises stacking limits, per-turn resets, and multi-ally handling; the suite passes under `uv run pytest tests/test_dynamo_wristbands.py`.【a2c193†L1-L11】
+- ⚠️ Blocking issue: `backend/tests/test_card_rewards.py` enumerates 1★ cards in `NEW_CARDS`, but the new `dynamo_wristbands` entry was not added. This violates the task requirement to extend existing registration coverage.【F:backend/tests/test_card_rewards.py†L22-L52】 Please update that list (and any downstream expectations) so the shared registration test validates the new card.

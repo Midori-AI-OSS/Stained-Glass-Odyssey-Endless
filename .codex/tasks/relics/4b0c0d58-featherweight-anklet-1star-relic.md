@@ -17,4 +17,9 @@ Our 1★ pool leans on sustain, mitigation, and incremental offense but lacks a 
 
 ---
 
-ready for review
+## Audit notes (2025-02-16)
+- ✅ `FeatherweightAnklet` now grants the multiplicative +2% SPD baseline and per-battle first-action burst with telemetry and cleanup, matching the design brief.【F:backend/plugins/relics/featherweight_anklet.py†L13-L119】
+- ✅ Regression coverage exercises permanent scaling, first-action gating, multi-battle resets, and multi-ally behavior; `uv run pytest tests/test_featherweight_anklet.py` passes locally.【80f61b†L1-L3】
+- ✅ Placeholder art guidance satisfied: `luna_items_prompts.txt` records a Luna Midori usage prompt for `featherweight_anklet.png`, aligning with the new placeholder-art directive and clearing the blocker for Task Master review.【F:luna_items_prompts.txt†L15-L17】
+
+requesting review from the Task Master.
