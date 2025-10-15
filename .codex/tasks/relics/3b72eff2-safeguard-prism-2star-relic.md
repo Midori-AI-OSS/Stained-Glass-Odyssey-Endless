@@ -14,3 +14,7 @@ Two-star relics emphasize counterattacks (Vengeful Pendant), first-action repeat
 - Update `.codex/implementation/relic-inventory.md` and the relic design plan with Safeguard Prism's final numbers and intent.【F:.codex/implementation/relic-inventory.md†L21-L43】【F:.codex/planning/archive/bd48a561-relic-plan.md†L37-L63】
 - Provide a placeholder icon under `frontend/src/lib/assets/relics/2star/` and ensure the catalog/tooltip surfaces the description via the usual metadata plumbing (no custom frontend code expected beyond verifying the asset loads).【F:frontend/src/lib/systems/assetRegistry.js†L174-L1353】
 - Document any tuning rationale in `.codex/docs/relics/` if the mitigation math needs future reference.
+
+---
+
+ready for review

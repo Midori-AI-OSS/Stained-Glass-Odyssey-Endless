@@ -14,3 +14,7 @@ Design and implement a new 1★ relic, **Copper Siphon**, that grants mild lifes
 - Ensure relic registration works with the existing loader (`backend/autofighter/relics.py`) without manual wiring and that repeated stacks scale multiplicatively as described.【F:backend/autofighter/relics.py†L10-L37】
 - Add targeted unit tests (e.g., in `backend/tests/test_relic_effects.py`) covering: healing proportional to damage, overflow shielding when HP is full, stacking behavior, and event emission hooks.
 - Update relic documentation to include Copper Siphon and note the lifesteal/shield interaction so docs stay in sync with gameplay.【F:.codex/implementation/relic-system.md†L1-L16】
+
+---
+
+ready for review
