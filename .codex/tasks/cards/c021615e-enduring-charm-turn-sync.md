@@ -12,3 +12,5 @@ Enduring Charm mirrors Vital Core's low-HP vitality buff but still uses a hard-c
 - Replace the wall-clock cleanup with logic tied to the modifier lifecycle (e.g., remove from `active_boosts` when the 2-turn stat buff expires, on `battle_end`, or via event callbacks).
 - Ensure the vitality bonus can reapply promptly once the effect expires or a new battle begins.
 - Add regression coverage showing the boost re-triggers correctly across rapid and prolonged fights without relying on `call_later`.
+
+ready for review
