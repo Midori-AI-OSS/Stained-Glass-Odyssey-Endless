@@ -10,7 +10,9 @@ from runs.lifecycle import save_map
 from runs.party_manager import load_party
 from runs.party_manager import save_party
 
+from autofighter.cards import award_card
 from autofighter.cards import instantiate_card
+from autofighter.relics import award_relic
 from autofighter.relics import instantiate_relic
 from tracking import log_game_action
 
@@ -64,6 +66,10 @@ async def select_card(run_id: str, card_id: str) -> dict[str, Any]:
 
     staging["cards"] = [staged_card]
 
+    awarded_card = award_card(party, card_id)
+    if awarded_card is None:
+        raise ValueError("invalid card")
+
     progression = state.get("reward_progression")
     if progression and progression.get("current_step") == "card":
         completed = progression.setdefault("completed", [])
@@ -86,6 +92,7 @@ async def select_card(run_id: str, card_id: str) -> dict[str, Any]:
             state["awaiting_next"] = True
 
     await asyncio.to_thread(save_map, run_id, state)
+    await asyncio.to_thread(save_party, run_id, party)
 
     snap = battle_snapshots.get(run_id)
     if isinstance(snap, dict):
@@ -165,6 +172,12 @@ async def select_relic(run_id: str, relic_id: str) -> dict[str, Any]:
 
     staging["relics"] = [staged_relic]
 
+    awarded_relic = award_relic(party, relic_id)
+    if awarded_relic is None:
+        raise ValueError("invalid relic")
+
+    staged_relic["stacks"] = party.relics.count(relic.id)
+
     progression = state.get("reward_progression")
     if progression and progression.get("current_step") == "relic":
         completed = progression.setdefault("completed", [])
@@ -187,6 +200,7 @@ async def select_relic(run_id: str, relic_id: str) -> dict[str, Any]:
             state["awaiting_next"] = True
 
     await asyncio.to_thread(save_map, run_id, state)
+    await asyncio.to_thread(save_party, run_id, party)
 
     snap = battle_snapshots.get(run_id)
     if isinstance(snap, dict):
