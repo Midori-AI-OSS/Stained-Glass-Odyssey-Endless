@@ -2,10 +2,13 @@
 
 from .encryption import get_fernet
 from .encryption import get_save_manager
+from .lifecycle import REWARD_STAGING_KEYS
 from .lifecycle import battle_locks
 from .lifecycle import battle_snapshots
 from .lifecycle import battle_tasks
 from .lifecycle import cleanup_battle_state
+from .lifecycle import empty_reward_staging
+from .lifecycle import ensure_reward_staging
 from .lifecycle import get_battle_state_sizes
 from .lifecycle import load_map
 from .lifecycle import save_map
@@ -19,6 +22,9 @@ __all__ = [
     "battle_snapshots",
     "battle_tasks",
     "cleanup_battle_state",
+    "empty_reward_staging",
+    "ensure_reward_staging",
+    "REWARD_STAGING_KEYS",
     "get_battle_state_sizes",
     "load_map",
     "save_map",

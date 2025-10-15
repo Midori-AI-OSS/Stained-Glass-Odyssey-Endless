@@ -34,6 +34,56 @@ ITEM_UI_METADATA: dict[str, dict[str, object]] = {
 }
 
 
+REWARD_STAGING_KEYS: tuple[str, str, str] = ("cards", "relics", "items")
+
+
+def empty_reward_staging() -> dict[str, list[object]]:
+    """Return a freshly initialised reward staging container."""
+
+    return {key: [] for key in REWARD_STAGING_KEYS}
+
+
+def ensure_reward_staging(state: dict[str, Any]) -> tuple[dict[str, list[object]], bool]:
+    """Ensure ``state`` contains a normalised ``reward_staging`` payload."""
+
+    raw = state.get("reward_staging")
+    changed = not isinstance(raw, Mapping)
+
+    staging: dict[str, Any]
+    if isinstance(raw, Mapping):
+        staging = {str(key): value for key, value in raw.items()}
+    else:
+        staging = {}
+
+    for key in REWARD_STAGING_KEYS:
+        value = staging.get(key)
+        if isinstance(value, list):
+            staging[key] = list(value)
+        else:
+            staging[key] = []
+            changed = True
+
+    state["reward_staging"] = staging
+    return staging, changed
+
+
+def _sync_snapshot_reward_staging(run_id: str, staging: Mapping[str, Any]) -> None:
+    """Ensure in-memory battle snapshots mirror the persisted staging payload."""
+
+    snapshot = battle_snapshots.get(run_id)
+    if not isinstance(snapshot, dict):
+        return
+
+    ensure_reward_staging(snapshot)
+    target = snapshot.get("reward_staging", {})
+    for key in REWARD_STAGING_KEYS:
+        source = staging.get(key, []) if isinstance(staging, Mapping) else []
+        if isinstance(source, list):
+            target[key] = list(source)
+        else:
+            target[key] = []
+
+
 def _apply_item_ui_metadata(entry: dict[str, object]) -> None:
     metadata = ITEM_UI_METADATA.get(str(entry.get("id")))
     if not metadata:
@@ -190,8 +240,12 @@ def load_map(run_id: str) -> tuple[dict, list[MapNode]]:
         cur = conn.execute("SELECT map FROM runs WHERE id = ?", (run_id,))
         row = cur.fetchone()
     if row is None:
-        return {"rooms": [], "current": 0, "battle": False}, []
+        default_state: dict[str, Any] = {"rooms": [], "current": 0, "battle": False}
+        staging, _ = ensure_reward_staging(default_state)
+        _sync_snapshot_reward_staging(run_id, staging)
+        return default_state, []
     state = json.loads(row[0])
+    staging, staging_changed = ensure_reward_staging(state)
     rooms = [MapNode.from_dict(n) for n in state.get("rooms", [])]
     raw_context = state.get("modifier_context")
     context: RunModifierContext | None = None
@@ -215,10 +269,17 @@ def load_map(run_id: str) -> tuple[dict, list[MapNode]]:
                 setattr(node, "run_modifier_context", context_candidate)
                 if not getattr(node, "metadata_hash", None):
                     node.metadata_hash = context_candidate.metadata_hash
+    if staging_changed:
+        try:
+            save_map(run_id, state)
+        except Exception:
+            log.exception("Failed to backfill reward staging for run %s", run_id)
+    _sync_snapshot_reward_staging(run_id, staging)
     return state, rooms
 
 
 def save_map(run_id: str, state: dict) -> None:
+    ensure_reward_staging(state)
     with get_save_manager().connection() as conn:
         conn.execute(
             "UPDATE runs SET map = ? WHERE id = ?",
@@ -514,6 +575,9 @@ __all__ = [
     "get_battle_state_sizes",
     "load_map",
     "save_map",
+    "empty_reward_staging",
+    "ensure_reward_staging",
+    "REWARD_STAGING_KEYS",
     "battle_tasks",
     "battle_snapshots",
     "battle_locks",

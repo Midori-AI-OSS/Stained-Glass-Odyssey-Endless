@@ -11,3 +11,5 @@ Design and persist a dedicated reward staging structure alongside the run map so
 
 ## Out of scope
 Do not change service APIs, confirmation flows, or UI payloads yet—those are covered by follow-up tasks.
+
+ready for review

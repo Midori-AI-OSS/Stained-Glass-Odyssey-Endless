@@ -7,7 +7,7 @@
 - Install dependencies with `uv add sqlcipher3-binary`.
 
 ## Schema
-- `runs(id TEXT PRIMARY KEY, party TEXT, map TEXT)` stores the current run state.
+- `runs(id TEXT PRIMARY KEY, party TEXT, map TEXT)` stores the current run state. The `map` JSON now always contains a `reward_staging` object with `cards`, `relics`, and `items` arrays so staged rewards persist across reconnects without mutating the `party` payload.
 - `options(key TEXT PRIMARY KEY, value TEXT)` stores player customization and settings.
 - Additional tables for players and settings will be added as features return.
 
