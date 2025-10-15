@@ -28,6 +28,6 @@ Managers maintain the operational backbone for contributors. They ensure every s
 
 ## Communication
 - Summarize accepted or rejected requests from the Lead Developer and share rationale with the team.
-- Use the team communication command noted in `AGENTS.md` when announcing instruction updates.
+- Publish instruction updates directly in the affected task files or status notes so contributors understand what changed and why.
 - Keep a changelog of significant documentation revisions within `.codex/instructions/` or linked planning files.
 - Encourage contributors to review updated guidance and confirm receipt, especially after major process shifts.

@@ -33,4 +33,4 @@ For contributors who audit repository documentation to keep it accurate and curr
 - Re-review previous reviewer notes to ensure follow-up tasks were actually created and that no open concern was silently dropped.
 
 ## Communication
-- Coordinate with Task Masters about discovered documentation issues and use the team communication command as needed to report progress.
+- Coordinate with Task Masters about discovered documentation issues by updating the affected task files or reviewer notes so progress is transparent without relying on a separate command.
