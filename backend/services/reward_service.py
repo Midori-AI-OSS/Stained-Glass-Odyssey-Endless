@@ -63,8 +63,27 @@ async def select_card(run_id: str, card_id: str) -> dict[str, Any]:
         staged_card["about"] = about
 
     staging["cards"] = [staged_card]
-    state["awaiting_card"] = True
-    state["awaiting_next"] = False
+
+    progression = state.get("reward_progression")
+    if progression and progression.get("current_step") == "card":
+        completed = progression.setdefault("completed", [])
+        if "card" not in completed:
+            completed.append("card")
+        available = progression.get("available", [])
+        next_steps = [step for step in available if step not in completed]
+        if next_steps:
+            progression["current_step"] = next_steps[0]
+            state["awaiting_card"] = False
+            state["awaiting_next"] = False
+        else:
+            progression["current_step"] = None
+            state["awaiting_card"] = False
+            state["awaiting_next"] = True
+            state.pop("reward_progression", None)
+    else:
+        state["awaiting_card"] = False
+        if not state.get("awaiting_relic") and not state.get("awaiting_loot"):
+            state["awaiting_next"] = True
 
     await asyncio.to_thread(save_map, run_id, state)
 
@@ -73,8 +92,15 @@ async def select_card(run_id: str, card_id: str) -> dict[str, Any]:
         snapshot = dict(snap)
         ensure_reward_staging(snapshot)
         snapshot["card_choices"] = []
-        snapshot["awaiting_card"] = True
-        snapshot["awaiting_next"] = False
+        snapshot["awaiting_card"] = state.get("awaiting_card", False)
+        snapshot["awaiting_relic"] = state.get("awaiting_relic", False)
+        snapshot["awaiting_loot"] = state.get("awaiting_loot", False)
+        snapshot["awaiting_next"] = state.get("awaiting_next", False)
+        progression_snapshot = state.get("reward_progression")
+        if isinstance(progression_snapshot, dict):
+            snapshot["reward_progression"] = dict(progression_snapshot)
+        else:
+            snapshot["reward_progression"] = progression_snapshot
         snapshot_staging = snapshot.get("reward_staging")
         if isinstance(snapshot_staging, dict):
             snapshot_staging.update(_serialise_staging(staging))
@@ -138,8 +164,27 @@ async def select_relic(run_id: str, relic_id: str) -> dict[str, Any]:
         staged_relic["about"] = about
 
     staging["relics"] = [staged_relic]
-    state["awaiting_relic"] = True
-    state["awaiting_next"] = False
+
+    progression = state.get("reward_progression")
+    if progression and progression.get("current_step") == "relic":
+        completed = progression.setdefault("completed", [])
+        if "relic" not in completed:
+            completed.append("relic")
+        available = progression.get("available", [])
+        next_steps = [step for step in available if step not in completed]
+        if next_steps:
+            progression["current_step"] = next_steps[0]
+            state["awaiting_relic"] = False
+            state["awaiting_next"] = False
+        else:
+            progression["current_step"] = None
+            state["awaiting_relic"] = False
+            state["awaiting_next"] = True
+            state.pop("reward_progression", None)
+    else:
+        state["awaiting_relic"] = False
+        if not state.get("awaiting_card") and not state.get("awaiting_loot"):
+            state["awaiting_next"] = True
 
     await asyncio.to_thread(save_map, run_id, state)
 
@@ -148,8 +193,15 @@ async def select_relic(run_id: str, relic_id: str) -> dict[str, Any]:
         snapshot = dict(snap)
         ensure_reward_staging(snapshot)
         snapshot["relic_choices"] = []
-        snapshot["awaiting_relic"] = True
-        snapshot["awaiting_next"] = False
+        snapshot["awaiting_card"] = state.get("awaiting_card", False)
+        snapshot["awaiting_relic"] = state.get("awaiting_relic", False)
+        snapshot["awaiting_loot"] = state.get("awaiting_loot", False)
+        snapshot["awaiting_next"] = state.get("awaiting_next", False)
+        progression_snapshot = state.get("reward_progression")
+        if isinstance(progression_snapshot, dict):
+            snapshot["reward_progression"] = dict(progression_snapshot)
+        else:
+            snapshot["reward_progression"] = progression_snapshot
         snapshot_staging = snapshot.get("reward_staging")
         if isinstance(snapshot_staging, dict):
             snapshot_staging.update(_serialise_staging(staging))
