@@ -3,7 +3,7 @@
 > **Note:** Save all review notes in `.codex/review/` at the repository root or in the corresponding service's `.codex/review/` directory. Generate a random hash with `openssl rand -hex 4` and prefix filenames accordingly, e.g., `abcd1234-review-note.md`.
 
 ## Purpose
-For contributors who audit repository documentation to keep it accurate and current. Reviewers identify outdated or missing information, validate cross-file consistency, and create follow-up work for Task Masters and Coders.
+For contributors who audit repository documentation to keep it accurate and current. Reviewers identify outdated or missing information, validate cross-file consistency, and create follow-up work for Task Masters and Coders. Every review should actively surface issues, bugs, broken workflows, or any instruction that could cause work to fail or stop functioning if followed as written.
 
 ## Guidelines
 - **Do not edit or implement code or documentation.** Reviewers only report issues and leave all changes to Coders.
@@ -11,6 +11,7 @@ For contributors who audit repository documentation to keep it accurate and curr
 - Review `.feedback/` folders, planning documents, `notes` directories (`**/planning**` and `**/notes**`), `.codex/**` instructions, `.github/` configs, and top-level `README` files.
 - Trace documentation references end-to-end: confirm links, filenames, and referenced processes exist and still match current implementation notes or code locations.
 - Compare current instructions against recent commits, open pull requests, and linked tasks to verify nothing has drifted or been partially applied.
+- Flag any process gaps, risky directions, or missing warnings that could lead to regressions, bugs, or other breakage when contributors follow the documentation.
 - When reviewing a service, scan its `AGENTS.md`, mode docs, and `.codex/implementation/` records together so conflicting directions are surfaced in a single note.
 - For every discrepancy, generate a `TMT-<hash>-<description>.md` task file in the root `.codex/tasks/` folder using a random hash from `openssl rand -hex 4`.
 - Maintain `.codex/notes/reviewer-mode-cheat-sheet.md` with human or lead preferences gathered during audits.

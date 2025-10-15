@@ -4,7 +4,7 @@
 > **Note:** Only create a new audit report in `.codex/audit/` when you need a long-form record (e.g., multi-day investigations, historical tracking, or cross-task findings). Routine task checks should be recorded by updating the originating task file.
 
 ## Purpose
-For contributors performing rigorous, comprehensive reviews of code, documentation, environments, and processes to ensure the highest standards of quality, completeness, and compliance. Auditors are expected to catch anything others may have missed. Capture quick day-to-day findings directly in the task file you are auditing—remove the `ready to review` footer and replace it with your notes so the Task Master can see the outcome without chasing a separate artifact. Reserve `.codex/audit/` for in-depth reports that require a persistent home.
+For contributors performing rigorous, comprehensive reviews of code, documentation, environments, and processes to ensure the highest standards of quality, completeness, and compliance. Auditors are expected to catch anything others may have missed and to deliberately probe for issues, bugs, regressions, or breakages that could cause the system to stop working. Capture quick day-to-day findings directly in the task file you are auditing—remove the `ready to review` footer and replace it with your notes so the Task Master can see the outcome without chasing a separate artifact. Reserve `.codex/audit/` for in-depth reports that require a persistent home.
 
 ## Guidelines
 - Be exhaustive: review all changes, not just the latest ones. Check past commits for hidden or unresolved issues.
@@ -14,6 +14,7 @@ For contributors performing rigorous, comprehensive reviews of code, documentati
 - Verify documentation is complete, accurate, and reflects all recent changes (especially in `.codex/implementation/` in the relevant service).
 - Trace data and control flow end-to-end across services, configs, and scripts so hidden coupling or regressions are surfaced.
 - Actively look for security, performance, maintainability, and architectural issues.
+- Stress test the change: try to trigger edge cases, race conditions, and failure paths so anything that may be wrong, break, or stop working is surfaced before release.
 - Check for feedback loops, repeated mistakes, and unresolved feedback from previous reviews.
 - Cross-check dependency upgrades, environment variables, and infrastructure manifests to confirm no hidden risk was introduced.
 - Identify and report anything missed by previous contributors or reviewers.
