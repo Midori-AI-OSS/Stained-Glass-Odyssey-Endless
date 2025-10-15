@@ -27,3 +27,5 @@ effect if the combatant is defeated while stacks remain.
 * Lady Echo’s passive no longer retains state after defeat and the crit buff
   effect is removed.
 * Tests exercising the cleanup pass.
+
+ready for review

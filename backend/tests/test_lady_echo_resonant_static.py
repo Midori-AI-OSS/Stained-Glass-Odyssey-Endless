@@ -1,12 +1,15 @@
 """Tests for the Lady Echo Resonant Static passive."""
 
+import asyncio
+
 import pytest
+from tests.helpers import call_maybe_async
 
 from autofighter.effects import DamageOverTime
 from autofighter.effects import EffectManager
+from autofighter.stats import BUS
 from autofighter.stats import Stats
 from plugins.passives.normal.lady_echo_resonant_static import LadyEchoResonantStatic
-from tests.helpers import call_maybe_async
 
 
 @pytest.mark.asyncio
@@ -59,6 +62,9 @@ def _reset_passive_state() -> None:
     LadyEchoResonantStatic._current_target.clear()
     LadyEchoResonantStatic._consecutive_hits.clear()
     LadyEchoResonantStatic._party_crit_stacks.clear()
+    for handler in LadyEchoResonantStatic._battle_end_handlers.values():
+        BUS.unsubscribe("battle_end", handler)
+    LadyEchoResonantStatic._battle_end_handlers.clear()
 
 
 @pytest.mark.asyncio
@@ -107,6 +113,62 @@ async def test_switching_targets_resets_consecutive_hits():
 
     assert passive.get_consecutive_hits(attacker) == 1
     assert passive.get_party_crit_stacks(attacker) == 0
+    assert not any(
+        effect.name == f"{passive.id}_party_crit" for effect in attacker._active_effects
+    )
+
+
+@pytest.mark.asyncio
+async def test_defeat_clears_state_and_effects():
+    """Defeat cleanup removes combo state and the party crit buff."""
+    _reset_passive_state()
+
+    attacker = Stats()
+    target = Stats()
+    passive = LadyEchoResonantStatic()
+
+    await passive.on_hit_landed(attacker, target)
+    await passive.on_hit_landed(attacker, target)
+    await passive.apply(attacker, hit_target=target)
+
+    entity_id = id(attacker)
+    assert entity_id in LadyEchoResonantStatic._consecutive_hits
+    assert entity_id in LadyEchoResonantStatic._party_crit_stacks
+    assert any(
+        effect.name == f"{passive.id}_party_crit" for effect in attacker._active_effects
+    )
+
+    await passive.on_defeat(attacker)
+
+    assert entity_id not in LadyEchoResonantStatic._consecutive_hits
+    assert entity_id not in LadyEchoResonantStatic._party_crit_stacks
+    assert entity_id not in LadyEchoResonantStatic._current_target
+    assert not any(
+        effect.name == f"{passive.id}_party_crit" for effect in attacker._active_effects
+    )
+
+
+@pytest.mark.asyncio
+async def test_battle_end_event_triggers_cleanup():
+    """Battle end events clear cached state via the registered handler."""
+    _reset_passive_state()
+
+    attacker = Stats()
+    target = Stats()
+    passive = LadyEchoResonantStatic()
+
+    await passive.on_hit_landed(attacker, target)
+    await passive.on_hit_landed(attacker, target)
+    await passive.apply(attacker, hit_target=target)
+
+    entity_id = id(attacker)
+    assert entity_id in LadyEchoResonantStatic._battle_end_handlers
+
+    await BUS.emit_async("battle_end", attacker)
+    await asyncio.sleep(0)
+
+    assert entity_id not in LadyEchoResonantStatic._battle_end_handlers
+    assert entity_id not in LadyEchoResonantStatic._consecutive_hits
     assert not any(
         effect.name == f"{passive.id}_party_crit" for effect in attacker._active_effects
     )

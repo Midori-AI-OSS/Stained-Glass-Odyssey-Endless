@@ -1,9 +1,12 @@
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
+from typing import Any
+from typing import Callable
 from typing import ClassVar
 from typing import Optional
 
 from autofighter.stat_effect import StatEffect
+from autofighter.stats import BUS
 
 if TYPE_CHECKING:
     from autofighter.stats import Stats
@@ -23,6 +26,7 @@ class LadyEchoResonantStatic:
     _current_target: ClassVar[dict[int, int]] = {}  # entity_id -> target_id
     _consecutive_hits: ClassVar[dict[int, int]] = {}  # entity_id -> hit_count
     _party_crit_stacks: ClassVar[dict[int, int]] = {}  # entity_id -> crit_stacks
+    _battle_end_handlers: ClassVar[dict[int, Callable[..., Any]]] = {}
 
     async def apply(
         self,
@@ -37,6 +41,7 @@ class LadyEchoResonantStatic:
         if entity_id not in self._consecutive_hits:
             self._consecutive_hits[entity_id] = 0
             self._party_crit_stacks[entity_id] = 0
+        self._register_battle_end(target)
 
         # Count DoTs on the hit target (enemy) for chain damage scaling
         dot_target = hit_target or target
@@ -88,6 +93,8 @@ class LadyEchoResonantStatic:
         hit_count = self._consecutive_hits.get(attacker_id, 0)
         crit_stacks = self._party_crit_stacks.get(attacker_id, 0)
 
+        self._register_battle_end(attacker)
+
         if previous_target == target_id and hit_count:
             # Consecutive hit on the same target.
             hit_count += 1
@@ -102,6 +109,15 @@ class LadyEchoResonantStatic:
         self._consecutive_hits[attacker_id] = hit_count
         self._party_crit_stacks[attacker_id] = crit_stacks
         self._current_target[attacker_id] = target_id
+
+    async def on_defeat(self, target: "Stats") -> None:
+        """Remove cached state and crit buffs when Lady Echo is defeated."""
+
+        entity_id = id(target)
+        handler = self._battle_end_handlers.pop(entity_id, None)
+        if handler is not None:
+            BUS.unsubscribe("battle_end", handler)
+        self._clear_state(entity_id, target)
 
     @classmethod
     def get_consecutive_hits(cls, attacker: "Stats") -> int:
@@ -119,3 +135,30 @@ class LadyEchoResonantStatic:
             "Chain lightning hits deal +10% damage per DoT on the target. "
             "Consecutive hits on the same foe grant the party +2% crit rate per stack, up to 20%."
         )
+
+    def _register_battle_end(self, target: "Stats") -> None:
+        """Register a battle end cleanup handler for the provided target."""
+
+        entity_id = id(target)
+        if entity_id in self._battle_end_handlers:
+            return
+
+        async def _on_battle_end(event_target: Optional["Stats"] = None, *_: object, **__: object) -> None:
+            if event_target is not None and id(event_target) != entity_id:
+                return
+            BUS.unsubscribe("battle_end", _on_battle_end)
+            self._battle_end_handlers.pop(entity_id, None)
+            self._clear_state(entity_id, target)
+
+        self._battle_end_handlers[entity_id] = _on_battle_end
+        BUS.subscribe("battle_end", _on_battle_end)
+
+    @classmethod
+    def _clear_state(cls, entity_id: int, target: Optional["Stats"] = None) -> None:
+        """Clear cached combo state and remove the crit effect for *entity_id*."""
+
+        cls._current_target.pop(entity_id, None)
+        cls._consecutive_hits.pop(entity_id, None)
+        cls._party_crit_stacks.pop(entity_id, None)
+        if target is not None:
+            target.remove_effect_by_name(f"{cls.id}_party_crit")
