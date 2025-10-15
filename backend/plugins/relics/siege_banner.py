@@ -34,6 +34,7 @@ class SiegeBanner(RelicBase):
             state = {
                 "stacks": stacks,
                 "kills": 0,
+                "kill_modifiers": [],  # Track modifiers to remove at battle end
             }
             party._siege_banner_state = state
         else:
@@ -118,6 +119,7 @@ class SiegeBanner(RelicBase):
             atk_buff = 0.04
             def_buff = 0.04
 
+            kill_mods = []
             for member in party.members:
                 mgr = getattr(member, "effect_manager", None)
                 if mgr is None:
@@ -133,6 +135,10 @@ class SiegeBanner(RelicBase):
                     defense_mult=1 + def_buff,
                 )
                 await mgr.add_modifier(mod)
+                kill_mods.append((member, mod))
+
+            # Store modifiers for cleanup at battle end
+            current_state["kill_modifiers"].extend(kill_mods)
 
             log.debug(
                 "Siege Banner: Party gained +%.1f%% ATK and +%.1f%% DEF (kill #%d)",
@@ -161,10 +167,18 @@ class SiegeBanner(RelicBase):
         def _cleanup(*_args) -> None:
             """Clean up subscriptions and state at battle end."""
             self.clear_subscriptions(party)
-            if getattr(party, "_siege_banner_state", None) is state:
-                state["kills"] = 0  # Reset kill counter but keep stacks
-                # Only delete the state if we're sure cleanup should remove it entirely
-                # For now, just reset kills to allow multi-battle tracking if needed
+            current_state = getattr(party, "_siege_banner_state", None)
+            if current_state is state:
+                # Remove all kill buff modifiers
+                for member, mod in current_state.get("kill_modifiers", []):
+                    try:
+                        mod.remove()
+                    except Exception as e:
+                        log.debug("Error removing Siege Banner modifier: %s", e)
+
+                # Reset state for next battle
+                state["kills"] = 0
+                state["kill_modifiers"] = []
 
         self.subscribe(party, "battle_start", _battle_start)
         self.subscribe(party, "damage_taken", _on_kill)

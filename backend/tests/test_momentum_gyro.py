@@ -220,7 +220,7 @@ async def test_momentum_gyro_multiple_stacks():
 
 @pytest.mark.asyncio
 async def test_momentum_gyro_zero_damage_ignored():
-    """Test that zero damage doesn't build momentum."""
+    """Test that zero damage resets momentum chains (miss)."""
     event_bus_module.bus._subs.clear()
     party = Party()
     attacker = PlayerBase()
@@ -239,15 +239,29 @@ async def test_momentum_gyro_zero_damage_ignored():
 
     await BUS.emit_async("battle_start", attacker)
 
-    # Zero damage should not create streak
-    await BUS.emit_async("damage_dealt", attacker, target, 0, None, None, None, "attack", {})
-    await asyncio.sleep(0)
+    # Build a streak first
+    for _ in range(3):
+        await BUS.emit_async("damage_dealt", attacker, target, 10, None, None, None, "attack", {})
+        await asyncio.sleep(0)
 
-    # No chain should be created
+    # Check streak is at 3
     state = getattr(party, "_momentum_gyro_state", None)
     chains = state.get("chains", {})
     attacker_id = id(attacker)
-    assert attacker_id not in chains or chains[attacker_id]["streak"] == 0
+    assert attacker_id in chains
+    assert chains[attacker_id]["streak"] == 3
+
+    # Zero damage should reset streak
+    await BUS.emit_async("damage_dealt", attacker, target, 0, None, None, None, "attack", {})
+    await asyncio.sleep(0)
+
+    # Streak should now be 0 (reset)
+    assert chains[attacker_id]["streak"] == 0
+
+    # Next hit should start fresh at 1
+    await BUS.emit_async("damage_dealt", attacker, target, 10, None, None, None, "attack", {})
+    await asyncio.sleep(0)
+    assert chains[attacker_id]["streak"] == 1
 
 
 @pytest.mark.asyncio

@@ -147,6 +147,8 @@ async def test_siege_banner_cleanup():
     party = Party()
     ally = PlayerBase()
     ally.id = "ally"
+    ally.set_base_stat("atk", 100)
+    ally.set_base_stat("defense", 50)
     ally.hp = ally.set_base_stat("max_hp", 1000)
     party.members.append(ally)
 
@@ -159,6 +161,9 @@ async def test_siege_banner_cleanup():
 
     await BUS.emit_async("battle_start", ally)
 
+    baseline_atk = ally.atk
+    baseline_def = ally.defense
+
     # Kill a foe
     await BUS.emit_async("damage_taken", foe, ally, 100, 100, 0, False, "attack", {})
     await asyncio.sleep(0)
@@ -168,6 +173,12 @@ async def test_siege_banner_cleanup():
     assert state is not None
     assert state.get("kills", 0) > 0
 
+    # Stats should be buffed
+    buffed_atk = ally.atk
+    buffed_def = ally.defense
+    assert buffed_atk > baseline_atk
+    assert buffed_def > baseline_def
+
     # End battle
     await BUS.emit_async("battle_end")
     await asyncio.sleep(0)
@@ -176,3 +187,7 @@ async def test_siege_banner_cleanup():
     state_after = getattr(party, "_siege_banner_state", None)
     if state_after is not None:
         assert state_after.get("kills", 0) == 0
+    
+    # Most importantly: buffs should be removed, stats should return to baseline
+    assert ally.atk == baseline_atk, f"ATK should return to baseline {baseline_atk}, but is {ally.atk}"
+    assert ally.defense == baseline_def, f"DEF should return to baseline {baseline_def}, but is {ally.defense}"

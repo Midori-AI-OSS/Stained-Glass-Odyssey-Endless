@@ -50,16 +50,18 @@ class MomentumGyro(RelicBase):
             if attacker not in party.members:
                 return
 
-            # Ignore zero damage
-            if damage <= 0:
-                return
-
             attacker_id = id(attacker)
             target_id = id(target)
             current_state = getattr(party, "_momentum_gyro_state", state)
             current_stacks = current_state.get("stacks", 0)
 
             if current_stacks <= 0:
+                return
+
+            # Reset streak on zero damage (miss)
+            if damage <= 0:
+                if attacker_id in chains:
+                    chains[attacker_id]["streak"] = 0
                 return
 
             # Get or initialize chain data for this attacker
