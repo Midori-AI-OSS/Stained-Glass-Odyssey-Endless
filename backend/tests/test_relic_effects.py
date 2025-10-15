@@ -772,3 +772,183 @@ async def test_echoing_drum_ignores_foe_attack_buffs():
     finally:
         await SummonManager.remove_summon(summon, "test_cleanup")
 
+
+@pytest.mark.asyncio
+async def test_catalyst_vials_dot_healing():
+    """Test that Catalyst Vials heals attacker when DoT ticks."""
+    event_bus_module.bus._subs.clear()
+    party = Party()
+    attacker = PlayerBase()
+    target = PlayerBase()
+    attacker.hp = attacker.set_base_stat('max_hp', 1000)
+    attacker.set_base_stat('atk', 100)
+    target.hp = target.set_base_stat('max_hp', 1000)
+    party.members.append(attacker)
+
+    # Reduce attacker HP to allow healing
+    attacker.hp = 900
+
+    # Award relic and apply
+    award_relic(party, "catalyst_vials")
+    await apply_relics(party)
+
+    # Simulate DoT tick for 20 damage - should heal for 5% = 1 HP (min 1)
+    await BUS.emit_async("dot_tick", attacker, target, 20)
+    await asyncio.sleep(0.01)  # Allow async healing to complete
+
+    # Check that HP increased by 1
+    assert attacker.hp == 901, f"Expected HP 901, got {attacker.hp}"
+
+
+@pytest.mark.asyncio
+async def test_catalyst_vials_effect_hit_buff():
+    """Test that Catalyst Vials grants effect hit rate buff."""
+    event_bus_module.bus._subs.clear()
+    party = Party()
+    attacker = PlayerBase()
+    target = PlayerBase()
+    attacker.hp = attacker.set_base_stat('max_hp', 1000)
+    attacker.set_base_stat('atk', 100)
+    attacker.set_base_stat('effect_hit_rate', 1.0)
+    target.hp = target.set_base_stat('max_hp', 1000)
+    party.members.append(attacker)
+
+    # Award relic and apply
+    award_relic(party, "catalyst_vials")
+    await apply_relics(party)
+
+    # Get initial effect hit rate
+    initial_ehr = attacker.effect_hit_rate
+
+    # Simulate DoT tick for 100 damage - should grant +5% effect hit rate
+    await BUS.emit_async("dot_tick", attacker, target, 100)
+    await asyncio.sleep(0.01)
+
+    # Check that effect hit rate increased
+    assert attacker.effect_hit_rate > initial_ehr, f"Expected effect hit rate > {initial_ehr}, got {attacker.effect_hit_rate}"
+
+
+@pytest.mark.asyncio
+async def test_catalyst_vials_stacks():
+    """Test that multiple Catalyst Vials stacks increase healing and buff."""
+    event_bus_module.bus._subs.clear()
+    party = Party()
+    attacker = PlayerBase()
+    target = PlayerBase()
+    attacker.hp = attacker.set_base_stat('max_hp', 1000)
+    attacker.set_base_stat('atk', 100)
+    target.hp = target.set_base_stat('max_hp', 1000)
+    party.members.append(attacker)
+
+    # Reduce attacker HP to allow healing
+    attacker.hp = 900
+
+    # Award 2 stacks of catalyst_vials (10% healing)
+    award_relic(party, "catalyst_vials")
+    award_relic(party, "catalyst_vials")
+    await apply_relics(party)
+
+    # Simulate DoT tick for 100 damage - should heal for 10% = 10 HP
+    await BUS.emit_async("dot_tick", attacker, target, 100)
+    await asyncio.sleep(0.01)
+
+    # Check that HP increased by 10
+    assert attacker.hp == 910, f"Expected HP 910, got {attacker.hp}"
+
+
+@pytest.mark.asyncio
+async def test_catalyst_vials_ignores_non_party():
+    """Test that Catalyst Vials ignores DoT ticks from non-party members."""
+    event_bus_module.bus._subs.clear()
+    party = Party()
+    attacker = PlayerBase()
+    enemy_attacker = PlayerBase()
+    target = PlayerBase()
+    attacker.hp = attacker.set_base_stat('max_hp', 1000)
+    enemy_attacker.hp = enemy_attacker.set_base_stat('max_hp', 1000)
+    target.hp = target.set_base_stat('max_hp', 1000)
+    party.members.append(attacker)
+    # enemy_attacker is NOT in party
+
+    # Reduce enemy_attacker HP
+    enemy_attacker.hp = 900
+
+    # Award relic and apply
+    award_relic(party, "catalyst_vials")
+    await apply_relics(party)
+
+    # Simulate DoT tick from enemy - should not heal
+    await BUS.emit_async("dot_tick", enemy_attacker, target, 100)
+    await asyncio.sleep(0.01)
+
+    # HP should not change
+    assert enemy_attacker.hp == 900, f"Expected HP 900, got {enemy_attacker.hp}"
+
+
+@pytest.mark.asyncio
+async def test_catalyst_vials_ignores_zero_damage():
+    """Test that Catalyst Vials doesn't trigger on zero damage."""
+    event_bus_module.bus._subs.clear()
+    party = Party()
+    attacker = PlayerBase()
+    target = PlayerBase()
+    attacker.hp = attacker.set_base_stat('max_hp', 1000)
+    target.hp = target.set_base_stat('max_hp', 1000)
+    party.members.append(attacker)
+
+    # Reduce attacker HP
+    attacker.hp = 900
+
+    # Award relic and apply
+    award_relic(party, "catalyst_vials")
+    await apply_relics(party)
+
+    # Simulate DoT tick with 0 damage - should not heal
+    await BUS.emit_async("dot_tick", attacker, target, 0)
+    await asyncio.sleep(0.01)
+
+    # HP should not change
+    assert attacker.hp == 900, f"Expected HP 900, got {attacker.hp}"
+
+
+@pytest.mark.asyncio
+async def test_catalyst_vials_telemetry():
+    """Test that Catalyst Vials emits proper telemetry events."""
+    event_bus_module.bus._subs.clear()
+    party = Party()
+    attacker = PlayerBase()
+    target = PlayerBase()
+    attacker.hp = attacker.set_base_stat('max_hp', 1000)
+    target.hp = target.set_base_stat('max_hp', 1000)
+    party.members.append(attacker)
+
+    # Reduce attacker HP
+    attacker.hp = 900
+
+    # Award relic and apply
+    award_relic(party, "catalyst_vials")
+    await apply_relics(party)
+
+    # Capture telemetry events
+    events: list[tuple] = []
+
+    def capture(*args: object) -> None:
+        events.append(args)
+
+    BUS.subscribe("relic_effect", capture)
+
+    # Simulate DoT tick for 100 damage
+    await BUS.emit_async("dot_tick", attacker, target, 100)
+    await asyncio.sleep(0.01)
+
+    # Check that telemetry was emitted
+    assert len(events) > 0, "Expected telemetry event"
+    relic_id, actor, effect_type, value, metadata = events[0]
+    assert relic_id == "catalyst_vials"
+    assert effect_type == "dot_siphon"
+    assert value == 5  # 5% of 100 damage
+    assert metadata["dot_damage"] == 100
+    assert metadata["heal_percentage"] == 5
+    assert metadata["stacks"] == 1
+
+

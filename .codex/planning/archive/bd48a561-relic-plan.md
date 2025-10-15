@@ -32,6 +32,7 @@ Parent: [Web Game Plan](8a7d9c1e-web-game-plan.md)
  - [x] **Ember Stone** – When an ally below 25% HP is hit, deal a burn equal to 50% ATK plus 50% per stack to the attacker.
  - [x] **Guardian Charm** – At the start of combat, the ally with the lowest HP gains +20% DEF plus 20% per stack.
  - [x] **Killer Instinct** – When an ally uses their Ultimate, they gain +75% ATK for that turn; if they kill a foe, they immediately take another turn.
+ - [x] **Catalyst Vials** – When an ally's DoT ticks on an enemy, heal them for 5% of damage per stack and grant +5% Effect Hit Rate for 1 turn.
 
 ## 3★ Relics
  - [ ] **Greed Engine** – All characters lose 1% HP per turn plus 0.5% per stack. Earn 50% more gold plus 25% per stack and increase rare drop rate by 0.5% plus 0.1% per additional stack.

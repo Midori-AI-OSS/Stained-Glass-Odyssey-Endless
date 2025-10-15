@@ -30,6 +30,7 @@ text via the `about` field returned by the backend.
 - 2★ Ember Stone – Below 25% HP, allies burn their attacker for 50% ATK.
 - 2★ Guardian Charm – Lowest-HP ally gains +20% DEF at battle start.
 - 2★ Killer Instinct – Ultimates grant +75% ATK for the turn; killing blows upgrade that bonus into +50% SPD for two turns per stack.
+- 2★ Catalyst Vials – When an ally's DoT ticks, heal them for 5% of damage per stack and grant +5% Effect Hit Rate for 1 turn
 - 3★ Greed Engine – Party loses 1% HP per turn, gains +50% gold, and raises rare drop rate by 0.5% plus 0.1% per extra stack.
 - 3★ Stellar Compass – Critical hits grant permanent +1.5% ATK and gold rate.
 - 3★ Echoing Drum – First attack each battle repeats at 25% power.
