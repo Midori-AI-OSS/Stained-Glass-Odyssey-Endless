@@ -22,6 +22,7 @@ Parent: [Web Game Plan](8a7d9c1e-web-game-plan.md)
  - [x] **Pocket Manual** – +3% damage; every 10th hit deals an extra 3% damage as Aftertaste.
  - [x] **Featherweight Anklet** – +2% SPD per stack (multiplicative); first action each ally takes per battle grants +6% SPD per stack for 1 turn.
  - [x] **Field Rations** – After each battle, heal 2% Max HP per stack and grant +1 ultimate charge per stack to all allies.
+ - [x] **Copper Siphon** – When an ally deals damage, heal them for 2% of damage per stack (min 1 HP); excess becomes shields.
 
 ## 2★ Relics
  - [x] **Vengeful Pendant** – Whenever an ally is hit, deal 15% of the damage taken back to the attacker, plus 15% per additional copy.
@@ -31,6 +32,8 @@ Parent: [Web Game Plan](8a7d9c1e-web-game-plan.md)
  - [x] **Ember Stone** – When an ally below 25% HP is hit, deal a burn equal to 50% ATK plus 50% per stack to the attacker.
  - [x] **Guardian Charm** – At the start of combat, the ally with the lowest HP gains +20% DEF plus 20% per stack.
  - [x] **Killer Instinct** – When an ally uses their Ultimate, they gain +75% ATK for that turn; if they kill a foe, they immediately take another turn.
+ - [x] **Catalyst Vials** – When an ally's DoT ticks on an enemy, heal them for 5% of damage per stack and grant +5% Effect Hit Rate for 1 turn.
+ - [x] **Safeguard Prism** – When an ally drops below 60% Max HP, grant shield worth 15% Max HP per stack and +12% mitigation per stack for 1 turn (1 trigger per stack per ally per battle).
 
 ## 3★ Relics
  - [ ] **Greed Engine** – All characters lose 1% HP per turn plus 0.5% per stack. Earn 50% more gold plus 25% per stack and increase rare drop rate by 0.5% plus 0.1% per additional stack.

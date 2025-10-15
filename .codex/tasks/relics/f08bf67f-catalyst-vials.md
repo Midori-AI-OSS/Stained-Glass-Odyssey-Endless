@@ -24,3 +24,7 @@ Create a mid-tier relic that turns existing damage-over-time builds into self-su
 ## Documentation
 - `.codex/implementation/relic-inventory.md`
 - `.codex/planning/archive/bd48a561-relic-plan.md`
+
+---
+
+ready for review

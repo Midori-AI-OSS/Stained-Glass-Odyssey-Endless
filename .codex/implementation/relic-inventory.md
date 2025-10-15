@@ -22,6 +22,7 @@ text via the `about` field returned by the backend.
 - 1★ Pocket Manual – +3% ATK; every 10th hit deals an extra 3% damage.
 - 1★ Featherweight Anklet – +2% SPD per stack; First action each battle grants +6% SPD per stack for 1 turn
 - 1★ Field Rations – After each battle, heal 2% Max HP per stack and grant +1 ultimate charge per stack to all allies
+- 1★ Copper Siphon – When an ally deals damage, heal them for 2% of damage per stack (min 1 HP); excess becomes shields
 - 2★ Vengeful Pendant – Reflects 15% of damage taken back to the attacker.
 - 2★ Arcane Flask – After an Ultimate, grant a shield equal to 20% Max HP per stack.
 - 2★ Echo Bell – First action each battle repeats at 15% power per stack.
@@ -29,6 +30,8 @@ text via the `about` field returned by the backend.
 - 2★ Ember Stone – Below 25% HP, allies burn their attacker for 50% ATK.
 - 2★ Guardian Charm – Lowest-HP ally gains +20% DEF at battle start.
 - 2★ Killer Instinct – Ultimates grant +75% ATK for the turn; killing blows upgrade that bonus into +50% SPD for two turns per stack.
+- 2★ Catalyst Vials – When an ally's DoT ticks, heal them for 5% of damage per stack and grant +5% Effect Hit Rate for 1 turn
+- 2★ Safeguard Prism – When an ally drops below 60% Max HP, grant shield worth 15% Max HP and +12% mitigation for 1 turn (1 trigger per stack per ally per battle)
 - 3★ Greed Engine – Party loses 1% HP per turn, gains +50% gold, and raises rare drop rate by 0.5% plus 0.1% per extra stack.
 - 3★ Stellar Compass – Critical hits grant permanent +1.5% ATK and gold rate.
 - 3★ Echoing Drum – First attack each battle repeats at 25% power.

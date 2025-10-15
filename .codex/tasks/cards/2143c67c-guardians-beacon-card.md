@@ -22,3 +22,7 @@ Introduce a defensive two-star card that channels Carly's protective playstyle b
 
 ## Player impact
 Guardian's Beacon provides a fresh sustain option for defensive squads, letting Carly-focused teams or Light-heavy parties maintain shields without relying solely on revival-centric cards.
+
+---
+
+ready for review
