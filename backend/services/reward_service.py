@@ -64,6 +64,9 @@ async def select_card(run_id: str, card_id: str) -> dict[str, Any]:
 
     staging["cards"] = [staged_card]
 
+    party.cards.append(card.id)
+    await asyncio.to_thread(save_party, run_id, party)
+
     progression = state.get("reward_progression")
     if progression and progression.get("current_step") == "card":
         completed = progression.setdefault("completed", [])
@@ -153,17 +156,21 @@ async def select_relic(run_id: str, relic_id: str) -> dict[str, Any]:
     room_identifier = str(getattr(room, "room_id", getattr(room, "index", current_index)))
 
     existing_stacks = party.relics.count(relic.id)
+    new_stack_count = existing_stacks + 1
     staged_relic: dict[str, Any] = {
         "id": relic.id,
         "name": relic.name,
         "stars": relic.stars,
-        "stacks": existing_stacks,
+        "stacks": new_stack_count,
     }
-    about = relic.describe(existing_stacks + 1)
+    about = relic.describe(new_stack_count)
     if about:
         staged_relic["about"] = about
 
     staging["relics"] = [staged_relic]
+
+    party.relics.append(relic.id)
+    await asyncio.to_thread(save_party, run_id, party)
 
     progression = state.get("reward_progression")
     if progression and progression.get("current_step") == "relic":

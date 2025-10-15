@@ -78,7 +78,7 @@ def _insert_run(run_id: str, party_payload: dict[str, object], map_payload: dict
 
 
 @pytest.mark.asyncio()
-async def test_select_card_stages_without_modifying_party() -> None:
+async def test_select_card_stages_and_applies_to_party() -> None:
     run_id = "stage-card"
     party_payload = {
         "members": ["player"],
@@ -128,7 +128,7 @@ async def test_select_card_stages_without_modifying_party() -> None:
     result = await reward_service.select_card(run_id, "arc_lightning")
 
     assert result["card"]["id"] == "arc_lightning"
-    assert result["cards"] == []  # party deck unchanged
+    assert result["cards"] == ["arc_lightning"]
     assert result["awaiting_card"] is False
     assert result["awaiting_next"] is True
     assert result["reward_progression"] is None
@@ -138,7 +138,7 @@ async def test_select_card_stages_without_modifying_party() -> None:
 
     assert party_manager is not None
     party = await asyncio.to_thread(party_manager.load_party, run_id)
-    assert party.cards == []
+    assert party.cards == ["arc_lightning"]
 
     assert lifecycle is not None
     state, _ = lifecycle.load_map(run_id)
@@ -154,7 +154,7 @@ async def test_select_card_stages_without_modifying_party() -> None:
 
 
 @pytest.mark.asyncio()
-async def test_select_relic_stages_without_duplicate_application() -> None:
+async def test_select_relic_stages_and_awards_relic() -> None:
     run_id = "stage-relic"
     party_payload = {
         "members": ["player"],
@@ -205,8 +205,8 @@ async def test_select_relic_stages_without_duplicate_application() -> None:
     result = await reward_service.select_relic(run_id, "old_coin")
 
     assert result["relic"]["id"] == "old_coin"
-    assert result["relic"]["stacks"] == 1
-    assert result["relics"] == ["old_coin"]
+    assert result["relic"]["stacks"] == 2
+    assert result["relics"] == ["old_coin", "old_coin"]
     assert result["awaiting_relic"] is False
     assert result["awaiting_next"] is True
     assert result["reward_progression"] is None
@@ -216,16 +216,18 @@ async def test_select_relic_stages_without_duplicate_application() -> None:
 
     assert party_manager is not None
     party = await asyncio.to_thread(party_manager.load_party, run_id)
-    assert party.relics == ["old_coin"]
+    assert party.relics == ["old_coin", "old_coin"]
 
     assert lifecycle is not None
     state, _ = lifecycle.load_map(run_id)
     assert state["awaiting_relic"] is False
     assert state["awaiting_next"] is True
     assert state["reward_staging"]["relics"][0]["id"] == "old_coin"
+    assert state["reward_staging"]["relics"][0]["stacks"] == 2
     snapshot = lifecycle.battle_snapshots[run_id]
     assert snapshot["relic_choices"] == []
     assert snapshot["awaiting_relic"] is False
     assert snapshot["awaiting_next"] is True
     assert snapshot.get("reward_progression") is None
     assert snapshot["reward_staging"]["relics"][0]["id"] == "old_coin"
+    assert snapshot["reward_staging"]["relics"][0]["stacks"] == 2
