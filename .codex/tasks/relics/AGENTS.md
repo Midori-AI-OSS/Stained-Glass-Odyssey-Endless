@@ -1,3 +1,5 @@
 # Task Priority Guidance
 
 Tasks in this folder are lower priority than tasks in the parent `.codex/tasks` directory.
+
+When placeholder relic art is required, update `luna_items_prompts.txt` with a text-to-photo prompt of Luna using the relic or item that should appear in the image. After saving the prompt, unblock any relic tasks that were waiting on that placeholder art.
