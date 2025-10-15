@@ -53,19 +53,16 @@ class FieldRations(RelicBase):
 
                 # Grant ultimate charge: +1 per stack
                 charge_amount = current_stacks
-                current_charge = getattr(member, "ultimate_charge", 0)
-                charge_capacity = getattr(member, "ultimate_charge_capacity", 15)
 
-                # Add charge, respecting cap
-                new_charge = min(current_charge + charge_amount, charge_capacity)
-                member.ultimate_charge = new_charge
+                # Use add_ultimate_charge to properly set ultimate_ready flag
+                member.add_ultimate_charge(charge_amount)
 
                 log.debug(
                     "Field Rations granted %d ultimate charge to %s (now %d/%d)",
                     charge_amount,
                     getattr(member, "id", "member"),
-                    new_charge,
-                    charge_capacity,
+                    member.ultimate_charge,
+                    member.ultimate_charge_max,
                 )
 
                 # Emit telemetry for the post-battle recovery
@@ -79,8 +76,9 @@ class FieldRations(RelicBase):
                         "heal_amount": heal_amount,
                         "ultimate_charge_granted": charge_amount,
                         "stacks": current_stacks,
-                        "new_ultimate_charge": new_charge,
-                        "ultimate_charge_capacity": charge_capacity,
+                        "new_ultimate_charge": member.ultimate_charge,
+                        "ultimate_charge_capacity": member.ultimate_charge_max,
+                        "ultimate_ready": member.ultimate_ready,
                     },
                 )
 

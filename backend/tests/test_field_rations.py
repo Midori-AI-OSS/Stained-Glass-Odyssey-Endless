@@ -106,6 +106,44 @@ def test_field_rations_respects_ultimate_charge_cap():
     loop.close()
 
 
+def test_field_rations_sets_ultimate_ready_flag():
+    """Test that Field Rations properly sets ultimate_ready flag when reaching capacity."""
+    sys.modules.setdefault(
+        "llms.torch_checker", types.SimpleNamespace(is_torch_available=lambda: False)
+    )
+
+    loop = setup_event_loop()
+    party = Party()
+
+    member = PlayerBase()
+    member.id = "test_member"
+    member.set_base_stat("max_hp", 1000)
+    member.hp = 1000
+    member.ultimate_charge = 14  # One point away from full
+    member.ultimate_charge_capacity = 15
+    member.ultimate_ready = False  # Not ready initially
+    party.members.append(member)
+
+    # Award and apply Field Rations
+    award_relic(party, "field_rations")
+    loop.run_until_complete(apply_relics(party))
+
+    # Trigger battle end - should grant +1 charge, reaching capacity
+    loop.run_until_complete(BUS.emit_async("battle_end"))
+
+    # Verify ultimate charge reached capacity
+    assert (
+        member.ultimate_charge == 15
+    ), f"Expected charge 15, got {member.ultimate_charge}"
+
+    # Verify ultimate_ready flag is set
+    assert (
+        member.ultimate_ready is True
+    ), "ultimate_ready should be True when charge reaches capacity"
+
+    loop.close()
+
+
 def test_field_rations_multiple_stacks():
     """Test that Field Rations stacks additively for healing and charge."""
     sys.modules.setdefault(
