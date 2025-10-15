@@ -204,6 +204,13 @@ class RustyBuckle(RelicBase):
 
     @staticmethod
     def _threshold_multiplier(stacks: int) -> float:
+        """Return the HP-loss multiplier required to fire Aftertaste."""
+
+        # Rusty Buckle is intentionally tuned around enormous thresholds: one
+        # stack requires losing 50× (5000%) of the party's combined Max HP
+        # before a volley releases, and each extra stack adds another 10×
+        # (1000%). The inflated percentage prevents chip damage from chaining
+        # triggers while still letting marathon fights build momentum.
         return 50.0 + 10.0 * max(stacks - 1, 0)
 
     def describe(self, stacks: int) -> str:

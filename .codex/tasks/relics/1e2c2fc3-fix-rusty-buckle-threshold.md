@@ -12,3 +12,5 @@ Rusty Buckle intentionally multiplies party Max HP by `50.0` per stack when dete
 - Update the relevant relic documentation (create or extend the appropriate `.codex/implementation` reference) to explicitly call out that Rusty Buckle's thresholds are expressed as 50× / 5000% of party Max HP per stack.
 - Add in-line comments or docstrings near `_threshold_multiplier` clarifying that the large percentage is intentional and by design.
 - Note the rationale in any applicable design notes or changelog so future contributors understand that 5000% is not a bug.
+
+ready for review
