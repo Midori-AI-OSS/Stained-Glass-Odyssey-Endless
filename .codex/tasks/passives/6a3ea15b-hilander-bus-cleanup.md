@@ -25,3 +25,5 @@ callback persists for the rest of the run, leaking listeners and leaving the
 ## Definition of Done
 * Hilander no longer leaves behind a `critical_hit` subscription after defeat.
 * Automated test coverage confirming the cleanup.
+
+ready for review
