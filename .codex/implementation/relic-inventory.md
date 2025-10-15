@@ -10,7 +10,7 @@ Relic entries display their stack count and expose their description as tooltip
 text via the `about` field returned by the backend.
 
 ## Implemented Relics
- - 1★ Rusty Buckle – All allies bleed for 5% Max HP per stack at the start of each turn. When the party loses HP equal to its total Max HP (scaled +50% per extra stack), it fires 5 Aftertaste hits plus 3 per additional stack, each hit equal to 0.5% of total HP lost.
+- 1★ Rusty Buckle – All allies bleed for 5% Max HP per stack at the start of each turn. When the party loses HP equal to 50× (5000%) of its total Max HP per stack (adding another 10× / 1000% for each additional stack), it fires 5 Aftertaste hits plus 3 per extra stack, each hit equal to 0.5% of the total HP lost.
 - 1★ Threadbare Cloak – Allies start battle with a shield equal to 3% Max HP per stack.
 - 1★ Lucky Button – +3% Crit Rate; missed crits add +3% Crit Rate next turn.
  - 1★ Bent Dagger – +3% ATK; when a foe dies, allies gain +1% ATK for the rest of combat.
