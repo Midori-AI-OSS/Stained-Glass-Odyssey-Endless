@@ -952,3 +952,234 @@ async def test_catalyst_vials_telemetry():
     assert metadata["stacks"] == 1
 
 
+@pytest.mark.asyncio
+async def test_safeguard_prism_shield_on_low_hp():
+    """Test that Safeguard Prism grants shield when ally drops below 60% HP."""
+    event_bus_module.bus._subs.clear()
+    party = Party()
+    ally = PlayerBase()
+    enemy = PlayerBase()
+    ally.hp = ally.set_base_stat('max_hp', 1000)
+    ally.set_base_stat('atk', 100)
+    enemy.hp = enemy.set_base_stat('max_hp', 1000)
+    party.members.append(ally)
+
+    # Award relic and apply
+    award_relic(party, "safeguard_prism")
+    await apply_relics(party)
+
+    # Set HP below threshold (below 60% = below 600)
+    ally.hp = 500
+
+    # Simulate damage event
+    await BUS.emit_async("damage_taken", ally, enemy, 100)
+    await asyncio.sleep(0.01)
+
+    # Should have received shield (15% of 1000 = 150)
+    assert ally.shields == 150, f"Expected shields 150, got {ally.shields}"
+
+
+@pytest.mark.asyncio
+async def test_safeguard_prism_mitigation_buff():
+    """Test that Safeguard Prism grants mitigation buff."""
+    event_bus_module.bus._subs.clear()
+    party = Party()
+    ally = PlayerBase()
+    enemy = PlayerBase()
+    ally.hp = ally.set_base_stat('max_hp', 1000)
+    ally.set_base_stat('atk', 100)
+    ally.set_base_stat('mitigation', 1.0)
+    enemy.hp = enemy.set_base_stat('max_hp', 1000)
+    party.members.append(ally)
+
+    # Award relic and apply
+    award_relic(party, "safeguard_prism")
+    await apply_relics(party)
+
+    # Set HP below threshold
+    ally.hp = 500
+
+    # Get initial mitigation
+    initial_mitigation = ally.mitigation
+
+    # Simulate damage to trigger safeguard
+    await BUS.emit_async("damage_taken", ally, enemy, 100)
+    await asyncio.sleep(0.01)
+
+    # Should have increased mitigation (+12%)
+    assert ally.mitigation > initial_mitigation, f"Expected mitigation > {initial_mitigation}, got {ally.mitigation}"
+
+
+@pytest.mark.asyncio
+async def test_safeguard_prism_stacks():
+    """Test that multiple Safeguard Prism stacks increase shield and mitigation."""
+    event_bus_module.bus._subs.clear()
+    party = Party()
+    ally = PlayerBase()
+    enemy = PlayerBase()
+    ally.hp = ally.set_base_stat('max_hp', 1000)
+    enemy.hp = enemy.set_base_stat('max_hp', 1000)
+    party.members.append(ally)
+
+    # Award 2 stacks (30% shield, 24% mitigation)
+    award_relic(party, "safeguard_prism")
+    award_relic(party, "safeguard_prism")
+    await apply_relics(party)
+
+    # Set HP below threshold
+    ally.hp = 500
+
+    # Simulate damage to trigger safeguard
+    await BUS.emit_async("damage_taken", ally, enemy, 100)
+    await asyncio.sleep(0.01)
+
+    # Should have received double shield (30% of 1000 = 300)
+    assert ally.shields == 300, f"Expected shields 300, got {ally.shields}"
+
+
+@pytest.mark.asyncio
+async def test_safeguard_prism_limited_triggers():
+    """Test that Safeguard Prism has limited triggers per stack."""
+    event_bus_module.bus._subs.clear()
+    party = Party()
+    ally = PlayerBase()
+    enemy = PlayerBase()
+    ally.hp = ally.set_base_stat('max_hp', 1000)
+    enemy.hp = enemy.set_base_stat('max_hp', 1000)
+    party.members.append(ally)
+
+    # Award 1 stack (1 trigger per ally per battle)
+    award_relic(party, "safeguard_prism")
+    await apply_relics(party)
+
+    # Trigger safeguard first time
+    ally.hp = 500
+    await BUS.emit_async("damage_taken", ally, enemy, 100)
+    await asyncio.sleep(0.01)
+
+    # Should have received shield
+    assert ally.shields == 150, f"Expected shields 150, got {ally.shields}"
+
+    # Reset shields and try to trigger again
+    ally.shields = 0
+    ally.hp = 400
+
+    await BUS.emit_async("damage_taken", ally, enemy, 100)
+    await asyncio.sleep(0.01)
+
+    # Should NOT have received shield (already used 1 trigger)
+    assert ally.shields == 0, f"Expected shields 0, got {ally.shields}"
+
+
+@pytest.mark.asyncio
+async def test_safeguard_prism_multiple_stacks_multiple_triggers():
+    """Test that multiple stacks allow multiple triggers per ally."""
+    event_bus_module.bus._subs.clear()
+    party = Party()
+    ally = PlayerBase()
+    enemy = PlayerBase()
+    ally.hp = ally.set_base_stat('max_hp', 1000)
+    enemy.hp = enemy.set_base_stat('max_hp', 1000)
+    party.members.append(ally)
+
+    # Award 2 stacks (2 triggers per ally per battle)
+    award_relic(party, "safeguard_prism")
+    award_relic(party, "safeguard_prism")
+    await apply_relics(party)
+
+    # Trigger safeguard first time
+    ally.hp = 500
+    await BUS.emit_async("damage_taken", ally, enemy, 100)
+    await asyncio.sleep(0.01)
+
+    # Should have received shield (30% = 300)
+    assert ally.shields == 300, f"Expected shields 300, got {ally.shields}"
+
+    # Reset shields and trigger again
+    ally.shields = 0
+    ally.hp = 400
+
+    await BUS.emit_async("damage_taken", ally, enemy, 100)
+    await asyncio.sleep(0.01)
+
+    # Should have received shield again (still have 1 trigger left)
+    assert ally.shields == 300, f"Expected shields 300, got {ally.shields}"
+
+    # Reset shields and try a third time
+    ally.shields = 0
+    ally.hp = 300
+
+    await BUS.emit_async("damage_taken", ally, enemy, 100)
+    await asyncio.sleep(0.01)
+
+    # Should NOT have received shield (used all 2 triggers)
+    assert ally.shields == 0, f"Expected shields 0, got {ally.shields}"
+
+
+@pytest.mark.asyncio
+async def test_safeguard_prism_above_threshold():
+    """Test that Safeguard Prism doesn't trigger above 60% HP."""
+    event_bus_module.bus._subs.clear()
+    party = Party()
+    ally = PlayerBase()
+    enemy = PlayerBase()
+    ally.hp = ally.set_base_stat('max_hp', 1000)
+    enemy.hp = enemy.set_base_stat('max_hp', 1000)
+    party.members.append(ally)
+
+    # Award relic and apply
+    award_relic(party, "safeguard_prism")
+    await apply_relics(party)
+
+    # Set HP to 700 (70% - above threshold)
+    ally.hp = 700
+
+    # Simulate damage that keeps HP above 60% (to 650 HP)
+    await BUS.emit_async("damage_taken", ally, enemy, 50)
+    await asyncio.sleep(0.01)
+
+    # Should NOT have received shield
+    assert ally.shields == 0, f"Expected shields 0, got {ally.shields}"
+
+
+@pytest.mark.asyncio
+async def test_safeguard_prism_telemetry():
+    """Test that Safeguard Prism emits proper telemetry events."""
+    event_bus_module.bus._subs.clear()
+    party = Party()
+    ally = PlayerBase()
+    enemy = PlayerBase()
+    ally.hp = ally.set_base_stat('max_hp', 1000)
+    enemy.hp = enemy.set_base_stat('max_hp', 1000)
+    party.members.append(ally)
+
+    # Award relic and apply
+    award_relic(party, "safeguard_prism")
+    await apply_relics(party)
+
+    # Capture telemetry events
+    events: list[tuple] = []
+
+    def capture(*args: object) -> None:
+        events.append(args)
+
+    BUS.subscribe("relic_effect", capture)
+
+    # Trigger safeguard
+    ally.hp = 500
+    await BUS.emit_async("damage_taken", ally, enemy, 100)
+    await asyncio.sleep(0.01)
+
+    # Check that telemetry was emitted
+    assert len(events) > 0, "Expected telemetry event"
+    relic_id, actor, effect_type, value, metadata = events[0]
+    assert relic_id == "safeguard_prism"
+    assert effect_type == "emergency_shield"
+    assert value == 150  # 15% of 1000
+    assert metadata["hp_threshold_percentage"] == 60
+    assert metadata["shield_percentage"] == 15
+    assert metadata["mitigation_bonus_percentage"] == 12
+    assert metadata["trigger_count"] == 1
+    assert metadata["max_triggers"] == 1
+    assert metadata["stacks"] == 1
+
