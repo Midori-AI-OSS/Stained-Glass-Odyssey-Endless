@@ -38,7 +38,7 @@ For contributors performing rigorous, comprehensive reviews of code, documentati
 - Note systemic issues that require policy updates and coordinate with the Manager to capture the follow-up documentation task.
 
 ## Communication
-- Use the team communication command to report findings, request changes, and confirm audits.
+- Report findings, requests, and audit confirmations directly in the relevant task file or pull request discussion so work stays traceable.
 - Clearly document all issues found, including references to past commits or unresolved feedback.
 - Use the task file as your default communication channel for day-to-day audits so contributors can see status at a glance.
 - Only create `.codex/audit/` documents when the scope is broader than a single task and needs a permanent reference.
