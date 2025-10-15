@@ -13,7 +13,7 @@ from autofighter.stats import BUS
 from autofighter.stats import Stats
 from autofighter.stats import calc_animation_time
 
-DEFAULT_TURN_PACING = 0.2
+DEFAULT_TURN_PACING = 0.5
 _MIN_TURN_PACING = 0.05
 
 TURN_PACING = DEFAULT_TURN_PACING

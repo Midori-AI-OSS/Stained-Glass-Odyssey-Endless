@@ -69,6 +69,7 @@ async def test_turn_pacing_endpoints(app_with_db):
     data = await resp.get_json()
     assert data["turn_pacing"] == pytest.approx(0.5)
     assert data["default"] == pytest.approx(0.5)
+    assert data["default"] == pytest.approx(pacing_module.DEFAULT_TURN_PACING)
 
     resp = await client.post("/config/turn_pacing", json={"turn_pacing": 0.8})
     data = await resp.get_json()

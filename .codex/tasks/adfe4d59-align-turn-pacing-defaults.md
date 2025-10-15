@@ -12,3 +12,5 @@ The backend uses a 0.2 s `TURN_PACING` while the config route and Settings UI 
 - Replace the fixed `3 / TURN_PACING` pause with a smarter gating mechanism (e.g., skip when no cinematic/intro assets exist, or cap the wait to a small constant).
 - Add regression coverage that the `/config/turn_pacing` endpoint and frontend slider display the same default, and document the intro pacing behavior.
 - Verify that existing options migrations/tests still pass with the new default.
+
+ready for review
