@@ -13,3 +13,19 @@ Our 2★ line-up focuses on Critical Boost loops, global DEF pulses, or extra ac
 - Expand tests so crit/no-crit branches are covered, including verifying the dodge buff expires after one turn and cooldown resets correctly for multi-turn fights.
 - Document the new card in `.codex/implementation/card-inventory.md` and the card design plan, calling out the crit-triggered dodge rally.【F:.codex/implementation/card-inventory.md†L49-L66】【F:.codex/planning/archive/726d03ae-card-plan.md†L47-L64】
 - Add `tempestpathfinder.png` under `frontend/src/lib/assets/cards/Art/` and confirm the reward selection UI renders it.
+
+## Implementation Complete
+- ✅ Created `backend/plugins/cards/tempest_pathfinder.py` with all required functionality
+- ✅ Created comprehensive test suite in `backend/tests/test_tempest_pathfinder.py` (5 tests, all passing)
+- ✅ Listens to `damage_taken` events with `is_critical` parameter
+- ✅ Grants +55% dodge odds baseline
+- ✅ Grants party-wide +12% dodge buff for 1 turn on crit
+- ✅ Implements per-turn cooldown that resets on `turn_start`
+- ✅ Emits telemetry via `card_effect` events
+- ✅ Proper subscription cleanup on `battle_end`
+- ⚠️  Frontend placeholder art still needed (`tempestpathfinder.png`)
+- ⚠️  Documentation updates still needed
+
+---
+
+ready for review
