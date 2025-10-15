@@ -1,5 +1,6 @@
 """Test configuration for backend suite."""
 
+from enum import Enum
 from pathlib import Path
 import sys
 import types
@@ -122,12 +123,22 @@ def _ensure_options_stub() -> None:
     options = types.ModuleType("options")
 
     class OptionKey(str):
-        pass
+        """Lightweight stand-in for :class:`backend.options.OptionKey`."""
 
-    def get_option(*_args, default=None, **_kwargs):  # noqa: ANN001, D401 - simple stub
-        return default
+        def __new__(cls, value: str):  # noqa: D401
+            return str.__new__(cls, value)
 
-    def set_option(*_args, **_kwargs):  # noqa: ANN001, D401 - simple stub
+
+    OptionKey.LRM_MODEL = OptionKey("lrm_model")
+    OptionKey.TURN_PACING = OptionKey("turn_pacing")
+
+    _store: dict[str, str] = {}
+
+    def get_option(key, default=None):  # noqa: ANN001, D401 - simple stub
+        return _store.get(str(key), default)
+
+    def set_option(key, value):  # noqa: ANN001, D401 - simple stub
+        _store[str(key)] = value
         return None
 
     options.OptionKey = OptionKey  # type: ignore[attr-defined]
@@ -147,8 +158,10 @@ def _ensure_llm_stub() -> None:
 
     loader = types.ModuleType("llms.loader")
 
-    class ModelName(str):
-        pass
+    class ModelName(str, Enum):
+        DEEPSEEK = "deepseek-ai/DeepSeek-R1-Distill-Qwen-7B"
+        GEMMA = "google/gemma-3-4b-it"
+        GGUF = "gguf"
 
     loader.ModelName = ModelName  # type: ignore[attr-defined]
     loader.pipeline = lambda *args, **kwargs: None  # noqa: E731

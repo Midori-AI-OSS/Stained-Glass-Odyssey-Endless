@@ -14,3 +14,4 @@ The backend uses a 0.2 s `TURN_PACING` while the config route and Settings UI 
 - Verify that existing options migrations/tests still pass with the new default.
 
 ready for review
+doc: Intro pacing behavior recorded in `.codex/implementation/battle-room.md`.
