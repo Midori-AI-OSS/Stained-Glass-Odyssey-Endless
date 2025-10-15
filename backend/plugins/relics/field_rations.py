@@ -21,9 +21,20 @@ class FieldRations(RelicBase):
     async def apply(self, party) -> None:
         await super().apply(party)
 
+        # Use a state object to track stacks across multiple relic instances
+        state = getattr(party, "_field_rations_state", None)
+        stacks = party.relics.count(self.id)
+
+        if state is None:
+            state = {"stacks": stacks}
+            party._field_rations_state = state
+        else:
+            state["stacks"] = stacks
+
         async def _battle_end(*_args) -> None:
             """Apply post-battle healing and ultimate charge to all party members."""
-            current_stacks = party.relics.count(self.id)
+            current_state = getattr(party, "_field_rations_state", state)
+            current_stacks = current_state.get("stacks", 0)
 
             if current_stacks <= 0:
                 return
@@ -82,7 +93,13 @@ class FieldRations(RelicBase):
                     },
                 )
 
+        def _cleanup(*_args) -> None:
+            self.clear_subscriptions(party)
+            if getattr(party, "_field_rations_state", None) is state:
+                delattr(party, "_field_rations_state")
+
         self.subscribe(party, "battle_end", _battle_end)
+        self.subscribe(party, "battle_end", _cleanup)
 
     def describe(self, stacks: int) -> str:
         if stacks == 1:

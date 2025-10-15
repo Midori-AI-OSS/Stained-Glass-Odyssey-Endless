@@ -309,3 +309,50 @@ def test_field_rations_triggers_multiple_battles():
     assert member.ultimate_charge == 2, "Second battle should grant charge again"
 
     loop.close()
+
+
+def test_field_rations_no_n_squared_scaling():
+    """Test that Field Rations doesn't have N² scaling with multiple stacks."""
+    sys.modules.setdefault(
+        "llms.torch_checker", types.SimpleNamespace(is_torch_available=lambda: False)
+    )
+
+    loop = setup_event_loop()
+    party = Party()
+
+    member = PlayerBase()
+    member.id = "test_member"
+    member.set_base_stat("max_hp", 1000)
+    member.hp = 500
+    member.ultimate_charge = 0
+    member.ultimate_charge_capacity = 15
+    party.members.append(member)
+
+    # Award 3 stacks
+    award_relic(party, "field_rations")
+    award_relic(party, "field_rations")
+    award_relic(party, "field_rations")
+    loop.run_until_complete(apply_relics(party))
+
+    # Trigger battle end
+    loop.run_until_complete(BUS.emit_async("battle_end"))
+
+    # With 3 stacks, should heal 2% * 3 = 6% = 60 HP (linear scaling)
+    # N² scaling would be 3 * 60 = 180 HP
+    expected_hp_linear = 500 + 60  # 560
+    expected_hp_n_squared = 500 + (3 * 60)  # 680
+
+    assert (
+        member.hp == expected_hp_linear
+    ), f"Expected linear scaling (HP={expected_hp_linear}), but got HP={member.hp}. N² would be {expected_hp_n_squared}"
+
+    # With 3 stacks, should grant 3 charge (linear scaling)
+    # N² scaling would be 3 * 3 = 9 charge
+    expected_charge_linear = 3
+    expected_charge_n_squared = 9
+
+    assert (
+        member.ultimate_charge == expected_charge_linear
+    ), f"Expected linear scaling (charge={expected_charge_linear}), but got charge={member.ultimate_charge}. N² would be {expected_charge_n_squared}"
+
+    loop.close()
