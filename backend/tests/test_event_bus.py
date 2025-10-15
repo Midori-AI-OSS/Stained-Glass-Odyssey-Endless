@@ -1,6 +1,7 @@
 import asyncio
 import importlib.util
 import logging
+from collections.abc import Awaitable, Callable
 from pathlib import Path
 import sys
 import types
@@ -233,3 +234,103 @@ async def test_emit_async_triggers_nested_batched_event_on_loop():
 
     bus.unsubscribe("inner", inner_handler)
     bus.unsubscribe("outer", outer_handler)
+
+
+@pytest.mark.asyncio
+async def test_emit_async_skips_hard_sleep_for_quick_callbacks(monkeypatch):
+    bus = EventBus()
+    recorded: list[float] = []
+    original_sleep = event_bus_module.asyncio.sleep
+
+    async def tracking_sleep(delay: float, *args, **kwargs):
+        recorded.append(delay)
+        return await original_sleep(delay)
+
+    monkeypatch.setattr(event_bus_module.asyncio, "sleep", tracking_sleep)
+
+    handlers: list[Callable[[int], Awaitable[None]]] = []
+
+    for idx in range(8):
+        async def handler(value: int, idx: int = idx) -> None:
+            _ = value + idx
+
+        handlers.append(handler)
+        bus.subscribe("adaptive", handler)
+
+    await bus.emit_async("adaptive", 5)
+
+    for handler in handlers:
+        bus.unsubscribe("adaptive", handler)
+
+    assert not any(
+        abs(delay - event_bus_module._HARD_YIELD_DELAY) < 1e-6
+        for delay in recorded
+        if delay > 0
+    )
+
+
+@pytest.mark.asyncio
+async def test_emit_async_hard_sleep_for_slow_callback(monkeypatch):
+    bus = EventBus()
+    recorded: list[float] = []
+    original_sleep = event_bus_module.asyncio.sleep
+
+    async def tracking_sleep(delay: float, *args, **kwargs):
+        recorded.append(delay)
+        return await original_sleep(delay)
+
+    monkeypatch.setattr(event_bus_module.asyncio, "sleep", tracking_sleep)
+
+    async def slow_handler(value: int) -> None:
+        await original_sleep(event_bus_module._HARD_YIELD_THRESHOLD + 0.005)
+
+    bus.subscribe("adaptive", slow_handler)
+
+    await bus.emit_async("adaptive", 5)
+
+    bus.unsubscribe("adaptive", slow_handler)
+
+    assert any(
+        abs(delay - event_bus_module._HARD_YIELD_DELAY) < 2e-4
+        for delay in recorded
+        if delay > 0
+    )
+
+
+@pytest.mark.asyncio
+async def test_batched_processing_uses_adaptive_yield(monkeypatch):
+    bus = EventBus()
+    recorded: list[float] = []
+    original_sleep = event_bus_module.asyncio.sleep
+
+    async def tracking_sleep(delay: float, *args, **kwargs):
+        recorded.append(delay)
+        return await original_sleep(delay)
+
+    monkeypatch.setattr(event_bus_module.asyncio, "sleep", tracking_sleep)
+
+    processed = asyncio.Event()
+    total = 6
+    counter = 0
+
+    async def slow_handler(value: int) -> None:
+        nonlocal counter
+        await original_sleep(event_bus_module._HARD_YIELD_THRESHOLD + 0.004)
+        counter += 1
+        if counter == total:
+            processed.set()
+
+    bus.subscribe("batch", slow_handler)
+
+    for idx in range(total):
+        bus.emit_batched("batch", idx)
+
+    await asyncio.wait_for(processed.wait(), timeout=2)
+
+    bus.unsubscribe("batch", slow_handler)
+
+    assert any(
+        abs(delay - event_bus_module._HARD_YIELD_DELAY) < 5e-4
+        for delay in recorded
+        if abs(delay - event_bus_module.bus._batch_interval) > 1e-6 and delay > 0
+    )

@@ -13,3 +13,5 @@ The EventBus injects 2 ms `asyncio.sleep` calls for every batched event and ev
 - Preserve cooperative behavior for pathological cases (no tight loops pegging the CPU) and document the new pacing policy.
 - Provide benchmarks or instrumentation snippets demonstrating the before/after latency for a representative battle setup.
 - Update or add tests covering batched dispatch and async subscribers so CI exercises the new pacing rules.
+
+ready for review

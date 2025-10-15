@@ -40,14 +40,57 @@ responsive.
 ## Batching and adaptive intervals
 High‑frequency events (e.g. `damage_dealt`, `damage_taken`, `hit_landed`,
 `heal_received`) are batched. Events collected within a frame (default
-`16 ms`) are processed together to reduce overhead. The batch interval can be
+`16 ms`) are processed together to reduce overhead. The batch interval is
 adaptive—when load is low, batches are processed more quickly; during heavy
 load, the interval grows to maintain responsiveness.
 
-Each callback and batch item yields `await asyncio.sleep(0.002)` per repository
-guidelines, giving other tasks a brief chance to run without relying on these
-micro-delays for gameplay pacing. Turn pacing is handled explicitly elsewhere
-with scheduled half-second waits plus an additional half-second gap between turns.
+The cooperative yield strategy is adaptive rather than fixed-delay. Each
+callback records its execution time and only yields when work has consumed a
+meaningful slice of the frame budget:
+
+- When a callback (or the accumulated time since the last yield) exceeds
+  **4 ms**, the bus schedules `await asyncio.sleep(0)` to hand control back to
+  the loop without adding artificial latency.
+- When the callback or accumulated time exceeds **20 ms**, the bus performs a
+  short blocking yield (`await asyncio.sleep(0.001)`) to prevent CPU pegging in
+  pathological cases.
+
+This keeps short bursts responsive—no unnecessary idle sleeps—while preserving
+back-pressure when plugins perform expensive work. Batch flattening uses the
+same adaptive thresholds. Large spikes still yield, but the loop is no longer
+throttled by unconditional sleeps between every queued emission.
+
+### Instrumentation and benchmarking
+
+You can capture before/after latency by sampling `bus.get_metrics()` or by
+timing individual dispatches:
+
+```python
+import asyncio
+from plugins.event_bus import EventBus, bus as internal_bus
+
+async def benchmark_emit(event_name: str, *args) -> dict[str, float]:
+    internal_bus.clear_metrics()
+    await EventBus().emit_async(event_name, *args)
+    return internal_bus.get_metrics().get(event_name, {})
+
+async def main():
+    bus = EventBus()
+
+    async def slow_handler(value: int) -> None:
+        await asyncio.sleep(0.025)
+
+    bus.subscribe("benchmark", slow_handler)
+    metrics = await benchmark_emit("benchmark", 1)
+    print(f"avg={metrics['avg_time']:.4f}s max={metrics['max_time']:.4f}s")
+
+asyncio.run(main())
+```
+
+Running the snippet before and after a change highlights the difference in
+callback timing and whether the hard 1 ms cooperative yield engaged. During
+battle setup you can wrap `emit_batched` similarly to confirm the batch
+processor avoids extra idle time while still enforcing the hard limit.
 
 ## Events
 The core combat engine emits a few global events that plugins may subscribe to:

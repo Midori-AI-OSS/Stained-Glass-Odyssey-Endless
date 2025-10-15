@@ -2,6 +2,7 @@ import asyncio
 from collections import defaultdict
 from collections.abc import Callable
 import contextlib
+from dataclasses import dataclass
 import inspect
 import logging
 import time
@@ -46,6 +47,17 @@ class EventMetrics:
 
 
 _FAST_BATCH_INTERVAL: float | None = None
+_SOFT_YIELD_THRESHOLD = 0.004  # seconds
+_HARD_YIELD_THRESHOLD = 0.02   # seconds
+_HARD_YIELD_DELAY = 0.001      # seconds
+
+
+@dataclass
+class _CooperativeState:
+    """Track cooperative yield timing across asynchronous helpers."""
+
+    last_yield: float
+    lock: asyncio.Lock | None = None
 
 
 def _get_fast_batch_interval() -> float:
@@ -73,6 +85,42 @@ class _Bus:
         self._batch_timer = None
         self._batch_interval = 0.016  # Batch events for one frame (16ms at 60fps)
         self._dynamic_batch_interval = True  # Enable adaptive batching
+
+    async def _cooperative_pause(
+        self,
+        duration: float,
+        state: _CooperativeState,
+        loop: asyncio.AbstractEventLoop,
+    ) -> None:
+        """Yield control based on *duration* and shared *state*."""
+
+        if state.lock is None:
+            await self._cooperative_pause_locked(duration, state, loop)
+            return
+
+        async with state.lock:
+            await self._cooperative_pause_locked(duration, state, loop)
+
+    async def _cooperative_pause_locked(
+        self,
+        duration: float,
+        state: _CooperativeState,
+        loop: asyncio.AbstractEventLoop,
+    ) -> None:
+        """Internal helper that assumes the caller already holds the lock."""
+
+        now = loop.time()
+        since_last = now - state.last_yield
+
+        if duration < _SOFT_YIELD_THRESHOLD and since_last < _SOFT_YIELD_THRESHOLD:
+            return
+
+        if duration >= _HARD_YIELD_THRESHOLD or since_last >= _HARD_YIELD_THRESHOLD:
+            await asyncio.sleep(_HARD_YIELD_DELAY)
+        else:
+            await asyncio.sleep(0)
+
+        state.last_yield = loop.time()
 
     def accept(self, event: str, obj, func: Callable[..., Any]) -> None:
         # Use weak references for objects to prevent memory leaks
@@ -211,30 +259,46 @@ class _Bus:
         self._batched_events.clear()
         self._batch_timer = None
 
+        if not events_snapshot:
+            return
+
+        loop = asyncio.get_running_loop()
+        collect_state = _CooperativeState(last_yield=loop.time())
+        chunk_start = time.perf_counter()
+
         for event, args_list in events_snapshot:
             for args in args_list:
                 all_events.append((event, args))
-                await asyncio.sleep(0.002)  # 2ms yield to avoid busy loop
+                elapsed = time.perf_counter() - chunk_start
+                if elapsed >= _SOFT_YIELD_THRESHOLD:
+                    await self._cooperative_pause(elapsed, collect_state, loop)
+                    chunk_start = time.perf_counter()
 
-        if all_events:
-            # Process all events concurrently for much better performance
-            async def process_single_event(event_data):
-                event, args = event_data
-                try:
-                    await self.send_async(event, args)
-                except Exception as e:
-                    log.exception("Error processing batched event %s: %s", event, e)
-                await asyncio.sleep(0.002)  # Maintain 2ms cooperative delay
+        remaining = time.perf_counter() - chunk_start
+        if remaining >= _SOFT_YIELD_THRESHOLD:
+            await self._cooperative_pause(remaining, collect_state, loop)
 
-            # Use gather with limited concurrency to avoid overwhelming the event loop
-            batch_size = 100  # Process in chunks to manage memory and concurrency
-            for i in range(0, len(all_events), batch_size):
-                batch = all_events[i:i + batch_size]
-                await asyncio.gather(
-                    *[process_single_event(event_data) for event_data in batch],
-                    return_exceptions=True,
-                )
-                await asyncio.sleep(0.002)  # Allow other tasks between batches
+        batch_state = _CooperativeState(last_yield=loop.time(), lock=asyncio.Lock())
+
+        async def process_single_event(event_data):
+            event, args = event_data
+            start = time.perf_counter()
+            try:
+                await self.send_async(event, args)
+            except Exception as e:
+                log.exception("Error processing batched event %s: %s", event, e)
+            finally:
+                duration = time.perf_counter() - start
+                await self._cooperative_pause(duration, batch_state, loop)
+
+        # Use gather with limited concurrency to avoid overwhelming the event loop
+        batch_size = 100  # Process in chunks to manage memory and concurrency
+        for i in range(0, len(all_events), batch_size):
+            batch = all_events[i:i + batch_size]
+            await asyncio.gather(
+                *[process_single_event(event_data) for event_data in batch],
+                return_exceptions=True,
+            )
 
     def _process_batches_sync(self):
         """Fallback sync processing when no event loop is available."""
@@ -264,7 +328,12 @@ class _Bus:
         if not callbacks:
             return
 
+        loop = asyncio.get_running_loop()
+        state = _CooperativeState(last_yield=loop.time(), lock=asyncio.Lock())
+
         async def _run_callback(obj_ref, func, args):
+            start = time.perf_counter()
+            executed = False
             try:
                 # Handle weak references
                 if callable(obj_ref):
@@ -274,17 +343,21 @@ class _Bus:
                 else:
                     obj = obj_ref
 
+                executed = True
+
                 if inspect.iscoroutinefunction(func):
                     await func(*args)
                 else:
                     # Run sync functions in thread pool to avoid blocking
-                    loop = asyncio.get_running_loop()
                     await loop.run_in_executor(None, lambda: func(*args))
-                await asyncio.sleep(0.002)  # Cooperative 2ms delay per repo rules
                 return True
             except Exception as e:
                 log.exception("Error in async event callback for %s: %s", event, e)
                 return False
+            finally:
+                if executed:
+                    duration = time.perf_counter() - start
+                    await self._cooperative_pause(duration, state, loop)
 
         # Run all callbacks concurrently to avoid blocking
         results = await asyncio.gather(
