@@ -15,3 +15,5 @@ The snapshot overlay only keeps the six most recent events per run. When pacing 
 
 ## Status
 ready for review — Expanded the snapshot queue to keep forty events per run, ensured queues rescale when the limit changes, ignored invalid status payloads to avoid stale sentinels, added burst-retention coverage, and documented the new history guarantee.
+
+requesting review from the Task Master
