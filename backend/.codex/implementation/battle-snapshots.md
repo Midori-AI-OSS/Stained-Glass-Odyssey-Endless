@@ -19,6 +19,10 @@ poll for results:
   Both maps are keyed by the owning combatant's id and store arrays of
   serialized summons. Each summon snapshot also includes an `owner_id` for
   convenience.
+- Reward selections update the snapshot's `reward_staging` container so
+  reconnecting clients receive the staged card or relic metadata. The
+  associated `card_choices` or `relic_choices` arrays are cleared once a choice
+  is staged to prevent duplicate applications.
 - Action queue snapshots now include summons so their action gauge values are
   serialized alongside party and foe combatants.
 - Progress snapshots now include `active_id`, the id of the combatant whose
