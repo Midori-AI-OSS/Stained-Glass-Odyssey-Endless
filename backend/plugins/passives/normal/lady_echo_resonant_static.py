@@ -144,6 +144,9 @@ class LadyEchoResonantStatic:
             return
 
         async def _on_battle_end(event_target: Optional["Stats"] = None, *_: object, **__: object) -> None:
+            if event_target is not None and event_target is not target:
+                return
+
             BUS.unsubscribe("battle_end", _on_battle_end)
             self._battle_end_handlers.pop(entity_id, None)
             self._clear_state(entity_id, target)
