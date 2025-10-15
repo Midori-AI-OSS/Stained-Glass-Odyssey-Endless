@@ -14,3 +14,7 @@ Our 1★ pool leans on sustain, mitigation, and incremental offense but lacks a 
 - Update `.codex/implementation/relic-inventory.md` and the archived relic plan to document Featherweight Anklet with the final numbers and behavior.【F:.codex/implementation/relic-inventory.md†L9-L47】【F:.codex/planning/archive/bd48a561-relic-plan.md†L10-L53】
 - Provide a placeholder icon under `frontend/src/lib/assets/relics/1star/` (24×24 PNG) and ensure it resolves through the asset registry (no manual import needed thanks to globbing, but include the asset in git).【F:frontend/src/lib/systems/assetRegistry.js†L174-L1353】
 - Add a release note blurb to `.codex/docs/relics/` if additional mechanical rationale is useful; otherwise ensure existing docs stay consistent.
+
+---
+
+ready for review

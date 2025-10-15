@@ -24,3 +24,7 @@ Design and implement a new 1★ relic that rewards survival by topping the party
 ## Documentation
 - `.codex/implementation/relic-inventory.md`
 - Related relic design notes under `.codex/docs/relics/` if needed
+
+---
+
+ready for review

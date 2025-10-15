@@ -22,3 +22,7 @@ Design and implement a new one-star card that leans into Ixia's lightning bruise
 
 ## Player impact
 Adding a lightning-centric 1★ option expands early-run build variety by letting players chase bonus crit uptime when they roll Ixia, LadyLightning, or other lightning specialists, while still offering a straightforward stat bump for general parties.
+
+---
+
+ready for review
