@@ -1,0 +1,23 @@
+
+name: Auto-Merge PR (SAFE)
+
+on:
+  pull_request:
+    branches-ignore:
+      - master
+      - main
+    types: [opened, synchronize, reopened]
+
+jobs:
+  auto_merge:
+    runs-on: ubuntu-latest
+    container:
+      image: lunamidori5/pixelarch:quartz
+    if: github.event.pull_request.user.login == 'lunamidori5'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+      - name: Enable Pull Request Automerge
+        run: bash .github/auto-merge "${{ github.event.pull_request.number }}"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
