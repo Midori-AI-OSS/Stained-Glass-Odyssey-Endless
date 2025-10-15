@@ -12,4 +12,9 @@ Design and persist a dedicated reward staging structure alongside the run map so
 ## Out of scope
 Do not change service APIs, confirmation flows, or UI payloads yet—those are covered by follow-up tasks.
 
-ready for review
+## Audit notes (2025-02-14)
+- Verified new `runs.lifecycle.ensure_reward_staging` normalizes the persisted map payload and backfills existing saves while keeping staged rewards out of `Party` blobs. Also confirmed `_sync_snapshot_reward_staging` mirrors the buckets into in-memory battle snapshots for reconnect flows.
+- Confirmed new runs seed `reward_staging` via `run_service` so the map serialization always carries empty `cards`, `relics`, and `items` arrays. Observed documentation updates in `.codex/implementation/post-fight-loot-screen.md` and `.codex/implementation/save-system.md` describing the new structure.
+- Exercised targeted regression tests: `uv run pytest tests/test_reward_staging_schema.py`.
+
+requesting review from the Task Master
