@@ -3,20 +3,199 @@ from math import isclose
 
 import pytest
 
-import autofighter.stats as stats_module
 from autofighter.party import Party
 from autofighter.relics import apply_relics
 from autofighter.relics import award_relic
+import autofighter.stats as stats_module
 from autofighter.stats import BUS
 from autofighter.stats import Stats
 from autofighter.summons.manager import SummonManager
-from plugins.effects.aftertaste import Aftertaste
-import plugins.event_bus as event_bus_module
 from plugins.characters._base import PlayerBase
 from plugins.characters.becca import Becca
 from plugins.characters.luna import Luna
+from plugins.effects.aftertaste import Aftertaste
+import plugins.event_bus as event_bus_module
 import plugins.relics._base as relic_base_module
 import plugins.relics.echo_bell as echo_bell_module
+
+
+@pytest.mark.asyncio
+async def test_copper_siphon_lifesteal():
+    """Test that Copper Siphon heals attacker for 2% of damage dealt."""
+    event_bus_module.bus._subs.clear()
+    party = Party()
+    attacker = PlayerBase()
+    target = PlayerBase()
+    attacker.hp = attacker.set_base_stat('max_hp', 1000)
+    attacker.set_base_stat('atk', 100)
+    target.hp = target.set_base_stat('max_hp', 1000)
+    party.members.append(attacker)
+
+    # Reduce attacker HP to allow healing
+    attacker.hp = 900
+
+    # Award relic and apply
+    award_relic(party, "copper_siphon")
+    await apply_relics(party)
+
+    # Simulate dealing 100 damage - should heal for 2% = 2 HP
+    await BUS.emit_async("action_used", attacker, target, 100)
+    await asyncio.sleep(0.01)  # Allow async healing to complete
+
+    # Check that HP increased by 2
+    assert attacker.hp == 902, f"Expected HP 902, got {attacker.hp}"
+
+
+@pytest.mark.asyncio
+async def test_copper_siphon_minimum_healing():
+    """Test that Copper Siphon heals at least 1 HP even for small damage."""
+    event_bus_module.bus._subs.clear()
+    party = Party()
+    attacker = PlayerBase()
+    target = PlayerBase()
+    attacker.hp = attacker.set_base_stat('max_hp', 1000)
+    attacker.set_base_stat('atk', 100)
+    target.hp = target.set_base_stat('max_hp', 1000)
+    party.members.append(attacker)
+
+    # Reduce attacker HP to allow healing
+    attacker.hp = 900
+
+    # Award relic and apply
+    award_relic(party, "copper_siphon")
+    await apply_relics(party)
+
+    # Simulate dealing 10 damage - 2% = 0.2, but minimum is 1 HP
+    await BUS.emit_async("action_used", attacker, target, 10)
+    await asyncio.sleep(0.01)  # Allow async healing to complete
+
+    # Check that HP increased by at least 1
+    assert attacker.hp == 901, f"Expected HP 901, got {attacker.hp}"
+
+
+@pytest.mark.asyncio
+async def test_copper_siphon_stacks():
+    """Test that multiple Copper Siphon stacks increase lifesteal."""
+    event_bus_module.bus._subs.clear()
+    party = Party()
+    attacker = PlayerBase()
+    target = PlayerBase()
+    attacker.hp = attacker.set_base_stat('max_hp', 1000)
+    attacker.set_base_stat('atk', 100)
+    target.hp = target.set_base_stat('max_hp', 1000)
+    party.members.append(attacker)
+
+    # Reduce attacker HP to allow healing
+    attacker.hp = 900
+
+    # Award 2 stacks of copper_siphon (4% lifesteal)
+    award_relic(party, "copper_siphon")
+    award_relic(party, "copper_siphon")
+    await apply_relics(party)
+
+    # Simulate dealing 100 damage - should heal for 4% = 4 HP
+    await BUS.emit_async("action_used", attacker, target, 100)
+    await asyncio.sleep(0.01)  # Allow async healing to complete
+
+    # Check that HP increased by 4
+    assert attacker.hp == 904, f"Expected HP 904, got {attacker.hp}"
+
+
+@pytest.mark.asyncio
+async def test_copper_siphon_overheal_shields():
+    """Test that Copper Siphon converts excess healing to shields."""
+    event_bus_module.bus._subs.clear()
+    party = Party()
+    attacker = PlayerBase()
+    target = PlayerBase()
+    attacker.hp = attacker.set_base_stat('max_hp', 1000)
+    attacker.set_base_stat('atk', 100)
+    target.hp = target.set_base_stat('max_hp', 1000)
+    party.members.append(attacker)
+
+    # Attacker is at full HP
+    attacker.hp = 1000
+
+    # Award relic and apply
+    award_relic(party, "copper_siphon")
+    await apply_relics(party)
+
+    # Simulate dealing 100 damage - should heal for 2 HP, which becomes shield
+    await BUS.emit_async("action_used", attacker, target, 100)
+    await asyncio.sleep(0.01)  # Allow async healing to complete
+
+    # Check that shields were applied (HP stays at max, shields increase)
+    assert attacker.hp == 1000, f"Expected HP 1000, got {attacker.hp}"
+    assert attacker.shields == 2, f"Expected shields 2, got {attacker.shields}"
+
+
+@pytest.mark.asyncio
+async def test_copper_siphon_ignores_zero_damage():
+    """Test that Copper Siphon doesn't trigger on zero or negative damage."""
+    event_bus_module.bus._subs.clear()
+    party = Party()
+    attacker = PlayerBase()
+    target = PlayerBase()
+    attacker.hp = attacker.set_base_stat('max_hp', 1000)
+    attacker.set_base_stat('atk', 100)
+    target.hp = target.set_base_stat('max_hp', 1000)
+    party.members.append(attacker)
+
+    # Reduce attacker HP
+    attacker.hp = 900
+
+    # Award relic and apply
+    award_relic(party, "copper_siphon")
+    await apply_relics(party)
+
+    # Simulate dealing 0 damage - should not heal
+    await BUS.emit_async("action_used", attacker, target, 0)
+    await asyncio.sleep(0.01)
+
+    # HP should not change
+    assert attacker.hp == 900, f"Expected HP 900, got {attacker.hp}"
+
+
+@pytest.mark.asyncio
+async def test_copper_siphon_telemetry():
+    """Test that Copper Siphon emits proper telemetry events."""
+    event_bus_module.bus._subs.clear()
+    party = Party()
+    attacker = PlayerBase()
+    target = PlayerBase()
+    attacker.hp = attacker.set_base_stat('max_hp', 1000)
+    attacker.set_base_stat('atk', 100)
+    target.hp = target.set_base_stat('max_hp', 1000)
+    party.members.append(attacker)
+
+    # Reduce attacker HP
+    attacker.hp = 900
+
+    # Award relic and apply
+    award_relic(party, "copper_siphon")
+    await apply_relics(party)
+
+    # Capture telemetry events
+    events: list[tuple] = []
+
+    def capture(*args: object) -> None:
+        events.append(args)
+
+    BUS.subscribe("relic_effect", capture)
+
+    # Simulate dealing 100 damage
+    await BUS.emit_async("action_used", attacker, target, 100)
+    await asyncio.sleep(0.01)
+
+    # Check that telemetry was emitted
+    assert len(events) > 0, "Expected telemetry event"
+    relic_id, actor, effect_type, value, metadata = events[0]
+    assert relic_id == "copper_siphon"
+    assert effect_type == "lifesteal"
+    assert value == 2  # 2% of 100 damage
+    assert metadata["damage_dealt"] == 100
+    assert metadata["lifesteal_percentage"] == 2
+    assert metadata["stacks"] == 1
 
 
 class DummyPlayer(Stats):

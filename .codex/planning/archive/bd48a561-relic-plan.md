@@ -22,6 +22,7 @@ Parent: [Web Game Plan](8a7d9c1e-web-game-plan.md)
  - [x] **Pocket Manual** – +3% damage; every 10th hit deals an extra 3% damage as Aftertaste.
  - [x] **Featherweight Anklet** – +2% SPD per stack (multiplicative); first action each ally takes per battle grants +6% SPD per stack for 1 turn.
  - [x] **Field Rations** – After each battle, heal 2% Max HP per stack and grant +1 ultimate charge per stack to all allies.
+ - [x] **Copper Siphon** – When an ally deals damage, heal them for 2% of damage per stack (min 1 HP); excess becomes shields.
 
 ## 2★ Relics
  - [x] **Vengeful Pendant** – Whenever an ally is hit, deal 15% of the damage taken back to the attacker, plus 15% per additional copy.
