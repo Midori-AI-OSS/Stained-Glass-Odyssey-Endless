@@ -21,6 +21,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
       - name: Enable Pull Request Automerge
-        run: bash .github/auto-merge "${{ github.event.pull_request.number }}"
+        run: bash .github/auto-merge.sh "${{ github.event.pull_request.number }}"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
