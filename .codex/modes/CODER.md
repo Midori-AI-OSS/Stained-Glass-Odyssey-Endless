@@ -15,6 +15,7 @@ For contributors actively writing, refactoring, or reviewing code. Coder Mode em
 - Regularly review the root `.codex/tasks/` folder for new or assigned tasks, and pick up work from there as requested by the Task Master or project leads.
 - Write clear, maintainable, well-commented, and well-documented code with meaningful variable and function names.
 - Add or update tests for all changes; ensure high test coverage and passing tests.
+- Re-run only the tests affected by your change. Use the commands in `run-tests.sh` as your baseline and scope them to the impacted area—e.g., backend checks with `uv run pytest tests/test_battle.py -k scenario_name` or node IDs like `uv run pytest tests/test_battle.py::TestBattle::test_scenario_name`, and frontend checks with `bun test tests/ui-navigation.test.js` or focused runs such as `bun x vitest run ui-navigation --run`. When the repository's `run-tests.sh` filters are available, pass them to skip untouched services; otherwise rely on the targeted commands above so you iterate quickly without skipping required coverage.
 - Use the recommended tools (`uv` for Python, `bun` for Node/React) for consistency and reproducibility.
 - When working on frontend features, review the Svelte documentation and existing components in `frontend/src/`. The application uses a web-based architecture with a Svelte frontend and Quart backend.
 - Keep documentation in sync with code changes; update or create docs in `.codex/implementation/` and `.codex/instructions/` in the relevant service as needed.
