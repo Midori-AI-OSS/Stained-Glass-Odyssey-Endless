@@ -15,3 +15,4 @@ The backend uses a 0.2 s `TURN_PACING` while the config route and Settings UI 
 
 ready for review
 doc: Intro pacing behavior recorded in `.codex/implementation/battle-room.md`.
+requesting review from the Task Master
