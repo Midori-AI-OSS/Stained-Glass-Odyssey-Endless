@@ -16,4 +16,9 @@ The 1★ catalog leans on flat stat bumps or tiny reactive procs, but none of th
 
 ---
 
-ready for review
+## Audit notes (2025-02-16)
+- ✅ Card logic applies the +3% Effect RES/Vitality baseline and issues a one-time Radiant Regeneration HoT per ally when they fall below 45% HP, with telemetry and battle-end cleanup in place.【F:backend/plugins/cards/oracle_prayer_charm.py†L15-L91】
+- ✅ Dedicated regression tests cover activation limits, multi-ally handling, and healing math; `uv run pytest tests/test_oracle_prayer_charm.py` passes locally.【ac7909†L1-L4】
+- ✅ Placeholder art guidance satisfied: `luna_items_prompts.txt` now documents a Luna Midori usage prompt for `oracleprayercharm.png`, meeting the latest direction for placeholder assets. No remaining blockers for Task Master review.【F:luna_items_prompts.txt†L7-L9】
+
+requesting review from the Task Master.

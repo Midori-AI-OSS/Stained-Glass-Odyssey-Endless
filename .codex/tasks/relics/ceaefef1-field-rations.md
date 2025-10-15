@@ -27,4 +27,9 @@ Design and implement a new 1★ relic that rewards survival by topping the party
 
 ---
 
-ready for review
+## Audit notes (2025-02-16)
+- ✅ Backend plugin applies the per-stack post-battle heal/ultimate charge and tracks state cleanup correctly.【F:backend/plugins/relics/field_rations.py†L11-L113】
+- ✅ Comprehensive regression suite validates healing, charge caps, stacking, multi-ally coverage, and repeated battles; `uv run pytest tests/test_field_rations.py` passes.【d397f7†L1-L3】
+- ✅ Placeholder art guidance satisfied: `luna_items_prompts.txt` now captures a Luna Midori usage prompt for `field_rations.png`, aligning with the latest placeholder instructions and removing the blocker for Task Master review.【F:luna_items_prompts.txt†L11-L13】
+
+requesting review from the Task Master.

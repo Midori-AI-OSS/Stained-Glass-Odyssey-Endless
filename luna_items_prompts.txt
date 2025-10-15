@@ -4,8 +4,10 @@ Balanced Diet: Luna seated at a sunlit wooden table, savoring a balanced plate p
 
 
 === Missing Cards Art ===
-None detected — card art glyphs present for plugin cards.
+Oracle Prayer Charm (oracleprayercharm.png): Luna Midori clasping a delicate silver prayer charm against her chest, etched with tiny constellations and a central radiant gem that blooms with warm golden light; soft rays spill across a parchment altar as she whispers a blessing, hinting at protective healing magic. Render as a cozy, painterly illustration suitable for a small card icon.
+
 
 === Missing Relics Art ===
-None detected — relic art glyphs present for plugin relics.
+Field Rations (field_rations.png): Luna Midori perched at a twilight camp table, unpacking a weathered satchel of neatly wrapped ration packs while lifting a steaming tin cup and a faintly glowing restorative vial; cool moonlight mixes with ember sparks to convey post-battle recovery. Stylize as a crisp overhead concept-art painting.
 
+Featherweight Anklet (featherweight_anklet.png): Luna Midori fastening a sleek metal anklet studded with azure runes as translucent feather charms trail mid-sway above a blurred cobblestone path; subtle motion blur and airy lighting emphasize the surge of agility and speed she feels. Paint in a vibrant fantasy UI art style with high contrast.
