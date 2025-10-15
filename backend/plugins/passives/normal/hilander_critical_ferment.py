@@ -116,10 +116,7 @@ class HilanderCriticalFerment:
         ]
 
         if cls.get_stacks(attacker) == 0:
-            cb = getattr(attacker, "_hilander_crit_cb", None)
-            if cb:
-                BUS.unsubscribe("critical_hit", cb)
-                delattr(attacker, "_hilander_crit_cb")
+            cls._clear_bus_listener(attacker)
 
     @classmethod
     def get_stacks(cls, target: "Stats") -> int:
@@ -129,6 +126,19 @@ class HilanderCriticalFerment:
             for effect in getattr(target, "_active_effects", [])
             if effect.name.startswith(f"{cls.id}_crit_stack_") and effect.name.endswith("_rate")
         )
+
+    @staticmethod
+    def _clear_bus_listener(target: "Stats") -> None:
+        """Remove the critical hit callback if it was registered."""
+        callback = getattr(target, "_hilander_crit_cb", None)
+        if callback is not None:
+            BUS.unsubscribe("critical_hit", callback)
+        if hasattr(target, "_hilander_crit_cb"):
+            delattr(target, "_hilander_crit_cb")
+
+    async def on_defeat(self, owner: "Stats") -> None:
+        """Clean up any lingering bus listener when Hilander is defeated."""
+        self._clear_bus_listener(owner)
 
     @classmethod
     def get_description(cls) -> str:
