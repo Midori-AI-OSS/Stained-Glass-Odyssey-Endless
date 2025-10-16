@@ -34,4 +34,8 @@ Introduce **Momentum Gyro**, a 2★ relic that rewards repeatedly striking the s
 - Please document Momentum Gyro in `.codex/implementation/relic-inventory.md` (and related references) so contributors can find the numbers.
 - Add the placeholder art `frontend/src/lib/assets/relics/2star/momentumgyro.png` to keep the reward catalog consistent.
 
-more work needed
+## Coder notes (2025-02-16)
+- ✅ Added Momentum Gyro to `.codex/implementation/relic-inventory.md`
+- ✅ Added placeholder art prompt to `luna_items_prompts.txt` for momentumgyro.png
+
+ready for review
