@@ -427,32 +427,53 @@ async def _run_player_turn_iteration(
 
     await target_manager.maybe_inflict_dot(member, damage)
     targets_hit = 1
-    if getattr(member.damage_type, "id", "").lower() == "wind":
-        targets_hit += await _handle_wind_spread(
+    animation_targets_hit = targets_hit
+    wind_targets: list[tuple[Any, Any]] | None = None
+    damage_type_id = getattr(member.damage_type, "id", "").lower()
+    if damage_type_id == "wind":
+        wind_targets = _collect_wind_spread_targets(
             context,
-            member,
             target_index,
+            target_foe,
         )
+        animation_targets_hit += len(wind_targets)
 
     await BUS.emit_async("action_used", member, target_foe, damage)
-    base_wait, _, total_duration = compute_multi_hit_timing(member, targets_hit)
+    base_wait, per_duration, total_duration = compute_multi_hit_timing(
+        member,
+        animation_targets_hit,
+    )
+    animation_started = False
     if total_duration > 0:
         await BUS.emit_async(
             "animation_start",
             member,
-            targets_hit,
+            animation_targets_hit,
             total_duration,
         )
-        try:
-            if base_wait > 0:
-                await pace_sleep(base_wait / TURN_PACING)
-        finally:
-            await BUS.emit_async(
-                "animation_end",
-                member,
-                targets_hit,
-                total_duration,
-            )
+        animation_started = True
+
+    additional_hits = 0
+    if damage_type_id == "wind":
+        additional_hits = await _handle_wind_spread(
+            context,
+            member,
+            target_index,
+            additional_targets=wind_targets,
+            per_duration=per_duration,
+        )
+        targets_hit = 1 + additional_hits
+
+    if animation_started and base_wait > 0:
+        await pace_sleep(base_wait / TURN_PACING)
+
+    if animation_started:
+        await BUS.emit_async(
+            "animation_end",
+            member,
+            animation_targets_hit,
+            total_duration,
+        )
 
     await impact_pause(member, targets_hit, duration=total_duration)
     await context.registry.trigger(
@@ -619,10 +640,38 @@ async def _handle_ultimate(
         )
 
 
+def _collect_wind_spread_targets(
+    context: TurnLoopContext,
+    target_index: int,
+    target_foe: Any,
+) -> list[tuple[Any, Any]]:
+    try:
+        primary_target = context.foes[target_index]
+    except Exception:
+        primary_target = target_foe
+
+    if primary_target is None:
+        primary_target = target_foe
+
+    try:
+        foe_snapshot = list(zip(list(context.foes), list(context.foe_effects)))
+    except Exception:
+        return []
+
+    return [
+        (extra_foe, extra_manager)
+        for extra_foe, extra_manager in foe_snapshot
+        if extra_foe is not primary_target and getattr(extra_foe, "hp", 0) > 0
+    ]
+
+
 async def _handle_wind_spread(
     context: TurnLoopContext,
     member: Any,
     target_index: int,
+    *,
+    additional_targets: list[tuple[Any, Any]] | None = None,
+    per_duration: float | None = None,
 ) -> int:
     try:
         living_targets = sum(
@@ -639,18 +688,25 @@ async def _handle_wind_spread(
     except Exception:
         target_foe = None
 
-    foe_snapshot = list(zip(list(context.foes), list(context.foe_effects)))
     defeated_during_spread = False
 
-    per_duration = animation_per_target_duration(member)
-    additional_targets = [
-        (extra_foe, extra_manager)
-        for extra_foe, extra_manager in foe_snapshot
-        if extra_foe is not target_foe and getattr(extra_foe, "hp", 0) > 0
-    ]
+    if additional_targets is None:
+        additional_targets = _collect_wind_spread_targets(
+            context,
+            target_index,
+            target_foe,
+        )
+    else:
+        additional_targets = list(additional_targets)
+
+    resolved_per_duration = (
+        per_duration
+        if per_duration is not None
+        else animation_per_target_duration(member)
+    )
 
     for extra_foe, extra_manager in additional_targets:
-        await pace_per_target(member, duration=per_duration)
+        await pace_per_target(member, duration=resolved_per_duration)
         if getattr(extra_foe, "hp", 0) <= 0:
             continue
         prepare_additional_hit_metadata(member)
