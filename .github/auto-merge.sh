@@ -20,6 +20,10 @@ if ! command -v gh >/dev/null 2>&1; then
   yay -Syu --noconfirm github-cli
 fi
 
+if ! command -v jq >/dev/null 2>&1; then
+  yay -Syu --noconfirm jq
+fi
+
 git config --global --add safe.directory /__w/Midori-AI-AutoFighter/Midori-AI-AutoFighter
 
 REPO_NAME_WITH_OWNER="${GITHUB_REPOSITORY:-}"
@@ -27,7 +31,7 @@ if [[ -z "$REPO_NAME_WITH_OWNER" ]]; then
   REPO_NAME_WITH_OWNER="$(gh repo view --json nameWithOwner --jq '.nameWithOwner')"
 fi
 
-MAX_POLL_ATTEMPTS=10
+MAX_POLL_ATTEMPTS=55
 REACTION_DETECTED=0
 RECENT_COMMENT_WINDOW_SECONDS=43200
 RECENT_COMMENT_WINDOW_HOURS=$(( RECENT_COMMENT_WINDOW_SECONDS / 3600 ))
