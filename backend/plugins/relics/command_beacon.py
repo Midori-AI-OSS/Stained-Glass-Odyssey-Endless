@@ -29,8 +29,12 @@ class CommandBeacon(RelicBase):
         # Track active SPD buffs to remove them at turn end
         active_buffs: dict[int, tuple[object, object]] = {}
 
-        async def _on_turn_start(*_args) -> None:
+        async def _on_turn_start(entity) -> None:
             """Apply SPD boost to all allies except the fastest, who takes HP cost."""
+            # Only trigger when an ally starts their turn, not when enemies do
+            if entity not in party.members:
+                return
+
             stacks = party.relics.count(self.id)
             if stacks <= 0 or not party.members:
                 return

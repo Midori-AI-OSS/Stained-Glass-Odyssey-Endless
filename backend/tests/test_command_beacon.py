@@ -1,11 +1,12 @@
 """Tests for Command Beacon relic mechanics."""
 
 import asyncio
+
 import pytest
 
+from autofighter.party import Party
 from autofighter.relics import apply_relics
 from autofighter.relics import award_relic
-from autofighter.party import Party
 from autofighter.stats import BUS
 from autofighter.stats import Stats
 
@@ -33,8 +34,8 @@ async def test_command_beacon_identifies_fastest_ally():
         award_relic(party, "command_beacon")
         await apply_relics(party)
 
-        # Trigger turn_start
-        await BUS.emit_async("turn_start", party)
+        # Trigger turn_start with a party member (simulating ally turn)
+        await BUS.emit_async("turn_start", party.members[0])
         await asyncio.sleep(0)
 
         # Fastest ally (member[1] with SPD=10) should pay the cost
@@ -64,8 +65,8 @@ async def test_command_beacon_spd_boost():
     initial_spd_1 = party.members[1].spd
     initial_spd_2 = party.members[2].spd
 
-    # Trigger turn_start
-    await BUS.emit_async("turn_start", party)
+    # Trigger turn_start with a party member (simulating ally turn)
+    await BUS.emit_async("turn_start", party.members[0])
     await asyncio.sleep(0)
 
     # Non-fastest allies should have +15% SPD
@@ -94,8 +95,8 @@ async def test_command_beacon_hp_cost():
     award_relic(party, "command_beacon")
     await apply_relics(party)
 
-    # Trigger turn_start
-    await BUS.emit_async("turn_start", party)
+    # Trigger turn_start with a party member (simulating ally turn)
+    await BUS.emit_async("turn_start", party.members[0])
     await asyncio.sleep(0)
 
     # Fastest ally should have lost 3% HP (30 HP)
@@ -130,8 +131,8 @@ async def test_command_beacon_multi_stack():
 
     initial_spd_0 = party.members[0].spd
 
-    # Trigger turn_start
-    await BUS.emit_async("turn_start", party)
+    # Trigger turn_start with a party member (simulating ally turn)
+    await BUS.emit_async("turn_start", party.members[0])
     await asyncio.sleep(0)
 
     # Non-fastest ally should have +30% SPD (2 stacks × 15%)
@@ -159,8 +160,8 @@ async def test_command_beacon_buff_expires_at_turn_end():
 
     initial_spd_0 = party.members[0].spd
 
-    # Trigger turn_start
-    await BUS.emit_async("turn_start", party)
+    # Trigger turn_start with a party member (simulating ally turn)
+    await BUS.emit_async("turn_start", party.members[0])
     await asyncio.sleep(0)
 
     # Should have SPD buff
@@ -207,8 +208,8 @@ async def test_command_beacon_skips_dead_allies():
     BUS.subscribe("relic_effect", _track_buff)
 
     try:
-        # Trigger turn_start
-        await BUS.emit_async("turn_start", party)
+        # Trigger turn_start with a party member (simulating ally turn)
+        await BUS.emit_async("turn_start", party.members[1])
         await asyncio.sleep(0)
 
         # Should only buff 1 ally (member[2]), not the dead one
@@ -252,8 +253,8 @@ async def test_command_beacon_coordination_events():
         award_relic(party, "command_beacon")
         await apply_relics(party)
 
-        # Trigger turn_start
-        await BUS.emit_async("turn_start", party)
+        # Trigger turn_start with a party member (simulating ally turn)
+        await BUS.emit_async("turn_start", party.members[0])
         await asyncio.sleep(0)
 
         # Should have both cost and coordination events
