@@ -9,7 +9,6 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 sys.modules.pop("services", None)
-import services  # noqa: E402
 from runs.lifecycle import RECENT_FOE_COOLDOWN  # noqa: E402
 from runs.lifecycle import battle_snapshots  # noqa: E402
 from runs.lifecycle import battle_tasks  # noqa: E402

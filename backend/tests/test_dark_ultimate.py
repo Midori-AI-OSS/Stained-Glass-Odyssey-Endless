@@ -1,15 +1,14 @@
-import asyncio
 import random
 import types
 
 import pytest
+from tests.helpers import call_maybe_async
 
 from autofighter.effects import DamageOverTime
 from autofighter.effects import EffectManager
 from autofighter.stats import BUS
 from autofighter.stats import Stats
 from plugins.damage_types.dark import Dark
-from tests.helpers import call_maybe_async
 
 
 class DummyPlayer(Stats):

@@ -1,13 +1,13 @@
 import asyncio
 
 import pytest
+from tests.helpers import call_maybe_async
 
 from autofighter.effects import DamageOverTime
 from autofighter.effects import EffectManager
 from autofighter.stats import Stats
 from autofighter.stats import set_battle_active
 from plugins.damage_types.lightning import Lightning
-from tests.helpers import call_maybe_async
 
 
 @pytest.mark.asyncio

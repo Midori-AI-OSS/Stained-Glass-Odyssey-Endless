@@ -35,6 +35,8 @@ text via the `about` field returned by the backend.
 - 3★ Greed Engine – Party loses 1% HP per turn, gains +50% gold, and raises rare drop rate by 0.5% plus 0.1% per extra stack.
 - 3★ Stellar Compass – Critical hits grant permanent +1.5% ATK and gold rate.
 - 3★ Echoing Drum – First attack each battle repeats at 25% power.
+- 3★ Siege Banner – At battle start, all enemies lose 15% DEF for 2 turns per stack. Each enemy killed grants the party +4% ATK and +4% DEF permanently.
+- 3★ Command Beacon – At turn start, fastest ally takes 3% Max HP damage per stack. All other allies gain +15% SPD for that turn per stack.
 - 4★ Null Lantern – Removes shops; fights drop additional pulls.
 - 4★ Traveler's Charm – When hit, gain +25% DEF and +10% mitigation next turn per stack.
 - 4★ Timekeeper's Hourglass – Each turn, 10% base chance (+1% per additional stack) for ready allies to gain a 2-turn +20% SPD buff per stack.

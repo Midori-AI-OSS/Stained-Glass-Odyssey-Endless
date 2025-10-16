@@ -3,8 +3,8 @@ from __future__ import annotations
 
 import asyncio
 import copy
-import inspect
 from dataclasses import dataclass
+import inspect
 from typing import Sequence
 
 from battle_logging.writers import BattleLogger

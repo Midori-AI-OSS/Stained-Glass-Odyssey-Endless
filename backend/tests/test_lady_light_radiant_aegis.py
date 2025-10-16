@@ -1,8 +1,7 @@
 import asyncio
 
-import asyncio
-
 import pytest
+from tests.helpers import call_maybe_async
 
 from autofighter.effects import EffectManager
 from autofighter.stats import BUS
@@ -11,7 +10,6 @@ from plugins.damage_types.light import Light
 from plugins.dots.bleed import Bleed
 from plugins.hots.radiant_regeneration import RadiantRegeneration
 from plugins.passives.normal.lady_light_radiant_aegis import LadyLightRadiantAegis
-from tests.helpers import call_maybe_async
 
 
 class DummyLightUser(Stats):

@@ -2,12 +2,12 @@ from __future__ import annotations
 
 from quart import Blueprint
 from quart import jsonify
+from tracking import log_menu_action
+from tracking import log_overlay_action
 
 # Import plugin registries directly to build metadata
 from autofighter.cards import _registry as card_registry
 from autofighter.relics import _registry as relic_registry
-from tracking import log_menu_action
-from tracking import log_overlay_action
 
 bp = Blueprint("catalog", __name__, url_prefix="/catalog")
 

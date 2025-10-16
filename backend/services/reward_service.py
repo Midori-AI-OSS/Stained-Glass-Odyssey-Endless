@@ -8,6 +8,7 @@ from runs.lifecycle import ensure_reward_staging
 from runs.lifecycle import load_map
 from runs.lifecycle import save_map
 from runs.party_manager import load_party
+from runs.party_manager import save_party
 from tracking import log_game_action
 
 from autofighter.cards import instantiate_card

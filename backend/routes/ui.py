@@ -6,6 +6,7 @@ import json
 import sys
 from typing import Any
 
+from error_context import format_exception_with_context
 from quart import Blueprint
 from quart import jsonify
 from quart import request
@@ -34,8 +35,6 @@ from services.run_service import update_party
 from services.run_service import wipe_save
 from tracking import log_game_action
 from tracking import log_menu_action
-
-from error_context import format_exception_with_context
 
 from autofighter.rooms.shop import serialize_shop_payload
 
@@ -292,7 +291,7 @@ async def get_ui_state() -> tuple[str, int, dict[str, Any]]:
                             context = RunModifierContext.from_dict(stored_context)
                         except Exception:
                             context = None
-                
+
                 shop_view = serialize_shop_payload(
                     party_snapshot,
                     stored_stock,

@@ -1,16 +1,14 @@
 import pytest
 
-import pytest
-
 from autofighter.rooms.utils import _serialize
 from autofighter.stats import BUS
 from autofighter.stats import Stats
 from autofighter.stats import set_battle_active
+from plugins.characters._base import PlayerBase
+from plugins.characters.luna import Luna
 from plugins.damage_types.generic import Generic
 from plugins.damage_types.ice import Ice
 from plugins.damage_types.wind import Wind
-from plugins.characters._base import PlayerBase
-from plugins.characters.luna import Luna
 
 
 def test_charge_accumulates_and_caps():

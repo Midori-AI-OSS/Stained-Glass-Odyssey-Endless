@@ -7,8 +7,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from autofighter.mapgen import MapNode
 from autofighter.party import Party
 from autofighter.rooms.utils import _choose_foe
-from plugins.damage_types._base import DamageTypeBase
 from plugins.characters import Player
+from plugins.damage_types._base import DamageTypeBase
 
 
 def test_choose_foe_instantiates_damage_type() -> None:

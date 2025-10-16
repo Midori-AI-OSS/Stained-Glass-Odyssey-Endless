@@ -14,8 +14,8 @@ from battle_logging.writers import start_run_logging
 from runs.encryption import get_fernet
 from runs.encryption import get_save_manager
 from runs.lifecycle import battle_snapshots
-from runs.lifecycle import empty_reward_staging
 from runs.lifecycle import emit_battle_end_for_runs
+from runs.lifecycle import empty_reward_staging
 from runs.lifecycle import load_map
 from runs.lifecycle import purge_all_run_state
 from runs.lifecycle import purge_run_state

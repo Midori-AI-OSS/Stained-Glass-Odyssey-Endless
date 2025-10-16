@@ -1,7 +1,7 @@
 import pytest
 
-from plugins.characters.foe_base import FoeBase
 from plugins.characters._base import PlayerBase
+from plugins.characters.foe_base import FoeBase
 
 
 @pytest.mark.asyncio
