@@ -39,10 +39,19 @@ class DummyMember:
         self.atk = atk
         self.id = "player"
         self.damage_type = SimpleNamespace(id="wind")
+        self.animation_per_target = 0.25
 
 
 @pytest.mark.asyncio
-async def test_wind_spread_applies_damage_after_first_extra_foe_dies():
+async def test_wind_spread_applies_damage_after_first_extra_foe_dies(monkeypatch):
+    async def fake_sleep(multiplier: float = 1.0) -> None:
+        return None
+
+    monkeypatch.setattr(
+        "autofighter.rooms.battle.pacing.pace_sleep",
+        fake_sleep,
+        raising=True,
+    )
     target = DummyFoe("target", hp=999.0)
     first_extra = DummyFoe("extra-1", hp=10.0)
     second_extra = DummyFoe("extra-2", hp=50.0)
@@ -72,3 +81,55 @@ async def test_wind_spread_applies_damage_after_first_extra_foe_dies():
     assert second_extra.hp < 50.0
     assert any(second_extra is args[1] for args, _ in context.registry.hit_calls)
     assert len(context.foes) == len(context.foe_effects)
+
+
+@pytest.mark.asyncio
+async def test_wind_spread_uses_animation_per_target_for_pacing(monkeypatch):
+    from autofighter.rooms.battle import pacing as battle_pacing
+
+    recorded: list[float] = []
+
+    async def fake_sleep(multiplier: float = 1.0) -> None:
+        recorded.append(multiplier)
+
+    monkeypatch.setattr(
+        "autofighter.rooms.battle.pacing.pace_sleep",
+        fake_sleep,
+        raising=True,
+    )
+
+    original_turn_pacing = battle_pacing.TURN_PACING
+    try:
+        battle_pacing.set_turn_pacing(original_turn_pacing)
+
+        target = DummyFoe("target", hp=999.0)
+        first_extra = DummyFoe("extra-1", hp=50.0)
+        second_extra = DummyFoe("extra-2", hp=50.0)
+
+        member = DummyMember(atk=200.0)
+        member.animation_per_target = 0.4
+
+        context = SimpleNamespace()
+        context.foes = [target, first_extra, second_extra]
+        context.foe_effects = [DummyEffectManager() for _ in context.foes]
+        context.enrage_mods = [None for _ in context.foes]
+        context.registry = DummyRegistry()
+        context.combat_party = SimpleNamespace(members=[])
+        context.credit_kwargs = {
+            "credited_foe_ids": set(),
+            "combat_party": SimpleNamespace(members=[]),
+            "party": SimpleNamespace(members=[]),
+            "room": SimpleNamespace(node=SimpleNamespace(index=0)),
+        }
+        context.exp_reward = 0
+        context.temp_rdr = 0.0
+
+        additional_hits = await _handle_wind_spread(context, member, target_index=0)
+
+        expected_multiplier = member.animation_per_target / battle_pacing.TURN_PACING
+        assert additional_hits == 2
+        assert recorded
+        assert len(recorded) == additional_hits
+        assert all(pytest.approx(expected_multiplier) == value for value in recorded)
+    finally:
+        battle_pacing.set_turn_pacing(original_turn_pacing)

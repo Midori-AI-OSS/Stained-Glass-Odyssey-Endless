@@ -8,15 +8,18 @@ from typing import Any
 
 from autofighter.effects import EffectManager
 from autofighter.stats import BUS
-from autofighter.stats import calc_animation_time
 from autofighter.summons.manager import SummonManager
 
 from ..logging import queue_log
+from ..pacing import TURN_PACING
 from ..pacing import _EXTRA_TURNS
 from ..pacing import YIELD_MULTIPLIER
 from ..pacing import _pace
+from ..pacing import animation_per_target_duration
 from ..pacing import clear_extra_turns_for
+from ..pacing import compute_multi_hit_timing
 from ..pacing import impact_pause
+from ..pacing import pace_per_target
 from ..pacing import pace_sleep
 from ..targeting import select_aggro_target
 from ..turn_helpers import credit_if_dead
@@ -432,25 +435,26 @@ async def _run_player_turn_iteration(
         )
 
     await BUS.emit_async("action_used", member, target_foe, damage)
-    duration = calc_animation_time(member, targets_hit)
-    if duration > 0:
+    base_wait, _, total_duration = compute_multi_hit_timing(member, targets_hit)
+    if total_duration > 0:
         await BUS.emit_async(
             "animation_start",
             member,
             targets_hit,
-            duration,
+            total_duration,
         )
         try:
-            await asyncio.sleep(duration)
+            if base_wait > 0:
+                await pace_sleep(base_wait / TURN_PACING)
         finally:
             await BUS.emit_async(
                 "animation_end",
                 member,
                 targets_hit,
-                duration,
+                total_duration,
             )
 
-    await impact_pause(member, targets_hit, duration=duration)
+    await impact_pause(member, targets_hit, duration=total_duration)
     await context.registry.trigger(
         "action_taken",
         member,
@@ -638,9 +642,16 @@ async def _handle_wind_spread(
     foe_snapshot = list(zip(list(context.foes), list(context.foe_effects)))
     defeated_during_spread = False
 
-    for extra_foe, extra_manager in foe_snapshot:
-        if extra_foe is target_foe or getattr(extra_foe, "hp", 0) <= 0:
-            await pace_sleep(YIELD_MULTIPLIER)
+    per_duration = animation_per_target_duration(member)
+    additional_targets = [
+        (extra_foe, extra_manager)
+        for extra_foe, extra_manager in foe_snapshot
+        if extra_foe is not target_foe and getattr(extra_foe, "hp", 0) > 0
+    ]
+
+    for extra_foe, extra_manager in additional_targets:
+        await pace_per_target(member, duration=per_duration)
+        if getattr(extra_foe, "hp", 0) <= 0:
             continue
         prepare_additional_hit_metadata(member)
         extra_damage = await extra_foe.apply_damage(

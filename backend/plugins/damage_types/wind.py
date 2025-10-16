@@ -39,8 +39,7 @@ class Wind(DamageTypeBase):
 
     async def ultimate(self, actor, allies, enemies):
         """Distribute attack across rapid hits on all foes."""
-        from autofighter.rooms.battle.pacing import YIELD_MULTIPLIER
-        from autofighter.rooms.battle.pacing import pace_sleep
+        from autofighter.rooms.battle.pacing import pace_per_target
         from autofighter.rooms.battle.targeting import select_aggro_target
 
         # Consume ultimate; bail if not ready
@@ -108,7 +107,7 @@ class Wind(DamageTypeBase):
                 rem -= 1
             per_hit = max(1, int(per_hit))
             dmg = await foe.apply_damage(per_hit, attacker=actor, action_name="Wind Ultimate")
-            await pace_sleep(YIELD_MULTIPLIER)
+            await pace_per_target(actor)
             try:
                 await BUS.emit_async("hit_landed", actor, foe, dmg, "attack", "wind_ultimate")
             except Exception:

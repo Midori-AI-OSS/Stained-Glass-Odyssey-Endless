@@ -17,8 +17,7 @@ class Generic(DamageTypeBase):
 
     async def ultimate(self, actor, allies, enemies):
         """Split the user's attack into 64 rapid strikes on one target."""
-        from autofighter.rooms.battle.pacing import YIELD_MULTIPLIER
-        from autofighter.rooms.battle.pacing import pace_sleep
+        from autofighter.rooms.battle.pacing import pace_per_target
         from autofighter.rooms.battle.targeting import select_aggro_target
 
         if not await self.consume_ultimate(actor):
@@ -58,7 +57,7 @@ class Generic(DamageTypeBase):
                 break
             dmg = base + (1 if i < remainder else 0)
             await target.apply_damage(dmg, attacker=actor, action_name="Generic Ultimate")
-            await pace_sleep(YIELD_MULTIPLIER)
+            await pace_per_target(actor)
             await BUS.emit_async(
                 "hit_landed", actor, target, dmg, "attack", "generic_ultimate"
             )

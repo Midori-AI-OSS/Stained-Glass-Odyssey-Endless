@@ -16,25 +16,22 @@ class Dark(DamageTypeBase):
     color: tuple[int, int, int] = (145, 0, 145)
 
     async def on_action(self, actor, allies, enemies) -> bool:
-        from autofighter.rooms.battle.pacing import YIELD_MULTIPLIER
-        from autofighter.rooms.battle.pacing import pace_sleep
+        from autofighter.rooms.battle.pacing import pace_per_target
 
         total_drained = 0
 
         for member in allies:
             if getattr(member, "hp", 0) <= 1:
-                await pace_sleep(YIELD_MULTIPLIER)
                 continue
 
             drain = max(int(member.hp * 0.10), 1)
             drain = min(drain, member.hp - 1)
             if drain <= 0:
-                await pace_sleep(YIELD_MULTIPLIER)
                 continue
 
             drained = await member.apply_cost_damage(drain)
             total_drained += max(int(drained), 0)
-            await pace_sleep(YIELD_MULTIPLIER)
+            await pace_per_target(actor)
 
         if total_drained > 0:
             variance = random.uniform(0.99, 1.01)
@@ -96,8 +93,7 @@ class Dark(DamageTypeBase):
     ) -> bool:
         """Strike a foe six times, scaling with allied DoT stacks."""
 
-        from autofighter.rooms.battle.pacing import YIELD_MULTIPLIER
-        from autofighter.rooms.battle.pacing import pace_sleep
+        from autofighter.rooms.battle.pacing import pace_per_target
         from autofighter.rooms.battle.targeting import select_aggro_target
 
         if not await self.consume_ultimate(actor):
@@ -121,7 +117,7 @@ class Dark(DamageTypeBase):
             except ValueError:
                 break
             dealt = await target.apply_damage(dmg, attacker=actor, action_name="Dark Ultimate")
-            await pace_sleep(YIELD_MULTIPLIER)
+            await pace_per_target(actor)
             await BUS.emit_async("damage", actor, target, dealt)
         return True
 

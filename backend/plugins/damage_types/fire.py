@@ -43,8 +43,7 @@ class Fire(DamageTypeBase):
 
     async def ultimate(self, actor: Stats, allies: list[Stats], enemies: list[Stats]) -> bool:
         """Blast all foes for the caster's attack and try to ignite them."""
-        from autofighter.rooms.battle.pacing import YIELD_MULTIPLIER
-        from autofighter.rooms.battle.pacing import pace_sleep
+        from autofighter.rooms.battle.pacing import pace_per_target
         from autofighter.rooms.battle.targeting import select_aggro_target
 
         await super().ultimate(actor, allies, enemies)
@@ -58,7 +57,7 @@ class Fire(DamageTypeBase):
             except ValueError:
                 break
             dealt = await foe.apply_damage(base, attacker=actor, action_name="Fire Ultimate")
-            await pace_sleep(YIELD_MULTIPLIER)
+            await pace_per_target(actor)
             mgr = getattr(foe, "effect_manager", None)
             if mgr is None:
                 mgr = EffectManager(foe)
