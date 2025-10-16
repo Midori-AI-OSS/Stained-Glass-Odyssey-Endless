@@ -6,12 +6,12 @@ Coders, reviewers, and managers should verify these markers whenever a task is
 touched.
 
 ## Allowed Status Markers
-- `ready for review` &mdash; the implementation is complete and waiting for
+- `ready for review` — the implementation is complete and waiting for
   feedback.
-- `requesting review from the Task Master` &mdash; reviewers append this when
+- `requesting review from the Task Master` — reviewers append this when
   they hand a fully-audited task back to the Task Master. Treat it as an
   extension of the `ready for review` state rather than a missing marker.
-- `more work needed` &mdash; the contributor is still iterating. Follow the tag
+- `more work needed` — the contributor is still iterating. Follow the tag
   with a short summary (and optionally a percentage complete) so the next
   person understands what remains.
 
