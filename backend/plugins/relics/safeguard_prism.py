@@ -48,6 +48,10 @@ class SafeguardPrism(RelicBase):
             if current_stacks <= 0:
                 return
 
+            # Skip if ally is dead (prevent resurrection)
+            if target.hp <= 0:
+                return
+
             # Check if ally is below 60% HP
             if target.hp > target.max_hp * 0.60:
                 return
