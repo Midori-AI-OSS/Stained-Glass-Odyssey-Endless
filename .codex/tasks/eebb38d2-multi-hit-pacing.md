@@ -21,4 +21,10 @@ Coder, fix the battle pacing so multi-hit sequences (e.g., wind spreads and ulti
 ## Coder notes (2025-02-16)
 - Expanded `.codex/implementation/damage-healing.md` with timeline breakdown, implementation guidance, and testing tips covering the multi-hit pacing helpers.
 
-ready for review
+## Auditor notes (2025-02-19)
+- Re-ran `uv sync` and `uv run pytest tests/test_damage_type_pacing.py` to confirm the new regression coverage executes cleanly.
+- Spot-checked `_handle_wind_spread` plus all multi-hit damage-type ultimates to verify they await `pace_per_target` before each additional strike and skip defeated targets without burning extra pacing budget.
+- Confirmed `compute_multi_hit_timing` integrates with the turn loop so animation bus events use the resolved `base_wait`/`total_duration` while spread helpers share the same `per_duration` budget.
+- Reviewed `.codex/implementation/damage-healing.md` to ensure the helper behavior and testing guidance are now documented for future contributors.
+
+requesting review from the Task Master
