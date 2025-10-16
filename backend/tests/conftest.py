@@ -306,6 +306,7 @@ def _ensure_runs_module() -> None:
         "tasks": 0,
         "snapshots": 0,
         "locks": 0,
+        "reward_locks": 0,
     }
     sys.modules["runs.lifecycle"] = lifecycle
     setattr(runs, "lifecycle", lifecycle)

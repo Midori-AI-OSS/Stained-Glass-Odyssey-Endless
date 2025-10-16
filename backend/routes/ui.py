@@ -13,6 +13,7 @@ from quart import request
 from runs.encryption import get_save_manager
 from runs.lifecycle import battle_snapshots
 from runs.lifecycle import battle_tasks
+from runs.lifecycle import has_pending_rewards
 from runs.lifecycle import load_map
 from runs.lifecycle import save_map
 from runs.party_manager import load_party
@@ -492,6 +493,7 @@ async def handle_ui_action() -> tuple[str, int, dict[str, Any]]:
                 state.get("awaiting_card")
                 or state.get("awaiting_relic")
                 or state.get("awaiting_loot")
+                or has_pending_rewards(state)
             ):
                 return create_error_response("Cannot advance room while rewards are pending", 400)
 
