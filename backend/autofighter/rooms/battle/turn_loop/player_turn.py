@@ -428,15 +428,30 @@ async def _run_player_turn_iteration(
     await target_manager.maybe_inflict_dot(member, damage)
     targets_hit = 1
     animation_targets_hit = targets_hit
-    wind_targets: list[tuple[Any, Any]] | None = None
-    damage_type_id = getattr(member.damage_type, "id", "").lower()
-    if damage_type_id == "wind":
-        wind_targets = _collect_wind_spread_targets(
-            context,
-            target_index,
-            target_foe,
-        )
-        animation_targets_hit += len(wind_targets)
+    spread_targets: list[tuple[Any, Any]] | None = None
+    damage_type = getattr(member, "damage_type", None)
+    damage_type_id = getattr(damage_type, "id", "").lower()
+    spread_behavior: Any | None = None
+    if damage_type is not None:
+        get_turn_spread = getattr(damage_type, "get_turn_spread", None)
+        if callable(get_turn_spread):
+            try:
+                spread_behavior = get_turn_spread()
+            except Exception:
+                spread_behavior = None
+    if spread_behavior is not None:
+        collect_spread = getattr(spread_behavior, "collect_targets", None)
+        if callable(collect_spread):
+            try:
+                spread_targets = collect_spread(
+                    context,
+                    target_index,
+                    target_foe,
+                )
+            except Exception:
+                spread_targets = []
+        if spread_targets:
+            animation_targets_hit += len(spread_targets)
 
     await BUS.emit_async("action_used", member, target_foe, damage)
     base_wait, per_duration, total_duration = compute_multi_hit_timing(
@@ -454,15 +469,17 @@ async def _run_player_turn_iteration(
         animation_started = True
 
     additional_hits = 0
-    if damage_type_id == "wind":
-        additional_hits = await _handle_wind_spread(
-            context,
-            member,
-            target_index,
-            additional_targets=wind_targets,
-            per_duration=per_duration,
-        )
-        targets_hit = 1 + additional_hits
+    if spread_behavior is not None:
+        resolve_spread = getattr(spread_behavior, "resolve", None)
+        if callable(resolve_spread):
+            additional_hits = await resolve_spread(
+                context,
+                member,
+                target_index,
+                additional_targets=spread_targets,
+                per_duration=per_duration,
+            )
+            targets_hit = 1 + additional_hits
 
     if animation_started and base_wait > 0:
         await pace_sleep(base_wait / TURN_PACING)
