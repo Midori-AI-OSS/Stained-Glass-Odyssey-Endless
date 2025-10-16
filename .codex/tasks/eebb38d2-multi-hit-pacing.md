@@ -14,4 +14,8 @@ Coder, fix the battle pacing so multi-hit sequences (e.g., wind spreads and ulti
 - Observing a battle with multi-hit attacks shows hits spaced by the configured animation timings rather than occurring simultaneously.
 - Tests in `backend/tests/` verify multi-hit flows wait for non-trivial intervals, and existing animation timing tests continue to pass.
 
-ready for review (Lead Dev added this due to 8 coders failing to update the task...)
+## Auditor notes (2025-02-15)
+- Battle pacing helpers (`pace_per_target`, `compute_multi_hit_timing`) behave as expected and regression tests pass, but the documentation requirement was missed.
+- `.codex/implementation/damage-healing.md` still lacks any explanation of the new multi-hit timing model—please document how per-target animation pacing is calculated.
+
+more work needed

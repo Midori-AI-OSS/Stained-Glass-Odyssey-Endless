@@ -27,4 +27,9 @@ Create a mid-tier relic that turns existing damage-over-time builds into self-su
 
 ---
 
-ready for review
+## Auditor notes (2025-02-15)
+- Lifesteal math and tests look good, but two deliverables remain: attackers never enable overheal before healing, so full-HP allies cannot convert lifesteal into shields. Add `attacker.enable_overheal()` before calling `apply_healing`.
+- The placeholder art `frontend/src/lib/assets/relics/2star/catalystvials.png` is missing, so the reward UI will lack an icon.
+- Documentation updates in `.codex/implementation/relic-inventory.md` and the relic plan are present.
+
+more work needed

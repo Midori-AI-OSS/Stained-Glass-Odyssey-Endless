@@ -29,4 +29,9 @@ Our 3★ relics reward economy (Greed Engine), crit scaling (Stellar Compass), o
 
 ---
 
-ready for review
+## Auditor notes (2025-02-15)
+- Debuff/buff logic and the test suite check out, but several deliverables are incomplete.
+- `.codex/implementation/relic-inventory.md` and the relic design plan still omit Siege Banner—please add the new entry and describe the kill-stack math.
+- Add the required placeholder art `frontend/src/lib/assets/relics/3star/siegebanner.png` so the frontend can display the relic.
+
+more work needed

@@ -28,4 +28,9 @@ Our 2★ line-up focuses on Critical Boost loops, global DEF pulses, or extra ac
 
 ---
 
-ready for review
+## Auditor notes (2025-02-15)
+- Combat logic and tests cover crit-triggered dodge pulses, cooldown resets, and telemetry, but required follow-up work is still outstanding.
+- `.codex/implementation/card-inventory.md` and `.codex/planning/archive/726d03ae-card-plan.md` do not mention Tempest Pathfinder yet—add the new entry to both references.
+- `frontend/src/lib/assets/cards/Art/tempestpathfinder.png` is missing, so the reward overlay will fall back to placeholder art. Please add the requested placeholder asset.
+
+more work needed

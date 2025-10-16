@@ -29,4 +29,9 @@ Introduce **Momentum Gyro**, a 2★ relic that rewards repeatedly striking the s
 
 ---
 
-ready for review
+## Auditor notes (2025-02-15)
+- Streak tracking, buff/debuff math, and tests behave as designed, but documentation/assets remain incomplete.
+- Please document Momentum Gyro in `.codex/implementation/relic-inventory.md` (and related references) so contributors can find the numbers.
+- Add the placeholder art `frontend/src/lib/assets/relics/2star/momentumgyro.png` to keep the reward catalog consistent.
+
+more work needed

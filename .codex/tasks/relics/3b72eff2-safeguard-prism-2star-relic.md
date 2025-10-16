@@ -17,4 +17,9 @@ Two-star relics emphasize counterattacks (Vengeful Pendant), first-action repeat
 
 ---
 
-ready for review
+## Auditor notes (2025-02-15)
+- Core shielding logic fires on low-HP triggers, but implementation skips the required shield pipeline: it never enables overheal or calls `apply_healing`, instead mutating `target.shields` directly. That bypasses the diminishing-returns logic described in the requirements.
+- Please switch to `target.enable_overheal()` + `safe_async_task(target.apply_healing(...))` so shields are generated through the standard helper, and make sure the minimum heal is enforced when Max HP is small.
+- The placeholder icon `frontend/src/lib/assets/relics/2star/safeguardprism.png` is missing, so UI will not display the new art.
+
+more work needed
