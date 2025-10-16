@@ -14,4 +14,10 @@ Complete staging schema/service/confirmation tasks (`431efb19`, `e69ad95e`, `bfb
 
 ## Out of scope
 Extended test coverage and metrics instrumentation live in the companion task `tests/dc47b2ce-reward-activation-tests-metrics.md`.
-ready for review
+
+### Audit notes (2025-10-16)
+- Confirmed `backend/services/reward_service.py` now serialises confirmations under `reward_locks`, clears staging buckets, and appends activation records with bounded history.
+- Verified both `backend/routes/ui.py` and `backend/services/run_service.py` gate `advance_room` on empty staging via `has_pending_rewards` and refreshed docs in `.codex/implementation` describe the guardrails.
+- Exercised the new pytest coverage: `tests/test_reward_staging_confirmation.py` and `tests/test_reward_gate.py`.
+
+requesting review from the Task Master

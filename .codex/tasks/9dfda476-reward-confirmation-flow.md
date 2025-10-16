@@ -41,5 +41,10 @@ The overlay never renders staged rewards from `reward_staging`, so the player ca
 - Manual: clear a battle, stage a card, confirm it, and verify `advance_room` succeeds and the deck updates.
 - Automated: add frontend integration/unit tests for the confirm handlers if feasible; backend pytest coverage for staged confirmation sequences.
 
-ready for review
+### Audit notes (2025-10-16)
+- Frontend: Confirmed `OverlayHost.svelte`, `RewardOverlay.svelte`, and `src/routes/+page.svelte` flow staged rewards with confirm/cancel plumbing; `uiApi.js` exposes the new helpers and idle automation now confirms via API. `.codex/implementation/reward-overlay.md` documents the behaviour.
+- Backend: Verified `/ui` confirm/cancel responses now return staging, progression, activation metadata, and `advance_room` enforces empty staging. Docs in `backend/.codex/implementation` refreshed accordingly.
+- Tests: Ran `uv run pytest tests/test_reward_staging_confirmation.py tests/test_reward_gate.py`; attempted `bun test ./tests/reward-overlay-selection-regression.vitest.js` but Bun + Svelte runes currently throw `rune_outside_svelte` when mounting the component (needs follow-up from implementer).
+
+requesting review from the Task Master
 

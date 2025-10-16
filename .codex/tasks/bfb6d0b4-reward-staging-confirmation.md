@@ -15,4 +15,9 @@ Complete `431efb19-reward-staging-schema.md` and `e69ad95e-reward-staging-servic
 ## Out of scope
 Duplicate-prevention guardrails and regression tests live in the guardrail tasks.
 
-ready for review
+### Audit notes (2025-10-16)
+- Verified `backend/routes/rewards.py` exposes confirm/cancel endpoints backed by `services.reward_service`, which now mutates parties, clears staging, and refreshes snapshots.
+- Confirmed `cancel_reward` reopens progression steps and `cleanup_battle_state` purges lingering staging buckets when runs exit the reward flow.
+- Documentation in `backend/.codex/implementation/post-fight-loot-screen.md` and `battle-endpoint-payload.md` reflects the lifecycle updates.
+
+requesting review from the Task Master
