@@ -11,8 +11,8 @@ from autofighter.stats import BUS
 from autofighter.summons.manager import SummonManager
 
 from ..logging import queue_log
-from ..pacing import TURN_PACING
 from ..pacing import _EXTRA_TURNS
+from ..pacing import TURN_PACING
 from ..pacing import YIELD_MULTIPLIER
 from ..pacing import _pace
 from ..pacing import animation_per_target_duration
