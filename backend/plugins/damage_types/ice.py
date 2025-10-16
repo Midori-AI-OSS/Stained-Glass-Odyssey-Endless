@@ -23,8 +23,7 @@ class Ice(DamageTypeBase):
         enemies: list[Stats],
     ) -> bool:
         """Strike all foes six times, ramping damage by 30% per target."""
-        from autofighter.rooms.battle.pacing import YIELD_MULTIPLIER
-        from autofighter.rooms.battle.pacing import pace_sleep
+        from autofighter.rooms.battle.pacing import pace_per_target
         from autofighter.rooms.battle.targeting import select_aggro_target
 
         if not await self.consume_ultimate(actor):
@@ -36,6 +35,7 @@ class Ice(DamageTypeBase):
             if hits_remaining <= 0:
                 break
             bonus = 1.0
+            wave_hits = 0
             for _ in range(hits_remaining):
                 try:
                     _, enemy = select_aggro_target(enemies)
@@ -48,9 +48,11 @@ class Ice(DamageTypeBase):
                     attacker=actor,
                     action_name="Ice Ultimate",
                 )
-                await pace_sleep(YIELD_MULTIPLIER)
+                await pace_per_target(actor)
+                wave_hits += 1
                 bonus += 0.3
-            await pace_sleep(YIELD_MULTIPLIER)
+            if wave_hits > 0:
+                await pace_per_target(actor)
         return True
 
     @classmethod

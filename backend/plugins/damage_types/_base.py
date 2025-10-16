@@ -192,6 +192,22 @@ class DamageTypeBase:
             pass
         return heal
 
+    # Optional battle behavior hooks ---------------------------------------
+
+    def get_turn_spread(self) -> object | None:
+        """Return an optional turn spread helper for normal actions.
+
+        Damage types that need to fan out their basic attacks across multiple
+        targets (for example Wind's chain gusts) can override this hook to
+        provide a lightweight helper object. The helper should expose
+        ``collect_targets`` and ``resolve`` callables mirroring the internal
+        helpers used by :mod:`autofighter.rooms.battle.turn_loop.player_turn`.
+        Implementations that do not participate in multi-target pacing may
+        simply return ``None`` (the default).
+        """
+
+        return None
+
     async def ultimate(
         self,
         actor: Stats,
