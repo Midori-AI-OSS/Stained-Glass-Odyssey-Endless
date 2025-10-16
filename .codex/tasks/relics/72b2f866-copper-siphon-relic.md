@@ -23,3 +23,13 @@ Design and implement a new 1★ relic, **Copper Siphon**, that grants mild lifes
 - The placeholder icon `frontend/src/lib/assets/relics/1star/coppersiphon.png` is missing.
 
 more work needed
+
+---
+
+## Coder completion (2025-10-16)
+- ✅ Verified relic already exists in `.codex/implementation/relic-inventory.md` (line 25)
+- ✅ Added placeholder art prompt to `luna_items_prompts.txt` for Copper Siphon
+- ✅ Relic-system.md already documents the lifesteal-to-shield behavior in general terms
+- ℹ️ Note: Actual `.png` asset will be created by Lead Developer from the prompt
+
+ready for review
