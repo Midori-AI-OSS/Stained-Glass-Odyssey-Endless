@@ -16,6 +16,9 @@
 - `card_choices` (array): up to three card options with `id`, `name`, and `stars`.
 - `relic_choices` (array): up to three relic options with `id`, `name`, and `stars`.
 - `loot` (object): summary of rewards with `gold`, `card_choices`, `relic_choices`, and `items` arrays.
+- `reward_staging` (object): active staged rewards split into `cards`, `relics`, and `items`. Each staged entry now exposes a
+  `preview` block summarizing stat changes (`stats`) and trigger hooks (`triggers`) so the UI can describe the pending effect
+  before confirmation. Percentage modifiers report values in whole percents and include the number of stacks being applied.
 - `foes` (array): stats for spawned foes. Each foe entry includes a `rank` string such as `"normal"` or `"boss"` indicating encounter difficulty.
 
 Generic damage types are reserved for the Luna player character; other combatants use elemental types such as Fire, Ice, Lightning, Light, Dark, or Wind.
@@ -77,6 +80,32 @@ Example:
     "relic_choices": [],
     "items": []
   },
+  "reward_staging": {
+    "cards": [
+      {
+        "id": "arc_lightning",
+        "name": "Arc Lightning",
+        "stars": 3,
+        "about": "+255% ATK; every attack chains 50% of dealt damage to a random foe.",
+        "preview": {
+          "summary": "+255% ATK; every attack chains 50% of dealt damage to a random foe.",
+          "stats": [
+            {
+              "stat": "atk",
+              "mode": "percent",
+              "amount": 255.0,
+              "target": "party",
+              "stacks": 1,
+              "total_amount": 255.0
+            }
+          ],
+          "triggers": []
+        }
+      }
+    ],
+    "relics": [],
+    "items": []
+  },
   "foes": [
     {
       "id": "slime",
@@ -113,6 +142,10 @@ Example:
   ]
 }
 ```
+
+The preview block reports the percentage bonus the party will receive (`amount`) and the cumulative modifier once the staged
+reward is confirmed (`total_amount`). When a relic adds an additional stack, a `previous_total` field is included so clients can
+display the incremental change alongside the existing bonus.
 
 ## Testing
 - `uv run pytest tests/test_card_rewards.py::test_battle_offers_choices_and_applies_effect`

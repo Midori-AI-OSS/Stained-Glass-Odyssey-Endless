@@ -3,10 +3,15 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from dataclasses import field
 import logging
+from typing import ClassVar
+from typing import Sequence
 
 from autofighter.effects import EffectManager
 from autofighter.effects import create_stat_buff
 from autofighter.party import Party
+from autofighter.reward_preview import RewardPreviewPayload
+from autofighter.reward_preview import RewardPreviewTrigger
+from autofighter.reward_preview import build_preview_from_effects
 
 log = logging.getLogger(__name__)
 
@@ -35,6 +40,7 @@ class RelicBase:
     stars: int = 1
     effects: dict[str, float] = field(default_factory=dict)
     about: str = ""
+    preview_triggers: ClassVar[Sequence[RewardPreviewTrigger | dict[str, object]]] = ()
 
     async def apply(self, party: Party) -> None:
         from autofighter.stats import BUS  # Import here to avoid circular imports
@@ -78,6 +84,25 @@ class RelicBase:
 
     def describe(self, stacks: int) -> str:
         return self.about
+
+    def preview_summary(self) -> str | None:
+        about = getattr(self, "about", "")
+        return about.strip() or None
+
+    def build_preview(
+        self,
+        *,
+        stacks: int,
+        previous_stacks: int = 0,
+    ) -> RewardPreviewPayload:
+        return build_preview_from_effects(
+            effects=self.effects,
+            summary=self.preview_summary(),
+            triggers=self.preview_triggers,
+            stacks=max(stacks, 1),
+            previous_stacks=max(previous_stacks, 0),
+            target="party",
+        )
 
     def subscribe(self, party: Party, event: str, callback: Callable[..., object]) -> Callable[..., object]:
         from autofighter.stats import BUS
