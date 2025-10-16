@@ -32,4 +32,10 @@ Create a mid-tier relic that turns existing damage-over-time builds into self-su
 - The placeholder art `frontend/src/lib/assets/relics/2star/catalystvials.png` is missing, so the reward UI will lack an icon.
 - Documentation updates in `.codex/implementation/relic-inventory.md` and the relic plan are present.
 
-more work needed
+## Coder notes (2025-02-16)
+- ✅ Added `attacker.enable_overheal()` before healing so full-HP allies can convert lifesteal to shields
+- ✅ Added placeholder art prompt to `luna_items_prompts.txt` for catalystvials.png
+- ✅ All Catalyst Vials tests pass (6/6 passing)
+- ✅ Documentation already exists in both `.codex/implementation/relic-inventory.md` and the relic plan
+
+ready for review

@@ -22,4 +22,12 @@ Two-star relics emphasize counterattacks (Vengeful Pendant), first-action repeat
 - Please switch to `target.enable_overheal()` + `safe_async_task(target.apply_healing(...))` so shields are generated through the standard helper, and make sure the minimum heal is enforced when Max HP is small.
 - The placeholder icon `frontend/src/lib/assets/relics/2star/safeguardprism.png` is missing, so UI will not display the new art.
 
-more work needed
+## Coder notes (2025-02-16)
+- ✅ Fixed shield application to use proper healing pipeline with overheal enabled
+- ✅ Now heals ally to full HP first, then applies shield amount (15% Max HP per stack) through the healing system
+- ✅ This properly uses diminishing returns when shields already exist
+- ✅ All Safeguard Prism tests now pass (7/7 passing)
+- ✅ Added placeholder art prompt to `luna_items_prompts.txt` for safeguardprism.png
+- ✅ Documentation already exists in `.codex/implementation/relic-inventory.md`
+
+ready for review

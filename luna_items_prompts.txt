@@ -4,10 +4,20 @@ Balanced Diet: Luna seated at a sunlit wooden table, savoring a balanced plate p
 
 
 === Missing Cards Art ===
+Tempest Pathfinder (tempestpathfinder.png): Luna Midori standing atop a windswept cliff edge, brandishing a luminous compass-like pathfinder device as swirling tempest winds spiral around her in graceful arcs; translucent dodge-motion trails shimmer behind her silhouette while crackles of elemental energy suggest swift, evasive strikes. Render as a dynamic action illustration with vibrant wind effects and motion blur.
+
 Oracle Prayer Charm (oracleprayercharm.png): Luna Midori clasping a delicate silver prayer charm against her chest, etched with tiny constellations and a central radiant gem that blooms with warm golden light; soft rays spill across a parchment altar as she whispers a blessing, hinting at protective healing magic. Render as a cozy, painterly illustration suitable for a small card icon.
 
 
 === Missing Relics Art ===
+Catalyst Vials (catalystvials.png): Luna Midori carefully holding ornate glass vials filled with swirling elemental essences that glow with toxic green and violet DoT energies, as wisps of healing vapor rise from the vials and flow back to her wounds while enhancing her debuffing aura; alchemical laboratory background with bubbling potions and mystical apparatus. Render in a detailed fantasy art style with glowing liquid effects and vapor trails.
+
+Siege Banner (siegebanner.png): Luna Midori raising a battle-worn banner emblazoned with fortress emblems and siege weaponry symbols, as dark energy tendrils snake outward from the banner to weaken enemies while golden reinforcement auras pulse around fallen foes to empower her party; dramatic battlefield atmosphere with crumbling enemy defenses and rising allied strength. Render in an epic war art style with contrasting dark debuffs and bright buffs.
+
+Safeguard Prism (safeguardprism.png): Luna Midori holding an iridescent crystalline prism that emanates protective barriers of shimmering light, with translucent shield hexagons forming around her as the prism pulses when her health drops low; soft gradient auras and defensive energy patterns suggest emergency protection. Render in a mystical art style with ethereal glowing effects and crystal clarity.
+
+Momentum Gyro (momentumgyro.png): Luna Midori spinning a gleaming brass gyroscope device with concentric rings that glow brighter with each rotation, while spectral momentum trails spiral outward showing her attacks becoming more focused and powerful against a single shadowy adversary; dynamic motion lines and energy buildup effects suggest escalating offensive momentum. Render in a vibrant action art style with metallic sheen and swirling energy particles.
+
 Field Rations (field_rations.png): Luna Midori perched at a twilight camp table, unpacking a weathered satchel of neatly wrapped ration packs while lifting a steaming tin cup and a faintly glowing restorative vial; cool moonlight mixes with ember sparks to convey post-battle recovery. Stylize as a crisp overhead concept-art painting.
 
 Featherweight Anklet (featherweight_anklet.png): Luna Midori fastening a sleek metal anklet studded with azure runes as translucent feather charms trail mid-sway above a blurred cobblestone path; subtle motion blur and airy lighting emphasize the surge of agility and speed she feels. Paint in a vibrant fantasy UI art style with high contrast.

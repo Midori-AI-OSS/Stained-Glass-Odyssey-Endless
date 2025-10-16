@@ -31,6 +31,7 @@ text via the `about` field returned by the backend.
 - 2★ Guardian Charm – Lowest-HP ally gains +20% DEF at battle start.
 - 2★ Killer Instinct – Ultimates grant +75% ATK for the turn; killing blows upgrade that bonus into +50% SPD for two turns per stack.
 - 2★ Catalyst Vials – When an ally's DoT ticks, heal them for 5% of damage per stack and grant +5% Effect Hit Rate for 1 turn
+- 2★ Momentum Gyro – When an ally hits the same foe consecutively, build momentum stacks (max 5); grant attacker +5% ATK per stack per momentum level, and apply -5% mitigation to target per stack per momentum level (resets on target switch or miss)
 - 2★ Safeguard Prism – When an ally drops below 60% Max HP, grant shield worth 15% Max HP and +12% mitigation for 1 turn (1 trigger per stack per ally per battle)
 - 3★ Greed Engine – Party loses 1% HP per turn, gains +50% gold, and raises rare drop rate by 0.5% plus 0.1% per extra stack.
 - 3★ Stellar Compass – Critical hits grant permanent +1.5% ATK and gold rate.

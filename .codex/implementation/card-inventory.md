@@ -57,6 +57,7 @@ detail pane.
 - Vital Surge – +55% Max HP; while below 50% HP, +55% ATK
 - Elemental Spark – +55% ATK & +55% Effect Hit Rate; one ally's debuffs gain +5% potency
 - Guardian's Beacon – +55% DEF; at turn end, heal lowest-HP ally for 8% Max HP (+ 10% mitigation for 1 turn if Light)
+- Tempest Pathfinder – +55% Dodge Odds; when an ally crits, grant party-wide +12% dodge for 1 turn (once per turn cooldown)
 - 
 ## 3★ Cards
 - Critical Overdrive – +255% ATK; while an ally has Critical Boost, they gain +10% Crit Rate and convert excess Crit Rate to +2% Crit Damage.

@@ -33,4 +33,9 @@ Our 2★ line-up focuses on Critical Boost loops, global DEF pulses, or extra ac
 - `.codex/implementation/card-inventory.md` and `.codex/planning/archive/726d03ae-card-plan.md` do not mention Tempest Pathfinder yet—add the new entry to both references.
 - `frontend/src/lib/assets/cards/Art/tempestpathfinder.png` is missing, so the reward overlay will fall back to placeholder art. Please add the requested placeholder asset.
 
-more work needed
+## Coder notes (2025-02-16)
+- ✅ Added Tempest Pathfinder to `.codex/implementation/card-inventory.md`
+- ✅ Added Tempest Pathfinder to `.codex/planning/archive/726d03ae-card-plan.md`
+- ✅ Added placeholder art prompt to `luna_items_prompts.txt` for tempestpathfinder.png
+
+ready for review

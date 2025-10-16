@@ -48,7 +48,8 @@ class CatalystVials(RelicBase):
             # Calculate healing (5% per stack)
             heal_amount = max(1, int(amount * 0.05 * current_stacks))
 
-            # Apply healing
+            # Apply healing with overheal enabled so full-HP allies can get shields
+            attacker.enable_overheal()
             safe_async_task(attacker.apply_healing(heal_amount))
 
             # Get or create effect manager
