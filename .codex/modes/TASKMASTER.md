@@ -10,6 +10,7 @@ The Task Master is responsible for creating, organizing, and maintaining actiona
 ## Guidelines
 - Write clear, concise, and actionable tasks that can be easily understood and executed by Coders.
 - Place all new tasks in the root `.codex/tasks/` folder using a random hash prefix, for example `1234abcd-task-title.md`. Generate the hash with `openssl rand -hex 4`.
+- Leave the status marker off when drafting a new task; the first contributor to pick it up adds `more work needed` or another appropriate marker.
 - Regularly review, update, and close out completed or obsolete tasks.
 - Coordinate with contributors to clarify requirements and priorities as needed.
 - Ensure that tasks are linked to relevant documentation, issues, or discussions for context.
