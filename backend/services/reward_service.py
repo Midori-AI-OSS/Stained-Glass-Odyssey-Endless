@@ -9,12 +9,12 @@ from runs.lifecycle import load_map
 from runs.lifecycle import save_map
 from runs.party_manager import load_party
 from runs.party_manager import save_party
+from tracking import log_game_action
 
 from autofighter.cards import award_card
 from autofighter.cards import instantiate_card
 from autofighter.relics import award_relic
 from autofighter.relics import instantiate_relic
-from tracking import log_game_action
 
 
 def _serialise_staging(staging: dict[str, Any]) -> dict[str, list[object]]:
@@ -133,7 +133,11 @@ async def select_card(run_id: str, card_id: str) -> dict[str, Any]:
         "awaiting_relic": state.get("awaiting_relic", False),
         "awaiting_loot": state.get("awaiting_loot", False),
         "awaiting_next": state.get("awaiting_next", False),
-        "reward_progression": state.get("reward_progression"),
+        "reward_progression": (
+            dict(state["reward_progression"])
+            if isinstance(state.get("reward_progression"), dict)
+            else state.get("reward_progression")
+        ),
     }
 
     next_index = current_index + 1
@@ -241,7 +245,11 @@ async def select_relic(run_id: str, relic_id: str) -> dict[str, Any]:
         "awaiting_relic": state.get("awaiting_relic", False),
         "awaiting_loot": state.get("awaiting_loot", False),
         "awaiting_next": state.get("awaiting_next", False),
-        "reward_progression": state.get("reward_progression"),
+        "reward_progression": (
+            dict(state["reward_progression"])
+            if isinstance(state.get("reward_progression"), dict)
+            else state.get("reward_progression")
+        ),
     }
 
     next_index = current_index + 1
