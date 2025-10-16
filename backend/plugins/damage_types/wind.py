@@ -36,9 +36,7 @@ class WindTurnSpread:
         additional_targets: list[tuple[Any, Any]] | None = None,
         per_duration: float | None = None,
     ) -> int:
-        from autofighter.rooms.battle.turn_loop.player_turn import (
-            _handle_wind_spread,
-        )
+        from autofighter.rooms.battle.turn_loop.player_turn import _handle_wind_spread
 
         return await _handle_wind_spread(
             context,

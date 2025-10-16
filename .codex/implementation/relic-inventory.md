@@ -40,6 +40,7 @@ text via the `about` field returned by the backend.
 - 4★ Null Lantern – Removes shops; fights drop additional pulls.
 - 4★ Traveler's Charm – When hit, gain +25% DEF and +10% mitigation next turn per stack.
 - 4★ Timekeeper's Hourglass – Each turn, 10% base chance (+1% per additional stack) for ready allies to gain a 2-turn +20% SPD buff per stack.
+- 4★ Entropy Mirror – At battle start, all foes gain +30% ATK per stack. When foes deal damage, they suffer recoil equal to 10% of damage dealt per stack.
 - 5★ Paradox Hourglass – 60% chance to sacrifice up to one ally per stack (max 4); survivors gain huge stat multipliers and foes lose defense.
 - 5★ Soul Prism – After battles, revives fallen allies at 1% HP, applies a stack-scaling Max HP penalty (75% minus 5% per extra stack), and grants +5% DEF/+5% mitigation plus +2% per additional stack.
 - 5★ Omega Core – Multiplies all stats by 6x plus 1x per stack for 10 turns +2 per stack before draining escalating HP.

@@ -24,3 +24,26 @@ Deliver a high-risk relic that accelerates battles by juicing enemy damage while
 ## Documentation
 - `.codex/implementation/relic-inventory.md`
 - `.codex/planning/archive/bd48a561-relic-plan.md`
+
+---
+
+## Implementation Complete (2025-10-16)
+
+- ✅ Implemented `EntropyMirror` relic plugin (4★) under `backend/plugins/relics/`
+- ✅ Applies multiplicative ATK buff (+30% per stack) to all foes at battle_start
+- ✅ Subscribes to damage_dealt to apply recoil damage
+- ✅ Recoil applies 10% of damage dealt per stack as cost damage (ignores mitigation/shields)
+- ✅ Emits detailed relic_effect events for both buffs and recoil
+- ✅ Proper cleanup on battle_end
+- ✅ Added comprehensive test coverage in `backend/tests/test_entropy_mirror.py`
+  - Tests enemy ATK buffing at battle start
+  - Tests recoil damage calculation and application
+  - Tests stacking behavior for multiple relics
+  - Tests edge cases (zero damage, dead foes, ally damage)
+  - Tests state cleanup
+  - Tests multiple foes buffing
+- ✅ Updated `.codex/implementation/relic-inventory.md` with 4★ entry
+- ✅ Added placeholder art prompt to `luna_items_prompts.txt`
+- ✅ Proper stacking behavior for multiple relic copies
+
+ready for review
