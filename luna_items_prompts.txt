@@ -10,6 +10,8 @@ Oracle Prayer Charm (oracleprayercharm.png): Luna Midori clasping a delicate sil
 
 
 === Missing Relics Art ===
+Safeguard Prism (safeguardprism.png): Luna Midori holding an iridescent crystalline prism that emanates protective barriers of shimmering light, with translucent shield hexagons forming around her as the prism pulses when her health drops low; soft gradient auras and defensive energy patterns suggest emergency protection. Render in a mystical art style with ethereal glowing effects and crystal clarity.
+
 Momentum Gyro (momentumgyro.png): Luna Midori spinning a gleaming brass gyroscope device with concentric rings that glow brighter with each rotation, while spectral momentum trails spiral outward showing her attacks becoming more focused and powerful against a single shadowy adversary; dynamic motion lines and energy buildup effects suggest escalating offensive momentum. Render in a vibrant action art style with metallic sheen and swirling energy particles.
 
 Field Rations (field_rations.png): Luna Midori perched at a twilight camp table, unpacking a weathered satchel of neatly wrapped ration packs while lifting a steaming tin cup and a faintly glowing restorative vial; cool moonlight mixes with ember sparks to convey post-battle recovery. Stylize as a crisp overhead concept-art painting.
