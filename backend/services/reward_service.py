@@ -9,12 +9,12 @@ from runs.lifecycle import load_map
 from runs.lifecycle import save_map
 from runs.party_manager import load_party
 from runs.party_manager import save_party
+from tracking import log_game_action
 
 from autofighter.cards import award_card
 from autofighter.cards import instantiate_card
 from autofighter.relics import award_relic
 from autofighter.relics import instantiate_relic
-from tracking import log_game_action
 
 
 def _serialise_staging(staging: dict[str, Any]) -> dict[str, list[object]]:

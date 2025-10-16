@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+from collections.abc import Awaitable
+from collections.abc import Callable
+from collections.abc import Generator
 import inspect
-from collections.abc import Awaitable, Callable, Generator
-from typing import Any, TypeVar
+from typing import Any
+from typing import TypeVar
 
 T = TypeVar("T")
 

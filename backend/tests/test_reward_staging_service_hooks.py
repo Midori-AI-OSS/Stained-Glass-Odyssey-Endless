@@ -11,7 +11,6 @@ from types import ModuleType
 
 import pytest
 
-
 enc: ModuleType | None = None
 lifecycle: ModuleType | None = None
 party_manager: ModuleType | None = None

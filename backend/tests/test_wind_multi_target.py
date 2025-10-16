@@ -1,6 +1,7 @@
 import random
 
 import pytest
+from tests.helpers import ensure_coroutine
 
 from autofighter.effects import EffectManager
 from autofighter.mapgen import MapNode
@@ -8,7 +9,6 @@ from autofighter.party import Party
 from autofighter.rooms.battle.core import BattleRoom
 from autofighter.stats import Stats
 from plugins.damage_types.wind import Wind
-from tests.helpers import ensure_coroutine
 
 
 @pytest.mark.asyncio

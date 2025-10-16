@@ -1,11 +1,11 @@
-import random
 from dataclasses import dataclass
 from dataclasses import field
+import random
 
 from autofighter.stats import BUS
+from autofighter.summons.manager import SummonManager
 from plugins.cards._base import CardBase
 from plugins.damage_types import load_damage_type
-from autofighter.summons.manager import SummonManager
 from plugins.damage_types._base import DamageTypeBase
 
 

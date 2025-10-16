@@ -16,8 +16,8 @@ from autofighter.party import Party  # noqa: E402
 from autofighter.relics import apply_relics  # noqa: E402
 from autofighter.relics import award_relic  # noqa: E402
 from autofighter.stats import BUS  # noqa: E402
-import plugins.event_bus as event_bus_module  # noqa: E402
 from plugins.characters._base import PlayerBase  # noqa: E402
+import plugins.event_bus as event_bus_module  # noqa: E402
 import plugins.relics.echo_bell as echo_bell_module  # noqa: E402
 import plugins.relics.echoing_drum as echoing_drum_module  # noqa: E402
 

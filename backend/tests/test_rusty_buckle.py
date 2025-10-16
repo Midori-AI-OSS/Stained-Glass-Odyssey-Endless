@@ -1,6 +1,6 @@
+import asyncio
 import sys
 import types
-import asyncio
 
 import pytest
 from runs import lifecycle as lifecycle_module

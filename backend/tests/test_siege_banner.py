@@ -187,7 +187,7 @@ async def test_siege_banner_cleanup():
     state_after = getattr(party, "_siege_banner_state", None)
     if state_after is not None:
         assert state_after.get("kills", 0) == 0
-    
+
     # Most importantly: buffs should be removed, stats should return to baseline
     assert ally.atk == baseline_atk, f"ATK should return to baseline {baseline_atk}, but is {ally.atk}"
     assert ally.defense == baseline_def, f"DEF should return to baseline {baseline_def}, but is {ally.defense}"

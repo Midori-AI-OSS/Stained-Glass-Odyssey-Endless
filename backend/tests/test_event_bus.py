@@ -1,7 +1,8 @@
 import asyncio
+from collections.abc import Awaitable
+from collections.abc import Callable
 import importlib.util
 import logging
-from collections.abc import Awaitable, Callable
 from pathlib import Path
 import sys
 import types

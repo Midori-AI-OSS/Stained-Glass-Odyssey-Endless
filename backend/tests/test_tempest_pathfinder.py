@@ -157,11 +157,11 @@ async def test_tempest_pathfinder_cooldown_reset():
     await apply_cards(party)
 
     await BUS.emit_async("battle_start", ally)
-    
+
     # Turn 1: First crit should trigger
     await BUS.emit_async("turn_start")
     baseline1 = ally.dodge_odds
-    
+
     await BUS.emit_async(
         "damage_taken",
         enemy,
@@ -180,7 +180,7 @@ async def test_tempest_pathfinder_cooldown_reset():
     await BUS.emit_async("turn_start")
     await asyncio.sleep(0)
     baseline2 = ally.dodge_odds
-    
+
     await BUS.emit_async(
         "damage_taken",
         enemy,
