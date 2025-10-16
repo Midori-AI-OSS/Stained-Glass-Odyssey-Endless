@@ -17,6 +17,7 @@ from tracking import log_game_action
 
 from autofighter.cards import instantiate_card
 from autofighter.relics import instantiate_relic
+from autofighter.reward_preview import merge_preview_payload
 
 
 def _serialise_staging(staging: dict[str, Any]) -> dict[str, list[object]]:
@@ -80,6 +81,22 @@ async def select_card(run_id: str, card_id: str) -> dict[str, Any]:
         about = getattr(card, "about", None)
         if about:
             staged_card["about"] = about
+
+        base_preview: dict[str, Any] | None = None
+        builder = getattr(card, "build_preview", None)
+        if callable(builder):
+            raw_preview = builder()
+            if isinstance(raw_preview, dict):
+                base_preview = raw_preview
+
+        staged_card["preview"] = merge_preview_payload(
+            base_preview,
+            fallback_effects=getattr(card, "effects", {}),
+            summary=about,
+            stacks=1,
+            previous_stacks=0,
+            target="party",
+        )
 
         staging["cards"] = [staged_card]
         state["awaiting_card"] = True
@@ -168,6 +185,25 @@ async def select_relic(run_id: str, relic_id: str) -> dict[str, Any]:
         about = relic.describe(existing_stacks + 1)
         if about:
             staged_relic["about"] = about
+
+        base_preview: dict[str, Any] | None = None
+        builder = getattr(relic, "build_preview", None)
+        if callable(builder):
+            raw_preview = builder(
+                stacks=existing_stacks + 1,
+                previous_stacks=existing_stacks,
+            )
+            if isinstance(raw_preview, dict):
+                base_preview = raw_preview
+
+        staged_relic["preview"] = merge_preview_payload(
+            base_preview,
+            fallback_effects=getattr(relic, "effects", {}),
+            summary=about,
+            stacks=existing_stacks + 1,
+            previous_stacks=existing_stacks,
+            target="party",
+        )
 
         staging["relics"] = [staged_relic]
         state["awaiting_relic"] = True

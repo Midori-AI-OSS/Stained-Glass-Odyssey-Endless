@@ -135,14 +135,28 @@ async def test_confirm_card_commits_and_unlocks_next_step() -> None:
     activation_record = confirm_payload.get("activation_record")
     assert isinstance(activation_record, dict)
     assert activation_record["bucket"] == "cards"
-    assert activation_record["staged_values"] == [
-        {
-            "id": "arc_lightning",
-            "name": "Arc Lightning",
-            "stars": 3,
-            "about": "+255% ATK; every attack chains 50% of dealt damage to a random foe.",
-        }
-    ]
+    staged_values = activation_record.get("staged_values")
+    assert isinstance(staged_values, list) and len(staged_values) == 1
+    staged_card = staged_values[0]
+    assert staged_card["id"] == "arc_lightning"
+    assert staged_card["name"] == "Arc Lightning"
+    assert staged_card["stars"] == 3
+    assert (
+        staged_card["about"]
+        == "+255% ATK; every attack chains 50% of dealt damage to a random foe."
+    )
+    preview = staged_card.get("preview")
+    assert isinstance(preview, dict)
+    assert preview.get("summary") == staged_card["about"]
+    stats = preview.get("stats")
+    assert isinstance(stats, list) and stats
+    atk_stat = stats[0]
+    assert atk_stat["stat"] == "atk"
+    assert atk_stat["mode"] == "percent"
+    assert atk_stat["stacks"] == 1
+    assert pytest.approx(atk_stat["total_amount"], rel=1e-6) == 255.0
+    triggers = preview.get("triggers")
+    assert isinstance(triggers, list)
     assert "activation_id" in activation_record
     assert "activated_at" in activation_record
 

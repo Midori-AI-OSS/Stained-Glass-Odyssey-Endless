@@ -14,3 +14,4 @@ Requires staging infrastructure from `431efb19-reward-staging-schema.md` and `e6
 
 ## Out of scope
 Do not touch frontend components yet—that work happens in a separate task.
+ready for review
