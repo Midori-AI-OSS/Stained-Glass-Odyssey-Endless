@@ -2,31 +2,58 @@
 
 ## Multi-hit attack pacing
 
-Recent changes introduced a dedicated helper for pacing additional hits so
-multi-target abilities no longer resolve in a single frame.
+Recent changes introduced dedicated helpers for pacing additional hits so
+multi-target abilities no longer resolve in a single frame. The helpers work
+hand-in-hand with the main turn loop so animation events, combat logs, and
+frontend timelines stay synchronised.
 
-* `autofighter.rooms.battle.pacing.pace_per_target(actor)` now sleeps for the
-  actor's `animation_per_target` duration (falling back to `TURN_PACING` when an
-  invalid or zero value is configured). The helper returns the multiplier passed
-  to `pace_sleep`, making it easy for tests to assert the intended pacing.
+### Timeline breakdown
+
 * `autofighter.rooms.battle.pacing.compute_multi_hit_timing(actor, hits)` splits
-  the total animation length reported by `calc_animation_time` into the base
-  `animation_duration` segment and the per-target delays consumed by
-  `pace_per_target`. The attack loop uses the base segment to drive
-  `animation_start`/`animation_end` events while the helper spaces out each
-  subsequent hit.
-* Normal attacks that trigger spread damage (e.g., Wind spreads) and damage type
-  ultimates now call `pace_per_target` instead of the previous
-  `YIELD_MULTIPLIER` micro-sleep. This ensures observers see distinct hit timing
-  in the log stream and on the frontend timeline.
+  the duration returned by `calc_animation_time` into three parts:
+  1. **`base_wait`** — the leading segment that should elapse between
+     `animation_start` and the first hit. This value already excludes the
+     per-target pacing delay and is therefore safe to feed straight into
+     `pace_sleep(base_wait / TURN_PACING)`.
+  2. **`per_duration`** — the resolved `animation_per_target` (with invalid or
+     missing numbers coerced to `TURN_PACING`). Spread handlers pass this forward
+     so every additional hit in the sequence uses the same pacing budget, even
+     if the actor modifies their stats mid-turn.
+  3. **`total_duration`** — the full animation length that is broadcast through
+     `animation_start`/`animation_end` BUS events and later reused by
+     `impact_pause` when no explicit animation plays.
 
-When authoring new multi-hit behaviours, always:
+* `autofighter.rooms.battle.pacing.pace_per_target(actor, duration=per)` then
+  yields for `per_duration` between each extra hit. The helper returns the raw
+  multiplier fed into `pace_sleep`, which makes it trivial for tests to confirm
+  the correct pacing without incurring real delays.
 
-1. Invoke `pace_per_target` before issuing each extra hit so the damage lands in
-   a staggered sequence. Skip the call when the candidate target is invalid or
-   already defeated to avoid compounding the pacing delay, and re-check the
-   target's HP after the delay in case another effect removed it while waiting.
-2. Reuse the `compute_multi_hit_timing` breakdown to avoid double-counting
-   delays when emitting animation telemetry or calling `impact_pause`.
-3. Update regression tests to monkeypatch `pace_sleep` if you need to observe
-   the pacing multiplier without incurring real-world delays.
+### Implementation playbook
+
+* Normal attacks that trigger spread damage (e.g., `_handle_wind_spread`) and
+  damage-type ultimates await `pace_per_target` before every follow-up hit. Do
+  this **before** recomputing hit metadata so `attack_sequence` increments match
+  the visual pacing.
+* Skip the pacing call when a candidate target is already defeated—otherwise the
+  loop spends unnecessary time waiting for a hit that will be skipped. After the
+  delay, re-check the target's HP because another effect may have removed the
+  foe while the actor was waiting.
+* Feed the `per_duration` returned by `compute_multi_hit_timing` into any helper
+  that schedules additional hits so the spread behaviour and the primary action
+  operate off the same timing contract.
+* Reuse the `base_wait` segment to align BUS events (`animation_start`/
+  `animation_end`) with the visual animation. The default player turn loop
+  demonstrates this by awaiting `pace_sleep(base_wait / TURN_PACING)` between
+  the main hit and `animation_end`.
+
+### Testing and instrumentation
+
+* Regression tests should monkeypatch `autofighter.rooms.battle.pacing.
+  pace_sleep` and capture the multiplier produced by `pace_per_target`. See
+  `backend/tests/test_damage_type_pacing.py` for examples that assert Wind,
+  Fire, Light, and other damage types honour `animation_per_target` when
+  emitting multi-hit sequences.
+* When crafting manual test scenarios, tail the battle log: distinct `hit_landed`
+  events should now arrive with perceptible spacing, and the frontend timeline
+  should render the staggered impacts without compressing them into a single
+  frame.

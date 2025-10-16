@@ -18,4 +18,7 @@ Coder, fix the battle pacing so multi-hit sequences (e.g., wind spreads and ulti
 - Battle pacing helpers (`pace_per_target`, `compute_multi_hit_timing`) behave as expected and regression tests pass, but the documentation requirement was missed.
 - `.codex/implementation/damage-healing.md` still lacks any explanation of the new multi-hit timing model—please document how per-target animation pacing is calculated.
 
-more work needed
+## Coder notes (2025-02-16)
+- Expanded `.codex/implementation/damage-healing.md` with timeline breakdown, implementation guidance, and testing tips covering the multi-hit pacing helpers.
+
+ready for review
