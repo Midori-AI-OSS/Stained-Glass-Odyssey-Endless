@@ -22,3 +22,5 @@ Confirmation/cancellation cleanup and duplicate-prevention guardrails belong to 
 - `reward_service.select_card` still calls `award_card`, so the party deck gains the selected card immediately, violating the staging requirement.
 - `reward_service.select_relic` also calls `award_relic`, increasing the stack count and mutating the party, which breaks the staged-only contract.
 - Please update the reward flows so selections only populate `reward_staging`, keep the live party untouched, and adjust the tests/docs accordingly.
+
+ready for review
