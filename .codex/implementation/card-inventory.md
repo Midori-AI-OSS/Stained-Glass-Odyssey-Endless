@@ -62,6 +62,7 @@ detail pane.
 - Critical Overdrive – +255% ATK; while an ally has Critical Boost, they gain +10% Crit Rate and convert excess Crit Rate to +2% Crit Damage.
 - Iron Resurgence – +200% DEF & +200% HP; the first ally death revives at 10% HP and refreshes every 4 turns.
 - Arc Lightning – +255% ATK; every attack chains 50% damage to a random foe.
+- Flux Convergence – +255% Effect Hit Rate; each debuff applied increments a Flux counter. At 5 stacks, deal 120% ATK dark damage to all foes and grant the debuffing ally +20% Effect Resistance for 1 turn.
 
 ## 4★ Cards
 - Overclock – +240% ATK & +240% Effect Hit Rate; at the start of each battle, all allies immediately take two actions back to back.
