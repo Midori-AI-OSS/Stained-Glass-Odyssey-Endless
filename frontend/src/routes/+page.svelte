@@ -11,6 +11,10 @@
     roomAction,
     chooseCard,
     chooseRelic,
+    confirmCard,
+    confirmRelic,
+    cancelCard,
+    cancelRelic,
     advanceRoom,
     getMap,
     getActiveRuns,
@@ -731,7 +735,21 @@
     const relics = (snap?.relic_choices?.length || 0) > 0;
     const lootItems = (snap?.loot?.items?.length || 0) > 0;
     const lootGold = (snap?.loot?.gold || 0) > 0;
-    return cards || relics || lootItems || lootGold;
+    const staging = snap?.reward_staging && typeof snap.reward_staging === 'object' ? snap.reward_staging : {};
+    const stagedCards = Array.isArray(staging.cards) && staging.cards.length > 0;
+    const stagedRelics = Array.isArray(staging.relics) && staging.relics.length > 0;
+    const awaitingCard = Boolean(snap?.awaiting_card);
+    const awaitingRelic = Boolean(snap?.awaiting_relic);
+    const awaitingLoot = Boolean(snap?.awaiting_loot);
+    return (
+      cards ||
+      relics ||
+      lootItems ||
+      lootGold ||
+      (awaitingCard && stagedCards) ||
+      (awaitingRelic && stagedRelics) ||
+      awaitingLoot
+    );
   }
 
   function scheduleMapRefresh() {
@@ -952,6 +970,59 @@
     }
   }
 
+  function normalizeRewardStagingPayload(source, fallback) {
+    const effective = source && typeof source === 'object'
+      ? source
+      : fallback && typeof fallback === 'object'
+        ? fallback
+        : {};
+    const buckets = { cards: [], relics: [], items: [] };
+    for (const bucket of Object.keys(buckets)) {
+      const values = Array.isArray(effective[bucket]) ? effective[bucket] : [];
+      buckets[bucket] = values.map((entry) => (entry && typeof entry === 'object' ? { ...entry } : entry));
+    }
+    return buckets;
+  }
+
+  function cloneRewardEntries(list) {
+    if (!Array.isArray(list)) return [];
+    return list.map((entry) => (entry && typeof entry === 'object' ? { ...entry } : entry));
+  }
+
+  function applyRewardPayload(result, { type } = {}) {
+    const base = roomData && typeof roomData === 'object' ? { ...roomData } : {};
+    base.reward_staging = normalizeRewardStagingPayload(result?.reward_staging, base.reward_staging);
+
+    const awaitingKeys = ['awaiting_card', 'awaiting_relic', 'awaiting_loot', 'awaiting_next'];
+    for (const key of awaitingKeys) {
+      if (Object.prototype.hasOwnProperty.call(result ?? {}, key)) {
+        base[key] = Boolean(result[key]);
+      }
+    }
+
+    if (Object.prototype.hasOwnProperty.call(result ?? {}, 'reward_progression')) {
+      base.reward_progression = result.reward_progression ?? null;
+    }
+
+    if (typeof result?.next_room === 'string') {
+      base.next_room = result.next_room;
+    }
+
+    if (Array.isArray(base.card_choices)) {
+      base.card_choices = cloneRewardEntries(base.card_choices);
+    }
+
+    if (Array.isArray(base.relic_choices)) {
+      base.relic_choices = cloneRewardEntries(base.relic_choices);
+    }
+
+    runState.setRoomData(base);
+
+    if (typeof result?.next_room === 'string') {
+      runState.setCurrentRoom({ nextRoomType: result.next_room });
+    }
+  }
+
   async function handleRewardSelect(detail) {
     const selection = detail && typeof detail === 'object' ? detail : {};
     const respond = typeof selection.respond === 'function' ? selection.respond : null;
@@ -959,46 +1030,111 @@
     const id = selection.id;
     let result = { ok: false };
 
-    try {
-      let res;
-      if (type === 'card') {
-        // chooseCard now routes via /ui/action and does not take runId
-        res = await chooseCard(id);
-        if (roomData) {
-          runState.setRoomData({ ...roomData, card_choices: [] });
-        }
-      } else if (type === 'relic') {
-        // chooseRelic now routes via /ui/action and does not take runId
-        res = await chooseRelic(id);
-        if (roomData) {
-          runState.setRoomData({ ...roomData, relic_choices: [] });
-        }
-      }
-      if (res && res.next_room) {
-        runState.setCurrentRoom({ nextRoomType: res.next_room });
-      }
-      result = { ok: true };
-    } catch (error) {
-      openOverlay('error', {
-        message: 'Failed to select reward.',
-        traceback: (error && error.stack) || ''
-      });
+    if (type === 'card' || type === 'relic') {
       try {
-        if (dev || !browser) {
-          const { error: logError } = await import('$lib/systems/logger.js');
-          logError('Failed to select reward.', error);
+        const res = type === 'card' ? await chooseCard(id) : await chooseRelic(id);
+        if (res) {
+          applyRewardPayload(res, { type });
         }
-      } catch {}
-    } finally {
-      if (respond) {
+        result = { ok: true };
+      } catch (error) {
+        openOverlay('error', {
+          message: 'Failed to select reward.',
+          traceback: (error && error.stack) || '',
+          context: error?.context ?? null
+        });
         try {
-          respond(result);
+          if (dev || !browser) {
+            const { error: logError } = await import('$lib/systems/logger.js');
+            logError('Failed to select reward.', error);
+          }
         } catch {}
       }
     }
 
+    if (respond) {
+      try {
+        respond(result);
+      } catch {}
+    }
+
     return result;
-    // Do not auto-advance; show Battle Review popup next.
+  }
+
+  async function handleRewardConfirm(detail) {
+    const payload = detail && typeof detail === 'object' ? detail : {};
+    const respond = typeof payload.respond === 'function' ? payload.respond : null;
+    const type = payload.type;
+    let result = { ok: false };
+
+    if (type === 'card' || type === 'relic') {
+      try {
+        const res = type === 'card' ? await confirmCard() : await confirmRelic();
+        if (res) {
+          applyRewardPayload(res, { type });
+          scheduleMapRefresh();
+        }
+        result = { ok: true };
+      } catch (error) {
+        openOverlay('error', {
+          message: 'Failed to confirm reward.',
+          traceback: (error && error.stack) || '',
+          context: error?.context ?? null
+        });
+        try {
+          if (dev || !browser) {
+            const { error: logError } = await import('$lib/systems/logger.js');
+            logError('Failed to confirm reward.', error);
+          }
+        } catch {}
+      }
+    }
+
+    if (respond) {
+      try {
+        respond(result);
+      } catch {}
+    }
+
+    return result;
+  }
+
+  async function handleRewardCancel(detail) {
+    const payload = detail && typeof detail === 'object' ? detail : {};
+    const respond = typeof payload.respond === 'function' ? payload.respond : null;
+    const type = payload.type;
+    let result = { ok: false };
+
+    if (type === 'card' || type === 'relic') {
+      try {
+        const res = type === 'card' ? await cancelCard() : await cancelRelic();
+        if (res) {
+          applyRewardPayload(res, { type });
+          scheduleMapRefresh();
+        }
+        result = { ok: true };
+      } catch (error) {
+        openOverlay('error', {
+          message: 'Failed to cancel reward.',
+          traceback: (error && error.stack) || '',
+          context: error?.context ?? null
+        });
+        try {
+          if (dev || !browser) {
+            const { error: logError } = await import('$lib/systems/logger.js');
+            logError('Failed to cancel reward.', error);
+          }
+        } catch {}
+      }
+    }
+
+    if (respond) {
+      try {
+        respond(result);
+      } catch {}
+    }
+
+    return result;
   }
 
   let autoHandling = false;
@@ -1006,20 +1142,56 @@
     if (!fullIdleMode || autoHandling || !runId || !roomData) return;
     autoHandling = true;
     try {
+      const staging = roomData.reward_staging && typeof roomData.reward_staging === 'object'
+        ? roomData.reward_staging
+        : {};
+      const stagedCards = Array.isArray(staging.cards) ? staging.cards : [];
+      const stagedRelics = Array.isArray(staging.relics) ? staging.relics : [];
+
+      if (roomData.awaiting_card && stagedCards.length > 0) {
+        try {
+          const res = await confirmCard();
+          if (res) {
+            applyRewardPayload(res, { type: 'card' });
+            scheduleMapRefresh();
+          }
+        } catch {}
+        return;
+      }
+
       if (roomData.card_choices?.length > 0) {
         const choice = roomData.card_choices[0];
-        const res = await chooseCard(choice.id);
-        runState.setRoomData({ ...roomData, card_choices: [] });
-        if (res && res.next_room) { runState.setCurrentRoom({ nextRoomType: res.next_room }); }
+        try {
+          const res = await chooseCard(choice.id);
+          if (res) {
+            applyRewardPayload(res, { type: 'card' });
+          }
+        } catch {}
         return;
       }
-      if (roomData.relic_choices?.length > 0) {
+
+      if (roomData.awaiting_relic && stagedRelics.length > 0) {
+        try {
+          const res = await confirmRelic();
+          if (res) {
+            applyRewardPayload(res, { type: 'relic' });
+            scheduleMapRefresh();
+          }
+        } catch {}
+        return;
+      }
+
+      if (!roomData.awaiting_card && roomData.relic_choices?.length > 0) {
         const choice = roomData.relic_choices[0];
-        const res = await chooseRelic(choice.id);
-        runState.setRoomData({ ...roomData, relic_choices: [] });
-        if (res && res.next_room) { runState.setCurrentRoom({ nextRoomType: res.next_room }); }
+        try {
+          const res = await chooseRelic(choice.id);
+          if (res) {
+            applyRewardPayload(res, { type: 'relic' });
+          }
+        } catch {}
         return;
       }
+
       const hasLoot = (roomData.loot?.gold || 0) > 0 || (roomData.loot?.items || []).length > 0;
       if (roomData.awaiting_loot || hasLoot) {
         await handleLootAcknowledge();
@@ -1471,6 +1643,8 @@
     on:home={homeOverlay}
     on:settings={() => openOverlay('settings')}
     on:rewardSelect={(e) => handleRewardSelect(e.detail)}
+    on:rewardConfirm={(e) => handleRewardConfirm(e.detail)}
+    on:rewardCancel={(e) => handleRewardCancel(e.detail)}
     on:loadRun={(e) => handleLoadExistingRun(e.detail)}
     on:startNewRun={handleStartNewRun}
     on:shopBuy={(e) => handleShopBuy(e.detail)}

@@ -17,6 +17,12 @@
   export let fullIdleMode = false;
   export let sfxVolume = 5;
   export let reducedMotion = false;
+  export let stagedCards = [];
+  export let stagedRelics = [];
+  export let awaitingCard = false;
+  export let awaitingRelic = false;
+  export let awaitingLoot = false;
+  export let awaitingNext = false;
 
   const dispatch = createEventDispatcher();
 
@@ -278,34 +284,86 @@
     }
   }
 
-  let cardsDone = false;
+  function normalizeRewardEntries(list) {
+    if (!Array.isArray(list)) return [];
+    return list
+      .filter((entry) => entry != null)
+      .map((entry) => (entry && typeof entry === 'object' ? { ...entry } : { id: entry }));
+  }
+
+  $: cardChoices = Array.isArray(cards) ? cards : [];
+  $: relicChoices = Array.isArray(relics) ? relics : [];
+  $: stagedCardEntries = normalizeRewardEntries(stagedCards);
+  $: stagedRelicEntries = normalizeRewardEntries(stagedRelics);
+
   let pendingCardSelection = null;
+  let pendingRelicSelection = null;
+  let pendingCardConfirm = null;
+  let pendingCardCancel = null;
+  let pendingRelicConfirm = null;
+  let pendingRelicCancel = null;
   let showNextButton = false;
-  $: showCards = cards.length > 0 && !cardsDone;
-  $: showRelics = relics.length > 0 && (cards.length === 0 || cardsDone);
-  $: remaining = (showCards ? cards.length : 0) + (showRelics ? relics.length : 0);
+
+  $: cardSelectionLocked = pendingCardSelection !== null || stagedCardEntries.length > 0;
+  $: relicSelectionLocked = pendingRelicSelection !== null || stagedRelicEntries.length > 0;
+  $: showCards = cardChoices.length > 0 && !cardSelectionLocked;
+  $: showRelics = relicChoices.length > 0 && !awaitingCard && !relicSelectionLocked;
+
+  $: pendingConfirmationCount =
+    (awaitingCard && stagedCardEntries.length > 0 ? 1 : 0) +
+    (awaitingRelic && stagedRelicEntries.length > 0 ? 1 : 0);
+
+  $: awaitingConfirmation =
+    pendingConfirmationCount > 0 ||
+    pendingCardConfirm !== null ||
+    pendingCardCancel !== null ||
+    pendingRelicConfirm !== null ||
+    pendingRelicCancel !== null;
+
+  $: remaining =
+    (showCards ? cardChoices.length : 0) +
+    (showRelics ? relicChoices.length : 0) +
+    pendingConfirmationCount;
+
+  $: cardActionsDisabled = pendingCardConfirm !== null || pendingCardCancel !== null || pendingCardSelection !== null;
+  $: relicActionsDisabled = pendingRelicConfirm !== null || pendingRelicCancel !== null || pendingRelicSelection !== null;
+
+  function dispatchWithResponse(eventName, type) {
+    return new Promise((resolve) => {
+      let responded = false;
+      const respond = (value) => {
+        if (responded) return;
+        responded = true;
+        resolve(value || { ok: false });
+      };
+      dispatch(eventName, { type, respond });
+    });
+  }
 
   async function handleSelect(e) {
     const baseDetail = e?.detail && typeof e.detail === 'object' ? e.detail : {};
     const detail = { ...baseDetail };
-    const isCard = detail.type === 'card';
-    const previousCardsDone = cardsDone;
-    let cardSelectionToken;
+    const type = detail.type;
+    const isCard = type === 'card';
+    const isRelic = type === 'relic';
+    let selectionToken = null;
 
     let responded = false;
     const responsePromise = new Promise((resolve) => {
       const respond = (value) => {
         if (responded) return;
         responded = true;
-        resolve(value);
+        resolve(value || { ok: false });
       };
       dispatch('select', { ...detail, respond });
     });
 
     if (isCard) {
-      cardSelectionToken = Symbol('cardSelection');
-      pendingCardSelection = { token: cardSelectionToken, previous: previousCardsDone };
-      cardsDone = true;
+      selectionToken = Symbol('cardSelection');
+      pendingCardSelection = selectionToken;
+    } else if (isRelic) {
+      selectionToken = Symbol('relicSelection');
+      pendingRelicSelection = selectionToken;
     }
 
     let response;
@@ -315,13 +373,63 @@
       response = { ok: false, error };
     }
 
-    if (response && response.ok) {
-      if (isCard && pendingCardSelection?.token === cardSelectionToken) {
-        pendingCardSelection = null;
-      }
-    } else if (isCard && pendingCardSelection?.token === cardSelectionToken) {
-      cardsDone = pendingCardSelection.previous;
+    if (isCard && pendingCardSelection === selectionToken) {
       pendingCardSelection = null;
+    }
+    if (isRelic && pendingRelicSelection === selectionToken) {
+      pendingRelicSelection = null;
+    }
+  }
+
+  async function handleConfirm(type) {
+    if (type === 'card') {
+      if (pendingCardConfirm) return;
+      const token = Symbol('cardConfirm');
+      pendingCardConfirm = token;
+      try {
+        await dispatchWithResponse('confirm', 'card');
+      } finally {
+        if (pendingCardConfirm === token) {
+          pendingCardConfirm = null;
+        }
+      }
+    } else if (type === 'relic') {
+      if (pendingRelicConfirm) return;
+      const token = Symbol('relicConfirm');
+      pendingRelicConfirm = token;
+      try {
+        await dispatchWithResponse('confirm', 'relic');
+      } finally {
+        if (pendingRelicConfirm === token) {
+          pendingRelicConfirm = null;
+        }
+      }
+    }
+  }
+
+  async function handleCancel(type) {
+    if (type === 'card') {
+      if (pendingCardCancel) return;
+      const token = Symbol('cardCancel');
+      pendingCardCancel = token;
+      try {
+        await dispatchWithResponse('cancel', 'card');
+      } finally {
+        if (pendingCardCancel === token) {
+          pendingCardCancel = null;
+        }
+      }
+    } else if (type === 'relic') {
+      if (pendingRelicCancel) return;
+      const token = Symbol('relicCancel');
+      pendingRelicCancel = token;
+      try {
+        await dispatchWithResponse('cancel', 'relic');
+      } finally {
+        if (pendingRelicCancel === token) {
+          pendingRelicCancel = null;
+        }
+      }
     }
   }
 
@@ -331,8 +439,8 @@
   $: {
     clearTimeout(autoTimer);
     const noChoices = remaining === 0;
-    const noLoot = (!gold || gold <= 0) && !hasLootItems;
-    if (noChoices && noLoot) {
+    const visibleLoot = (gold > 0) || hasLootItems || awaitingLoot;
+    if (noChoices && !awaitingConfirmation && !visibleLoot) {
       autoTimer = setTimeout(() => dispatch('next'), 5000);
     }
   }
@@ -351,8 +459,9 @@
   // Show Next Room button when there's loot but no choices
   $: {
     const noChoices = remaining === 0;
-    const hasLoot = (gold > 0) || hasLootItems;
-    showNextButton = noChoices && hasLoot;
+    const visibleLoot = (gold > 0) || hasLootItems || awaitingLoot;
+    const readyToAdvance = awaitingNext && !awaitingLoot;
+    showNextButton = noChoices && !awaitingConfirmation && (visibleLoot || readyToAdvance);
   }
 
   function handleNextRoom() {
@@ -382,6 +491,67 @@
     justify-items: center;
     width: 100%;
     max-width: 960px;
+  }
+
+  .choices.staged {
+    pointer-events: none;
+  }
+
+  .staged-block {
+    width: 100%;
+    max-width: 960px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.6rem;
+  }
+
+  .actions-row {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .confirm-btn,
+  .cancel-btn {
+    min-width: 140px;
+    padding: 0.65rem 1.75rem;
+    border: none;
+    border-radius: 999px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 120ms ease, box-shadow 120ms ease, opacity 120ms ease;
+    color: #fff;
+  }
+
+  .confirm-btn {
+    background: linear-gradient(145deg, #4caf50, #2e7d32);
+    box-shadow: 0 6px 16px rgba(46, 125, 50, 0.35);
+  }
+
+  .confirm-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 22px rgba(46, 125, 50, 0.45);
+  }
+
+  .cancel-btn {
+    background: linear-gradient(145deg, #d32f2f, #9a0007);
+    box-shadow: 0 6px 16px rgba(211, 47, 47, 0.35);
+  }
+
+  .cancel-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 22px rgba(211, 47, 47, 0.45);
+  }
+
+  .confirm-btn:disabled,
+  .cancel-btn:disabled {
+    opacity: 0.55;
+    cursor: default;
+    transform: none;
+    box-shadow: none;
   }
 
   .status {
@@ -591,24 +761,59 @@
   on:pointerdown={handleLootSfxGesture}
   on:keydown={handleLootSfxGesture}
 >
-  {#if showCards}
-  <h3 class="section-title">Choose a Card</h3>
-  <div class="choices">
-        {#each cards.slice(0,3) as card, i (card.id)}
+  {#if stagedCardEntries.length > 0}
+    <div class="staged-block">
+      <h3 class="section-title">Selected Card</h3>
+      <div class="choices staged">
+        {#each stagedCardEntries.slice(0,3) as card, i (card?.id ?? `staged-card-${i}`)}
           <div class:reveal={!reducedMotion} style={`--delay: ${revealDelay(i)}ms`}>
-            <RewardCard entry={card} type="card" quiet={iconQuiet} on:select={handleSelect} />
+            <RewardCard entry={card} type="card" quiet={iconQuiet} disabled={true} />
           </div>
         {/each}
+      </div>
+      <div class="actions-row">
+        <button class="confirm-btn" type="button" on:click={() => handleConfirm('card')} disabled={cardActionsDisabled}>Confirm</button>
+        <button class="cancel-btn" type="button" on:click={() => handleCancel('card')} disabled={cardActionsDisabled}>Cancel</button>
+      </div>
     </div>
   {/if}
-  {#if showRelics}
-  <h3 class="section-title">Choose a Relic</h3>
-  <div class="choices">
-        {#each relics.slice(0,3) as relic, i (relic.id)}
+
+  {#if showCards}
+    <h3 class="section-title">Choose a Card</h3>
+    <div class="choices">
+      {#each cardChoices.slice(0,3) as card, i (card?.id ?? `card-${i}`)}
+        <div class:reveal={!reducedMotion} style={`--delay: ${revealDelay(i)}ms`}>
+          <RewardCard entry={card} type="card" quiet={iconQuiet} on:select={handleSelect} />
+        </div>
+      {/each}
+    </div>
+  {/if}
+
+  {#if stagedRelicEntries.length > 0}
+    <div class="staged-block">
+      <h3 class="section-title">Selected Relic</h3>
+      <div class="choices staged">
+        {#each stagedRelicEntries.slice(0,3) as relic, i (relic?.id ?? `staged-relic-${i}`)}
           <div class:reveal={!reducedMotion} style={`--delay: ${revealDelay(i)}ms`}>
-            <CurioChoice entry={relic} quiet={iconQuiet} on:select={handleSelect} />
+            <CurioChoice entry={relic} quiet={iconQuiet} disabled={true} />
           </div>
         {/each}
+      </div>
+      <div class="actions-row">
+        <button class="confirm-btn" type="button" on:click={() => handleConfirm('relic')} disabled={relicActionsDisabled}>Confirm</button>
+        <button class="cancel-btn" type="button" on:click={() => handleCancel('relic')} disabled={relicActionsDisabled}>Cancel</button>
+      </div>
+    </div>
+  {/if}
+
+  {#if showRelics}
+    <h3 class="section-title">Choose a Relic</h3>
+    <div class="choices">
+      {#each relicChoices.slice(0,3) as relic, i (relic?.id ?? `relic-${i}`)}
+        <div class:reveal={!reducedMotion} style={`--delay: ${revealDelay(i)}ms`}>
+          <CurioChoice entry={relic} quiet={iconQuiet} on:select={handleSelect} />
+        </div>
+      {/each}
     </div>
   {/if}
   

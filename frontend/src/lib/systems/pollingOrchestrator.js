@@ -103,7 +103,21 @@ function hasRewards(snap) {
   const relics = (snap?.relic_choices?.length || 0) > 0;
   const lootItems = (snap?.loot?.items?.length || 0) > 0;
   const lootGold = (snap?.loot?.gold || 0) > 0;
-  return cards || relics || lootItems || lootGold;
+  const staging = snap?.reward_staging && typeof snap.reward_staging === 'object' ? snap.reward_staging : {};
+  const stagedCards = Array.isArray(staging.cards) && staging.cards.length > 0;
+  const stagedRelics = Array.isArray(staging.relics) && staging.relics.length > 0;
+  const awaitingCard = Boolean(snap?.awaiting_card);
+  const awaitingRelic = Boolean(snap?.awaiting_relic);
+  const awaitingLoot = Boolean(snap?.awaiting_loot);
+  return (
+    cards ||
+    relics ||
+    lootItems ||
+    lootGold ||
+    (awaitingCard && stagedCards) ||
+    (awaitingRelic && stagedRelics) ||
+    awaitingLoot
+  );
 }
 
 function snapshotIndicatesDefeat(source) {
