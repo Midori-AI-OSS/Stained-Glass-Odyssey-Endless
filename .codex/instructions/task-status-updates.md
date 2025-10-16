@@ -5,9 +5,12 @@ thread, or pull request description must end with a clear status indicator.
 Coders, reviewers, and managers should verify these markers whenever a task is
 touched.
 
-## Required Status Markers
+## Allowed Status Markers
 - `ready for review` &mdash; the implementation is complete and waiting for
   feedback.
+- `requesting review from the Task Master` &mdash; reviewers append this when
+  they hand a fully-audited task back to the Task Master. Treat it as an
+  extension of the `ready for review` state rather than a missing marker.
 - `more work needed` &mdash; the contributor is still iterating. Follow the tag
   with a short summary (and optionally a percentage complete) so the next
   person understands what remains.
