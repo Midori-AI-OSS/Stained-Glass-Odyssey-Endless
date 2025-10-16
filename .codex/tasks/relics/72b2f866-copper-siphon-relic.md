@@ -17,4 +17,9 @@ Design and implement a new 1★ relic, **Copper Siphon**, that grants mild lifes
 
 ---
 
-ready for review
+## Auditor notes (2025-02-15)
+- Gameplay logic and tests pass (lifesteal scales, shields apply at full HP), but documentation and assets still need attention.
+- `.codex/implementation/relic-system.md` has not been updated to mention Copper Siphon or its lifesteal-to-shield behavior—please add it alongside the inventory entry.
+- The placeholder icon `frontend/src/lib/assets/relics/1star/coppersiphon.png` is missing.
+
+more work needed

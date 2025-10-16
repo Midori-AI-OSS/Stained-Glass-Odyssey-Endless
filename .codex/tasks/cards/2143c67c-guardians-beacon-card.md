@@ -25,4 +25,9 @@ Guardian's Beacon provides a fresh sustain option for defensive squads, letting 
 
 ---
 
-ready for review
+## Auditor notes (2025-02-15)
+- Verified the turn-end hook heals the lowest-HP living ally for the correct amount and grants Light allies a one-turn mitigation buff.
+- `backend/tests/test_card_effects.py` includes coverage for healing, Light-only mitigation, death handling, and telemetry; all pass via `uv run pytest tests/test_card_effects.py::test_guardians_beacon_*`.
+- Documentation (`card-inventory`, card plan) reflects the new reward.
+
+requesting review from the Task Master
