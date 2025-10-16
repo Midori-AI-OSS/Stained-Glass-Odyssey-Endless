@@ -82,12 +82,47 @@ Staged rewards are committed through the dedicated confirmation endpoints:
 - `POST /rewards/card/<run_id>/confirm`
 - `POST /rewards/relic/<run_id>/confirm`
 
-Each endpoint consumes the staged payload for the requested reward type. The
-server appends the staged card or relic to the saved party, clears the staging
-bucket, and updates the reward progression sequence. When no further rewards
-are pending the backend flips `awaiting_next` to `True` so the room can advance.
+Each endpoint consumes the staged payload for the requested reward type. A
+per-run asyncio lock (`runs.lifecycle.reward_locks[run_id]`) guarantees that
+confirmation, cancellation, and selection calls execute serially so the staged
+payload is applied at most once even if the UI retries the request. The server
+appends the staged card or relic to the saved party, clears the staging bucket,
+and updates the reward progression sequence. When no further rewards are
+pending the backend flips `awaiting_next` to `True` so the room can advance.
 The JSON response mirrors the updated state and includes the current party deck
 or relic list alongside the refreshed `reward_staging` payload.
+
+The confirmation response also exposes an `activation_record` describing the
+commit event:
+
+```json
+{
+  "activation_record": {
+    "activation_id": "0fe817fb-...",
+    "bucket": "cards",
+    "activated_at": "2025-03-14T05:09:27.224310+00:00",
+    "staged_values": [
+      {
+        "id": "arc_lightning",
+        "name": "Arc Lightning",
+        "stars": 3,
+        "about": "+255% ATK; every attack chains 50% of dealt damage to a random foe."
+      }
+    ]
+  },
+  "reward_activation_log": [
+    {
+      "activation_id": "0fe817fb-...",
+      "bucket": "cards",
+      "activated_at": "2025-03-14T05:09:27.224310+00:00"
+    }
+  ]
+}
+```
+
+`reward_activation_log` is persisted with the run and mirrored into battle
+snapshots so reconnecting clients can audit prior confirmations. Only the most
+recent twenty activations are retained to bound storage.
 
 Clients can roll back a staged choice with:
 
@@ -97,6 +132,12 @@ Clients can roll back a staged choice with:
 Cancellation removes the staged entry, reopens the matching progression step,
 and ensures `awaiting_next` stays `False`. Downstream UIs should respond by
 redisplaying the available choices and prompting the player to select again.
+
+`advance_room` now verifies both the `awaiting_*` flags **and** that every
+`reward_staging` bucket is empty. Attempts to advance while a staged reward
+remains (even if `awaiting_card`/`awaiting_relic` has been cleared) produce a
+`400` error: “pending rewards must be collected before advancing.” Frontends
+must always confirm or cancel staged entries before requesting the next room.
 
 ## Cleanup guarantees
 

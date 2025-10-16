@@ -26,7 +26,26 @@ their local state without re-fetching the full map.
     "current_step": "relic"
   },
   "cards": ["arc_lightning"],
-  "next_room": "shop"
+  "next_room": "shop",
+  "activation_record": {
+    "activation_id": "2f6dbd25-...",
+    "bucket": "cards",
+    "activated_at": "2025-03-14T05:09:27.224310+00:00",
+    "staged_values": [
+      {
+        "id": "arc_lightning",
+        "name": "Arc Lightning",
+        "stars": 3
+      }
+    ]
+  },
+  "reward_activation_log": [
+    {
+      "activation_id": "2f6dbd25-...",
+      "bucket": "cards",
+      "activated_at": "2025-03-14T05:09:27.224310+00:00"
+    }
+  ]
 }
 ```
 
@@ -40,6 +59,12 @@ Key fields:
 - `cards` / `relics`: included only for the confirmed reward type so overlays can
   show the updated deck or relic stacks without another `/ui` poll.
 - `next_room`: populated when `awaiting_next` becomes `true`.
+- `activation_record`: single-use audit event emitted for the confirmation. The
+  payload contains the canonical bucket name, an ISO timestamp, a UUID, and the
+  staged values that were applied.
+- `reward_activation_log`: history of recent confirmation events kept to help
+  QA and telemetry debug duplicate submissions. Only the newest twenty entries
+  are retained.
 
 ## Cancellation response
 
@@ -74,4 +99,6 @@ Key fields:
 Once a run leaves the reward state (advancing to the next room or ending the
 run) `cleanup_battle_state` empties any remaining staging buckets in both the
 stored map and the in-memory snapshot. This guarantees confirmation responses
-never surface stale staged data on reconnects.
+never surface stale staged data on reconnects. Atomicity is enforced with
+`runs.lifecycle.reward_locks`, so even if the UI retries a confirmation call the
+staged payload is applied at most once before the buckets are cleared.

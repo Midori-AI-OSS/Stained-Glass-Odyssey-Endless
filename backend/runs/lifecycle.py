@@ -98,6 +98,7 @@ def _apply_item_ui_metadata(entry: dict[str, object]) -> None:
 battle_tasks: dict[str, asyncio.Task] = {}
 battle_snapshots: dict[str, dict[str, Any]] = {}
 battle_locks: dict[str, asyncio.Lock] = {}
+reward_locks: dict[str, asyncio.Lock] = {}
 
 
 def purge_run_state(run_id: str, *, cancel_task: bool = True) -> None:
@@ -109,6 +110,7 @@ def purge_run_state(run_id: str, *, cancel_task: bool = True) -> None:
 
     battle_snapshots.pop(run_id, None)
     battle_locks.pop(run_id, None)
+    reward_locks.pop(run_id, None)
 
 
 def purge_all_run_state(*, cancel_tasks: bool = True) -> None:
@@ -117,6 +119,7 @@ def purge_all_run_state(*, cancel_tasks: bool = True) -> None:
     run_ids = set(battle_tasks)
     run_ids.update(battle_snapshots)
     run_ids.update(battle_locks)
+    run_ids.update(reward_locks)
 
     for run_id in list(run_ids):
         purge_run_state(run_id, cancel_task=cancel_tasks)
@@ -166,6 +169,7 @@ async def cleanup_battle_state() -> None:
     tasks_removed = 0
     snapshots_removed = 0
     locks_removed = 0
+    reward_locks_removed = 0
 
     for run_id in completed:
         state: dict[str, Any] = {}
@@ -224,16 +228,19 @@ async def cleanup_battle_state() -> None:
             if not preserve_snapshot:
                 if battle_snapshots.pop(run_id, None) is not None:
                     snapshots_removed += 1
-            if battle_locks.pop(run_id, None) is not None:
-                locks_removed += 1
+        if battle_locks.pop(run_id, None) is not None:
+            locks_removed += 1
+        if reward_locks.pop(run_id, None) is not None:
+            reward_locks_removed += 1
 
-    removed_total = tasks_removed + snapshots_removed + locks_removed
+    removed_total = tasks_removed + snapshots_removed + locks_removed + reward_locks_removed
     if removed_total:
         message = (
-            "Removed %d tasks, %d snapshots, %d locks",
+            "Removed %d tasks, %d snapshots, %d locks, %d reward locks",
             tasks_removed,
             snapshots_removed,
             locks_removed,
+            reward_locks_removed,
         )
         if removed_total > 10:
             log.warning(*message)
@@ -250,7 +257,20 @@ def get_battle_state_sizes() -> dict[str, int]:
         "tasks": len(battle_tasks),
         "snapshots": len(battle_snapshots),
         "locks": len(battle_locks),
+        "reward_locks": len(reward_locks),
     }
+
+
+def has_pending_rewards(state: Mapping[str, Any]) -> bool:
+    """Return ``True`` if the provided state still has staged rewards."""
+
+    staging = state.get("reward_staging")
+    if isinstance(staging, Mapping):
+        for key in REWARD_STAGING_KEYS:
+            bucket = staging.get(key)
+            if isinstance(bucket, list) and bucket:
+                return True
+    return False
 
 
 def load_map(run_id: str) -> tuple[dict, list[MapNode]]:

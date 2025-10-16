@@ -14,3 +14,4 @@ Complete staging schema/service/confirmation tasks (`431efb19`, `e69ad95e`, `bfb
 
 ## Out of scope
 Extended test coverage and metrics instrumentation live in the companion task `tests/dc47b2ce-reward-activation-tests-metrics.md`.
+ready for review

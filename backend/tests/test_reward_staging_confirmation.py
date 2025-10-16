@@ -132,6 +132,24 @@ async def test_confirm_card_commits_and_unlocks_next_step() -> None:
     assert confirm_payload["reward_staging"]["cards"] == []
     assert "cards" in confirm_payload and "arc_lightning" in confirm_payload["cards"]
 
+    activation_record = confirm_payload.get("activation_record")
+    assert isinstance(activation_record, dict)
+    assert activation_record["bucket"] == "cards"
+    assert activation_record["staged_values"] == [
+        {
+            "id": "arc_lightning",
+            "name": "Arc Lightning",
+            "stars": 3,
+            "about": "+255% ATK; every attack chains 50% of dealt damage to a random foe.",
+        }
+    ]
+    assert "activation_id" in activation_record
+    assert "activated_at" in activation_record
+
+    activation_log = confirm_payload.get("reward_activation_log")
+    assert isinstance(activation_log, list)
+    assert activation_log and activation_log[-1]["activation_id"] == activation_record["activation_id"]
+
     party = await asyncio.to_thread(party_manager.load_party, run_id)
     assert party.cards == ["arc_lightning"]
 
@@ -140,11 +158,77 @@ async def test_confirm_card_commits_and_unlocks_next_step() -> None:
     assert state.get("awaiting_next") is True
     assert state.get("reward_staging", {}).get("cards") == []
     assert "reward_progression" not in state
+    state_log = state.get("reward_activation_log")
+    assert isinstance(state_log, list)
+    assert state_log[-1]["activation_id"] == activation_record["activation_id"]
 
     snapshot = lifecycle.battle_snapshots[run_id]
     assert snapshot["reward_staging"]["cards"] == []
     assert snapshot["awaiting_card"] is False
     assert snapshot["awaiting_next"] is True
+    assert snapshot["reward_activation_log"][-1]["activation_id"] == activation_record["activation_id"]
+
+
+@pytest.mark.asyncio()
+async def test_confirm_card_is_single_use() -> None:
+    assert lifecycle is not None
+    assert reward_service is not None
+
+    run_id = "confirm-card-once"
+    party_payload = {
+        "members": ["player"],
+        "gold": 0,
+        "relics": [],
+        "cards": [],
+        "exp": {"player": 0},
+        "level": {"player": 1},
+        "player": {"pronouns": "", "damage_type": "Light", "stats": {}},
+    }
+    map_payload = {
+        "rooms": [
+            {"room_id": 0, "room_type": "battle-normal"},
+            {"room_id": 1, "room_type": "treasure"},
+        ],
+        "current": 0,
+        "battle": False,
+        "awaiting_card": True,
+        "awaiting_relic": False,
+        "awaiting_loot": False,
+        "awaiting_next": False,
+        "reward_progression": {
+            "available": ["card"],
+            "completed": [],
+            "current_step": "card",
+        },
+        "reward_staging": {"cards": [], "relics": [], "items": []},
+    }
+    _insert_run(run_id, party_payload, map_payload)
+
+    lifecycle.battle_snapshots[run_id] = {
+        "result": "battle",
+        "ended": True,
+        "card_choices": [
+            {
+                "id": "arc_lightning",
+                "name": "Arc Lightning",
+                "stars": 3,
+            }
+        ],
+        "relic_choices": [],
+        "reward_staging": {"cards": [], "relics": [], "items": []},
+    }
+
+    await reward_service.select_card(run_id, "arc_lightning")
+    first_payload = await reward_service.confirm_reward(run_id, "card")
+    assert first_payload["awaiting_next"] is True
+
+    with pytest.raises(ValueError):
+        await reward_service.confirm_reward(run_id, "card")
+
+    state, _ = lifecycle.load_map(run_id)
+    activation_log = state.get("reward_activation_log")
+    assert isinstance(activation_log, list)
+    assert len(activation_log) == 1
 
 
 @pytest.mark.asyncio()
@@ -303,4 +387,49 @@ async def test_confirm_multiple_steps_advances_sequence() -> None:
     assert state.get("awaiting_next") is True
     assert state.get("reward_staging", {}).get("relics") == []
     assert "reward_progression" not in state
+
+
+@pytest.mark.asyncio()
+async def test_advance_room_rejects_when_staging_remains() -> None:
+    assert lifecycle is not None
+
+    from services.run_service import advance_room
+
+    run_id = "staging-blocks-advance"
+    party_payload = {
+        "members": ["player"],
+        "gold": 0,
+        "relics": [],
+        "cards": ["strike"],
+        "exp": {"player": 0},
+        "level": {"player": 1},
+        "player": {"pronouns": "", "damage_type": "Light", "stats": {}},
+    }
+    map_payload = {
+        "rooms": [
+            {"room_id": 0, "room_type": "battle-normal"},
+            {"room_id": 1, "room_type": "shop"},
+        ],
+        "current": 0,
+        "battle": False,
+        "awaiting_card": False,
+        "awaiting_relic": False,
+        "awaiting_loot": False,
+        "awaiting_next": True,
+        "reward_staging": {
+            "cards": [
+                {
+                    "id": "arc_lightning",
+                    "name": "Arc Lightning",
+                    "stars": 3,
+                }
+            ],
+            "relics": [],
+            "items": [],
+        },
+    }
+    _insert_run(run_id, party_payload, map_payload)
+
+    with pytest.raises(ValueError, match="pending rewards must be collected"):
+        await advance_room(run_id)
 

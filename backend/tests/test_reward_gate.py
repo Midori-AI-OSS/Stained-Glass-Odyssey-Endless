@@ -53,7 +53,7 @@ async def test_advance_room_requires_reward_selection(app_with_db):
     resp = await client.post("/ui/action", json={"action": "advance_room"})
     assert resp.status_code == 400
 
-    # Selecting card still leaves relic to claim
+    # Selecting card still leaves relic to claim and staging data present
     await client.post(
         "/ui/action",
         json={"action": "choose_card", "params": {"card_id": "micro_blade"}},
@@ -61,11 +61,21 @@ async def test_advance_room_requires_reward_selection(app_with_db):
     resp = await client.post("/ui/action", json={"action": "advance_room"})
     assert resp.status_code == 400
 
-    # After choosing relic, advancing succeeds
+    # Confirm the staged card to clear the reward bucket
+    resp = await client.post("/ui/action", json={"action": "confirm_card"})
+    assert resp.status_code == 200
+
+    # Staging a relic should continue to block advancement until confirmed
     await client.post(
         "/ui/action",
         json={"action": "choose_relic", "params": {"relic_id": "threadbare_cloak"}},
     )
+    resp = await client.post("/ui/action", json={"action": "advance_room"})
+    assert resp.status_code == 400
+
+    resp = await client.post("/ui/action", json={"action": "confirm_relic"})
+    assert resp.status_code == 200
+
     resp = await client.post("/ui/action", json={"action": "advance_room"})
     data = await resp.get_json()
     assert resp.status_code == 200
