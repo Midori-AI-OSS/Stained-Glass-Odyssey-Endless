@@ -74,3 +74,33 @@ and block room advancement until the confirmation call succeeds. Confirmation
 logic is responsible for applying the staged payload, clearing the bucket, and
 flipping the `awaiting_*` flags. Until then the party roster (`Party.cards` and
 `Party.relics`) is intentionally unchanged.
+
+## Confirmation workflow
+
+Staged rewards are committed through the dedicated confirmation endpoints:
+
+- `POST /rewards/card/<run_id>/confirm`
+- `POST /rewards/relic/<run_id>/confirm`
+
+Each endpoint consumes the staged payload for the requested reward type. The
+server appends the staged card or relic to the saved party, clears the staging
+bucket, and updates the reward progression sequence. When no further rewards
+are pending the backend flips `awaiting_next` to `True` so the room can advance.
+The JSON response mirrors the updated state and includes the current party deck
+or relic list alongside the refreshed `reward_staging` payload.
+
+Clients can roll back a staged choice with:
+
+- `POST /rewards/card/<run_id>/cancel`
+- `POST /rewards/relic/<run_id>/cancel`
+
+Cancellation removes the staged entry, reopens the matching progression step,
+and ensures `awaiting_next` stays `False`. Downstream UIs should respond by
+redisplaying the available choices and prompting the player to select again.
+
+## Cleanup guarantees
+
+`runs.lifecycle.cleanup_battle_state` now clears any non-empty staging buckets
+whenever a run leaves the reward state (either because the run ended or because
+all confirmations completed). This prevents reconnects from surfacing stale
+staging data after the player advances to the next room or abandons the run.

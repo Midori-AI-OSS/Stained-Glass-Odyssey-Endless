@@ -17,6 +17,8 @@ from runs.lifecycle import load_map
 from runs.lifecycle import save_map
 from runs.party_manager import load_party
 from services.asset_service import get_asset_manifest
+from services.reward_service import cancel_reward
+from services.reward_service import confirm_reward
 from services.reward_service import select_card
 from services.reward_service import select_relic
 from services.room_service import BATTLE_ROOM_TYPES
@@ -571,6 +573,46 @@ async def handle_ui_action() -> tuple[str, int, dict[str, Any]]:
 
             try:
                 result = await select_relic(run_id, relic_id)
+                return jsonify(result)
+            except ValueError as exc:
+                return create_error_response(str(exc), 400)
+
+        elif action == "confirm_card":
+            if not run_id:
+                return create_error_response("No active run", 400)
+
+            try:
+                result = await confirm_reward(run_id, "card")
+                return jsonify(result)
+            except ValueError as exc:
+                return create_error_response(str(exc), 400)
+
+        elif action == "confirm_relic":
+            if not run_id:
+                return create_error_response("No active run", 400)
+
+            try:
+                result = await confirm_reward(run_id, "relic")
+                return jsonify(result)
+            except ValueError as exc:
+                return create_error_response(str(exc), 400)
+
+        elif action == "cancel_card":
+            if not run_id:
+                return create_error_response("No active run", 400)
+
+            try:
+                result = await cancel_reward(run_id, "card")
+                return jsonify(result)
+            except ValueError as exc:
+                return create_error_response(str(exc), 400)
+
+        elif action == "cancel_relic":
+            if not run_id:
+                return create_error_response("No active run", 400)
+
+            try:
+                result = await cancel_reward(run_id, "relic")
                 return jsonify(result)
             except ValueError as exc:
                 return create_error_response(str(exc), 400)

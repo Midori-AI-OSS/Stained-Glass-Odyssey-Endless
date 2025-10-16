@@ -14,3 +14,5 @@ Complete `431efb19-reward-staging-schema.md` and `e69ad95e-reward-staging-servic
 
 ## Out of scope
 Duplicate-prevention guardrails and regression tests live in the guardrail tasks.
+
+ready for review
