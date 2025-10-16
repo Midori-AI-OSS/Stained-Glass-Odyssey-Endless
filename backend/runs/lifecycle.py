@@ -203,6 +203,24 @@ async def cleanup_battle_state() -> None:
         preserve_snapshot = ended and run_result == "defeat"
 
         if ended or (not awaiting_next and not has_rewards):
+            if not state:
+                try:
+                    state, _ = await asyncio.to_thread(load_map, run_id)
+                except Exception:
+                    state = {}
+            if state:
+                staging, _ = ensure_reward_staging(state)
+                cleared = False
+                for key in REWARD_STAGING_KEYS:
+                    bucket = staging.get(key)
+                    if isinstance(bucket, list) and bucket:
+                        staging[key] = []
+                        cleared = True
+                if cleared:
+                    try:
+                        await asyncio.to_thread(save_map, run_id, state)
+                    except Exception:
+                        log.debug("Failed to clear reward staging for run %s", run_id, exc_info=True)
             if not preserve_snapshot:
                 if battle_snapshots.pop(run_id, None) is not None:
                     snapshots_removed += 1

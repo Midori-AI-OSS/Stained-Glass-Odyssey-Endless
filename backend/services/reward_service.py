@@ -35,6 +35,19 @@ def _serialise_staging(staging: dict[str, Any]) -> dict[str, list[object]]:
     return payload
 
 
+def _normalise_reward_type(reward_type: str) -> str:
+    """Return the canonical staging bucket for ``reward_type``."""
+
+    normalised = (reward_type or "").strip().lower()
+    if normalised == "card":
+        return "cards"
+    if normalised == "relic":
+        return "relics"
+    if normalised in {"item", "items"}:
+        return "items"
+    raise ValueError("unsupported reward type")
+
+
 async def select_card(run_id: str, card_id: str) -> dict[str, Any]:
     if not card_id:
         raise ValueError("invalid card")
@@ -248,3 +261,204 @@ async def acknowledge_loot(run_id: str) -> dict[str, Any]:
     except Exception:
         pass
     return {"next_room": next_type} if next_type is not None else {"next_room": None}
+
+
+def _update_reward_progression(
+    state: dict[str, Any],
+    *,
+    completed_step: str | None = None,
+    reopen_step: str | None = None,
+) -> None:
+    progression = state.get("reward_progression")
+    if not isinstance(progression, dict):
+        return
+
+    available = progression.get("available", [])
+    completed = progression.get("completed", [])
+    if completed_step and completed_step in available and completed_step not in completed:
+        completed.append(completed_step)
+        progression["completed"] = completed
+    if reopen_step and reopen_step in completed:
+        progression["completed"] = [step for step in completed if step != reopen_step]
+
+    if reopen_step:
+        progression["current_step"] = reopen_step
+        return
+
+    next_steps = [step for step in available if step not in completed]
+    if next_steps:
+        progression["current_step"] = next_steps[0]
+    else:
+        progression["current_step"] = None
+        state.pop("reward_progression", None)
+
+
+def _refresh_snapshot(run_id: str, state: dict[str, Any], staging: dict[str, Any]) -> None:
+    snap = battle_snapshots.get(run_id)
+    if not isinstance(snap, dict):
+        return
+
+    snapshot = dict(snap)
+    ensure_reward_staging(snapshot)
+    snapshot["awaiting_card"] = state.get("awaiting_card", False)
+    snapshot["awaiting_relic"] = state.get("awaiting_relic", False)
+    snapshot["awaiting_loot"] = state.get("awaiting_loot", False)
+    snapshot["awaiting_next"] = state.get("awaiting_next", False)
+    progression_snapshot = state.get("reward_progression")
+    if isinstance(progression_snapshot, dict):
+        snapshot["reward_progression"] = dict(progression_snapshot)
+    else:
+        snapshot.pop("reward_progression", None)
+
+    snapshot_staging = snapshot.get("reward_staging")
+    if isinstance(snapshot_staging, dict):
+        snapshot_staging.update(_serialise_staging(staging))
+    else:
+        snapshot["reward_staging"] = _serialise_staging(staging)
+    battle_snapshots[run_id] = snapshot
+
+
+async def _persist_reward_state(
+    run_id: str,
+    state: dict[str, Any],
+    party,
+) -> None:
+    await asyncio.to_thread(save_map, run_id, state)
+    await asyncio.to_thread(save_party, run_id, party)
+
+
+async def confirm_reward(run_id: str, reward_type: str) -> dict[str, Any]:
+    bucket = _normalise_reward_type(reward_type)
+
+    state, rooms = await asyncio.to_thread(load_map, run_id)
+    staging, _ = ensure_reward_staging(state)
+    staged_values = staging.get(bucket, [])
+    if not staged_values:
+        raise ValueError("no staged reward to confirm")
+
+    party = await asyncio.to_thread(load_party, run_id)
+
+    if bucket == "cards":
+        staged_card = staged_values[0]
+        card_id = staged_card.get("id") if isinstance(staged_card, dict) else None
+        if not card_id:
+            raise ValueError("invalid staged card")
+        if card_id not in getattr(party, "cards", []):
+            party.cards.append(card_id)
+        state["awaiting_card"] = False
+        _update_reward_progression(state, completed_step="card")
+    elif bucket == "relics":
+        staged_relic = staged_values[0]
+        relic_id = staged_relic.get("id") if isinstance(staged_relic, dict) else None
+        if not relic_id:
+            raise ValueError("invalid staged relic")
+        party.relics.append(relic_id)
+        state["awaiting_relic"] = False
+        _update_reward_progression(state, completed_step="relic")
+    elif bucket == "items":
+        staged_items = [item for item in staged_values if isinstance(item, dict)]
+        inventory = getattr(party, "items", None)
+        if isinstance(inventory, list):
+            inventory.extend(staged_items)
+        else:
+            setattr(party, "items", staged_items)
+        state["awaiting_loot"] = False
+        _update_reward_progression(state, completed_step="loot")
+
+    staging[bucket] = []
+
+    if not (
+        state.get("awaiting_card")
+        or state.get("awaiting_relic")
+        or state.get("awaiting_loot")
+    ):
+        state["awaiting_next"] = True
+    else:
+        state["awaiting_next"] = False
+
+    await _persist_reward_state(run_id, state, party)
+    _refresh_snapshot(run_id, state, staging)
+
+    next_room = None
+    if state.get("awaiting_next"):
+        next_index = state.get("current", 0) + 1
+        if isinstance(rooms, list) and 0 <= next_index < len(rooms):
+            next_room = rooms[next_index].room_type
+
+    try:
+        await log_game_action(
+            f"confirm_{reward_type}",
+            run_id=run_id,
+            room_id=str(state.get("current", "")),
+            details={"bucket": bucket},
+        )
+    except Exception:
+        pass
+
+    payload: dict[str, Any] = {
+        "reward_staging": _serialise_staging(staging),
+        "awaiting_card": state.get("awaiting_card", False),
+        "awaiting_relic": state.get("awaiting_relic", False),
+        "awaiting_loot": state.get("awaiting_loot", False),
+        "awaiting_next": state.get("awaiting_next", False),
+    }
+    if bucket == "cards":
+        payload["cards"] = list(getattr(party, "cards", []))
+    if bucket == "relics":
+        payload["relics"] = list(getattr(party, "relics", []))
+    progression_payload = state.get("reward_progression")
+    if isinstance(progression_payload, dict):
+        payload["reward_progression"] = dict(progression_payload)
+    if next_room is not None:
+        payload["next_room"] = next_room
+    return payload
+
+
+async def cancel_reward(run_id: str, reward_type: str) -> dict[str, Any]:
+    bucket = _normalise_reward_type(reward_type)
+
+    state, _ = await asyncio.to_thread(load_map, run_id)
+    staging, _ = ensure_reward_staging(state)
+    staged_values = staging.get(bucket, [])
+    if not staged_values:
+        raise ValueError("no staged reward to cancel")
+
+    staging[bucket] = []
+
+    if bucket == "cards":
+        state["awaiting_card"] = True
+        _update_reward_progression(state, reopen_step="card")
+    elif bucket == "relics":
+        state["awaiting_relic"] = True
+        _update_reward_progression(state, reopen_step="relic")
+    elif bucket == "items":
+        state["awaiting_loot"] = True
+        _update_reward_progression(state, reopen_step="loot")
+
+    state["awaiting_next"] = False
+
+    party = await asyncio.to_thread(load_party, run_id)
+    await _persist_reward_state(run_id, state, party)
+    _refresh_snapshot(run_id, state, staging)
+
+    try:
+        await log_game_action(
+            f"cancel_{reward_type}",
+            run_id=run_id,
+            room_id=str(state.get("current", "")),
+            details={"bucket": bucket},
+        )
+    except Exception:
+        pass
+
+    payload: dict[str, Any] = {
+        "reward_staging": _serialise_staging(staging),
+        "awaiting_card": state.get("awaiting_card", False),
+        "awaiting_relic": state.get("awaiting_relic", False),
+        "awaiting_loot": state.get("awaiting_loot", False),
+        "awaiting_next": state.get("awaiting_next", False),
+    }
+    progression_payload = state.get("reward_progression")
+    if isinstance(progression_payload, dict):
+        payload["reward_progression"] = dict(progression_payload)
+    return payload
