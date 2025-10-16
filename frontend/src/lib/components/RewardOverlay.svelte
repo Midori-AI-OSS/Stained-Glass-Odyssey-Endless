@@ -315,6 +315,8 @@
 
   $: awaitingConfirmation =
     pendingConfirmationCount > 0 ||
+    pendingCardSelection !== null ||
+    pendingRelicSelection !== null ||
     pendingCardConfirm !== null ||
     pendingCardCancel !== null ||
     pendingRelicConfirm !== null ||

@@ -1008,11 +1008,17 @@
       base.next_room = result.next_room;
     }
 
-    if (Array.isArray(base.card_choices)) {
+    if (Object.prototype.hasOwnProperty.call(result ?? {}, 'card_choices')) {
+      const nextCardChoices = Array.isArray(result?.card_choices) ? result.card_choices : [];
+      base.card_choices = cloneRewardEntries(nextCardChoices);
+    } else if (Array.isArray(base.card_choices)) {
       base.card_choices = cloneRewardEntries(base.card_choices);
     }
 
-    if (Array.isArray(base.relic_choices)) {
+    if (Object.prototype.hasOwnProperty.call(result ?? {}, 'relic_choices')) {
+      const nextRelicChoices = Array.isArray(result?.relic_choices) ? result.relic_choices : [];
+      base.relic_choices = cloneRewardEntries(nextRelicChoices);
+    } else if (Array.isArray(base.relic_choices)) {
       base.relic_choices = cloneRewardEntries(base.relic_choices);
     }
 
