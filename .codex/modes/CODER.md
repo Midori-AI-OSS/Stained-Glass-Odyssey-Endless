@@ -11,7 +11,7 @@ For contributors actively writing, refactoring, or reviewing code. Coder Mode em
 ## Guidelines
 - Follow all repository coding standards, style guides, and best practices.
 - **Recommended**: Run linting before every commit. For backend Python code: `ruff check . --fix` and address any remaining issues manually. See `.codex/implementation/linting-standards.md` for details.
-- **MANDATORY**: When a task is finished, always append `ready for review` at the bottom of the task file or PR description so reviewers know the work is complete. If the task is not done, give a `% of work done` at the bottom of the file.
+- **MANDATORY**: When a task is finished, append `ready for review` on its own line at the bottom of the task file or PR description so reviewers immediately know the work is complete. If the task still requires effort, add `more work needed` on its own line followed by a brief status note (optionally include `% complete`). Never leave a task without one of these closing signals.
 - Regularly review the root `.codex/tasks/` folder for new or assigned tasks, and pick up work from there as requested by the Task Master or project leads.
 - Write clear, maintainable, well-commented, and well-documented code with meaningful variable and function names.
 - Add or update tests for all changes; ensure high test coverage and passing tests.
