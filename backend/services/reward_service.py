@@ -11,7 +11,9 @@ from runs.party_manager import load_party
 from runs.party_manager import save_party
 from tracking import log_game_action
 
+from autofighter.cards import award_card
 from autofighter.cards import instantiate_card
+from autofighter.relics import award_relic
 from autofighter.relics import instantiate_relic
 
 
@@ -64,17 +66,33 @@ async def select_card(run_id: str, card_id: str) -> dict[str, Any]:
 
     staging["cards"] = [staged_card]
 
-    # Keep reward progression blocked until confirmation applies the staged card.
-    progression = state.get("reward_progression")
-    if isinstance(progression, dict):
-        if progression.get("current_step") is None:
-            progression["current_step"] = "card"
-        state["reward_progression"] = progression
+    awarded_card = award_card(party, card_id)
+    if awarded_card is None:
+        raise ValueError("invalid card")
 
-    state["awaiting_card"] = True
-    state["awaiting_next"] = False
+    progression = state.get("reward_progression")
+    if progression and progression.get("current_step") == "card":
+        completed = progression.setdefault("completed", [])
+        if "card" not in completed:
+            completed.append("card")
+        available = progression.get("available", [])
+        next_steps = [step for step in available if step not in completed]
+        if next_steps:
+            progression["current_step"] = next_steps[0]
+            state["awaiting_card"] = False
+            state["awaiting_next"] = False
+        else:
+            progression["current_step"] = None
+            state["awaiting_card"] = False
+            state["awaiting_next"] = True
+            state.pop("reward_progression", None)
+    else:
+        state["awaiting_card"] = False
+        if not state.get("awaiting_relic") and not state.get("awaiting_loot"):
+            state["awaiting_next"] = True
 
     await asyncio.to_thread(save_map, run_id, state)
+    await asyncio.to_thread(save_party, run_id, party)
 
     snap = battle_snapshots.get(run_id)
     if isinstance(snap, dict):
@@ -158,18 +176,35 @@ async def select_relic(run_id: str, relic_id: str) -> dict[str, Any]:
 
     staging["relics"] = [staged_relic]
 
-    staged_relic["stacks"] = existing_stacks + 1
+    awarded_relic = award_relic(party, relic_id)
+    if awarded_relic is None:
+        raise ValueError("invalid relic")
+
+    staged_relic["stacks"] = party.relics.count(relic.id)
 
     progression = state.get("reward_progression")
-    if isinstance(progression, dict):
-        if progression.get("current_step") is None:
-            progression["current_step"] = "relic"
-        state["reward_progression"] = progression
-
-    state["awaiting_relic"] = True
-    state["awaiting_next"] = False
+    if progression and progression.get("current_step") == "relic":
+        completed = progression.setdefault("completed", [])
+        if "relic" not in completed:
+            completed.append("relic")
+        available = progression.get("available", [])
+        next_steps = [step for step in available if step not in completed]
+        if next_steps:
+            progression["current_step"] = next_steps[0]
+            state["awaiting_relic"] = False
+            state["awaiting_next"] = False
+        else:
+            progression["current_step"] = None
+            state["awaiting_relic"] = False
+            state["awaiting_next"] = True
+            state.pop("reward_progression", None)
+    else:
+        state["awaiting_relic"] = False
+        if not state.get("awaiting_card") and not state.get("awaiting_loot"):
+            state["awaiting_next"] = True
 
     await asyncio.to_thread(save_map, run_id, state)
+    await asyncio.to_thread(save_party, run_id, party)
 
     snap = battle_snapshots.get(run_id)
     if isinstance(snap, dict):
