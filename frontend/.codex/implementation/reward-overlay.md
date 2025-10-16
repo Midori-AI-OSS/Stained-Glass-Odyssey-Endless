@@ -34,6 +34,34 @@ both `aria-label`s and visually hidden text for assistive technologies. Failed
 lookups and network errors fall back to the shared material placeholder via
 `onMaterialIconError` so the overlay never shows broken images.
 
+## Confirmation flow for staged rewards
+
+When the backend marks `awaiting_card` or `awaiting_relic` as `true` and
+provides staged entries under `reward_staging`, the overlay now surfaces a
+dedicated confirmation block. The selected card or relic renders in a disabled
+state alongside **Confirm** and **Cancel** buttons so players can commit or
+undo their choice before advancing the run.
+
+- `RewardOverlay` receives `stagedCards`, `stagedRelics`, and the
+  `awaiting_*` flags from `OverlayHost`. The component hides the original card
+  or relic choice grid while a staged entry is pending.
+- Clicking **Confirm** dispatches a `confirm` event with the reward type so the
+  caller can invoke `/ui?action=confirm_card` or `/ui?action=confirm_relic`.
+  Buttons stay disabled until the parent responds via the provided
+  `respond({ ok })` callback.
+- Clicking **Cancel** dispatches a matching `cancel` event that triggers the
+  `/ui?action=cancel_*` endpoints and restores the choice list once the staging
+  bucket is cleared.
+- Idle mode relies on these events as well. Automation confirms staged rewards
+  instead of calling `advance_room`, keeping the overlay visible until the
+  backend reports `awaiting_next`.
+- The overlay's auto-advance timer and "Next Room" button now respect staged
+  confirmations so players cannot accidentally skip unconfirmed rewards.
+
+This UI contract mirrors the backend guardrails introduced for staged rewards,
+keeping the frontend in sync with the confirmation lifecycle without forcing a
+full map refresh between each step.
+
 To emphasise each pickup, the component keeps a `visibleDrops` array separate
 from the aggregated `dropEntries`. When motion reduction is disabled the list
 is populated one entry at a time on a timed interval; each reveal triggers the

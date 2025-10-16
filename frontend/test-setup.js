@@ -2,8 +2,27 @@
 // Mock SvelteKit modules that aren't available in test environment
 
 import { beforeAll } from 'bun:test';
+import { JSDOM } from 'jsdom';
+import 'svelte/internal/flags/legacy.js';
+
+process.env.SVELTE_ALLOW_RUNES_OUTSIDE_SVELTE = 'true';
+globalThis.SVELTE_ALLOW_RUNES_OUTSIDE_SVELTE = true;
 
 beforeAll(() => {
+  const dom = new JSDOM('<!doctype html><html><body></body></html>', { url: 'http://localhost' });
+  global.window = dom.window;
+  global.document = dom.window.document;
+  global.navigator = dom.window.navigator;
+  global.HTMLElement = dom.window.HTMLElement;
+  global.CustomEvent = dom.window.CustomEvent;
+  global.requestAnimationFrame =
+    dom.window.requestAnimationFrame || ((callback) => setTimeout(callback, 0));
+  global.cancelAnimationFrame =
+    dom.window.cancelAnimationFrame || ((handle) => clearTimeout(handle));
+
+  process.env.SVELTE_ALLOW_RUNES_OUTSIDE_SVELTE = 'true';
+  global.SVELTE_ALLOW_RUNES_OUTSIDE_SVELTE = true;
+
   // Mock $app/environment
   global.$app = {
     environment: {

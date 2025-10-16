@@ -206,9 +206,17 @@ export function rewardOpen(roomData, _battleActive) {
   if (!roomData) return false;
   const hasCards = (roomData?.card_choices?.length || 0) > 0;
   const hasRelics = (roomData?.relic_choices?.length || 0) > 0;
-  // Only open the reward overlay for selectable choices (cards/relics).
-  // Loot items/gold are displayed via floating messages, not as a blocking popup.
-  return Boolean(hasCards || hasRelics);
+  const staging = roomData?.reward_staging && typeof roomData.reward_staging === 'object' ? roomData.reward_staging : {};
+  const stagedCards = Array.isArray(staging.cards) && staging.cards.length > 0;
+  const stagedRelics = Array.isArray(staging.relics) && staging.relics.length > 0;
+  const awaitingCard = Boolean(roomData?.awaiting_card);
+  const awaitingRelic = Boolean(roomData?.awaiting_relic);
+  return Boolean(
+    hasCards ||
+    hasRelics ||
+    (awaitingCard && stagedCards) ||
+    (awaitingRelic && stagedRelics)
+  );
 }
 
 export function selectBattleMusic({ roomType, party = [], foes = [], preferences = {} }) {

@@ -316,6 +316,34 @@ export async function chooseRelic(relicId) {
 }
 
 /**
+ * Confirm a staged card reward.
+ */
+export async function confirmCard() {
+  return await sendAction('confirm_card');
+}
+
+/**
+ * Confirm a staged relic reward.
+ */
+export async function confirmRelic() {
+  return await sendAction('confirm_relic');
+}
+
+/**
+ * Cancel a staged card reward and reopen choices.
+ */
+export async function cancelCard() {
+  return await sendAction('cancel_card');
+}
+
+/**
+ * Cancel a staged relic reward and reopen choices.
+ */
+export async function cancelRelic() {
+  return await sendAction('cancel_relic');
+}
+
+/**
  * Acknowledge and collect room loot.
  * @param {string} runId - The current run identifier
  */

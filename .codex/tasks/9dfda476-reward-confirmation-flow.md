@@ -41,3 +41,5 @@ The overlay never renders staged rewards from `reward_staging`, so the player ca
 - Manual: clear a battle, stage a card, confirm it, and verify `advance_room` succeeds and the deck updates.
 - Automated: add frontend integration/unit tests for the confirm handlers if feasible; backend pytest coverage for staged confirmation sequences.
 
+ready for review
+

@@ -69,6 +69,31 @@
   // Floating loot messages are suppressed after first display via `lootConsumed`,
   // but the overlay should remain visible until the player advances.
   $: rewardOpen = computeRewardOpen(roomData, battleActive);
+  $: rewardStaging = roomData?.reward_staging && typeof roomData.reward_staging === 'object' ? roomData.reward_staging : null;
+  $: stagedCards = Array.isArray(rewardStaging?.cards) ? rewardStaging.cards : [];
+  $: stagedRelics = Array.isArray(rewardStaging?.relics) ? rewardStaging.relics : [];
+  $: awaitingCard = Boolean(roomData?.awaiting_card);
+  $: awaitingRelic = Boolean(roomData?.awaiting_relic);
+  $: awaitingLoot = Boolean(roomData?.awaiting_loot);
+  $: awaitingNext = Boolean(roomData?.awaiting_next);
+  $: rewardTitle = (() => {
+    if (awaitingCard && stagedCards.length > 0) {
+      return 'Confirm Card';
+    }
+    if (awaitingRelic && stagedRelics.length > 0) {
+      return 'Confirm Relic';
+    }
+    if ((roomData?.card_choices?.length || 0) > 0) {
+      return 'Choose a Card';
+    }
+    if ((roomData?.relic_choices?.length || 0) > 0) {
+      return 'Choose a Relic';
+    }
+    if (awaitingLoot) {
+      return 'Collect Loot';
+    }
+    return 'Rewards';
+  })();
   // Review should display after a battle finishes, once reward choices (if any) are done.
   // Only show review when we have a valid battle_index to load summaries
   $: reviewOpen = Boolean(
@@ -401,7 +426,7 @@
 
 {#if rewardOpen}
   <PopupWindow
-    title={(roomData?.card_choices?.length || 0) > 0 ? 'Choose a Card' : 'Choose a Relic'}
+    title={rewardTitle}
     maxWidth="880px"
     maxHeight="100%"
     zIndex={1100}
@@ -410,14 +435,23 @@
     on:close={() => { /* block closing while choices remain */ }}
   >
     <RewardOverlay
-      cards={roomData.card_choices || []}
-      relics={roomData.relic_choices || []}
-      items={roomData.loot?.items || []}
-      gold={roomData.loot?.gold || 0}
+      cards={roomData?.card_choices || []}
+      relics={roomData?.relic_choices || []}
+      stagedCards={stagedCards}
+      stagedRelics={stagedRelics}
+      awaitingCard={awaitingCard}
+      awaitingRelic={awaitingRelic}
+      awaitingLoot={awaitingLoot}
+      awaitingNext={awaitingNext}
+      items={roomData?.loot?.items || []}
+      gold={roomData?.loot?.gold || 0}
+      nextRoom={roomData?.next_room || ''}
       {sfxVolume}
       {fullIdleMode}
       reducedMotion={overlayReducedMotion}
       on:select={(e) => dispatch('rewardSelect', e.detail)}
+      on:confirm={(e) => dispatch('rewardConfirm', e.detail)}
+      on:cancel={(e) => dispatch('rewardCancel', e.detail)}
       on:next={() => dispatch('nextRoom')}
       on:lootAcknowledge={() => dispatch('lootAcknowledge')}
     />
