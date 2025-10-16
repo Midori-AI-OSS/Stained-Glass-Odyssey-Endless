@@ -53,8 +53,10 @@ This document summarizes common development practices for all services in this r
 The repository supports several contributor modes to clarify expectations and best practices for different types of contributions:
 
 > **MANDATORY: All contributors must read their mode's documentation in `.codex/modes/` before starting any work. Failure to do so may result in removal from the repository.**
-> 
+>
 > Recent incidents (e.g., a coder updating audit files 3 times without following mode guidelines) have shown that skipping these docs leads to wasted effort and rework. This is not optional—review your mode doc every time you contribute.
+
+**Mode selection rule:** When a request begins with the name of a mode (e.g., "Manager", "Coder", "Reviewer"), treat that as the required mode for the task unless explicitly told otherwise. Switch to that mode's instructions before continuing.
 
 **All contributors should regularly review and keep their mode cheat sheet in `.codex/notes/` up to date.**
 Refer to your mode's cheat sheet for quick reminders and update it as needed.
