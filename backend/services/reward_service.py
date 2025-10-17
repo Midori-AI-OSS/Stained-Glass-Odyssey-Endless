@@ -102,6 +102,9 @@ async def select_card(run_id: str, card_id: str) -> dict[str, Any]:
         state["awaiting_card"] = True
         state["awaiting_next"] = False
 
+        # Ensure reward_progression exists
+        _ensure_reward_progression(state, staging)
+
         await asyncio.to_thread(save_map, run_id, state)
 
         snap = battle_snapshots.get(run_id)
@@ -146,7 +149,7 @@ async def select_card(run_id: str, card_id: str) -> dict[str, Any]:
             "reward_progression": (
                 dict(state["reward_progression"])
                 if isinstance(state.get("reward_progression"), dict)
-                else state.get("reward_progression")
+                else None
             ),
         }
 
@@ -209,6 +212,9 @@ async def select_relic(run_id: str, relic_id: str) -> dict[str, Any]:
         state["awaiting_relic"] = True
         state["awaiting_next"] = False
 
+        # Ensure reward_progression exists
+        _ensure_reward_progression(state, staging)
+
         await asyncio.to_thread(save_map, run_id, state)
 
         snap = battle_snapshots.get(run_id)
@@ -253,7 +259,7 @@ async def select_relic(run_id: str, relic_id: str) -> dict[str, Any]:
             "reward_progression": (
                 dict(state["reward_progression"])
                 if isinstance(state.get("reward_progression"), dict)
-                else state.get("reward_progression")
+                else None
             ),
         }
 
@@ -307,6 +313,62 @@ async def acknowledge_loot(run_id: str) -> dict[str, Any]:
         except Exception:
             pass
         return {"next_room": next_type} if next_type is not None else {"next_room": None}
+
+
+def _ensure_reward_progression(state: dict[str, Any], staging: dict[str, Any] | None = None) -> None:
+    """Ensure reward_progression exists and is properly populated based on current state.
+    This defensive backfill creates progression metadata from awaiting_* flags and staging
+    buckets when the field is missing, ensuring the frontend always has a consistent step map.
+    """
+    existing = state.get("reward_progression")
+    if isinstance(existing, dict) and existing.get("available"):
+        # Progression already exists and has content, no backfill needed
+        return
+
+    # Determine what reward steps are available
+    has_card = state.get("awaiting_card", False)
+    has_relic = state.get("awaiting_relic", False)
+    has_loot = state.get("awaiting_loot", False)
+
+    # Check staging buckets if provided
+    if isinstance(staging, dict):
+        if not has_card and staging.get("cards"):
+            has_card = True
+        if not has_relic and staging.get("relics"):
+            has_relic = True
+        if not has_loot and staging.get("items"):
+            has_loot = True
+
+    # If no rewards are pending, clear any partial progression
+    if not (has_card or has_relic or has_loot):
+        state.pop("reward_progression", None)
+        return
+
+    # Build progression structure
+    available = []
+    completed = []
+
+    # Preserve existing completed steps if progression exists
+    if isinstance(existing, dict):
+        completed = existing.get("completed", [])
+
+    # Determine which steps should be in available
+    if has_card:
+        available.append("card")
+    if has_relic:
+        available.append("relic")
+    if has_loot:
+        available.append("loot")
+
+    # Determine current step (first incomplete step)
+    next_steps = [step for step in available if step not in completed]
+    current_step = next_steps[0] if next_steps else None
+
+    state["reward_progression"] = {
+        "available": available,
+        "completed": completed,
+        "current_step": current_step,
+    }
 
 
 def _update_reward_progression(
@@ -392,6 +454,9 @@ async def confirm_reward(run_id: str, reward_type: str) -> dict[str, Any]:
 
         party = await asyncio.to_thread(load_party, run_id)
 
+        # Ensure reward_progression exists before updating
+        _ensure_reward_progression(state, staging)
+
         activation_snapshot: list[dict[str, Any]] = []
         if bucket == "cards":
             staged_card = staged_values[0]
@@ -476,14 +541,16 @@ async def confirm_reward(run_id: str, reward_type: str) -> dict[str, Any]:
             "awaiting_loot": state.get("awaiting_loot", False),
             "awaiting_next": state.get("awaiting_next", False),
             "activation_record": activation_record,
+            "reward_progression": (
+                dict(state["reward_progression"])
+                if isinstance(state.get("reward_progression"), dict)
+                else None
+            ),
         }
         if bucket == "cards":
             payload["cards"] = list(getattr(party, "cards", []))
         if bucket == "relics":
             payload["relics"] = list(getattr(party, "relics", []))
-        progression_payload = state.get("reward_progression")
-        if isinstance(progression_payload, dict):
-            payload["reward_progression"] = dict(progression_payload)
         if next_room is not None:
             payload["next_room"] = next_room
         payload["reward_activation_log"] = [dict(entry) for entry in activation_log]
@@ -502,6 +569,9 @@ async def cancel_reward(run_id: str, reward_type: str) -> dict[str, Any]:
             raise ValueError("no staged reward to cancel")
 
         staging[bucket] = []
+
+        # Ensure reward_progression exists before updating
+        _ensure_reward_progression(state, staging)
 
         if bucket == "cards":
             state["awaiting_card"] = True
@@ -535,8 +605,10 @@ async def cancel_reward(run_id: str, reward_type: str) -> dict[str, Any]:
             "awaiting_relic": state.get("awaiting_relic", False),
             "awaiting_loot": state.get("awaiting_loot", False),
             "awaiting_next": state.get("awaiting_next", False),
+            "reward_progression": (
+                dict(state["reward_progression"])
+                if isinstance(state.get("reward_progression"), dict)
+                else None
+            ),
         }
-        progression_payload = state.get("reward_progression")
-        if isinstance(progression_payload, dict):
-            payload["reward_progression"] = dict(progression_payload)
         return payload
