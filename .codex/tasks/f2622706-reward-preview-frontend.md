@@ -15,3 +15,5 @@ Complete the backend preview schema task (`b30ad6a1-reward-preview-schema.md`) f
 
 ## Out of scope
 Guardrails, staging confirmation logic, and backend tests belong to other tasks.
+
+ready for review
