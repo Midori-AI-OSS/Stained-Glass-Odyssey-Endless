@@ -36,6 +36,9 @@ Managers and reviewers should confirm that:
    handing the task off.
 4. Any time the status changes, the contributor updates the marker
    immediately.
+5. Auditors only engage once a task is marked `ready for review` or
+   `requesting review from the Task Master`; tasks without those markers should
+   continue to incubate with the assignee.
 
 If a marker is missing, request an update before proceeding so downstream
 contributors have accurate visibility into task readiness.

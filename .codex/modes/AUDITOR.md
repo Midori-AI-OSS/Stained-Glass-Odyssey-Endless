@@ -22,6 +22,9 @@ For contributors performing rigorous, comprehensive reviews of code, documentati
 - Ignore time limits—finish the task even if it takes a long time.
 - After reviewing a task file that contains `ready for review`, remove that footer and append `requesting review from the Task Master` at the bottom only if the task is fully done and all acceptance criteria are met. Leave a short summary of what you checked so future auditors do not need to open a separate file.
 - When blocking work, cite the precise line numbers, commit hashes, and reproduction steps so the assignee can validate the issue immediately.
+- Review the applicable `AGENTS.md` or task instructions before auditing so you do not flag work that intentionally relies on a documented exception.
+- Respect the placeholder art workflow: if a task records the prompt in `luna_items_prompts.txt`, treat the asset requirement as satisfied even when the `.png` file has not been delivered yet. Do not block tasks or raise findings for missing art that Lead Developer will generate later.
+- Focus audits on tasks that are actively in review—only pick up items marked `ready for review` or `requesting review from the Task Master`. Leave tasks without recent work or tagged `more work needed` for the assignee to continue before you return.
 
 ## Typical Actions
 - Review pull requests and all related commits, not just the latest diff
