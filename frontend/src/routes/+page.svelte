@@ -1021,6 +1021,9 @@
     if (Object.prototype.hasOwnProperty.call(result ?? {}, 'card_choices')) {
       const nextCardChoices = Array.isArray(result?.card_choices) ? result.card_choices : [];
       base.card_choices = cloneRewardEntries(nextCardChoices);
+    } else if (type === 'card' && result && !result.awaiting_card) {
+      // If we just confirmed or cancelled a card and awaiting_card is false, clear choices
+      base.card_choices = [];
     } else if (Array.isArray(base.card_choices)) {
       base.card_choices = cloneRewardEntries(base.card_choices);
     }
@@ -1028,6 +1031,9 @@
     if (Object.prototype.hasOwnProperty.call(result ?? {}, 'relic_choices')) {
       const nextRelicChoices = Array.isArray(result?.relic_choices) ? result.relic_choices : [];
       base.relic_choices = cloneRewardEntries(nextRelicChoices);
+    } else if (type === 'relic' && result && !result.awaiting_relic) {
+      // If we just confirmed or cancelled a relic and awaiting_relic is false, clear choices
+      base.relic_choices = [];
     } else if (Array.isArray(base.relic_choices)) {
       base.relic_choices = cloneRewardEntries(base.relic_choices);
     }

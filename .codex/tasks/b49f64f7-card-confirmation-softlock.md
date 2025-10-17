@@ -35,3 +35,20 @@ Audit **f6409b29** found that confirming the first post-battle card reward immed
 - `.codex/audit/f6409b29-game-playtest-audit.audit.md`
 - Frontend: `frontend/src/routes/(app)/game/+page.svelte`, `frontend/src/lib/overlays/RewardOverlay.svelte`, `frontend/src/lib/systems/uiApi.js`
 - Backend: `backend/routes/ui.py`, `backend/services/reward_service.py`
+
+## Implementation Notes (2025-10-17)
+### Root Cause
+The bug was in `frontend/src/routes/+page.svelte` in the `applyRewardPayload` function. After confirming a card:
+1. Backend returns `awaiting_card=false` with staging cleared
+2. Frontend's `applyRewardPayload` didn't receive `card_choices` in the response
+3. The else branch kept the old `card_choices` array instead of clearing it
+4. RewardOverlay saw `awaitingCard=false` and `card_choices.length > 0`, causing it to re-show card selection
+
+### Fix Applied
+Modified `applyRewardPayload` to clear `card_choices` when:
+- Type is 'card' and result shows `awaiting_card=false`
+- Type is 'relic' and result shows `awaiting_relic=false`
+
+This ensures that after confirmation, the choices are properly cleared and the overlay advances to the next reward step.
+
+more work needed - Fix applied, needs manual testing to verify the soft lock is resolved
