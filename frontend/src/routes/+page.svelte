@@ -51,6 +51,7 @@
   import { registerAssetManifest } from '$lib/systems/assetLoader.js';
   import { browser, dev } from '$app/environment';
   import { normalizeShopPurchase, processSequentialPurchases } from '$lib/systems/shopPurchases.js';
+  import { normalizeRewardPreview } from '$lib/utils/rewardPreviewFormatter.js';
 
   const runState = runStateStore;
 
@@ -979,7 +980,16 @@
     const buckets = { cards: [], relics: [], items: [] };
     for (const bucket of Object.keys(buckets)) {
       const values = Array.isArray(effective[bucket]) ? effective[bucket] : [];
-      buckets[bucket] = values.map((entry) => (entry && typeof entry === 'object' ? { ...entry } : entry));
+      buckets[bucket] = values.map((entry) => {
+        if (!entry || typeof entry !== 'object') {
+          return entry;
+        }
+        const clone = { ...entry };
+        if (clone.preview) {
+          clone.preview = normalizeRewardPreview(clone.preview);
+        }
+        return clone;
+      });
     }
     return buckets;
   }

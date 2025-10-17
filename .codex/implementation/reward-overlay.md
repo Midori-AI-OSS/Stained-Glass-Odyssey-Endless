@@ -9,6 +9,21 @@ Selecting a card posts to `/cards/<run_id>` via the `chooseCard` API helper once
 When a relic reward is selected, the overlay shows its `about` text so players
 see the effect with the next stack applied.
 
+## Preview metadata
+
+Staged cards and relics now surface preview metadata returned by the backend. `RewardOverlay` renders a preview panel beneath the Confirm/Cancel controls whenever a staged entry includes a `preview` payload (or an `about` fallback). The panel highlights:
+
+- A summary line (either from `preview.summary` or the staged `about` text).
+- Per-stat deltas formatted according to the preview `mode` (percent, flat, multiplier) and scoped to the target audience (party, foes, allies, etc.). Each stat line also lists stack counts and previous totals when supplied.
+- Trigger hooks with the normalized event name and optional description.
+
+Preview data is normalised on receipt so the frontend can render it idempotently across reconnects. The helper in `src/lib/utils/rewardPreviewFormatter.js` keeps formatting consistent between cards and relics.
+
+Screenshot references:
+
+- Card preview — see `.codex/screenshots/reward-overlay-card-preview.png`.
+- Relic preview — see `.codex/screenshots/reward-overlay-relic-preview.png`.
+
 ## Testing
 - `bun test frontend/tests/rewardoverlay.test.js`
 
