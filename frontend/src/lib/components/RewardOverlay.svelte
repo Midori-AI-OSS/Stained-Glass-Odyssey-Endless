@@ -6,6 +6,7 @@
   import CurioChoice from './CurioChoice.svelte';
   import { getMaterialIcon, onMaterialIconError } from '../systems/assetLoader.js';
   import { createRewardDropSfx } from '../systems/sfx.js';
+  import { formatRewardPreview } from '../utils/rewardPreviewFormatter.js';
 
   export let cards = [];
   export let relics = [];
@@ -296,6 +297,37 @@
   $: stagedCardEntries = normalizeRewardEntries(stagedCards);
   $: stagedRelicEntries = normalizeRewardEntries(stagedRelics);
 
+  const PREVIEW_LIMIT = 3;
+  $: stagedCardPreviewDetails = stagedCardEntries
+    .slice(0, PREVIEW_LIMIT)
+    .map((entry, index) => {
+      const name = entry?.name || entry?.id || 'Card';
+      const preview = formatRewardPreview(entry?.preview, {
+        fallbackSummary: entry?.about || entry?.tooltip || ''
+      });
+      return {
+        key: entry?.id ?? `staged-card-preview-${index}`,
+        name,
+        preview
+      };
+    })
+    .filter((entry) => entry.preview?.hasContent);
+
+  $: stagedRelicPreviewDetails = stagedRelicEntries
+    .slice(0, PREVIEW_LIMIT)
+    .map((entry, index) => {
+      const name = entry?.name || entry?.id || 'Relic';
+      const preview = formatRewardPreview(entry?.preview, {
+        fallbackSummary: entry?.about || ''
+      });
+      return {
+        key: entry?.id ?? `staged-relic-preview-${index}`,
+        name,
+        preview
+      };
+    })
+    .filter((entry) => entry.preview?.hasContent);
+
   let pendingCardSelection = null;
   let pendingRelicSelection = null;
   let pendingCardConfirm = null;
@@ -513,6 +545,116 @@
     gap: 0.75rem;
     flex-wrap: wrap;
     justify-content: center;
+  }
+
+  .preview-panel {
+    width: 100%;
+    background: rgba(11, 17, 27, 0.68);
+    border: 1px solid rgba(153, 201, 255, 0.25);
+    border-radius: 16px;
+    padding: clamp(0.75rem, 1.8vw, 1.2rem);
+    color: #f1f5ff;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25);
+  }
+
+  .preview-heading {
+    margin: 0 0 0.4rem;
+    font-size: 1rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .preview-summary {
+    margin: 0 0 0.6rem;
+    font-size: 0.95rem;
+    line-height: 1.4;
+    color: rgba(241, 245, 255, 0.85);
+  }
+
+  .preview-stats {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .preview-stat {
+    border-top: 1px solid rgba(153, 201, 255, 0.15);
+    padding-top: 0.5rem;
+  }
+
+  .preview-stat:first-child {
+    border-top: none;
+    padding-top: 0;
+  }
+
+  .stat-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.75rem;
+    font-size: 0.95rem;
+  }
+
+  .stat-name {
+    font-weight: 600;
+    letter-spacing: 0.03em;
+  }
+
+  .stat-change {
+    font-variant-numeric: tabular-nums;
+    color: #9ed9ff;
+    font-weight: 600;
+  }
+
+  .stat-details {
+    list-style: none;
+    margin: 0.35rem 0 0 0;
+    padding: 0 0 0 1.2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    color: rgba(241, 245, 255, 0.8);
+    font-size: 0.85rem;
+  }
+
+  .preview-triggers {
+    margin-top: 0.75rem;
+    padding-top: 0.6rem;
+    border-top: 1px solid rgba(153, 201, 255, 0.15);
+  }
+
+  .preview-triggers h5 {
+    margin: 0 0 0.3rem;
+    font-size: 0.85rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: rgba(158, 217, 255, 0.9);
+  }
+
+  .preview-triggers ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    color: rgba(241, 245, 255, 0.85);
+    font-size: 0.9rem;
+  }
+
+  .trigger-event {
+    font-weight: 600;
+  }
+
+  .trigger-description {
+    color: rgba(241, 245, 255, 0.82);
+  }
+
+  .preview-panel[data-type='relic'] .stat-change {
+    color: #f9c97f;
   }
 
   .confirm-btn,
@@ -777,6 +919,48 @@
         <button class="confirm-btn" type="button" on:click={() => handleConfirm('card')} disabled={cardActionsDisabled}>Confirm</button>
         <button class="cancel-btn" type="button" on:click={() => handleCancel('card')} disabled={cardActionsDisabled}>Cancel</button>
       </div>
+      {#each stagedCardPreviewDetails as detail (detail.key)}
+        <div class="preview-panel" data-type="card">
+          <h4 class="preview-heading">{detail.name} Preview</h4>
+          {#if detail.preview.summary}
+            <p class="preview-summary">{detail.preview.summary}</p>
+          {/if}
+          {#if detail.preview.stats.length > 0}
+            <ul class="preview-stats" role="list">
+              {#each detail.preview.stats as stat (stat.id)}
+                <li class="preview-stat" role="listitem">
+                  <div class="stat-row">
+                    <span class="stat-name">{stat.label}</span>
+                    <span class="stat-change">{stat.change}</span>
+                  </div>
+                  {#if stat.details.length > 0}
+                    <ul class="stat-details" role="list">
+                      {#each stat.details as item, index (`${stat.id}-detail-${index}`)}
+                        <li role="listitem">{item}</li>
+                      {/each}
+                    </ul>
+                  {/if}
+                </li>
+              {/each}
+            </ul>
+          {/if}
+          {#if detail.preview.triggers.length > 0}
+            <div class="preview-triggers" role="group" aria-label="Trigger effects">
+              <h5>Triggers</h5>
+              <ul role="list">
+                {#each detail.preview.triggers as trigger (trigger.id)}
+                  <li role="listitem">
+                    <span class="trigger-event">{trigger.event}</span>
+                    {#if trigger.description}
+                      <span class="trigger-description"> — {trigger.description}</span>
+                    {/if}
+                  </li>
+                {/each}
+              </ul>
+            </div>
+          {/if}
+        </div>
+      {/each}
     </div>
   {/if}
 
@@ -805,6 +989,48 @@
         <button class="confirm-btn" type="button" on:click={() => handleConfirm('relic')} disabled={relicActionsDisabled}>Confirm</button>
         <button class="cancel-btn" type="button" on:click={() => handleCancel('relic')} disabled={relicActionsDisabled}>Cancel</button>
       </div>
+      {#each stagedRelicPreviewDetails as detail (detail.key)}
+        <div class="preview-panel" data-type="relic">
+          <h4 class="preview-heading">{detail.name} Preview</h4>
+          {#if detail.preview.summary}
+            <p class="preview-summary">{detail.preview.summary}</p>
+          {/if}
+          {#if detail.preview.stats.length > 0}
+            <ul class="preview-stats" role="list">
+              {#each detail.preview.stats as stat (stat.id)}
+                <li class="preview-stat" role="listitem">
+                  <div class="stat-row">
+                    <span class="stat-name">{stat.label}</span>
+                    <span class="stat-change">{stat.change}</span>
+                  </div>
+                  {#if stat.details.length > 0}
+                    <ul class="stat-details" role="list">
+                      {#each stat.details as item, index (`${stat.id}-detail-${index}`)}
+                        <li role="listitem">{item}</li>
+                      {/each}
+                    </ul>
+                  {/if}
+                </li>
+              {/each}
+            </ul>
+          {/if}
+          {#if detail.preview.triggers.length > 0}
+            <div class="preview-triggers" role="group" aria-label="Trigger effects">
+              <h5>Triggers</h5>
+              <ul role="list">
+                {#each detail.preview.triggers as trigger (trigger.id)}
+                  <li role="listitem">
+                    <span class="trigger-event">{trigger.event}</span>
+                    {#if trigger.description}
+                      <span class="trigger-description"> — {trigger.description}</span>
+                    {/if}
+                  </li>
+                {/each}
+              </ul>
+            </div>
+          {/if}
+        </div>
+      {/each}
     </div>
   {/if}
 

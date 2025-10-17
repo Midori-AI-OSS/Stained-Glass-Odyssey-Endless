@@ -1,10 +1,18 @@
-import { afterEach, describe, expect, test } from 'vitest';
+import { afterEach, beforeAll, describe, expect, test } from 'vitest';
 
 process.env.SVELTE_ALLOW_RUNES_OUTSIDE_SVELTE = 'true';
 globalThis.SVELTE_ALLOW_RUNES_OUTSIDE_SVELTE = true;
+globalThis.DEV = false;
 
-const { cleanup, fireEvent, render } = await import('@testing-library/svelte');
-const RewardOverlay = (await import('../src/lib/components/RewardOverlay.svelte')).default;
+let cleanup;
+let fireEvent;
+let render;
+let RewardOverlay;
+
+beforeAll(async () => {
+  ({ cleanup, fireEvent, render } = await import('@testing-library/svelte'));
+  RewardOverlay = (await import('../src/lib/components/RewardOverlay.svelte')).default;
+});
 
 const baseProps = Object.freeze({
   cards: [
@@ -100,6 +108,33 @@ describe('RewardOverlay selection regression', () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
 
     expect(confirmButton.disabled).toBe(false);
+  });
+
+  test('renders staged reward previews when available', () => {
+    const { container } = renderOverlay({
+      cards: [],
+      stagedCards: [
+        {
+          id: 'radiant-beam',
+          name: 'Radiant Beam',
+          stars: 4,
+          about: 'Deal extra damage to all foes.',
+          preview: {
+            summary: 'Deal extra damage to all foes.',
+            stats: [
+              { stat: 'atk', mode: 'percent', amount: 12, total_amount: 12, stacks: 1, target: 'party' }
+            ],
+            triggers: [{ event: 'on_turn_start', description: 'Gain 1 energy.' }]
+          }
+        }
+      ],
+      awaitingCard: true
+    });
+
+    const panel = container.querySelector('.preview-panel[data-type="card"]');
+    expect(panel).not.toBeNull();
+    expect(panel?.textContent).toMatch(/Attack/);
+    expect(panel?.textContent).toMatch(/Triggers/);
   });
 
   test('dispatches cancel event for staged relics', async () => {
