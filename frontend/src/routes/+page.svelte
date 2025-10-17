@@ -999,7 +999,7 @@
     return list.map((entry) => (entry && typeof entry === 'object' ? { ...entry } : entry));
   }
 
-  function applyRewardPayload(result, { type } = {}) {
+  function applyRewardPayload(result, { type, intent } = {}) {
     const base = roomData && typeof roomData === 'object' ? { ...roomData } : {};
     base.reward_staging = normalizeRewardStagingPayload(result?.reward_staging, base.reward_staging);
 
@@ -1018,9 +1018,14 @@
       base.next_room = result.next_room;
     }
 
+    const normalizedType = type === 'card' || type === 'relic' ? type : null;
+    const normalizedIntent = typeof intent === 'string' ? intent : null;
+
     if (Object.prototype.hasOwnProperty.call(result ?? {}, 'card_choices')) {
       const nextCardChoices = Array.isArray(result?.card_choices) ? result.card_choices : [];
       base.card_choices = cloneRewardEntries(nextCardChoices);
+    } else if (normalizedType === 'card' && normalizedIntent === 'confirm') {
+      base.card_choices = [];
     } else if (Array.isArray(base.card_choices)) {
       base.card_choices = cloneRewardEntries(base.card_choices);
     }
@@ -1028,6 +1033,8 @@
     if (Object.prototype.hasOwnProperty.call(result ?? {}, 'relic_choices')) {
       const nextRelicChoices = Array.isArray(result?.relic_choices) ? result.relic_choices : [];
       base.relic_choices = cloneRewardEntries(nextRelicChoices);
+    } else if (normalizedType === 'relic' && normalizedIntent === 'confirm') {
+      base.relic_choices = [];
     } else if (Array.isArray(base.relic_choices)) {
       base.relic_choices = cloneRewardEntries(base.relic_choices);
     }
@@ -1050,7 +1057,7 @@
       try {
         const res = type === 'card' ? await chooseCard(id) : await chooseRelic(id);
         if (res) {
-          applyRewardPayload(res, { type });
+          applyRewardPayload(res, { type, intent: 'select' });
         }
         result = { ok: true };
       } catch (error) {
@@ -1087,7 +1094,7 @@
       try {
         const res = type === 'card' ? await confirmCard() : await confirmRelic();
         if (res) {
-          applyRewardPayload(res, { type });
+          applyRewardPayload(res, { type, intent: 'confirm' });
           scheduleMapRefresh();
         }
         result = { ok: true };
@@ -1125,7 +1132,7 @@
       try {
         const res = type === 'card' ? await cancelCard() : await cancelRelic();
         if (res) {
-          applyRewardPayload(res, { type });
+          applyRewardPayload(res, { type, intent: 'cancel' });
           scheduleMapRefresh();
         }
         result = { ok: true };
@@ -1168,7 +1175,7 @@
         try {
           const res = await confirmCard();
           if (res) {
-            applyRewardPayload(res, { type: 'card' });
+            applyRewardPayload(res, { type: 'card', intent: 'confirm' });
             scheduleMapRefresh();
           }
         } catch {}
@@ -1180,7 +1187,7 @@
         try {
           const res = await chooseCard(choice.id);
           if (res) {
-            applyRewardPayload(res, { type: 'card' });
+            applyRewardPayload(res, { type: 'card', intent: 'select' });
           }
         } catch {}
         return;
@@ -1190,7 +1197,7 @@
         try {
           const res = await confirmRelic();
           if (res) {
-            applyRewardPayload(res, { type: 'relic' });
+            applyRewardPayload(res, { type: 'relic', intent: 'confirm' });
             scheduleMapRefresh();
           }
         } catch {}
@@ -1202,7 +1209,7 @@
         try {
           const res = await chooseRelic(choice.id);
           if (res) {
-            applyRewardPayload(res, { type: 'relic' });
+            applyRewardPayload(res, { type: 'relic', intent: 'select' });
           }
         } catch {}
         return;

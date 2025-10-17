@@ -35,3 +35,5 @@ Audit **f6409b29** found that confirming the first post-battle card reward immed
 - `.codex/audit/f6409b29-game-playtest-audit.audit.md`
 - Frontend: `frontend/src/routes/(app)/game/+page.svelte`, `frontend/src/lib/overlays/RewardOverlay.svelte`, `frontend/src/lib/systems/uiApi.js`
 - Backend: `backend/routes/ui.py`, `backend/services/reward_service.py`
+
+ready for review
