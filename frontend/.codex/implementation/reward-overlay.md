@@ -64,6 +64,25 @@ This UI contract mirrors the backend guardrails introduced for staged rewards,
 keeping the frontend in sync with the confirmation lifecycle without forcing a
 full map refresh between each step.
 
+### Preview metadata panels
+
+Staged entries render preview panels derived from the backend's `preview`
+payload (with `about` text as a fallback). `formatRewardPreview` normalises the
+metadata into labelled stat deltas, stack summaries, and trigger bullet lists so
+cards and relics share the same presentation. The overlay shows up to three
+panels for each reward bucket, ensuring reconnecting clients still surface the
+context for every staged selection.
+
+### Auto-advance and Next Room controls
+
+`RewardOverlay` delays auto-advancing the run until there are no available
+choices, no staged confirmations, and no loot awaiting acknowledgement. When
+`awaitingNext` arrives alongside `awaitingLoot === false`, the overlay surfaces a
+**Next Room** button that dispatches a `lootAcknowledge` event so idle-mode
+automation can finish the encounter immediately. A separate five-second timer
+fires a `next` event when the popup is otherwise empty, which keeps fast loot
+pickups from stalling the run.
+
 To emphasise each pickup, the component keeps a `visibleDrops` array separate
 from the aggregated `dropEntries`. When motion reduction is disabled the list
 is populated one entry at a time on a timed interval; each reveal triggers the
