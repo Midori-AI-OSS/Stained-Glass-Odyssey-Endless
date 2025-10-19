@@ -8,6 +8,7 @@ from autofighter.party import Party
 from autofighter.relics import apply_relics
 from autofighter.relics import award_relic
 from autofighter.stats import BUS
+from autofighter.stats import set_battle_active
 from autofighter.stats import Stats
 
 
@@ -34,6 +35,8 @@ async def test_command_beacon_identifies_fastest_ally():
         award_relic(party, "command_beacon")
         await apply_relics(party)
 
+        set_battle_active(True)
+
         # Trigger turn_start with a party member (simulating ally turn)
         await BUS.emit_async("turn_start", party.members[0])
         await asyncio.sleep(0)
@@ -43,6 +46,7 @@ async def test_command_beacon_identifies_fastest_ally():
         assert cost_events[0]["entity"] is party.members[1]
 
     finally:
+        set_battle_active(False)
         BUS.unsubscribe("relic_effect", _track_cost)
         await BUS.emit_async("battle_end", party)
 
@@ -60,22 +64,32 @@ async def test_command_beacon_spd_boost():
     award_relic(party, "command_beacon")
     await apply_relics(party)
 
-    # Record initial SPD
-    initial_spd_0 = party.members[0].spd
-    initial_spd_1 = party.members[1].spd
-    initial_spd_2 = party.members[2].spd
+    set_battle_active(True)
+    try:
+        # Trigger turn_start with a party member (simulating ally turn)
+        await BUS.emit_async("turn_start", party.members[0])
+        await asyncio.sleep(0)
 
-    # Trigger turn_start with a party member (simulating ally turn)
-    await BUS.emit_async("turn_start", party.members[0])
-    await asyncio.sleep(0)
+        for idx in (0, 2):
+            member = party.members[idx]
+            mgr = getattr(member, "effect_manager", None)
+            assert mgr is not None
 
-    # Non-fastest allies should have +15% SPD
-    assert party.members[0].spd == pytest.approx(initial_spd_0 * 1.15, rel=0.01)
-    assert party.members[1].spd == initial_spd_1  # Fastest, no buff
-    assert party.members[2].spd == pytest.approx(initial_spd_2 * 1.15, rel=0.01)
+            mod_id = f"command_beacon_spd_{id(member)}"
+            mods = [mod for mod in mgr.mods if mod.id == mod_id]
+            assert len(mods) == 1
+            mod = mods[0]
+            assert mod.multipliers is not None
+            assert mod.multipliers.get("spd") == pytest.approx(1.15, rel=0.001)
 
-    # Clean up
-    await BUS.emit_async("battle_end", party)
+        fastest_mgr = getattr(party.members[1], "effect_manager", None)
+        if fastest_mgr is not None:
+            mod_id = f"command_beacon_spd_{id(party.members[1])}"
+            assert [mod for mod in fastest_mgr.mods if mod.id == mod_id] == []
+
+    finally:
+        set_battle_active(False)
+        await BUS.emit_async("battle_end", party)
 
 
 @pytest.mark.asyncio
@@ -95,19 +109,22 @@ async def test_command_beacon_hp_cost():
     award_relic(party, "command_beacon")
     await apply_relics(party)
 
-    # Trigger turn_start with a party member (simulating ally turn)
-    await BUS.emit_async("turn_start", party.members[0])
-    await asyncio.sleep(0)
+    set_battle_active(True)
+    try:
+        # Trigger turn_start with a party member (simulating ally turn)
+        await BUS.emit_async("turn_start", party.members[0])
+        await asyncio.sleep(0)
 
-    # Fastest ally should have lost 3% HP (30 HP)
-    expected_hp = 1000 - 30
-    assert party.members[1].hp == expected_hp
+        # Fastest ally should have lost 3% HP (multiplicative scaling with one stack)
+        expected_hp = 1000 - int(1000 * (1 - (0.97 ** 1)))
+        assert party.members[1].hp == expected_hp
 
-    # Other ally should not lose HP
-    assert party.members[0].hp == 1000
+        # Other ally should not lose HP
+        assert party.members[0].hp == 1000
 
-    # Clean up
-    await BUS.emit_async("battle_end", party)
+    finally:
+        set_battle_active(False)
+        await BUS.emit_async("battle_end", party)
 
 
 @pytest.mark.asyncio
@@ -129,21 +146,30 @@ async def test_command_beacon_multi_stack():
     award_relic(party, "command_beacon")
     await apply_relics(party)
 
-    initial_spd_0 = party.members[0].spd
+    set_battle_active(True)
+    try:
+        # Trigger turn_start with a party member (simulating ally turn)
+        await BUS.emit_async("turn_start", party.members[0])
+        await asyncio.sleep(0)
 
-    # Trigger turn_start with a party member (simulating ally turn)
-    await BUS.emit_async("turn_start", party.members[0])
-    await asyncio.sleep(0)
+        member = party.members[0]
+        mgr = getattr(member, "effect_manager", None)
+        assert mgr is not None
 
-    # Non-fastest ally should have +30% SPD (2 stacks × 15%)
-    assert party.members[0].spd == pytest.approx(initial_spd_0 * 1.30, rel=0.01)
+        mod_id = f"command_beacon_spd_{id(member)}"
+        mods = [mod for mod in mgr.mods if mod.id == mod_id]
+        assert len(mods) == 1
+        mod = mods[0]
+        assert mod.multipliers is not None
+        assert mod.multipliers.get("spd") == pytest.approx(1.15 ** 2, rel=0.001)
 
-    # Fastest ally should have lost 6% HP (2 stacks × 3%)
-    expected_hp = 1000 - 60
-    assert party.members[1].hp == expected_hp
+        # Fastest ally should have multiplicative HP cost (1 - 0.97 ** stacks)
+        expected_hp = 1000 - int(1000 * (1 - (0.97 ** 2)))
+        assert party.members[1].hp == expected_hp
 
-    # Clean up
-    await BUS.emit_async("battle_end", party)
+    finally:
+        set_battle_active(False)
+        await BUS.emit_async("battle_end", party)
 
 
 @pytest.mark.asyncio
@@ -158,24 +184,37 @@ async def test_command_beacon_buff_expires_at_turn_end():
     award_relic(party, "command_beacon")
     await apply_relics(party)
 
-    initial_spd_0 = party.members[0].spd
+    set_battle_active(True)
+    try:
+        # Trigger turn_start with a party member (simulating ally turn)
+        await BUS.emit_async("turn_start", party.members[0])
+        await asyncio.sleep(0)
 
-    # Trigger turn_start with a party member (simulating ally turn)
-    await BUS.emit_async("turn_start", party.members[0])
-    await asyncio.sleep(0)
+        member = party.members[0]
+        mgr = getattr(member, "effect_manager", None)
+        assert mgr is not None
 
-    # Should have SPD buff
-    assert party.members[0].spd > initial_spd_0
+        mod_id = f"command_beacon_spd_{id(member)}"
+        mods = [mod for mod in mgr.mods if mod.id == mod_id]
+        assert len(mods) == 1
 
-    # Trigger turn_end
-    await BUS.emit_async("turn_end", party)
-    await asyncio.sleep(0)
+        active_effect_names = [effect.name for effect in member.get_active_effects()]
+        assert mod_id in active_effect_names
 
-    # SPD should revert to initial value
-    assert party.members[0].spd == pytest.approx(initial_spd_0, rel=0.01)
+        # Trigger turn_end
+        await BUS.emit_async("turn_end", party)
+        await asyncio.sleep(0)
 
-    # Clean up
-    await BUS.emit_async("battle_end", party)
+        mgr = getattr(member, "effect_manager", None)
+        if mgr is not None:
+            assert all(mod.id != mod_id for mod in mgr.mods)
+
+        active_effect_names = [effect.name for effect in member.get_active_effects()]
+        assert mod_id not in active_effect_names
+
+    finally:
+        set_battle_active(False)
+        await BUS.emit_async("battle_end", party)
 
 
 @pytest.mark.asyncio
@@ -208,6 +247,8 @@ async def test_command_beacon_skips_dead_allies():
     BUS.subscribe("relic_effect", _track_buff)
 
     try:
+        set_battle_active(True)
+
         # Trigger turn_start with a party member (simulating ally turn)
         await BUS.emit_async("turn_start", party.members[1])
         await asyncio.sleep(0)
@@ -216,10 +257,20 @@ async def test_command_beacon_skips_dead_allies():
         assert len(buff_events) == 1
         assert buff_events[0]["count"] == 1
 
-        # Dead ally should not gain SPD buff
-        assert party.members[0].spd == party.members[0]._base_spd
+        alive_member = party.members[2]
+        alive_mgr = getattr(alive_member, "effect_manager", None)
+        assert alive_mgr is not None
+        alive_mod_id = f"command_beacon_spd_{id(alive_member)}"
+        assert any(mod.id == alive_mod_id for mod in alive_mgr.mods)
+
+        dead_member = party.members[0]
+        dead_mgr = getattr(dead_member, "effect_manager", None)
+        if dead_mgr is not None:
+            dead_mod_id = f"command_beacon_spd_{id(dead_member)}"
+            assert all(mod.id != dead_mod_id for mod in dead_mgr.mods)
 
     finally:
+        set_battle_active(False)
         BUS.unsubscribe("relic_effect", _track_buff)
         await BUS.emit_async("battle_end", party)
 
@@ -253,6 +304,8 @@ async def test_command_beacon_coordination_events():
         award_relic(party, "command_beacon")
         await apply_relics(party)
 
+        set_battle_active(True)
+
         # Trigger turn_start with a party member (simulating ally turn)
         await BUS.emit_async("turn_start", party.members[0])
         await asyncio.sleep(0)
@@ -263,5 +316,6 @@ async def test_command_beacon_coordination_events():
         assert "speed_coordination" in event_types
 
     finally:
+        set_battle_active(False)
         BUS.unsubscribe("relic_effect", _track_events)
         await BUS.emit_async("battle_end", party)

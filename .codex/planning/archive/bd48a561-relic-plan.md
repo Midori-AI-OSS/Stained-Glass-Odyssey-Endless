@@ -39,6 +39,7 @@ Parent: [Web Game Plan](8a7d9c1e-web-game-plan.md)
  - [ ] **Greed Engine** – All characters lose 1% HP per turn plus 0.5% per stack. Earn 50% more gold plus 25% per stack and increase rare drop rate by 0.5% plus 0.1% per additional stack.
  - [ ] **Stellar Compass** – Critical hits grant +1.5% ATK and +1.5% gold for the rest of combat, stacking without limit.
  - [ ] **Echoing Drum** – The first attack an ally uses each battle repeats at 25% power plus 25% per stack.
+ - [x] **Command Beacon** – At the start of each ally turn the fastest member spends 3% Max HP (multiplicative per stack) so every other ally gains a 1-turn SPD buff that scales multiplicatively (+15% per stack).
  - [x] **Siege Banner** – At battle start, all enemies lose 15% DEF for 2 turns per stack. Each enemy killed grants the party +4% ATK and +4% DEF permanently.
 
 ## 4★ Relics

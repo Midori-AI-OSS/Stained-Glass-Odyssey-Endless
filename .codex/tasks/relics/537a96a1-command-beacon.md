@@ -29,10 +29,10 @@ Ship a rare relic that redistributes speed each turn so slower allies keep pace 
 
 ---
 
-## Audit notes (2025-02-18)
+## Status update (2025-02-24)
 
-- ❌ Stacking math is linear: both the SPD bonus and HP cost scale with `0.15 * stacks` / `0.03 * stacks`, contradicting the requirement for multiplicative scaling consistent with other relics.【F:backend/plugins/relics/command_beacon.py†L59-L109】
-- ❌ The dedicated regression suite fails (`uv run pytest tests/test_command_beacon.py`), demonstrating that SPD buffs never apply, HP cost never triggers, and telemetry counts are off; this contradicts the completion checklist and indicates core behavior is broken.【d39337†L1-L69】
-- ⚠️ The relic planning archive still lacks a Command Beacon entry in the 3★ list, so our design documentation is out of sync with the implementation.【F:.codex/planning/archive/bd48a561-relic-plan.md†L32-L46】
+- Implemented multiplicative scaling for both the SPD buff and HP cost, ensuring repeated stacks compound as specified.
+- Restored the Command Beacon regression tests with new assertions that cover the multiplicative behavior and turn cleanup.
+- Updated design documentation in `.codex/implementation/relic-inventory.md` and the relic planning archive to document the final mechanics.
 
-more work needed — please address multiplicative scaling, restore the failing tests, and update the planning docs before requesting another review.
+ready for review

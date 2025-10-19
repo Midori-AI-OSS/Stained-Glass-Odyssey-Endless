@@ -56,9 +56,10 @@ class CommandBeacon(RelicBase):
             if fastest_ally is None:
                 return
 
-            # Calculate buffs and costs
-            spd_bonus = 0.15 * stacks  # +15% per stack
-            hp_cost_pct = 0.03 * stacks  # 3% per stack
+            # Calculate buffs and costs with multiplicative stacking
+            spd_multiplier = 1.15 ** stacks
+            spd_bonus_pct = (spd_multiplier - 1) * 100
+            hp_cost_pct = 1 - (0.97 ** stacks)
 
             # Apply HP cost to fastest ally
             hp_cost = int(fastest_ally.max_hp * hp_cost_pct)
@@ -100,12 +101,26 @@ class CommandBeacon(RelicBase):
                     mgr = EffectManager(member)
                     member.effect_manager = mgr
 
+                # Remove any lingering buff from previous turns
+                existing = active_buffs.pop(id(member), None)
+                if existing is not None:
+                    _, old_mod = existing
+                    try:
+                        old_mod.remove()
+                    except Exception:
+                        log.debug("Command Beacon: Failed to remove prior SPD buff", exc_info=True)
+                    mgr_mods = getattr(mgr, "mods", None)
+                    if mgr_mods is not None and old_mod in mgr_mods:
+                        mgr_mods.remove(old_mod)
+                    if getattr(member, "mods", None) and old_mod.id in member.mods:
+                        member.mods.remove(old_mod.id)
+
                 # Create SPD buff for 1 turn
                 mod = create_stat_buff(
                     member,
                     name=f"{self.id}_spd_{id(member)}",
                     turns=1,
-                    spd_mult=1 + spd_bonus,
+                    spd_mult=spd_multiplier,
                 )
                 await mgr.add_modifier(mod)
 
@@ -117,7 +132,7 @@ class CommandBeacon(RelicBase):
                 log.debug(
                     "Command Beacon: %s gained +%d%% SPD (from %s)",
                     getattr(member, "id", "unknown"),
-                    int(spd_bonus * 100),
+                    int(round(spd_bonus_pct)),
                     getattr(fastest_ally, "id", "unknown"),
                 )
 
@@ -131,7 +146,7 @@ class CommandBeacon(RelicBase):
                     {
                         "coordinator": getattr(fastest_ally, "id", "unknown"),
                         "allies_buffed": buffed_count,
-                        "spd_bonus_pct": spd_bonus * 100,
+                        "spd_bonus_pct": spd_bonus_pct,
                         "stacks": stacks,
                     },
                 )
@@ -163,15 +178,18 @@ class CommandBeacon(RelicBase):
         self.subscribe(party, "battle_end", _on_battle_end)
 
     def describe(self, stacks: int) -> str:
-        spd_bonus = 15 * stacks
-        hp_cost = 3 * stacks
+        spd_multiplier = 1.15 ** stacks
+        spd_bonus = (spd_multiplier - 1) * 100
+        hp_cost = (1 - (0.97 ** stacks)) * 100
         if stacks == 1:
             return (
                 "At turn start, the fastest ally takes 3% Max HP damage. "
                 "All other allies gain +15% SPD for that turn."
             )
-        else:
-            return (
-                f"At turn start, the fastest ally takes {hp_cost}% Max HP damage ({stacks} stacks). "
-                f"All other allies gain +{spd_bonus}% SPD for that turn."
-            )
+
+        return (
+            "At turn start, the fastest ally takes "
+            f"{hp_cost:.2f}% Max HP damage ({stacks} stacks). "
+            "All other allies gain +"
+            f"{spd_bonus:.2f}% SPD for that turn."
+        )
