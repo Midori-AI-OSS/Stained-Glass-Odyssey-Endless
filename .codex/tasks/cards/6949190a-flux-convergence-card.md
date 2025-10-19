@@ -26,12 +26,4 @@ Deliver a high-impact three-star reward that channels Kboshi's flux manipulation
 ## Player impact
 Flux Convergence gives debuff-centric teams—especially those fielding Kboshi or LadyDarkness—a reason to invest in multi-turn control loops, providing reliable AoE bursts and protection against incoming cleanses.
 
----
-
-## Audit notes (2025-02-18)
-
-- ❌ Stat debuff tracking fails because `StatModifier` instances produced by `create_stat_buff` have no `source` attribute; `_on_effect_applied` exits early when `source not in party.members`, so flux never increments for standard defense/mitigation debuffs despite the specification calling them out.【F:backend/plugins/cards/flux_convergence.py†L74-L87】【F:backend/autofighter/effects.py†L101-L140】
-- ❌ The automated regression suite does not pass—`uv run pytest tests/test_flux_convergence.py` reports two failing cases (`burst_at_five` never damages stored foes and the counter over-increments). The failures block CI and indicate the feature was not validated as claimed.【48f40a†L1-L44】
-- ⚠️ The planning archive in `.codex/planning/archive/726d03ae-card-plan.md` still lacks a Flux Convergence entry under the 3★ section, so documentation is incomplete.【F:.codex/planning/archive/726d03ae-card-plan.md†L40-L64】
-
-more work needed — card does not yet meet the acceptance criteria above; please address the failing tests and stat-debuff detection before resubmitting.
+ready for review
