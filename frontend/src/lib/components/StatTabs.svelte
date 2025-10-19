@@ -42,6 +42,7 @@
   $: isPlayer = !!previewChar?.is_player;
   $: viewStats = previewChar?.stats || {};
   $: playerRequired = selected.includes(previewId) && isPlayer;
+  $: showConfirmButton = !playerRequired;
 
   $: upgradeTotals = upgradeData?.stat_totals || {};
   $: upgradeCounts = upgradeData?.stat_counts || {};
@@ -286,16 +287,18 @@
       {#if playerRequired}
         <span class="required-note" role="status">Player is required</span>
       {/if}
-      {#if upgradeMode}
-        <button class="secondary" on:click={() => handleUpgradeDismiss('footer')} title="Close upgrade stats">Cancel upgrade</button>
-      {:else}
-        <button class="secondary" on:click={openUpgrade} title="Upgrade stats for this character">Upgrade stats</button>
-      {/if}
-      {#if !playerRequired}
-        <button class="confirm" on:click={toggleMember}>
-          {selected.includes(previewId) ? 'Remove from party' : 'Add to party'}
-        </button>
-      {/if}
+      <div class="footer-actions" class:single-action={!showConfirmButton}>
+        {#if upgradeMode}
+          <button class="secondary" on:click={() => handleUpgradeDismiss('footer')} title="Close upgrade stats">Cancel upgrade</button>
+        {:else}
+          <button class="secondary" on:click={openUpgrade} title="Upgrade stats for this character">Upgrade stats</button>
+        {/if}
+        {#if showConfirmButton}
+          <button class="confirm" on:click={toggleMember}>
+            {selected.includes(previewId) ? 'Remove from party' : 'Add to party'}
+          </button>
+        {/if}
+      </div>
     </div>
   {/if}
 </div>
@@ -350,10 +353,26 @@
     padding: 0.15rem 0;
     margin-top: 0.25rem;
     gap: 0.5rem;
+    width: 100%;
   }
   .stats-confirm.player-required {
     justify-content: space-between;
     gap: 0.75rem;
+  }
+  .footer-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.5rem;
+  }
+  .stats-confirm.player-required .footer-actions {
+    flex: 1 1 auto;
+  }
+  .footer-actions.single-action {
+    flex: 1 1 auto;
+  }
+  .footer-actions.single-action button {
+    flex: 1 1 auto;
   }
   button.secondary,
   button.confirm {
@@ -368,6 +387,9 @@
     opacity: 0.9;
     box-shadow: var(--glass-shadow);
     backdrop-filter: var(--glass-filter);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
   }
   button.secondary { font-size: 0.9rem; opacity: 0.85; }
   button.confirm { font-size: 0.95rem; }
@@ -390,6 +412,7 @@
     line-height: 1.2;
     display: inline-flex;
     align-items: center;
+    flex-shrink: 0;
   }
   .stats-tabs {
     display: flex;
