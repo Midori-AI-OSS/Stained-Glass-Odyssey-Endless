@@ -20,4 +20,7 @@ Extended test coverage and metrics instrumentation live in the companion task `t
 - Verified both `backend/routes/ui.py` and `backend/services/run_service.py` gate `advance_room` on empty staging via `has_pending_rewards` and refreshed docs in `.codex/implementation` describe the guardrails.
 - Exercised the new pytest coverage: `tests/test_reward_staging_confirmation.py` and `tests/test_reward_gate.py`.
 
-requesting review from the Task Master
+### Task Master review (2025-02-16)
+- The `.codex/implementation` docs referenced in the requirements were not updated to document the activation guardrails, so knowledge about the new single-confirm rules remains implicit.
+
+more work needed — add the guardrail details to the relevant `.codex/implementation` docs before closing this task.

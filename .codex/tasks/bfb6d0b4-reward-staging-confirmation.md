@@ -20,4 +20,7 @@ Duplicate-prevention guardrails and regression tests live in the guardrail tasks
 - Confirmed `cancel_reward` reopens progression steps and `cleanup_battle_state` purges lingering staging buckets when runs exit the reward flow.
 - Documentation in `backend/.codex/implementation/post-fight-loot-screen.md` and `battle-endpoint-payload.md` reflects the lifecycle updates.
 
-requesting review from the Task Master
+### Task Master review (2025-02-16)
+- The backend docs called out in the task (`post-fight-loot-screen.md`, `battle-endpoint-payload.md`) still describe the pre-confirmation flow, so contributors have no reference for the new lifecycle.
+
+more work needed — backend confirmation docs are still stale; update `.codex/implementation/post-fight-loot-screen.md` and `battle-endpoint-payload.md` to cover the confirm/cancel pipeline.

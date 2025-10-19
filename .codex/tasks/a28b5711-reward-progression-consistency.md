@@ -27,4 +27,8 @@ Guarantee `reward_progression` accompanies every staged reward payload so the fr
 - Confirmed reward selection/confirmation flows mirror `reward_progression` into payloads and snapshots until steps finish, and documentation in backend/.codex/implementation now promises the contract.
 - Setup backend env with `uv sync` and ran `uv run pytest tests/test_reward_staging_service_hooks.py tests/test_reward_staging_confirmation.py tests/test_reward_gate.py` (all passed).
 
-requesting review from the Task Master
+### Task Master review (2025-02-16)
+- `/ui?action=advance_room` short-circuits with a payload that lacks the refreshed `reward_progression`, so the frontend still cannot rely on the contract when another step remains.
+- The requested documentation refresh for `post-fight-loot-screen.md` and `battle-endpoint-payload.md` never landed, leaving the guarantee undocumented.
+
+more work needed — `/ui?action=advance_room` should return the updated `reward_progression`, and the backend docs still need the promised contract update.
