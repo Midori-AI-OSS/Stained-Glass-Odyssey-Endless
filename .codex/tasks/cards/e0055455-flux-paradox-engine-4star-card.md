@@ -12,4 +12,3 @@ Current 4★ rewards hand out brute-force tempo (Overclock), revives (Iron Resol
 - Implement `backend/plugins/cards/flux_paradox_engine.py` with stat boosts, stance state machine, per-ally triggers, and proper cleanup. Lean on existing event subscriptions (turn_start, damage_dealt) to avoid polling loops.
 - Extend backend tests to cover both stances, ensuring stacks flip correctly across turns and mitigation buffs expire after one round.
 - Update `.codex/implementation/card-inventory.md` and the archived card plan with the stance-cycling description and numerical tuning.【F:.codex/implementation/card-inventory.md†L63-L69】【F:.codex/planning/archive/726d03ae-card-plan.md†L61-L69】
-- Provide `fluxparadoxengine.png` in `frontend/src/lib/assets/cards/Art/` and verify reward previews pick up the asset.

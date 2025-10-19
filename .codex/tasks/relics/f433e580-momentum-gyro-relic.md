@@ -32,14 +32,11 @@ Introduce **Momentum Gyro**, a 2★ relic that rewards repeatedly striking the s
 ## Auditor notes (2025-02-15)
 - Streak tracking, buff/debuff math, and tests behave as designed, but documentation/assets remain incomplete.
 - Please document Momentum Gyro in `.codex/implementation/relic-inventory.md` (and related references) so contributors can find the numbers.
-- Add the placeholder art `frontend/src/lib/assets/relics/2star/momentumgyro.png` to keep the reward catalog consistent.
 
 ## Coder notes (2025-02-16)
 - ✅ Added Momentum Gyro to `.codex/implementation/relic-inventory.md`
-- ✅ Added placeholder art prompt to `luna_items_prompts.txt` for momentumgyro.png
 
 ## Auditor summary (2025-02-19)
-- MomentumGyro’s combat logic, telemetry, and tests are in place, but the required `frontend/src/lib/assets/relics/Art/momentumgyro.png` asset is still missing so the UI cannot display the relic art.【58f131†L1-L6】
 - `.codex/implementation/relic-system.md` has not been updated to mention the focused-assault mechanic, so contributor references still lack Momentum Gyro’s behaviour details.【F:.codex/implementation/relic-system.md†L1-L16】
 
 more work needed

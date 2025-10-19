@@ -12,4 +12,3 @@ Our 5★ options currently cover summon tempo, near-invulnerability, and crit-st
 - Implement `backend/plugins/cards/eclipse_theater_sigil.py` with stat mods, turn-based polarity toggles, ally/foe effect application, crit buff cleanup, and subscription teardown patterned after Reality Split and Temporal Shield.
 - Extend backend tests to cover alternating turns, ensuring cleanses happen only on Light turns, Dark debuffs/buffs fire once per turn, and polarity resets between battles.
 - Document the new card in `.codex/implementation/card-inventory.md` (adding the missing 5★ section if needed) and refresh the archived card plan with the alternating aura description.【F:.codex/implementation/card-inventory.md†L63-L69】【F:.codex/planning/archive/726d03ae-card-plan.md†L66-L69】
-- Drop `eclipsetheatersigil.png` into `frontend/src/lib/assets/cards/Art/` and confirm the UI catalogs it.
