@@ -41,9 +41,9 @@ async def test_advance_room_requires_reward_selection(app_with_db):
             "awaiting_loot": False,
             "awaiting_next": False,
             "reward_progression": {
-                "available": ["card", "relic"],
+                "available": ["cards", "relics"],
                 "completed": [],
-                "current_step": "card",
+                "current_step": "cards",
             },
         }
     )
