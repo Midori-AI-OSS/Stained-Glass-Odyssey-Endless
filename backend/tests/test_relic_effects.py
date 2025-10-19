@@ -1038,8 +1038,8 @@ async def test_safeguard_prism_stacks():
 
 
 @pytest.mark.asyncio
-async def test_safeguard_prism_limited_triggers():
-    """Test that Safeguard Prism has limited triggers per stack."""
+async def test_safeguard_prism_requires_turn_cooldown():
+    """Safeguard Prism should not re-trigger until five turns pass."""
     event_bus_module.bus._subs.clear()
     party = Party()
     ally = PlayerBase()
@@ -1048,7 +1048,7 @@ async def test_safeguard_prism_limited_triggers():
     enemy.hp = enemy.set_base_stat('max_hp', 1000)
     party.members.append(ally)
 
-    # Award 1 stack (1 trigger per ally per battle)
+    # Award 1 stack
     award_relic(party, "safeguard_prism")
     await apply_relics(party)
 
@@ -1060,20 +1060,43 @@ async def test_safeguard_prism_limited_triggers():
     # Should have received shield
     assert ally.shields == 150, f"Expected shields 150, got {ally.shields}"
 
-    # Reset shields and try to trigger again
+    # Reset shields and try to trigger again before cooldown expires
     ally.shields = 0
     ally.hp = 400
 
     await BUS.emit_async("damage_taken", ally, enemy, 100)
     await asyncio.sleep(0.01)
 
-    # Should NOT have received shield (already used 1 trigger)
+    # Should NOT have received shield yet (cooldown not elapsed)
     assert ally.shields == 0, f"Expected shields 0, got {ally.shields}"
+
+    # Advance 4 turns (still on cooldown)
+    for _ in range(4):
+        await BUS.emit_async("turn_start")
+    await asyncio.sleep(0.01)
+
+    ally.hp = 350
+    await BUS.emit_async("damage_taken", ally, enemy, 100)
+    await asyncio.sleep(0.01)
+
+    # Still on cooldown after only 4 turns
+    assert ally.shields == 0, f"Expected shields 0, got {ally.shields}"
+
+    # Advance final turn to clear cooldown
+    await BUS.emit_async("turn_start")
+    await asyncio.sleep(0.01)
+
+    ally.hp = 300
+    await BUS.emit_async("damage_taken", ally, enemy, 100)
+    await asyncio.sleep(0.01)
+
+    # Cooldown complete; shield should apply again
+    assert ally.shields == 150, f"Expected shields 150, got {ally.shields}"
 
 
 @pytest.mark.asyncio
-async def test_safeguard_prism_multiple_stacks_multiple_triggers():
-    """Test that multiple stacks allow multiple triggers per ally."""
+async def test_safeguard_prism_extended_cooldown_scales_with_stacks():
+    """Five stacks should extend the cooldown to six turns."""
     event_bus_module.bus._subs.clear()
     party = Party()
     ally = PlayerBase()
@@ -1082,9 +1105,8 @@ async def test_safeguard_prism_multiple_stacks_multiple_triggers():
     enemy.hp = enemy.set_base_stat('max_hp', 1000)
     party.members.append(ally)
 
-    # Award 2 stacks (2 triggers per ally per battle)
-    award_relic(party, "safeguard_prism")
-    award_relic(party, "safeguard_prism")
+    for _ in range(5):
+        award_relic(party, "safeguard_prism")
     await apply_relics(party)
 
     # Trigger safeguard first time
@@ -1092,28 +1114,37 @@ async def test_safeguard_prism_multiple_stacks_multiple_triggers():
     await BUS.emit_async("damage_taken", ally, enemy, 100)
     await asyncio.sleep(0.01)
 
-    # Should have received shield (30% = 300)
-    assert ally.shields == 300, f"Expected shields 300, got {ally.shields}"
+    # Should have received shield (75% = 750)
+    assert ally.shields == 750, f"Expected shields 750, got {ally.shields}"
 
-    # Reset shields and trigger again
+    # Reset shields and trigger again before cooldown expires
     ally.shields = 0
     ally.hp = 400
-
     await BUS.emit_async("damage_taken", ally, enemy, 100)
     await asyncio.sleep(0.01)
 
-    # Should have received shield again (still have 1 trigger left)
-    assert ally.shields == 300, f"Expected shields 300, got {ally.shields}"
-
-    # Reset shields and try a third time
-    ally.shields = 0
-    ally.hp = 300
-
-    await BUS.emit_async("damage_taken", ally, enemy, 100)
-    await asyncio.sleep(0.01)
-
-    # Should NOT have received shield (used all 2 triggers)
+    # Cooldown has not elapsed (6-turn lockout)
     assert ally.shields == 0, f"Expected shields 0, got {ally.shields}"
+
+    # Advance 5 turns — still 1 turn short
+    for _ in range(5):
+        await BUS.emit_async("turn_start")
+    await asyncio.sleep(0.01)
+
+    ally.hp = 320
+    await BUS.emit_async("damage_taken", ally, enemy, 100)
+    await asyncio.sleep(0.01)
+    assert ally.shields == 0, f"Expected shields 0, got {ally.shields}"
+
+    # Advance the 6th turn; cooldown should expire
+    await BUS.emit_async("turn_start")
+    await asyncio.sleep(0.01)
+
+    ally.hp = 280
+    await BUS.emit_async("damage_taken", ally, enemy, 100)
+    await asyncio.sleep(0.01)
+
+    assert ally.shields == 750, f"Expected shields 750, got {ally.shields}"
 
 
 @pytest.mark.asyncio
@@ -1177,9 +1208,12 @@ async def test_safeguard_prism_telemetry():
     assert effect_type == "emergency_shield"
     assert value == 150  # 15% of 1000
     assert metadata["hp_threshold_percentage"] == 60
+    assert metadata["hp_percentage_before"] == pytest.approx(50.0)
     assert metadata["shield_percentage"] == 15
     assert metadata["mitigation_bonus_percentage"] == 12
-    assert metadata["trigger_count"] == 1
-    assert metadata["max_triggers"] == 1
+    assert metadata["cooldown_turns"] == 5
+    assert metadata["turn_index"] == 0
+    assert metadata["next_available_turn"] == 5
+    assert metadata["turns_remaining"] == 5
     assert metadata["stacks"] == 1
 

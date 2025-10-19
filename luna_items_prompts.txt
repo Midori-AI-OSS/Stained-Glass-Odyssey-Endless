@@ -10,7 +10,7 @@ Balanced Diet: Luna seated at a sunlit wooden table, savoring a balanced plate p
 
 Siege Banner (siegebanner): 
 
-Safeguard Prism (): 
+Safeguard Prism (safeguardprism): Luna raising a hexagonal prism of refracted starlight as it blossoms into a rotating shield dome around wounded allies; layered light bands display a subtle turn counter etched in the aura, hinting at the protective cooldown before the prism can flare again.
 
 Momentum Gyro (momentumgyro): Luna spinning a gleaming brass gyroscope device with concentric rings that glow brighter with each rotation, while spectral momentum trails spiral outward showing her attacks becoming more focused and powerful against a single shadowy adversary; dynamic motion lines and energy buildup effects suggest escalating offensive momentum.
 
