@@ -1,13 +1,19 @@
-# Reward confirmation payloads
+# Reward confirmation payload reference
 
-This reference outlines the payloads returned by the reward confirmation and
-rollback endpoints introduced with the staging flow. The endpoints live under
-`/rewards/<type>/<run_id>/*` and return a consistent shape so clients can update
-their local state without re-fetching the full map.
+The reward staging flow exposes a trio of endpoints beneath
+`/rewards/<reward_type>/<run_id>/…` so clients can confirm or cancel staged
+choices without polling the entire `/ui` payload. This guide documents the
+responses returned by those handlers.
+
+- `POST /rewards/<reward_type>/<run_id>/confirm`
+- `POST /rewards/<reward_type>/<run_id>/cancel`
+- `POST /rewards/loot/<run_id>` (acknowledges auto-awarded drops)
+
+`<reward_type>` accepts `card`, `cards`, `relic`, `relics`, `item`, and `items`.
+`reward_type` is normalised to the canonical staging bucket internally so the
+same contract applies regardless of the alias supplied by the client.
 
 ## Confirmation response
-
-`POST /rewards/{card|relic}/<run_id>/confirm`
 
 ```json
 {
@@ -49,27 +55,28 @@ their local state without re-fetching the full map.
 }
 ```
 
-Key fields:
+Key points:
 
-- `reward_staging`: always returned so UIs can clear local staging state.
-- `awaiting_*`: reflect the refreshed gating flags. When all are false the
-  backend flips `awaiting_next` to `true` to signal room advancement is allowed.
-- `reward_progression`: present when additional reward steps remain. The field is
-  omitted entirely once the sequence completes and the step names are always the
-  canonical `drops` → `cards` → `relics` → `battle_review` sequence.
-- `cards` / `relics`: included only for the confirmed reward type so overlays can
-  show the updated deck or relic stacks without another `/ui` poll.
-- `next_room`: populated when `awaiting_next` becomes `true`.
-- `activation_record`: single-use audit event emitted for the confirmation. The
-  payload contains the canonical bucket name, an ISO timestamp, a UUID, and the
-  staged values that were applied.
-- `reward_activation_log`: history of recent confirmation events kept to help
-  QA and telemetry debug duplicate submissions. Only the newest twenty entries
-  are retained.
+- `reward_staging` always reflects the emptied staging buckets so UIs can clear
+  their local previews immediately after confirmation.
+- `awaiting_*` exposes the refreshed gating flags. When all three are `false` the
+  backend sets `awaiting_next` to `true` and, when possible, includes the upcoming
+  `next_room` type.
+- `reward_progression` is present when further reward steps remain. The field is
+  removed entirely once the sequence finishes.
+- `cards` or `relics` appear only when that bucket was confirmed; there is no
+  `items` array because staged loot is merged directly into `party.items`.
+- `activation_record` captures the single confirmation event, including a copy of
+  the staged payload. This is echoed at the top of `reward_activation_log`.
+- `reward_activation_log` stores the twenty most recent confirmation events so
+  clients and QA can audit duplicate submissions without replaying history from
+  `/ui`.
+
+Confirming an `item` or `items` bucket follows the same contract. The `bucket`
+field in both activation structures changes to `"items"` and `awaiting_loot`
+flips to `false` once the drops are committed.
 
 ## Cancellation response
-
-`POST /rewards/{card|relic}/<run_id>/cancel`
 
 ```json
 {
@@ -90,16 +97,23 @@ Key fields:
 }
 ```
 
-- Cancellation never returns the party roster because nothing changed on disk.
-- `awaiting_next` is always `false` so the UI keeps the loot overlay open.
-- The progression block is reset to the cancelled step so the front-end can
-  redisplay the appropriate selection UI.
+Cancellation clears the requested bucket and reopens the progression step while
+keeping `awaiting_next` set to `false`. No activation metadata is returned
+because nothing changed on disk. After the response the battle snapshot mirrors
+the updated staging payload, ensuring reconnecting clients see the cleared
+selection immediately.
 
-## Cleanup behaviour
+## Loot acknowledgement response
 
-Once a run leaves the reward state (advancing to the next room or ending the
-run) `cleanup_battle_state` empties any remaining staging buckets in both the
-stored map and the in-memory snapshot. This guarantees confirmation responses
-never surface stale staged data on reconnects. Atomicity is enforced with
-`runs.lifecycle.reward_locks`, so even if the UI retries a confirmation call the
-staged payload is applied at most once before the buckets are cleared.
+`POST /rewards/loot/<run_id>` returns only the upcoming room hint because the
+party state is unchanged:
+
+```json
+{
+  "next_room": "boss"
+}
+```
+
+The acknowledgement endpoint is only used for automatically granted drops that
+skipped the staging UI. Manual loot confirmations should continue to use the
+standard `confirm` and `cancel` routes above.

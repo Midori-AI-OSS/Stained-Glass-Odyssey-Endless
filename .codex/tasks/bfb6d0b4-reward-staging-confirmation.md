@@ -23,4 +23,5 @@ Duplicate-prevention guardrails and regression tests live in the guardrail tasks
 ### Task Master review (2025-02-16)
 - The backend docs called out in the task (`post-fight-loot-screen.md`, `battle-endpoint-payload.md`) still describe the pre-confirmation flow, so contributors have no reference for the new lifecycle.
 
-more work needed — backend confirmation docs are still stale; update `.codex/implementation/post-fight-loot-screen.md` and `battle-endpoint-payload.md` to cover the confirm/cancel pipeline.
+Updated docs to document the confirmation/cancellation pipeline and staging cleanup.
+ready for review
