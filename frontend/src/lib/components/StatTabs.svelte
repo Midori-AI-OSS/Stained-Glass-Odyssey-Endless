@@ -41,6 +41,7 @@
   $: previewChar = roster.find((r) => r.id === previewId);
   $: isPlayer = !!previewChar?.is_player;
   $: viewStats = previewChar?.stats || {};
+  $: playerRequired = selected.includes(previewId) && isPlayer;
 
   $: upgradeTotals = upgradeData?.stat_totals || {};
   $: upgradeCounts = upgradeData?.stat_counts || {};
@@ -281,15 +282,16 @@
     <div class="stats-placeholder">Select a character to view stats</div>
   {/if}
   {#if previewId}
-    <div class="stats-confirm">
+    <div class="stats-confirm" class:player-required={playerRequired}>
+      {#if playerRequired}
+        <span class="required-note" role="status">Player is required</span>
+      {/if}
       {#if upgradeMode}
         <button class="secondary" on:click={() => handleUpgradeDismiss('footer')} title="Close upgrade stats">Cancel upgrade</button>
       {:else}
         <button class="secondary" on:click={openUpgrade} title="Upgrade stats for this character">Upgrade stats</button>
       {/if}
-      {#if selected.includes(previewId) && isPlayer}
-        <button class="confirm" disabled title="The player must stay in the party">Player is required</button>
-      {:else}
+      {#if !playerRequired}
         <button class="confirm" on:click={toggleMember}>
           {selected.includes(previewId) ? 'Remove from party' : 'Add to party'}
         </button>
@@ -349,6 +351,10 @@
     margin-top: 0.25rem;
     gap: 0.5rem;
   }
+  .stats-confirm.player-required {
+    justify-content: space-between;
+    gap: 0.75rem;
+  }
   button.secondary,
   button.confirm {
     background: linear-gradient(0deg, rgba(255,255,255,0.04), rgba(255,255,255,0.04)), rgba(6, 12, 24, 0.55);
@@ -373,6 +379,17 @@
   button.confirm:disabled {
     opacity: 0.45;
     cursor: not-allowed;
+  }
+  .required-note {
+    color: #ffcf70;
+    background: rgba(255, 207, 112, 0.15);
+    border: 1px solid rgba(255, 207, 112, 0.35);
+    border-radius: 6px;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.85rem;
+    line-height: 1.2;
+    display: inline-flex;
+    align-items: center;
   }
   .stats-tabs {
     display: flex;
