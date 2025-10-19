@@ -13,9 +13,12 @@ from quart import request
 from runs.encryption import get_save_manager
 from runs.lifecycle import battle_snapshots
 from runs.lifecycle import battle_tasks
+from runs.lifecycle import ensure_reward_progression
 from runs.lifecycle import has_pending_rewards
 from runs.lifecycle import load_map
+from runs.lifecycle import normalise_reward_step
 from runs.lifecycle import save_map
+from runs.lifecycle import REWARD_STEP_BATTLE_REVIEW
 from runs.party_manager import load_party
 from services.asset_service import get_asset_manifest
 from services.reward_service import cancel_reward
@@ -103,12 +106,12 @@ def determine_ui_mode(game_state: dict[str, Any]) -> str:
     # Check for reward progression sequence first
     progression = current_state.get("reward_progression")
     if progression and progression.get("current_step"):
-        step = progression["current_step"]
-        if step == "card":
+        step = normalise_reward_step(progression.get("current_step"))
+        if step == "cards":
             return "card_selection"
-        elif step == "relic":
+        elif step == "relics":
             return "relic_selection"
-        elif step == "loot":
+        elif step == "drops":
             return "loot"
         elif step == "battle_review":
             return "battle_review"
@@ -497,13 +500,13 @@ async def handle_ui_action() -> tuple[str, int, dict[str, Any]]:
             ):
                 return create_error_response("Cannot advance room while rewards are pending", 400)
 
-            progression = state.get("reward_progression")
+            progression, _ = ensure_reward_progression(state)
 
             if progression and progression.get("current_step"):
-                current_step = progression["current_step"]
+                current_step = normalise_reward_step(progression.get("current_step"))
 
                 # Special handling for battle_review step - it's informational only
-                if current_step == "battle_review":
+                if current_step == REWARD_STEP_BATTLE_REVIEW:
                     # Complete battle_review and any remaining steps automatically
                     state["awaiting_next"] = True
                     state["awaiting_card"] = False
@@ -512,32 +515,33 @@ async def handle_ui_action() -> tuple[str, int, dict[str, Any]]:
                     del state["reward_progression"]
                 else:
                     # Complete the current step and advance progression
-                    progression["completed"].append(current_step)
+                    completed_steps = progression.setdefault("completed", [])
+                    if current_step and current_step not in completed_steps:
+                        completed_steps.append(current_step)
+                    state["reward_progression"] = progression
 
-                    # Find next step in progression
-                    available = progression.get("available", [])
-                    completed = progression.get("completed", [])
-                    next_steps = [step for step in available if step not in completed]
+                    ensure_reward_progression(state)
 
-                    if next_steps:
-                        # Move to next step in progression
-                        progression["current_step"] = next_steps[0]
-                        state["reward_progression"] = progression
+                    if state.get("reward_progression"):
+                        state["awaiting_next"] = False
                     else:
                         # All progression steps completed, ready to advance room
                         state["awaiting_next"] = True
                         state["awaiting_card"] = False
                         state["awaiting_relic"] = False
                         state["awaiting_loot"] = False
-                        del state["reward_progression"]
 
                 await asyncio.to_thread(save_map, run_id, state)
 
                 # If we still have progression steps, return the updated state
-                if current_step != "battle_review" and progression and progression.get("current_step"):
+                if (
+                    current_step != REWARD_STEP_BATTLE_REVIEW
+                    and state.get("reward_progression")
+                    and state["reward_progression"].get("current_step")
+                ):
                     return jsonify({
                         "progression_advanced": True,
-                        "current_step": progression["current_step"]
+                        "current_step": state["reward_progression"]["current_step"]
                     })
 
             try:

@@ -21,9 +21,9 @@ their local state without re-fetching the full map.
   "awaiting_loot": false,
   "awaiting_next": false,
   "reward_progression": {
-    "available": ["card", "relic"],
-    "completed": ["card"],
-    "current_step": "relic"
+    "available": ["cards", "relics"],
+    "completed": ["cards"],
+    "current_step": "relics"
   },
   "cards": ["arc_lightning"],
   "next_room": "shop",
@@ -55,7 +55,8 @@ Key fields:
 - `awaiting_*`: reflect the refreshed gating flags. When all are false the
   backend flips `awaiting_next` to `true` to signal room advancement is allowed.
 - `reward_progression`: present when additional reward steps remain. The field is
-  omitted entirely once the sequence completes.
+  omitted entirely once the sequence completes and the step names are always the
+  canonical `drops` → `cards` → `relics` → `battle_review` sequence.
 - `cards` / `relics`: included only for the confirmed reward type so overlays can
   show the updated deck or relic stacks without another `/ui` poll.
 - `next_room`: populated when `awaiting_next` becomes `true`.
@@ -82,9 +83,9 @@ Key fields:
   "awaiting_loot": false,
   "awaiting_next": false,
   "reward_progression": {
-    "available": ["card"],
+    "available": ["cards"],
     "completed": [],
-    "current_step": "card"
+    "current_step": "cards"
   }
 }
 ```

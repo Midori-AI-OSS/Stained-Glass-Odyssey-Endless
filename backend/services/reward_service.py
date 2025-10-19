@@ -7,10 +7,15 @@ from typing import Any
 from uuid import uuid4
 
 from runs.lifecycle import battle_snapshots
+from runs.lifecycle import ensure_reward_progression
 from runs.lifecycle import ensure_reward_staging
 from runs.lifecycle import load_map
+from runs.lifecycle import normalise_reward_step
 from runs.lifecycle import reward_locks
 from runs.lifecycle import save_map
+from runs.lifecycle import REWARD_STEP_CARDS
+from runs.lifecycle import REWARD_STEP_DROPS
+from runs.lifecycle import REWARD_STEP_RELICS
 from runs.party_manager import load_party
 from runs.party_manager import save_party
 from tracking import log_game_action
@@ -101,6 +106,8 @@ async def select_card(run_id: str, card_id: str) -> dict[str, Any]:
         staging["cards"] = [staged_card]
         state["awaiting_card"] = True
         state["awaiting_next"] = False
+
+        ensure_reward_progression(state)
 
         await asyncio.to_thread(save_map, run_id, state)
 
@@ -209,6 +216,8 @@ async def select_relic(run_id: str, relic_id: str) -> dict[str, Any]:
         state["awaiting_relic"] = True
         state["awaiting_next"] = False
 
+        ensure_reward_progression(state)
+
         await asyncio.to_thread(save_map, run_id, state)
 
         snap = battle_snapshots.get(run_id)
@@ -271,25 +280,13 @@ async def acknowledge_loot(run_id: str) -> dict[str, Any]:
         if not state.get("awaiting_loot"):
             raise ValueError("not awaiting loot")
         current_index = int(state.get("current", 0))
-        progression = state.get("reward_progression")
-        if progression and progression.get("current_step") == "loot":
-            progression["completed"].append("loot")
-            available = progression.get("available", [])
-            completed = progression.get("completed", [])
-            next_steps = [step for step in available if step not in completed]
-            if next_steps:
-                progression["current_step"] = next_steps[0]
-                state["awaiting_loot"] = False
-                state["awaiting_next"] = False
-            else:
-                progression["current_step"] = None
-                state["awaiting_loot"] = False
-                state["awaiting_next"] = True
-                del state["reward_progression"]
-        else:
-            state["awaiting_loot"] = False
-            if not state.get("awaiting_card") and not state.get("awaiting_relic"):
-                state["awaiting_next"] = True
+        state["awaiting_loot"] = False
+        _update_reward_progression(state, completed_step=REWARD_STEP_DROPS)
+
+        if state.get("reward_progression"):
+            state["awaiting_next"] = False
+        elif not state.get("awaiting_card") and not state.get("awaiting_relic"):
+            state["awaiting_next"] = True
         next_type = (
             rooms[state["current"] + 1].room_type
             if state["current"] + 1 < len(rooms) and state.get("awaiting_next")
@@ -315,28 +312,45 @@ def _update_reward_progression(
     completed_step: str | None = None,
     reopen_step: str | None = None,
 ) -> None:
-    progression = state.get("reward_progression")
-    if not isinstance(progression, dict):
+    progression, _ = ensure_reward_progression(state)
+    if progression is None:
         return
 
-    available = progression.get("available", [])
-    completed = progression.get("completed", [])
-    if completed_step and completed_step in available and completed_step not in completed:
-        completed.append(completed_step)
-        progression["completed"] = completed
-    if reopen_step and reopen_step in completed:
-        progression["completed"] = [step for step in completed if step != reopen_step]
+    available: list[str] = list(progression.get("available", []))
+    completed: list[str] = list(progression.get("completed", []))
+
+    canonical_completed: list[str] = [
+        step for step in available if step in completed
+    ]
+    completed_set = set(canonical_completed)
+
+    if completed_step:
+        normalised = normalise_reward_step(completed_step)
+        if normalised and normalised in available:
+            completed_set.add(normalised)
 
     if reopen_step:
-        progression["current_step"] = reopen_step
+        normalised = normalise_reward_step(reopen_step)
+        if normalised in completed_set:
+            completed_set.remove(normalised)
+
+    canonical_completed = [
+        step for step in available if step in completed_set
+    ]
+    progression["completed"] = canonical_completed
+
+    next_step = None
+    for step in available:
+        if step not in completed_set:
+            next_step = step
+            break
+
+    if next_step is None:
+        state.pop("reward_progression", None)
         return
 
-    next_steps = [step for step in available if step not in completed]
-    if next_steps:
-        progression["current_step"] = next_steps[0]
-    else:
-        progression["current_step"] = None
-        state.pop("reward_progression", None)
+    progression["current_step"] = next_step
+    state["reward_progression"] = progression
 
 
 def _refresh_snapshot(run_id: str, state: dict[str, Any], staging: dict[str, Any]) -> None:
@@ -402,7 +416,7 @@ async def confirm_reward(run_id: str, reward_type: str) -> dict[str, Any]:
                 party.cards.append(card_id)
             activation_snapshot = [dict(staged_card)] if isinstance(staged_card, dict) else []
             state["awaiting_card"] = False
-            _update_reward_progression(state, completed_step="card")
+            _update_reward_progression(state, completed_step=REWARD_STEP_CARDS)
         elif bucket == "relics":
             staged_relic = staged_values[0]
             relic_id = staged_relic.get("id") if isinstance(staged_relic, dict) else None
@@ -411,7 +425,7 @@ async def confirm_reward(run_id: str, reward_type: str) -> dict[str, Any]:
             party.relics.append(relic_id)
             activation_snapshot = [dict(staged_relic)] if isinstance(staged_relic, dict) else []
             state["awaiting_relic"] = False
-            _update_reward_progression(state, completed_step="relic")
+            _update_reward_progression(state, completed_step=REWARD_STEP_RELICS)
         elif bucket == "items":
             staged_items = [item for item in staged_values if isinstance(item, dict)]
             inventory = getattr(party, "items", None)
@@ -421,7 +435,10 @@ async def confirm_reward(run_id: str, reward_type: str) -> dict[str, Any]:
                 setattr(party, "items", staged_items)
             activation_snapshot = [dict(item) for item in staged_items]
             state["awaiting_loot"] = False
-            _update_reward_progression(state, completed_step="loot")
+            _update_reward_progression(state, completed_step=REWARD_STEP_DROPS)
+
+        if not isinstance(staging := state.get("reward_staging"), dict):
+            staging, _ = ensure_reward_staging(state)
 
         staging[bucket] = []
 
@@ -505,13 +522,16 @@ async def cancel_reward(run_id: str, reward_type: str) -> dict[str, Any]:
 
         if bucket == "cards":
             state["awaiting_card"] = True
-            _update_reward_progression(state, reopen_step="card")
+            _update_reward_progression(state, reopen_step=REWARD_STEP_CARDS)
         elif bucket == "relics":
             state["awaiting_relic"] = True
-            _update_reward_progression(state, reopen_step="relic")
+            _update_reward_progression(state, reopen_step=REWARD_STEP_RELICS)
         elif bucket == "items":
             state["awaiting_loot"] = True
-            _update_reward_progression(state, reopen_step="loot")
+            _update_reward_progression(state, reopen_step=REWARD_STEP_DROPS)
+
+        if not isinstance(staging := state.get("reward_staging"), dict):
+            staging, _ = ensure_reward_staging(state)
 
         state["awaiting_next"] = False
 

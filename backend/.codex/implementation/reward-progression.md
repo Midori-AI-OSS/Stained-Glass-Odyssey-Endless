@@ -8,7 +8,16 @@ The map state blocks advancing to the next room while any post-battle rewards re
 
 `advance_room` refuses to progress while any of these flags are `True`. The UI action handler returns an HTTP 400 error when a client attempts to advance with pending rewards, and the `run_service.advance_room` function raises a `ValueError` so direct calls cannot bypass the restriction.
 
-Reward sequences may also use a `reward_progression` structure to handle multiple reward steps. Once all steps are completed and the `awaiting_*` flags are cleared, room advancement is allowed.
+Reward sequences also use a `reward_progression` structure to represent the
+remaining post-battle phases. The payload always exposes `available`,
+`completed`, and `current_step` keys and the step identifiers are normalised to
+the canonical order: `drops` → `cards` → `relics` → `battle_review`. Whenever a
+run is awaiting loot, cards, relics, or the battle review overlay, the backend
+ensures `reward_progression` is populated so the frontend can render the correct
+phase without falling back to legacy flags. The helper automatically backfills
+missing metadata by inspecting the `awaiting_*` flags and staged reward buckets
+and persists the structure until every step is completed, at which point the
+field is removed and `awaiting_next` is set.
 
 ## Reward staging
 

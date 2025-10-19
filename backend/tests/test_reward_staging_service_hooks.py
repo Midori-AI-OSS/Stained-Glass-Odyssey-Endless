@@ -100,9 +100,9 @@ async def test_select_card_stages_without_modifying_party() -> None:
         "awaiting_loot": False,
         "awaiting_next": False,
         "reward_progression": {
-            "available": ["card"],
+            "available": ["cards"],
             "completed": [],
-            "current_step": "card",
+            "current_step": "cards",
         },
         "reward_staging": {"cards": [], "relics": [], "items": []},
     }
@@ -132,7 +132,7 @@ async def test_select_card_stages_without_modifying_party() -> None:
     assert result["awaiting_next"] is False
     progression_payload = result["reward_progression"]
     assert isinstance(progression_payload, dict)
-    assert progression_payload.get("current_step") == "card"
+    assert progression_payload.get("current_step") == "cards"
     assert progression_payload.get("completed") == []
     staged_cards = result["reward_staging"]["cards"]
     assert len(staged_cards) == 1
@@ -148,7 +148,7 @@ async def test_select_card_stages_without_modifying_party() -> None:
     assert state["awaiting_next"] is False
     progression_state = state.get("reward_progression")
     assert isinstance(progression_state, dict)
-    assert progression_state.get("current_step") == "card"
+    assert progression_state.get("current_step") == "cards"
     assert state["reward_staging"]["cards"][0]["id"] == "arc_lightning"
     snapshot = lifecycle.battle_snapshots[run_id]
     assert snapshot["card_choices"] == []
@@ -156,7 +156,7 @@ async def test_select_card_stages_without_modifying_party() -> None:
     assert snapshot["awaiting_next"] is False
     progression_snapshot = snapshot.get("reward_progression")
     assert isinstance(progression_snapshot, dict)
-    assert progression_snapshot.get("current_step") == "card"
+    assert progression_snapshot.get("current_step") == "cards"
     assert snapshot["reward_staging"]["cards"][0]["id"] == "arc_lightning"
 
 
@@ -184,9 +184,9 @@ async def test_select_relic_stages_without_duplicate_application() -> None:
         "awaiting_loot": False,
         "awaiting_next": False,
         "reward_progression": {
-            "available": ["relic"],
+            "available": ["relics"],
             "completed": [],
-            "current_step": "relic",
+            "current_step": "relics",
         },
         "reward_staging": {"cards": [], "relics": [], "items": []},
     }
@@ -218,7 +218,7 @@ async def test_select_relic_stages_without_duplicate_application() -> None:
     assert result["awaiting_next"] is False
     progression_payload = result["reward_progression"]
     assert isinstance(progression_payload, dict)
-    assert progression_payload.get("current_step") == "relic"
+    assert progression_payload.get("current_step") == "relics"
     assert progression_payload.get("completed") == []
     staged_relics = result["reward_staging"]["relics"]
     assert len(staged_relics) == 1
@@ -235,7 +235,7 @@ async def test_select_relic_stages_without_duplicate_application() -> None:
     assert state["awaiting_next"] is False
     progression_state = state.get("reward_progression")
     assert isinstance(progression_state, dict)
-    assert progression_state.get("current_step") == "relic"
+    assert progression_state.get("current_step") == "relics"
     staged_state = state["reward_staging"]["relics"][0]
     assert staged_state["id"] == "old_coin"
     assert staged_state["stacks"] == 2
@@ -245,7 +245,7 @@ async def test_select_relic_stages_without_duplicate_application() -> None:
     assert snapshot["awaiting_next"] is False
     progression_snapshot = snapshot.get("reward_progression")
     assert isinstance(progression_snapshot, dict)
-    assert progression_snapshot.get("current_step") == "relic"
+    assert progression_snapshot.get("current_step") == "relics"
     staged_snapshot = snapshot["reward_staging"]["relics"][0]
     assert staged_snapshot["id"] == "old_coin"
     assert staged_snapshot["stacks"] == 2

@@ -22,3 +22,5 @@ Guarantee `reward_progression` accompanies every staged reward payload so the fr
 - Include migration/repair logic for existing runs in progress (consider applying the backfill the next time their map state loads).
 - Make sure any async locks (`reward_locks`) keep the progression state in sync with staging updates.
 
+ready for review
+

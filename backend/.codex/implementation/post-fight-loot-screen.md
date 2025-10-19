@@ -62,9 +62,13 @@ Because staged rewards are not yet committed, the `awaiting_card` or
 `advance_room` guarded and guarantees the loot screen remains visible across
 reconnects.
 
-`reward_progression` is left untouched—`current_step` continues to point at the
-pending reward step and `completed` remains unchanged. Consumers should use the
-presence of staged entries to drive confirmation UI instead of relying on
+`reward_progression` remains in sync with the pending step list—`current_step`
+continues to point at the active phase while `available` and `completed`
+enumerate the canonical sequence (`drops`, `cards`, `relics`, and optionally
+`battle_review`). The backend reconstitutes the structure whenever metadata is
+missing by inspecting the staging buckets and `awaiting_*` flags, so clients can
+trust the payload even after reconnects. Consumers should use the presence of
+staged entries to drive confirmation UI instead of relying solely on
 `awaiting_next`.
 
 ## Client expectations
