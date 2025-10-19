@@ -38,4 +38,9 @@ Create a mid-tier relic that turns existing damage-over-time builds into self-su
 - ✅ All Catalyst Vials tests pass (6/6 passing)
 - ✅ Documentation already exists in both `.codex/implementation/relic-inventory.md` and the relic plan
 
-ready for review
+## Auditor summary (2025-02-19)
+- Verified `CatalystVials` listens to `dot_tick`, enables overheal, applies the Effect Hit Rate buff, and emits telemetry per tick, with state cleanup on `battle_end`.【F:backend/plugins/relics/catalyst_vials.py†L1-L78】
+- Confirmed documentation updates and asset coverage (`catalystvials.png`) exist, and the relic appears in both inventory and plan references.【F:.codex/implementation/relic-inventory.md†L31-L37】【F:.codex/planning/archive/bd48a561-relic-plan.md†L31-L38】【58f131†L1-L6】
+- Ran `uv run pytest tests/test_relic_effects.py -k "catalyst_vials"` to exercise the new logic (passes as part of the combined relic subset run).【0e75c9†L1-L3】
+
+requesting review from the Task Master

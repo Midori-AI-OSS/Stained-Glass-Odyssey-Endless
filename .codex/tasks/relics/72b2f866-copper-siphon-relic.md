@@ -32,4 +32,8 @@ more work needed
 - ✅ Relic-system.md already documents the lifesteal-to-shield behavior in general terms
 - ℹ️ Note: Actual `.png` asset will be created by Lead Developer from the prompt
 
-ready for review
+## Auditor summary (2025-02-19)
+- Backend plugin and tests behave as expected, but there is still no `coppersiphon.png` asset under `frontend/src/lib/assets/relics/Art/`, so the UI cannot show the relic art.【58f131†L1-L6】
+- `.codex/implementation/relic-system.md` has not been updated to cover Copper Siphon’s lifesteal-to-shield interaction, despite the requirement to document it for contributors.【F:.codex/implementation/relic-system.md†L1-L16】
+
+more work needed

@@ -24,4 +24,10 @@ Duplicate-prevention guardrails and regression tests live in the guardrail tasks
 - The backend docs called out in the task (`post-fight-loot-screen.md`, `battle-endpoint-payload.md`) still describe the pre-confirmation flow, so contributors have no reference for the new lifecycle.
 
 Updated docs to document the confirmation/cancellation pipeline and staging cleanup.
-ready for review
+
+## Auditor summary (2025-02-19)
+- Confirmed `backend/services/reward_service.py` now serialises activation logs, clears staging buckets, and flips the awaiting flags consistently when confirming or cancelling rewards, including reopening progression steps on cancellation.【F:backend/services/reward_service.py†L118-L266】
+- Verified `/ui` action handler short-circuits to emit refreshed progression payloads before advancing rooms, and documentation in `.codex/implementation/post-fight-loot-screen.md` and `battle-endpoint-payload.md` reflects the lifecycle contract.【F:backend/routes/ui.py†L520-L565】【F:backend/.codex/implementation/post-fight-loot-screen.md†L1-L87】【F:backend/.codex/implementation/battle-endpoint-payload.md†L1-L115】
+- Ran `uv run pytest tests/test_reward_staging_service_hooks.py tests/test_reward_staging_confirmation.py tests/test_reward_gate.py` to cover the new flows (all passed).【1dcee1†L1-L12】
+
+requesting review from the Task Master

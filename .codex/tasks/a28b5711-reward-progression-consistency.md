@@ -32,4 +32,9 @@ Guarantee `reward_progression` accompanies every staged reward payload so the fr
 - Updated `.codex/implementation/post-fight-loot-screen.md` and `.codex/implementation/battle-endpoint-payload.md` to document the guarantee.
 - Backend env synced with `uv sync`; ran `uv run pytest tests/test_reward_staging_service_hooks.py tests/test_reward_staging_confirmation.py tests/test_reward_gate.py` (pass).
 
-ready for review
+## Auditor summary (2025-02-19)
+- Confirmed `runs.lifecycle.ensure_reward_progression` backfills and persists canonical sequencing across map loads/saves, `_refresh_snapshot` mirrors the field into `battle_snapshots`, and `/ui` responses expose the structure until all steps resolve.【F:backend/runs/lifecycle.py†L58-L198】【F:backend/services/reward_service.py†L71-L118】【F:backend/routes/ui.py†L200-L332】
+- Verified `reward_service` selection handlers always include `reward_progression` in their payloads and `reward_activation_log` snapshots, ensuring reconnects retain state.【F:backend/services/reward_service.py†L52-L190】
+- Re-ran targeted pytest suite covering reward progression to confirm behavior (see task f2622706 audit for shared test command output).【1dcee1†L1-L12】
+
+requesting review from the Task Master

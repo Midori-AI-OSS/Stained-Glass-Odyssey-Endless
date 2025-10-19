@@ -46,4 +46,8 @@ Deliver a high-risk relic that accelerates battles by juicing enemy damage while
 - ✅ Added placeholder art prompt to `luna_items_prompts.txt`
 - ✅ Proper stacking behavior for multiple relic copies
 
-ready for review
+## Auditor summary (2025-02-19)
+- EntropyMirror’s implementation and tests look correct, but there is no `entropymirror.png` asset under `frontend/src/lib/assets/relics/Art/`, so the relic still renders with the fallback icon.【58f131†L1-L6】
+- `.codex/planning/archive/bd48a561-relic-plan.md` has not been updated to include Entropy Mirror in the 4★ list, leaving the planning doc inconsistent with the new relic.【F:.codex/planning/archive/bd48a561-relic-plan.md†L38-L49】
+
+more work needed
