@@ -500,6 +500,7 @@ async def handle_ui_action() -> tuple[str, int, dict[str, Any]]:
             ):
                 return create_error_response("Cannot advance room while rewards are pending", 400)
 
+            refreshed_progression = None
             progression, _ = ensure_reward_progression(state)
 
             if progression and progression.get("current_step"):
@@ -520,9 +521,9 @@ async def handle_ui_action() -> tuple[str, int, dict[str, Any]]:
                         completed_steps.append(current_step)
                     state["reward_progression"] = progression
 
-                    ensure_reward_progression(state)
+                    refreshed_progression, _ = ensure_reward_progression(state)
 
-                    if state.get("reward_progression"):
+                    if refreshed_progression:
                         state["awaiting_next"] = False
                     else:
                         # All progression steps completed, ready to advance room
@@ -536,12 +537,17 @@ async def handle_ui_action() -> tuple[str, int, dict[str, Any]]:
                 # If we still have progression steps, return the updated state
                 if (
                     current_step != REWARD_STEP_BATTLE_REVIEW
-                    and state.get("reward_progression")
-                    and state["reward_progression"].get("current_step")
+                    and refreshed_progression
+                    and refreshed_progression.get("current_step")
                 ):
                     return jsonify({
                         "progression_advanced": True,
-                        "current_step": state["reward_progression"]["current_step"]
+                        "current_step": refreshed_progression["current_step"],
+                        "reward_progression": refreshed_progression,
+                        "awaiting_card": bool(state.get("awaiting_card")),
+                        "awaiting_relic": bool(state.get("awaiting_relic")),
+                        "awaiting_loot": bool(state.get("awaiting_loot")),
+                        "awaiting_next": bool(state.get("awaiting_next")),
                     })
 
             try:

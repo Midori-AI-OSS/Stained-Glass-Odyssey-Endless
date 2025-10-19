@@ -117,3 +117,29 @@ party state is unchanged:
 The acknowledgement endpoint is only used for automatically granted drops that
 skipped the staging UI. Manual loot confirmations should continue to use the
 standard `confirm` and `cancel` routes above.
+
+## Advance room progression response
+
+When rewards remain after a step completes (for example when a battle review is
+still queued), `/ui?action=advance_room` no longer advances the map immediately.
+Instead it returns the refreshed progression payload so the UI can transition to
+the next reward phase without a full `/ui` poll:
+
+```json
+{
+  "progression_advanced": true,
+  "current_step": "battle_review",
+  "reward_progression": {
+    "available": ["cards", "battle_review"],
+    "completed": ["cards"],
+    "current_step": "battle_review"
+  },
+  "awaiting_card": false,
+  "awaiting_relic": false,
+  "awaiting_loot": false,
+  "awaiting_next": false
+}
+```
+
+The `reward_progression` field persists in every `/ui` and advance-room payload
+until the sequence fully resolves, mirroring the confirmation endpoints above.
