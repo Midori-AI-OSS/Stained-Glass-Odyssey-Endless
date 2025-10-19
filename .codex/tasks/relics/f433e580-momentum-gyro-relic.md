@@ -38,4 +38,8 @@ Introduce **Momentum Gyro**, a 2★ relic that rewards repeatedly striking the s
 - ✅ Added Momentum Gyro to `.codex/implementation/relic-inventory.md`
 - ✅ Added placeholder art prompt to `luna_items_prompts.txt` for momentumgyro.png
 
-ready for review
+## Auditor summary (2025-02-19)
+- MomentumGyro’s combat logic, telemetry, and tests are in place, but the required `frontend/src/lib/assets/relics/Art/momentumgyro.png` asset is still missing so the UI cannot display the relic art.【58f131†L1-L6】
+- `.codex/implementation/relic-system.md` has not been updated to mention the focused-assault mechanic, so contributor references still lack Momentum Gyro’s behaviour details.【F:.codex/implementation/relic-system.md†L1-L16】
+
+more work needed
