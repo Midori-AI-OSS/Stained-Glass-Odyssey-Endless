@@ -7,7 +7,7 @@
 - Install dependencies with `uv add sqlcipher3-binary`.
 
 ## Schema
-- `runs(id TEXT PRIMARY KEY, party TEXT, map TEXT)` stores the current run state. The `map` JSON now always contains a `reward_staging` object with `cards`, `relics`, and `items` arrays so staged rewards persist across reconnects without mutating the `party` payload. Staged entries include a `preview` block describing stat modifiers and triggers so reconnects do not lose context about pending rewards.
+- `runs(id TEXT PRIMARY KEY, party TEXT, map TEXT)` stores the current run state. The `map` JSON now always contains a `reward_staging` object with `cards`, `relics`, and `items` arrays so staged rewards persist across reconnects without mutating the `party` payload. Staged entries include a `preview` block describing stat modifiers and triggers so reconnects do not lose context about pending rewards. Confirmations append audit breadcrumbs to `reward_activation_log`, which keeps the twenty most recent activation records (id, timestamp, bucket, payload) so duplicate submits can be traced without growing the save file unboundedly.
 - `options(key TEXT PRIMARY KEY, value TEXT)` stores player customization and settings.
 - Additional tables for players and settings will be added as features return.
 
