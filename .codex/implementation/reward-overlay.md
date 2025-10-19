@@ -9,6 +9,10 @@ Selecting a card posts to `/cards/<run_id>` via the `chooseCard` API helper once
 When a relic reward is selected, the overlay shows its `about` text so players
 see the effect with the next stack applied.
 
+## Confirmation responses
+
+Confirmed selections now return an `activation_record` with `activation_id`, `activated_at`, `bucket`, and the committed payload so reconnecting clients can surface what was just accepted. The backend also streams a bounded `reward_activation_log` array alongside the usual `awaiting_*` flags, letting the overlay highlight historical confirmations for audit trails. Because confirmations operate under a per-run mutex, retries that arrive after the staging bucket has been cleared raise an error instead of duplicating rewards.
+
 ## Preview metadata
 
 Staged cards and relics now surface preview metadata returned by the backend. `RewardOverlay` renders a preview panel beneath the Confirm/Cancel controls whenever a staged entry includes a `preview` payload (or an `about` fallback). The panel highlights:

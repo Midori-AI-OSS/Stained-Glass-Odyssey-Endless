@@ -20,7 +20,9 @@ Extended test coverage and metrics instrumentation live in the companion task `t
 - Verified both `backend/routes/ui.py` and `backend/services/run_service.py` gate `advance_room` on empty staging via `has_pending_rewards` and refreshed docs in `.codex/implementation` describe the guardrails.
 - Exercised the new pytest coverage: `tests/test_reward_staging_confirmation.py` and `tests/test_reward_gate.py`.
 
-### Task Master review (2025-02-16)
-- The `.codex/implementation` docs referenced in the requirements were not updated to document the activation guardrails, so knowledge about the new single-confirm rules remains implicit.
+### Documentation refresh (2025-02-20)
+- Added a "Single-confirm guardrails" section to `.codex/implementation/post-fight-loot-screen.md` describing the per-run mutex, staging cleanup, activation log, and `advance_room` gate.
+- Documented the `reward_activation_log` payload in `.codex/implementation/save-system.md` so the persistent schema notes cover the audit breadcrumbs.
+- Expanded `.codex/implementation/reward-overlay.md` with the confirmation response contract, including activation records and mutex-driven duplicate protection for reconnects.
 
-more work needed — add the guardrail details to the relevant `.codex/implementation` docs before closing this task.
+ready for review
