@@ -1,8 +1,10 @@
 import { beforeAll } from 'vitest';
+import { state as svelteState } from 'svelte/internal/client';
 import 'svelte/internal/flags/legacy.js';
 
 process.env.SVELTE_ALLOW_RUNES_OUTSIDE_SVELTE = 'true';
 globalThis.SVELTE_ALLOW_RUNES_OUTSIDE_SVELTE = true;
+globalThis.$state = svelteState;
 
 beforeAll(() => {
   globalThis.$app = {
@@ -31,4 +33,5 @@ beforeAll(() => {
   if (typeof globalThis.cancelAnimationFrame !== 'function') {
     globalThis.cancelAnimationFrame = (handle) => clearTimeout(handle);
   }
+  globalThis.$state = svelteState;
 });

@@ -3,10 +3,12 @@
 
 import { beforeAll } from 'bun:test';
 import { JSDOM } from 'jsdom';
+import { state as svelteState } from 'svelte/internal/client';
 import 'svelte/internal/flags/legacy.js';
 
 process.env.SVELTE_ALLOW_RUNES_OUTSIDE_SVELTE = 'true';
 globalThis.SVELTE_ALLOW_RUNES_OUTSIDE_SVELTE = true;
+globalThis.$state = svelteState;
 
 beforeAll(() => {
   const dom = new JSDOM('<!doctype html><html><body></body></html>', { url: 'http://localhost' });
@@ -22,6 +24,7 @@ beforeAll(() => {
 
   process.env.SVELTE_ALLOW_RUNES_OUTSIDE_SVELTE = 'true';
   global.SVELTE_ALLOW_RUNES_OUTSIDE_SVELTE = true;
+  global.$state = svelteState;
 
   // Mock $app/environment
   global.$app = {
