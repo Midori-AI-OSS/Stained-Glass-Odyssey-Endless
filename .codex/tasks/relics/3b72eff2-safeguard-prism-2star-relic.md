@@ -13,7 +13,6 @@ Two-star relics emphasize counterattacks (Vengeful Pendant), first-action repeat
 - Persist the last trigger turn per ally and hook into the appropriate BUS turn/round signals so cooldown expiry is tracked server-side (rather than burning stack counters).
 - Expand backend tests to cover cooldown expiry, multi-stack timing, shield application (verifying overheal), and mitigation expiry. Add cases to `backend/tests/test_relic_effects.py` or a new focused module if clearer.
 - Update `.codex/implementation/relic-inventory.md` and the relic design plan with the new cooldown mechanics and final tuning numbers.【F:.codex/implementation/relic-inventory.md†L21-L43】【F:.codex/planning/archive/bd48a561-relic-plan.md†L37-L63】
-- Populate the `Safeguard Prism` entry inside `luna_items_prompts.txt` with a descriptive prompt so Luna can generate the art from the list.【F:frontend/src/lib/systems/assetRegistry.js†L174-L1353】
 - Document any tuning rationale in `.codex/docs/relics/` if the mitigation math needs future reference.
 
 ---
@@ -22,14 +21,6 @@ Two-star relics emphasize counterattacks (Vengeful Pendant), first-action repeat
 - Core shielding logic fires on low-HP triggers, but implementation skips the required shield pipeline: it never enables overheal or calls `apply_healing`, instead mutating `target.shields` directly. That bypasses the diminishing-returns logic described in the requirements.
 - Please switch to `target.enable_overheal()` + `safe_async_task(target.apply_healing(...))` so shields are generated through the standard helper, and make sure the minimum heal is enforced when Max HP is small.
 
-## Coder notes (2025-02-16)
-- ✅ Fixed shield application to use proper healing pipeline with overheal enabled
-- ✅ Now heals ally to full HP first, then applies shield amount (15% Max HP per stack) through the healing system
-- ✅ This properly uses diminishing returns when shields already exist
-- ✅ All Safeguard Prism tests now pass (7/7 passing)
-- ✅ Added placeholder art prompt to `luna_items_prompts.txt` for Safeguard Prism
-- ✅ Documentation already exists in `.codex/implementation/relic-inventory.md`
-
 ## Follow-up required (2025-02-22 audit)
 - 🔄 Rework the relic logic to use the five-turn (+1 per five stacks) cooldown instead of consuming a stack permanently per battle.
 - 🔄 Update descriptive copy (`about`, `describe`, telemetry) and implementation docs/tests so they describe and validate the cooldown behavior.
@@ -37,4 +28,4 @@ Two-star relics emphasize counterattacks (Vengeful Pendant), first-action repeat
 - 🔄 Fill in the missing Safeguard Prism prompt text in `luna_items_prompts.txt` so placeholder art tracking is accurate.
 - 🔄 Ensure repository setup instructions (e.g., provide a `pyproject.toml` so `uv sync` works) cover backend dependencies for consistent environment bootstrap.
 
-more work needed — pending cooldown redesign, docs/tests sync, placeholder prompt, and env manifest update
+more work needed — pending cooldown redesign, docs/tests sync, and env manifest update
