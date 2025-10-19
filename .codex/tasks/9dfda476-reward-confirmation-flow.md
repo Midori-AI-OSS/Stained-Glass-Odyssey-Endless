@@ -46,5 +46,9 @@ The overlay never renders staged rewards from `reward_staging`, so the player ca
 - Backend: Verified `/ui` confirm/cancel responses now return staging, progression, activation metadata, and `advance_room` enforces empty staging. Docs in `backend/.codex/implementation` refreshed accordingly.
 - Tests: Ran `uv run pytest tests/test_reward_staging_confirmation.py tests/test_reward_gate.py`; attempted `bun test ./tests/reward-overlay-selection-regression.vitest.js` but Bun + Svelte runes currently throw `rune_outside_svelte` when mounting the component (needs follow-up from implementer).
 
-requesting review from the Task Master
+### Task Master review (2025-02-16)
+- `.codex/implementation/reward-overlay.md` still explains the pre-staging UI flow and never mentions the new confirm/cancel controls, so the documentation piece of the task is incomplete.
+- The reported Bun rune issue remains unresolved; the suite still errors with `rune_outside_svelte`, so automated coverage for the regression is missing.
+
+more work needed — refresh the reward overlay doc for the confirm/cancel UX and fix or replace the failing Bun test before handing this back.
 
