@@ -22,5 +22,9 @@ Guarantee `reward_progression` accompanies every staged reward payload so the fr
 - Include migration/repair logic for existing runs in progress (consider applying the backfill the next time their map state loads).
 - Make sure any async locks (`reward_locks`) keep the progression state in sync with staging updates.
 
-ready for review
+## Audit (2025-02-15)
+- Verified `runs.lifecycle.ensure_reward_progression` rebuilds and normalises the canonical progression structure based on staging buckets, awaiting flags, and battle review, and that map loads/saves now guarantee the field.
+- Confirmed reward selection/confirmation flows mirror `reward_progression` into payloads and snapshots until steps finish, and documentation in backend/.codex/implementation now promises the contract.
+- Setup backend env with `uv sync` and ran `uv run pytest tests/test_reward_staging_service_hooks.py tests/test_reward_staging_confirmation.py tests/test_reward_gate.py` (all passed).
 
+requesting review from the Task Master
