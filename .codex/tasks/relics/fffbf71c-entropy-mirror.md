@@ -45,7 +45,7 @@ Deliver a high-risk relic that accelerates battles by juicing enemy damage while
 - ✅ Updated `.codex/implementation/relic-inventory.md` with 4★ entry
 - ✅ Proper stacking behavior for multiple relic copies
 
-## Auditor summary (2025-02-19)
-- `.codex/planning/archive/bd48a561-relic-plan.md` has not been updated to include Entropy Mirror in the 4★ list, leaving the planning doc inconsistent with the new relic.【F:.codex/planning/archive/bd48a561-relic-plan.md†L38-L49】
+## Coder follow-up (2025-02-22)
+- Updated `.codex/planning/archive/bd48a561-relic-plan.md` to document Entropy Mirror in the 4★ relic list, matching the implemented behavior and inventory docs.
 
-more work needed
+ready for review
