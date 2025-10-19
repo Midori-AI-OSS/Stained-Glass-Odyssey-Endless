@@ -66,7 +66,11 @@
   // Simplified conversion: only 4★ items, one at a time
 
   $: selected = roster.find((r) => r.id === previewId);
-  $: elementName = overrideElement || selected?.element || '';
+  $: elementName = (() => {
+    const raw = overrideElement || upgradeData?.element || selected?.element || '';
+    if (!raw) return '';
+    return String(raw).trim();
+  })();
   $: accent = getElementColor(elementName || 'Generic');
   $: ElementIcon = getElementIcon(elementName || 'Generic');
   $: pendingStat = upgradeContext?.pendingStat || null;
@@ -77,8 +81,7 @@
   $: upgradeCosts = upgradeData?.next_costs || {};
   $: upgradeCounts = upgradeData?.stat_counts || {};
   $: upgradeErrorMessage = upgradeError ? (upgradeError.message || String(upgradeError)) : '';
-  $: resolvedUpgradeElement = (upgradeData?.element || elementName || 'generic');
-  $: upgradeElementKey = String(resolvedUpgradeElement || 'generic').toLowerCase();
+  $: upgradeElementKey = (elementName ? elementName.toLowerCase() : 'generic');
   $: upgradeMaterialKey = `${upgradeElementKey}_1`;
   $: elementInventory = extractElementBreakdown(upgradeItems, upgradeElementKey);
   $: availableMaterials = computeUnitsFromBreakdown(elementInventory);
@@ -130,7 +133,7 @@
     wind: clone(sunLayout),
     generic: clone(sunLayout)
   };
-  $: elementKey = String(elementName || 'generic').toLowerCase();
+  $: elementKey = upgradeElementKey;
   function deg2rad(d){ return (Math.PI/180) * d; }
   function makeOrbLayout(base, radius = 18, order = ['atk','def','crit_rate','crit_damage','vitality','mitigation'], startDeg = -90) {
     const layout = clone(base);
