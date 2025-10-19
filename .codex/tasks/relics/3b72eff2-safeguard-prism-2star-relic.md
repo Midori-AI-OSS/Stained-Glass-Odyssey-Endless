@@ -17,15 +17,4 @@ Two-star relics emphasize counterattacks (Vengeful Pendant), first-action repeat
 
 ---
 
-## Auditor notes (2025-02-15)
-- Core shielding logic fires on low-HP triggers, but implementation skips the required shield pipeline: it never enables overheal or calls `apply_healing`, instead mutating `target.shields` directly. That bypasses the diminishing-returns logic described in the requirements.
-- Please switch to `target.enable_overheal()` + `safe_async_task(target.apply_healing(...))` so shields are generated through the standard helper, and make sure the minimum heal is enforced when Max HP is small.
-
-## Follow-up required (2025-02-22 audit)
-- 🔄 Rework the relic logic to use the five-turn (+1 per five stacks) cooldown instead of consuming a stack permanently per battle.
-- 🔄 Update descriptive copy (`about`, `describe`, telemetry) and implementation docs/tests so they describe and validate the cooldown behavior.
-- 🔄 Capture and expose turn-tracking data needed for the cooldown timer.
-- 🔄 Fill in the missing Safeguard Prism prompt text in `luna_items_prompts.txt` so placeholder art tracking is accurate.
-- 🔄 Ensure repository setup instructions (e.g., provide a `pyproject.toml` so `uv sync` works) cover backend dependencies for consistent environment bootstrap.
-
-more work needed — pending cooldown redesign, docs/tests sync, and env manifest update
+ready for review
