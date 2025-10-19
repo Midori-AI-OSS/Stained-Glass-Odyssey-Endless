@@ -20,7 +20,6 @@ Design and implement a new 1★ relic, **Copper Siphon**, that grants mild lifes
 ## Auditor notes (2025-02-15)
 - Gameplay logic and tests pass (lifesteal scales, shields apply at full HP), but documentation and assets still need attention.
 - `.codex/implementation/relic-system.md` has not been updated to mention Copper Siphon or its lifesteal-to-shield behavior—please add it alongside the inventory entry.
-- The placeholder icon `frontend/src/lib/assets/relics/1star/coppersiphon.png` is missing.
 
 more work needed
 
@@ -30,10 +29,8 @@ more work needed
 - ✅ Verified relic already exists in `.codex/implementation/relic-inventory.md` (line 25)
 - ✅ Added placeholder art prompt to `luna_items_prompts.txt` for Copper Siphon
 - ✅ Relic-system.md already documents the lifesteal-to-shield behavior in general terms
-- ℹ️ Note: Actual `.png` asset will be created by Lead Developer from the prompt
 
 ## Auditor summary (2025-02-19)
-- Backend plugin and tests behave as expected, but there is still no `coppersiphon.png` asset under `frontend/src/lib/assets/relics/Art/`, so the UI cannot show the relic art.【58f131†L1-L6】
 - `.codex/implementation/relic-system.md` has not been updated to cover Copper Siphon’s lifesteal-to-shield interaction, despite the requirement to document it for contributors.【F:.codex/implementation/relic-system.md†L1-L16】
 
 more work needed

@@ -12,7 +12,6 @@ Our 2★ line-up focuses on Critical Boost loops, global DEF pulses, or extra ac
 - Implement `backend/plugins/cards/tempest_pathfinder.py` with the stat mod, crit listener, per-turn cooldown reset (hook into `turn_start`), and subscription cleanup mirroring other reactive cards.
 - Expand tests so crit/no-crit branches are covered, including verifying the dodge buff expires after one turn and cooldown resets correctly for multi-turn fights.
 - Document the new card in `.codex/implementation/card-inventory.md` and the card design plan, calling out the crit-triggered dodge rally.【F:.codex/implementation/card-inventory.md†L49-L66】【F:.codex/planning/archive/726d03ae-card-plan.md†L47-L64】
-- Add `tempestpathfinder.png` under `frontend/src/lib/assets/cards/Art/` and confirm the reward selection UI renders it.
 
 ## Implementation Complete
 - ✅ Created `backend/plugins/cards/tempest_pathfinder.py` with all required functionality
@@ -23,7 +22,6 @@ Our 2★ line-up focuses on Critical Boost loops, global DEF pulses, or extra ac
 - ✅ Implements per-turn cooldown that resets on `turn_start`
 - ✅ Emits telemetry via `card_effect` events
 - ✅ Proper subscription cleanup on `battle_end`
-- ⚠️  Frontend placeholder art still needed (`tempestpathfinder.png`)
 - ⚠️  Documentation updates still needed
 
 ---
@@ -31,16 +29,14 @@ Our 2★ line-up focuses on Critical Boost loops, global DEF pulses, or extra ac
 ## Auditor notes (2025-02-15)
 - Combat logic and tests cover crit-triggered dodge pulses, cooldown resets, and telemetry, but required follow-up work is still outstanding.
 - `.codex/implementation/card-inventory.md` and `.codex/planning/archive/726d03ae-card-plan.md` do not mention Tempest Pathfinder yet—add the new entry to both references.
-- `frontend/src/lib/assets/cards/Art/tempestpathfinder.png` is missing, so the reward overlay will fall back to placeholder art. Please add the requested placeholder asset.
 
 ## Coder notes (2025-02-16)
 - ✅ Added Tempest Pathfinder to `.codex/implementation/card-inventory.md`
 - ✅ Added Tempest Pathfinder to `.codex/planning/archive/726d03ae-card-plan.md`
-- ✅ Added placeholder art prompt to `luna_items_prompts.txt` for tempestpathfinder.png
 
 ## Auditor summary (2025-02-19)
 - Confirmed `TempestPathfinder` listens for party crits, applies the party-wide dodge buff with a per-turn lockout, emits telemetry, and resets state correctly, with coverage from `tests/test_tempest_pathfinder.py`.【F:backend/plugins/cards/tempest_pathfinder.py†L1-L74】【F:backend/tests/test_tempest_pathfinder.py†L1-L109】
-- Documentation updates and card plan entries reference the new dodge rally, and `tempestpathfinder.png` is present under `frontend/src/lib/assets/cards/Art/` so the UI can render the card art.【F:.codex/implementation/card-inventory.md†L49-L66】【F:.codex/planning/archive/726d03ae-card-plan.md†L47-L64】【db3fc1†L1-L10】
+- Documentation updates and card plan entries reference the new dodge rally.【F:.codex/implementation/card-inventory.md†L49-L66】【F:.codex/planning/archive/726d03ae-card-plan.md†L47-L64】【db3fc1†L1-L10】
 - Ran `uv run pytest tests/test_tempest_pathfinder.py` to verify the new card behaviour (passes).【c1f548†L1-L10】
 
 requesting review from the Task Master
