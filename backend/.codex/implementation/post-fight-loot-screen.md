@@ -43,6 +43,15 @@ returned state even after reconnects. `advance_room` now verifies both that all
 attempt to advance with lingering staged rewards returns a `400` error telling
 the client to finish collecting rewards first.
 
+When a step finishes and another reward phase remains, the
+`/ui?action=advance_room` handler returns early with a compact payload so the UI
+can pivot to the next step without re-polling `/ui`. The response contains
+`progression_advanced`, the refreshed `reward_progression` structure, and the
+four gating booleans (`awaiting_card`, `awaiting_relic`, `awaiting_loot`,
+`awaiting_next`). The field remains present until `reward_progression` reports
+no remaining steps, matching the guarantees offered by the confirmation
+endpoints.
+
 ## Confirmation stage
 
 Staged rewards are committed through `POST /rewards/<reward_type>/<run_id>/confirm`

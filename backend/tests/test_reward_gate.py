@@ -1,5 +1,6 @@
 import asyncio
 import importlib.util
+
 from pathlib import Path
 
 import pytest
@@ -80,3 +81,47 @@ async def test_advance_room_requires_reward_selection(app_with_db):
     data = await resp.get_json()
     assert resp.status_code == 200
     assert data.get("next_room") is not None
+
+
+@pytest.mark.asyncio
+async def test_advance_room_emits_progression_payload(app_with_db):
+    from runs.lifecycle import load_map
+    from runs.lifecycle import save_map
+
+    app = app_with_db
+    client = app.test_client()
+
+    start_resp = await client.post("/run/start", json={"party": ["player"]})
+    run_id = (await start_resp.get_json())["run_id"]
+
+    state, _ = await asyncio.to_thread(load_map, run_id)
+    state.update(
+        {
+            "awaiting_card": False,
+            "awaiting_relic": False,
+            "awaiting_loot": False,
+            "awaiting_next": False,
+            "reward_preferences": {"battle_review": True},
+            "reward_progression": {
+                "available": ["cards", "battle_review"],
+                "completed": [],
+                "current_step": "cards",
+            },
+            "reward_staging": {"cards": [], "relics": [], "items": []},
+        }
+    )
+    await asyncio.to_thread(save_map, run_id, state)
+
+    resp = await client.post("/ui/action", json={"action": "advance_room"})
+    data = await resp.get_json()
+
+    assert resp.status_code == 200
+    assert data["progression_advanced"] is True
+    assert data["current_step"] == "cards"
+    assert data["awaiting_card"] is False
+    assert data["awaiting_relic"] is False
+    assert data["awaiting_loot"] is False
+    assert data["awaiting_next"] is False
+    assert data["reward_progression"]["current_step"] == "cards"
+    assert data["reward_progression"]["available"] == ["cards", "battle_review"]
+    assert data["reward_progression"]["completed"] == ["cards"]
