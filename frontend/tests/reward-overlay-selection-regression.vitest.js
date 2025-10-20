@@ -8,10 +8,12 @@ let cleanup;
 let fireEvent;
 let render;
 let RewardOverlay;
+let resetRewardProgression;
 
 beforeAll(async () => {
   ({ cleanup, fireEvent, render } = await import('@testing-library/svelte'));
   RewardOverlay = (await import('../src/lib/components/RewardOverlay.svelte')).default;
+  ({ resetRewardProgression } = await import('../src/lib/systems/overlayState.js'));
 });
 
 const baseProps = Object.freeze({
@@ -39,6 +41,7 @@ function renderOverlay(overrides = {}) {
 }
 
 afterEach(() => {
+  resetRewardProgression?.();
   cleanup();
 });
 

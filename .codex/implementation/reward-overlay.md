@@ -4,6 +4,10 @@ After a battle resolves, the backend returns a `loot` object summarizing gold an
 
 `RewardOverlay` also accepts a `partyStats` array derived from `_serialize`, rendering a right-hand table listing each party member and their `damage_dealt`. Placeholder columns reserve space for future metrics like damage taken or healing.
 
+The overlay now subscribes to the shared reward phase state machine so the experience plays out as a deterministic Drops → Cards → Relics → Battle Review flow. While the controller reports `current === 'drops'`, only loot tiles and gold summaries render and later-phase controls are kept out of the DOM. A right-rail "Reward Flow" panel reflects the active phase and upcoming steps without exposing the advance button (that arrives with the countdown task) so screen readers and automation can follow progress. Once the phase machine advances past Drops the usual card and relic widgets mount just as before.
+
+When Drops finishes, `RewardOverlay` emits an `autofighter:reward-phase` telemetry event with the `drops-complete` kind so regression automation can confirm the transition before proceeding with card or relic checks.
+
 Selecting a card posts to `/cards/<run_id>` via the `chooseCard` API helper once the player confirms, clearing `card_choices`. The "Next Room" button remains disabled until all selections are resolved. Clicking it dismisses the popup, unmounts `BattleView`, and calls `/run/<id>/next` to advance the map.
 
 When a relic reward is selected, the overlay shows its `about` text so players

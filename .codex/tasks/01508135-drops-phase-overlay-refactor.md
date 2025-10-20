@@ -13,3 +13,4 @@ Implement the UI pieces for the Drops phase so loot tiles render in isolation an
 ## Coordination notes
 - Pair with the advance button implementer to confirm how the controller signals Drops completion.
 - Flag any styling tokens needed for shared stained-glass visuals so the follow-up task can reuse them.
+ready for review
