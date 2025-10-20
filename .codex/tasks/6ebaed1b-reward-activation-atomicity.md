@@ -25,4 +25,10 @@ Extended test coverage and metrics instrumentation live in the companion task `t
 - Documented the `reward_activation_log` payload in `.codex/implementation/save-system.md` so the persistent schema notes cover the audit breadcrumbs.
 - Expanded `.codex/implementation/reward-overlay.md` with the confirmation response contract, including activation records and mutex-driven duplicate protection for reconnects.
 
-ready for review
+### Auditor confirmation (2025-02-20)
+- Verified `services.reward_service.confirm_reward` enforces the per-run `reward_locks` mutex, clears staging buckets, updates the `awaiting_*` flags, and appends bounded activation records mirrored into battle snapshots.【F:backend/services/reward_service.py†L399-L507】
+- Confirmed both `/ui` and service-level room advancement guards call `has_pending_rewards` so pending staging data blocks map progression until all rewards are resolved.【F:backend/routes/ui.py†L480-L521】【F:backend/services/run_service.py†L500-L537】【F:backend/runs/lifecycle.py†L452-L469】
+- Checked the refreshed implementation docs describe the mutex, activation log payload, and confirmation response contract that now surface on the API.【F:.codex/implementation/post-fight-loot-screen.md†L12-L26】【F:.codex/implementation/save-system.md†L9-L20】【F:.codex/implementation/reward-overlay.md†L17-L36】
+- Re-ran `uv run pytest tests/test_reward_staging_confirmation.py tests/test_reward_gate.py` to exercise the single-confirm guardrails and the advancement gate (all passing).【36ec08†L1-L2】【f63c5e†L1-L4】
+
+requesting review from the Task Master
