@@ -15,7 +15,7 @@ Deliver a high-impact three-star reward that channels Kboshi's flux manipulation
 ## Implementation notes
 - Implement the plugin under `backend/plugins/cards/`, using shared event hooks for debuff application (consult `.codex/implementation/stats-and-effects.md` for debuff plumbing).
 - Ensure AoE damage respects mitigation and logs correctly through the damage manager.
-- Document the card in `.codex/implementation/card-inventory.md` and update the planning entry in `.codex/planning/archive/726d03ae-card-plan.md`.
+- Document the card in `.codex/implementation/card-inventory.md`.
 - Extend backend tests for 3★ card registration and add targeted unit coverage to confirm the Flux counter, damage burst, and resistance buff fire at exactly five debuff applications.
 
 ## Deliverables
