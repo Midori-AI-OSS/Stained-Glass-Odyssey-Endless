@@ -17,4 +17,9 @@ Two-star relics emphasize counterattacks (Vengeful Pendant), first-action repeat
 
 ---
 
-ready for review
+## Auditor Notes
+- Reviewed `backend/plugins/relics/safeguard_prism.py` for cooldown tracking, overheal handling, and telemetry payloads; confirmed alignment with guardian and ember relic patterns.【F:backend/plugins/relics/safeguard_prism.py†L1-L159】
+- Confirmed documentation updates in `.codex/implementation/relic-inventory.md`, `.codex/planning/archive/bd48a561-relic-plan.md`, and `.codex/docs/relics/safeguard-prism-cooldown.md` reflect the new turn-based cooldown rules.【F:.codex/implementation/relic-inventory.md†L20-L39】【F:.codex/planning/archive/bd48a561-relic-plan.md†L31-L67】【F:.codex/docs/relics/safeguard-prism-cooldown.md†L1-L13】
+- Reproduced safeguard-specific tests via `uv run pytest tests/test_relic_effects.py -k safeguard_prism` after syncing the backend environment with `uv sync`; all safeguard suites pass and cover cooldown expiry as well as telemetry.【F:backend/tests/test_relic_effects.py†L956-L1206】【3b88a0†L1-L8】【f7dec3†L1-L5】
+
+requesting review from the Task Master
