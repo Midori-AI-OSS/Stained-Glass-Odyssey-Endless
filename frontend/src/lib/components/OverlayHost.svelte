@@ -30,7 +30,12 @@
   import { rewardOpen as computeRewardOpen } from '../systems/viewportState.js';
   import { getBattleSummary } from '../systems/uiApi.js';
   import { motionStore } from '../systems/settingsStorage.js';
-  import { setRewardOverlayOpen, setReviewOverlayState } from '../systems/overlayState.js';
+  import {
+    setRewardOverlayOpen,
+    setReviewOverlayState,
+    updateRewardProgression,
+    resetRewardProgression
+  } from '../systems/overlayState.js';
   import { filterPartyEntities } from '../systems/summonManager.js';
 
   export let selected = [];
@@ -76,6 +81,36 @@
   $: awaitingRelic = Boolean(roomData?.awaiting_relic);
   $: awaitingLoot = Boolean(roomData?.awaiting_loot);
   $: awaitingNext = Boolean(roomData?.awaiting_next);
+  $: rewardPhaseHints = (() => {
+    const phases = new Set();
+    if (
+      awaitingLoot ||
+      (roomData?.loot && (
+        Number.isFinite(roomData.loot.gold) ? roomData.loot.gold > 0 : false
+      )) ||
+      (roomData?.loot && Array.isArray(roomData.loot.items) && roomData.loot.items.length > 0)
+    ) {
+      phases.add('drops');
+    }
+    if (
+      (roomData?.card_choices?.length || 0) > 0 ||
+      awaitingCard ||
+      stagedCards.length > 0
+    ) {
+      phases.add('cards');
+    }
+    if (
+      (roomData?.relic_choices?.length || 0) > 0 ||
+      awaitingRelic ||
+      stagedRelics.length > 0
+    ) {
+      phases.add('relics');
+    }
+    if (roomData && (roomData.result === 'battle' || roomData.result === 'boss')) {
+      phases.add('battle_review');
+    }
+    return { fallbackPhases: Array.from(phases) };
+  })();
   $: rewardTitle = (() => {
     if (awaitingCard && stagedCards.length > 0) {
       return 'Confirm Card';
@@ -168,6 +203,17 @@
   $: if (reviewOpen && !rewardOpen && reviewReady && skipBattleReview) {
     // Battle is complete and ready for review, but user wants to skip - advance immediately
     dispatch('nextRoom');
+  }
+
+  $: {
+    if (roomData) {
+      updateRewardProgression(roomData.reward_progression ?? null, {
+        hints: rewardPhaseHints,
+        reason: 'room-data'
+      });
+    } else {
+      resetRewardProgression();
+    }
   }
 
   $: reviewPartyData = (() => {

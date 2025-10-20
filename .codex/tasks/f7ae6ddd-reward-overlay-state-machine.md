@@ -13,3 +13,4 @@ Define the frontend reward overlay controller that ingests `reward_progression` 
 ## Coordination notes
 - Align with backend maintainers on expected `reward_progression` schema shape before hard-coding assumptions.
 - Hand off the exposed hooks to the UI implementers working on Drops/Confirm tasks so they can rely on the same API.
+ready for review
