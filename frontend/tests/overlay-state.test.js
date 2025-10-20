@@ -10,7 +10,9 @@ import {
   setReviewOverlayState,
   setManualSyncHalt,
   resetOverlayState,
-  setBattleActive
+  setBattleActive,
+  rewardPhaseController,
+  updateRewardProgression
 } from '../src/lib/systems/overlayState.js';
 import { runStateStore } from '../src/lib/systems/runState.js';
 
@@ -58,6 +60,11 @@ describe('overlay state gating helpers', () => {
     setRewardOverlayOpen(true);
     setReviewOverlayState({ open: true, ready: true });
     setManualSyncHalt(true);
+    updateRewardProgression({
+      available: ['drops', 'cards'],
+      completed: ['drops'],
+      current_step: 'cards'
+    });
     resetOverlayState();
     expect(overlayStateStore.getSnapshot()).toEqual({
       rewardOpen: false,
@@ -67,6 +74,11 @@ describe('overlay state gating helpers', () => {
     });
     expect(get(overlayBlocking)).toBe(false);
     expect(get(haltSync)).toBe(false);
+    const phaseSnapshot = rewardPhaseController.getSnapshot();
+    expect(phaseSnapshot.sequence).toEqual([]);
+    expect(phaseSnapshot.completed).toEqual([]);
+    expect(phaseSnapshot.current).toBeNull();
+    expect(phaseSnapshot.next).toBeNull();
   });
 
   test('review key transition keeps review ready after repeated battle index', () => {
