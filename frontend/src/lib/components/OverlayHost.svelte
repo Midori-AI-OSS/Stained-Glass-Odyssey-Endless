@@ -443,6 +443,7 @@
       awaitingRelic={awaitingRelic}
       awaitingLoot={awaitingLoot}
       awaitingNext={awaitingNext}
+      rewardProgression={roomData?.reward_progression}
       items={roomData?.loot?.items || []}
       gold={roomData?.loot?.gold || 0}
       nextRoom={roomData?.next_room || ''}
@@ -454,6 +455,7 @@
       on:cancel={(e) => dispatch('rewardCancel', e.detail)}
       on:next={() => dispatch('nextRoom')}
       on:lootAcknowledge={() => dispatch('lootAcknowledge')}
+      on:advancePhase={(e) => dispatch('advancePhase', e.detail)}
     />
   </PopupWindow>
 {/if}

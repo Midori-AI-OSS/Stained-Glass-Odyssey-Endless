@@ -24,8 +24,19 @@
   export let awaitingRelic = false;
   export let awaitingLoot = false;
   export let awaitingNext = false;
+  export let rewardProgression = null;
 
   const dispatch = createEventDispatcher();
+
+  // Phase-based flow support
+  $: hasProgression = Boolean(rewardProgression && typeof rewardProgression === 'object');
+  $: currentPhase = hasProgression ? String(rewardProgression.current_step || '') : '';
+  $: availablePhases = hasProgression && Array.isArray(rewardProgression.available) ? rewardProgression.available : [];
+  $: completedPhases = hasProgression && Array.isArray(rewardProgression.completed) ? rewardProgression.completed : [];
+  $: isDropsPhase = hasProgression && currentPhase === 'drops';
+  $: isCardsPhase = hasProgression && currentPhase === 'cards';
+  $: isRelicsPhase = hasProgression && currentPhase === 'relics';
+  $: isBattleReviewPhase = hasProgression && currentPhase === 'battle_review';
 
   // Render immediately; CSS animations handle reveal on mount
 
@@ -336,10 +347,30 @@
   let pendingRelicCancel = null;
   let showNextButton = false;
 
+  // Card/Relic highlight state for new phase-based flow
+  let highlightedCardId = null;
+  let highlightedRelicId = null;
+
+  // Drops phase countdown timer
+  const DROPS_ADVANCE_DELAY_S = 10;
+  let dropsTimeRemaining = DROPS_ADVANCE_DELAY_S;
+  let dropsCountdownTimer = null;
+  let dropsAdvanceInProgress = false;
+
   $: cardSelectionLocked = pendingCardSelection !== null || stagedCardEntries.length > 0;
   $: relicSelectionLocked = pendingRelicSelection !== null || stagedRelicEntries.length > 0;
-  $: showCards = cardChoices.length > 0 && !cardSelectionLocked;
-  $: showRelics = relicChoices.length > 0 && !awaitingCard && !relicSelectionLocked;
+  $: showCards = hasProgression 
+    ? (isCardsPhase && cardChoices.length > 0 && !cardSelectionLocked)
+    : (cardChoices.length > 0 && !cardSelectionLocked);
+  $: showRelics = hasProgression
+    ? (isRelicsPhase && relicChoices.length > 0 && !relicSelectionLocked)
+    : (relicChoices.length > 0 && !awaitingCard && !relicSelectionLocked);
+  $: showDrops = hasProgression
+    ? (isDropsPhase && hasLootItems)
+    : hasLootItems;
+  $: showGold = hasProgression
+    ? (isDropsPhase && gold > 0)
+    : (gold > 0);
 
   $: pendingConfirmationCount =
     (awaitingCard && stagedCardEntries.length > 0 ? 1 : 0) +
@@ -382,6 +413,30 @@
     const isRelic = type === 'relic';
     let selectionToken = null;
 
+    // New phase-based flow: first click highlights, no immediate selection
+    if (hasProgression && (isCardsPhase || isRelicsPhase)) {
+      const itemId = detail.id;
+      if (isCard && isCardsPhase) {
+        if (highlightedCardId === itemId) {
+          // Second click on same card = confirm
+          await handlePhaseConfirm('card', itemId);
+          return;
+        }
+        highlightedCardId = itemId;
+        return;
+      }
+      if (isRelic && isRelicsPhase) {
+        if (highlightedRelicId === itemId) {
+          // Second click on same relic = confirm
+          await handlePhaseConfirm('relic', itemId);
+          return;
+        }
+        highlightedRelicId = itemId;
+        return;
+      }
+    }
+
+    // Legacy flow: dispatch select event immediately
     let responded = false;
     const responsePromise = new Promise((resolve) => {
       const respond = (value) => {
@@ -412,6 +467,35 @@
     }
     if (isRelic && pendingRelicSelection === selectionToken) {
       pendingRelicSelection = null;
+    }
+  }
+
+  async function handlePhaseConfirm(type, itemId) {
+    // Dispatch select event for phase-based flow
+    let responded = false;
+    const responsePromise = new Promise((resolve) => {
+      const respond = (value) => {
+        if (responded) return;
+        responded = true;
+        resolve(value || { ok: false });
+      };
+      dispatch('select', { type, id: itemId, respond });
+    });
+
+    let response;
+    try {
+      response = await responsePromise;
+    } catch (error) {
+      response = { ok: false, error };
+    }
+
+    // Clear highlight if successful
+    if (response && response.ok) {
+      if (type === 'card') {
+        highlightedCardId = null;
+      } else if (type === 'relic') {
+        highlightedRelicId = null;
+      }
     }
   }
 
@@ -483,6 +567,10 @@
     clearTimeout(autoTimer);
     clearDropRevealTimers();
     stopDropAudio(true);
+    if (dropsCountdownTimer) {
+      clearInterval(dropsCountdownTimer);
+      dropsCountdownTimer = null;
+    }
     lastDropSignature = null;
     lastReducedMotion = null;
     lootSfxEnabled = false;
@@ -498,9 +586,47 @@
     showNextButton = noChoices && !awaitingConfirmation && (visibleLoot || readyToAdvance);
   }
 
+  // Drops phase countdown timer
+  $: {
+    if (isDropsPhase && hasLootItems) {
+      // Start countdown when entering drops phase
+      if (!dropsCountdownTimer) {
+        dropsTimeRemaining = DROPS_ADVANCE_DELAY_S;
+        dropsCountdownTimer = setInterval(() => {
+          dropsTimeRemaining -= 1;
+          if (dropsTimeRemaining <= 0) {
+            clearInterval(dropsCountdownTimer);
+            dropsCountdownTimer = null;
+            if (isDropsPhase && !dropsAdvanceInProgress) {
+              handleDropsAdvance();
+            }
+          }
+        }, 1000);
+      }
+    } else {
+      // Clear timer when leaving drops phase
+      if (dropsCountdownTimer) {
+        clearInterval(dropsCountdownTimer);
+        dropsCountdownTimer = null;
+      }
+      dropsTimeRemaining = DROPS_ADVANCE_DELAY_S;
+    }
+  }
+
+  function handleDropsAdvance() {
+    if (dropsAdvanceInProgress) return;
+    dropsAdvanceInProgress = true;
+    dispatch('advancePhase', { from: 'drops' });
+    // Reset after dispatch
+    setTimeout(() => {
+      dropsAdvanceInProgress = false;
+    }, 100);
+  }
+
   function handleNextRoom() {
     dispatch('lootAcknowledge');
   }
+
 </script>
 
 <style>
@@ -881,6 +1007,114 @@
     }
   }
 
+  /* Wiggle animation for highlighted cards/relics */
+  @keyframes wiggle {
+    0% { transform: rotate(0deg) scale(1); }
+    10% { transform: rotate(-1.5deg) scale(1.02); }
+    20% { transform: rotate(1.5deg) scale(1.02); }
+    30% { transform: rotate(-1deg) scale(1.01); }
+    40% { transform: rotate(1deg) scale(1.01); }
+    50% { transform: rotate(0deg) scale(1); }
+    100% { transform: rotate(0deg) scale(1); }
+  }
+
+  .highlight-wiggle {
+    animation: wiggle 2.2s ease-in-out infinite;
+    animation-delay: var(--wiggle-delay, 0ms);
+  }
+
+  /* Confirm button that appears beneath highlighted card/relic */
+  .inline-confirm-wrapper {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .inline-confirm-btn {
+    background: var(--glass-bg);
+    border: var(--glass-border);
+    box-shadow: var(--glass-shadow);
+    backdrop-filter: var(--glass-filter);
+    padding: 0.5rem 1.5rem;
+    border-radius: 0;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #fff;
+    cursor: pointer;
+    transition: background 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 120px;
+  }
+
+  .inline-confirm-btn:hover {
+    background: rgba(120, 180, 255, 0.22);
+    box-shadow: 0 2px 8px 0 rgba(0, 40, 120, 0.18);
+    transform: translateY(-2px);
+  }
+
+  .inline-confirm-btn:active {
+    transform: translateY(0);
+  }
+
+  .inline-confirm-btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  /* Drops advance button with countdown */
+  .drops-advance-wrapper {
+    margin-top: 1rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .drops-advance-btn {
+    background: var(--glass-bg);
+    border: var(--glass-border);
+    box-shadow: var(--glass-shadow);
+    backdrop-filter: var(--glass-filter);
+    padding: 0.6rem 2rem;
+    border-radius: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #fff;
+    cursor: pointer;
+    transition: background 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+  }
+
+  .drops-advance-btn:hover {
+    background: rgba(120, 180, 255, 0.22);
+    box-shadow: 0 2px 8px 0 rgba(0, 40, 120, 0.18);
+    transform: translateY(-2px);
+  }
+
+  .drops-advance-btn:active {
+    transform: translateY(0);
+  }
+
+  .drops-advance-btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  .countdown-display {
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.75);
+    font-variant-numeric: tabular-nums;
+  }
+
   @media (max-width: 768px) {
     .next-room-overlay {
       bottom: 1rem;
@@ -915,52 +1149,54 @@
           </div>
         {/each}
       </div>
-      <div class="actions-row">
-        <button class="confirm-btn" type="button" on:click={() => handleConfirm('card')} disabled={cardActionsDisabled}>Confirm</button>
-        <button class="cancel-btn" type="button" on:click={() => handleCancel('card')} disabled={cardActionsDisabled}>Cancel</button>
-      </div>
-      {#each stagedCardPreviewDetails as detail (detail.key)}
-        <div class="preview-panel" data-type="card">
-          <h4 class="preview-heading">{detail.name} Preview</h4>
-          {#if detail.preview.summary}
-            <p class="preview-summary">{detail.preview.summary}</p>
-          {/if}
-          {#if detail.preview.stats.length > 0}
-            <ul class="preview-stats" role="list">
-              {#each detail.preview.stats as stat (stat.id)}
-                <li class="preview-stat" role="listitem">
-                  <div class="stat-row">
-                    <span class="stat-name">{stat.label}</span>
-                    <span class="stat-change">{stat.change}</span>
-                  </div>
-                  {#if stat.details.length > 0}
-                    <ul class="stat-details" role="list">
-                      {#each stat.details as item, index (`${stat.id}-detail-${index}`)}
-                        <li role="listitem">{item}</li>
-                      {/each}
-                    </ul>
-                  {/if}
-                </li>
-              {/each}
-            </ul>
-          {/if}
-          {#if detail.preview.triggers.length > 0}
-            <div class="preview-triggers" role="group" aria-label="Trigger effects">
-              <h5>Triggers</h5>
-              <ul role="list">
-                {#each detail.preview.triggers as trigger (trigger.id)}
-                  <li role="listitem">
-                    <span class="trigger-event">{trigger.event}</span>
-                    {#if trigger.description}
-                      <span class="trigger-description"> — {trigger.description}</span>
+      {#if !hasProgression}
+        <div class="actions-row">
+          <button class="confirm-btn" type="button" on:click={() => handleConfirm('card')} disabled={cardActionsDisabled}>Confirm</button>
+          <button class="cancel-btn" type="button" on:click={() => handleCancel('card')} disabled={cardActionsDisabled}>Cancel</button>
+        </div>
+        {#each stagedCardPreviewDetails as detail (detail.key)}
+          <div class="preview-panel" data-type="card">
+            <h4 class="preview-heading">{detail.name} Preview</h4>
+            {#if detail.preview.summary}
+              <p class="preview-summary">{detail.preview.summary}</p>
+            {/if}
+            {#if detail.preview.stats.length > 0}
+              <ul class="preview-stats" role="list">
+                {#each detail.preview.stats as stat (stat.id)}
+                  <li class="preview-stat" role="listitem">
+                    <div class="stat-row">
+                      <span class="stat-name">{stat.label}</span>
+                      <span class="stat-change">{stat.change}</span>
+                    </div>
+                    {#if stat.details.length > 0}
+                      <ul class="stat-details" role="list">
+                        {#each stat.details as item, index (`${stat.id}-detail-${index}`)}
+                          <li role="listitem">{item}</li>
+                        {/each}
+                      </ul>
                     {/if}
                   </li>
                 {/each}
               </ul>
-            </div>
-          {/if}
-        </div>
-      {/each}
+            {/if}
+            {#if detail.preview.triggers.length > 0}
+              <div class="preview-triggers" role="group" aria-label="Trigger effects">
+                <h5>Triggers</h5>
+                <ul role="list">
+                  {#each detail.preview.triggers as trigger (trigger.id)}
+                    <li role="listitem">
+                      <span class="trigger-event">{trigger.event}</span>
+                      {#if trigger.description}
+                        <span class="trigger-description"> — {trigger.description}</span>
+                      {/if}
+                    </li>
+                  {/each}
+                </ul>
+              </div>
+            {/if}
+          </div>
+        {/each}
+      {/if}
     </div>
   {/if}
 
@@ -968,8 +1204,26 @@
     <h3 class="section-title">Choose a Card</h3>
     <div class="choices">
       {#each cardChoices.slice(0,3) as card, i (card?.id ?? `card-${i}`)}
-        <div class:reveal={!reducedMotion} style={`--delay: ${revealDelay(i)}ms`}>
-          <RewardCard entry={card} type="card" quiet={iconQuiet} on:select={handleSelect} />
+        <div 
+          class:reveal={!reducedMotion} 
+          style={`--delay: ${revealDelay(i)}ms`}
+          class:inline-confirm-wrapper={hasProgression && highlightedCardId === card?.id}
+        >
+          <div 
+            class:highlight-wiggle={hasProgression && highlightedCardId === card?.id}
+            style={hasProgression && highlightedCardId === card?.id ? `--wiggle-delay: ${i * 100}ms` : ''}
+          >
+            <RewardCard entry={card} type="card" quiet={iconQuiet} on:select={handleSelect} />
+          </div>
+          {#if hasProgression && highlightedCardId === card?.id}
+            <button 
+              class="inline-confirm-btn" 
+              on:click={() => handlePhaseConfirm('card', card?.id)}
+              aria-label="Confirm card selection"
+            >
+              Confirm
+            </button>
+          {/if}
         </div>
       {/each}
     </div>
@@ -985,52 +1239,54 @@
           </div>
         {/each}
       </div>
-      <div class="actions-row">
-        <button class="confirm-btn" type="button" on:click={() => handleConfirm('relic')} disabled={relicActionsDisabled}>Confirm</button>
-        <button class="cancel-btn" type="button" on:click={() => handleCancel('relic')} disabled={relicActionsDisabled}>Cancel</button>
-      </div>
-      {#each stagedRelicPreviewDetails as detail (detail.key)}
-        <div class="preview-panel" data-type="relic">
-          <h4 class="preview-heading">{detail.name} Preview</h4>
-          {#if detail.preview.summary}
-            <p class="preview-summary">{detail.preview.summary}</p>
-          {/if}
-          {#if detail.preview.stats.length > 0}
-            <ul class="preview-stats" role="list">
-              {#each detail.preview.stats as stat (stat.id)}
-                <li class="preview-stat" role="listitem">
-                  <div class="stat-row">
-                    <span class="stat-name">{stat.label}</span>
-                    <span class="stat-change">{stat.change}</span>
-                  </div>
-                  {#if stat.details.length > 0}
-                    <ul class="stat-details" role="list">
-                      {#each stat.details as item, index (`${stat.id}-detail-${index}`)}
-                        <li role="listitem">{item}</li>
-                      {/each}
-                    </ul>
-                  {/if}
-                </li>
-              {/each}
-            </ul>
-          {/if}
-          {#if detail.preview.triggers.length > 0}
-            <div class="preview-triggers" role="group" aria-label="Trigger effects">
-              <h5>Triggers</h5>
-              <ul role="list">
-                {#each detail.preview.triggers as trigger (trigger.id)}
-                  <li role="listitem">
-                    <span class="trigger-event">{trigger.event}</span>
-                    {#if trigger.description}
-                      <span class="trigger-description"> — {trigger.description}</span>
+      {#if !hasProgression}
+        <div class="actions-row">
+          <button class="confirm-btn" type="button" on:click={() => handleConfirm('relic')} disabled={relicActionsDisabled}>Confirm</button>
+          <button class="cancel-btn" type="button" on:click={() => handleCancel('relic')} disabled={relicActionsDisabled}>Cancel</button>
+        </div>
+        {#each stagedRelicPreviewDetails as detail (detail.key)}
+          <div class="preview-panel" data-type="relic">
+            <h4 class="preview-heading">{detail.name} Preview</h4>
+            {#if detail.preview.summary}
+              <p class="preview-summary">{detail.preview.summary}</p>
+            {/if}
+            {#if detail.preview.stats.length > 0}
+              <ul class="preview-stats" role="list">
+                {#each detail.preview.stats as stat (stat.id)}
+                  <li class="preview-stat" role="listitem">
+                    <div class="stat-row">
+                      <span class="stat-name">{stat.label}</span>
+                      <span class="stat-change">{stat.change}</span>
+                    </div>
+                    {#if stat.details.length > 0}
+                      <ul class="stat-details" role="list">
+                        {#each stat.details as item, index (`${stat.id}-detail-${index}`)}
+                          <li role="listitem">{item}</li>
+                        {/each}
+                      </ul>
                     {/if}
                   </li>
                 {/each}
               </ul>
-            </div>
-          {/if}
-        </div>
-      {/each}
+            {/if}
+            {#if detail.preview.triggers.length > 0}
+              <div class="preview-triggers" role="group" aria-label="Trigger effects">
+                <h5>Triggers</h5>
+                <ul role="list">
+                  {#each detail.preview.triggers as trigger (trigger.id)}
+                    <li role="listitem">
+                      <span class="trigger-event">{trigger.event}</span>
+                      {#if trigger.description}
+                        <span class="trigger-description"> — {trigger.description}</span>
+                      {/if}
+                    </li>
+                  {/each}
+                </ul>
+              </div>
+            {/if}
+          </div>
+        {/each}
+      {/if}
     </div>
   {/if}
 
@@ -1038,14 +1294,32 @@
     <h3 class="section-title">Choose a Relic</h3>
     <div class="choices">
       {#each relicChoices.slice(0,3) as relic, i (relic?.id ?? `relic-${i}`)}
-        <div class:reveal={!reducedMotion} style={`--delay: ${revealDelay(i)}ms`}>
-          <CurioChoice entry={relic} quiet={iconQuiet} on:select={handleSelect} />
+        <div 
+          class:reveal={!reducedMotion} 
+          style={`--delay: ${revealDelay(i)}ms`}
+          class:inline-confirm-wrapper={hasProgression && highlightedRelicId === relic?.id}
+        >
+          <div 
+            class:highlight-wiggle={hasProgression && highlightedRelicId === relic?.id}
+            style={hasProgression && highlightedRelicId === relic?.id ? `--wiggle-delay: ${i * 100}ms` : ''}
+          >
+            <CurioChoice entry={relic} quiet={iconQuiet} on:select={handleSelect} />
+          </div>
+          {#if hasProgression && highlightedRelicId === relic?.id}
+            <button 
+              class="inline-confirm-btn" 
+              on:click={() => handlePhaseConfirm('relic', relic?.id)}
+              aria-label="Confirm relic selection"
+            >
+              Confirm
+            </button>
+          {/if}
         </div>
       {/each}
     </div>
   {/if}
   
-  {#if hasLootItems}
+  {#if showDrops}
     <h3 class="section-title">Drops</h3>
     <div class="drops-row" role="list">
       {#each visibleDrops as entry (entry.key)}
@@ -1070,8 +1344,20 @@
         </div>
       {/each}
     </div>
+    {#if isDropsPhase}
+      <div class="drops-advance-wrapper">
+        <button 
+          class="drops-advance-btn" 
+          on:click={handleDropsAdvance} 
+          disabled={dropsAdvanceInProgress}
+        >
+          Advance
+          <span class="countdown-display">({dropsTimeRemaining}s)</span>
+        </button>
+      </div>
+    {/if}
   {/if}
-  {#if gold}
+  {#if showGold}
     <div class="status">Gold +{gold}</div>
   {/if}
   

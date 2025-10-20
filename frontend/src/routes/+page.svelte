@@ -1481,6 +1481,19 @@
     await handleNextRoom();
   }
 
+  async function handleAdvancePhase(detail) {
+    if (!runId) return;
+    // For phase-based reward flow, advance to next phase
+    try {
+      await advanceRoom();
+      // Refresh state to get updated reward_progression
+      scheduleMapRefresh();
+    } catch (e) {
+      console.warn('Phase advancement failed:', e?.message || e);
+      scheduleMapRefresh();
+    }
+  }
+
   async function handleForceNextRoom() {
     if (!runId) return;
     // Force-advance regardless of current overlay/state; safety for stuck awaiting_next
@@ -1675,6 +1688,7 @@
     on:shopLeave={handleShopLeave}
     on:nextRoom={handleNextRoom}
     on:lootAcknowledge={handleLootAcknowledge}
+    on:advancePhase={(e) => handleAdvancePhase(e.detail)}
     on:endRun={handleRunEnd}
     on:forceNextRoom={handleForceNextRoom}
     on:saveParty={handlePartySave}
