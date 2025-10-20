@@ -1,5 +1,5 @@
 <script>
-  import { createEventDispatcher, onDestroy } from 'svelte';
+  import { createEventDispatcher, onDestroy, onMount } from 'svelte';
   import { cubicOut } from 'svelte/easing';
   import { scale } from 'svelte/transition';
   import RewardCard from './RewardCard.svelte';
@@ -7,6 +7,8 @@
   import { getMaterialIcon, onMaterialIconError } from '../systems/assetLoader.js';
   import { createRewardDropSfx } from '../systems/sfx.js';
   import { formatRewardPreview } from '../utils/rewardPreviewFormatter.js';
+  import { rewardPhaseState, rewardPhaseController } from '../systems/overlayState.js';
+  import { emitRewardTelemetry } from '../systems/rewardTelemetry.js';
 
   export let cards = [];
   export let relics = [];
@@ -27,6 +29,32 @@
 
   const dispatch = createEventDispatcher();
 
+  const DEFAULT_PHASE_SEQUENCE = ['drops', 'cards', 'relics', 'battle_review'];
+  const PHASE_LABELS = {
+    drops: 'Drops',
+    cards: 'Cards',
+    relics: 'Relics',
+    battle_review: 'Battle Review'
+  };
+  const DROPS_COMPLETE_EVENT = 'drops-complete';
+
+  let detachRewardPhaseListener = null;
+
+  onMount(() => {
+    detachRewardPhaseListener = rewardPhaseController.on('exit', (detail) => {
+      if (!detail || detail.phase !== 'drops') {
+        return;
+      }
+      emitRewardTelemetry(DROPS_COMPLETE_EVENT, {
+        from: detail.phase,
+        to: detail.to ?? null,
+        reason: detail.reason ?? 'exit',
+        next: detail.snapshot?.current ?? null,
+        sequence: Array.isArray(detail.snapshot?.sequence) ? detail.snapshot.sequence.slice() : []
+      });
+    });
+  });
+
   // Render immediately; CSS animations handle reveal on mount
 
   $: normalizedSfxVolume = (() => {
@@ -42,6 +70,32 @@
   $: hasLootItems = lootItems.length > 0;
   $: dataReducedMotion = reducedMotion ? 'true' : 'false';
   $: dataSfxVolume = String(normalizedSfxVolume);
+  $: phaseSnapshot = $rewardPhaseState;
+  $: phaseSequence =
+    Array.isArray(phaseSnapshot?.sequence) && phaseSnapshot.sequence.length > 0
+      ? phaseSnapshot.sequence
+      : DEFAULT_PHASE_SEQUENCE;
+  $: completedPhaseSet = new Set(Array.isArray(phaseSnapshot?.completed) ? phaseSnapshot.completed : []);
+  $: currentPhase = phaseSnapshot?.current ?? null;
+  $: nextPhase = phaseSnapshot?.next ?? null;
+  $: dropsPhaseActive = currentPhase === 'drops';
+  $: showDropsSection = dropsPhaseActive && (hasLootItems || awaitingLoot || gold > 0);
+  $: nonDropContentHidden = dropsPhaseActive;
+  $: phaseEntries = phaseSequence.map((phase, index) => {
+    const resolvedLabel = PHASE_LABELS[phase] ?? phase.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+    const status = completedPhaseSet.has(phase)
+      ? 'completed'
+      : phase === currentPhase
+        ? 'current'
+        : 'upcoming';
+    return {
+      phase,
+      index: index + 1,
+      label: resolvedLabel,
+      status
+    };
+  });
+  $: nextPhaseLabel = nextPhase ? (PHASE_LABELS[nextPhase] ?? nextPhase.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())) : '';
 
   function titleForItem(item) {
     if (!item) return '';
@@ -488,6 +542,10 @@
     lootSfxEnabled = false;
     lootSfxBlocked = false;
     lootSfxNoticeLogged = false;
+    if (typeof detachRewardPhaseListener === 'function') {
+      detachRewardPhaseListener();
+      detachRewardPhaseListener = null;
+    }
   });
 
   // Show Next Room button when there's loot but no choices
@@ -506,9 +564,115 @@
 <style>
   .layout {
     display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    justify-content: center;
+    gap: clamp(1rem, 2vw, 2.5rem);
+    width: 100%;
+  }
+
+  .main-column {
+    flex: 1 1 0;
+    display: flex;
     flex-direction: column;
     align-items: center;
     gap: 1rem;
+    min-width: 0;
+  }
+
+  .phase-rail {
+    flex: 0 0 260px;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: clamp(0.75rem, 1.5vw, 1.25rem);
+    border-radius: 18px;
+    background: rgba(11, 17, 27, 0.72);
+    border: 1px solid rgba(153, 201, 255, 0.18);
+    box-shadow: 0 16px 36px rgba(0, 0, 0, 0.35);
+    color: rgba(241, 245, 255, 0.92);
+    min-height: 100%;
+  }
+
+  .phase-heading {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .phase-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .phase-item {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    padding: 0.55rem 0.75rem;
+    border-radius: 12px;
+    background: rgba(12, 18, 28, 0.65);
+    border: 1px solid rgba(153, 201, 255, 0.1);
+    font-size: 0.95rem;
+  }
+
+  .phase-item.completed {
+    background: rgba(58, 164, 108, 0.25);
+    border-color: rgba(76, 175, 80, 0.35);
+  }
+
+  .phase-item.current {
+    background: rgba(52, 120, 207, 0.3);
+    border-color: rgba(90, 170, 255, 0.45);
+    box-shadow: 0 0 0 1px rgba(90, 170, 255, 0.3);
+  }
+
+  .phase-index {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.8rem;
+    height: 1.8rem;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.35);
+    font-weight: 700;
+  }
+
+  .phase-item.completed .phase-index {
+    background: rgba(76, 175, 80, 0.45);
+  }
+
+  .phase-item.current .phase-index {
+    background: rgba(90, 170, 255, 0.45);
+  }
+
+  .phase-label {
+    flex: 1 1 auto;
+    font-weight: 600;
+  }
+
+  .phase-note {
+    margin: 0;
+    font-size: 0.85rem;
+    color: rgba(241, 245, 255, 0.75);
+  }
+
+  @media (max-width: 1100px) {
+    .layout {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .phase-rail {
+      width: 100%;
+      flex: 0 0 auto;
+    }
   }
 
   .section-title {
@@ -905,180 +1069,210 @@
   on:pointerdown={handleLootSfxGesture}
   on:keydown={handleLootSfxGesture}
 >
-  {#if stagedCardEntries.length > 0}
-    <div class="staged-block">
-      <h3 class="section-title">Selected Card</h3>
-      <div class="choices staged">
-        {#each stagedCardEntries.slice(0,3) as card, i (card?.id ?? `staged-card-${i}`)}
-          <div class:reveal={!reducedMotion} style={`--delay: ${revealDelay(i)}ms`}>
-            <RewardCard entry={card} type="card" quiet={iconQuiet} disabled={true} />
-          </div>
-        {/each}
-      </div>
-      <div class="actions-row">
-        <button class="confirm-btn" type="button" on:click={() => handleConfirm('card')} disabled={cardActionsDisabled}>Confirm</button>
-        <button class="cancel-btn" type="button" on:click={() => handleCancel('card')} disabled={cardActionsDisabled}>Cancel</button>
-      </div>
-      {#each stagedCardPreviewDetails as detail (detail.key)}
-        <div class="preview-panel" data-type="card">
-          <h4 class="preview-heading">{detail.name} Preview</h4>
-          {#if detail.preview.summary}
-            <p class="preview-summary">{detail.preview.summary}</p>
-          {/if}
-          {#if detail.preview.stats.length > 0}
-            <ul class="preview-stats" role="list">
-              {#each detail.preview.stats as stat (stat.id)}
-                <li class="preview-stat" role="listitem">
-                  <div class="stat-row">
-                    <span class="stat-name">{stat.label}</span>
-                    <span class="stat-change">{stat.change}</span>
-                  </div>
-                  {#if stat.details.length > 0}
-                    <ul class="stat-details" role="list">
-                      {#each stat.details as item, index (`${stat.id}-detail-${index}`)}
-                        <li role="listitem">{item}</li>
-                      {/each}
-                    </ul>
-                  {/if}
-                </li>
-              {/each}
-            </ul>
-          {/if}
-          {#if detail.preview.triggers.length > 0}
-            <div class="preview-triggers" role="group" aria-label="Trigger effects">
-              <h5>Triggers</h5>
-              <ul role="list">
-                {#each detail.preview.triggers as trigger (trigger.id)}
-                  <li role="listitem">
-                    <span class="trigger-event">{trigger.event}</span>
-                    {#if trigger.description}
-                      <span class="trigger-description"> — {trigger.description}</span>
-                    {/if}
-                  </li>
-                {/each}
-              </ul>
+  <div class="main-column">
+    {#if showDropsSection}
+      <h3 class="section-title">Drops</h3>
+      {#if awaitingLoot && !hasLootItems}
+        <div class="status" role="status">Processing loot…</div>
+      {/if}
+      {#if hasLootItems}
+        <div class="drops-row" role="list">
+          {#each visibleDrops as entry (entry.key)}
+            <div
+              class="drop-tile"
+              role="listitem"
+              style={`--accent: ${entry.accent}`}
+              aria-label={`${entry.label}${entry.count > 1 ? ` x${entry.count}` : ''}`}
+              in:scale={dropPopTransition}
+            >
+              <img
+                class="drop-icon"
+                src={entry.icon}
+                alt=""
+                aria-hidden="true"
+                on:error={onMaterialIconError}
+              />
+              {#if entry.count > 1}
+                <span class="drop-count">x{entry.count}</span>
+              {/if}
+              <span class="sr-only">{entry.label}{entry.count > 1 ? ` x${entry.count}` : ''}</span>
             </div>
-          {/if}
+          {/each}
         </div>
-      {/each}
-    </div>
-  {/if}
+      {/if}
+      {#if gold}
+        <div class="status">Gold +{gold}</div>
+      {/if}
+      {#if !awaitingLoot && !hasLootItems && !gold}
+        <div class="status">No drops this time.</div>
+      {/if}
+    {/if}
 
-  {#if showCards}
-    <h3 class="section-title">Choose a Card</h3>
-    <div class="choices">
-      {#each cardChoices.slice(0,3) as card, i (card?.id ?? `card-${i}`)}
-        <div class:reveal={!reducedMotion} style={`--delay: ${revealDelay(i)}ms`}>
-          <RewardCard entry={card} type="card" quiet={iconQuiet} on:select={handleSelect} />
-        </div>
-      {/each}
-    </div>
-  {/if}
-
-  {#if stagedRelicEntries.length > 0}
-    <div class="staged-block">
-      <h3 class="section-title">Selected Relic</h3>
-      <div class="choices staged">
-        {#each stagedRelicEntries.slice(0,3) as relic, i (relic?.id ?? `staged-relic-${i}`)}
-          <div class:reveal={!reducedMotion} style={`--delay: ${revealDelay(i)}ms`}>
-            <CurioChoice entry={relic} quiet={iconQuiet} disabled={true} />
+    {#if !nonDropContentHidden}
+      {#if stagedCardEntries.length > 0}
+        <div class="staged-block">
+          <h3 class="section-title">Selected Card</h3>
+          <div class="choices staged">
+            {#each stagedCardEntries.slice(0,3) as card, i (card?.id ?? `staged-card-${i}`)}
+              <div class:reveal={!reducedMotion} style={`--delay: ${revealDelay(i)}ms`}>
+                <RewardCard entry={card} type="card" quiet={iconQuiet} disabled={true} />
+              </div>
+            {/each}
           </div>
-        {/each}
-      </div>
-      <div class="actions-row">
-        <button class="confirm-btn" type="button" on:click={() => handleConfirm('relic')} disabled={relicActionsDisabled}>Confirm</button>
-        <button class="cancel-btn" type="button" on:click={() => handleCancel('relic')} disabled={relicActionsDisabled}>Cancel</button>
-      </div>
-      {#each stagedRelicPreviewDetails as detail (detail.key)}
-        <div class="preview-panel" data-type="relic">
-          <h4 class="preview-heading">{detail.name} Preview</h4>
-          {#if detail.preview.summary}
-            <p class="preview-summary">{detail.preview.summary}</p>
-          {/if}
-          {#if detail.preview.stats.length > 0}
-            <ul class="preview-stats" role="list">
-              {#each detail.preview.stats as stat (stat.id)}
-                <li class="preview-stat" role="listitem">
-                  <div class="stat-row">
-                    <span class="stat-name">{stat.label}</span>
-                    <span class="stat-change">{stat.change}</span>
-                  </div>
-                  {#if stat.details.length > 0}
-                    <ul class="stat-details" role="list">
-                      {#each stat.details as item, index (`${stat.id}-detail-${index}`)}
-                        <li role="listitem">{item}</li>
-                      {/each}
-                    </ul>
-                  {/if}
-                </li>
-              {/each}
-            </ul>
-          {/if}
-          {#if detail.preview.triggers.length > 0}
-            <div class="preview-triggers" role="group" aria-label="Trigger effects">
-              <h5>Triggers</h5>
-              <ul role="list">
-                {#each detail.preview.triggers as trigger (trigger.id)}
-                  <li role="listitem">
-                    <span class="trigger-event">{trigger.event}</span>
-                    {#if trigger.description}
-                      <span class="trigger-description"> — {trigger.description}</span>
-                    {/if}
-                  </li>
-                {/each}
-              </ul>
+          <div class="actions-row">
+            <button class="confirm-btn" type="button" on:click={() => handleConfirm('card')} disabled={cardActionsDisabled}>Confirm</button>
+            <button class="cancel-btn" type="button" on:click={() => handleCancel('card')} disabled={cardActionsDisabled}>Cancel</button>
+          </div>
+          {#each stagedCardPreviewDetails as detail (detail.key)}
+            <div class="preview-panel" data-type="card">
+              <h4 class="preview-heading">{detail.name} Preview</h4>
+              {#if detail.preview.summary}
+                <p class="preview-summary">{detail.preview.summary}</p>
+              {/if}
+              {#if detail.preview.stats.length > 0}
+                <ul class="preview-stats" role="list">
+                  {#each detail.preview.stats as stat (stat.id)}
+                    <li class="preview-stat" role="listitem">
+                      <div class="stat-row">
+                        <span class="stat-name">{stat.label}</span>
+                        <span class="stat-change">{stat.change}</span>
+                      </div>
+                      {#if stat.details.length > 0}
+                        <ul class="stat-details" role="list">
+                          {#each stat.details as item, index (`${stat.id}-detail-${index}`)}
+                            <li role="listitem">{item}</li>
+                          {/each}
+                        </ul>
+                      {/if}
+                    </li>
+                  {/each}
+                </ul>
+              {/if}
+              {#if detail.preview.triggers.length > 0}
+                <div class="preview-triggers" role="group" aria-label="Trigger effects">
+                  <h5>Triggers</h5>
+                  <ul role="list">
+                    {#each detail.preview.triggers as trigger (trigger.id)}
+                      <li role="listitem">
+                        <span class="trigger-event">{trigger.event}</span>
+                        {#if trigger.description}
+                          <span class="trigger-description"> — {trigger.description}</span>
+                        {/if}
+                      </li>
+                    {/each}
+                  </ul>
+                </div>
+              {/if}
             </div>
-          {/if}
+          {/each}
         </div>
-      {/each}
-    </div>
-  {/if}
+      {/if}
 
-  {#if showRelics}
-    <h3 class="section-title">Choose a Relic</h3>
-    <div class="choices">
-      {#each relicChoices.slice(0,3) as relic, i (relic?.id ?? `relic-${i}`)}
-        <div class:reveal={!reducedMotion} style={`--delay: ${revealDelay(i)}ms`}>
-          <CurioChoice entry={relic} quiet={iconQuiet} on:select={handleSelect} />
+      {#if showCards}
+        <h3 class="section-title">Choose a Card</h3>
+        <div class="choices">
+          {#each cardChoices.slice(0,3) as card, i (card?.id ?? `card-${i}`)}
+            <div class:reveal={!reducedMotion} style={`--delay: ${revealDelay(i)}ms`}>
+              <RewardCard entry={card} type="card" quiet={iconQuiet} on:select={handleSelect} />
+            </div>
+          {/each}
         </div>
-      {/each}
-    </div>
-  {/if}
-  
-  {#if hasLootItems}
-    <h3 class="section-title">Drops</h3>
-    <div class="drops-row" role="list">
-      {#each visibleDrops as entry (entry.key)}
-        <div
-          class="drop-tile"
+      {/if}
+
+      {#if stagedRelicEntries.length > 0}
+        <div class="staged-block">
+          <h3 class="section-title">Selected Relic</h3>
+          <div class="choices staged">
+            {#each stagedRelicEntries.slice(0,3) as relic, i (relic?.id ?? `staged-relic-${i}`)}
+              <div class:reveal={!reducedMotion} style={`--delay: ${revealDelay(i)}ms`}>
+                <CurioChoice entry={relic} quiet={iconQuiet} disabled={true} />
+              </div>
+            {/each}
+          </div>
+          <div class="actions-row">
+            <button class="confirm-btn" type="button" on:click={() => handleConfirm('relic')} disabled={relicActionsDisabled}>Confirm</button>
+            <button class="cancel-btn" type="button" on:click={() => handleCancel('relic')} disabled={relicActionsDisabled}>Cancel</button>
+          </div>
+          {#each stagedRelicPreviewDetails as detail (detail.key)}
+            <div class="preview-panel" data-type="relic">
+              <h4 class="preview-heading">{detail.name} Preview</h4>
+              {#if detail.preview.summary}
+                <p class="preview-summary">{detail.preview.summary}</p>
+              {/if}
+              {#if detail.preview.stats.length > 0}
+                <ul class="preview-stats" role="list">
+                  {#each detail.preview.stats as stat (stat.id)}
+                    <li class="preview-stat" role="listitem">
+                      <div class="stat-row">
+                        <span class="stat-name">{stat.label}</span>
+                        <span class="stat-change">{stat.change}</span>
+                      </div>
+                      {#if stat.details.length > 0}
+                        <ul class="stat-details" role="list">
+                          {#each stat.details as item, index (`${stat.id}-detail-${index}`)}
+                            <li role="listitem">{item}</li>
+                          {/each}
+                        </ul>
+                      {/if}
+                    </li>
+                  {/each}
+                </ul>
+              {/if}
+              {#if detail.preview.triggers.length > 0}
+                <div class="preview-triggers" role="group" aria-label="Trigger effects">
+                  <h5>Triggers</h5>
+                  <ul role="list">
+                    {#each detail.preview.triggers as trigger (trigger.id)}
+                      <li role="listitem">
+                        <span class="trigger-event">{trigger.event}</span>
+                        {#if trigger.description}
+                          <span class="trigger-description"> — {trigger.description}</span>
+                        {/if}
+                      </li>
+                    {/each}
+                  </ul>
+                </div>
+              {/if}
+            </div>
+          {/each}
+        </div>
+      {/if}
+
+      {#if showRelics}
+        <h3 class="section-title">Choose a Relic</h3>
+        <div class="choices">
+          {#each relicChoices.slice(0,3) as relic, i (relic?.id ?? `relic-${i}`)}
+            <div class:reveal={!reducedMotion} style={`--delay: ${revealDelay(i)}ms`}>
+              <CurioChoice entry={relic} quiet={iconQuiet} on:select={handleSelect} />
+            </div>
+          {/each}
+        </div>
+      {/if}
+    {/if}
+
+    {#if showNextButton}
+      <div class="next-room-overlay">
+        <button class="next-button overlay" on:click={handleNextRoom}>Next Room</button>
+      </div>
+    {/if}
+  </div>
+
+  <aside class="phase-rail" aria-label="Reward flow">
+    <h3 class="phase-heading">Reward Flow</h3>
+    <ol class="phase-list" role="list">
+      {#each phaseEntries as entry (entry.phase)}
+        <li
+          class={`phase-item ${entry.status}`}
           role="listitem"
-          style={`--accent: ${entry.accent}`}
-          aria-label={`${entry.label}${entry.count > 1 ? ` x${entry.count}` : ''}`}
-          in:scale={dropPopTransition}
+          aria-current={entry.status === 'current' ? 'step' : undefined}
         >
-          <img
-            class="drop-icon"
-            src={entry.icon}
-            alt=""
-            aria-hidden="true"
-            on:error={onMaterialIconError}
-          />
-          {#if entry.count > 1}
-            <span class="drop-count">x{entry.count}</span>
-          {/if}
-          <span class="sr-only">{entry.label}{entry.count > 1 ? ` x${entry.count}` : ''}</span>
-        </div>
+          <span class="phase-index" aria-hidden="true">{entry.status === 'completed' ? '✓' : entry.index}</span>
+          <span class="phase-label">{entry.label}</span>
+        </li>
       {/each}
-    </div>
-  {/if}
-  {#if gold}
-    <div class="status">Gold +{gold}</div>
-  {/if}
-  
-  {#if showNextButton}
-    <div class="next-room-overlay">
-      <button class="next-button overlay" on:click={handleNextRoom}>Next Room</button>
-    </div>
-  {/if}
-  <!-- Auto-advance remains when no choices/loot -->
+    </ol>
+    {#if nextPhaseLabel && dropsPhaseActive}
+      <p class="phase-note">Next: {nextPhaseLabel}</p>
+    {/if}
+  </aside>
 </div>
