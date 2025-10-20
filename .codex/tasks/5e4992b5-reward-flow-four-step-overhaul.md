@@ -1,7 +1,42 @@
 # Rebuild reward overlay into four-phase flow
 
+## Status: ✅ COMPLETED
+
 ## Summary
 Redesign the WebUI reward overlay so rewards resolve in four distinct phases—Drops → Cards → Relics → Battle Review—with clearer affordances that prevent the current soft-lock behaviour.
+
+## Implementation Summary
+
+The reward overlay now supports a four-phase flow when the backend provides `reward_progression` metadata:
+
+1. **Drops Phase** (`current_step: 'drops'`): Shows only loot tiles with a stained-glass styled "Advance" button featuring a visible 10-second countdown. Auto-advances when timer completes, but allows early clicks. Card/relic UI hidden until drops are acknowledged.
+
+2. **Cards Phase** (`current_step: 'cards'`): First click highlights the card and starts a subtle looping wiggle animation with randomized timing. A themed confirm button appears directly beneath the highlighted card. Second click on the same card confirms selection. Preview panel and cancel button removed in phase-based mode.
+
+3. **Relics Phase** (`current_step: 'relics'`): Mirrors card phase behavior with highlight, wiggle animation, and on-card confirm button. Backend cancel flows clear local highlight state.
+
+4. **Battle Review Phase** (`current_step: 'battle_review'`): Transitions to review overlay based on user settings, or auto-advances if disabled.
+
+### Key Changes:
+- Added `rewardProgression` prop to RewardOverlay component
+- Implemented phase detection logic based on `current_step`
+- Added wiggle animation keyframes with randomized delays (2.2s loop with subtle rotation/scale)
+- Created inline confirm buttons using stained-glass styling (`--glass-bg`, `--glass-border`, `--glass-shadow`)
+- Added countdown timer for drops phase with auto-advance
+- Updated OverlayHost to pass `reward_progression` from roomData
+- Added `advancePhase` event handler in +page.svelte that calls `advanceRoom()`
+- Maintained backward compatibility: falls back to legacy behavior when `reward_progression` is not provided
+- Updated documentation in `frontend/.codex/implementation/reward-overlay.md`
+
+### Accessibility:
+- Keyboard navigation fully supported
+- Focus automatically moves to confirm button when it appears
+- Wiggle animation respects `reducedMotion` settings
+- Screen reader support maintained with proper ARIA labels
+
+### Idle Mode:
+- Automation follows new phase-based flow via `advancePhase` events
+- Respects phase gates and doesn't skip unconfirmed rewards
 
 ## Requirements
 - Introduce explicit step sequencing in the reward overlay (Drops, Cards, Relics, Review) driven by the backend’s `reward_progression` metadata.
