@@ -83,6 +83,19 @@ automation can finish the encounter immediately. A separate five-second timer
 fires a `next` event when the popup is otherwise empty, which keeps fast loot
 pickups from stalling the run.
 
+### Phase advance panel and countdown
+
+The right rail now renders a stained-glass panel that mirrors the reward phase
+sequence and exposes a shared **Advance** button. When the current phase has no
+remaining selections or confirmations, the button activates, a 10-second
+countdown appears, and both manual clicks and the timer call the
+`rewardPhaseController.advance()` helper. The component dispatches an
+`advance` event with `{ reason: 'manual' | 'auto', from, target, snapshot }` so
+automation tasks can observe transitions without reimplementing controller
+logic. The countdown automatically pauses if new choices arrive, resets when the
+controller skips phases, and restarts once the next phase is ready. Styling for
+the panel reuses the shared stained-glass tokens to match other right-rail UI.
+
 To emphasise each pickup, the component keeps a `visibleDrops` array separate
 from the aggregated `dropEntries`. When motion reduction is disabled the list
 is populated one entry at a time on a timed interval; each reveal triggers the
