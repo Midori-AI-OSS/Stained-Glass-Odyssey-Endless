@@ -1,16 +1,14 @@
 # Implement reward overlay phase controller
 
 ## Summary
-Introduce an explicit four-phase controller inside the WebUI reward overlay so Drops, Cards, Relics, and Battle Review execute sequentially without soft-locks.
+Umbrella pointer for the frontend controller track. Work has been split so coders can land the state machine, drops-only phase, advance countdown, and resilience pieces independently.
 
-## Requirements
-- Drive the overlay UI from the backend-provided `reward_progression` metadata, mapping each phase (Drops → Cards → Relics → Review) to a clear internal state machine.
-- Render the Drops phase with only loot tiles visible and gate later UI elements until completion.
-- Add a stained-glass styled right-rail with an `Advance` button and a prominently displayed 10 second countdown that auto-advances when it expires but allows manual clicks.
-- Ensure early confirmation moves the controller into the next phase safely, including when the backend skips a phase.
-- Provide graceful fallback behaviour if `reward_progression` is missing or malformed: log, default to the current single-phase behaviour, and prevent freezes.
-- Verify keyboard focus flows correctly into and out of the advance button during automatic and manual transitions.
+## Subtasks
+- `.codex/tasks/f7ae6ddd-reward-overlay-state-machine.md` — build the state machine scaffold around `reward_progression`.
+- `.codex/tasks/01508135-drops-phase-overlay-refactor.md` — render the Drops-only experience.
+- `.codex/tasks/bcfc52bc-reward-advance-countdown.md` — add the advance button and countdown timer.
+- `.codex/tasks/6afb12ae-reward-overlay-resilience.md` — harden transitions and accessibility edge cases.
 
-## Coordination notes
-- Check `frontend/.codex/implementation/reward-overlay.md` for existing structure notes before refactoring.
-- Confirm with backend maintainers whether additional `reward_progression` hints are expected so the controller can be resilient.
+## Notes
+- Keep this parent file updated as subtasks land or new gaps appear.
+- Coordinate sequencing with the card/relic refresh umbrella to avoid merge conflicts in shared components.
