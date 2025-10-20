@@ -7,7 +7,11 @@
   import { getMaterialIcon, onMaterialIconError } from '../systems/assetLoader.js';
   import { createRewardDropSfx } from '../systems/sfx.js';
   import { formatRewardPreview } from '../utils/rewardPreviewFormatter.js';
-  import { rewardPhaseState, rewardPhaseController } from '../systems/overlayState.js';
+  import {
+    rewardPhaseState,
+    rewardPhaseController,
+    advanceRewardPhase
+  } from '../systems/overlayState.js';
   import { emitRewardTelemetry } from '../systems/rewardTelemetry.js';
 
   export let cards = [];
@@ -95,7 +99,37 @@
       status
     };
   });
-  $: nextPhaseLabel = nextPhase ? (PHASE_LABELS[nextPhase] ?? nextPhase.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())) : '';
+  $: nextPhaseLabel = nextPhase
+    ? PHASE_LABELS[nextPhase] ?? nextPhase.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+    : '';
+
+  const ADVANCE_COUNTDOWN_SECONDS = 10;
+  let advanceCountdownSeconds = ADVANCE_COUNTDOWN_SECONDS;
+  let advanceCountdownTimer = null;
+  let advanceCountdownContext = null;
+  let advanceCountdownDeadline = 0;
+  let advanceInFlight = false;
+
+  $: advanceCountdownLabel = formatCountdown(advanceCountdownSeconds);
+  $: showAdvancePanel = Boolean(currentPhase && nextPhase);
+  $: phaseAdvanceAvailable = computeAdvanceAvailability(currentPhase, nextPhase);
+  $: advanceButtonDisabled = !phaseAdvanceAvailable || advanceInFlight;
+  $: advanceCountdownActive = Boolean(advanceCountdownTimer) && phaseAdvanceAvailable;
+  $: advanceStatusMessage = (() => {
+    if (!showAdvancePanel) return '';
+    if (!phaseAdvanceAvailable) {
+      return 'Complete this step to continue';
+    }
+    return `Auto in ${advanceCountdownLabel}`;
+  })();
+
+  $: {
+    if (showAdvancePanel && phaseAdvanceAvailable && currentPhase && nextPhase && !advanceInFlight) {
+      ensureAdvanceCountdown(currentPhase, nextPhase);
+    } else {
+      resetAdvanceCountdown(true);
+    }
+  }
 
   function titleForItem(item) {
     if (!item) return '';
@@ -327,6 +361,114 @@
     return true;
   }
 
+  function formatCountdown(value) {
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric) || numeric <= 0) {
+      return '00:00';
+    }
+    const clamped = Math.max(0, Math.floor(numeric));
+    const minutes = Math.floor(clamped / 60);
+    const seconds = clamped % 60;
+    return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+  }
+
+  function computeAdvanceAvailability(current, target) {
+    if (!current || !target) return false;
+    if (advanceInFlight) return false;
+    if (awaitingConfirmation) return false;
+    switch (current) {
+      case 'drops':
+        return true;
+      case 'cards':
+        if (!Array.isArray(cardChoices)) return false;
+        if (awaitingCard) return false;
+        if (Array.isArray(cardChoices) && cardChoices.length > 0) return false;
+        if (Array.isArray(stagedCardEntries) && stagedCardEntries.length > 0) return false;
+        return true;
+      case 'relics':
+        if (!Array.isArray(relicChoices)) return false;
+        if (awaitingRelic) return false;
+        if (Array.isArray(relicChoices) && relicChoices.length > 0) return false;
+        if (Array.isArray(stagedRelicEntries) && stagedRelicEntries.length > 0) return false;
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  function ensureAdvanceCountdown(phase, target) {
+    const context = `${phase}->${target}`;
+    if (advanceCountdownTimer && advanceCountdownContext === context) {
+      return;
+    }
+    resetAdvanceCountdown(false);
+    advanceCountdownContext = context;
+    advanceCountdownSeconds = ADVANCE_COUNTDOWN_SECONDS;
+    advanceCountdownDeadline = Date.now() + ADVANCE_COUNTDOWN_SECONDS * 1000;
+    advanceCountdownTimer = setInterval(syncAdvanceCountdown, 250);
+    syncAdvanceCountdown();
+  }
+
+  function resetAdvanceCountdown(resetValue = true) {
+    if (advanceCountdownTimer) {
+      clearInterval(advanceCountdownTimer);
+      advanceCountdownTimer = null;
+    }
+    advanceCountdownContext = null;
+    advanceCountdownDeadline = 0;
+    if (resetValue) {
+      advanceCountdownSeconds = ADVANCE_COUNTDOWN_SECONDS;
+    }
+  }
+
+  function syncAdvanceCountdown() {
+    if (!advanceCountdownTimer) return;
+    const remainingMs = Math.max(0, advanceCountdownDeadline - Date.now());
+    const remainingSeconds = Math.max(0, Math.ceil(remainingMs / 1000));
+    if (remainingSeconds !== advanceCountdownSeconds) {
+      advanceCountdownSeconds = remainingSeconds;
+    }
+    if (remainingSeconds <= 0) {
+      resetAdvanceCountdown(false);
+      triggerAdvance('auto');
+    }
+  }
+
+  function triggerAdvance(reason) {
+    if (!phaseAdvanceAvailable || advanceInFlight) return;
+    const snapshot =
+      typeof rewardPhaseController?.getSnapshot === 'function'
+        ? rewardPhaseController.getSnapshot()
+        : phaseSnapshot;
+    const fromPhase = snapshot?.current ?? currentPhase;
+    const targetPhase = snapshot?.next ?? nextPhase;
+    if (!fromPhase || !targetPhase) return;
+
+    advanceInFlight = true;
+    resetAdvanceCountdown(false);
+    advanceCountdownSeconds = ADVANCE_COUNTDOWN_SECONDS;
+
+    let nextSnapshot = null;
+    try {
+      nextSnapshot = advanceRewardPhase();
+    } finally {
+      advanceInFlight = false;
+    }
+
+    dispatch('advance', {
+      reason,
+      from: fromPhase,
+      to: nextSnapshot?.current ?? null,
+      target: targetPhase,
+      snapshot: nextSnapshot ?? null
+    });
+  }
+
+  function handleAdvanceClick() {
+    if (!phaseAdvanceAvailable || advanceInFlight) return;
+    triggerAdvance('manual');
+  }
+
   $: {
     const nextSignature = snapshotDropSignature(dropEntries);
     const unchangedSignature =
@@ -537,6 +679,7 @@
     clearTimeout(autoTimer);
     clearDropRevealTimers();
     stopDropAudio(true);
+    resetAdvanceCountdown(true);
     lastDropSignature = null;
     lastReducedMotion = null;
     lootSfxEnabled = false;
@@ -581,17 +724,30 @@
   }
 
   .phase-rail {
-    flex: 0 0 260px;
+    flex: 0 0 280px;
     display: flex;
     flex-direction: column;
-    gap: 0.75rem;
-    padding: clamp(0.75rem, 1.5vw, 1.25rem);
-    border-radius: 18px;
-    background: rgba(11, 17, 27, 0.72);
-    border: 1px solid rgba(153, 201, 255, 0.18);
-    box-shadow: 0 16px 36px rgba(0, 0, 0, 0.35);
+    gap: 0.85rem;
+    padding: clamp(0.9rem, 1.8vw, 1.4rem);
+    border-radius: 20px;
+    background: var(--glass-bg);
+    border: var(--glass-border);
+    box-shadow: var(--glass-shadow);
+    backdrop-filter: var(--glass-filter);
     color: rgba(241, 245, 255, 0.92);
     min-height: 100%;
+  }
+
+  .phase-panel,
+  .advance-panel {
+    background: rgba(12, 18, 28, 0.72);
+    border: 1px solid rgba(153, 201, 255, 0.2);
+    border-radius: 16px;
+    padding: clamp(0.75rem, 1.6vw, 1.3rem);
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.32);
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
   }
 
   .phase-heading {
@@ -661,6 +817,42 @@
     margin: 0;
     font-size: 0.85rem;
     color: rgba(241, 245, 255, 0.75);
+  }
+
+  .advance-panel.locked {
+    opacity: 0.65;
+  }
+
+  .advance-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.75rem;
+  }
+
+  .advance-header h4 {
+    margin: 0;
+    font-size: 0.95rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .advance-target {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: rgba(158, 217, 255, 0.95);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .advance-status {
+    margin: 0;
+    font-size: 0.9rem;
+    color: rgba(241, 245, 255, 0.8);
+  }
+
+  .advance-button {
+    align-self: flex-start;
   }
 
   @media (max-width: 1100px) {
@@ -1258,21 +1450,42 @@
   </div>
 
   <aside class="phase-rail" aria-label="Reward flow">
-    <h3 class="phase-heading">Reward Flow</h3>
-    <ol class="phase-list" role="list">
-      {#each phaseEntries as entry (entry.phase)}
-        <li
-          class={`phase-item ${entry.status}`}
-          role="listitem"
-          aria-current={entry.status === 'current' ? 'step' : undefined}
-        >
-          <span class="phase-index" aria-hidden="true">{entry.status === 'completed' ? '✓' : entry.index}</span>
-          <span class="phase-label">{entry.label}</span>
-        </li>
-      {/each}
-    </ol>
+    <div class="phase-panel">
+      <h3 class="phase-heading">Reward Flow</h3>
+      <ol class="phase-list" role="list">
+        {#each phaseEntries as entry (entry.phase)}
+          <li
+            class={`phase-item ${entry.status}`}
+            role="listitem"
+            aria-current={entry.status === 'current' ? 'step' : undefined}
+          >
+            <span class="phase-index" aria-hidden="true">{entry.status === 'completed' ? '✓' : entry.index}</span>
+            <span class="phase-label">{entry.label}</span>
+          </li>
+        {/each}
+      </ol>
+    </div>
     {#if nextPhaseLabel && dropsPhaseActive}
       <p class="phase-note">Next: {nextPhaseLabel}</p>
+    {/if}
+    {#if showAdvancePanel}
+      <div class={`advance-panel ${phaseAdvanceAvailable ? 'active' : 'locked'}`}>
+        <div class="advance-header">
+          <h4>Advance</h4>
+          {#if nextPhaseLabel}
+            <span class="advance-target">{nextPhaseLabel}</span>
+          {/if}
+        </div>
+        <p class="advance-status" data-testid="advance-countdown" aria-live="polite">{advanceStatusMessage}</p>
+        <button
+          class="icon-btn advance-button"
+          type="button"
+          on:click={handleAdvanceClick}
+          disabled={advanceButtonDisabled}
+        >
+          Advance
+        </button>
+      </div>
     {/if}
   </aside>
 </div>

@@ -13,3 +13,4 @@ Add the stained-glass right-rail with a manual `Advance` button, integrate a 10-
 ## Coordination notes
 - Confirm animation/styling expectations with the UX owner before finalising CSS variables.
 - Provide an event or callback the automation task can hook into for validating auto-advance in tests.
+ready for review

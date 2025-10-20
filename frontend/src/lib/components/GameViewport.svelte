@@ -431,6 +431,7 @@
       on:rewardSelect={(e) => dispatch('rewardSelect', e.detail)}
       on:rewardConfirm={(e) => dispatch('rewardConfirm', e.detail)}
       on:rewardCancel={(e) => dispatch('rewardCancel', e.detail)}
+      on:rewardAdvance={(e) => dispatch('rewardAdvance', e.detail)}
       on:nextRoom={() => dispatch('nextRoom')}
       on:lootAcknowledge={() => dispatch('lootAcknowledge')}
       on:editorSave={(e) => dispatch('editorSave', e.detail)}
