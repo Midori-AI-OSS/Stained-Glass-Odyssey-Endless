@@ -13,3 +13,4 @@ Add automated tests and fixtures that exercise the new countdown advance, confir
 ## Coordination notes
 - Work with the automation task owner to share fixtures and avoid duplication.
 - Coordinate with QA to review new coverage and identify any remaining gaps needing manual test cases.
+ready for review
