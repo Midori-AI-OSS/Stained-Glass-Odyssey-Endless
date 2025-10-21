@@ -13,3 +13,7 @@ Polish the shared styling and accessibility surface for the refreshed card and r
 ## Coordination notes
 - Coordinate with the resilience task owner to avoid conflicting focus management changes.
 - Loop in UX for sign-off on the shared styling tokens before merging.
+
+## Status
+- 2025-02-15: Shared confirm button tokens across card/relic phases and added live announcements for selection/confirmation state changes.
+ready for review

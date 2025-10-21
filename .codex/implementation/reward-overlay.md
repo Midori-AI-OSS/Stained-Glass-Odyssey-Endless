@@ -13,6 +13,21 @@ Selecting a card posts to `/cards/<run_id>` via the `chooseCard` API helper once
 When a relic reward is selected, the overlay shows its `about` text so players
 see the effect with the next stack applied.
 
+## Confirm control styling & accessibility
+
+Card and relic confirm buttons now share a stained-glass token set defined in
+`src/lib/styles/reward-confirm.css`, with matching design values exposed through
+`src/lib/constants/rewardConfirmTokens.js` for any logic that needs to read or
+override the CSS variables. Both `RewardCard.svelte` and `CurioChoice.svelte`
+apply the shared `reward-confirm-button` class alongside their component-level
+layout hooks so hover/disabled states remain visually consistent between phases.
+
+Each confirm control exposes an explicit `aria-label` (`Confirm card …` /
+`Confirm relic …`) while the overlay announces selection changes and confirm
+availability via the `selectionAnnouncement` live region. Announcements fire
+when highlights move, confirms become available, or staged rewards clear so
+screen readers receive timely updates during the Cards and Relics phases.
+
 ## Confirmation responses
 
 Confirmed selections now return an `activation_record` with `activation_id`, `activated_at`, `bucket`, and the committed payload so reconnecting clients can surface what was just accepted. The backend also streams a bounded `reward_activation_log` array alongside the usual `awaiting_*` flags, letting the overlay highlight historical confirmations for audit trails. Because confirmations operate under a per-run mutex, retries that arrive after the staging bucket has been cleared raise an error instead of duplicating rewards.

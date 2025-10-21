@@ -51,6 +51,16 @@
   let lastAnnouncedPhase = null;
   let fallbackLogSignature = null;
   let lastAdvanceFocusable = false;
+  let selectionAnnouncement = '';
+  let lastCardHighlightKey = null;
+  let lastCardConfirmKey = null;
+  let lastRelicHighlightKey = null;
+  let lastRelicConfirmKey = null;
+  let lastSelectionMessage = '';
+  let stagedCardEntryMap = new Map();
+  let cardChoiceEntryMap = new Map();
+  let stagedRelicEntryMap = new Map();
+  let relicChoiceEntryMap = new Map();
 
   onMount(() => {
     const exitDisposer = rewardPhaseController.on('exit', (detail) => {
@@ -309,6 +319,70 @@
       return rewardEntryKey(detail.entry, 0, fallbackPrefix);
     }
     return null;
+  }
+
+  function labelForRewardEntry(entry, fallbackType = 'reward') {
+    const baseFallback =
+      fallbackType === 'card'
+        ? 'card selection'
+        : fallbackType === 'relic'
+          ? 'relic selection'
+          : 'reward selection';
+    if (!entry || typeof entry !== 'object') {
+      return baseFallback;
+    }
+    const source =
+      entry.entry && typeof entry.entry === 'object'
+        ? entry.entry
+        : entry;
+    if (!source || typeof source !== 'object') {
+      return baseFallback;
+    }
+    const uiMeta = source.ui && typeof source.ui === 'object' ? source.ui : null;
+    const candidates = [
+      uiMeta?.label,
+      uiMeta?.title,
+      source.name,
+      source.title,
+      source.id,
+      source.slug,
+      source.key
+    ];
+    for (const value of candidates) {
+      if (value == null) continue;
+      const normalized = String(value).trim();
+      if (normalized !== '') {
+        return normalized;
+      }
+    }
+    return baseFallback;
+  }
+
+  function describeRewardLabel(type, label) {
+    const prefix = type === 'relic' ? 'Relic' : 'Card';
+    const normalized = typeof label === 'string' ? label.trim() : '';
+    if (!normalized) {
+      return `${prefix} selection`;
+    }
+    const lower = normalized.toLowerCase();
+    if (lower.startsWith(prefix.toLowerCase())) {
+      return normalized;
+    }
+    return `${prefix} ${normalized}`;
+  }
+
+  function sendSelectionAnnouncement(message) {
+    const trimmed = typeof message === 'string' ? message.trim() : '';
+    if (!trimmed) return;
+    if (trimmed === lastSelectionMessage) {
+      selectionAnnouncement = '';
+      queueMicrotask(() => {
+        selectionAnnouncement = trimmed;
+      });
+      return;
+    }
+    lastSelectionMessage = trimmed;
+    selectionAnnouncement = trimmed;
   }
 
   $: dropEntries = (() => {
@@ -630,6 +704,14 @@
   }));
   $: stagedCardEntries = normalizeRewardEntries(stagedCards);
   $: stagedRelicEntries = normalizeRewardEntries(stagedRelics);
+  $: stagedCardEntryMap = new Map(
+    stagedCardEntries.map((entry, index) => [rewardEntryKey(entry, index, 'staged-card'), entry])
+  );
+  $: cardChoiceEntryMap = new Map(cardChoiceEntries.map((choice) => [choice.key, choice.entry]));
+  $: stagedRelicEntryMap = new Map(
+    stagedRelicEntries.map((entry, index) => [rewardEntryKey(entry, index, 'staged-relic'), entry])
+  );
+  $: relicChoiceEntryMap = new Map(relicChoiceEntries.map((choice) => [choice.key, choice.entry]));
 
   const PREVIEW_LIMIT = 3;
   $: stagedCardPreviewDetails = stagedCardEntries
@@ -716,6 +798,19 @@
     }
   }
 
+  $: highlightedCardLabel = highlightedCardKey
+    ? labelForRewardEntry(
+        stagedCardEntryMap.get(highlightedCardKey) ?? cardChoiceEntryMap.get(highlightedCardKey),
+        'card'
+      )
+    : '';
+  $: confirmableCardLabel = confirmableCardKey
+    ? labelForRewardEntry(
+        stagedCardEntryMap.get(confirmableCardKey) ?? cardChoiceEntryMap.get(confirmableCardKey),
+        'card'
+      )
+    : '';
+
   $: stagedRelicKey =
     stagedRelicEntries.length > 0 ? rewardEntryKey(stagedRelicEntries[0], 0, 'staged-relic') : null;
   $: confirmableRelicKey = awaitingRelic && stagedRelicEntries.length > 0 ? stagedRelicKey : null;
@@ -728,6 +823,66 @@
       }
     } else {
       highlightedRelicKey = null;
+    }
+  }
+
+  $: highlightedRelicLabel = highlightedRelicKey
+    ? labelForRewardEntry(
+        stagedRelicEntryMap.get(highlightedRelicKey) ?? relicChoiceEntryMap.get(highlightedRelicKey),
+        'relic'
+      )
+    : '';
+  $: confirmableRelicLabel = confirmableRelicKey
+    ? labelForRewardEntry(
+        stagedRelicEntryMap.get(confirmableRelicKey) ?? relicChoiceEntryMap.get(confirmableRelicKey),
+        'relic'
+      )
+    : '';
+
+  $: {
+    if (fallbackActive) {
+      if (selectionAnnouncement) {
+        selectionAnnouncement = '';
+      }
+      lastSelectionMessage = '';
+    }
+
+    if (!fallbackActive && currentPhase === 'cards') {
+      if (confirmableCardKey && confirmableCardKey !== lastCardConfirmKey) {
+        const label = describeRewardLabel('card', confirmableCardLabel || highlightedCardLabel);
+        sendSelectionAnnouncement(`${label} ready to confirm.`);
+      } else if (!confirmableCardKey && lastCardConfirmKey) {
+        sendSelectionAnnouncement('Card confirmation cleared.');
+      } else if (highlightedCardKey && highlightedCardKey !== lastCardHighlightKey) {
+        const label = describeRewardLabel('card', highlightedCardLabel);
+        sendSelectionAnnouncement(`${label} selected.`);
+      } else if (!highlightedCardKey && lastCardHighlightKey) {
+        sendSelectionAnnouncement('Card selection cleared.');
+      }
+      lastCardConfirmKey = confirmableCardKey;
+      lastCardHighlightKey = highlightedCardKey;
+    } else {
+      lastCardConfirmKey = null;
+      lastCardHighlightKey = null;
+    }
+
+    if (!fallbackActive && currentPhase === 'relics') {
+      if (confirmableRelicKey && confirmableRelicKey !== lastRelicConfirmKey) {
+        const label = describeRewardLabel('relic', confirmableRelicLabel || highlightedRelicLabel);
+        sendSelectionAnnouncement(`${label} ready to confirm.`);
+      } else if (!confirmableRelicKey && lastRelicConfirmKey) {
+        sendSelectionAnnouncement('Relic confirmation cleared.');
+      } else if (highlightedRelicKey && highlightedRelicKey !== lastRelicHighlightKey) {
+        const label = describeRewardLabel('relic', highlightedRelicLabel);
+        sendSelectionAnnouncement(`${label} selected.`);
+      } else if (!highlightedRelicKey && lastRelicHighlightKey) {
+        sendSelectionAnnouncement('Relic selection cleared.');
+      }
+      lastRelicConfirmKey = confirmableRelicKey;
+      lastRelicHighlightKey = highlightedRelicKey;
+    } else {
+      lastRelicConfirmKey = null;
+      lastRelicHighlightKey = null;
     }
   }
 
@@ -1598,6 +1753,7 @@
 >
   <span class="sr-only" aria-live="assertive" aria-atomic="true">{phaseAnnouncement}</span>
   <span class="sr-only" aria-live="polite" aria-atomic="true">{countdownAnnouncement}</span>
+  <span class="sr-only" aria-live="polite" aria-atomic="true">{selectionAnnouncement}</span>
   <div class="main-column">
     {#if showDropsSection}
       <h3 class="section-title">Drops</h3>

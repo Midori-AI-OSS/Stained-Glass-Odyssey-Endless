@@ -3,6 +3,7 @@
   import Tooltip from './Tooltip.svelte';
   import { createEventDispatcher } from 'svelte';
   import { selectionAnimationCssVariables } from '../constants/rewardAnimationTokens.js';
+  import { rewardConfirmCssVariables } from '../constants/rewardConfirmTokens.js';
 
   export let entry = {};
   export let size = 'normal';
@@ -21,6 +22,10 @@
 
   const selectionAnimationVars = selectionAnimationCssVariables();
   const selectionAnimationStyle = Object.entries(selectionAnimationVars)
+    .map(([key, value]) => `${key}: ${value}`)
+    .join('; ');
+  const confirmButtonVars = rewardConfirmCssVariables();
+  const confirmButtonStyle = Object.entries(confirmButtonVars)
     .map(([key, value]) => `${key}: ${value}`)
     .join('; ');
 
@@ -87,9 +92,12 @@
       </button>
       {#if confirmable}
         <button
-          class="curio-confirm"
+          class="curio-confirm reward-confirm-button"
           type="button"
+          aria-label={`Confirm relic ${entry?.name || entry?.id || 'selection'}`}
+          data-reward-confirm="relic"
           disabled={confirmDisabled}
+          style={confirmButtonStyle}
           on:click={() => {
             if (!confirmDisabled) dispatchConfirm();
           }}
@@ -121,9 +129,12 @@
     </button>
     {#if confirmable}
       <button
-        class="curio-confirm"
+        class="curio-confirm reward-confirm-button"
         type="button"
+        aria-label={`Confirm relic ${entry?.name || entry?.id || 'selection'}`}
+        data-reward-confirm="relic"
         disabled={confirmDisabled}
+        style={confirmButtonStyle}
         on:click={() => {
           if (!confirmDisabled) dispatchConfirm();
         }}
@@ -135,6 +146,8 @@
 {/if}
 
 <style>
+  @import '../styles/reward-confirm.css';
+
   .curio-shell {
     position: relative;
     display: flex;
@@ -202,42 +215,12 @@
     animation: none;
   }
 
-  .curio-confirm {
+  .curio-shell.confirmable .curio-confirm {
     display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0.55rem 1.5rem;
-    border-radius: 999px;
-    border: 1px solid rgba(152, 206, 255, 0.45);
-    font-size: 0.95rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: #f3f8ff;
-    background:
-      linear-gradient(135deg, rgba(33, 54, 92, 0.92), rgba(19, 36, 64, 0.92)),
-      linear-gradient(120deg, rgba(148, 192, 255, 0.38), rgba(75, 126, 218, 0.18));
-    box-shadow:
-      0 12px 26px rgba(0, 0, 0, 0.42),
-      0 0 0 1px rgba(115, 174, 255, 0.18) inset;
-    cursor: pointer;
-    transition: transform 140ms ease, box-shadow 140ms ease, filter 140ms ease;
   }
 
-  .curio-confirm:hover,
-  .curio-confirm:focus-visible {
-    transform: translateY(-2px);
-    box-shadow:
-      0 18px 32px rgba(0, 0, 0, 0.45),
-      0 0 0 1px rgba(153, 210, 255, 0.32) inset;
-    outline: none;
-  }
-
-  .curio-confirm:disabled {
-    opacity: 0.58;
-    cursor: default;
-    transform: none;
-    box-shadow: none;
+  .curio-confirm {
+    display: none;
   }
 
   /* Tooltip visuals are provided by Tooltip.svelte + settings-shared.css */

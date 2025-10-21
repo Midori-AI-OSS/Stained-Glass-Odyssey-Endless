@@ -95,7 +95,7 @@ describe('RewardOverlay card phase interactions', () => {
 
     await tick();
 
-    const confirmButton = getByRole('button', { name: 'Confirm' });
+    const confirmButton = getByRole('button', { name: 'Confirm card Radiant Beam' });
     expect(confirmButton).toBeTruthy();
 
     const confirmableShell = container.querySelector('.card-shell.confirmable');
