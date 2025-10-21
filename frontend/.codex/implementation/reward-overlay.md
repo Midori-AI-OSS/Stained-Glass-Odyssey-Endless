@@ -38,20 +38,18 @@ lookups and network errors fall back to the shared material placeholder via
 
 When the backend marks `awaiting_card` or `awaiting_relic` as `true` and
 provides staged entries under `reward_staging`, the overlay now surfaces a
-dedicated confirmation block. The selected card keeps the primary grid visible
-so re-selection can happen without cancelling, auto-selects the first available
-card on entry, and renders a stained-glass **Confirm** button directly beneath
-the highlighted card. The highlight applies a looping wiggle animation defined
-in `frontend/src/lib/constants/rewardAnimationTokens.js`; motion honours the
-player's reduced-motion preference. Second clicks (or keyboard activation) on
-the highlighted card dispatch the confirm event immediately, matching the
-on-card button. Relics continue to present confirm/cancel controls in the
-staged block until their parity task lands.
+dedicated confirmation block. The highlighted card or relic keeps the primary
+grid visible so re-selection can happen without cancelling, auto-selects the
+first available option on entry, and renders a stained-glass **Confirm** button
+directly beneath the highlighted tile. The highlight applies a looping wiggle
+animation defined in `frontend/src/lib/constants/rewardAnimationTokens.js`;
+motion honours the player's reduced-motion preference. Second clicks (or
+keyboard activation) on the highlighted tile dispatch the confirm event
+immediately, matching the on-card button.
 
 - `RewardOverlay` receives `stagedCards`, `stagedRelics`, and the
-  `awaiting_*` flags from `OverlayHost`. The card grid stays visible while a
-  staged entry is pending so players can reselect without cancelling. Relics
-  continue to hide their grid until the matching interaction polish lands.
+  `awaiting_*` flags from `OverlayHost`. Both grids stay visible while a staged
+  entry is pending so players can reselect without cancelling.
 - Clicking **Confirm** (either the on-card button or the highlighted card a
   second time) dispatches a `confirm` event with the reward type so the caller
   can invoke `/ui?action=confirm_card` or `/ui?action=confirm_relic`.
@@ -71,6 +69,15 @@ staged block until their parity task lands.
 This UI contract mirrors the backend guardrails introduced for staged rewards,
 keeping the frontend in sync with the confirmation lifecycle without forcing a
 full map refresh between each step.
+
+### Shared animation tokens
+
+`frontend/src/lib/constants/rewardAnimationTokens.js` exports
+`rewardSelectionAnimationTokens` alongside
+`selectionAnimationCssVariables()`, translating the shared timing, scale, and
+rotation values into CSS custom properties that `RewardCard` and `CurioChoice`
+consume. Keeping the helper pure allows other overlays to reuse the tokens
+without cloning the wiggle constants or hand-maintaining style fragments.
 
 ### Preview metadata panels
 
@@ -104,6 +111,34 @@ logic. The countdown automatically pauses if new choices arrive, resets when the
 controller skips phases, and restarts once the next phase is ready. Styling for
 the panel reuses the shared stained-glass tokens to match other right-rail UI.
 
+## Reward phase controller
+
+`frontend/src/lib/systems/rewardProgression.js` defines the finite state
+machine that drives the overlay flow. `createRewardPhaseController()` returns a
+Svelte store with `{ subscribe, getSnapshot, ingest, advance, skipTo, reset }`
+plus `on(event, handler)`/`off(event, handler)` helpers. Incoming payloads are
+normalised through `normalizeRewardProgression()`, which collapses aliases,
+deduplicates steps, and falls back to the canonical
+`['drops', 'cards', 'relics', 'battle_review']` order when metadata is missing
+or reordered. Whenever the fallback path activates the controller logs
+`rewardPhaseMachine: …` diagnostics so QA can surface malformed server
+responses.
+
+`frontend/src/lib/systems/overlayState.js` instantiates this machine as
+`rewardPhaseController` and re-exports `rewardPhaseState` for reactive
+consumers. The controller emits:
+
+- `enter` — dispatched when a phase becomes active.
+- `exit` — dispatched before leaving a phase. `RewardOverlay` listens for
+  `exit` events where `detail.phase === 'drops'` to trigger
+  `emitRewardTelemetry('drops-complete', …)`.
+- `change` — dispatched on every snapshot update so automation and analytics
+  can mirror the controller's view without diffing raw payloads.
+
+Wrapper helpers such as `advanceRewardPhase()`, `skipToRewardPhase()`, and
+`resetRewardProgression()` live in `overlayState.js`, keeping the controller API
+consistent for UI components, tests, and automation scripts.
+
 To emphasise each pickup, the component keeps a `visibleDrops` array separate
 from the aggregated `dropEntries`. When motion reduction is disabled the list
 is populated one entry at a time on a timed interval; each reveal triggers the
@@ -134,3 +169,18 @@ combat to rewards remains smooth.
 `handleLootAcknowledge()` now stops any active battle polling timers before
 calling the backend so lingering snapshot requests cannot mark the run as ended
 mid‑acknowledgement.
+
+## Accessibility notes
+
+- Phase and countdown changes are announced through visually hidden
+  `aria-live` regions (`aria-live="assertive"` for the phase summary and
+  `aria-live="polite"` for the countdown) so screen readers hear when a new
+  step becomes active and how long remains before auto-advance triggers.
+- Drop tiles expose descriptive `aria-label`s and redundant hidden text so
+  assistive tech hears item names and stack counts alongside the visual badges.
+- Focus automatically shifts to the **Advance** button when a phase becomes
+  actionable and falls back to the overlay container when auto-advance fires,
+  keeping keyboard flows predictable.
+- Confirm buttons reuse the stained-glass styling tokens but retain native
+  button semantics, so keyboard activation, focus rings, and screen reader
+  labelling stay consistent across cards and relics.
