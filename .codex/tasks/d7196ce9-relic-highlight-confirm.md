@@ -13,3 +13,4 @@ Apply the refreshed highlight, wiggle, and confirm flow to relic rewards, includ
 ## Coordination notes
 - Verify with backend maintainers whether relic rewards can be absent or multi-select; adapt the UI accordingly.
 - Share any additional ARIA labels or accessibility copy updates with the accessibility-focused task owner.
+ready for review
