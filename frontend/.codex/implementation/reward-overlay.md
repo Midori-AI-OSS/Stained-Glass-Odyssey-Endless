@@ -70,6 +70,19 @@ motion honours the player's reduced-motion preference. Second clicks (or
 keyboard activation) on the highlighted tile dispatch the confirm event
 immediately, matching the on-card button.
 
+### Stained-glass theme alignment
+
+The overlay now mirrors the stained-glass palette used by the navigation
+bar and settings surfaces. Panels layer warm and cool gradients over the
+shared `--glass-bg`, `--glass-border`, `--glass-shadow`, and
+`--glass-filter` tokens so the right rail, preview panes, and drop tiles all
+read as part of the same frosted-glass family. Primary actions (cancel,
+advance, next room) reuse pill-shaped glass buttons with warm accent glows,
+while the confirm buttons inherit refreshed `reward-confirm.css` tokens that
+blend the warm overlay accent with the run's cooler highlight. The result is
+a cohesive reward surface without the neon gradients that previously clashed
+with the rest of the UI.
+
 - `RewardOverlay` receives `stagedCards`, `stagedRelics`, and the
   `awaiting_*` flags from `OverlayHost`. Both grids stay visible while a staged
   entry is pending so players can reselect without cancelling.
