@@ -24,25 +24,25 @@ describe('run configuration metadata caching', () => {
   });
 
   test('returns cached metadata on subsequent calls', async () => {
-    httpGet.mockResolvedValueOnce(createMetadata('2025.02'));
+    httpGet.mockResolvedValueOnce(createMetadata('2025.03'));
 
     const first = await getRunConfigurationMetadata();
     expect(httpGet).toHaveBeenCalledTimes(1);
-    expect(first.version).toBe('2025.02');
+    expect(first.version).toBe('2025.03');
 
     const second = await getRunConfigurationMetadata();
     expect(httpGet).toHaveBeenCalledTimes(1);
-    expect(second.version).toBe('2025.02');
+    expect(second.version).toBe('2025.03');
   });
 
   test('refetches when requested hash differs from cache', async () => {
-    httpGet.mockResolvedValueOnce(createMetadata('2025.02'));
+    httpGet.mockResolvedValueOnce(createMetadata('2025.03'));
     await getRunConfigurationMetadata();
 
-    httpGet.mockResolvedValueOnce(createMetadata('2025.03'));
-    const refreshed = await getRunConfigurationMetadata({ metadataHash: '2025.03' });
+    httpGet.mockResolvedValueOnce(createMetadata('2025.04'));
+    const refreshed = await getRunConfigurationMetadata({ metadataHash: '2025.04' });
     expect(httpGet).toHaveBeenCalledTimes(2);
-    expect(refreshed.version).toBe('2025.03');
+    expect(refreshed.version).toBe('2025.04');
   });
 
   test('hydrates from sessionStorage without fetching', async () => {
