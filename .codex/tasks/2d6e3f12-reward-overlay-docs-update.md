@@ -13,3 +13,4 @@ Update documentation artifacts so they describe the four-phase reward flow, new 
 ## Coordination notes
 - Share the updated docs with coders once the major UI tasks land to confirm accuracy.
 - If documentation gaps remain after UI/testing work completes, outline follow-up tasks in this file.
+ready for review
