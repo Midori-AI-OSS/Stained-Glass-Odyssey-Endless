@@ -30,6 +30,15 @@ and stored with the run record.
   and current HP for each stack before diminishing returns. Preview rows show
   the raw multiplier alongside the diminished effective value so designers can
   size late-game encounters against the new scaling curve.
+- `character_stat_down` now applies a 0.0001× overflow penalty past 500 stacks
+  and publishes the `cap_threshold_stacks` and `stacks_above_cap` values in the
+  snapshot. Total penalties clamp below 100% (0.999) so player stats never hit
+  zero. Once penalties cross the 95% threshold (`cap_threshold_stacks`, 5,000
+  stacks with the current coefficients) rare-drop bonuses stop increasing while
+  experience gains trickle at 1/25th the usual pace per additional stack. Those
+  excess stacks also feed a 1% per-stack foe multiplier across HP, ATK, DEF,
+  SPD, and Vitality which is exposed through
+  `RunModifierContext.foe_overflow_multiplier`.
 
 Telemetry records a `Run/view_config` menu action so analytics can measure how
 often the setup flow is opened.
@@ -49,8 +58,12 @@ payload, and the legacy `pressure` fallback. The helper:
    - Foe-focused modifiers grant +1% experience and rare drop rate per stack via
      the `foe_modifier_bonus` field.
    - `character_stat_down` applies the tiered stat penalty (0.001× per stack up
-     to 500 stacks, then 0.000001×) and returns the matching 0.1% + 0.12% per
-     extra stack bonus in `player_modifier_bonus`.
+     to 500 stacks, then 0.0001×) and returns the matching 0.1% + 0.12% per
+     extra stack bonus in `player_modifier_bonus`. RDR stops growing once the
+     penalty reaches 95% while experience continues to trickle using the
+     reduced overflow rate. `player_penalty_cap_stacks`,
+     `player_penalty_excess_stacks`, and `player_overflow_multiplier` capture
+     the flattened reward state so telemetry can track overflow behaviour.
 6. Builds a snapshot with modifier details, pressure math, and aggregate
    rewards that is stored with the run.
 
@@ -58,10 +71,17 @@ payload, and the legacy `pressure` fallback. The helper:
 `runs.party` JSON under the `config` key and returned to the frontend as
 `configuration` from `start_run`. The helper also builds a
 `RunModifierContext` derived from the snapshot so downstream systems can read
-foe stat multipliers, encounter slot bonuses, shop/tax multipliers, and player
-stat penalties without re-validating the metadata payload. The context is
+foe stat multipliers (including overflow multipliers), encounter slot bonuses,
+shop/tax multipliers, and player stat penalties without re-validating the
+metadata payload. The context is
 persisted alongside the map state and stamped onto generated nodes via a
 metadata hash for analytics.
+
+`RunModifierContext` now exposes `player_penalty_excess_stacks` and
+`foe_overflow_multiplier` so map/battle generators can factor overflow pressure
+into foe tuning. `derived_metrics()` mirrors these values along with the
+existing foe strength aggregates, ensuring telemetry captures when players push
+beyond the RDR cap.
 
 The `apply_player_modifier_context` helper keeps player stats aligned with the
 stored configuration. `start_run` uses it immediately after validation so the

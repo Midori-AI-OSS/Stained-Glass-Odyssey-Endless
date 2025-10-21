@@ -201,7 +201,7 @@ async def start_run(
     modifier_context = build_run_modifier_context(configuration_snapshot)
     configuration_snapshot.setdefault("derived_effects", modifier_context.derived_metrics())
 
-    player_stat_multiplier = apply_player_modifier_context(party_members, modifier_context)
+    _ = apply_player_modifier_context(party_members, modifier_context)
 
     exp_multiplier_map: dict[str, float] = {}
     for member, info in zip(party_members, party_info):
@@ -349,6 +349,8 @@ async def start_run(
             "foe_stat_multipliers": modifier_context.foe_stat_multipliers,
             "foe_stat_deltas": modifier_context.foe_stat_deltas,
             "player_stat_multiplier": modifier_context.player_stat_multiplier,
+            "player_penalty_excess_stacks": modifier_context.player_penalty_excess_stacks,
+            "foe_overflow_multiplier": modifier_context.foe_overflow_multiplier,
             "elite_spawn_bonus_pct": modifier_context.elite_spawn_bonus_pct,
             "glitched_spawn_bonus_pct": modifier_context.glitched_spawn_bonus_pct,
             "prime_spawn_bonus_pct": modifier_context.prime_spawn_bonus_pct,

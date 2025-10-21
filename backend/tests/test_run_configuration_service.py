@@ -33,6 +33,9 @@ def test_run_configuration_metadata_details():
     assert "encounter_bonus" in pressure["effects"]
     pressure_preview = next(item for item in pressure["preview"] if item["stacks"] == 10)
     assert pressure_preview["encounter_bonus"] == 2
+    char_penalty = next(mod for mod in metadata["modifiers"] if mod["id"] == "character_stat_down")
+    assert char_penalty["effects"]["overflow_penalty_per_stack"] == pytest.approx(0.0001)
+    assert char_penalty["effects"]["penalty_cap_pct"] == pytest.approx(0.95)
 
 
 def test_validate_run_configuration_defaults():
@@ -44,6 +47,8 @@ def test_validate_run_configuration_defaults():
     assert selection.reward_bonuses.get("player_modifier_bonus", 0.0) == pytest.approx(0.0)
     assert selection.reward_bonuses.get("foe_rdr_bonus", 0.0) == pytest.approx(0.0)
     assert selection.reward_bonuses.get("player_rdr_bonus", 0.0) == pytest.approx(0.0)
+    assert selection.reward_bonuses["player_penalty_excess_stacks"] == 0
+    assert selection.reward_bonuses["player_overflow_multiplier"] == pytest.approx(1.0)
     assert selection.snapshot["pressure"]["tooltip"]
 
 
@@ -63,6 +68,29 @@ def test_validate_run_configuration_with_modifiers():
     assert selection.reward_bonuses["rdr_bonus"] == pytest.approx(0.0634, rel=1e-6)
     assert selection.reward_bonuses["exp_multiplier"] == pytest.approx(4.0034, rel=1e-6)
     assert selection.reward_bonuses["rdr_multiplier"] == pytest.approx(1.0634, rel=1e-6)
+    assert selection.reward_bonuses["player_penalty_cap_stacks"] >= 0
+    assert selection.reward_bonuses["player_overflow_multiplier"] == pytest.approx(1.0)
+
+
+def test_character_stat_penalty_overflow_caps_rewards():
+    stacks = 5010
+    selection = validate_run_configuration(
+        run_type="standard",
+        modifiers={"character_stat_down": stacks},
+    )
+    details = selection.snapshot["modifiers"]["character_stat_down"]["details"]
+    cap_threshold = details["cap_threshold_stacks"]
+    excess = details["stacks_above_cap"]
+    assert cap_threshold > 0
+    assert stacks - cap_threshold == excess
+    assert selection.reward_bonuses["player_penalty_cap_stacks"] == cap_threshold
+    assert selection.reward_bonuses["player_penalty_excess_stacks"] == excess
+    assert selection.reward_bonuses["player_overflow_multiplier"] == pytest.approx(
+        details["overflow_multiplier"]
+    )
+    assert selection.reward_bonuses["player_rdr_bonus"] == pytest.approx(details["bonus_rdr"])
+    assert selection.reward_bonuses["player_modifier_bonus"] == pytest.approx(details["bonus_exp"])
+    assert selection.reward_bonuses["player_modifier_bonus"] > selection.reward_bonuses["player_rdr_bonus"]
 
 
 def test_validate_run_configuration_rejects_unknown_modifier():
