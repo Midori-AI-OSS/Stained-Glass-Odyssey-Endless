@@ -3,6 +3,9 @@
 
 import { openOverlay } from './OverlayController.js';
 import { httpGet, httpPost } from './httpClient.js';
+import { runState } from './runState.js';
+import { rewardPhaseController } from './overlayState.js';
+import { hasLootAvailable } from '../utils/rewardAutomation.js';
 
 const RUN_CONFIG_STORAGE_KEY = 'run_config_metadata_v1';
 
@@ -284,19 +287,162 @@ export async function roomAction(roomId = '0', actionData = {}) {
 /**
  * Advance to the next room.
  */
-export async function advanceRoom() {
-  const state = await getUIState();
-  const gs = state?.game_state || {};
-  const cs = gs?.current_state || {};
-  if (cs.awaiting_card || cs.awaiting_relic || cs.awaiting_loot) {
-    const message = 'Cannot advance room until all rewards are collected.';
-    openOverlay('error', { message, traceback: '', context: null });
-    const err = new Error(message);
-    err.status = 400;
-    err.overlayShown = true;
-    throw err;
+let activeAdvanceRoomPromise = null;
+
+function getRewardRoomSnapshot() {
+  try {
+    if (typeof runState?.getSnapshot === 'function') {
+      const { roomData } = runState.getSnapshot() || {};
+      return roomData && typeof roomData === 'object' ? { ...roomData } : roomData ?? null;
+    }
+  } catch {}
+  return null;
+}
+
+function getRewardPhaseSnapshot() {
+  try {
+    if (typeof rewardPhaseController?.getSnapshot === 'function') {
+      return rewardPhaseController.getSnapshot() || null;
+    }
+  } catch {}
+  return null;
+}
+
+function normalizeRewardEntries(list) {
+  if (!Array.isArray(list)) return [];
+  return list.filter((entry) => entry != null);
+}
+
+function collectRewardBlockingState(roomData, phaseSnapshot) {
+  const data = roomData && typeof roomData === 'object' ? roomData : {};
+  const staging = data.reward_staging && typeof data.reward_staging === 'object' ? data.reward_staging : {};
+  const stagedCards = normalizeRewardEntries(staging.cards);
+  const stagedRelics = normalizeRewardEntries(staging.relics);
+  const cardChoices = normalizeRewardEntries(data.card_choices);
+  const relicChoices = normalizeRewardEntries(data.relic_choices);
+
+  const awaitingCard = data.awaiting_card === true;
+  const awaitingRelic = data.awaiting_relic === true;
+  const awaitingLoot = data.awaiting_loot === true;
+  const awaitingNext = data.awaiting_next === true;
+
+  const cardPending = awaitingCard || stagedCards.length > 0 || cardChoices.length > 0;
+  const relicPending = awaitingRelic || stagedRelics.length > 0 || relicChoices.length > 0;
+  const lootPending = awaitingLoot || hasLootAvailable(data);
+
+  const phases = [];
+  if (lootPending) phases.push('drops');
+  if (cardPending) phases.push('cards');
+  if (relicPending) phases.push('relics');
+
+  const blocking = cardPending || relicPending || lootPending;
+
+  return {
+    blocking,
+    awaitingNext,
+    cardPending,
+    relicPending,
+    lootPending,
+    phases,
+    activePhase: phaseSnapshot?.current ?? null,
+    snapshot: phaseSnapshot ?? null,
+    summary: {
+      cardChoices: cardChoices.length,
+      stagedCards: stagedCards.length,
+      relicChoices: relicChoices.length,
+      stagedRelics: stagedRelics.length,
+      awaitingCard,
+      awaitingRelic,
+      awaitingLoot
+    }
+  };
+}
+
+function formatBlockingMessage(blockingState) {
+  const segments = [];
+  if (blockingState.cardPending) segments.push('card rewards');
+  if (blockingState.relicPending) segments.push('relic rewards');
+  if (blockingState.lootPending) segments.push('loot pickups');
+
+  if (segments.length === 0) {
+    return 'Complete your rewards before advancing to the next room.';
   }
-  return await sendAction('advance_room');
+
+  const formatList = (items) => {
+    if (items.length === 1) return items[0];
+    if (items.length === 2) return `${items[0]} and ${items[1]}`;
+    return `${items.slice(0, -1).join(', ')}, and ${items[items.length - 1]}`;
+  };
+
+  return `Finish your pending ${formatList(segments)} before advancing to the next room.`;
+}
+
+async function ensureRewardAdvanceAllowed({ skipRewardCheck = false } = {}) {
+  if (skipRewardCheck) {
+    return;
+  }
+
+  const initialRoomData = getRewardRoomSnapshot();
+  const phaseSnapshot = getRewardPhaseSnapshot();
+  let blockingState = collectRewardBlockingState(initialRoomData, phaseSnapshot);
+
+  if (!blockingState.blocking) {
+    return;
+  }
+
+  let latestState;
+  try {
+    latestState = await getUIState();
+  } catch (error) {
+    throw error;
+  }
+
+  const latestRoomData = latestState?.game_state?.current_state?.room_data ?? initialRoomData;
+  if (latestRoomData && latestRoomData !== initialRoomData && typeof runState?.setRoomData === 'function') {
+    try {
+      runState.setRoomData(latestRoomData);
+    } catch {}
+  }
+  blockingState = collectRewardBlockingState(latestRoomData, phaseSnapshot);
+
+  if (!blockingState.blocking) {
+    return;
+  }
+
+  const message = formatBlockingMessage(blockingState);
+  const context = {
+    phase: blockingState.activePhase,
+    phases: blockingState.phases,
+    awaitingNext: blockingState.awaitingNext,
+    summary: blockingState.summary
+  };
+
+  openOverlay('error', { message, traceback: '', context });
+  const err = new Error(message);
+  err.status = 400;
+  err.overlayShown = true;
+  err.context = context;
+  throw err;
+}
+
+export async function advanceRoom(options = {}) {
+  const { skipRewardCheck = false, suppressOverlay = false } = options || {};
+
+  if (activeAdvanceRoomPromise) {
+    return activeAdvanceRoomPromise;
+  }
+
+  const pending = (async () => {
+    await ensureRewardAdvanceAllowed({ skipRewardCheck });
+    return await sendAction('advance_room', {}, { suppressOverlay });
+  })();
+
+  activeAdvanceRoomPromise = pending;
+  try {
+    return await pending;
+  } finally {
+    activeAdvanceRoomPromise = null;
+  }
 }
 
 /**

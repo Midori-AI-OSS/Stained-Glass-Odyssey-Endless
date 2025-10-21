@@ -124,6 +124,19 @@ automation can finish the encounter immediately. A separate five-second timer
 fires a `next` event when the popup is otherwise empty, which keeps fast loot
 pickups from stalling the run.
 
+The overlay now accepts an `advanceBusy` prop that is toggled while the client
+is waiting on the `/ui?action=advance_room` response. When `advanceBusy` is
+true the advance panel switches its status copy to **“Advancing to the next
+room…”**, disables the **Advance** button, pauses the auto-advance countdown,
+and also disables the **Next Room** button so additional clicks do not refire
+the request. `OverlayHost.svelte` pipes this flag through from `+page.svelte`
+once the next-room flow begins, keeping the UI in sync with the server call.
+
+`uiApi.advanceRoom()` re-validates reward state against the latest
+`runState`/`rewardProgression` snapshot before surfacing the blocking overlay.
+The overlay copy now enumerates the pending reward buckets (card, relic, or
+loot) and only displays when selections or confirmations genuinely remain.
+
 ### Phase advance panel and countdown
 
 The right rail now renders a stained-glass panel that mirrors the reward phase
