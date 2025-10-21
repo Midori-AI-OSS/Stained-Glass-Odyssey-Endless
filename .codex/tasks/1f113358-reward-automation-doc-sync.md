@@ -11,3 +11,4 @@ Umbrella pointer covering automation, regression coverage, and documentation upd
 ## Notes
 - Coordinate timing with the UI subtasks so automation/tests target the finalised hooks and styling.
 - Once all child tasks close, revisit this parent to confirm no further follow-up is required.
+ready for review

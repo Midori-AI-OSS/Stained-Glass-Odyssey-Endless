@@ -56,11 +56,29 @@ flashing was replaced by red/blue rain lines that intensify with enrage and
 gracefully fade after battles. At very high enrage the whole screen rains more
 densely; Reduced Motion lowers density and disables animation.
 
-After each battle, a review overlay presents per-combatant damage graphs by
-element and lists any card or relic rewards. `CardArt.svelte` and
-`CurioChoice.svelte` power the selection panels using assets from
-`src/lib/assets`. Gold and item drops float briefly on screen before the overlay
-appears.
+After each battle, a four-phase reward overlay walks through Drops → Cards →
+Relics → Review:
+
+1. **Drops** — materials appear in a dedicated grid while floating pickups play
+   out. The right rail lists the four phases but keeps the **Advance** button
+   disabled until the controller marks Drops complete.
+2. **Cards** — the first card auto-selects with a stained-glass confirm button
+   mounted beneath the highlighted tile. Mouse, touch, and keyboard navigation
+   all dispatch `confirm_card` events through the overlay host.
+3. **Relics** — mirrors the card interaction model, including staged
+   confirmations, reset handling, and the shared wiggle animation tokens.
+4. **Battle Review** — mounts `BattleReview.svelte` with the familiar damage
+   graphs and timeline view once all staged rewards resolve.
+
+The right rail runs a 10-second countdown whenever a phase becomes actionable;
+manual clicks or the timer call `rewardPhaseController.advance({ reason })` so
+automation can log `manual` vs `auto` transitions. Idle automation listens for
+the controller's `advance` events instead of calling `/ui?action=advance_room`
+directly, preventing timer fights when the UI auto-advances first.
+
+`CardArt.svelte` and `CurioChoice.svelte` power the card and relic panels using
+assets from `src/lib/assets`. Gold and item drops float briefly on screen before
+the overlay appears.
 Placeholder icons for items, relics, and cards live under `src/lib/assets/{items,relics,cards}`. Asset names combine the star folder and base filename (e.g. `3star/omega_core.png`) so the frontend can resolve the correct image for a given reward. Each damage type or star rank has its own folder with 24×24 colored placeholders so artists can replace them later.
 
 ## Settings: Wipe Save Data

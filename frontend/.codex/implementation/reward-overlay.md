@@ -1,6 +1,6 @@
 # Reward Overlay
 
-`src/lib/components/RewardOverlay.svelte` presents battle rewards using `RewardCard.svelte` for cards and `CurioChoice.svelte` for relics.
+`src/lib/components/RewardOverlay.svelte` presents the four-phase reward flow using `RewardCard.svelte` for cards and `CurioChoice.svelte` for relics.
 Both components wrap `CardArt.svelte`, which builds the Star Rail–style frame with a star-colored header, centered icon, star count, and description.
 `OverlayHost.svelte` spawns `FloatingLoot.svelte` elements when `roomData.loot` is present, so gold and item drops briefly rise on screen and are omitted from the reward overlay.
 Assets are resolved by star folder and id through the centralized registry
@@ -33,6 +33,29 @@ materials grid from the main inventory. Each entry resolves its art through
 both `aria-label`s and visually hidden text for assistive technologies. Failed
 lookups and network errors fall back to the shared material placeholder via
 `onMaterialIconError` so the overlay never shows broken images.
+
+## Four-phase progression overview
+
+The overlay ingests the backend's `reward_progression` payload and walks through
+four explicit phases:
+
+| Phase key        | UI surface                                                                      |
+| ---------------- | ------------------------------------------------------------------------------- |
+| `drops`          | Drops grid, sequential reveal, no confirm controls.                              |
+| `cards`          | Card staging grid with highlight, wiggle animation, and on-card confirm button.  |
+| `relics`         | Relic staging grid mirroring the card interaction model.                         |
+| `battle_review`  | Post-battle graphs and summary shell mounted via `BattleReview.svelte`.          |
+
+`normalizeRewardProgression()` collapses aliases, removes duplicates, and
+falls back to the canonical order above whenever metadata arrives missing or in
+an unexpected sequence. Fallback activations log `rewardPhaseMachine:`
+diagnostics in development builds so QA can flag malformed responses without
+blocking players.
+
+Each phase emits an `enter` event through the reward phase controller. The
+overlay listens for `exit`/`enter` pairs to toggle countdown timers, announce
+phase transitions to screen readers, and publish analytics through
+`emitRewardTelemetry`.
 
 ## Confirmation flow for staged rewards
 
@@ -119,28 +142,48 @@ the panel reuses the shared stained-glass tokens to match other right-rail UI.
 `frontend/src/lib/systems/rewardProgression.js` defines the finite state
 machine that drives the overlay flow. `createRewardPhaseController()` returns a
 Svelte store with `{ subscribe, getSnapshot, ingest, advance, skipTo, reset }`
-plus `on(event, handler)`/`off(event, handler)` helpers. Incoming payloads are
-normalised through `normalizeRewardProgression()`, which collapses aliases,
-deduplicates steps, and falls back to the canonical
-`['drops', 'cards', 'relics', 'battle_review']` order when metadata is missing
-or reordered. Whenever the fallback path activates the controller logs
-`rewardPhaseMachine: …` diagnostics so QA can surface malformed server
-responses.
+plus `on(event, handler)`/`off(event, handler)` helpers. Snapshot objects expose
+
+```ts
+type RewardPhaseSnapshot = {
+  order: ('drops' | 'cards' | 'relics' | 'battle_review')[];
+  current: RewardPhase;
+  previous?: RewardPhase;
+  pending?: RewardPhase;
+  completed: RewardPhase[];
+  awaiting: Set<RewardPhase>; // phases awaiting confirmation or payloads
+};
+```
+
+Key helpers:
+
+| Helper                | Purpose                                                                                      |
+| --------------------- | -------------------------------------------------------------------------------------------- |
+| `ingest(payload)`     | Normalises backend `reward_progression` responses and updates the snapshot.                   |
+| `advance({ reason })` | Moves to the next completable phase, emitting `advance` events with `reason: 'manual' \| 'auto'`. |
+| `skipTo(phase)`       | Jumps ahead when the backend omits a phase; used for empty cards/relics buckets.             |
+| `reset()`             | Clears progression and returns to the canonical order.                                       |
+| `getSnapshot()`       | Returns the current snapshot without requiring a subscription.                               |
 
 `frontend/src/lib/systems/overlayState.js` instantiates this machine as
 `rewardPhaseController` and re-exports `rewardPhaseState` for reactive
 consumers. The controller emits:
 
-- `enter` — dispatched when a phase becomes active.
+- `enter` — dispatched when a phase becomes active. UI components subscribe to
+  focus the **Advance** button and fire telemetry for automation logs.
 - `exit` — dispatched before leaving a phase. `RewardOverlay` listens for
   `exit` events where `detail.phase === 'drops'` to trigger
-  `emitRewardTelemetry('drops-complete', …)`.
+  `emitRewardTelemetry('drops-complete', …)` and to freeze countdown timers
+  until the next phase confirms its payload.
 - `change` — dispatched on every snapshot update so automation and analytics
-  can mirror the controller's view without diffing raw payloads.
+  can mirror the controller's view without diffing raw payloads. Automation
+  scripts reuse this to log `phase-change` breadcrumbs.
 
 Wrapper helpers such as `advanceRewardPhase()`, `skipToRewardPhase()`, and
 `resetRewardProgression()` live in `overlayState.js`, keeping the controller API
-consistent for UI components, tests, and automation scripts.
+consistent for UI components, tests, and automation scripts. The helper file
+also re-exports `rewardPhaseEvents` so idle automation can attach handlers
+without importing the controller singleton directly.
 
 To emphasise each pickup, the component keeps a `visibleDrops` array separate
 from the aggregated `dropEntries`. When motion reduction is disabled the list
@@ -187,3 +230,21 @@ mid‑acknowledgement.
 - Confirm buttons reuse the stained-glass styling tokens but retain native
   button semantics, so keyboard activation, focus rings, and screen reader
   labelling stay consistent across cards and relics.
+- Live regions announce when confirm buttons appear or disappear so screen
+  reader users hear when staged selections are ready or cleared.
+- Countdown updates respect Reduced Motion; when motion is disabled the timer
+  posts updates every two seconds instead of animating per-second fades.
+
+## Manual QA checklist
+
+- Trigger a full Drops → Cards → Relics → Review sequence using mocked
+  `reward_progression` data; confirm controller logs only appear when phases are
+  skipped or reordered.
+- Start a countdown in the Drops phase, then stage a card to ensure the timer
+  pauses until confirmations complete.
+- Confirm that automation hooks (`advance` events) log both manual and auto
+  reasons during idle-mode runs.
+- Navigate the overlay using only the keyboard: verify focus order is
+  Drops grid → **Advance** → staged confirm → **Advance** again after each phase.
+- With a screen reader, listen for announcements when confirm buttons appear,
+  disappear, and when the countdown reaches zero.
