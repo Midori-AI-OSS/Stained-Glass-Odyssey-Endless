@@ -670,10 +670,13 @@
   let pendingRelicCancel = null;
   let showNextButton = false;
   let highlightedCardKey = null;
+  let highlightedRelicKey = null;
   let autoCardSelectionInFlight = false;
+  let autoRelicSelectionInFlight = false;
 
   $: cardSelectionLocked = pendingCardSelection !== null;
-  $: relicSelectionLocked = pendingRelicSelection !== null || stagedRelicEntries.length > 0;
+  $: relicSelectionLocked =
+    pendingRelicSelection !== null || pendingRelicConfirm !== null || stagedRelicEntries.length > 0;
   $: showCards = cardChoiceEntries.length > 0;
   $: showRelics = relicChoiceEntries.length > 0 && !awaitingCard && !relicSelectionLocked;
 
@@ -710,6 +713,31 @@
       }
     } else {
       highlightedCardKey = null;
+    }
+  }
+
+  $: stagedRelicKey =
+    stagedRelicEntries.length > 0 ? rewardEntryKey(stagedRelicEntries[0], 0, 'staged-relic') : null;
+  $: confirmableRelicKey = awaitingRelic && stagedRelicEntries.length > 0 ? stagedRelicKey : null;
+  $: {
+    if (currentPhase === 'relics') {
+      if (confirmableRelicKey) {
+        highlightedRelicKey = confirmableRelicKey;
+      } else if (!highlightedRelicKey && relicChoiceEntries.length > 0) {
+        highlightedRelicKey = relicChoiceEntries[0].key;
+      }
+    } else {
+      highlightedRelicKey = null;
+    }
+  }
+
+  $: {
+    if (
+      highlightedRelicKey &&
+      !confirmableRelicKey &&
+      !relicChoiceEntries.some((choice) => choice.key === highlightedRelicKey)
+    ) {
+      highlightedRelicKey = relicChoiceEntries.length > 0 ? relicChoiceEntries[0].key : null;
     }
   }
 
@@ -776,6 +804,7 @@
     const detail = { ...baseDetail };
     const type = detail.type;
     const isCard = type === 'card';
+    const isRelic = type === 'relic';
 
     if (isCard) {
       const selectionKey = selectionKeyFromDetail(detail, 'card');
@@ -794,6 +823,23 @@
       }
     }
 
+    if (isRelic) {
+      const selectionKey = selectionKeyFromDetail(detail, 'relic');
+      if (selectionKey) {
+        highlightedRelicKey = selectionKey;
+        if (
+          confirmableRelicKey &&
+          selectionKey === confirmableRelicKey &&
+          awaitingRelic &&
+          stagedRelicEntries.length > 0 &&
+          !relicActionsDisabled
+        ) {
+          await handleConfirm('relic');
+          return;
+        }
+      }
+    }
+
     await performRewardSelection(detail);
   }
 
@@ -805,6 +851,16 @@
       highlightedCardKey = selectionKey;
     }
     await handleConfirm('card');
+  }
+
+  async function handleRelicConfirm(event) {
+    if (relicActionsDisabled) return;
+    const detail = event?.detail && typeof event.detail === 'object' ? event.detail : {};
+    const selectionKey = selectionKeyFromDetail(detail, 'relic');
+    if (selectionKey) {
+      highlightedRelicKey = selectionKey;
+    }
+    await handleConfirm('relic');
   }
 
   $: if (
@@ -836,6 +892,57 @@
     autoCardSelectionInFlight = false;
   }
 
+  $: if (
+    currentPhase === 'relics' &&
+    relicChoiceEntries.length > 0 &&
+    !awaitingRelic &&
+    !awaitingCard &&
+    stagedRelicEntries.length === 0 &&
+    pendingRelicSelection === null &&
+    !autoRelicSelectionInFlight
+  ) {
+    autoRelicSelectionInFlight = true;
+    const firstChoice = relicChoiceEntries[0];
+    if (!highlightedRelicKey) {
+      highlightedRelicKey = firstChoice.key;
+    }
+    (async () => {
+      try {
+        await performRewardSelection({
+          type: 'relic',
+          id: firstChoice.entry?.id,
+          entry: firstChoice.entry,
+          key: firstChoice.key
+        });
+      } finally {
+        autoRelicSelectionInFlight = false;
+      }
+    })();
+  } else if (currentPhase !== 'relics') {
+    autoRelicSelectionInFlight = false;
+  }
+
+  function focusRelicChoices() {
+    queueMicrotask(() => {
+      if (!overlayRootEl) return;
+      const stagedButton = overlayRootEl.querySelector(
+        '.staged button[data-reward-relic]'
+      );
+      if (stagedButton) {
+        stagedButton.focus();
+        return;
+      }
+      const choiceButton = overlayRootEl.querySelector(
+        '.choices button[data-reward-relic]'
+      );
+      if (choiceButton) {
+        choiceButton.focus();
+        return;
+      }
+      overlayRootEl.focus?.();
+    });
+  }
+
   async function handleConfirm(type) {
     if (type === 'card') {
       if (pendingCardConfirm) return;
@@ -858,6 +965,7 @@
         if (pendingRelicConfirm === token) {
           pendingRelicConfirm = null;
         }
+        focusRelicChoices();
       }
     }
   }
@@ -884,6 +992,7 @@
         if (pendingRelicCancel === token) {
           pendingRelicCancel = null;
         }
+        focusRelicChoices();
       }
     }
   }
@@ -1249,7 +1358,6 @@
     color: #f9c97f;
   }
 
-  .confirm-btn,
   .cancel-btn {
     min-width: 140px;
     padding: 0.65rem 1.75rem;
@@ -1262,16 +1370,6 @@
     color: #fff;
   }
 
-  .confirm-btn {
-    background: linear-gradient(145deg, #4caf50, #2e7d32);
-    box-shadow: 0 6px 16px rgba(46, 125, 50, 0.35);
-  }
-
-  .confirm-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 10px 22px rgba(46, 125, 50, 0.45);
-  }
-
   .cancel-btn {
     background: linear-gradient(145deg, #d32f2f, #9a0007);
     box-shadow: 0 6px 16px rgba(211, 47, 47, 0.35);
@@ -1282,7 +1380,6 @@
     box-shadow: 0 10px 22px rgba(211, 47, 47, 0.45);
   }
 
-  .confirm-btn:disabled,
   .cancel-btn:disabled {
     opacity: 0.55;
     cursor: default;
@@ -1639,13 +1736,23 @@
           <h3 class="section-title">Selected Relic</h3>
           <div class="choices staged">
             {#each stagedRelicEntries.slice(0,3) as relic, i (relic?.id ?? `staged-relic-${i}`)}
+              {@const selectionKey = rewardEntryKey(relic, i, 'staged-relic')}
               <div class:reveal={!reducedMotion} style={`--delay: ${revealDelay(i)}ms`}>
-                <CurioChoice entry={relic} quiet={iconQuiet} disabled={true} />
+                <CurioChoice
+                  entry={relic}
+                  quiet={iconQuiet}
+                  selectionKey={selectionKey}
+                  selected={highlightedRelicKey === selectionKey}
+                  confirmable={true}
+                  confirmDisabled={relicActionsDisabled}
+                  confirmLabel="Confirm"
+                  reducedMotion={reducedMotion}
+                  on:confirm={handleRelicConfirm}
+                />
               </div>
             {/each}
           </div>
           <div class="actions-row">
-            <button class="confirm-btn" type="button" on:click={() => handleConfirm('relic')} disabled={relicActionsDisabled}>Confirm</button>
             <button class="cancel-btn" type="button" on:click={() => handleCancel('relic')} disabled={relicActionsDisabled}>Cancel</button>
           </div>
           {#each stagedRelicPreviewDetails as detail (detail.key)}
@@ -1698,7 +1805,18 @@
         <div class="choices">
           {#each relicChoiceEntries.slice(0,3) as relicChoice, i (relicChoice.key)}
             <div class:reveal={!reducedMotion} style={`--delay: ${revealDelay(i)}ms`}>
-              <CurioChoice entry={relicChoice.entry} quiet={iconQuiet} on:select={handleSelect} />
+              <CurioChoice
+                entry={relicChoice.entry}
+                quiet={iconQuiet}
+                selectionKey={relicChoice.key}
+                selected={highlightedRelicKey === relicChoice.key}
+                confirmable={confirmableRelicKey === relicChoice.key}
+                confirmDisabled={relicActionsDisabled}
+                confirmLabel="Confirm"
+                reducedMotion={reducedMotion}
+                on:select={handleSelect}
+                on:confirm={handleRelicConfirm}
+              />
             </div>
           {/each}
         </div>

@@ -78,7 +78,7 @@ describe('RewardOverlay selection regression', () => {
       event.detail?.respond?.({ ok: true });
     });
 
-    const confirmButton = container.querySelector('button.confirm-btn');
+    const confirmButton = container.querySelector('.card-shell.confirmable button.card-confirm');
     expect(confirmButton).not.toBeNull();
     if (!confirmButton) return;
 
@@ -101,7 +101,7 @@ describe('RewardOverlay selection regression', () => {
       });
     });
 
-    const confirmButton = container.querySelector('button.confirm-btn');
+    const confirmButton = container.querySelector('.card-shell.confirmable button.card-confirm');
     expect(confirmButton).not.toBeNull();
     if (!confirmButton) return;
 
@@ -182,7 +182,7 @@ describe('RewardOverlay selection regression', () => {
       }
     });
 
-    const confirmButton = container.querySelector('button.confirm-btn');
+    const confirmButton = container.querySelector('.curio-shell.confirmable button.curio-confirm');
     expect(confirmButton).not.toBeNull();
     if (!confirmButton) return;
 
