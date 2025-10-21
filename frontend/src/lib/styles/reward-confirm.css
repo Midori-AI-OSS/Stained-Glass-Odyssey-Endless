@@ -1,0 +1,60 @@
+:global(:root) {
+  --reward-confirm-border-radius: 999px;
+  --reward-confirm-padding-y: 0.55rem;
+  --reward-confirm-padding-x: 1.5rem;
+  --reward-confirm-font-size: 0.95rem;
+  --reward-confirm-font-weight: 600;
+  --reward-confirm-letter-spacing: 0.08em;
+  --reward-confirm-text-color: #f3f8ff;
+  --reward-confirm-bg-layer-primary: rgba(33, 54, 92, 0.92);
+  --reward-confirm-bg-layer-secondary: rgba(19, 36, 64, 0.92);
+  --reward-confirm-glint-layer-primary: rgba(148, 192, 255, 0.38);
+  --reward-confirm-glint-layer-secondary: rgba(75, 126, 218, 0.18);
+  --reward-confirm-border-color: rgba(152, 206, 255, 0.45);
+  --reward-confirm-shadow: 0 12px 26px rgba(0, 0, 0, 0.42);
+  --reward-confirm-inner-glow: 0 0 0 1px rgba(115, 174, 255, 0.18) inset;
+  --reward-confirm-hover-shadow: 0 18px 32px rgba(0, 0, 0, 0.45);
+  --reward-confirm-hover-inner: 0 0 0 1px rgba(153, 210, 255, 0.32) inset;
+  --reward-confirm-disabled-opacity: 0.58;
+  --reward-confirm-transition-duration: 140ms;
+}
+
+:global(.reward-confirm-button) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--reward-confirm-padding-y) var(--reward-confirm-padding-x);
+  border-radius: var(--reward-confirm-border-radius);
+  border: 1px solid var(--reward-confirm-border-color);
+  font-size: var(--reward-confirm-font-size);
+  font-weight: var(--reward-confirm-font-weight);
+  letter-spacing: var(--reward-confirm-letter-spacing);
+  text-transform: uppercase;
+  color: var(--reward-confirm-text-color);
+  background:
+    linear-gradient(135deg, var(--reward-confirm-bg-layer-primary), var(--reward-confirm-bg-layer-secondary)),
+    linear-gradient(120deg, var(--reward-confirm-glint-layer-primary), var(--reward-confirm-glint-layer-secondary));
+  box-shadow:
+    var(--reward-confirm-shadow),
+    var(--reward-confirm-inner-glow);
+  cursor: pointer;
+  transition: transform var(--reward-confirm-transition-duration) ease,
+    box-shadow var(--reward-confirm-transition-duration) ease,
+    filter var(--reward-confirm-transition-duration) ease;
+}
+
+:global(.reward-confirm-button:hover),
+:global(.reward-confirm-button:focus-visible) {
+  transform: translateY(-2px);
+  box-shadow:
+    var(--reward-confirm-hover-shadow),
+    var(--reward-confirm-hover-inner);
+  outline: none;
+}
+
+:global(.reward-confirm-button:disabled) {
+  opacity: var(--reward-confirm-disabled-opacity);
+  cursor: default;
+  transform: none;
+  box-shadow: none;
+}
