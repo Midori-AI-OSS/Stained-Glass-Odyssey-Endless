@@ -47,6 +47,7 @@
   export let fullIdleMode = false;
   export let animationSpeed = 1;
   export let shopProcessing = false;
+  export let advanceBusy = false;
 
   let randomBg = '';
   let roster = [];
@@ -419,6 +420,7 @@
         {flashEnrageCounter}
         {fullIdleMode}
         {skipBattleReview}
+        {advanceBusy}
         bind:animationSpeed
         {selectedParty}
         {battleActive}

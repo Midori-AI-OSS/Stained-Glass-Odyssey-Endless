@@ -167,6 +167,39 @@ describe('reward overlay multi-phase regression', () => {
 
     const nextRoomButton = container.querySelector('button.next-button.overlay');
     expect(nextRoomButton).toBeInstanceOf(HTMLButtonElement);
+    if (nextRoomButton instanceof HTMLButtonElement) {
+      expect(nextRoomButton.disabled).toBe(false);
+    }
+
+    const statusEl = container.querySelector('[data-testid="advance-countdown"]');
+    expect(statusEl).not.toBeNull();
+    if (statusEl) {
+      expect(statusEl.textContent).toContain('Advance ready');
+    }
+
+    const advancePanel = container.querySelector('.advance-panel');
+    expect(advancePanel?.classList.contains('locked')).toBe(false);
+
+    component.$set({ advanceBusy: true });
+    await tick();
+
+    if (statusEl) {
+      expect(statusEl.textContent).toContain('Advancing to the next room');
+    }
+    expect(advanceButton.disabled).toBe(true);
+    if (nextRoomButton instanceof HTMLButtonElement) {
+      expect(nextRoomButton.disabled).toBe(true);
+    }
+
+    component.$set({ advanceBusy: false });
+    await tick();
+
+    if (statusEl) {
+      expect(statusEl.textContent).toContain('Advance ready');
+    }
+    if (nextRoomButton instanceof HTMLButtonElement) {
+      expect(nextRoomButton.disabled).toBe(false);
+    }
 
     expect(advanceEvents.length).toBeGreaterThan(0);
     expect(advanceEvents[0]?.reason).toBe('manual');

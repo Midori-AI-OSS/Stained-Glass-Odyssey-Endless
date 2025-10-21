@@ -31,6 +31,7 @@
   export let awaitingRelic = false;
   export let awaitingLoot = false;
   export let awaitingNext = false;
+  export let advanceBusy = false;
 
   const dispatch = createEventDispatcher();
 
@@ -147,12 +148,15 @@
   $: advanceCountdownLabel = formatCountdown(advanceCountdownSeconds);
   $: showAdvancePanel = !fallbackActive && Boolean(currentPhase && nextPhase);
   $: phaseAdvanceAvailable = !fallbackActive && computeAdvanceAvailability(currentPhase, nextPhase);
-  $: advanceButtonDisabled = !phaseAdvanceAvailable || advanceInFlight || fallbackActive;
-  $: advanceCountdownActive = Boolean(advanceCountdownTimer) && phaseAdvanceAvailable;
+  $: advanceButtonDisabled = !phaseAdvanceAvailable || advanceInFlight || fallbackActive || advanceBusy;
+  $: advanceCountdownActive = Boolean(advanceCountdownTimer) && phaseAdvanceAvailable && !advanceBusy;
   $: advanceStatusMessage = (() => {
     if (!showAdvancePanel) return '';
     if (!phaseAdvanceAvailable) {
       return 'Advance locked until this phase is complete.';
+    }
+    if (advanceBusy) {
+      return 'Advancing to the next room…';
     }
     if (advanceCountdownActive) {
       return `Advance ready. Auto in ${advanceCountdownLabel}.`;
@@ -220,7 +224,14 @@
   }
 
   $: {
-    if (showAdvancePanel && phaseAdvanceAvailable && currentPhase && nextPhase && !advanceInFlight) {
+    if (
+      showAdvancePanel &&
+      phaseAdvanceAvailable &&
+      currentPhase &&
+      nextPhase &&
+      !advanceInFlight &&
+      !advanceBusy
+    ) {
       ensureAdvanceCountdown(currentPhase, nextPhase);
     } else {
       resetAdvanceCountdown(true);
@@ -583,6 +594,7 @@
   }
 
   function ensureAdvanceCountdown(phase, target) {
+    if (advanceBusy) return;
     const context = `${phase}->${target}`;
     if (advanceCountdownTimer && advanceCountdownContext === context) {
       return;
@@ -621,7 +633,7 @@
   }
 
   function triggerAdvance(reason) {
-    if (!phaseAdvanceAvailable || advanceInFlight || fallbackActive) return;
+    if (!phaseAdvanceAvailable || advanceInFlight || fallbackActive || advanceBusy) return;
     const snapshot =
       typeof rewardPhaseController?.getSnapshot === 'function'
         ? rewardPhaseController.getSnapshot()
@@ -657,7 +669,7 @@
   }
 
   function handleAdvanceClick() {
-    if (!phaseAdvanceAvailable || advanceInFlight) return;
+    if (!phaseAdvanceAvailable || advanceInFlight || advanceBusy) return;
     triggerAdvance('manual');
   }
 
@@ -667,6 +679,7 @@
     if (!overlayRootEl || event.target !== overlayRootEl) return;
     if (!phaseAdvanceAvailable || advanceButtonDisabled) return;
     if (fallbackActive) return;
+    if (advanceBusy) return;
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
       triggerAdvance('keyboard');
@@ -1199,7 +1212,7 @@
     clearTimeout(autoTimer);
     const noChoices = remaining === 0;
     const visibleLoot = (gold > 0) || hasLootItems || awaitingLoot;
-    if (noChoices && !awaitingConfirmation && !visibleLoot) {
+    if (noChoices && !awaitingConfirmation && !visibleLoot && !advanceBusy) {
       autoTimer = setTimeout(() => dispatch('next'), 5000);
     }
   }
@@ -1231,6 +1244,7 @@
   }
 
   function handleNextRoom() {
+    if (advanceBusy) return;
     dispatch('lootAcknowledge');
   }
 </script>
@@ -2021,7 +2035,7 @@
 
     {#if showNextButton}
       <div class="next-room-overlay">
-        <button class="next-button overlay" on:click={handleNextRoom}>Next Room</button>
+        <button class="next-button overlay" on:click={handleNextRoom} disabled={advanceBusy}>Next Room</button>
       </div>
     {/if}
   </div>

@@ -55,6 +55,7 @@
   export let flashEnrageCounter = true;
   export let fullIdleMode = false;
   export let skipBattleReview = false;
+  export let advanceBusy = false;
   export let animationSpeed = 1;
   export let selectedParty = [];
   export let battleActive = false;
@@ -489,6 +490,7 @@
       awaitingRelic={awaitingRelic}
       awaitingLoot={awaitingLoot}
       awaitingNext={awaitingNext}
+      advanceBusy={advanceBusy}
       items={roomData?.loot?.items || []}
       gold={roomData?.loot?.gold || 0}
       nextRoom={roomData?.next_room || ''}
