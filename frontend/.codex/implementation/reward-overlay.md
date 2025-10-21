@@ -38,15 +38,23 @@ lookups and network errors fall back to the shared material placeholder via
 
 When the backend marks `awaiting_card` or `awaiting_relic` as `true` and
 provides staged entries under `reward_staging`, the overlay now surfaces a
-dedicated confirmation block. The selected card or relic renders in a disabled
-state alongside **Confirm** and **Cancel** buttons so players can commit or
-undo their choice before advancing the run.
+dedicated confirmation block. The selected card keeps the primary grid visible
+so re-selection can happen without cancelling, auto-selects the first available
+card on entry, and renders a stained-glass **Confirm** button directly beneath
+the highlighted card. The highlight applies a looping wiggle animation defined
+in `frontend/src/lib/constants/rewardAnimationTokens.js`; motion honours the
+player's reduced-motion preference. Second clicks (or keyboard activation) on
+the highlighted card dispatch the confirm event immediately, matching the
+on-card button. Relics continue to present confirm/cancel controls in the
+staged block until their parity task lands.
 
 - `RewardOverlay` receives `stagedCards`, `stagedRelics`, and the
-  `awaiting_*` flags from `OverlayHost`. The component hides the original card
-  or relic choice grid while a staged entry is pending.
-- Clicking **Confirm** dispatches a `confirm` event with the reward type so the
-  caller can invoke `/ui?action=confirm_card` or `/ui?action=confirm_relic`.
+  `awaiting_*` flags from `OverlayHost`. The card grid stays visible while a
+  staged entry is pending so players can reselect without cancelling. Relics
+  continue to hide their grid until the matching interaction polish lands.
+- Clicking **Confirm** (either the on-card button or the highlighted card a
+  second time) dispatches a `confirm` event with the reward type so the caller
+  can invoke `/ui?action=confirm_card` or `/ui?action=confirm_relic`.
   Buttons stay disabled until the parent responds via the provided
   `respond({ ok })` callback. After a successful confirmation the frontend
   immediately prunes the resolved choice bucket so the overlay transitions to
