@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-import logging
+import math
 import random
+import logging
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Sequence
@@ -34,6 +35,36 @@ log = logging.getLogger(__name__)
 
 
 ELEMENTS = [element.lower() for element in ALL_DAMAGE_TYPES]
+
+
+def _generate_item_rewards(room: BattleRoom, temp_rdr: float) -> list[dict[str, Any]]:
+    """Create item rewards using bounded upgrades for very high rdr."""
+
+    multiplier = max(temp_rdr, 1.0)
+    baseline_stars = _pick_item_stars(room)
+
+    log_multiplier = math.log10(multiplier)
+    sequential_upgrades = int(log_multiplier)
+
+    stars = baseline_stars
+    applied_upgrades = 0
+    while applied_upgrades < sequential_upgrades and stars < 4:
+        stars += 1
+        applied_upgrades += 1
+    stars = min(stars, 4)
+
+    residual_multiplier = multiplier / (10 ** applied_upgrades)
+    capped_residual = min(residual_multiplier, 10.0)
+    extra_drop_chance = max(0.0, min((capped_residual - 1.0) / 9.0, 1.0))
+
+    element = random.choice(ELEMENTS)
+    items = [{"id": element, "stars": stars}]
+
+    if random.random() < extra_drop_chance:
+        consolation_stars = min(baseline_stars, stars)
+        items.append({"id": element, "stars": consolation_stars})
+
+    return items
 
 
 async def resolve_rewards(
@@ -168,15 +199,7 @@ async def resolve_rewards(
     party.gold += gold_reward
     await BUS.emit_async("gold_earned", gold_reward)
 
-    item_base = 1 * temp_rdr
-    base_int = int(item_base)
-    item_count = max(1, base_int)
-    if random.random() < item_base - base_int:
-        item_count += 1
-    items = [
-        {"id": random.choice(ELEMENTS), "stars": _pick_item_stars(room)}
-        for _ in range(item_count)
-    ]
+    items = _generate_item_rewards(room, temp_rdr)
     node = getattr(room, "node", None)
     is_floor_boss = getattr(node, "room_type", "") == "battle-boss-floor"
     is_boss_strength = getattr(room, "strength", 1.0) > 1.0
