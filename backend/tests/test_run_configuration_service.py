@@ -18,10 +18,10 @@ def test_run_configuration_metadata_shape():
 def test_run_configuration_metadata_details():
     metadata = get_run_configuration_metadata()
     foe_hp = next(mod for mod in metadata["modifiers"] if mod["id"] == "foe_hp")
-    assert foe_hp["effects"]["per_stack"] == pytest.approx(0.5)
+    assert foe_hp["effects"]["per_stack"] == pytest.approx(150.0)
     assert foe_hp["diminishing_returns"]["applies"] is True
     preview_five = next(item for item in foe_hp["preview"] if item["stacks"] == 5)
-    assert preview_five["raw_bonus"] == pytest.approx(2.5)
+    assert preview_five["raw_bonus"] == pytest.approx(750.0)
     foe_speed = next(mod for mod in metadata["modifiers"] if mod["id"] == "foe_speed")
     assert foe_speed["reward_bonuses"]["exp_bonus_per_stack"] == pytest.approx(0.5)
     assert foe_speed["reward_bonuses"]["rdr_bonus_per_stack"] == pytest.approx(0.01)

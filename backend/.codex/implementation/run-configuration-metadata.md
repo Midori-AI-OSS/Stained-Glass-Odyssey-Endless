@@ -21,8 +21,15 @@ and stored with the run record.
     counts, whether stacks grant reward bonuses, and tooltip data. Stacks are no
     longer hard capped; validation only enforces the documented minimums and
     converts numeric input.
-  - `pressure.tooltip` – canonical tooltip text summarizing encounter sizing,
-    defense floors, elite odds, and shop tax scaling for pressure stacks.
+- `pressure.tooltip` – canonical tooltip text summarizing encounter sizing,
+  defense floors, elite odds, and shop tax scaling for pressure stacks.
+
+### Modifier Notes
+
+- `foe_hp` applies a +150× additive multiplier (15,000% increase) to both max
+  and current HP for each stack before diminishing returns. Preview rows show
+  the raw multiplier alongside the diminished effective value so designers can
+  size late-game encounters against the new scaling curve.
 
 Telemetry records a `Run/view_config` menu action so analytics can measure how
 often the setup flow is opened.

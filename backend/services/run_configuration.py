@@ -15,7 +15,7 @@ from typing import Mapping
 from autofighter.effects import DIMINISHING_RETURNS_CONFIG
 from autofighter.effects import calculate_diminishing_returns
 
-METADATA_VERSION = "2025.02"
+METADATA_VERSION = "2025.03"
 
 _PRESSURE_TOOLTIP = (
     "Each stack raises encounter pressure. Base encounters gain +1 foe slot for every "
@@ -221,10 +221,10 @@ _MODIFIER_DEFINITIONS: dict[str, dict[str, Any]] = {
         "min_stacks": 0,
         "stack_step": 1,
         "grants_reward_bonus": True,
-        "description": "Raises foe max/current HP by +0.5× per stack before diminishing returns.",
+        "description": "Raises foe max/current HP by +150× (15,000%) per stack before diminishing returns.",
         "effects_metadata": {
             "stat": "max_hp",
-            "per_stack": 0.5,
+            "per_stack": 150.0,
             "scaling_type": "additive",
         },
         "diminishing_returns": {
@@ -237,7 +237,7 @@ _MODIFIER_DEFINITIONS: dict[str, dict[str, Any]] = {
             "rdr_bonus_per_stack": 0.01,
         },
         "preview_stacks": [0, 1, 5, 10],
-        "effects": lambda stacks: _foe_modifier_effect("max_hp", 0.5, stacks),
+        "effects": lambda stacks: _foe_modifier_effect("max_hp", 150.0, stacks),
         "diminishing_stat": "max_hp",
     },
     "foe_mitigation": {
