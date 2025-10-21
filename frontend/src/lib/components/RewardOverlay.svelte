@@ -285,6 +285,32 @@
     return 1;
   }
 
+  function rewardEntryKey(entry, index, prefix = 'reward') {
+    if (!entry || typeof entry !== 'object') {
+      return `${prefix}-${index}`;
+    }
+    if (entry.id != null && entry.id !== '') {
+      return String(entry.id);
+    }
+    if (entry.slug != null && entry.slug !== '') {
+      return String(entry.slug);
+    }
+    if (entry.key != null && entry.key !== '') {
+      return String(entry.key);
+    }
+    return `${prefix}-${index}`;
+  }
+
+  function selectionKeyFromDetail(detail, fallbackPrefix = 'reward') {
+    if (!detail || typeof detail !== 'object') return null;
+    if (detail.key != null) return String(detail.key);
+    if (detail.id != null) return String(detail.id);
+    if (detail.entry) {
+      return rewardEntryKey(detail.entry, 0, fallbackPrefix);
+    }
+    return null;
+  }
+
   $: dropEntries = (() => {
     if (!hasLootItems) return [];
     const grouped = [];
@@ -593,7 +619,15 @@
   }
 
   $: cardChoices = Array.isArray(cards) ? cards : [];
+  $: cardChoiceEntries = cardChoices.map((card, index) => ({
+    entry: card,
+    key: rewardEntryKey(card, index, 'card')
+  }));
   $: relicChoices = Array.isArray(relics) ? relics : [];
+  $: relicChoiceEntries = relicChoices.map((relic, index) => ({
+    entry: relic,
+    key: rewardEntryKey(relic, index, 'relic')
+  }));
   $: stagedCardEntries = normalizeRewardEntries(stagedCards);
   $: stagedRelicEntries = normalizeRewardEntries(stagedRelics);
 
@@ -635,11 +669,13 @@
   let pendingRelicConfirm = null;
   let pendingRelicCancel = null;
   let showNextButton = false;
+  let highlightedCardKey = null;
+  let autoCardSelectionInFlight = false;
 
-  $: cardSelectionLocked = pendingCardSelection !== null || stagedCardEntries.length > 0;
+  $: cardSelectionLocked = pendingCardSelection !== null;
   $: relicSelectionLocked = pendingRelicSelection !== null || stagedRelicEntries.length > 0;
-  $: showCards = cardChoices.length > 0 && !cardSelectionLocked;
-  $: showRelics = relicChoices.length > 0 && !awaitingCard && !relicSelectionLocked;
+  $: showCards = cardChoiceEntries.length > 0;
+  $: showRelics = relicChoiceEntries.length > 0 && !awaitingCard && !relicSelectionLocked;
 
   $: pendingConfirmationCount =
     (awaitingCard && stagedCardEntries.length > 0 ? 1 : 0) +
@@ -655,12 +691,27 @@
     pendingRelicCancel !== null;
 
   $: remaining =
-    (showCards ? cardChoices.length : 0) +
-    (showRelics ? relicChoices.length : 0) +
+    (showCards ? cardChoiceEntries.length : 0) +
+    (showRelics ? relicChoiceEntries.length : 0) +
     pendingConfirmationCount;
 
   $: cardActionsDisabled = pendingCardConfirm !== null || pendingCardCancel !== null || pendingCardSelection !== null;
   $: relicActionsDisabled = pendingRelicConfirm !== null || pendingRelicCancel !== null || pendingRelicSelection !== null;
+
+  $: stagedCardKey =
+    stagedCardEntries.length > 0 ? rewardEntryKey(stagedCardEntries[0], 0, 'staged-card') : null;
+  $: confirmableCardKey = awaitingCard && stagedCardEntries.length > 0 ? stagedCardKey : null;
+  $: {
+    if (currentPhase === 'cards') {
+      if (confirmableCardKey) {
+        highlightedCardKey = confirmableCardKey;
+      } else if (!highlightedCardKey && cardChoiceEntries.length > 0) {
+        highlightedCardKey = cardChoiceEntries[0].key;
+      }
+    } else {
+      highlightedCardKey = null;
+    }
+  }
 
   function dispatchWithResponse(eventName, type) {
     return new Promise((resolve) => {
@@ -674,12 +725,12 @@
     });
   }
 
-  async function handleSelect(e) {
-    const baseDetail = e?.detail && typeof e.detail === 'object' ? e.detail : {};
-    const detail = { ...baseDetail };
-    const type = detail.type;
+  async function performRewardSelection(detail) {
+    const type = detail?.type;
     const isCard = type === 'card';
     const isRelic = type === 'relic';
+    if (!isCard && !isRelic) return;
+
     let selectionToken = null;
 
     let responded = false;
@@ -700,11 +751,16 @@
       pendingRelicSelection = selectionToken;
     }
 
-    let response;
     try {
-      response = await responsePromise;
+      await responsePromise;
     } catch (error) {
-      response = { ok: false, error };
+      if (isCard && pendingCardSelection === selectionToken) {
+        pendingCardSelection = null;
+      }
+      if (isRelic && pendingRelicSelection === selectionToken) {
+        pendingRelicSelection = null;
+      }
+      return;
     }
 
     if (isCard && pendingCardSelection === selectionToken) {
@@ -713,6 +769,71 @@
     if (isRelic && pendingRelicSelection === selectionToken) {
       pendingRelicSelection = null;
     }
+  }
+
+  async function handleSelect(e) {
+    const baseDetail = e?.detail && typeof e.detail === 'object' ? e.detail : {};
+    const detail = { ...baseDetail };
+    const type = detail.type;
+    const isCard = type === 'card';
+
+    if (isCard) {
+      const selectionKey = selectionKeyFromDetail(detail, 'card');
+      if (selectionKey) {
+        highlightedCardKey = selectionKey;
+        if (
+          confirmableCardKey &&
+          selectionKey === confirmableCardKey &&
+          awaitingCard &&
+          stagedCardEntries.length > 0 &&
+          !cardActionsDisabled
+        ) {
+          await handleConfirm('card');
+          return;
+        }
+      }
+    }
+
+    await performRewardSelection(detail);
+  }
+
+  async function handleCardConfirm(event) {
+    if (cardActionsDisabled) return;
+    const detail = event?.detail && typeof event.detail === 'object' ? event.detail : {};
+    const selectionKey = selectionKeyFromDetail(detail, 'card');
+    if (selectionKey) {
+      highlightedCardKey = selectionKey;
+    }
+    await handleConfirm('card');
+  }
+
+  $: if (
+    currentPhase === 'cards' &&
+    cardChoiceEntries.length > 0 &&
+    !awaitingCard &&
+    stagedCardEntries.length === 0 &&
+    pendingCardSelection === null &&
+    !autoCardSelectionInFlight
+  ) {
+    autoCardSelectionInFlight = true;
+    const firstChoice = cardChoiceEntries[0];
+    if (!highlightedCardKey) {
+      highlightedCardKey = firstChoice.key;
+    }
+    (async () => {
+      try {
+        await performRewardSelection({
+          type: 'card',
+          id: firstChoice.entry?.id,
+          entry: firstChoice.entry,
+          key: firstChoice.key
+        });
+      } finally {
+        autoCardSelectionInFlight = false;
+      }
+    })();
+  } else if (currentPhase !== 'cards') {
+    autoCardSelectionInFlight = false;
   }
 
   async function handleConfirm(type) {
@@ -1424,14 +1545,25 @@
         <div class="staged-block">
           <h3 class="section-title">Selected Card</h3>
           <div class="choices staged">
-            {#each stagedCardEntries.slice(0,3) as card, i (card?.id ?? `staged-card-${i}`)}
+            {#each stagedCardEntries.slice(0,3) as card, i (rewardEntryKey(card, i, 'staged-card'))}
+              {@const selectionKey = rewardEntryKey(card, i, 'staged-card')}
               <div class:reveal={!reducedMotion} style={`--delay: ${revealDelay(i)}ms`}>
-                <RewardCard entry={card} type="card" quiet={iconQuiet} disabled={true} />
+                <RewardCard
+                  entry={card}
+                  type="card"
+                  quiet={iconQuiet}
+                  selectionKey={selectionKey}
+                  selected={highlightedCardKey === selectionKey}
+                  confirmable={true}
+                  confirmDisabled={cardActionsDisabled}
+                  confirmLabel="Confirm"
+                  reducedMotion={reducedMotion}
+                  on:confirm={handleCardConfirm}
+                />
               </div>
             {/each}
           </div>
           <div class="actions-row">
-            <button class="confirm-btn" type="button" on:click={() => handleConfirm('card')} disabled={cardActionsDisabled}>Confirm</button>
             <button class="cancel-btn" type="button" on:click={() => handleCancel('card')} disabled={cardActionsDisabled}>Cancel</button>
           </div>
           {#each stagedCardPreviewDetails as detail (detail.key)}
@@ -1482,9 +1614,21 @@
       {#if showCards}
         <h3 class="section-title">Choose a Card</h3>
         <div class="choices">
-          {#each cardChoices.slice(0,3) as card, i (card?.id ?? `card-${i}`)}
+          {#each cardChoiceEntries.slice(0,3) as choice, i (choice.key)}
             <div class:reveal={!reducedMotion} style={`--delay: ${revealDelay(i)}ms`}>
-              <RewardCard entry={card} type="card" quiet={iconQuiet} on:select={handleSelect} />
+              <RewardCard
+                entry={choice.entry}
+                type="card"
+                quiet={iconQuiet}
+                selectionKey={choice.key}
+                selected={highlightedCardKey === choice.key}
+                confirmable={confirmableCardKey === choice.key}
+                confirmDisabled={cardActionsDisabled}
+                confirmLabel="Confirm"
+                reducedMotion={reducedMotion}
+                on:select={handleSelect}
+                on:confirm={handleCardConfirm}
+              />
             </div>
           {/each}
         </div>
@@ -1552,9 +1696,9 @@
       {#if showRelics}
         <h3 class="section-title">Choose a Relic</h3>
         <div class="choices">
-          {#each relicChoices.slice(0,3) as relic, i (relic?.id ?? `relic-${i}`)}
+          {#each relicChoiceEntries.slice(0,3) as relicChoice, i (relicChoice.key)}
             <div class:reveal={!reducedMotion} style={`--delay: ${revealDelay(i)}ms`}>
-              <CurioChoice entry={relic} quiet={iconQuiet} on:select={handleSelect} />
+              <CurioChoice entry={relicChoice.entry} quiet={iconQuiet} on:select={handleSelect} />
             </div>
           {/each}
         </div>

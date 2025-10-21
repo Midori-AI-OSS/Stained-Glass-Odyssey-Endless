@@ -1,0 +1,155 @@
+import { afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
+import { tick } from 'svelte';
+
+process.env.SVELTE_ALLOW_RUNES_OUTSIDE_SVELTE = 'true';
+globalThis.SVELTE_ALLOW_RUNES_OUTSIDE_SVELTE = true;
+globalThis.DEV = false;
+
+let cleanup;
+let render;
+let fireEvent;
+let RewardOverlay;
+let updateRewardProgression;
+let resetRewardProgression;
+
+beforeAll(async () => {
+  ({ cleanup, render, fireEvent } = await import('@testing-library/svelte'));
+  RewardOverlay = (await import('../src/lib/components/RewardOverlay.svelte')).default;
+  ({ updateRewardProgression, resetRewardProgression } = await import('../src/lib/systems/overlayState.js'));
+});
+
+beforeEach(() => {
+  resetRewardProgression?.();
+});
+
+afterEach(() => {
+  cleanup();
+});
+
+describe('RewardOverlay card phase interactions', () => {
+  test('auto-selects the first card when entering the card phase', async () => {
+    updateRewardProgression({
+      available: ['drops', 'cards'],
+      completed: ['drops'],
+      current_step: 'cards'
+    });
+
+    const selectEvents = [];
+    const { component, container } = render(RewardOverlay, {
+      props: {
+        cards: [
+          {
+            id: 'first-card',
+            name: 'First Card',
+            stars: 3
+          },
+          {
+            id: 'second-card',
+            name: 'Second Card',
+            stars: 2
+          }
+        ],
+        relics: [],
+        items: [],
+        gold: 0,
+        awaitingLoot: false,
+        awaitingCard: false,
+        awaitingRelic: false,
+        awaitingNext: false,
+        reducedMotion: true
+      }
+    });
+
+    component.$on('select', (event) => selectEvents.push(event.detail));
+
+    await tick();
+    await tick();
+
+    expect(selectEvents.some((detail) => detail?.type === 'card' && detail?.id === 'first-card')).toBe(true);
+    const highlighted = container.querySelector('.card-shell.selected');
+    expect(highlighted).not.toBeNull();
+    expect(
+      highlighted?.querySelector('button[aria-label="Select card First Card"]')
+    ).not.toBeNull();
+  });
+
+  test('shows on-card confirm controls for the staged card', async () => {
+    updateRewardProgression({
+      available: ['cards', 'relics'],
+      completed: [],
+      current_step: 'cards'
+    });
+
+    const stagedCard = {
+      id: 'radiant-beam',
+      name: 'Radiant Beam',
+      stars: 4
+    };
+
+    const { getByRole, container } = render(RewardOverlay, {
+      props: {
+        cards: [stagedCard],
+        stagedCards: [stagedCard],
+        awaitingCard: true,
+        relics: [],
+        items: [],
+        awaitingLoot: false,
+        awaitingRelic: false,
+        awaitingNext: false,
+        reducedMotion: false
+      }
+    });
+
+    await tick();
+
+    const confirmButton = getByRole('button', { name: 'Confirm' });
+    expect(confirmButton).toBeTruthy();
+
+    const confirmableShell = container.querySelector('.card-shell.confirmable');
+    expect(confirmableShell).not.toBeNull();
+    expect(confirmableShell?.dataset.reducedMotion).toBe('false');
+    expect(confirmableShell?.classList.contains('selected')).toBe(true);
+  });
+
+  test('dispatches confirm when clicking the selected card again', async () => {
+    updateRewardProgression({
+      available: ['cards'],
+      completed: [],
+      current_step: 'cards'
+    });
+
+    const stagedCard = {
+      id: 'echo-strike',
+      name: 'Echo Strike',
+      stars: 5
+    };
+
+    const { component, getByLabelText } = render(RewardOverlay, {
+      props: {
+        cards: [stagedCard],
+        stagedCards: [stagedCard],
+        awaitingCard: true,
+        relics: [],
+        items: [],
+        awaitingLoot: false,
+        awaitingRelic: false,
+        awaitingNext: false,
+        reducedMotion: true
+      }
+    });
+
+    const confirmHandler = vi.fn();
+    component.$on('confirm', (event) => {
+      if (event.detail?.type === 'card') {
+        confirmHandler(event.detail);
+      }
+    });
+
+    const cardButton = getByLabelText('Select card Echo Strike');
+    await fireEvent.click(cardButton);
+    await tick();
+
+    expect(confirmHandler).toHaveBeenCalledTimes(1);
+    expect(confirmHandler.mock.calls[0][0]?.id).toBe('echo-strike');
+  });
+});

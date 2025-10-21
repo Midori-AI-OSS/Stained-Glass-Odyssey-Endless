@@ -13,3 +13,5 @@ Rework the reward card phase so the selected card visually stands out with a loo
 ## Coordination notes
 - Hand off the animation token details to the relic task owner for parity.
 - Confirm the confirm event name/signature with backend or automation maintainers so hooks remain consistent.
+
+ready for review
