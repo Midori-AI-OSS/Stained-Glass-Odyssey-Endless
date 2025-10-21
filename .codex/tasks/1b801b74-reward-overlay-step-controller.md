@@ -12,3 +12,4 @@ Umbrella pointer for the frontend controller track. Work has been split so coder
 ## Notes
 - Keep this parent file updated as subtasks land or new gaps appear.
 - Coordinate sequencing with the card/relic refresh umbrella to avoid merge conflicts in shared components.
+ready for review
