@@ -55,7 +55,7 @@ describe('reward automation helpers', () => {
     expect(action.choice).toEqual({ id: 'a' });
   });
 
-  test('confirms card when awaiting confirmation', () => {
+  test('pauses when awaiting card resolution without new choices', () => {
     const roomData = {
       awaiting_card: true,
       reward_staging: { cards: [{ id: 'a' }] }
@@ -65,7 +65,7 @@ describe('reward automation helpers', () => {
       snapshot: snapshotFor('cards'),
       stagedCards: [{ id: 'a' }]
     });
-    expect(action.type).toBe('confirm-card');
+    expect(action.type).toBe('none');
   });
 
   test('advances when card phase has no choices or staging', () => {

@@ -70,7 +70,7 @@ describe('RewardOverlay card phase interactions', () => {
     ).not.toBeNull();
   });
 
-  test('shows on-card confirm controls for the staged card', async () => {
+  test('renders staged card without confirm controls', async () => {
     updateRewardProgression(fourPhaseProgression({ current_step: 'cards', completed: ['drops'] }));
 
     const stagedCard = {
@@ -79,7 +79,7 @@ describe('RewardOverlay card phase interactions', () => {
       stars: 4
     };
 
-    const { getByRole, container } = render(RewardOverlay, {
+    const { container } = render(RewardOverlay, {
       props: {
         cards: [stagedCard],
         stagedCards: [stagedCard],
@@ -95,16 +95,15 @@ describe('RewardOverlay card phase interactions', () => {
 
     await tick();
 
-    const confirmButton = getByRole('button', { name: 'Confirm card Radiant Beam' });
-    expect(confirmButton).toBeTruthy();
-
-    const confirmableShell = container.querySelector('.card-shell.confirmable');
-    expect(confirmableShell).not.toBeNull();
-    expect(confirmableShell?.dataset.reducedMotion).toBe('false');
-    expect(confirmableShell?.classList.contains('selected')).toBe(true);
+    expect(container.querySelector('.card-shell.confirmable')).toBeNull();
+    const confirmButton = container.querySelector('button.card-confirm');
+    expect(confirmButton).toBeNull();
+    const stagedShell = container.querySelector('.card-shell.selected');
+    expect(stagedShell).not.toBeNull();
+    expect(stagedShell?.dataset.reducedMotion).toBe('false');
   });
 
-  test('dispatches confirm when clicking the selected card again', async () => {
+  test('re-dispatches select when clicking the staged card again', async () => {
     updateRewardProgression(fourPhaseProgression({ current_step: 'cards', completed: ['drops'] }));
 
     const stagedCard = {
@@ -112,6 +111,8 @@ describe('RewardOverlay card phase interactions', () => {
       name: 'Echo Strike',
       stars: 5
     };
+
+    const selectHandler = vi.fn();
 
     const { component, getByLabelText } = render(RewardOverlay, {
       props: {
@@ -127,10 +128,9 @@ describe('RewardOverlay card phase interactions', () => {
       }
     });
 
-    const confirmHandler = vi.fn();
-    component.$on('confirm', (event) => {
+    component.$on('select', (event) => {
       if (event.detail?.type === 'card') {
-        confirmHandler(event.detail);
+        selectHandler(event.detail);
       }
     });
 
@@ -138,8 +138,8 @@ describe('RewardOverlay card phase interactions', () => {
     await fireEvent.click(cardButton);
     await tick();
 
-    expect(confirmHandler).toHaveBeenCalledTimes(1);
-    expect(confirmHandler.mock.calls[0][0]?.id).toBe('echo-strike');
+    expect(selectHandler).toHaveBeenCalledTimes(1);
+    expect(selectHandler.mock.calls[0][0]?.id).toBe('echo-strike');
   });
 
   test('applies selected styling in the no-confirmation card flow', async () => {

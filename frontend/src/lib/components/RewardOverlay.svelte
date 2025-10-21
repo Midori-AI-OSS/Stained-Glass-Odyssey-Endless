@@ -54,9 +54,7 @@
   let lastAdvanceFocusable = false;
   let selectionAnnouncement = '';
   let lastCardHighlightKey = null;
-  let lastCardConfirmKey = null;
   let lastRelicHighlightKey = null;
-  let lastRelicConfirmKey = null;
   let lastSelectionMessage = '';
   let stagedCardEntryMap = new Map();
   let cardChoiceEntryMap = new Map();
@@ -572,7 +570,7 @@
   function computeAdvanceAvailability(current, target) {
     if (!current || !target) return false;
     if (advanceInFlight) return false;
-    if (awaitingConfirmation) return false;
+    if (selectionInFlight || awaitingResolution) return false;
     switch (current) {
       case 'drops':
         return true;
@@ -759,10 +757,6 @@
 
   let pendingCardSelection = null;
   let pendingRelicSelection = null;
-  let pendingCardConfirm = null;
-  let pendingCardCancel = null;
-  let pendingRelicConfirm = null;
-  let pendingRelicCancel = null;
   let showNextButton = false;
   let highlightedCardKey = null;
   let highlightedRelicKey = null;
@@ -770,41 +764,29 @@
   let autoRelicSelectionInFlight = false;
 
   $: cardSelectionLocked = pendingCardSelection !== null;
-  $: relicSelectionLocked =
-    pendingRelicSelection !== null || pendingRelicConfirm !== null || stagedRelicEntries.length > 0;
+  $: relicSelectionLocked = pendingRelicSelection !== null || stagedRelicEntries.length > 0;
   $: showCards = cardChoiceEntries.length > 0;
   $: showRelics = relicChoiceEntries.length > 0 && !awaitingCard && !relicSelectionLocked;
 
-  $: pendingConfirmationCount =
-    (awaitingCard && stagedCardEntries.length > 0 ? 1 : 0) +
-    (awaitingRelic && stagedRelicEntries.length > 0 ? 1 : 0);
+  $: selectionInFlight = pendingCardSelection !== null || pendingRelicSelection !== null;
 
-  $: awaitingConfirmation =
-    pendingConfirmationCount > 0 ||
-    pendingCardSelection !== null ||
-    pendingRelicSelection !== null ||
-    pendingCardConfirm !== null ||
-    pendingCardCancel !== null ||
-    pendingRelicConfirm !== null ||
-    pendingRelicCancel !== null;
+  $: awaitingResolution =
+    (awaitingCard && stagedCardEntries.length > 0) || (awaitingRelic && stagedRelicEntries.length > 0);
 
   $: remaining =
     (showCards ? cardChoiceEntries.length : 0) +
     (showRelics ? relicChoiceEntries.length : 0) +
-    pendingConfirmationCount;
-
-  $: cardActionsDisabled = pendingCardConfirm !== null || pendingCardCancel !== null || pendingCardSelection !== null;
-  $: relicActionsDisabled = pendingRelicConfirm !== null || pendingRelicCancel !== null || pendingRelicSelection !== null;
+    (awaitingCard ? stagedCardEntries.length : 0) +
+    (awaitingRelic ? stagedRelicEntries.length : 0);
 
   $: stagedCardKey =
     stagedCardEntries.length > 0 ? rewardEntryKey(stagedCardEntries[0], 0, 'staged-card') : null;
-  $: confirmableCardKey = awaitingCard && stagedCardEntries.length > 0 ? stagedCardKey : null;
   $: {
     if (currentPhase === 'cards') {
-      if (confirmableCardKey) {
-        highlightedCardKey = confirmableCardKey;
-      } else if (!highlightedCardKey && cardChoiceEntries.length > 0) {
-        highlightedCardKey = cardChoiceEntries[0].key;
+      if (stagedCardKey) {
+        highlightedCardKey = stagedCardKey;
+      } else if (!highlightedCardKey || !cardChoiceEntries.some((choice) => choice.key === highlightedCardKey)) {
+        highlightedCardKey = cardChoiceEntries.length > 0 ? cardChoiceEntries[0].key : null;
       }
     } else {
       highlightedCardKey = null;
@@ -817,22 +799,15 @@
         'card'
       )
     : '';
-  $: confirmableCardLabel = confirmableCardKey
-    ? labelForRewardEntry(
-        stagedCardEntryMap.get(confirmableCardKey) ?? cardChoiceEntryMap.get(confirmableCardKey),
-        'card'
-      )
-    : '';
 
   $: stagedRelicKey =
     stagedRelicEntries.length > 0 ? rewardEntryKey(stagedRelicEntries[0], 0, 'staged-relic') : null;
-  $: confirmableRelicKey = awaitingRelic && stagedRelicEntries.length > 0 ? stagedRelicKey : null;
   $: {
     if (currentPhase === 'relics') {
-      if (confirmableRelicKey) {
-        highlightedRelicKey = confirmableRelicKey;
-      } else if (!highlightedRelicKey && relicChoiceEntries.length > 0) {
-        highlightedRelicKey = relicChoiceEntries[0].key;
+      if (stagedRelicKey) {
+        highlightedRelicKey = stagedRelicKey;
+      } else if (!highlightedRelicKey || !relicChoiceEntries.some((choice) => choice.key === highlightedRelicKey)) {
+        highlightedRelicKey = relicChoiceEntries.length > 0 ? relicChoiceEntries[0].key : null;
       }
     } else {
       highlightedRelicKey = null;
@@ -842,12 +817,6 @@
   $: highlightedRelicLabel = highlightedRelicKey
     ? labelForRewardEntry(
         stagedRelicEntryMap.get(highlightedRelicKey) ?? relicChoiceEntryMap.get(highlightedRelicKey),
-        'relic'
-      )
-    : '';
-  $: confirmableRelicLabel = confirmableRelicKey
-    ? labelForRewardEntry(
-        stagedRelicEntryMap.get(confirmableRelicKey) ?? relicChoiceEntryMap.get(confirmableRelicKey),
         'relic'
       )
     : '';
@@ -861,40 +830,26 @@
     }
 
     if (!fallbackActive && currentPhase === 'cards') {
-      if (confirmableCardKey && confirmableCardKey !== lastCardConfirmKey) {
-        const label = describeRewardLabel('card', confirmableCardLabel || highlightedCardLabel);
-        sendSelectionAnnouncement(`${label} ready to confirm.`);
-      } else if (!confirmableCardKey && lastCardConfirmKey) {
-        sendSelectionAnnouncement('Card confirmation cleared.');
-      } else if (highlightedCardKey && highlightedCardKey !== lastCardHighlightKey) {
+      if (highlightedCardKey && highlightedCardKey !== lastCardHighlightKey) {
         const label = describeRewardLabel('card', highlightedCardLabel);
         sendSelectionAnnouncement(`${label} selected.`);
       } else if (!highlightedCardKey && lastCardHighlightKey) {
         sendSelectionAnnouncement('Card selection cleared.');
       }
-      lastCardConfirmKey = confirmableCardKey;
       lastCardHighlightKey = highlightedCardKey;
     } else {
-      lastCardConfirmKey = null;
       lastCardHighlightKey = null;
     }
 
     if (!fallbackActive && currentPhase === 'relics') {
-      if (confirmableRelicKey && confirmableRelicKey !== lastRelicConfirmKey) {
-        const label = describeRewardLabel('relic', confirmableRelicLabel || highlightedRelicLabel);
-        sendSelectionAnnouncement(`${label} ready to confirm.`);
-      } else if (!confirmableRelicKey && lastRelicConfirmKey) {
-        sendSelectionAnnouncement('Relic confirmation cleared.');
-      } else if (highlightedRelicKey && highlightedRelicKey !== lastRelicHighlightKey) {
+      if (highlightedRelicKey && highlightedRelicKey !== lastRelicHighlightKey) {
         const label = describeRewardLabel('relic', highlightedRelicLabel);
         sendSelectionAnnouncement(`${label} selected.`);
       } else if (!highlightedRelicKey && lastRelicHighlightKey) {
         sendSelectionAnnouncement('Relic selection cleared.');
       }
-      lastRelicConfirmKey = confirmableRelicKey;
       lastRelicHighlightKey = highlightedRelicKey;
     } else {
-      lastRelicConfirmKey = null;
       lastRelicHighlightKey = null;
     }
   }
@@ -902,63 +857,13 @@
   $: {
     if (
       highlightedRelicKey &&
-      !confirmableRelicKey &&
+      !stagedRelicEntries.some(
+        (entry, index) => rewardEntryKey(entry, index, 'staged-relic') === highlightedRelicKey
+      ) &&
       !relicChoiceEntries.some((choice) => choice.key === highlightedRelicKey)
     ) {
       highlightedRelicKey = relicChoiceEntries.length > 0 ? relicChoiceEntries[0].key : null;
     }
-  }
-
-  function rewardEventDetail(type, { useConfirmable = false } = {}) {
-    const baseDetail = {
-      type,
-      phase: null,
-      key: null,
-      id: null,
-      entry: null,
-      label: ''
-    };
-
-    if (type === 'card') {
-      baseDetail.phase = 'cards';
-      const resolvedKey = useConfirmable && confirmableCardKey
-        ? confirmableCardKey
-        : highlightedCardKey || (stagedCardEntries[0] ? rewardEntryKey(stagedCardEntries[0], 0, 'staged-card') : null);
-      if (resolvedKey) {
-        baseDetail.key = resolvedKey;
-        baseDetail.entry =
-          stagedCardEntryMap.get(resolvedKey) ?? cardChoiceEntryMap.get(resolvedKey) ?? null;
-      }
-      baseDetail.id = baseDetail.entry?.id ?? null;
-      baseDetail.label = labelForRewardEntry(baseDetail.entry, 'card');
-    } else if (type === 'relic') {
-      baseDetail.phase = 'relics';
-      const resolvedKey = useConfirmable && confirmableRelicKey
-        ? confirmableRelicKey
-        : highlightedRelicKey || (stagedRelicEntries[0] ? rewardEntryKey(stagedRelicEntries[0], 0, 'staged-relic') : null);
-      if (resolvedKey) {
-        baseDetail.key = resolvedKey;
-        baseDetail.entry =
-          stagedRelicEntryMap.get(resolvedKey) ?? relicChoiceEntryMap.get(resolvedKey) ?? null;
-      }
-      baseDetail.id = baseDetail.entry?.id ?? null;
-      baseDetail.label = labelForRewardEntry(baseDetail.entry, 'relic');
-    }
-
-    return baseDetail;
-  }
-
-  function dispatchWithResponse(eventName, type, options = {}) {
-    const eventDetail = rewardEventDetail(type, options);
-    return new Promise((resolve) => {
-      let responded = false;
-      const respond = (value) => {
-        if (responded) return;
-        responded = true;
-        resolve(value || { ok: false });
-      };
-      dispatch(eventName, { ...eventDetail, respond });
-    });
   }
 
   async function performRewardSelection(detail) {
@@ -1018,16 +923,6 @@
       const selectionKey = selectionKeyFromDetail(detail, 'card');
       if (selectionKey) {
         highlightedCardKey = selectionKey;
-        if (
-          confirmableCardKey &&
-          selectionKey === confirmableCardKey &&
-          awaitingCard &&
-          stagedCardEntries.length > 0 &&
-          !cardActionsDisabled
-        ) {
-          await handleConfirm('card');
-          return;
-        }
       }
     }
 
@@ -1035,40 +930,10 @@
       const selectionKey = selectionKeyFromDetail(detail, 'relic');
       if (selectionKey) {
         highlightedRelicKey = selectionKey;
-        if (
-          confirmableRelicKey &&
-          selectionKey === confirmableRelicKey &&
-          awaitingRelic &&
-          stagedRelicEntries.length > 0 &&
-          !relicActionsDisabled
-        ) {
-          await handleConfirm('relic');
-          return;
-        }
       }
     }
 
     await performRewardSelection(detail);
-  }
-
-  async function handleCardConfirm(event) {
-    if (cardActionsDisabled) return;
-    const detail = event?.detail && typeof event.detail === 'object' ? event.detail : {};
-    const selectionKey = selectionKeyFromDetail(detail, 'card');
-    if (selectionKey) {
-      highlightedCardKey = selectionKey;
-    }
-    await handleConfirm('card');
-  }
-
-  async function handleRelicConfirm(event) {
-    if (relicActionsDisabled) return;
-    const detail = event?.detail && typeof event.detail === 'object' ? event.detail : {};
-    const selectionKey = selectionKeyFromDetail(detail, 'relic');
-    if (selectionKey) {
-      highlightedRelicKey = selectionKey;
-    }
-    await handleConfirm('relic');
   }
 
   $: if (
@@ -1130,81 +995,6 @@
     autoRelicSelectionInFlight = false;
   }
 
-  function focusRelicChoices() {
-    queueMicrotask(() => {
-      if (!overlayRootEl) return;
-      const stagedButton = overlayRootEl.querySelector(
-        '.staged button[data-reward-relic]'
-      );
-      if (stagedButton) {
-        stagedButton.focus();
-        return;
-      }
-      const choiceButton = overlayRootEl.querySelector(
-        '.choices button[data-reward-relic]'
-      );
-      if (choiceButton) {
-        choiceButton.focus();
-        return;
-      }
-      overlayRootEl.focus?.();
-    });
-  }
-
-  async function handleConfirm(type) {
-    if (type === 'card') {
-      if (pendingCardConfirm) return;
-      const token = Symbol('cardConfirm');
-      pendingCardConfirm = token;
-      try {
-        await dispatchWithResponse('confirm', 'card', { useConfirmable: true });
-      } finally {
-        if (pendingCardConfirm === token) {
-          pendingCardConfirm = null;
-        }
-      }
-    } else if (type === 'relic') {
-      if (pendingRelicConfirm) return;
-      const token = Symbol('relicConfirm');
-      pendingRelicConfirm = token;
-      try {
-        await dispatchWithResponse('confirm', 'relic', { useConfirmable: true });
-      } finally {
-        if (pendingRelicConfirm === token) {
-          pendingRelicConfirm = null;
-        }
-        focusRelicChoices();
-      }
-    }
-  }
-
-  async function handleCancel(type) {
-    if (type === 'card') {
-      if (pendingCardCancel) return;
-      const token = Symbol('cardCancel');
-      pendingCardCancel = token;
-      try {
-        await dispatchWithResponse('cancel', 'card', { useConfirmable: true });
-      } finally {
-        if (pendingCardCancel === token) {
-          pendingCardCancel = null;
-        }
-      }
-    } else if (type === 'relic') {
-      if (pendingRelicCancel) return;
-      const token = Symbol('relicCancel');
-      pendingRelicCancel = token;
-      try {
-        await dispatchWithResponse('cancel', 'relic', { useConfirmable: true });
-      } finally {
-        if (pendingRelicCancel === token) {
-          pendingRelicCancel = null;
-        }
-        focusRelicChoices();
-      }
-    }
-  }
-
   // Auto-advance when there are no selectable rewards and no visible loot/gold.
   // This avoids showing an empty rewards popup in loot-consumed cases.
   let autoTimer;
@@ -1212,7 +1002,7 @@
     clearTimeout(autoTimer);
     const noChoices = remaining === 0;
     const visibleLoot = (gold > 0) || hasLootItems || awaitingLoot;
-    if (noChoices && !awaitingConfirmation && !visibleLoot && !advanceBusy) {
+    if (noChoices && !selectionInFlight && !awaitingResolution && !visibleLoot && !advanceBusy) {
       autoTimer = setTimeout(() => dispatch('next'), 5000);
     }
   }
@@ -1240,7 +1030,7 @@
     const noChoices = remaining === 0;
     const visibleLoot = (gold > 0) || hasLootItems || awaitingLoot;
     const readyToAdvance = awaitingNext && !awaitingLoot;
-    showNextButton = noChoices && !awaitingConfirmation && (visibleLoot || readyToAdvance);
+    showNextButton = noChoices && !selectionInFlight && !awaitingResolution && (visibleLoot || readyToAdvance);
   }
 
   function handleNextRoom() {
@@ -1513,13 +1303,6 @@
     gap: 0.6rem;
   }
 
-  .actions-row {
-    display: flex;
-    gap: 0.75rem;
-    flex-wrap: wrap;
-    justify-content: center;
-  }
-
   .preview-panel {
     width: 100%;
     background: var(--overlay-panel-bg);
@@ -1629,36 +1412,6 @@
 
   .preview-panel[data-type='relic'] .stat-change {
     color: #f9c97f;
-  }
-
-  .cancel-btn {
-    min-width: 140px;
-    padding: 0.65rem 1.75rem;
-    border-radius: 0;
-    font-size: 0.95rem;
-    font-weight: 600;
-    cursor: pointer;
-    transition: transform 160ms ease, box-shadow 160ms ease, opacity 160ms ease;
-    color: var(--overlay-text-primary);
-    background: var(--overlay-button-bg);
-    border: var(--overlay-button-border);
-    box-shadow: var(--overlay-button-shadow);
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
-  }
-
-  .cancel-btn:hover,
-  .cancel-btn:focus-visible {
-    transform: translateY(-1px);
-    box-shadow: 0 16px 32px rgba(0, 0, 0, 0.52);
-    outline: none;
-  }
-
-  .cancel-btn:disabled {
-    opacity: 0.55;
-    cursor: default;
-    transform: none;
-    box-shadow: none;
   }
 
   .status {
@@ -1943,17 +1696,10 @@
                   quiet={iconQuiet}
                   selectionKey={selectionKey}
                   selected={highlightedCardKey === selectionKey}
-                  confirmable={true}
-                  confirmDisabled={cardActionsDisabled}
-                  confirmLabel="Confirm"
                   reducedMotion={reducedMotion}
-                  on:confirm={handleCardConfirm}
                 />
               </div>
             {/each}
-          </div>
-          <div class="actions-row">
-            <button class="cancel-btn" type="button" on:click={() => handleCancel('card')} disabled={cardActionsDisabled}>Cancel</button>
           </div>
           {#each stagedCardPreviewDetails as detail (detail.key)}
             <div class="preview-panel" data-type="card">
@@ -2011,12 +1757,8 @@
                 quiet={iconQuiet}
                 selectionKey={choice.key}
                 selected={highlightedCardKey === choice.key}
-                confirmable={confirmableCardKey === choice.key}
-                confirmDisabled={cardActionsDisabled}
-                confirmLabel="Confirm"
                 reducedMotion={reducedMotion}
                 on:select={handleSelect}
-                on:confirm={handleCardConfirm}
               />
             </div>
           {/each}
@@ -2035,17 +1777,10 @@
                   quiet={iconQuiet}
                   selectionKey={selectionKey}
                   selected={highlightedRelicKey === selectionKey}
-                  confirmable={true}
-                  confirmDisabled={relicActionsDisabled}
-                  confirmLabel="Confirm"
                   reducedMotion={reducedMotion}
-                  on:confirm={handleRelicConfirm}
                 />
               </div>
             {/each}
-          </div>
-          <div class="actions-row">
-            <button class="cancel-btn" type="button" on:click={() => handleCancel('relic')} disabled={relicActionsDisabled}>Cancel</button>
           </div>
           {#each stagedRelicPreviewDetails as detail (detail.key)}
             <div class="preview-panel" data-type="relic">
@@ -2102,12 +1837,8 @@
                 quiet={iconQuiet}
                 selectionKey={relicChoice.key}
                 selected={highlightedRelicKey === relicChoice.key}
-                confirmable={confirmableRelicKey === relicChoice.key}
-                confirmDisabled={relicActionsDisabled}
-                confirmLabel="Confirm"
                 reducedMotion={reducedMotion}
                 on:select={handleSelect}
-                on:confirm={handleRelicConfirm}
               />
             </div>
           {/each}

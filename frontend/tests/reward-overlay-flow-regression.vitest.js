@@ -39,7 +39,7 @@ afterEach(() => {
 });
 
 describe('reward overlay multi-phase regression', () => {
-  test('walks through the four-phase flow with confirm hooks', async () => {
+  test('walks through the four-phase flow with single-click selection', async () => {
     updateRewardProgression(fourPhaseProgression());
 
     const cards = [
@@ -55,7 +55,7 @@ describe('reward overlay multi-phase regression', () => {
     ];
 
     const advanceEvents = [];
-    const confirmEvents = [];
+    const selectEvents = [];
 
     const { component, container } = render(RewardOverlay, {
       props: {
@@ -85,8 +85,8 @@ describe('reward overlay multi-phase regression', () => {
       }
     });
 
-    component.$on('confirm', (event) => {
-      confirmEvents.push(event.detail);
+    component.$on('select', (event) => {
+      selectEvents.push(event.detail);
       event.detail?.respond?.({ ok: true });
       if (event.detail?.type === 'card') {
         queueMicrotask(() => {
@@ -135,33 +135,35 @@ describe('reward overlay multi-phase regression', () => {
     });
     await tick();
 
-    const cardConfirmButton = container.querySelector(
-      '.card-shell.confirmable button.card-confirm'
+    expect(container.querySelector('.card-shell.confirmable')).toBeNull();
+    const cardButton = container.querySelector(
+      'button[aria-label="Select card Radiant Beam"]'
     );
-    expect(cardConfirmButton).toBeInstanceOf(HTMLButtonElement);
-    if (cardConfirmButton instanceof HTMLButtonElement) {
-      await fireEvent.click(cardConfirmButton);
+    expect(cardButton).toBeInstanceOf(HTMLButtonElement);
+    if (cardButton instanceof HTMLButtonElement) {
+      await fireEvent.click(cardButton);
     }
 
     await tick();
     await tick();
 
-    expect(confirmEvents.some((detail) => detail?.type === 'card')).toBe(true);
+    expect(selectEvents.some((detail) => detail?.type === 'card')).toBe(true);
 
     await tick();
 
-    const relicConfirmButton = container.querySelector(
-      '.curio-shell.confirmable button.curio-confirm'
+    expect(container.querySelector('.curio-shell.confirmable')).toBeNull();
+    const relicButton = container.querySelector(
+      'button[aria-label="Select relic Guardian Talisman"]'
     );
-    expect(relicConfirmButton).toBeInstanceOf(HTMLButtonElement);
-    if (relicConfirmButton instanceof HTMLButtonElement) {
-      await fireEvent.click(relicConfirmButton);
+    expect(relicButton).toBeInstanceOf(HTMLButtonElement);
+    if (relicButton instanceof HTMLButtonElement) {
+      await fireEvent.click(relicButton);
     }
 
     await tick();
     await tick();
 
-    expect(confirmEvents.some((detail) => detail?.type === 'relic')).toBe(true);
+    expect(selectEvents.some((detail) => detail?.type === 'relic')).toBe(true);
 
     await tick();
 

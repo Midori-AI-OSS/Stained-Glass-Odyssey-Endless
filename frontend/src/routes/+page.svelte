@@ -11,10 +11,6 @@
     roomAction,
     chooseCard,
     chooseRelic,
-    confirmCard,
-    confirmRelic,
-    cancelCard,
-    cancelRelic,
     advanceRoom,
     getMap,
     getActiveRuns,
@@ -1095,82 +1091,6 @@
     return result;
   }
 
-  async function handleRewardConfirm(detail) {
-    const payload = detail && typeof detail === 'object' ? detail : {};
-    const respond = typeof payload.respond === 'function' ? payload.respond : null;
-    const type = payload.type;
-    let result = { ok: false };
-
-    if (type === 'card' || type === 'relic') {
-      try {
-        const res = type === 'card' ? await confirmCard() : await confirmRelic();
-        if (res) {
-          applyRewardPayload(res, { type, intent: 'confirm' });
-          scheduleMapRefresh();
-        }
-        result = { ok: true };
-      } catch (error) {
-        openOverlay('error', {
-          message: 'Failed to confirm reward.',
-          traceback: (error && error.stack) || '',
-          context: error?.context ?? null
-        });
-        try {
-          if (dev || !browser) {
-            const { error: logError } = await import('$lib/systems/logger.js');
-            logError('Failed to confirm reward.', error);
-          }
-        } catch {}
-      }
-    }
-
-    if (respond) {
-      try {
-        respond(result);
-      } catch {}
-    }
-
-    return result;
-  }
-
-  async function handleRewardCancel(detail) {
-    const payload = detail && typeof detail === 'object' ? detail : {};
-    const respond = typeof payload.respond === 'function' ? payload.respond : null;
-    const type = payload.type;
-    let result = { ok: false };
-
-    if (type === 'card' || type === 'relic') {
-      try {
-        const res = type === 'card' ? await cancelCard() : await cancelRelic();
-        if (res) {
-          applyRewardPayload(res, { type, intent: 'cancel' });
-          scheduleMapRefresh();
-        }
-        result = { ok: true };
-      } catch (error) {
-        openOverlay('error', {
-          message: 'Failed to cancel reward.',
-          traceback: (error && error.stack) || '',
-          context: error?.context ?? null
-        });
-        try {
-          if (dev || !browser) {
-            const { error: logError } = await import('$lib/systems/logger.js');
-            logError('Failed to cancel reward.', error);
-          }
-        } catch {}
-      }
-    }
-
-    if (respond) {
-      try {
-        respond(result);
-      } catch {}
-    }
-
-    return result;
-  }
-
   async function handleRewardAdvance(detail) {
     const payload = detail && typeof detail === 'object' ? detail : {};
     const respond = typeof payload.respond === 'function' ? payload.respond : null;
@@ -1252,16 +1172,6 @@
       });
 
       switch (action.type) {
-        case 'confirm-card': {
-          try {
-            const res = await confirmCard();
-            if (res) {
-              applyRewardPayload(res, { type: 'card', intent: 'confirm' });
-              scheduleMapRefresh();
-            }
-          } catch {}
-          return;
-        }
         case 'select-card': {
           if (action.choice) {
             try {
@@ -1271,16 +1181,6 @@
               }
             } catch {}
           }
-          return;
-        }
-        case 'confirm-relic': {
-          try {
-            const res = await confirmRelic();
-            if (res) {
-              applyRewardPayload(res, { type: 'relic', intent: 'confirm' });
-              scheduleMapRefresh();
-            }
-          } catch {}
           return;
         }
         case 'select-relic': {
@@ -1804,8 +1704,6 @@
     on:home={homeOverlay}
     on:settings={() => openOverlay('settings')}
     on:rewardSelect={(e) => handleRewardSelect(e.detail)}
-    on:rewardConfirm={(e) => handleRewardConfirm(e.detail)}
-    on:rewardCancel={(e) => handleRewardCancel(e.detail)}
     on:rewardAdvance={(e) => handleRewardAdvance(e.detail)}
     on:loadRun={(e) => handleLoadExistingRun(e.detail)}
     on:startNewRun={handleStartNewRun}

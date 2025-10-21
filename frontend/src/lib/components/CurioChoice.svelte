@@ -3,7 +3,6 @@
   import Tooltip from './Tooltip.svelte';
   import { createEventDispatcher } from 'svelte';
   import { selectionAnimationCssVariables } from '../constants/rewardAnimationTokens.js';
-  import { rewardConfirmCssVariables } from '../constants/rewardConfirmTokens.js';
 
   export let entry = {};
   export let size = 'normal';
@@ -12,9 +11,6 @@
   export let fluid = false;
   export let selectionKey = '';
   export let selected = false;
-  export let confirmable = false;
-  export let confirmDisabled = false;
-  export let confirmLabel = 'Confirm';
   export let reducedMotion = false;
   export let disabled = false;
 
@@ -24,25 +20,12 @@
   const selectionAnimationStyle = Object.entries(selectionAnimationVars)
     .map(([key, value]) => `${key}: ${value}`)
     .join('; ');
-  const confirmButtonVars = rewardConfirmCssVariables();
-  const confirmButtonStyle = Object.entries(confirmButtonVars)
-    .map(([key, value]) => `${key}: ${value}`)
-    .join('; ');
-
   function dispatchSelect() {
     dispatch('select', { type: 'relic', id: entry?.id, entry, key: selectionKey });
   }
 
-  function dispatchConfirm() {
-    dispatch('confirm', { type: 'relic', id: entry?.id, entry, key: selectionKey });
-  }
-
   function handleClick() {
     if (disabled) return;
-    if (confirmable && selected && !confirmDisabled) {
-      dispatchConfirm();
-      return;
-    }
     dispatchSelect();
   }
 
@@ -52,10 +35,6 @@
     if (disabled) return;
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault();
-      if (confirmable && selected && !confirmDisabled) {
-        dispatchConfirm();
-        return;
-      }
       dispatchSelect();
     }
   };
@@ -66,7 +45,6 @@
     <div
       class="curio-shell"
       class:selected={selected}
-      class:confirmable={confirmable}
       data-reduced-motion={reducedMotion ? 'true' : 'false'}
       style={selectionAnimationStyle}
     >
@@ -90,28 +68,12 @@
           {fluid}
         />
       </button>
-      {#if confirmable}
-        <button
-          class="curio-confirm reward-confirm-button"
-          type="button"
-          aria-label={`Confirm relic ${entry?.name || entry?.id || 'selection'}`}
-          data-reward-confirm="relic"
-          disabled={confirmDisabled}
-          style={confirmButtonStyle}
-          on:click={() => {
-            if (!confirmDisabled) dispatchConfirm();
-          }}
-        >
-          {confirmLabel}
-        </button>
-      {/if}
     </div>
   </Tooltip>
 {:else}
   <div
     class="curio-shell"
     class:selected={selected}
-    class:confirmable={confirmable}
     data-reduced-motion={reducedMotion ? 'true' : 'false'}
     style={selectionAnimationStyle}
   >
@@ -127,27 +89,11 @@
     >
       <CardArt {entry} type="relic" roundIcon={true} {size} {quiet} {compact} {fluid} />
     </button>
-    {#if confirmable}
-      <button
-        class="curio-confirm reward-confirm-button"
-        type="button"
-        aria-label={`Confirm relic ${entry?.name || entry?.id || 'selection'}`}
-        data-reward-confirm="relic"
-        disabled={confirmDisabled}
-        style={confirmButtonStyle}
-        on:click={() => {
-          if (!confirmDisabled) dispatchConfirm();
-        }}
-      >
-        {confirmLabel}
-      </button>
-    {/if}
   </div>
 {/if}
 
 <style>
-  @import '../styles/reward-confirm.css';
-
+  
   .curio-shell {
     position: relative;
     display: flex;
@@ -213,14 +159,6 @@
 
   .curio-shell[data-reduced-motion='true'] :global(.card-art) {
     animation: none;
-  }
-
-  .curio-shell.confirmable .curio-confirm {
-    display: inline-flex;
-  }
-
-  .curio-confirm {
-    display: none;
   }
 
   /* Tooltip visuals are provided by Tooltip.svelte + settings-shared.css */
