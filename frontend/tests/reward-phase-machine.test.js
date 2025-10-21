@@ -3,6 +3,11 @@ import {
   createRewardPhaseController,
   normalizeRewardProgression
 } from '../src/lib/systems/rewardProgression.js';
+import {
+  fourPhaseProgression,
+  singlePhaseProgression,
+  skipCardsProgression
+} from './__fixtures__/rewardProgressionPayloads.js';
 
 describe('reward phase controller', () => {
   let controller;
@@ -19,11 +24,13 @@ describe('reward phase controller', () => {
   });
 
   test('ingests canonical progression payloads', () => {
-    const snapshot = controller.ingest({
-      available: ['cards', 'drops', 'relics'],
-      completed: ['drops'],
-      current_step: 'cards'
-    });
+    const snapshot = controller.ingest(
+      fourPhaseProgression({
+        available: ['cards', 'drops', 'relics'],
+        completed: ['drops'],
+        current_step: 'cards'
+      })
+    );
 
     expect(snapshot.sequence).toEqual(['drops', 'cards', 'relics']);
     expect(snapshot.completed).toEqual(['drops']);
@@ -42,11 +49,7 @@ describe('reward phase controller', () => {
   });
 
   test('advance completes the current phase and moves forward', () => {
-    controller.ingest({
-      available: ['drops', 'cards', 'relics'],
-      completed: [],
-      current_step: 'drops'
-    });
+    controller.ingest(fourPhaseProgression({ available: ['drops', 'cards', 'relics'] }));
 
     const advanced = controller.advance();
     expect(advanced.completed).toEqual(['drops']);
@@ -55,11 +58,7 @@ describe('reward phase controller', () => {
   });
 
   test('skipTo marks earlier phases completed and focuses the target', () => {
-    controller.ingest({
-      available: ['drops', 'cards', 'relics'],
-      completed: [],
-      current_step: 'drops'
-    });
+    controller.ingest(fourPhaseProgression({ available: ['drops', 'cards', 'relics'] }));
 
     const snapshot = controller.skipTo('relics');
     expect(snapshot.completed).toEqual(['drops', 'cards']);
@@ -73,29 +72,55 @@ describe('reward phase controller', () => {
     controller.on('enter', (detail) => enters.push(detail.phase));
     controller.on('exit', (detail) => exits.push(detail.phase));
 
-    controller.ingest({
-      available: ['drops', 'cards', 'relics'],
-      completed: [],
-      current_step: 'drops'
-    });
+    controller.ingest(fourPhaseProgression({ available: ['drops', 'cards', 'relics'] }));
     controller.advance();
 
     expect(exits).toEqual(['drops']);
     expect(enters).toContain('cards');
+  });
+
+  test('ingesting skipCardsProgression enters relics without logging warnings', () => {
+    const snapshot = controller.ingest(skipCardsProgression());
+
+    expect(snapshot.sequence).toEqual(['drops', 'relics', 'battle_review']);
+    expect(snapshot.current).toBe('relics');
+    expect(snapshot.next).toBe('battle_review');
+    expect(logs).toEqual([]);
+  });
+
+  test('singlePhaseProgression advance completes the final phase', () => {
+    controller.ingest(singlePhaseProgression());
+
+    const advanced = controller.advance();
+    expect(advanced.completed).toEqual(['battle_review']);
+    expect(advanced.current).toBeNull();
   });
 });
 
 describe('normalizeRewardProgression', () => {
   test('orders phases according to the canonical sequence', () => {
     const snapshot = normalizeRewardProgression(
-      {
-        available: ['battle_review', 'drops'],
-        completed: []
-      },
+      fourPhaseProgression({ available: ['battle_review', 'drops'] }),
       { logger: () => {} }
     );
 
     expect(snapshot.sequence).toEqual(['drops', 'battle_review']);
     expect(snapshot.current).toBe('drops');
+  });
+
+  test('skipCardsProgression jumps directly to relics without diagnostics', () => {
+    const snapshot = normalizeRewardProgression(skipCardsProgression(), { logger: () => {} });
+
+    expect(snapshot.sequence).toEqual(['drops', 'relics', 'battle_review']);
+    expect(snapshot.current).toBe('relics');
+    expect(snapshot.diagnostics).toEqual([]);
+  });
+
+  test('singlePhaseProgression marks battle review as the only phase', () => {
+    const snapshot = normalizeRewardProgression(singlePhaseProgression(), { logger: () => {} });
+
+    expect(snapshot.sequence).toEqual(['battle_review']);
+    expect(snapshot.current).toBe('battle_review');
+    expect(snapshot.next).toBeNull();
   });
 });

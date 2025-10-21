@@ -1,5 +1,6 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
 import { tick } from 'svelte';
+import { afterDropsProgression, fourPhaseProgression } from './__fixtures__/rewardProgressionPayloads.js';
 
 process.env.SVELTE_ALLOW_RUNES_OUTSIDE_SVELTE = 'true';
 globalThis.SVELTE_ALLOW_RUNES_OUTSIDE_SVELTE = true;
@@ -28,11 +29,7 @@ afterEach(() => {
 
 describe('RewardOverlay card phase interactions', () => {
   test('auto-selects the first card when entering the card phase', async () => {
-    updateRewardProgression({
-      available: ['drops', 'cards'],
-      completed: ['drops'],
-      current_step: 'cards'
-    });
+    updateRewardProgression(afterDropsProgression());
 
     const selectEvents = [];
     const { component, container } = render(RewardOverlay, {
@@ -74,11 +71,7 @@ describe('RewardOverlay card phase interactions', () => {
   });
 
   test('shows on-card confirm controls for the staged card', async () => {
-    updateRewardProgression({
-      available: ['cards', 'relics'],
-      completed: [],
-      current_step: 'cards'
-    });
+    updateRewardProgression(fourPhaseProgression({ current_step: 'cards', completed: ['drops'] }));
 
     const stagedCard = {
       id: 'radiant-beam',
@@ -112,11 +105,7 @@ describe('RewardOverlay card phase interactions', () => {
   });
 
   test('dispatches confirm when clicking the selected card again', async () => {
-    updateRewardProgression({
-      available: ['cards'],
-      completed: [],
-      current_step: 'cards'
-    });
+    updateRewardProgression(fourPhaseProgression({ current_step: 'cards', completed: ['drops'] }));
 
     const stagedCard = {
       id: 'echo-strike',

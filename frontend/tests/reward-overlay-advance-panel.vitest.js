@@ -1,5 +1,9 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, test } from 'vitest';
 import { tick } from 'svelte';
+import {
+  afterDropsProgression,
+  fourPhaseProgression
+} from './__fixtures__/rewardProgressionPayloads.js';
 
 process.env.SVELTE_ALLOW_RUNES_OUTSIDE_SVELTE = 'true';
 globalThis.SVELTE_ALLOW_RUNES_OUTSIDE_SVELTE = true;
@@ -100,11 +104,7 @@ async function withMockedTimers(run) {
 
 describe('reward overlay advance panel', () => {
   test('manual advance dispatches events and advances the controller', async () => {
-    updateRewardProgression({
-      available: ['drops', 'cards'],
-      completed: [],
-      current_step: 'drops'
-    });
+    updateRewardProgression(fourPhaseProgression());
 
     const { component, container } = renderOverlay();
     const advances = [];
@@ -128,11 +128,7 @@ describe('reward overlay advance panel', () => {
   });
 
   test('auto countdown advances after 10 seconds when ready', async () => {
-    updateRewardProgression({
-      available: ['drops', 'cards'],
-      completed: [],
-      current_step: 'drops'
-    });
+    updateRewardProgression(fourPhaseProgression());
 
     const { component, container } = renderOverlay();
     const advances = [];
@@ -152,11 +148,7 @@ describe('reward overlay advance panel', () => {
   });
 
   test('countdown pauses when new choices arrive and resumes when cleared', async () => {
-    updateRewardProgression({
-      available: ['drops', 'cards', 'relics'],
-      completed: ['drops'],
-      current_step: 'cards'
-    });
+    updateRewardProgression(afterDropsProgression());
 
     const { component, container } = renderOverlay({ cards: [] });
     const readStatus = () => container.querySelector('.advance-status')?.textContent ?? '';
@@ -186,11 +178,7 @@ describe('reward overlay advance panel', () => {
   });
 
   test('focuses advance button when a phase becomes ready', async () => {
-    updateRewardProgression({
-      available: ['drops', 'cards'],
-      completed: [],
-      current_step: 'drops'
-    });
+    updateRewardProgression(fourPhaseProgression());
 
     const { container } = renderOverlay();
     await tick();
