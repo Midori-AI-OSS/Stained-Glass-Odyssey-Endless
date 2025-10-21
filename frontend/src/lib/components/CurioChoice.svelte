@@ -207,7 +207,7 @@
     }
   }
 
-  .curio-shell.confirmable.selected[data-reduced-motion='false'] :global(.card-art) {
+  .curio-shell.selected[data-reduced-motion='false'] :global(.card-art) {
     animation: reward-selection-wiggle var(--reward-selection-wiggle-duration) ease-in-out infinite;
   }
 
