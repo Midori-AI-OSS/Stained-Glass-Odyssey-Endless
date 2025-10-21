@@ -85,4 +85,4 @@ See detailed analysis in `.codex/audit/5ab6729c-reward-flow-four-step-overhaul-a
 
 ---
 
-**Requesting review from the Task Master** - This task has BLOCKING issues that must be resolved before proceeding.
+**more work needed** — Audit found critical state sync bug causing infinite error loop in Drops phase. Backend `awaiting_loot` flag mismatch prevents progression. See `.codex/audit/5ab6729c-reward-flow-four-step-overhaul-audit.md` for full analysis.
