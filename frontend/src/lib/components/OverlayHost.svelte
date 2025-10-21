@@ -474,8 +474,8 @@
 {#if rewardOpen}
   <PopupWindow
     title={rewardTitle}
-    maxWidth="880px"
-    maxHeight="100%"
+    maxWidth="1280px"
+    maxHeight="92vh"
     zIndex={1100}
     surfaceNoScroll={true}
     reducedMotion={overlayReducedMotion}

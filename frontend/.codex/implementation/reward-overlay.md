@@ -72,16 +72,18 @@ immediately, matching the on-card button.
 
 ### Stained-glass theme alignment
 
-The overlay now mirrors the stained-glass palette used by the navigation
-bar and settings surfaces. Panels layer warm and cool gradients over the
-shared `--glass-bg`, `--glass-border`, `--glass-shadow`, and
-`--glass-filter` tokens so the right rail, preview panes, and drop tiles all
-read as part of the same frosted-glass family. Primary actions (cancel,
-advance, next room) reuse pill-shaped glass buttons with warm accent glows,
-while the confirm buttons inherit refreshed `reward-confirm.css` tokens that
-blend the warm overlay accent with the run's cooler highlight. The result is
-a cohesive reward surface without the neon gradients that previously clashed
-with the rest of the UI.
+The reward flow now follows the same dark, angular stained-glass treatment as
+the navigation bar and main menu. Panels reuse the shared
+`--glass-bg`/`--glass-border`/`--glass-shadow` tokens with squared corners and a
+subtle deep-blue gradient overlay so every surface reads as a single sheet of
+frosted glass. Status chips, preview panes, and loot tiles share a common
+`--overlay-chip-*` token set that keeps their borders crisp and neutral until
+the active state introduces an accent tint.
+
+Primary action buttons (Advance, Cancel, Next Room) were flattened into the
+same rectangular glass pads used elsewhere in the web UI. They still pick up
+the run accent colour on hover/focus, but lose the oversized glow and rounded
+pill silhouette so they sit flush with the rest of the interface.
 
 - `RewardOverlay` receives `stagedCards`, `stagedRelics`, and the
   `awaiting_*` flags from `OverlayHost`. Both grids stay visible while a staged

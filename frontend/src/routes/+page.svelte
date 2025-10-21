@@ -1602,7 +1602,6 @@
           /* no-op */
         }
       }
-    }
     } finally {
       roomAdvanceInFlight = false;
     }
