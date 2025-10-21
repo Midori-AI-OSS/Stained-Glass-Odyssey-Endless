@@ -65,52 +65,41 @@ describe('RewardOverlay selection regression', () => {
     expect(container.querySelector('button[aria-label^="Select card"]')).not.toBeNull();
   });
 
-  test('renders confirm controls for staged cards', async () => {
+  test('renders staged cards without confirm controls', async () => {
+    const { container } = renderOverlay({
+      cards: [],
+      stagedCards: [{ id: 'radiant-beam', name: 'Radiant Beam', stars: 4 }],
+      awaitingCard: true
+    });
+
+    expect(container.querySelector('.card-shell.confirmable')).toBeNull();
+    expect(container.querySelector('button.card-confirm')).toBeNull();
+    const stagedShell = container.querySelector('.card-shell.selected');
+    expect(stagedShell).not.toBeNull();
+  });
+
+  test('re-dispatches select events for staged cards', async () => {
     const { component, container } = renderOverlay({
       cards: [],
       stagedCards: [{ id: 'radiant-beam', name: 'Radiant Beam', stars: 4 }],
       awaitingCard: true
     });
 
-    let confirmDetail = null;
-    component.$on('confirm', (event) => {
-      confirmDetail = event.detail;
+    let selectDetail = null;
+    component.$on('select', (event) => {
+      selectDetail = event.detail;
       event.detail?.respond?.({ ok: true });
     });
 
-    const confirmButton = container.querySelector('.card-shell.confirmable button.card-confirm');
-    expect(confirmButton).not.toBeNull();
-    if (!confirmButton) return;
+    const cardButton = container.querySelector('button[aria-label="Select card Radiant Beam"]');
+    expect(cardButton).not.toBeNull();
+    if (!cardButton) return;
 
-    await fireEvent.click(confirmButton);
+    await fireEvent.click(cardButton);
     await new Promise((resolve) => setTimeout(resolve, 0));
 
-    expect(confirmDetail?.type).toBe('card');
-  });
-
-  test('re-enables confirm button when the parent rejects the staged card', async () => {
-    const { component, container } = renderOverlay({
-      cards: [],
-      stagedCards: [{ id: 'radiant-beam', name: 'Radiant Beam', stars: 4 }],
-      awaitingCard: true
-    });
-
-    component.$on('confirm', (event) => {
-      setTimeout(() => {
-        event.detail?.respond?.({ ok: false });
-      });
-    });
-
-    const confirmButton = container.querySelector('.card-shell.confirmable button.card-confirm');
-    expect(confirmButton).not.toBeNull();
-    if (!confirmButton) return;
-
-    await fireEvent.click(confirmButton);
-    expect(confirmButton.disabled).toBe(true);
-
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    expect(confirmButton.disabled).toBe(false);
+    expect(selectDetail?.type).toBe('card');
+    expect(selectDetail?.id).toBe('radiant-beam');
   });
 
   test('renders staged reward previews when available', () => {
@@ -140,32 +129,20 @@ describe('RewardOverlay selection regression', () => {
     expect(panel?.textContent).toMatch(/Triggers/);
   });
 
-  test('dispatches cancel event for staged relics', async () => {
-    const { component, container } = renderOverlay({
+  test('renders staged relics without confirm or cancel controls', async () => {
+    const { container } = renderOverlay({
       cards: [],
       stagedRelics: [{ id: 'lucky-charm', name: 'Lucky Charm' }],
       awaitingCard: false,
       awaitingRelic: true
     });
 
-    let cancelDetail = null;
-    component.$on('cancel', (event) => {
-      cancelDetail = event.detail;
-      event.detail?.respond?.({ ok: true });
-    });
-
-    const cancelButton = container.querySelector('button.cancel-btn');
-    expect(cancelButton).not.toBeNull();
-    if (!cancelButton) return;
-
-    await fireEvent.click(cancelButton);
-    await new Promise((resolve) => setTimeout(resolve, 0));
-
-    expect(cancelDetail?.type).toBe('relic');
+    expect(container.querySelector('.curio-shell.confirmable')).toBeNull();
+    expect(container.querySelector('button.curio-confirm')).toBeNull();
+    expect(container.querySelector('button.cancel-btn')).toBeNull();
   });
 
-  test('prevents duplicate relic confirm dispatch while a request is pending', async () => {
-    let confirmCount = 0;
+  test('re-dispatches select events for staged relics', async () => {
     const { component, container } = renderOverlay({
       cards: [],
       stagedRelics: [{ id: 'guardian-talisman', name: 'Guardian Talisman' }],
@@ -173,28 +150,21 @@ describe('RewardOverlay selection regression', () => {
       awaitingCard: false
     });
 
-    component.$on('confirm', (event) => {
-      confirmCount += 1;
-      if (confirmCount === 1) {
-        setTimeout(() => {
-          event.detail?.respond?.({ ok: true });
-        }, 5);
-      }
+    let selectDetail = null;
+    component.$on('select', (event) => {
+      selectDetail = event.detail;
+      event.detail?.respond?.({ ok: true });
     });
 
-    const confirmButton = container.querySelector('.curio-shell.confirmable button.curio-confirm');
-    expect(confirmButton).not.toBeNull();
-    if (!confirmButton) return;
+    const relicButton = container.querySelector('button[aria-label="Select relic Guardian Talisman"]');
+    expect(relicButton).not.toBeNull();
+    if (!relicButton) return;
 
-    await fireEvent.click(confirmButton);
-    expect(confirmButton.disabled).toBe(true);
+    await fireEvent.click(relicButton);
+    await new Promise((resolve) => setTimeout(resolve, 0));
 
-    await fireEvent.click(confirmButton);
-    expect(confirmCount).toBe(1);
-
-    await new Promise((resolve) => setTimeout(resolve, 10));
-
-    expect(confirmButton.disabled).toBe(false);
+    expect(selectDetail?.type).toBe('relic');
+    expect(selectDetail?.id).toBe('guardian-talisman');
   });
 
   test('shows the next-room automation button when confirmations are clear', async () => {

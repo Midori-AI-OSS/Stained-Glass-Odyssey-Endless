@@ -498,8 +498,6 @@
       {fullIdleMode}
       reducedMotion={overlayReducedMotion}
       on:select={(e) => dispatch('rewardSelect', e.detail)}
-      on:confirm={(e) => dispatch('rewardConfirm', e.detail)}
-      on:cancel={(e) => dispatch('rewardCancel', e.detail)}
       on:advance={(e) => dispatch('rewardAdvance', e.detail)}
       on:next={() => dispatch('nextRoom')}
       on:lootAcknowledge={() => dispatch('lootAcknowledge')}
