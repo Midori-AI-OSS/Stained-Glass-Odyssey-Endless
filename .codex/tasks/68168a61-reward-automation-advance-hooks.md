@@ -13,3 +13,4 @@ Teach the idle automation/assist scripts to drive the new Drops → Cards → Re
 ## Coordination notes
 - Collaborate with the overlay implementers to reuse their published hooks/callbacks.
 - Capture any follow-up backend tooling needed in a separate task if automation reveals API gaps.
+ready for review

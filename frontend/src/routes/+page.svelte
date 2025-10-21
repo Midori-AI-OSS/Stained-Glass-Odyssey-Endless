@@ -44,6 +44,7 @@
     syncBattlePolling,
     syncMapPolling
   } from '$lib';
+  import { rewardPhaseController } from '$lib/systems/overlayState.js';
   import { updateParty, acknowledgeLoot, resetRunConfigurationMetadataCache } from '$lib/systems/uiApi.js';
   import { getPlayers } from '$lib/systems/api.js';
   import { deriveSeedParty, sanitizePartyIds } from '$lib/systems/partySeed.js';
@@ -52,6 +53,7 @@
   import { browser, dev } from '$app/environment';
   import { normalizeShopPurchase, processSequentialPurchases } from '$lib/systems/shopPurchases.js';
   import { normalizeRewardPreview } from '$lib/utils/rewardPreviewFormatter.js';
+  import { computeAutomationAction } from '$lib/utils/rewardAutomation.js';
 
   const runState = runStateStore;
 
@@ -1160,9 +1162,59 @@
     return result;
   }
 
+  async function handleRewardAdvance(detail) {
+    const payload = detail && typeof detail === 'object' ? detail : {};
+    const respond = typeof payload.respond === 'function' ? payload.respond : null;
+
+    if (!runId) {
+      if (respond) {
+        try {
+          respond({ ok: false, reason: 'no-run' });
+        } catch {}
+      }
+      return { ok: false };
+    }
+
+    if (rewardAdvanceInFlight) {
+      if (respond) {
+        try {
+          respond({ ok: false, reason: 'busy' });
+        } catch {}
+      }
+      return { ok: false };
+    }
+
+    rewardAdvanceInFlight = true;
+    try {
+      await handleNextRoom();
+      if (respond) {
+        try {
+          respond({ ok: true });
+        } catch {}
+      }
+      return { ok: true };
+    } catch (error) {
+      if (respond) {
+        try {
+          respond({ ok: false, error });
+        } catch {}
+      }
+      try {
+        if (dev || !browser) {
+          const { error: logError } = await import('$lib/systems/logger.js');
+          logError('Failed to advance reward progression.', error);
+        }
+      } catch {}
+      return { ok: false };
+    } finally {
+      rewardAdvanceInFlight = false;
+    }
+  }
+
   let autoHandling = false;
+  let rewardAdvanceInFlight = false;
   async function maybeAutoHandle() {
-    if (!fullIdleMode || autoHandling || !runId || !roomData) return;
+    if (!fullIdleMode || autoHandling || rewardAdvanceInFlight || !runId || !roomData) return;
     autoHandling = true;
     try {
       const staging = roomData.reward_staging && typeof roomData.reward_staging === 'object'
@@ -1170,62 +1222,76 @@
         : {};
       const stagedCards = Array.isArray(staging.cards) ? staging.cards : [];
       const stagedRelics = Array.isArray(staging.relics) ? staging.relics : [];
+      const snapshot = typeof rewardPhaseController?.getSnapshot === 'function'
+        ? rewardPhaseController.getSnapshot()
+        : null;
+      const action = computeAutomationAction({
+        roomData,
+        snapshot,
+        stagedCards,
+        stagedRelics
+      });
 
-      if (roomData.awaiting_card && stagedCards.length > 0) {
-        try {
-          const res = await confirmCard();
-          if (res) {
-            applyRewardPayload(res, { type: 'card', intent: 'confirm' });
-            scheduleMapRefresh();
+      switch (action.type) {
+        case 'confirm-card': {
+          try {
+            const res = await confirmCard();
+            if (res) {
+              applyRewardPayload(res, { type: 'card', intent: 'confirm' });
+              scheduleMapRefresh();
+            }
+          } catch {}
+          return;
+        }
+        case 'select-card': {
+          if (action.choice) {
+            try {
+              const res = await chooseCard(action.choice.id);
+              if (res) {
+                applyRewardPayload(res, { type: 'card', intent: 'select' });
+              }
+            } catch {}
           }
-        } catch {}
-        return;
-      }
-
-      if (roomData.card_choices?.length > 0) {
-        const choice = roomData.card_choices[0];
-        try {
-          const res = await chooseCard(choice.id);
-          if (res) {
-            applyRewardPayload(res, { type: 'card', intent: 'select' });
+          return;
+        }
+        case 'confirm-relic': {
+          try {
+            const res = await confirmRelic();
+            if (res) {
+              applyRewardPayload(res, { type: 'relic', intent: 'confirm' });
+              scheduleMapRefresh();
+            }
+          } catch {}
+          return;
+        }
+        case 'select-relic': {
+          if (action.choice) {
+            try {
+              const res = await chooseRelic(action.choice.id);
+              if (res) {
+                applyRewardPayload(res, { type: 'relic', intent: 'select' });
+              }
+            } catch {}
           }
-        } catch {}
-        return;
-      }
-
-      if (roomData.awaiting_relic && stagedRelics.length > 0) {
-        try {
-          const res = await confirmRelic();
-          if (res) {
-            applyRewardPayload(res, { type: 'relic', intent: 'confirm' });
-            scheduleMapRefresh();
+          return;
+        }
+        case 'ack-loot': {
+          await handleLootAcknowledge();
+          return;
+        }
+        case 'next-room': {
+          await handleNextRoom();
+          return;
+        }
+        case 'advance': {
+          if (!rewardAdvanceInFlight) {
+            await handleRewardAdvance({ reason: 'automation', phase: action.phase ?? null });
           }
-        } catch {}
-        return;
-      }
-
-      if (!roomData.awaiting_card && roomData.relic_choices?.length > 0) {
-        const choice = roomData.relic_choices[0];
-        try {
-          const res = await chooseRelic(choice.id);
-          if (res) {
-            applyRewardPayload(res, { type: 'relic', intent: 'select' });
-          }
-        } catch {}
-        return;
-      }
-
-      const hasLoot = (roomData.loot?.gold || 0) > 0 || (roomData.loot?.items || []).length > 0;
-      if (roomData.awaiting_loot || hasLoot) {
-        await handleLootAcknowledge();
-        return;
-      }
-      if (roomData.result === 'shop') {
-        await handleNextRoom();
-        return;
-      }
-      if (roomData.awaiting_next) {
-        await handleNextRoom();
+          return;
+        }
+        default: {
+          return;
+        }
       }
     } finally {
       autoHandling = false;
@@ -1668,6 +1734,7 @@
     on:rewardSelect={(e) => handleRewardSelect(e.detail)}
     on:rewardConfirm={(e) => handleRewardConfirm(e.detail)}
     on:rewardCancel={(e) => handleRewardCancel(e.detail)}
+    on:rewardAdvance={(e) => handleRewardAdvance(e.detail)}
     on:loadRun={(e) => handleLoadExistingRun(e.detail)}
     on:startNewRun={handleStartNewRun}
     on:shopBuy={(e) => handleShopBuy(e.detail)}
