@@ -72,14 +72,19 @@ During playtest, an error overlay appears with message "Cannot advance room unti
    - 3 phases when no relics are awarded (Drops/Cards/Battle Review) ✅
    - This is conditional/dynamic behavior, not a bug
 
-2. **Subtasks may be ready for review:** Since reward flow is functional, subtasks should be individually validated rather than blanket flagged. Most core functionality appears to be working.
+2. **Reward flow UI theming inconsistency:** The reward flow overlay uses different styling than the rest of the web UI. The "REWARD FLOW" panel has a darker, more modern theme that doesn't match the stained-glass/fantasy aesthetic of the main game UI. This needs to be addressed before production.
 
-3. **Documentation appears accurate:** `frontend/.codex/implementation/reward-overlay.md` describes behavior that matches actual implementation in re-audit playtest.
+3. **Subtasks may be ready for review:** Since reward flow is functional, subtasks should be individually validated rather than blanket flagged. Most core functionality appears to be working.
+
+4. **Documentation appears accurate:** `frontend/.codex/implementation/reward-overlay.md` describes behavior that matches actual implementation in re-audit playtest.
 
 ### Required Actions Before Review:
 
-**MODERATE (P2):**
+**HIGH (P1):**
+- [ ] Update reward flow UI theming to match web UI aesthetic (stained-glass/fantasy theme)
 - [ ] Fix error overlay display logic to not show false errors after successful completion
+
+**MODERATE (P2):**
 - [ ] Improve error message clarity or remove misleading overlay
 - [ ] Add defensive checks to prevent incorrect error states
 
@@ -96,18 +101,20 @@ During playtest, an error overlay appears with message "Cannot advance room unti
 
 See detailed analysis in `.codex/audit/5ab6729c-reward-flow-four-step-overhaul-audit.md`
 
-**Auditor's Summary (Re-audit):** The reward flow overhaul is **functionally complete and working correctly**. Original audit findings were significantly inaccurate - a fresh playtest demonstrates all reward phases working properly through multiple rooms. The only issue found is a minor UX bug where an error overlay incorrectly appears after successful completion, but this does not block gameplay.
+**Auditor's Summary (Re-audit):** The reward flow overhaul is **functionally complete and working correctly**. Original audit findings were significantly inaccurate - a fresh playtest demonstrates all reward phases working properly through multiple rooms. Two UX issues were found:
+1. Error overlay incorrectly appears after successful completion (does not block gameplay)
+2. Reward flow UI theming does not match the rest of the web UI aesthetic
 
 **Recommendation:** 
-- **Core reward flow:** READY FOR REVIEW ✅
-- **Error overlay UX:** Needs minor fix but is low priority
+- **Core reward flow:** Functionally complete ✅
+- **Visual/UX issues:** Need to be addressed before production (P1 priority)
 - **Subtasks:** Should be individually reviewed rather than blanket flagged
 
 **Next Steps:** 
-1. Create issue to fix error overlay display logic (P2 priority)
-2. Review individual subtasks for completion
-3. Consider this umbrella task substantially complete
+1. Update reward flow UI theming to match web UI aesthetic (P1 priority)
+2. Fix error overlay display logic (P1 priority)
+3. Review individual subtasks for completion after theming is fixed
 
 ---
 
-**requesting review from the Task Master** — Re-audit corrected previous inaccurate findings. Reward flow is functional and progresses correctly through all phases (Drops → Cards → Relics → Battle Review). Only minor UX issue with error overlay display. See `.codex/audit/5ab6729c-reward-flow-four-step-overhaul-audit.md` for detailed re-audit analysis with screenshots and backend log evidence.
+**more work needed** — Re-audit corrected previous inaccurate findings. Reward flow is functionally complete and progresses correctly through all phases (Drops → Cards → Relics → Battle Review). However, two UX issues need to be addressed: (1) error overlay display bug and (2) reward flow UI theming inconsistency with main web UI. See `.codex/audit/5ab6729c-reward-flow-four-step-overhaul-audit.md` for detailed re-audit analysis with screenshots and backend log evidence.

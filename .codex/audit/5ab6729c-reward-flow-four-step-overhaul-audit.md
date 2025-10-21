@@ -43,7 +43,9 @@
 ```
 No `400 "not awaiting loot"` errors observed during any phase transitions.
 
-### Actual Issue Found: Error Overlay UX Bug
+### Actual Issues Found
+
+#### 1. Error Overlay UX Bug
 
 **Severity:** MODERATE (UX issue, not functional blocker)  
 **Symptoms:**
@@ -55,6 +57,20 @@ No `400 "not awaiting loot"` errors observed during any phase transitions.
 **Impact:** Confusing user experience but does not block gameplay
 
 **Root Cause:** Frontend display issue - error overlay is shown incorrectly but underlying reward flow logic works fine
+
+#### 2. Reward Flow UI Theming Inconsistency
+
+**Severity:** MODERATE (Visual/UX issue)  
+**Symptoms:**
+- The reward flow overlay UI uses a different visual style than the rest of the web UI
+- The "REWARD FLOW" panel on the right side has a darker, more modern theme
+- Does not match the stained-glass/fantasy aesthetic of the main game UI
+
+**Impact:** Visual inconsistency breaks immersion and looks unpolished
+
+**Evidence:** Visible in screenshots showing the reward overlay (Cards phase, Relics phase, etc.)
+
+**Root Cause:** Reward flow overlay was likely implemented or updated separately and uses different styling/theming components
 
 ### Inaccuracies in Previous Audit
 
@@ -85,11 +101,16 @@ The previous audit (sections below) incorrectly claimed:
 - ⚠️ Error overlay appears incorrectly during normal operation
 - ⚠️ Error overlay persists after successful completion
 - ⚠️ Better error handling/user feedback needed
+- ⚠️ Reward flow UI theming does not match the rest of the web UI
 
 ### Recommendation
 
 **Updated Status:** Change from CRITICAL to MODERATE  
-**Action:** Fix error overlay display logic, but reward flow is ready for production use
+**Action Required Before Production:**
+1. Fix error overlay display logic (P2 priority)
+2. Update reward flow UI theming to match web UI aesthetic (P2 priority)
+
+While the reward flow is functionally complete, these visual/UX issues should be addressed before marking as production-ready.
 
 ---
 
