@@ -8,6 +8,7 @@ from datetime import UTC
 from datetime import datetime
 import hashlib
 import json
+import math
 from typing import Any
 from typing import Iterable
 from typing import Mapping
@@ -16,6 +17,33 @@ from autofighter.effects import DIMINISHING_RETURNS_CONFIG
 from autofighter.effects import calculate_diminishing_returns
 
 METADATA_VERSION = "2025.03"
+
+_CHARACTER_STAT_PRIMARY_LIMIT = 500
+_CHARACTER_STAT_PRIMARY_PENALTY = 0.001
+_CHARACTER_STAT_OVERFLOW_PENALTY = 0.0001
+_CHARACTER_STAT_TARGET_PENALTY = 0.95
+_CHARACTER_REWARD_FIRST_STACK = 0.001
+_CHARACTER_REWARD_PER_ADDITIONAL_STACK = 0.0012
+_CHARACTER_EXP_OVERFLOW_DIVISOR = 25.0
+
+
+def _calculate_penalty_cap_threshold() -> int:
+    primary_penalty_total = _CHARACTER_STAT_PRIMARY_LIMIT * _CHARACTER_STAT_PRIMARY_PENALTY
+    if _CHARACTER_STAT_TARGET_PENALTY <= 0:
+        return 0
+    if _CHARACTER_STAT_TARGET_PENALTY <= primary_penalty_total:
+        return int(
+            math.ceil(_CHARACTER_STAT_TARGET_PENALTY / _CHARACTER_STAT_PRIMARY_PENALTY)
+        )
+    overflow_required = _CHARACTER_STAT_TARGET_PENALTY - primary_penalty_total
+    if _CHARACTER_STAT_OVERFLOW_PENALTY <= 0:
+        return _CHARACTER_STAT_PRIMARY_LIMIT
+    return _CHARACTER_STAT_PRIMARY_LIMIT + int(
+        math.ceil(overflow_required / _CHARACTER_STAT_OVERFLOW_PENALTY)
+    )
+
+
+_CHARACTER_STAT_CAP_STACKS = _calculate_penalty_cap_threshold()
 
 _PRESSURE_TOOLTIP = (
     "Each stack raises encounter pressure. Base encounters gain +1 foe slot for every "
@@ -52,6 +80,15 @@ class RunConfigurationSelection:
                 "player_modifier_bonus": self.reward_bonuses.get("player_modifier_bonus", 0.0),
                 "foe_rdr_bonus": self.reward_bonuses.get("foe_rdr_bonus", 0.0),
                 "player_rdr_bonus": self.reward_bonuses.get("player_rdr_bonus", 0.0),
+                "player_penalty_cap_stacks": self.reward_bonuses.get(
+                    "player_penalty_cap_stacks", 0
+                ),
+                "player_penalty_excess_stacks": self.reward_bonuses.get(
+                    "player_penalty_excess_stacks", 0
+                ),
+                "player_overflow_multiplier": self.reward_bonuses.get(
+                    "player_overflow_multiplier", 1.0
+                ),
             },
         }
 
@@ -125,25 +162,45 @@ def _percent_modifier_effect(per_stack: float, stacks: int) -> dict[str, Any]:
 
 
 def _character_stat_penalty(stacks: int) -> dict[str, Any]:
-    capped = min(stacks, 500)
-    overflow = max(stacks - 500, 0)
-    penalty_primary = capped * 0.001
-    penalty_overflow = overflow * 0.000001
-    total_penalty = penalty_primary + penalty_overflow
+    normalised_stacks = max(int(stacks), 0)
+    capped = min(normalised_stacks, _CHARACTER_STAT_PRIMARY_LIMIT)
+    overflow = max(normalised_stacks - _CHARACTER_STAT_PRIMARY_LIMIT, 0)
+    penalty_primary = capped * _CHARACTER_STAT_PRIMARY_PENALTY
+    penalty_overflow = overflow * _CHARACTER_STAT_OVERFLOW_PENALTY
+    raw_penalty = penalty_primary + penalty_overflow
+    total_penalty = min(raw_penalty, 0.999)
     effective_multiplier = max(0.0, 1.0 - total_penalty)
+
+    cap_threshold = max(_CHARACTER_STAT_CAP_STACKS, 0)
+    capped_reward_stacks = min(normalised_stacks, cap_threshold)
+    stacks_above_cap = max(normalised_stacks - cap_threshold, 0)
+
     bonus_rdr = 0.0
     bonus_exp = 0.0
-    if stacks > 0:
-        bonus_rdr = 0.001 + max(0, stacks - 1) * 0.0012
+    if capped_reward_stacks > 0:
+        bonus_rdr = _CHARACTER_REWARD_FIRST_STACK + max(capped_reward_stacks - 1, 0) * (
+            _CHARACTER_REWARD_PER_ADDITIONAL_STACK
+        )
         bonus_exp = bonus_rdr
+    if stacks_above_cap > 0:
+        bonus_exp += stacks_above_cap * (
+            _CHARACTER_REWARD_PER_ADDITIONAL_STACK / _CHARACTER_EXP_OVERFLOW_DIVISOR
+        )
+
+    overflow_multiplier = 1.0 + 0.01 * stacks_above_cap
+
     return {
-        "stacks": stacks,
+        "stacks": normalised_stacks,
         "penalty_primary": penalty_primary,
         "penalty_overflow": penalty_overflow,
         "total_penalty": total_penalty,
         "effective_multiplier": effective_multiplier,
         "bonus_rdr": bonus_rdr,
         "bonus_exp": bonus_exp,
+        "cap_threshold_stacks": cap_threshold,
+        "stacks_above_cap": stacks_above_cap,
+        "overflow_multiplier": overflow_multiplier,
+        "raw_total_penalty": raw_penalty,
     }
 
 
@@ -340,13 +397,17 @@ _MODIFIER_DEFINITIONS: dict[str, dict[str, Any]] = {
         "stack_step": 1,
         "grants_reward_bonus": False,
         "description": (
-            "Reduces all player stats by 0.001× per stack (0.000001× past 500 stacks) in exchange for"
-            " escalating RDR/EXP bonuses."
+            "Reduces all player stats by 0.001× per stack (0.0001× past 500 stacks) in exchange for"
+            " escalating RDR/EXP bonuses that cap once penalties reach 95%. Overflow stacks"
+            " continue feeding experience at a trickle while empowering foes."
         ),
         "effects_metadata": {
             "primary_penalty_per_stack": 0.001,
-            "overflow_penalty_per_stack": 0.000001,
+            "overflow_penalty_per_stack": 0.0001,
             "overflow_threshold": 500,
+            "penalty_cap_pct": 0.95,
+            "overflow_multiplier_per_stack": 0.01,
+            "exp_overflow_divisor": 25,
         },
         "reward_bonuses": {
             "exp_bonus_first_stack": 0.001,
@@ -486,6 +547,9 @@ def validate_run_configuration(
     player_exp_bonus = 0.0
     player_rdr_bonus = 0.0
     char_penalty_snapshot: dict[str, Any] | None = None
+    player_penalty_cap_stacks = 0
+    player_penalty_excess_stacks = 0
+    player_overflow_multiplier = 1.0
 
     for key, value in combined.items():
         mod_id = str(key).strip().lower()
@@ -525,6 +589,12 @@ def validate_run_configuration(
             char_penalty_snapshot = details
             player_exp_bonus = _numeric(details.get("bonus_exp"))
             player_rdr_bonus = _numeric(details.get("bonus_rdr"))
+            player_penalty_cap_stacks = _integer(details.get("cap_threshold_stacks"))
+            player_penalty_excess_stacks = max(
+                _integer(details.get("stacks_above_cap")),
+                0,
+            )
+            player_overflow_multiplier = _numeric(details.get("overflow_multiplier"), default=1.0)
 
     pressure_value = int(normalized.get("pressure", 0))
     if char_penalty_snapshot is None:
@@ -540,6 +610,18 @@ def validate_run_configuration(
         )
         player_exp_bonus = _numeric(char_penalty_snapshot.get("bonus_exp"))
         player_rdr_bonus = _numeric(char_penalty_snapshot.get("bonus_rdr"))
+        player_penalty_cap_stacks = _integer(
+            char_penalty_snapshot.get("cap_threshold_stacks"),
+            default=player_penalty_cap_stacks,
+        )
+        player_penalty_excess_stacks = max(
+            _integer(char_penalty_snapshot.get("stacks_above_cap")),
+            0,
+        )
+        player_overflow_multiplier = _numeric(
+            char_penalty_snapshot.get("overflow_multiplier"),
+            default=player_overflow_multiplier,
+        )
 
     reward_bonuses = {
         "foe_modifier_bonus": foe_exp_bonus,
@@ -547,6 +629,9 @@ def validate_run_configuration(
         "foe_rdr_bonus": foe_rdr_bonus,
         "player_rdr_bonus": player_rdr_bonus,
     }
+    reward_bonuses["player_penalty_cap_stacks"] = int(player_penalty_cap_stacks)
+    reward_bonuses["player_penalty_excess_stacks"] = int(player_penalty_excess_stacks)
+    reward_bonuses["player_overflow_multiplier"] = float(player_overflow_multiplier or 1.0)
     total_exp_bonus = foe_exp_bonus + player_exp_bonus
     total_rdr_bonus = foe_rdr_bonus + player_rdr_bonus
     reward_bonuses["exp_bonus"] = total_exp_bonus
@@ -605,6 +690,8 @@ class RunModifierContext:
     foe_stat_multipliers: dict[str, float]
     foe_stat_deltas: dict[str, float]
     player_stat_multiplier: float
+    player_penalty_excess_stacks: int
+    foe_overflow_multiplier: float
     pressure_defense_floor: float
     pressure_defense_min_roll: float
     pressure_defense_max_roll: float
@@ -632,6 +719,8 @@ class RunModifierContext:
             "foe_stat_multipliers": dict(self.foe_stat_multipliers),
             "foe_stat_deltas": dict(self.foe_stat_deltas),
             "player_stat_multiplier": self.player_stat_multiplier,
+            "player_penalty_excess_stacks": self.player_penalty_excess_stacks,
+            "foe_overflow_multiplier": self.foe_overflow_multiplier,
             "pressure_defense_floor": self.pressure_defense_floor,
             "pressure_defense_min_roll": self.pressure_defense_min_roll,
             "pressure_defense_max_roll": self.pressure_defense_max_roll,
@@ -669,6 +758,8 @@ class RunModifierContext:
             "player_exp_bonus": self.player_exp_bonus,
             "foe_rdr_bonus": self.foe_rdr_bonus,
             "player_rdr_bonus": self.player_rdr_bonus,
+            "player_penalty_excess_stacks": float(self.player_penalty_excess_stacks),
+            "foe_overflow_multiplier": self.foe_overflow_multiplier,
         }
 
     @classmethod
@@ -696,6 +787,8 @@ class RunModifierContext:
             foe_stat_multipliers=dict(mapping.get("foe_stat_multipliers", {})),
             foe_stat_deltas=dict(mapping.get("foe_stat_deltas", {})),
             player_stat_multiplier=float(mapping.get("player_stat_multiplier", 1.0) or 1.0),
+            player_penalty_excess_stacks=int(mapping.get("player_penalty_excess_stacks", 0) or 0),
+            foe_overflow_multiplier=float(mapping.get("foe_overflow_multiplier", 1.0) or 1.0),
             pressure_defense_floor=float(mapping.get("pressure_defense_floor", 0.0) or 0.0),
             pressure_defense_min_roll=float(mapping.get("pressure_defense_min_roll", 0.0) or 0.0),
             pressure_defense_max_roll=float(mapping.get("pressure_defense_max_roll", 0.0) or 0.0),
@@ -867,6 +960,13 @@ def _numeric(value: Any, *, default: float = 0.0) -> float:
         return float(default)
 
 
+def _integer(value: Any, *, default: int = 0) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return int(default)
+
+
 def build_run_modifier_context(snapshot: Mapping[str, Any]) -> RunModifierContext:
     """Extract reusable modifier effects from a configuration snapshot."""
 
@@ -934,6 +1034,19 @@ def build_run_modifier_context(snapshot: Mapping[str, Any]) -> RunModifierContex
         char_penalty.get("effective_multiplier"),
         default=1.0,
     )
+    player_penalty_excess = max(_integer(char_penalty.get("stacks_above_cap")), 0)
+    overflow_multiplier = _numeric(char_penalty.get("overflow_multiplier"), default=1.0)
+    if overflow_multiplier <= 0.0:
+        overflow_multiplier = 1.0
+
+    if player_penalty_excess > 0 and overflow_multiplier != 1.0:
+        overflow_stats = ("max_hp", "atk", "defense", "spd", "vitality")
+        for stat in overflow_stats:
+            current_value = foe_stat_multipliers.get(stat)
+            if current_value is None:
+                foe_stat_multipliers[stat] = float(overflow_multiplier)
+            else:
+                foe_stat_multipliers[stat] = float(current_value) * float(overflow_multiplier)
 
     shop_tax_multiplier = 1.0
     shop_variance = (0.95, 1.05)
@@ -1030,6 +1143,8 @@ def build_run_modifier_context(snapshot: Mapping[str, Any]) -> RunModifierContex
         player_exp_bonus=player_exp_bonus,
         foe_rdr_bonus=foe_rdr_bonus,
         player_rdr_bonus=player_rdr_bonus,
+        player_penalty_excess_stacks=player_penalty_excess,
+        foe_overflow_multiplier=overflow_multiplier,
         metadata_hash=metadata_hash,
     )
 
