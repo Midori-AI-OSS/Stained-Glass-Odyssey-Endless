@@ -281,6 +281,9 @@ async def acknowledge_loot(run_id: str) -> dict[str, Any]:
             raise ValueError("not awaiting loot")
         current_index = int(state.get("current", 0))
         state["awaiting_loot"] = False
+        staging, _ = ensure_reward_staging(state)
+        staging["items"] = []
+        _refresh_snapshot(run_id, state, staging)
         _update_reward_progression(state, completed_step=REWARD_STEP_DROPS)
 
         if state.get("reward_progression"):
