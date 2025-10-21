@@ -571,6 +571,8 @@ async def _run_battle(
             return
         state["battle"] = False
         try:
+            staging, staging_changed = ensure_reward_staging(state)
+            previous_loot_items = list(staging.get("items", []))
             if result.get("result") != "defeat":
                 try:
                     current_pull_tokens = int(getattr(party, "pull_tokens", 0) or 0)
@@ -582,6 +584,15 @@ async def _run_battle(
                     loot_items = loot_block.setdefault("items", [])
                     loot_items.extend({"id": "ticket", "stars": 0} for _ in range(delta))
             loot_items = result.get("loot", {}).get("items", [])
+            staged_loot_items: list[object] = []
+            if isinstance(loot_items, list):
+                for entry in loot_items:
+                    if isinstance(entry, dict):
+                        staged_loot_items.append(dict(entry))
+                    else:
+                        staged_loot_items.append(entry)
+            staging["items"] = staged_loot_items
+            loot_bucket_changed = staged_loot_items != previous_loot_items or staging_changed
             manager = GachaManager(get_save_manager())
             items = manager._get_items()
             for entry in loot_items:
@@ -711,9 +722,17 @@ async def _run_battle(
                 return
             has_card_choices = bool(result.get("card_choices"))
             has_relic_choices = bool(result.get("relic_choices"))
-            # Check if there's loot to review (gold or items)
-            has_loot = bool(result.get("loot", {}).get("gold", 0) > 0 or
-                           len(result.get("loot", {}).get("items", [])) > 0)
+            loot_payload = result.get("loot", {})
+            loot_gold_raw = 0
+            if isinstance(loot_payload, Mapping):
+                loot_gold_raw = loot_payload.get("gold", 0)
+            has_loot_gold = False
+            try:
+                has_loot_gold = int(loot_gold_raw) > 0
+            except (TypeError, ValueError):
+                has_loot_gold = bool(loot_gold_raw)
+            has_loot_items = bool(staging.get("items"))
+            has_loot = has_loot_gold or has_loot_items
 
             state["awaiting_card"] = has_card_choices
             state["awaiting_relic"] = has_relic_choices
@@ -730,7 +749,13 @@ async def _run_battle(
             else:
                 state["awaiting_next"] = False
                 next_type = None
-            await asyncio.to_thread(save_map, run_id, state)
+            map_saved = False
+            if loot_bucket_changed:
+                await asyncio.to_thread(save_map, run_id, state)
+                map_saved = True
+                _sync_snapshot_reward_staging(run_id, staging)
+            if not map_saved:
+                await asyncio.to_thread(save_map, run_id, state)
             await asyncio.to_thread(save_party, run_id, party)
             result.update(
                 {
@@ -745,6 +770,11 @@ async def _run_battle(
                     "awaiting_next": state.get("awaiting_next", False),
                 }
             )
+            if loot_bucket_changed:
+                result["reward_staging"] = {
+                    key: list(staging.get(key, []))
+                    for key in REWARD_STAGING_KEYS
+                }
             battle_snapshots[run_id] = result
         except Exception as exc:
             log.exception("Battle processing failed for %s", run_id)
