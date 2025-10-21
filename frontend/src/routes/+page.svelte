@@ -81,9 +81,18 @@
   let roomTags = runSnapshot.roomTags;
   let battleActive = runSnapshot.battleActive;
   let lastBattleSnapshot = runSnapshot.lastBattleSnapshot;
+  let lootAckBlocked = false;
+  let lastAwaitingLoot = Boolean(roomData?.awaiting_loot);
 
   $: runSnapshot = $runState;
   $: ({ runId, mapRooms, currentIndex, currentRoomType, nextRoom, roomData, roomTags, battleActive, lastBattleSnapshot } = runSnapshot);
+  $: {
+    const awaitingLoot = Boolean(runSnapshot?.roomData?.awaiting_loot);
+    if (awaitingLoot !== lastAwaitingLoot) {
+      lastAwaitingLoot = awaitingLoot;
+      lootAckBlocked = false;
+    }
+  }
 
   function partiesEqual(a, b) {
     if (a === b) return true;
@@ -1184,6 +1193,15 @@
       return { ok: false };
     }
 
+    if (lootAckBlocked) {
+      if (respond) {
+        try {
+          respond({ ok: false, reason: 'loot-blocked' });
+        } catch {}
+      }
+      return { ok: false };
+    }
+
     rewardAdvanceInFlight = true;
     try {
       await handleNextRoom();
@@ -1214,7 +1232,7 @@
   let autoHandling = false;
   let rewardAdvanceInFlight = false;
   async function maybeAutoHandle() {
-    if (!fullIdleMode || autoHandling || rewardAdvanceInFlight || !runId || !roomData) return;
+    if (!fullIdleMode || autoHandling || rewardAdvanceInFlight || !runId || !roomData || lootAckBlocked) return;
     autoHandling = true;
     try {
       const staging = roomData.reward_staging && typeof roomData.reward_staging === 'object'
@@ -1404,11 +1422,57 @@
     await enterRoom();
   }
 
+  function resetLootAdvanceCountdown() {
+    try {
+      if (typeof rewardPhaseController?.reset === 'function') {
+        rewardPhaseController.reset();
+      }
+    } catch {}
+  }
+
+  async function attemptLootAcknowledge({ source }) {
+    if (!runId) {
+      return false;
+    }
+
+    try {
+      await acknowledgeLoot(runId);
+      return true;
+    } catch (error) {
+      const reason = (() => {
+        if (error && typeof error === 'object' && typeof error.message === 'string' && error.message.trim()) {
+          return error.message;
+        }
+        if (typeof error === 'string' && error.trim()) {
+          return error;
+        }
+        return 'Unknown error';
+      })();
+      lootAckBlocked = true;
+      resetLootAdvanceCountdown();
+      const contextPayload = {
+        source,
+        reason
+      };
+      if (error?.context !== undefined) {
+        contextPayload.detail = error.context;
+      }
+      openOverlay('error', {
+        message: 'Failed to acknowledge loot rewards.',
+        traceback: (error && error.stack) || '',
+        context: contextPayload
+      });
+      console.warn('Loot acknowledgement failed:', reason, error);
+      scheduleMapRefresh();
+      return false;
+    }
+  }
+
   async function handleNextRoom() {
-    if (!runId) return;
+    if (!runId || lootAckBlocked) return;
     // Ensure syncing is enabled when advancing to the next room
     haltSync = false;
-    
+
     // Check if we're currently in battle review mode by checking if review is open
     const inBattleReview = Boolean(
       roomData && (roomData.result === 'battle' || roomData.result === 'boss') && !battleActive &&
@@ -1430,7 +1494,10 @@
       const hasLoot = Boolean((roomData?.loot?.gold || 0) > 0 || (roomData?.loot?.items || []).length > 0);
       if (roomData?.awaiting_loot || hasLoot) {
         stopBattlePolling();
-        try { await acknowledgeLoot(runId); } catch { /* ignore if already acknowledged */ }
+        const acknowledged = await attemptLootAcknowledge({ source: 'next-room' });
+        if (!acknowledged) {
+          return;
+        }
       }
     } catch { /* no-op */ }
     // If the run has ended due to defeat, clear state and show defeat popup immediately
@@ -1537,13 +1604,11 @@
   async function handleLootAcknowledge() {
     if (!runId) return;
     stopBattlePolling();
-    try {
-      await acknowledgeLoot(runId);
-    } catch (e) {
-      console.warn('Loot acknowledgement failed:', e?.message || e);
-      scheduleMapRefresh();
+    const acknowledged = await attemptLootAcknowledge({ source: 'manual-loot' });
+    if (!acknowledged) {
       return;
     }
+    lootAckBlocked = false;
     await handleNextRoom();
   }
 

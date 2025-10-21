@@ -2,6 +2,7 @@ import asyncio
 import importlib.util
 
 from pathlib import Path
+import sys
 
 import pytest
 
@@ -12,6 +13,11 @@ def app_with_db(tmp_path, monkeypatch):
     monkeypatch.setenv("AF_DB_PATH", str(db_path))
     monkeypatch.setenv("AF_DB_KEY", "testkey")
     monkeypatch.syspath_prepend(Path(__file__).resolve().parents[1])
+
+    for module_name in tuple(
+        name for name in sys.modules if name == "runs" or name.startswith("runs.")
+    ):
+        sys.modules.pop(module_name, None)
     spec = importlib.util.spec_from_file_location(
         "app", Path(__file__).resolve().parents[1] / "app.py",
     )
@@ -24,6 +30,7 @@ def app_with_db(tmp_path, monkeypatch):
 
 @pytest.mark.asyncio
 async def test_advance_room_requires_reward_selection(app_with_db):
+    from runs.lifecycle import battle_snapshots
     from runs.lifecycle import load_map
     from runs.lifecycle import save_map
 
@@ -35,52 +42,84 @@ async def test_advance_room_requires_reward_selection(app_with_db):
 
     # Simulate a battle that grants both card and relic rewards
     state, rooms = await asyncio.to_thread(load_map, run_id)
+    staged_loot = [
+        {"id": "ember_fragment", "stars": 2},
+        {"id": "ticket", "stars": 0},
+    ]
     state.update(
         {
             "awaiting_card": True,
             "awaiting_relic": True,
-            "awaiting_loot": False,
+            "awaiting_loot": True,
             "awaiting_next": False,
             "reward_progression": {
-                "available": ["cards", "relics"],
+                "available": ["drops", "cards", "relics"],
                 "completed": [],
-                "current_step": "cards",
+                "current_step": "drops",
+            },
+            "reward_staging": {
+                "cards": [],
+                "relics": [],
+                "items": list(staged_loot),
             },
         }
     )
     await asyncio.to_thread(save_map, run_id, state)
+    battle_snapshots[run_id] = {
+        "result": "victory",
+        "loot": {"gold": 75, "items": list(staged_loot)},
+        "awaiting_card": True,
+        "awaiting_relic": True,
+        "awaiting_loot": True,
+        "awaiting_next": False,
+    }
 
-    # Cannot advance while rewards are pending
-    resp = await client.post("/ui/action", json={"action": "advance_room"})
-    assert resp.status_code == 400
+    try:
+        # Cannot advance while any rewards are pending
+        resp = await client.post("/ui/action", json={"action": "advance_room"})
+        assert resp.status_code == 400
 
-    # Selecting card still leaves relic to claim and staging data present
-    await client.post(
-        "/ui/action",
-        json={"action": "choose_card", "params": {"card_id": "micro_blade"}},
-    )
-    resp = await client.post("/ui/action", json={"action": "advance_room"})
-    assert resp.status_code == 400
+        # Selecting card still leaves relic and loot to claim
+        await client.post(
+            "/ui/action",
+            json={"action": "choose_card", "params": {"card_id": "micro_blade"}},
+        )
+        resp = await client.post("/ui/action", json={"action": "advance_room"})
+        assert resp.status_code == 400
 
-    # Confirm the staged card to clear the reward bucket
-    resp = await client.post("/ui/action", json={"action": "confirm_card"})
-    assert resp.status_code == 200
+        # Confirm the staged card to clear the reward bucket
+        resp = await client.post("/ui/action", json={"action": "confirm_card"})
+        assert resp.status_code == 200
 
-    # Staging a relic should continue to block advancement until confirmed
-    await client.post(
-        "/ui/action",
-        json={"action": "choose_relic", "params": {"relic_id": "threadbare_cloak"}},
-    )
-    resp = await client.post("/ui/action", json={"action": "advance_room"})
-    assert resp.status_code == 400
+        # Staging a relic should continue to block advancement until confirmed
+        await client.post(
+            "/ui/action",
+            json={"action": "choose_relic", "params": {"relic_id": "threadbare_cloak"}},
+        )
+        resp = await client.post("/ui/action", json={"action": "advance_room"})
+        assert resp.status_code == 400
 
-    resp = await client.post("/ui/action", json={"action": "confirm_relic"})
-    assert resp.status_code == 200
+        resp = await client.post("/ui/action", json={"action": "confirm_relic"})
+        assert resp.status_code == 200
 
-    resp = await client.post("/ui/action", json={"action": "advance_room"})
-    data = await resp.get_json()
-    assert resp.status_code == 200
-    assert data.get("next_room") is not None
+        # Even with card and relic confirmed, loot acknowledgement keeps advancement blocked
+        resp = await client.post("/ui/action", json={"action": "advance_room"})
+        assert resp.status_code == 400
+
+        loot_resp = await client.post(f"/rewards/loot/{run_id}")
+        assert loot_resp.status_code == 200
+        loot_data = await loot_resp.get_json()
+        assert "next_room" in loot_data
+
+        state_after, _ = await asyncio.to_thread(load_map, run_id)
+        assert state_after.get("awaiting_loot") is False
+
+        resp = await client.post("/ui/action", json={"action": "advance_room"})
+        data = await resp.get_json()
+        assert resp.status_code == 200
+        assert data.get("next_room") is not None
+    finally:
+        battle_snapshots.pop(run_id, None)
 
 
 @pytest.mark.asyncio
