@@ -14,3 +14,6 @@ Add the stained-glass right-rail with a manual `Advance` button, integrate a 10-
 - Confirm animation/styling expectations with the UX owner before finalising CSS variables.
 - Provide an event or callback the automation task can hook into for validating auto-advance in tests.
 ready for review
+
+## Auditor note
+- 2025-10-20: Reward flow rail leaked into the home screen side panel during implementation work tied to this task. The rail has been removed from the main menu; subsequent updates should keep all countdown and rail UI scoped to the reward overlay.

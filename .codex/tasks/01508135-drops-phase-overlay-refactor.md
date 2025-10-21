@@ -14,3 +14,6 @@ Implement the UI pieces for the Drops phase so loot tiles render in isolation an
 - Pair with the advance button implementer to confirm how the controller signals Drops completion.
 - Flag any styling tokens needed for shared stained-glass visuals so the follow-up task can reuse them.
 ready for review
+
+## Auditor note
+- 2025-10-20: Reward flow rail briefly shipped on the home screen side panel instead of staying in the reward overlay. Main menu has been restored; future work on this task should keep the rail scoped to the overlay only.
