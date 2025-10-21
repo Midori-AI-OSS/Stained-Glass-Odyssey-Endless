@@ -13,3 +13,6 @@ Tighten the reward overlay's transition handling, fallback behaviour, and focus 
 ## Coordination notes
 - Pair with QA or accessibility reviewers to validate screen reader messaging.
 - Sync with backend engineers if additional metadata is required to cover new edge cases uncovered during implementation.
+- Remaining risk: the Bun test runner currently resolves Svelte's server build, so reward overlay component tests must run under a DOM-capable environment (e.g., jsdom) to execute successfully.
+
+ready for review
