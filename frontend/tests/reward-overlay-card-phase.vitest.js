@@ -141,4 +141,48 @@ describe('RewardOverlay card phase interactions', () => {
     expect(confirmHandler).toHaveBeenCalledTimes(1);
     expect(confirmHandler.mock.calls[0][0]?.id).toBe('echo-strike');
   });
+
+  test('applies selected styling in the no-confirmation card flow', async () => {
+    updateRewardProgression(afterDropsProgression());
+
+    const { container } = render(RewardOverlay, {
+      props: {
+        cards: [
+          {
+            id: 'first-card',
+            name: 'First Card',
+            stars: 3
+          },
+          {
+            id: 'second-card',
+            name: 'Second Card',
+            stars: 2
+          }
+        ],
+        relics: [],
+        items: [],
+        gold: 0,
+        awaitingLoot: false,
+        awaitingCard: false,
+        awaitingRelic: false,
+        awaitingNext: false,
+        reducedMotion: false
+      }
+    });
+
+    const secondCardButton = container.querySelector(
+      'button[aria-label="Select card Second Card"]'
+    );
+    expect(secondCardButton).not.toBeNull();
+    if (!secondCardButton) return;
+
+    await fireEvent.click(secondCardButton);
+    await tick();
+
+    const shell = secondCardButton.closest('.card-shell');
+    expect(shell).not.toBeNull();
+    expect(shell?.classList.contains('selected')).toBe(true);
+    expect(shell?.classList.contains('confirmable')).toBe(false);
+    expect(shell?.dataset.reducedMotion).toBe('false');
+  });
 });

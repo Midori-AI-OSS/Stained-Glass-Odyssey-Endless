@@ -1,5 +1,6 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
 import { tick } from 'svelte';
+import { afterCardsProgression } from './__fixtures__/rewardProgressionPayloads.js';
 
 process.env.SVELTE_ALLOW_RUNES_OUTSIDE_SVELTE = 'true';
 globalThis.SVELTE_ALLOW_RUNES_OUTSIDE_SVELTE = true;
@@ -65,6 +66,37 @@ describe('RewardOverlay relic phase interactions', () => {
     expect(selectEvents.some((detail) => detail?.type === 'relic' && detail?.id === 'first-relic')).toBe(true);
     const highlighted = container.querySelector('.curio-shell.selected');
     expect(highlighted).not.toBeNull();
+  });
+
+  test('applies selected styling in the no-confirmation relic flow', async () => {
+    updateRewardProgression(afterCardsProgression());
+
+    const { container } = render(RewardOverlay, {
+      props: {
+        ...baseProps,
+        relics: [
+          { id: 'first-relic', name: 'First Relic' },
+          { id: 'second-relic', name: 'Second Relic' }
+        ],
+        reducedMotion: false,
+        awaitingRelic: false
+      }
+    });
+
+    const secondRelicButton = container.querySelector(
+      'button[aria-label="Select relic Second Relic"]'
+    );
+    expect(secondRelicButton).not.toBeNull();
+    if (!secondRelicButton) return;
+
+    await fireEvent.click(secondRelicButton);
+    await tick();
+
+    const shell = secondRelicButton.closest('.curio-shell');
+    expect(shell).not.toBeNull();
+    expect(shell?.classList.contains('selected')).toBe(true);
+    expect(shell?.classList.contains('confirmable')).toBe(false);
+    expect(shell?.dataset.reducedMotion).toBe('false');
   });
 
   test('shows on-tile confirm controls for the staged relic', async () => {

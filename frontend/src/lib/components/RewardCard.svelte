@@ -208,7 +208,7 @@
     }
   }
 
-  .card-shell.confirmable.selected[data-reduced-motion='false'] :global(.card-art) {
+  .card-shell.selected[data-reduced-motion='false'] :global(.card-art) {
     animation: reward-selection-wiggle var(--reward-selection-wiggle-duration)
       ease-in-out infinite;
   }
