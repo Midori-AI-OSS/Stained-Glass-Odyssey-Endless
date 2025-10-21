@@ -1602,12 +1602,13 @@
   }
 
   async function handleLootAcknowledge() {
-    if (!runId || lootAckBlocked) return;
+    if (!runId) return;
     stopBattlePolling();
     const acknowledged = await attemptLootAcknowledge({ source: 'manual-loot' });
     if (!acknowledged) {
       return;
     }
+    lootAckBlocked = false;
     await handleNextRoom();
   }
 
