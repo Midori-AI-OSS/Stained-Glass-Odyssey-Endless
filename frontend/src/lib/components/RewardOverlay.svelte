@@ -896,7 +896,47 @@
     }
   }
 
-  function dispatchWithResponse(eventName, type) {
+  function rewardEventDetail(type, { useConfirmable = false } = {}) {
+    const baseDetail = {
+      type,
+      phase: null,
+      key: null,
+      id: null,
+      entry: null,
+      label: ''
+    };
+
+    if (type === 'card') {
+      baseDetail.phase = 'cards';
+      const resolvedKey = useConfirmable && confirmableCardKey
+        ? confirmableCardKey
+        : highlightedCardKey || (stagedCardEntries[0] ? rewardEntryKey(stagedCardEntries[0], 0, 'staged-card') : null);
+      if (resolvedKey) {
+        baseDetail.key = resolvedKey;
+        baseDetail.entry =
+          stagedCardEntryMap.get(resolvedKey) ?? cardChoiceEntryMap.get(resolvedKey) ?? null;
+      }
+      baseDetail.id = baseDetail.entry?.id ?? null;
+      baseDetail.label = labelForRewardEntry(baseDetail.entry, 'card');
+    } else if (type === 'relic') {
+      baseDetail.phase = 'relics';
+      const resolvedKey = useConfirmable && confirmableRelicKey
+        ? confirmableRelicKey
+        : highlightedRelicKey || (stagedRelicEntries[0] ? rewardEntryKey(stagedRelicEntries[0], 0, 'staged-relic') : null);
+      if (resolvedKey) {
+        baseDetail.key = resolvedKey;
+        baseDetail.entry =
+          stagedRelicEntryMap.get(resolvedKey) ?? relicChoiceEntryMap.get(resolvedKey) ?? null;
+      }
+      baseDetail.id = baseDetail.entry?.id ?? null;
+      baseDetail.label = labelForRewardEntry(baseDetail.entry, 'relic');
+    }
+
+    return baseDetail;
+  }
+
+  function dispatchWithResponse(eventName, type, options = {}) {
+    const eventDetail = rewardEventDetail(type, options);
     return new Promise((resolve) => {
       let responded = false;
       const respond = (value) => {
@@ -904,7 +944,7 @@
         responded = true;
         resolve(value || { ok: false });
       };
-      dispatch(eventName, { type, respond });
+      dispatch(eventName, { ...eventDetail, respond });
     });
   }
 
@@ -1104,7 +1144,7 @@
       const token = Symbol('cardConfirm');
       pendingCardConfirm = token;
       try {
-        await dispatchWithResponse('confirm', 'card');
+        await dispatchWithResponse('confirm', 'card', { useConfirmable: true });
       } finally {
         if (pendingCardConfirm === token) {
           pendingCardConfirm = null;
@@ -1115,7 +1155,7 @@
       const token = Symbol('relicConfirm');
       pendingRelicConfirm = token;
       try {
-        await dispatchWithResponse('confirm', 'relic');
+        await dispatchWithResponse('confirm', 'relic', { useConfirmable: true });
       } finally {
         if (pendingRelicConfirm === token) {
           pendingRelicConfirm = null;
@@ -1131,7 +1171,7 @@
       const token = Symbol('cardCancel');
       pendingCardCancel = token;
       try {
-        await dispatchWithResponse('cancel', 'card');
+        await dispatchWithResponse('cancel', 'card', { useConfirmable: true });
       } finally {
         if (pendingCardCancel === token) {
           pendingCardCancel = null;
@@ -1142,7 +1182,7 @@
       const token = Symbol('relicCancel');
       pendingRelicCancel = token;
       try {
-        await dispatchWithResponse('cancel', 'relic');
+        await dispatchWithResponse('cancel', 'relic', { useConfirmable: true });
       } finally {
         if (pendingRelicCancel === token) {
           pendingRelicCancel = null;

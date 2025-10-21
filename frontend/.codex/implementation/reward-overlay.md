@@ -51,12 +51,15 @@ immediately, matching the on-card button.
   `awaiting_*` flags from `OverlayHost`. Both grids stay visible while a staged
   entry is pending so players can reselect without cancelling.
 - Clicking **Confirm** (either the on-card button or the highlighted card a
-  second time) dispatches a `confirm` event with the reward type so the caller
-  can invoke `/ui?action=confirm_card` or `/ui?action=confirm_relic`.
-  Buttons stay disabled until the parent responds via the provided
-  `respond({ ok })` callback. After a successful confirmation the frontend
-  immediately prunes the resolved choice bucket so the overlay transitions to
-  the next reward step without briefly reopening the spent selection view.
+  second time) dispatches a `confirm` event with the reward metadata so the
+  caller can invoke `/ui?action=confirm_card` or `/ui?action=confirm_relic`.
+  The detail includes the reward `type`, currently staged `key`, resolved
+  `id`, a human-readable `label`, the originating `phase`, and the staged
+  `entry` object (if available) alongside the `respond({ ok })` callback.
+  Buttons stay disabled until the parent responds via the provided callback.
+  After a successful confirmation the frontend immediately prunes the resolved
+  choice bucket so the overlay transitions to the next reward step without
+  briefly reopening the spent selection view.
 - Clicking **Cancel** dispatches a matching `cancel` event that triggers the
   `/ui?action=cancel_*` endpoints and restores the choice list once the staging
   bucket is cleared.
