@@ -11,3 +11,5 @@ Umbrella pointer for the card/relic interaction refresh. The work is now split s
 ## Notes
 - Coordinate timelines with the phase controller subtasks so confirm hooks wire into the shared state machine cleanly.
 - Update this parent as subtasks close or if additional polish work is identified.
+
+ready for review
