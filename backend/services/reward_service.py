@@ -277,36 +277,65 @@ async def acknowledge_loot(run_id: str) -> dict[str, Any]:
     lock = reward_locks.setdefault(run_id, asyncio.Lock())
     async with lock:
         state, rooms = await asyncio.to_thread(load_map, run_id)
-        if not state.get("awaiting_loot"):
-            raise ValueError("not awaiting loot")
-        current_index = int(state.get("current", 0))
-        state["awaiting_loot"] = False
         staging, _ = ensure_reward_staging(state)
+        awaiting_loot = bool(state.get("awaiting_loot"))
+        current_index = int(state.get("current", 0))
+        room = None
+        if isinstance(rooms, list) and 0 <= current_index < len(rooms):
+            room = rooms[current_index]
+
+        def resolve_next_room() -> str | None:
+            if not state.get("awaiting_next"):
+                return None
+            next_index = state.get("current", 0) + 1
+            if isinstance(rooms, list) and 0 <= next_index < len(rooms):
+                return rooms[next_index].room_type
+            return None
+
+        if not awaiting_loot:
+            next_room = resolve_next_room()
+            try:
+                await log_game_action(
+                    "acknowledge_loot",
+                    run_id=run_id,
+                    room_id=str(getattr(room, "room_id", getattr(room, "index", current_index)))
+                    if room
+                    else str(current_index),
+                    details={"next_room": next_room, "idempotent": True},
+                )
+            except Exception:
+                pass
+            return {"next_room": next_room}
+
+        state["awaiting_loot"] = False
         staging["items"] = []
-        _refresh_snapshot(run_id, state, staging)
         _update_reward_progression(state, completed_step=REWARD_STEP_DROPS)
 
         if state.get("reward_progression"):
             state["awaiting_next"] = False
         elif not state.get("awaiting_card") and not state.get("awaiting_relic"):
             state["awaiting_next"] = True
-        next_type = (
-            rooms[state["current"] + 1].room_type
-            if state["current"] + 1 < len(rooms) and state.get("awaiting_next")
-            else None
-        )
-        await asyncio.to_thread(save_map, run_id, state)
-        await asyncio.to_thread(save_party, run_id, await asyncio.to_thread(load_party, run_id))
+        else:
+            state["awaiting_next"] = False
+
+        _refresh_snapshot(run_id, state, staging)
+
+        party = await asyncio.to_thread(load_party, run_id)
+        await _persist_reward_state(run_id, state, party)
+
+        next_type = resolve_next_room()
         try:
             await log_game_action(
                 "acknowledge_loot",
                 run_id=run_id,
-                room_id=str(getattr(rooms[current_index], "room_id", current_index)) if rooms else str(current_index),
-                details={"next_room": next_type},
+                room_id=str(getattr(room, "room_id", getattr(room, "index", current_index)))
+                if room
+                else str(current_index),
+                details={"next_room": next_type, "idempotent": False},
             )
         except Exception:
             pass
-        return {"next_room": next_type} if next_type is not None else {"next_room": None}
+        return {"next_room": next_type}
 
 
 def _update_reward_progression(
