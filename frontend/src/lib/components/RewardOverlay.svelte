@@ -12,6 +12,7 @@
     rewardPhaseController,
     advanceRewardPhase
   } from '../systems/overlayState.js';
+  import { warn as logWarn } from '../systems/logger.js';
   import { emitRewardTelemetry } from '../systems/rewardTelemetry.js';
 
   export let cards = [];
@@ -42,10 +43,17 @@
   };
   const DROPS_COMPLETE_EVENT = 'drops-complete';
 
-  let detachRewardPhaseListener = null;
+  const phaseListenerDisposers = [];
+  let overlayRootEl = null;
+  let advanceButtonEl = null;
+  let phaseAnnouncement = '';
+  let countdownAnnouncement = '';
+  let lastAnnouncedPhase = null;
+  let fallbackLogSignature = null;
+  let lastAdvanceFocusable = false;
 
   onMount(() => {
-    detachRewardPhaseListener = rewardPhaseController.on('exit', (detail) => {
+    const exitDisposer = rewardPhaseController.on('exit', (detail) => {
       if (!detail || detail.phase !== 'drops') {
         return;
       }
@@ -57,6 +65,9 @@
         sequence: Array.isArray(detail.snapshot?.sequence) ? detail.snapshot.sequence.slice() : []
       });
     });
+    if (typeof exitDisposer === 'function') {
+      phaseListenerDisposers.push(exitDisposer);
+    }
   });
 
   // Render immediately; CSS animations handle reveal on mount
@@ -75,32 +86,45 @@
   $: dataReducedMotion = reducedMotion ? 'true' : 'false';
   $: dataSfxVolume = String(normalizedSfxVolume);
   $: phaseSnapshot = $rewardPhaseState;
-  $: phaseSequence =
+  $: rawPhaseSequence =
     Array.isArray(phaseSnapshot?.sequence) && phaseSnapshot.sequence.length > 0
       ? phaseSnapshot.sequence
-      : DEFAULT_PHASE_SEQUENCE;
+      : [];
+  $: phaseSequence = rawPhaseSequence.length > 0 ? rawPhaseSequence : DEFAULT_PHASE_SEQUENCE;
   $: completedPhaseSet = new Set(Array.isArray(phaseSnapshot?.completed) ? phaseSnapshot.completed : []);
   $: currentPhase = phaseSnapshot?.current ?? null;
   $: nextPhase = phaseSnapshot?.next ?? null;
-  $: dropsPhaseActive = currentPhase === 'drops';
-  $: showDropsSection = dropsPhaseActive && (hasLootItems || awaitingLoot || gold > 0);
-  $: nonDropContentHidden = dropsPhaseActive;
+  $: phaseDiagnostics = Array.isArray(phaseSnapshot?.diagnostics) ? phaseSnapshot.diagnostics : [];
+  $: fallbackActive =
+    rawPhaseSequence.length === 0 || !currentPhase || (phaseDiagnostics?.length ?? 0) > 0;
+  $: dropsPhaseActive = !fallbackActive && currentPhase === 'drops';
+  $: showDropsSection = fallbackActive
+    ? hasLootItems || awaitingLoot || gold > 0
+    : dropsPhaseActive && (hasLootItems || awaitingLoot || gold > 0);
+  $: nonDropContentHidden = fallbackActive ? false : dropsPhaseActive;
   $: phaseEntries = phaseSequence.map((phase, index) => {
     const resolvedLabel = PHASE_LABELS[phase] ?? phase.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
-    const status = completedPhaseSet.has(phase)
-      ? 'completed'
-      : phase === currentPhase
-        ? 'current'
-        : 'upcoming';
+    const isCurrent = !fallbackActive && phase === currentPhase;
+    const status = fallbackActive
+      ? 'legacy'
+      : completedPhaseSet.has(phase)
+        ? 'completed'
+        : isCurrent
+          ? 'current'
+          : 'upcoming';
     return {
       phase,
       index: index + 1,
       label: resolvedLabel,
-      status
+      status,
+      isCurrent
     };
   });
-  $: nextPhaseLabel = nextPhase
+  $: nextPhaseLabel = !fallbackActive && nextPhase
     ? PHASE_LABELS[nextPhase] ?? nextPhase.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+    : '';
+  $: fallbackPhaseMessage = fallbackActive
+    ? 'Reward phases unavailable. Showing legacy overlay.'
     : '';
 
   const ADVANCE_COUNTDOWN_SECONDS = 10;
@@ -111,17 +135,79 @@
   let advanceInFlight = false;
 
   $: advanceCountdownLabel = formatCountdown(advanceCountdownSeconds);
-  $: showAdvancePanel = Boolean(currentPhase && nextPhase);
-  $: phaseAdvanceAvailable = computeAdvanceAvailability(currentPhase, nextPhase);
-  $: advanceButtonDisabled = !phaseAdvanceAvailable || advanceInFlight;
+  $: showAdvancePanel = !fallbackActive && Boolean(currentPhase && nextPhase);
+  $: phaseAdvanceAvailable = !fallbackActive && computeAdvanceAvailability(currentPhase, nextPhase);
+  $: advanceButtonDisabled = !phaseAdvanceAvailable || advanceInFlight || fallbackActive;
   $: advanceCountdownActive = Boolean(advanceCountdownTimer) && phaseAdvanceAvailable;
   $: advanceStatusMessage = (() => {
     if (!showAdvancePanel) return '';
     if (!phaseAdvanceAvailable) {
-      return 'Complete this step to continue';
+      return 'Advance locked until this phase is complete.';
     }
-    return `Auto in ${advanceCountdownLabel}`;
+    if (advanceCountdownActive) {
+      return `Advance ready. Auto in ${advanceCountdownLabel}.`;
+    }
+    return 'Advance ready.';
   })();
+  $: countdownAnnouncement = showAdvancePanel ? advanceStatusMessage : '';
+
+  $: {
+    if (fallbackActive) {
+      lastAnnouncedPhase = null;
+      phaseAnnouncement = fallbackPhaseMessage;
+    } else if (currentPhase && currentPhase !== lastAnnouncedPhase) {
+      const label = PHASE_LABELS[currentPhase] ?? currentPhase.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+      const nextLabel = nextPhaseLabel || '';
+      phaseAnnouncement = nextLabel
+        ? `Entered ${label} phase. Next: ${nextLabel}.`
+        : `Entered ${label} phase. Final reward step.`;
+      lastAnnouncedPhase = currentPhase;
+    }
+  }
+
+  $: {
+    if (fallbackActive) {
+      const signature = JSON.stringify({
+        diagnostics: phaseDiagnostics,
+        currentPhase,
+        sequence: rawPhaseSequence
+      });
+      if (signature !== fallbackLogSignature) {
+        fallbackLogSignature = signature;
+        logWarn('RewardOverlay: reward progression invalid, falling back to legacy overlay', {
+          diagnostics: phaseDiagnostics,
+          snapshot: phaseSnapshot ?? null
+        });
+      }
+    } else {
+      fallbackLogSignature = null;
+    }
+  }
+
+  $: {
+    const focusable =
+      !fallbackActive &&
+      showAdvancePanel &&
+      phaseAdvanceAvailable &&
+      !advanceButtonDisabled &&
+      advanceButtonEl != null;
+    if (focusable && !lastAdvanceFocusable) {
+      queueMicrotask(() => {
+        if (!advanceButtonEl) return;
+        if (document.activeElement !== advanceButtonEl) {
+          advanceButtonEl.focus();
+        }
+      });
+    }
+    if (!focusable && lastAdvanceFocusable) {
+      queueMicrotask(() => {
+        if (advanceButtonEl && document.activeElement === advanceButtonEl && overlayRootEl) {
+          overlayRootEl.focus();
+        }
+      });
+    }
+    lastAdvanceFocusable = focusable;
+  }
 
   $: {
     if (showAdvancePanel && phaseAdvanceAvailable && currentPhase && nextPhase && !advanceInFlight) {
@@ -435,7 +521,7 @@
   }
 
   function triggerAdvance(reason) {
-    if (!phaseAdvanceAvailable || advanceInFlight) return;
+    if (!phaseAdvanceAvailable || advanceInFlight || fallbackActive) return;
     const snapshot =
       typeof rewardPhaseController?.getSnapshot === 'function'
         ? rewardPhaseController.getSnapshot()
@@ -462,11 +548,29 @@
       target: targetPhase,
       snapshot: nextSnapshot ?? null
     });
+
+    if (reason === 'auto' && overlayRootEl) {
+      queueMicrotask(() => {
+        overlayRootEl?.focus?.();
+      });
+    }
   }
 
   function handleAdvanceClick() {
     if (!phaseAdvanceAvailable || advanceInFlight) return;
     triggerAdvance('manual');
+  }
+
+  function handleLayoutKeydown(event) {
+    handleLootSfxGesture(event);
+    if (event.defaultPrevented) return;
+    if (!overlayRootEl || event.target !== overlayRootEl) return;
+    if (!phaseAdvanceAvailable || advanceButtonDisabled) return;
+    if (fallbackActive) return;
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      triggerAdvance('keyboard');
+    }
   }
 
   $: {
@@ -685,9 +789,11 @@
     lootSfxEnabled = false;
     lootSfxBlocked = false;
     lootSfxNoticeLogged = false;
-    if (typeof detachRewardPhaseListener === 'function') {
-      detachRewardPhaseListener();
-      detachRewardPhaseListener = null;
+    while (phaseListenerDisposers.length > 0) {
+      const dispose = phaseListenerDisposers.pop();
+      try {
+        dispose?.();
+      } catch {}
     }
   });
 
@@ -767,7 +873,7 @@
     gap: 0.5rem;
   }
 
-  .phase-item {
+  .phase-item { 
     display: flex;
     align-items: center;
     gap: 0.65rem;
@@ -808,6 +914,10 @@
     background: rgba(90, 170, 255, 0.45);
   }
 
+  .phase-item.legacy {
+    opacity: 0.55;
+  }
+
   .phase-label {
     flex: 1 1 auto;
     font-weight: 600;
@@ -817,6 +927,11 @@
     margin: 0;
     font-size: 0.85rem;
     color: rgba(241, 245, 255, 0.75);
+  }
+
+  .phase-note.warning {
+    color: rgba(255, 214, 153, 0.92);
+    font-weight: 600;
   }
 
   .advance-panel.locked {
@@ -1256,11 +1371,15 @@
 
 <div
   class="layout"
+  bind:this={overlayRootEl}
+  tabindex="-1"
   data-reduced-motion={dataReducedMotion}
   data-sfx-volume={dataSfxVolume}
   on:pointerdown={handleLootSfxGesture}
-  on:keydown={handleLootSfxGesture}
+  on:keydown={handleLayoutKeydown}
 >
+  <span class="sr-only" aria-live="assertive" aria-atomic="true">{phaseAnnouncement}</span>
+  <span class="sr-only" aria-live="polite" aria-atomic="true">{countdownAnnouncement}</span>
   <div class="main-column">
     {#if showDropsSection}
       <h3 class="section-title">Drops</h3>
@@ -1465,7 +1584,9 @@
         {/each}
       </ol>
     </div>
-    {#if nextPhaseLabel && dropsPhaseActive}
+    {#if fallbackPhaseMessage}
+      <p class="phase-note warning" role="status">{fallbackPhaseMessage}</p>
+    {:else if nextPhaseLabel && dropsPhaseActive}
       <p class="phase-note">Next: {nextPhaseLabel}</p>
     {/if}
     {#if showAdvancePanel}
@@ -1480,6 +1601,7 @@
         <button
           class="icon-btn advance-button"
           type="button"
+          bind:this={advanceButtonEl}
           on:click={handleAdvanceClick}
           disabled={advanceButtonDisabled}
         >

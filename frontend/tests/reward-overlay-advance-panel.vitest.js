@@ -1,4 +1,4 @@
-import { afterEach, beforeAll, beforeEach, describe, expect, test, vi } from 'vitest';
+import { afterEach, beforeAll, beforeEach, describe, expect, test } from 'vitest';
 import { tick } from 'svelte';
 
 process.env.SVELTE_ALLOW_RUNES_OUTSIDE_SVELTE = 'true';
@@ -24,13 +24,11 @@ beforeAll(async () => {
 });
 
 beforeEach(() => {
-  vi.useRealTimers();
   resetRewardProgression?.();
 });
 
 afterEach(() => {
   cleanup?.();
-  vi.useRealTimers();
 });
 
 const baseProps = Object.freeze({
@@ -52,6 +50,54 @@ function renderOverlay(overrides = {}) {
   return render(RewardOverlay, { props: { ...baseProps, ...overrides } });
 }
 
+async function withMockedTimers(run) {
+  const originalNow = Date.now;
+  const originalSetInterval = globalThis.setInterval;
+  const originalClearInterval = globalThis.clearInterval;
+
+  let currentNow = originalNow();
+  const intervals = new Map();
+  let nextIntervalId = 1;
+
+  Date.now = () => currentNow;
+
+  globalThis.setInterval = (callback) => {
+    const id = nextIntervalId++;
+    intervals.set(id, callback);
+    return id;
+  };
+
+  globalThis.clearInterval = (id) => {
+    intervals.delete(id);
+  };
+
+  const runIntervals = () => {
+    for (const callback of Array.from(intervals.values())) {
+      callback();
+    }
+  };
+
+  const advanceMs = (ms) => {
+    currentNow += ms;
+    runIntervals();
+  };
+
+  try {
+    await run({
+      advanceMs,
+      runIntervals,
+      setNow(value) {
+        currentNow = value;
+        runIntervals();
+      }
+    });
+  } finally {
+    Date.now = originalNow;
+    globalThis.setInterval = originalSetInterval;
+    globalThis.clearInterval = originalClearInterval;
+  }
+}
+
 describe('reward overlay advance panel', () => {
   test('manual advance dispatches events and advances the controller', async () => {
     updateRewardProgression({
@@ -65,8 +111,10 @@ describe('reward overlay advance panel', () => {
     component.$on('advance', (event) => advances.push(event.detail));
 
     const button = container.querySelector('.advance-button');
-    expect(button).not.toBeNull();
-    if (!button) return;
+    expect(button).toBeInstanceOf(HTMLButtonElement);
+    if (!(button instanceof HTMLButtonElement)) {
+      throw new Error('Advance button missing');
+    }
 
     await fireEvent.click(button);
     await tick();
@@ -80,7 +128,6 @@ describe('reward overlay advance panel', () => {
   });
 
   test('auto countdown advances after 10 seconds when ready', async () => {
-    vi.useFakeTimers();
     updateRewardProgression({
       available: ['drops', 'cards'],
       completed: [],
@@ -94,17 +141,17 @@ describe('reward overlay advance panel', () => {
     const status = container.querySelector('.advance-status');
     expect(status?.textContent ?? '').toMatch(/Auto in/);
 
-    vi.advanceTimersByTime(10000);
-    await tick();
+    await withMockedTimers(async ({ advanceMs }) => {
+      advanceMs(10000);
+      await tick();
+    });
 
     expect(advances.length).toBeGreaterThan(0);
     expect(advances[0]?.reason).toBe('auto');
     expect(rewardPhaseController.getSnapshot().current).toBe('cards');
-    vi.useRealTimers();
   });
 
   test('countdown pauses when new choices arrive and resumes when cleared', async () => {
-    vi.useFakeTimers();
     updateRewardProgression({
       available: ['drops', 'cards', 'relics'],
       completed: ['drops'],
@@ -119,19 +166,119 @@ describe('reward overlay advance panel', () => {
 
     component.$set({ cards: [{ id: 'luminous-surge', name: 'Luminous Surge' }] });
     await tick();
-    expect(readStatus()).toMatch(/Complete this step/);
+    expect(readStatus()).toMatch(/Advance locked/);
 
-    vi.advanceTimersByTime(12000);
-    await tick();
+    await withMockedTimers(async ({ advanceMs }) => {
+      advanceMs(12000);
+      await tick();
+    });
     expect(rewardPhaseController.getSnapshot().current).toBe('cards');
 
     component.$set({ cards: [] });
     await tick();
     expect(readStatus()).toMatch(/Auto in/);
 
-    vi.advanceTimersByTime(10000);
-    await tick();
+    await withMockedTimers(async ({ advanceMs }) => {
+      advanceMs(10000);
+      await tick();
+    });
     expect(rewardPhaseController.getSnapshot().current).toBe('relics');
-    vi.useRealTimers();
+  });
+
+  test('focuses advance button when a phase becomes ready', async () => {
+    updateRewardProgression({
+      available: ['drops', 'cards'],
+      completed: [],
+      current_step: 'drops'
+    });
+
+    const { container } = renderOverlay();
+    await tick();
+    await tick();
+
+    const button = container.querySelector('.advance-button');
+    expect(button).toBeInstanceOf(HTMLButtonElement);
+    if (!(button instanceof HTMLButtonElement)) {
+      throw new Error('Advance button missing');
+    }
+    expect(document.activeElement).toBe(button);
+  });
+
+  test('auto advance returns focus to overlay root', async () => {
+    updateRewardProgression({
+      available: ['drops', 'cards'],
+      completed: [],
+      current_step: 'drops'
+    });
+
+    const { container } = renderOverlay();
+    await tick();
+    await tick();
+
+    const layout = container.querySelector('.layout');
+    const button = container.querySelector('.advance-button');
+    expect(layout).toBeInstanceOf(HTMLElement);
+    expect(button).toBeInstanceOf(HTMLButtonElement);
+    if (!(layout instanceof HTMLElement) || !(button instanceof HTMLButtonElement)) {
+      throw new Error('Overlay layout or button missing');
+    }
+    expect(document.activeElement).toBe(button);
+
+    await withMockedTimers(async ({ advanceMs }) => {
+      advanceMs(10000);
+      await tick();
+    });
+
+    expect(document.activeElement).toBe(layout);
+  });
+
+  test('enter key on overlay root triggers keyboard advance', async () => {
+    updateRewardProgression({
+      available: ['drops', 'cards'],
+      completed: [],
+      current_step: 'drops'
+    });
+
+    const { component, container } = renderOverlay();
+    const advances = [];
+    component.$on('advance', (event) => advances.push(event.detail));
+
+    await tick();
+    const layout = container.querySelector('.layout');
+    expect(layout).toBeInstanceOf(HTMLElement);
+    if (!(layout instanceof HTMLElement)) {
+      throw new Error('Overlay layout missing');
+    }
+
+    layout.focus();
+    await tick();
+
+    await fireEvent.keyDown(layout, { key: 'Enter', code: 'Enter' });
+    await tick();
+
+    expect(advances.at(-1)?.reason).toBe('keyboard');
+  });
+
+  test('falls back to legacy overlay when progression diagnostics are present', async () => {
+    const originalWarn = console.warn;
+    const warnings = [];
+    console.warn = (...args) => {
+      warnings.push(args);
+    };
+
+    try {
+      updateRewardProgression({});
+      const { container } = renderOverlay({
+        cards: [{ id: 'flare', name: 'Flare' }]
+      });
+
+      await tick();
+      const fallbackNote = container.querySelector('.phase-note.warning');
+      expect(fallbackNote?.textContent ?? '').toMatch(/legacy overlay/i);
+      expect(container.querySelector('.advance-panel')).toBeNull();
+      expect(warnings.length).toBeGreaterThan(0);
+    } finally {
+      console.warn = originalWarn;
+    }
   });
 });
