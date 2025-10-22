@@ -492,12 +492,39 @@ async def handle_ui_action() -> tuple[str, int, dict[str, Any]]:
 
             # Load current map state to ensure rewards are resolved
             state, rooms = await asyncio.to_thread(load_map, run_id)
-            if (
-                state.get("awaiting_card")
-                or state.get("awaiting_relic")
-                or state.get("awaiting_loot")
-                or has_pending_rewards(state)
-            ):
+            staging_raw = state.get("reward_staging")
+            staging = staging_raw if isinstance(staging_raw, Mapping) else None
+            staged_cards = []
+            if isinstance(staging, Mapping):
+                bucket = staging.get("cards")
+                if isinstance(bucket, list):
+                    staged_cards = bucket
+            if state.get("awaiting_card"):
+                if not staged_cards:
+                    return create_error_response("Cannot advance room while rewards are pending", 400)
+                try:
+                    await confirm_reward(run_id, "card")
+                except ValueError as exc:
+                    return create_error_response(str(exc), 400)
+                state, rooms = await asyncio.to_thread(load_map, run_id)
+                staging_raw = state.get("reward_staging")
+                staging = staging_raw if isinstance(staging_raw, Mapping) else None
+
+            staged_relics = []
+            staged_items = []
+            if isinstance(staging, Mapping):
+                relic_bucket = staging.get("relics")
+                if isinstance(relic_bucket, list):
+                    staged_relics = relic_bucket
+                item_bucket = staging.get("items")
+                if isinstance(item_bucket, list):
+                    staged_items = item_bucket
+
+            if state.get("awaiting_relic") and not staged_relics:
+                return create_error_response("Cannot advance room while rewards are pending", 400)
+            if state.get("awaiting_loot") and not staged_items:
+                return create_error_response("Cannot advance room while rewards are pending", 400)
+            if has_pending_rewards(state):
                 return create_error_response("Cannot advance room while rewards are pending", 400)
 
             refreshed_progression = None

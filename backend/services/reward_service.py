@@ -4,6 +4,7 @@ import asyncio
 from datetime import datetime
 from datetime import timezone
 from typing import Any
+from typing import Mapping
 from uuid import uuid4
 
 from runs.lifecycle import battle_snapshots
@@ -63,6 +64,20 @@ async def select_card(run_id: str, card_id: str) -> dict[str, Any]:
         raise ValueError("invalid card")
     lock = reward_locks.setdefault(run_id, asyncio.Lock())
     async with lock:
+        state, rooms = await asyncio.to_thread(load_map, run_id)
+        staging, _ = ensure_reward_staging(state)
+
+        available_choices_raw = state.get("card_choice_options")
+        valid_card_ids: set[str] = set()
+        if isinstance(available_choices_raw, list):
+            for entry in available_choices_raw:
+                if isinstance(entry, Mapping):
+                    entry_id = entry.get("id")
+                    if isinstance(entry_id, str):
+                        valid_card_ids.add(entry_id)
+        if valid_card_ids and card_id not in valid_card_ids:
+            raise ValueError("invalid card")
+
         party = await asyncio.to_thread(load_party, run_id)
         if card_id in getattr(party, "cards", []):
             raise ValueError("invalid card")
@@ -70,9 +85,6 @@ async def select_card(run_id: str, card_id: str) -> dict[str, Any]:
         card = instantiate_card(card_id)
         if card is None:
             raise ValueError("invalid card")
-
-        state, rooms = await asyncio.to_thread(load_map, run_id)
-        staging, _ = ensure_reward_staging(state)
 
         current_index = int(state.get("current", 0))
         room = rooms[current_index] if 0 <= current_index < len(rooms) else None
@@ -448,6 +460,7 @@ async def confirm_reward(run_id: str, reward_type: str) -> dict[str, Any]:
                 party.cards.append(card_id)
             activation_snapshot = [dict(staged_card)] if isinstance(staged_card, dict) else []
             state["awaiting_card"] = False
+            state.pop("card_choice_options", None)
             _update_reward_progression(state, completed_step=REWARD_STEP_CARDS)
         elif bucket == "relics":
             staged_relic = staged_values[0]
