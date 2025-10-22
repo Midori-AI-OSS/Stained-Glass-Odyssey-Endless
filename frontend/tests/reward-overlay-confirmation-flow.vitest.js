@@ -88,7 +88,7 @@ describe('Reward overlay confirmation flow', () => {
       }
     };
 
-    const { component, queryByLabelText, queryByText } = render(OverlayHost, {
+    const { component, container, queryByLabelText } = render(OverlayHost, {
       props: {
         runId: 'test-run',
         roomData,
@@ -144,15 +144,20 @@ describe('Reward overlay confirmation flow', () => {
 
     await fireEvent.click(cardButton);
     await tick();
+    await tick();
 
-    expect(queryByText('Confirm Card Radiant Beam?')).not.toBeNull();
+    const advancePanel = container.querySelector('.advance-panel');
+    expect(advancePanel?.classList.contains('confirm-mode')).toBe(true);
+
+    const advanceStatus = container.querySelector('.advance-status')?.textContent ?? '';
+    expect(advanceStatus).toMatch(/Highlighted card ready/);
 
     await fireEvent.click(cardButton);
     await tick();
     await tick();
 
     expect(queryByLabelText('Select card Radiant Beam')).toBeNull();
-    expect(queryByText('Confirm Card Radiant Beam?')).toBeNull();
+    expect(container.querySelector('.advance-panel')?.classList.contains('confirm-mode')).toBe(false);
 
     const snapshot = rewardPhaseController.getSnapshot?.();
     expect(snapshot?.completed || []).toContain('cards');
@@ -194,7 +199,7 @@ describe('Reward overlay confirmation flow', () => {
       }
     };
 
-    const { component, container, queryByLabelText, queryByText } = render(OverlayHost, {
+    const { component, container, queryByLabelText } = render(OverlayHost, {
       props: {
         runId: 'test-run',
         roomData,
@@ -268,7 +273,7 @@ describe('Reward overlay confirmation flow', () => {
     await tick();
     await tick();
 
-    expect(queryByText('Confirm Card Radiant Beam?')).toBeNull();
+    expect(container.querySelector('.advance-panel')?.classList.contains('confirm-mode')).toBe(false);
     const snapshot = rewardPhaseController.getSnapshot?.();
     expect(snapshot?.completed || []).toContain('cards');
     expect(snapshot?.current).not.toBe('cards');
