@@ -153,26 +153,20 @@
   let advanceCountdownContext = null;
   let advanceCountdownDeadline = 0;
   let advanceInFlight = false;
+  let confirmFallbackMode = null;
+  let confirmFallbackKey = null;
+  let confirmFallbackLabel = '';
+  let advancePanelActive = false;
+  let advanceButtonMode = 'advance';
+  let advanceHelperMessage = '';
+  let advanceButtonAriaLabel = '';
+  let advanceButtonDisabled = true;
+  let advanceStatusMessage = '';
 
   $: advanceCountdownLabel = formatCountdown(advanceCountdownSeconds);
   $: showAdvancePanel = !fallbackActive && Boolean(currentPhase && nextPhase);
   $: phaseAdvanceAvailable = !fallbackActive && computeAdvanceAvailability(currentPhase, nextPhase);
-  $: advanceButtonDisabled = !phaseAdvanceAvailable || advanceInFlight || fallbackActive || advanceBusy;
   $: advanceCountdownActive = Boolean(advanceCountdownTimer) && phaseAdvanceAvailable && !advanceBusy;
-  $: advanceStatusMessage = (() => {
-    if (!showAdvancePanel) return '';
-    if (!phaseAdvanceAvailable) {
-      return 'Advance locked until this phase is complete.';
-    }
-    if (advanceBusy) {
-      return 'Advancing to the next room…';
-    }
-    if (advanceCountdownActive) {
-      return `Advance ready. Auto in ${advanceCountdownLabel}.`;
-    }
-    return 'Advance ready.';
-  })();
-  $: countdownAnnouncement = showAdvancePanel ? advanceStatusMessage : '';
 
   $: {
     if (fallbackActive) {
@@ -205,31 +199,6 @@
     } else {
       fallbackLogSignature = null;
     }
-  }
-
-  $: {
-    const focusable =
-      !fallbackActive &&
-      showAdvancePanel &&
-      phaseAdvanceAvailable &&
-      !advanceButtonDisabled &&
-      advanceButtonEl != null;
-    if (focusable && !lastAdvanceFocusable) {
-      queueMicrotask(() => {
-        if (!advanceButtonEl) return;
-        if (document.activeElement !== advanceButtonEl) {
-          advanceButtonEl.focus();
-        }
-      });
-    }
-    if (!focusable && lastAdvanceFocusable) {
-      queueMicrotask(() => {
-        if (advanceButtonEl && document.activeElement === advanceButtonEl && overlayRootEl) {
-          overlayRootEl.focus();
-        }
-      });
-    }
-    lastAdvanceFocusable = focusable;
   }
 
   $: {
@@ -678,7 +647,20 @@
   }
 
   function handleAdvanceClick() {
-    if (!phaseAdvanceAvailable || advanceInFlight || advanceBusy) return;
+    if (advanceButtonDisabled) {
+      return;
+    }
+    if (confirmFallbackMode === 'card') {
+      void handleConfirmClick('card');
+      return;
+    }
+    if (confirmFallbackMode === 'relic') {
+      void handleConfirmClick('relic');
+      return;
+    }
+    if (!phaseAdvanceAvailable || advanceInFlight || advanceBusy || fallbackActive) {
+      return;
+    }
     triggerAdvance('manual');
   }
 
@@ -686,12 +668,18 @@
     handleLootSfxGesture(event);
     if (event.defaultPrevented) return;
     if (!overlayRootEl || event.target !== overlayRootEl) return;
-    if (!phaseAdvanceAvailable || advanceButtonDisabled) return;
+    if (advanceButtonDisabled) return;
     if (fallbackActive) return;
     if (advanceBusy) return;
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
-      triggerAdvance('keyboard');
+      if (confirmFallbackMode === 'card') {
+        void handleConfirmClick('card');
+      } else if (confirmFallbackMode === 'relic') {
+        void handleConfirmClick('relic');
+      } else if (phaseAdvanceAvailable && !advanceInFlight) {
+        triggerAdvance('keyboard');
+      }
     }
   }
 
@@ -840,6 +828,122 @@
 
   $: cardConfirmDisabled = !showCardConfirmation || selectionInFlight || advanceBusy;
   $: relicConfirmDisabled = !showRelicConfirmation || selectionInFlight || advanceBusy;
+
+  $: {
+    const cardReady =
+      !fallbackActive &&
+      currentPhase === 'cards' &&
+      awaitingCard &&
+      stagedCardEntries.length > 0 &&
+      pendingCardSelection === null &&
+      !advanceInFlight &&
+      !advanceBusy;
+
+    const relicReady =
+      !fallbackActive &&
+      currentPhase === 'relics' &&
+      awaitingRelic &&
+      stagedRelicEntries.length > 0 &&
+      pendingRelicSelection === null &&
+      !advanceInFlight &&
+      !advanceBusy &&
+      !awaitingCard;
+
+    confirmFallbackMode = cardReady ? 'card' : relicReady ? 'relic' : null;
+
+    if (confirmFallbackMode === 'card') {
+      const stagedEntry = stagedCardEntries[0] ?? null;
+      confirmFallbackKey = stagedEntry ? rewardEntryKey(stagedEntry, 0, 'staged-card') : null;
+      confirmFallbackLabel = cardConfirmDescription;
+    } else if (confirmFallbackMode === 'relic') {
+      const stagedEntry = stagedRelicEntries[0] ?? null;
+      confirmFallbackKey = stagedEntry ? rewardEntryKey(stagedEntry, 0, 'staged-relic') : null;
+      confirmFallbackLabel = relicConfirmDescription;
+    } else {
+      confirmFallbackKey = null;
+      confirmFallbackLabel = '';
+    }
+
+    advanceButtonMode = confirmFallbackMode ? `confirm-${confirmFallbackMode}` : 'advance';
+    advancePanelActive = Boolean(confirmFallbackMode) || (phaseAdvanceAvailable && !fallbackActive);
+
+    const confirmReady =
+      confirmFallbackMode != null && confirmFallbackKey && !selectionInFlight && !advanceBusy;
+
+    advanceButtonAriaLabel =
+      confirmFallbackMode === 'card'
+        ? `Confirm ${cardConfirmDescription} with Advance`
+        : confirmFallbackMode === 'relic'
+          ? `Confirm ${relicConfirmDescription} with Advance`
+          : nextPhaseLabel
+            ? `Advance to ${nextPhaseLabel}`
+            : 'Advance to next phase';
+
+    advanceHelperMessage = confirmFallbackMode
+      ? 'Advance confirms the highlighted selection if double-click is unavailable.'
+      : '';
+
+    advanceButtonDisabled = (() => {
+      if (fallbackActive) return true;
+      if (advanceBusy || advanceInFlight) return true;
+      if (confirmFallbackMode) {
+        return !confirmReady;
+      }
+      return !phaseAdvanceAvailable;
+    })();
+
+    advanceStatusMessage = (() => {
+      if (!showAdvancePanel) return '';
+      if (advanceBusy) {
+        return 'Advancing to the next room…';
+      }
+      if (advanceInFlight) {
+        return 'Advancing…';
+      }
+      if (confirmFallbackMode) {
+        if (!confirmReady) {
+          return 'Finishing selection…';
+        }
+        return confirmFallbackMode === 'card'
+          ? `Highlighted card ready. Use Advance to confirm ${cardConfirmDescription}.`
+          : `Highlighted relic ready. Use Advance to confirm ${relicConfirmDescription}.`;
+      }
+      if (!phaseAdvanceAvailable) {
+        return 'Advance locked until this phase is complete.';
+      }
+      if (advanceCountdownActive) {
+        return `Advance ready. Auto in ${advanceCountdownLabel}.`;
+      }
+      return 'Advance ready.';
+    })();
+  }
+
+  $: countdownAnnouncement = showAdvancePanel ? advanceStatusMessage : '';
+
+  $: {
+    const focusable =
+      !fallbackActive &&
+      showAdvancePanel &&
+      advancePanelActive &&
+      !advanceButtonDisabled &&
+      advanceButtonEl != null;
+    if (focusable && !lastAdvanceFocusable) {
+      queueMicrotask(() => {
+        if (!advanceButtonEl) return;
+        if (document.activeElement !== advanceButtonEl) {
+          advanceButtonEl.focus();
+        }
+      });
+    }
+    if (!focusable && lastAdvanceFocusable) {
+      queueMicrotask(() => {
+        if (advanceButtonEl && document.activeElement === advanceButtonEl && overlayRootEl) {
+          overlayRootEl.focus();
+        }
+      });
+    }
+    lastAdvanceFocusable = focusable;
+  }
 
   $: {
     if (fallbackActive) {
@@ -1372,6 +1476,12 @@
     filter: saturate(0.85);
   }
 
+  .advance-panel.confirm-mode {
+    border: var(--overlay-chip-border-active);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent, #7ec8ff) 30%, transparent) inset,
+      var(--overlay-panel-shadow);
+  }
+
   .advance-header {
     display: flex;
     align-items: baseline;
@@ -1399,6 +1509,16 @@
     margin: 0;
     font-size: 0.9rem;
     color: var(--overlay-text-muted);
+  }
+
+  .advance-helper {
+    margin: 0;
+    font-size: 0.85rem;
+    color: var(--overlay-text-primary);
+  }
+
+  .advance-panel.confirm-mode .advance-helper {
+    color: var(--overlay-text-warm);
   }
 
   .advance-button {
@@ -1871,7 +1991,10 @@
       <p class="phase-note">Next: {nextPhaseLabel}</p>
     {/if}
     {#if showAdvancePanel}
-      <div class={`advance-panel ${phaseAdvanceAvailable ? 'active' : 'locked'}`}>
+      <div
+        class={`advance-panel ${advancePanelActive ? 'active' : 'locked'}${confirmFallbackMode ? ' confirm-mode' : ''}`}
+        data-mode={advanceButtonMode}
+      >
         <div class="advance-header">
           <h4>Advance</h4>
           {#if nextPhaseLabel}
@@ -1879,12 +2002,17 @@
           {/if}
         </div>
         <p class="advance-status" data-testid="advance-countdown" aria-live="polite">{advanceStatusMessage}</p>
+        {#if advanceHelperMessage}
+          <p class="advance-helper" role="note">{advanceHelperMessage}</p>
+        {/if}
         <button
           class="icon-btn advance-button"
           type="button"
           bind:this={advanceButtonEl}
           on:click={handleAdvanceClick}
           disabled={advanceButtonDisabled}
+          aria-label={advanceButtonAriaLabel}
+          title={advanceHelperMessage || undefined}
         >
           Advance
         </button>
