@@ -747,18 +747,17 @@
     (awaitingCard ? stagedCardEntries.length : 0) +
     (awaitingRelic ? stagedRelicEntries.length : 0);
 
-  $: stagedCardKey =
-    stagedCardEntries.length > 0 ? rewardEntryKey(stagedCardEntries[0], 0, 'staged-card') : null;
-  $: {
-    if (currentPhase === 'cards') {
-      if (stagedCardKey) {
-        highlightedCardKey = stagedCardKey;
-      } else if (!highlightedCardKey || !cardChoiceEntries.some((choice) => choice.key === highlightedCardKey)) {
-        highlightedCardKey = cardChoiceEntries.length > 0 ? cardChoiceEntries[0].key : null;
-      }
-    } else {
-      highlightedCardKey = null;
-    }
+  $: if (currentPhase !== 'cards' && highlightedCardKey !== null) {
+    highlightedCardKey = null;
+  }
+
+  $: if (
+    currentPhase === 'cards' &&
+    highlightedCardKey &&
+    !cardChoiceEntryMap.has(highlightedCardKey) &&
+    !stagedCardEntryMap.has(highlightedCardKey)
+  ) {
+    highlightedCardKey = null;
   }
 
   $: highlightedCardLabel = highlightedCardKey
@@ -768,18 +767,17 @@
       )
     : '';
 
-  $: stagedRelicKey =
-    stagedRelicEntries.length > 0 ? rewardEntryKey(stagedRelicEntries[0], 0, 'staged-relic') : null;
-  $: {
-    if (currentPhase === 'relics') {
-      if (stagedRelicKey) {
-        highlightedRelicKey = stagedRelicKey;
-      } else if (!highlightedRelicKey || !relicChoiceEntries.some((choice) => choice.key === highlightedRelicKey)) {
-        highlightedRelicKey = relicChoiceEntries.length > 0 ? relicChoiceEntries[0].key : null;
-      }
-    } else {
-      highlightedRelicKey = null;
-    }
+  $: if (currentPhase !== 'relics' && highlightedRelicKey !== null) {
+    highlightedRelicKey = null;
+  }
+
+  $: if (
+    currentPhase === 'relics' &&
+    highlightedRelicKey &&
+    !relicChoiceEntryMap.has(highlightedRelicKey) &&
+    !stagedRelicEntryMap.has(highlightedRelicKey)
+  ) {
+    highlightedRelicKey = null;
   }
 
   $: highlightedRelicLabel = highlightedRelicKey
@@ -887,18 +885,33 @@
     const isCard = type === 'card';
     const isRelic = type === 'relic';
 
-    if (isCard) {
-      const selectionKey = selectionKeyFromDetail(detail, 'card');
-      if (selectionKey) {
-        highlightedCardKey = selectionKey;
-      }
+    if (!isCard && !isRelic) {
+      return;
     }
 
-    if (isRelic) {
-      const selectionKey = selectionKeyFromDetail(detail, 'relic');
-      if (selectionKey) {
+    const selectionKey = selectionKeyFromDetail(detail, isCard ? 'card' : 'relic');
+    if (!selectionKey) {
+      return;
+    }
+
+    const isDoubleClick = isCard
+      ? highlightedCardKey === selectionKey
+      : highlightedRelicKey === selectionKey;
+
+    if (!isDoubleClick) {
+      if (isCard) {
+        highlightedCardKey = selectionKey;
+      } else {
         highlightedRelicKey = selectionKey;
       }
+      if (detail.key == null) {
+        detail.key = selectionKey;
+      }
+      return;
+    }
+
+    if (detail.key == null) {
+      detail.key = selectionKey;
     }
 
     await performRewardSelection(detail);
@@ -1258,28 +1271,6 @@
     max-width: 1320px;
   }
 
-  .choices.staged {
-    pointer-events: none;
-  }
-
-  .staged-block {
-    width: 100%;
-    max-width: 1320px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.75rem;
-    margin-bottom: 1.25rem;
-  }
-
-  .staged-block:last-child {
-    margin-bottom: 0;
-  }
-
-  .staged-block .section-title {
-    margin-top: 0;
-  }
-
   .status {
     margin-top: 0.25rem;
     text-align: center;
@@ -1549,27 +1540,6 @@
     {/if}
 
     {#if !nonDropContentHidden}
-      {#if stagedCardEntries.length > 0}
-        <div class="staged-block">
-          <h3 class="section-title">Selected Card</h3>
-          <div class="choices staged">
-            {#each stagedCardEntries.slice(0,3) as card, i (rewardEntryKey(card, i, 'staged-card'))}
-              {@const selectionKey = rewardEntryKey(card, i, 'staged-card')}
-              <div class:reveal={!reducedMotion} style={`--delay: ${revealDelay(i)}ms`}>
-                <RewardCard
-                  entry={card}
-                  type="card"
-                  quiet={iconQuiet}
-                  selectionKey={selectionKey}
-                  selected={highlightedCardKey === selectionKey}
-                  reducedMotion={reducedMotion}
-                />
-              </div>
-            {/each}
-          </div>
-        </div>
-      {/if}
-
       {#if showCards}
         <h3 class="section-title">Choose a Card</h3>
         <div class="choices">
@@ -1586,26 +1556,6 @@
               />
             </div>
           {/each}
-        </div>
-      {/if}
-
-      {#if stagedRelicEntries.length > 0}
-        <div class="staged-block">
-          <h3 class="section-title">Selected Relic</h3>
-          <div class="choices staged">
-            {#each stagedRelicEntries.slice(0,3) as relic, i (relic?.id ?? `staged-relic-${i}`)}
-              {@const selectionKey = rewardEntryKey(relic, i, 'staged-relic')}
-              <div class:reveal={!reducedMotion} style={`--delay: ${revealDelay(i)}ms`}>
-                <CurioChoice
-                  entry={relic}
-                  quiet={iconQuiet}
-                  selectionKey={selectionKey}
-                  selected={highlightedRelicKey === selectionKey}
-                  reducedMotion={reducedMotion}
-                />
-              </div>
-            {/each}
-          </div>
         </div>
       {/if}
 
