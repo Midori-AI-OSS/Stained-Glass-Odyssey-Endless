@@ -41,7 +41,7 @@ async def test_advance_room_requires_reward_selection(app_with_db):
     run_id = (await start_resp.get_json())["run_id"]
 
     # Simulate a battle that grants both card and relic rewards
-    state, rooms = await asyncio.to_thread(load_map, run_id)
+    state, _ = await asyncio.to_thread(load_map, run_id)
     staged_loot = [
         {"id": "ember_fragment", "stars": 2},
         {"id": "ticket", "stars": 0},
@@ -87,9 +87,8 @@ async def test_advance_room_requires_reward_selection(app_with_db):
         resp = await client.post("/ui/action", json={"action": "advance_room"})
         assert resp.status_code == 400
 
-        # Confirm the staged card to clear the reward bucket
-        resp = await client.post("/ui/action", json={"action": "confirm_card"})
-        assert resp.status_code == 200
+        state_after_card, _ = await asyncio.to_thread(load_map, run_id)
+        assert state_after_card.get("awaiting_card") is False
 
         # Staging a relic should continue to block advancement until confirmed
         await client.post(
@@ -164,3 +163,75 @@ async def test_advance_room_emits_progression_payload(app_with_db):
     assert data["reward_progression"]["current_step"] == "cards"
     assert data["reward_progression"]["available"] == ["cards", "battle_review"]
     assert data["reward_progression"]["completed"] == ["cards"]
+
+
+@pytest.mark.asyncio
+async def test_card_selection_unlocks_advancement(app_with_db):
+    from runs.lifecycle import battle_snapshots
+    from runs.lifecycle import load_map
+    from runs.lifecycle import save_map
+    from runs.party_manager import load_party
+
+    app = app_with_db
+    client = app.test_client()
+
+    start_resp = await client.post("/run/start", json={"party": ["player"]})
+    run_id = (await start_resp.get_json())["run_id"]
+
+    state, rooms = await asyncio.to_thread(load_map, run_id)
+    state.update(
+        {
+            "awaiting_card": True,
+            "awaiting_relic": False,
+            "awaiting_loot": False,
+            "awaiting_next": False,
+            "reward_progression": {
+                "available": ["cards"],
+                "completed": [],
+                "current_step": "cards",
+            },
+            "reward_staging": {"cards": [], "relics": [], "items": []},
+            "card_choice_options": [
+                {
+                    "id": "micro_blade",
+                    "name": "Micro Blade",
+                    "stars": 1,
+                    "about": "Deal 110% ATK to the front foe.",
+                }
+            ],
+        }
+    )
+    await asyncio.to_thread(save_map, run_id, state)
+    battle_snapshots[run_id] = {
+        "result": "battle",
+        "ended": True,
+        "card_choices": list(state["card_choice_options"]),
+        "relic_choices": [],
+        "reward_staging": {"cards": [], "relics": [], "items": []},
+    }
+
+    try:
+        resp = await client.post("/ui/action", json={"action": "advance_room"})
+        assert resp.status_code == 400
+
+        party_before = await asyncio.to_thread(load_party, run_id)
+        assert party_before.cards == []
+
+        await client.post(
+            "/ui/action",
+            json={"action": "choose_card", "params": {"card_id": "micro_blade"}},
+        )
+
+        resp = await client.post("/ui/action", json={"action": "advance_room"})
+        data = await resp.get_json()
+        assert resp.status_code == 200
+        assert data.get("next_room") is not None
+
+        party_after = await asyncio.to_thread(load_party, run_id)
+        assert party_after.cards == ["micro_blade"]
+
+        state_after, _ = await asyncio.to_thread(load_map, run_id)
+        assert state_after.get("awaiting_card") is False
+        assert "card_choice_options" not in state_after
+    finally:
+        battle_snapshots.pop(run_id, None)
