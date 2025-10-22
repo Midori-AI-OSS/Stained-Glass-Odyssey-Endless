@@ -62,11 +62,13 @@ Relics → Review:
 1. **Drops** — materials appear in a dedicated grid while floating pickups play
    out. The right rail lists the four phases but keeps the **Advance** button
    disabled until the controller marks Drops complete.
-2. **Cards** — the first card auto-selects with a stained-glass confirm button
-   mounted beneath the highlighted tile. Mouse, touch, and keyboard navigation
-   all dispatch `confirm_card` events through the overlay host.
+2. **Cards** — the first card auto-selects and wiggles to highlight the staged
+   pick. Double-clicking (or pressing the selection a second time) confirms
+   immediately, and the right-rail **Advance** button switches into a confirm
+   mode for single-tap or accessibility flows.
 3. **Relics** — mirrors the card interaction model, including staged
-   confirmations, reset handling, and the shared wiggle animation tokens.
+   confirmations, the Advance confirm fallback, reset handling, and the shared
+   wiggle animation tokens.
 4. **Battle Review** — mounts `BattleReview.svelte` with the familiar damage
    graphs and timeline view once all staged rewards resolve.
 

@@ -141,7 +141,7 @@ describe('RewardOverlay relic phase interactions', () => {
     expect(stagedShell?.classList.contains('selected')).toBe(true);
   });
 
-  test('keeps relic grid and confirmation controls visible during staged confirmation', async () => {
+  test('keeps relic grid visible and routes confirmation through Advance controls', async () => {
     updateRewardProgression({
       available: ['cards', 'relics', 'battle_review'],
       completed: ['cards'],
@@ -153,7 +153,7 @@ describe('RewardOverlay relic phase interactions', () => {
       { id: 'sun-charm', name: 'Sun Charm' }
     ];
 
-    const { container, getByRole, getByText } = render(RewardOverlay, {
+    const { container, getByText } = render(RewardOverlay, {
       props: {
         ...baseProps,
         relics: relicPool,
@@ -172,12 +172,19 @@ describe('RewardOverlay relic phase interactions', () => {
     expect(relicGrid?.classList.contains('choices')).toBe(true);
     expect(relicGrid?.querySelectorAll('.curio-shell').length ?? 0).toBeGreaterThan(0);
 
-    const confirmGroup = getByRole('group', { name: 'Confirm relic selection' });
-    expect(confirmGroup).not.toBeNull();
+    expect(container.querySelector('.confirm-panel')).toBeNull();
 
-    const confirmButton = confirmGroup?.querySelector('button');
-    expect(confirmButton).not.toBeNull();
-    expect(confirmButton?.textContent?.trim()).toBe('Confirm');
+    const advancePanel = container.querySelector('.advance-panel');
+    expect(advancePanel).not.toBeNull();
+    expect(advancePanel?.classList.contains('confirm-mode')).toBe(true);
+
+    const helper = advancePanel?.querySelector('.advance-helper');
+    expect(helper?.textContent?.trim()).toMatch(/Advance confirms/i);
+
+    const advanceButton = advancePanel?.querySelector('button.advance-button');
+    expect(advanceButton).not.toBeNull();
+    expect(advanceButton?.dataset.mode).toBe('confirm-relic');
+    expect(advanceButton?.getAttribute('aria-label') ?? '').toContain('Confirm Relic');
   });
 
   test('requires a second click on the highlighted relic to confirm', async () => {

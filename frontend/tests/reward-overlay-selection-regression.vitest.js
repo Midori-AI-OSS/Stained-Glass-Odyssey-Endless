@@ -65,15 +65,24 @@ describe('RewardOverlay selection regression', () => {
     expect(container.querySelector('button[aria-label^="Select card"]')).not.toBeNull();
   });
 
-  test('renders staged cards with confirm controls', async () => {
+  test('activates Advance confirm mode for staged cards', async () => {
     const { container } = renderOverlay({
       cards: [],
       stagedCards: [{ id: 'radiant-beam', name: 'Radiant Beam', stars: 4 }],
       awaitingCard: true
     });
 
-    expect(container.querySelector('.confirm-panel.card')).not.toBeNull();
-    expect(container.querySelector('.confirm-panel.card button.confirm-button')).not.toBeNull();
+    expect(container.querySelector('.confirm-panel')).toBeNull();
+
+    const advancePanel = container.querySelector('.advance-panel');
+    expect(advancePanel).not.toBeNull();
+    expect(advancePanel?.classList.contains('confirm-mode')).toBe(true);
+
+    const advanceButton = advancePanel?.querySelector('button.advance-button');
+    expect(advanceButton).not.toBeNull();
+    expect(advanceButton?.dataset.mode).toBe('confirm-card');
+    expect(advanceButton?.getAttribute('aria-label') ?? '').toContain('Confirm Card');
+
     const stagedShell = container.querySelector('.card-shell.selected');
     expect(stagedShell).not.toBeNull();
   });
@@ -127,7 +136,7 @@ describe('RewardOverlay selection regression', () => {
     expect(container.querySelector('.preview-panel')).toBeNull();
   });
 
-  test('renders staged relics with confirm controls', async () => {
+  test('activates Advance confirm mode for staged relics', async () => {
     const { container } = renderOverlay({
       cards: [],
       stagedRelics: [{ id: 'lucky-charm', name: 'Lucky Charm' }],
@@ -135,8 +144,16 @@ describe('RewardOverlay selection regression', () => {
       awaitingRelic: true
     });
 
-    expect(container.querySelector('.confirm-panel.relic')).not.toBeNull();
-    expect(container.querySelector('.confirm-panel.relic button.confirm-button')).not.toBeNull();
+    expect(container.querySelector('.confirm-panel')).toBeNull();
+
+    const advancePanel = container.querySelector('.advance-panel');
+    expect(advancePanel).not.toBeNull();
+    expect(advancePanel?.classList.contains('confirm-mode')).toBe(true);
+
+    const advanceButton = advancePanel?.querySelector('button.advance-button');
+    expect(advanceButton).not.toBeNull();
+    expect(advanceButton?.dataset.mode).toBe('confirm-relic');
+    expect(advanceButton?.getAttribute('aria-label') ?? '').toContain('Confirm Relic');
   });
 
   test('re-dispatches select events for staged relics', async () => {

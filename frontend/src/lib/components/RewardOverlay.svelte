@@ -61,16 +61,8 @@
   let relicChoiceEntryMap = new Map();
   let queuedCardConfirmation = null;
   let queuedRelicConfirmation = null;
-  let showCardConfirmation = false;
-  let showRelicConfirmation = false;
-  let cardConfirmEntry = null;
-  let relicConfirmEntry = null;
-  let cardConfirmLabel = '';
-  let relicConfirmLabel = '';
   let cardConfirmDescription = 'Card selection';
   let relicConfirmDescription = 'Relic selection';
-  let cardConfirmDisabled = true;
-  let relicConfirmDisabled = true;
 
   onMount(() => {
     const exitDisposer = rewardPhaseController.on('exit', (detail) => {
@@ -155,7 +147,6 @@
   let advanceInFlight = false;
   let confirmFallbackMode = null;
   let confirmFallbackKey = null;
-  let confirmFallbackLabel = '';
   let advancePanelActive = false;
   let advanceButtonMode = 'advance';
   let advanceHelperMessage = '';
@@ -811,24 +802,22 @@
     highlightedRelicKey = stagedRelicHighlightKey;
   }
 
-  $: showCardConfirmation = awaitingCard && stagedCardEntries.length > 0;
-  $: showRelicConfirmation = awaitingRelic && stagedRelicEntries.length > 0;
+  $: stagedCardSelection = awaitingCard && stagedCardEntries.length > 0 ? stagedCardEntries[0] : null;
+  $: stagedRelicSelection = awaitingRelic && stagedRelicEntries.length > 0 ? stagedRelicEntries[0] : null;
 
-  $: cardConfirmEntry = showCardConfirmation ? stagedCardEntries[0] : highlightedCardEntry;
-  $: relicConfirmEntry = showRelicConfirmation ? stagedRelicEntries[0] : highlightedRelicEntry;
+  $: cardConfirmDescription = (() => {
+    const entry = stagedCardSelection ?? highlightedCardEntry;
+    if (!entry) return 'Card selection';
+    const label = labelForRewardEntry(entry, 'card');
+    return describeRewardLabel('card', label);
+  })();
 
-  $: cardConfirmLabel = cardConfirmEntry ? labelForRewardEntry(cardConfirmEntry, 'card') : '';
-  $: relicConfirmLabel = relicConfirmEntry ? labelForRewardEntry(relicConfirmEntry, 'relic') : '';
-
-  $: cardConfirmDescription = cardConfirmLabel
-    ? describeRewardLabel('card', cardConfirmLabel)
-    : 'Card selection';
-  $: relicConfirmDescription = relicConfirmLabel
-    ? describeRewardLabel('relic', relicConfirmLabel)
-    : 'Relic selection';
-
-  $: cardConfirmDisabled = !showCardConfirmation || selectionInFlight || advanceBusy;
-  $: relicConfirmDisabled = !showRelicConfirmation || selectionInFlight || advanceBusy;
+  $: relicConfirmDescription = (() => {
+    const entry = stagedRelicSelection ?? highlightedRelicEntry;
+    if (!entry) return 'Relic selection';
+    const label = labelForRewardEntry(entry, 'relic');
+    return describeRewardLabel('relic', label);
+  })();
 
   $: {
     const cardReady =
@@ -855,14 +844,11 @@
     if (confirmFallbackMode === 'card') {
       const stagedEntry = stagedCardEntries[0] ?? null;
       confirmFallbackKey = stagedEntry ? rewardEntryKey(stagedEntry, 0, 'staged-card') : null;
-      confirmFallbackLabel = cardConfirmDescription;
     } else if (confirmFallbackMode === 'relic') {
       const stagedEntry = stagedRelicEntries[0] ?? null;
       confirmFallbackKey = stagedEntry ? rewardEntryKey(stagedEntry, 0, 'staged-relic') : null;
-      confirmFallbackLabel = relicConfirmDescription;
     } else {
       confirmFallbackKey = null;
-      confirmFallbackLabel = '';
     }
 
     advanceButtonMode = confirmFallbackMode ? `confirm-${confirmFallbackMode}` : 'advance';
@@ -1588,34 +1574,6 @@
     max-width: 1320px;
   }
 
-  .confirm-panel {
-    margin-top: 0.85rem;
-    padding: clamp(0.75rem, 1.6vw, 1.25rem);
-    border: var(--overlay-panel-border);
-    background: var(--overlay-panel-bg);
-    box-shadow: var(--overlay-panel-shadow);
-    display: flex;
-    flex-direction: column;
-    gap: 0.65rem;
-    align-items: flex-start;
-  }
-
-  .confirm-panel .confirm-actions {
-    display: flex;
-    gap: 0.75rem;
-  }
-
-  .confirm-panel .confirm-button {
-    padding: 0.65rem 1.5rem;
-    min-width: 140px;
-  }
-
-  .confirm-message {
-    margin: 0;
-    font-size: 1rem;
-    color: var(--overlay-text-primary);
-  }
-
   .status {
     margin-top: 0.25rem;
     text-align: center;
@@ -1914,21 +1872,6 @@
             </div>
           {/each}
         </div>
-        {#if showCardConfirmation}
-          <div class="confirm-panel card" role="group" aria-label="Confirm card selection">
-            <p class="confirm-message">Confirm {cardConfirmDescription}?</p>
-            <div class="confirm-actions">
-              <button
-                class="icon-btn confirm-button"
-                type="button"
-                on:click={() => handleConfirmClick('card')}
-                disabled={cardConfirmDisabled}
-              >
-                Confirm
-              </button>
-            </div>
-          </div>
-        {/if}
       {/if}
 
       {#if showRelics}
@@ -1947,21 +1890,6 @@
             </div>
           {/each}
         </div>
-        {#if showRelicConfirmation}
-          <div class="confirm-panel relic" role="group" aria-label="Confirm relic selection">
-            <p class="confirm-message">Confirm {relicConfirmDescription}?</p>
-            <div class="confirm-actions">
-              <button
-                class="icon-btn confirm-button"
-                type="button"
-                on:click={() => handleConfirmClick('relic')}
-                disabled={relicConfirmDisabled}
-              >
-                Confirm
-              </button>
-            </div>
-          </div>
-        {/if}
       {/if}
     {/if}
 
