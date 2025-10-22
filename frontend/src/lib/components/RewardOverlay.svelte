@@ -61,6 +61,16 @@
   let relicChoiceEntryMap = new Map();
   let queuedCardConfirmation = null;
   let queuedRelicConfirmation = null;
+  let showCardConfirmation = false;
+  let showRelicConfirmation = false;
+  let cardConfirmEntry = null;
+  let relicConfirmEntry = null;
+  let cardConfirmLabel = '';
+  let relicConfirmLabel = '';
+  let cardConfirmDescription = 'Card selection';
+  let relicConfirmDescription = 'Relic selection';
+  let cardConfirmDisabled = true;
+  let relicConfirmDisabled = true;
 
   onMount(() => {
     const exitDisposer = rewardPhaseController.on('exit', (detail) => {
