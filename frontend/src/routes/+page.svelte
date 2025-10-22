@@ -11,6 +11,8 @@
     roomAction,
     chooseCard,
     chooseRelic,
+    confirmCard,
+    confirmRelic,
     advanceRoom,
     getMap,
     getActiveRuns,
@@ -1057,26 +1059,32 @@
     const selection = detail && typeof detail === 'object' ? detail : {};
     const respond = typeof selection.respond === 'function' ? selection.respond : null;
     const type = selection.type;
+    const intent = typeof selection.intent === 'string' ? selection.intent : 'select';
     const id = selection.id;
-    let result = { ok: false };
+    let result = { ok: false, intent };
 
     if (type === 'card' || type === 'relic') {
       try {
-        const res = type === 'card' ? await chooseCard(id) : await chooseRelic(id);
-        if (res) {
-          applyRewardPayload(res, { type, intent: 'select' });
+        let res = null;
+        if (intent === 'confirm') {
+          res = type === 'card' ? await confirmCard() : await confirmRelic();
+        } else {
+          res = type === 'card' ? await chooseCard(id) : await chooseRelic(id);
         }
-        result = { ok: true };
+        if (res) {
+          applyRewardPayload(res, { type, intent });
+        }
+        result = { ok: true, intent, payload: res ?? null };
       } catch (error) {
         openOverlay('error', {
-          message: 'Failed to select reward.',
+          message: intent === 'confirm' ? 'Failed to confirm reward.' : 'Failed to select reward.',
           traceback: (error && error.stack) || '',
           context: error?.context ?? null
         });
         try {
           if (dev || !browser) {
             const { error: logError } = await import('$lib/systems/logger.js');
-            logError('Failed to select reward.', error);
+            logError(intent === 'confirm' ? 'Failed to confirm reward.' : 'Failed to select reward.', error);
           }
         } catch {}
       }

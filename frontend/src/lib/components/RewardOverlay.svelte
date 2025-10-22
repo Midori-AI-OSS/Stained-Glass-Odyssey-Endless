@@ -59,6 +59,18 @@
   let cardChoiceEntryMap = new Map();
   let stagedRelicEntryMap = new Map();
   let relicChoiceEntryMap = new Map();
+  let queuedCardConfirmation = null;
+  let queuedRelicConfirmation = null;
+  let showCardConfirmation = false;
+  let showRelicConfirmation = false;
+  let cardConfirmEntry = null;
+  let relicConfirmEntry = null;
+  let cardConfirmLabel = '';
+  let relicConfirmLabel = '';
+  let cardConfirmDescription = 'Card selection';
+  let relicConfirmDescription = 'Relic selection';
+  let cardConfirmDisabled = true;
+  let relicConfirmDisabled = true;
 
   onMount(() => {
     const exitDisposer = rewardPhaseController.on('exit', (detail) => {
@@ -767,6 +779,10 @@
       )
     : '';
 
+  $: highlightedCardEntry = highlightedCardKey
+    ? stagedCardEntryMap.get(highlightedCardKey) ?? cardChoiceEntryMap.get(highlightedCardKey)
+    : null;
+
   $: if (currentPhase !== 'relics' && highlightedRelicKey !== null) {
     highlightedRelicKey = null;
   }
@@ -786,6 +802,44 @@
         'relic'
       )
     : '';
+
+  $: highlightedRelicEntry = highlightedRelicKey
+    ? stagedRelicEntryMap.get(highlightedRelicKey) ?? relicChoiceEntryMap.get(highlightedRelicKey)
+    : null;
+
+  $: stagedCardHighlightKey = stagedCardEntries.length > 0
+    ? rewardEntryKey(stagedCardEntries[0], 0, 'staged-card')
+    : null;
+  $: stagedRelicHighlightKey = stagedRelicEntries.length > 0
+    ? rewardEntryKey(stagedRelicEntries[0], 0, 'staged-relic')
+    : null;
+
+  $: if (awaitingCard && stagedCardHighlightKey && highlightedCardKey !== stagedCardHighlightKey) {
+    highlightedCardKey = stagedCardHighlightKey;
+  }
+
+  $: if (awaitingRelic && stagedRelicHighlightKey && highlightedRelicKey !== stagedRelicHighlightKey) {
+    highlightedRelicKey = stagedRelicHighlightKey;
+  }
+
+  $: showCardConfirmation = awaitingCard && stagedCardEntries.length > 0;
+  $: showRelicConfirmation = awaitingRelic && stagedRelicEntries.length > 0;
+
+  $: cardConfirmEntry = showCardConfirmation ? stagedCardEntries[0] : highlightedCardEntry;
+  $: relicConfirmEntry = showRelicConfirmation ? stagedRelicEntries[0] : highlightedRelicEntry;
+
+  $: cardConfirmLabel = cardConfirmEntry ? labelForRewardEntry(cardConfirmEntry, 'card') : '';
+  $: relicConfirmLabel = relicConfirmEntry ? labelForRewardEntry(relicConfirmEntry, 'relic') : '';
+
+  $: cardConfirmDescription = cardConfirmLabel
+    ? describeRewardLabel('card', cardConfirmLabel)
+    : 'Card selection';
+  $: relicConfirmDescription = relicConfirmLabel
+    ? describeRewardLabel('relic', relicConfirmLabel)
+    : 'Relic selection';
+
+  $: cardConfirmDisabled = !showCardConfirmation || selectionInFlight || advanceBusy;
+  $: relicConfirmDisabled = !showRelicConfirmation || selectionInFlight || advanceBusy;
 
   $: {
     if (fallbackActive) {
@@ -832,22 +886,68 @@
     }
   }
 
+  $: if (queuedCardConfirmation?.type === 'card') {
+    if (awaitingCard && stagedCardEntries.length > 0) {
+      const stagedEntry = stagedCardEntries[0];
+      const confirmDetail = {
+        type: 'card',
+        intent: 'confirm',
+        id: stagedEntry?.id ?? queuedCardConfirmation.detail?.id ?? null,
+        key:
+          queuedCardConfirmation.detail?.key ?? rewardEntryKey(stagedEntry, 0, 'staged-card'),
+        entry: stagedEntry
+      };
+      queuedCardConfirmation = null;
+      queueMicrotask(() => {
+        void performRewardSelection(confirmDetail);
+      });
+    } else if (!awaitingCard && stagedCardEntries.length === 0 && pendingCardSelection === null) {
+      queuedCardConfirmation = null;
+    }
+  }
+
+  $: if (queuedRelicConfirmation?.type === 'relic') {
+    if (awaitingRelic && stagedRelicEntries.length > 0) {
+      const stagedEntry = stagedRelicEntries[0];
+      const confirmDetail = {
+        type: 'relic',
+        intent: 'confirm',
+        id: stagedEntry?.id ?? queuedRelicConfirmation.detail?.id ?? null,
+        key:
+          queuedRelicConfirmation.detail?.key ?? rewardEntryKey(stagedEntry, 0, 'staged-relic'),
+        entry: stagedEntry
+      };
+      queuedRelicConfirmation = null;
+      queueMicrotask(() => {
+        void performRewardSelection(confirmDetail);
+      });
+    } else if (!awaitingRelic && stagedRelicEntries.length === 0 && pendingRelicSelection === null) {
+      queuedRelicConfirmation = null;
+    }
+  }
+
   async function performRewardSelection(detail) {
     const type = detail?.type;
     const isCard = type === 'card';
     const isRelic = type === 'relic';
     if (!isCard && !isRelic) return;
 
+    const intent = detail?.intent === 'confirm' || detail?.intent === 'cancel'
+      ? detail.intent
+      : 'select';
+
     let selectionToken = null;
 
     let responded = false;
+    let responseValue = null;
     const responsePromise = new Promise((resolve) => {
       const respond = (value) => {
         if (responded) return;
         responded = true;
-        resolve(value || { ok: false });
+        responseValue = value && typeof value === 'object' ? value : { ok: false };
+        resolve(responseValue);
       };
-      dispatch('select', { ...detail, respond });
+      dispatch('select', { ...detail, intent, respond });
     });
 
     if (isCard) {
@@ -858,8 +958,9 @@
       pendingRelicSelection = selectionToken;
     }
 
+    let result;
     try {
-      await responsePromise;
+      result = await responsePromise;
     } catch (error) {
       if (isCard && pendingCardSelection === selectionToken) {
         pendingCardSelection = null;
@@ -867,7 +968,7 @@
       if (isRelic && pendingRelicSelection === selectionToken) {
         pendingRelicSelection = null;
       }
-      return;
+      return null;
     }
 
     if (isCard && pendingCardSelection === selectionToken) {
@@ -876,6 +977,8 @@
     if (isRelic && pendingRelicSelection === selectionToken) {
       pendingRelicSelection = null;
     }
+
+    return result ?? responseValue ?? { ok: false };
   }
 
   async function handleSelect(e) {
@@ -898,20 +1001,113 @@
       ? highlightedCardKey === selectionKey
       : highlightedRelicKey === selectionKey;
 
-    if (!isDoubleClick) {
-      if (isCard) {
-        highlightedCardKey = selectionKey;
-      } else {
-        highlightedRelicKey = selectionKey;
-      }
-      if (detail.key == null) {
-        detail.key = selectionKey;
-      }
-      return;
-    }
+    const awaiting = isCard ? awaitingCard : awaitingRelic;
+    const stagedMap = isCard ? stagedCardEntryMap : stagedRelicEntryMap;
+    const choiceMap = isCard ? cardChoiceEntryMap : relicChoiceEntryMap;
+    const stagedEntry = stagedMap.get(selectionKey) ?? null;
+    const choiceEntry = choiceMap.get(selectionKey) ?? null;
+    const pending = isCard ? pendingCardSelection !== null : pendingRelicSelection !== null;
 
     if (detail.key == null) {
       detail.key = selectionKey;
+    }
+
+    if (detail.id == null) {
+      detail.id = detail.entry?.id ?? stagedEntry?.id ?? choiceEntry?.id ?? null;
+    }
+
+    if (!detail.entry && (stagedEntry || choiceEntry)) {
+      detail.entry = stagedEntry ?? choiceEntry;
+    }
+
+    if (isCard) {
+      highlightedCardKey = selectionKey;
+    } else {
+      highlightedRelicKey = selectionKey;
+    }
+
+    if (isDoubleClick) {
+      if (pending) {
+        const queuedDetail = {
+          type,
+          id: detail.id ?? stagedEntry?.id ?? choiceEntry?.id ?? null,
+          key: selectionKey,
+          entry: stagedEntry ?? detail.entry ?? choiceEntry ?? null
+        };
+        if (isCard) {
+          queuedCardConfirmation = { type: 'card', detail: queuedDetail };
+        } else {
+          queuedRelicConfirmation = { type: 'relic', detail: queuedDetail };
+        }
+        return;
+      }
+
+      if (!awaiting || !stagedEntry) {
+        const stageDetail = {
+          ...detail,
+          intent: 'select'
+        };
+        const stageResult = await performRewardSelection(stageDetail);
+        if (!stageResult?.ok) {
+          return;
+        }
+      }
+
+      const confirmDetail = {
+        ...detail,
+        intent: 'confirm',
+        entry: stagedMap.get(selectionKey) ?? stagedEntry ?? detail.entry ?? choiceEntry ?? null
+      };
+      await performRewardSelection(confirmDetail);
+      return;
+    }
+
+    if (!awaiting || !stagedEntry) {
+      if (!detail.id && !choiceEntry) {
+        return;
+      }
+      const selectDetail = {
+        ...detail,
+        intent: 'select',
+        entry: detail.entry ?? choiceEntry ?? null
+      };
+      await performRewardSelection(selectDetail);
+    }
+  }
+
+  async function handleConfirmClick(type) {
+    const isCard = type === 'card';
+    const isRelic = type === 'relic';
+    if (!isCard && !isRelic) return;
+
+    const selectionKey = isCard ? highlightedCardKey ?? stagedCardHighlightKey : highlightedRelicKey ?? stagedRelicHighlightKey;
+    if (!selectionKey) return;
+
+    const awaiting = isCard ? awaitingCard : awaitingRelic;
+    if (!awaiting) return;
+
+    const stagedEntries = isCard ? stagedCardEntries : stagedRelicEntries;
+    if (!Array.isArray(stagedEntries) || stagedEntries.length === 0) return;
+
+    const stagedEntry = (isCard ? stagedCardEntryMap : stagedRelicEntryMap).get(selectionKey) ?? stagedEntries[0];
+    if (!stagedEntry) return;
+
+    const detail = {
+      type,
+      intent: 'confirm',
+      id: stagedEntry?.id ?? null,
+      key: selectionKey,
+      entry: stagedEntry
+    };
+
+    const pending = isCard ? pendingCardSelection !== null : pendingRelicSelection !== null;
+    if (pending) {
+      if (isCard) {
+        queuedCardConfirmation = { type: 'card', detail };
+      } else {
+        queuedRelicConfirmation = { type: 'relic', detail };
+      }
+      return;
     }
 
     await performRewardSelection(detail);
@@ -1271,6 +1467,34 @@
     max-width: 1320px;
   }
 
+  .confirm-panel {
+    margin-top: 0.85rem;
+    padding: clamp(0.75rem, 1.6vw, 1.25rem);
+    border: var(--overlay-panel-border);
+    background: var(--overlay-panel-bg);
+    box-shadow: var(--overlay-panel-shadow);
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+    align-items: flex-start;
+  }
+
+  .confirm-panel .confirm-actions {
+    display: flex;
+    gap: 0.75rem;
+  }
+
+  .confirm-panel .confirm-button {
+    padding: 0.65rem 1.5rem;
+    min-width: 140px;
+  }
+
+  .confirm-message {
+    margin: 0;
+    font-size: 1rem;
+    color: var(--overlay-text-primary);
+  }
+
   .status {
     margin-top: 0.25rem;
     text-align: center;
@@ -1567,6 +1791,21 @@
             </div>
           {/each}
         </div>
+        {#if showCardConfirmation}
+          <div class="confirm-panel card" role="group" aria-label="Confirm card selection">
+            <p class="confirm-message">Confirm {cardConfirmDescription}?</p>
+            <div class="confirm-actions">
+              <button
+                class="icon-btn confirm-button"
+                type="button"
+                on:click={() => handleConfirmClick('card')}
+                disabled={cardConfirmDisabled}
+              >
+                Confirm
+              </button>
+            </div>
+          </div>
+        {/if}
       {/if}
 
       {#if showRelics}
@@ -1585,6 +1824,21 @@
             </div>
           {/each}
         </div>
+        {#if showRelicConfirmation}
+          <div class="confirm-panel relic" role="group" aria-label="Confirm relic selection">
+            <p class="confirm-message">Confirm {relicConfirmDescription}?</p>
+            <div class="confirm-actions">
+              <button
+                class="icon-btn confirm-button"
+                type="button"
+                on:click={() => handleConfirmClick('relic')}
+                disabled={relicConfirmDisabled}
+              >
+                Confirm
+              </button>
+            </div>
+          </div>
+        {/if}
       {/if}
     {/if}
 

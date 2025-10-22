@@ -62,7 +62,11 @@ describe('RewardOverlay card phase interactions', () => {
     await tick();
     await tick();
 
-    expect(selectEvents.some((detail) => detail?.type === 'card' && detail?.id === 'first-card')).toBe(true);
+    expect(
+      selectEvents.some(
+        (detail) => detail?.type === 'card' && detail?.id === 'first-card' && detail?.intent === 'select'
+      )
+    ).toBe(true);
     const highlighted = container.querySelector('.card-shell.selected');
     expect(highlighted).not.toBeNull();
     expect(
@@ -111,7 +115,7 @@ describe('RewardOverlay card phase interactions', () => {
   test('requires a second click on the highlighted card to confirm', async () => {
     updateRewardProgression(afterDropsProgression());
 
-    const selectHandler = vi.fn();
+    const selectEvents = [];
 
     const { component, getByLabelText } = render(RewardOverlay, {
       props: {
@@ -140,7 +144,7 @@ describe('RewardOverlay card phase interactions', () => {
 
     component.$on('select', (event) => {
       if (event.detail?.type === 'card') {
-        selectHandler(event.detail);
+        selectEvents.push(event.detail);
       }
     });
 
@@ -148,7 +152,9 @@ describe('RewardOverlay card phase interactions', () => {
     await fireEvent.click(secondCardButton);
     await tick();
 
-    expect(selectHandler).not.toHaveBeenCalled();
+    expect(selectEvents).toHaveLength(1);
+    expect(selectEvents[0]?.intent).toBe('select');
+    expect(selectEvents[0]?.id).toBe('second-card');
     const shell = secondCardButton.closest('.card-shell');
     expect(shell).not.toBeNull();
     expect(shell?.classList.contains('selected')).toBe(true);
@@ -156,14 +162,15 @@ describe('RewardOverlay card phase interactions', () => {
     await fireEvent.click(secondCardButton);
     await tick();
 
-    expect(selectHandler).toHaveBeenCalledTimes(1);
-    expect(selectHandler.mock.calls[0][0]?.id).toBe('second-card');
+    expect(selectEvents).toHaveLength(2);
+    expect(selectEvents[1]?.intent).toBe('confirm');
+    expect(selectEvents[1]?.id).toBe('second-card');
   });
 
   test('applies selected styling before confirmation in the card flow', async () => {
     updateRewardProgression(afterDropsProgression());
 
-    const selectHandler = vi.fn();
+    const selectEvents = [];
 
     const { component, container } = render(RewardOverlay, {
       props: {
@@ -192,7 +199,7 @@ describe('RewardOverlay card phase interactions', () => {
 
     component.$on('select', (event) => {
       if (event.detail?.type === 'card') {
-        selectHandler(event.detail);
+        selectEvents.push(event.detail);
       }
     });
 
@@ -205,11 +212,11 @@ describe('RewardOverlay card phase interactions', () => {
     await fireEvent.click(secondCardButton);
     await tick();
 
-    expect(selectHandler).not.toHaveBeenCalled();
+    expect(selectEvents).toHaveLength(1);
+    expect(selectEvents[0]?.intent).toBe('select');
     const shell = secondCardButton.closest('.card-shell');
     expect(shell).not.toBeNull();
     expect(shell?.classList.contains('selected')).toBe(true);
-    expect(shell?.classList.contains('confirmable')).toBe(false);
     expect(shell?.dataset.reducedMotion).toBe('false');
   });
 });
