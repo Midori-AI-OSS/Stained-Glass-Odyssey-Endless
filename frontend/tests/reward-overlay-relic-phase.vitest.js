@@ -141,6 +141,45 @@ describe('RewardOverlay relic phase interactions', () => {
     expect(stagedShell?.classList.contains('selected')).toBe(true);
   });
 
+  test('keeps relic grid and confirmation controls visible during staged confirmation', async () => {
+    updateRewardProgression({
+      available: ['cards', 'relics', 'battle_review'],
+      completed: ['cards'],
+      current_step: 'relics'
+    });
+
+    const relicPool = [
+      { id: 'moon-charm', name: 'Moon Charm' },
+      { id: 'sun-charm', name: 'Sun Charm' }
+    ];
+
+    const { container, getByRole, getByText } = render(RewardOverlay, {
+      props: {
+        ...baseProps,
+        relics: relicPool,
+        stagedRelics: [relicPool[0]],
+        awaitingRelic: true
+      }
+    });
+
+    await tick();
+
+    const relicHeading = getByText('Choose a Relic');
+    expect(relicHeading).not.toBeNull();
+
+    const relicGrid = relicHeading?.nextElementSibling;
+    expect(relicGrid).not.toBeNull();
+    expect(relicGrid?.classList.contains('choices')).toBe(true);
+    expect(relicGrid?.querySelectorAll('.curio-shell').length ?? 0).toBeGreaterThan(0);
+
+    const confirmGroup = getByRole('group', { name: 'Confirm relic selection' });
+    expect(confirmGroup).not.toBeNull();
+
+    const confirmButton = confirmGroup?.querySelector('button');
+    expect(confirmButton).not.toBeNull();
+    expect(confirmButton?.textContent?.trim()).toBe('Confirm');
+  });
+
   test('requires a second click on the highlighted relic to confirm', async () => {
     updateRewardProgression({
       available: ['relics'],

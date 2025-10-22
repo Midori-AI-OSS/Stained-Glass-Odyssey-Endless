@@ -732,9 +732,10 @@
   let autoRelicSelectionInFlight = false;
 
   $: cardSelectionLocked = pendingCardSelection !== null;
-  $: relicSelectionLocked = pendingRelicSelection !== null || stagedRelicEntries.length > 0;
   $: showCards = cardChoiceEntries.length > 0;
-  $: showRelics = relicChoiceEntries.length > 0 && !awaitingCard && !relicSelectionLocked;
+  $: hasRelicChoices = relicChoiceEntries.length > 0;
+  $: hasStagedRelics = stagedRelicEntries.length > 0;
+  $: showRelics = (hasRelicChoices || hasStagedRelics) && !awaitingCard;
 
   $: selectionInFlight = pendingCardSelection !== null || pendingRelicSelection !== null;
 
