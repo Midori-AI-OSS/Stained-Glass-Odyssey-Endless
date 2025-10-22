@@ -68,10 +68,12 @@ describe('RewardOverlay relic phase interactions', () => {
     expect(highlighted).not.toBeNull();
   });
 
-  test('applies selected styling in the no-confirmation relic flow', async () => {
+  test('applies selected styling before confirmation in the relic flow', async () => {
     updateRewardProgression(afterCardsProgression());
 
-    const { container } = render(RewardOverlay, {
+    const selectHandler = vi.fn();
+
+    const { component, container } = render(RewardOverlay, {
       props: {
         ...baseProps,
         relics: [
@@ -80,6 +82,12 @@ describe('RewardOverlay relic phase interactions', () => {
         ],
         reducedMotion: false,
         awaitingRelic: false
+      }
+    });
+
+    component.$on('select', (event) => {
+      if (event.detail?.type === 'relic') {
+        selectHandler(event.detail);
       }
     });
 
@@ -92,6 +100,7 @@ describe('RewardOverlay relic phase interactions', () => {
     await fireEvent.click(secondRelicButton);
     await tick();
 
+    expect(selectHandler).not.toHaveBeenCalled();
     const shell = secondRelicButton.closest('.curio-shell');
     expect(shell).not.toBeNull();
     expect(shell?.classList.contains('selected')).toBe(true);
@@ -99,7 +108,7 @@ describe('RewardOverlay relic phase interactions', () => {
     expect(shell?.dataset.reducedMotion).toBe('false');
   });
 
-  test('renders staged relic without confirm controls', async () => {
+  test('keeps staged relic in the main grid while awaiting confirmation', async () => {
     updateRewardProgression({
       available: ['relics', 'battle_review'],
       completed: [],
@@ -108,7 +117,7 @@ describe('RewardOverlay relic phase interactions', () => {
 
     const stagedRelic = { id: 'guardian-talisman', name: 'Guardian Talisman' };
 
-    const { container } = render(RewardOverlay, {
+    const { container, getByLabelText } = render(RewardOverlay, {
       props: {
         ...baseProps,
         relics: [],
@@ -119,14 +128,20 @@ describe('RewardOverlay relic phase interactions', () => {
 
     await tick();
 
-    expect(container.querySelector('.curio-shell.confirmable')).toBeNull();
-    const confirmButton = container.querySelector('button.curio-confirm');
-    expect(confirmButton).toBeNull();
-    const stagedShell = container.querySelector('.curio-shell.selected');
+    expect(container.querySelector('.staged-block')).toBeNull();
+    const relicButton = getByLabelText('Select relic Guardian Talisman');
+    expect(relicButton).not.toBeNull();
+    if (!relicButton) return;
+
+    await fireEvent.click(relicButton);
+    await tick();
+
+    const stagedShell = relicButton.closest('.curio-shell');
     expect(stagedShell).not.toBeNull();
+    expect(stagedShell?.classList.contains('selected')).toBe(true);
   });
 
-  test('re-dispatches select when clicking the staged relic again', async () => {
+  test('requires a second click on the highlighted relic to confirm', async () => {
     updateRewardProgression({
       available: ['relics'],
       completed: [],
@@ -152,6 +167,14 @@ describe('RewardOverlay relic phase interactions', () => {
     });
 
     const relicButton = getByLabelText('Select relic Echo Charm');
+    await fireEvent.click(relicButton);
+    await tick();
+
+    expect(selectHandler).not.toHaveBeenCalled();
+    const shell = relicButton.closest('.curio-shell');
+    expect(shell).not.toBeNull();
+    expect(shell?.classList.contains('selected')).toBe(true);
+
     await fireEvent.click(relicButton);
     await tick();
 
