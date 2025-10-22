@@ -1730,13 +1730,15 @@
     animation-delay: var(--delay, 0ms);
   }
 
-  /* Fix for card selection visual bug: Ensure selected cards have full opacity
-     to prevent reveal animation interference. The reveal animation sets opacity: 0
-     initially and animates to opacity: 1. When a card is selected, the wiggle animation
-     is applied, but the reveal animation's opacity property can interfere, causing the
-     card to disappear. This rule ensures selected cards always have opacity: 1 regardless
-     of the reveal animation state. */
-  .reveal :global(.card-shell.selected .card-art) {
+  /* Fix for reward selection visual bug: Ensure selected cards and relics have
+     full opacity to prevent reveal animation interference. The reveal animation
+     sets opacity: 0 initially and animates to opacity: 1. When a reward is
+     selected, the wiggle animation is applied, but the reveal animation's
+     opacity property can interfere, causing the reward to disappear. These
+     rules ensure selected rewards always have opacity: 1 regardless of the
+     reveal animation state. */
+  .reveal :global(.card-shell.selected .card-art),
+  .reveal :global(.curio-shell.selected .card-art) {
     opacity: 1 !important;
   }
 
