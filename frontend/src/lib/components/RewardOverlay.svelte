@@ -1993,7 +1993,6 @@
     {#if showAdvancePanel}
       <div
         class={`advance-panel ${advancePanelActive ? 'active' : 'locked'}${confirmFallbackMode ? ' confirm-mode' : ''}`}
-        data-mode={advanceButtonMode}
       >
         <div class="advance-header">
           <h4>Advance</h4>
@@ -2013,6 +2012,7 @@
           disabled={advanceButtonDisabled}
           aria-label={advanceButtonAriaLabel}
           title={advanceHelperMessage || undefined}
+          data-mode={advanceButtonMode}
         >
           Advance
         </button>
