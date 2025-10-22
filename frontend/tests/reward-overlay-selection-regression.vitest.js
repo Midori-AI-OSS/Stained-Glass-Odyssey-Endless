@@ -102,7 +102,7 @@ describe('RewardOverlay selection regression', () => {
     expect(selectDetail?.id).toBe('radiant-beam');
   });
 
-  test('renders staged reward previews when available', () => {
+  test('omits staged preview panels when cards are already confirmed', () => {
     const { container } = renderOverlay({
       cards: [],
       stagedCards: [
@@ -123,10 +123,7 @@ describe('RewardOverlay selection regression', () => {
       awaitingCard: true
     });
 
-    const panel = container.querySelector('.preview-panel[data-type="card"]');
-    expect(panel).not.toBeNull();
-    expect(panel?.textContent).toMatch(/Attack/);
-    expect(panel?.textContent).toMatch(/Triggers/);
+    expect(container.querySelector('.preview-panel')).toBeNull();
   });
 
   test('renders staged relics without confirm or cancel controls', async () => {
