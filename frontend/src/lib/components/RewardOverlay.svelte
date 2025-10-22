@@ -6,7 +6,6 @@
   import CurioChoice from './CurioChoice.svelte';
   import { getMaterialIcon, onMaterialIconError } from '../systems/assetLoader.js';
   import { createRewardDropSfx } from '../systems/sfx.js';
-  import { formatRewardPreview } from '../utils/rewardPreviewFormatter.js';
   import {
     rewardPhaseState,
     rewardPhaseController,
@@ -724,37 +723,6 @@
   );
   $: relicChoiceEntryMap = new Map(relicChoiceEntries.map((choice) => [choice.key, choice.entry]));
 
-  const PREVIEW_LIMIT = 3;
-  $: stagedCardPreviewDetails = stagedCardEntries
-    .slice(0, PREVIEW_LIMIT)
-    .map((entry, index) => {
-      const name = entry?.name || entry?.id || 'Card';
-      const preview = formatRewardPreview(entry?.preview, {
-        fallbackSummary: entry?.about || entry?.tooltip || ''
-      });
-      return {
-        key: entry?.id ?? `staged-card-preview-${index}`,
-        name,
-        preview
-      };
-    })
-    .filter((entry) => entry.preview?.hasContent);
-
-  $: stagedRelicPreviewDetails = stagedRelicEntries
-    .slice(0, PREVIEW_LIMIT)
-    .map((entry, index) => {
-      const name = entry?.name || entry?.id || 'Relic';
-      const preview = formatRewardPreview(entry?.preview, {
-        fallbackSummary: entry?.about || ''
-      });
-      return {
-        key: entry?.id ?? `staged-relic-preview-${index}`,
-        name,
-        preview
-      };
-    })
-    .filter((entry) => entry.preview?.hasContent);
-
   let pendingCardSelection = null;
   let pendingRelicSelection = null;
   let showNextButton = false;
@@ -1300,118 +1268,16 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 0.6rem;
-  }
-
-  .preview-panel {
-    width: 100%;
-    background: var(--overlay-panel-bg);
-    border: var(--overlay-panel-border);
-    border-radius: 0;
-    padding: clamp(0.75rem, 1.8vw, 1.2rem);
-    color: var(--overlay-text-primary);
-    box-shadow: var(--overlay-panel-shadow);
-  }
-
-  .preview-heading {
-    margin: 0 0 0.4rem;
-    font-size: 1rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: var(--overlay-text-warm);
-  }
-
-  .preview-summary {
-    margin: 0 0 0.6rem;
-    font-size: 0.95rem;
-    line-height: 1.4;
-    color: var(--overlay-text-muted);
-  }
-
-  .preview-stats {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-
-  .preview-stat {
-    border-top: 1px solid var(--overlay-divider-color);
-    padding-top: 0.5rem;
-  }
-
-  .preview-stat:first-child {
-    border-top: none;
-    padding-top: 0;
-  }
-
-  .stat-row {
-    display: flex;
-    justify-content: space-between;
     gap: 0.75rem;
-    font-size: 0.95rem;
+    margin-bottom: 1.25rem;
   }
 
-  .stat-name {
-    font-weight: 600;
-    letter-spacing: 0.03em;
+  .staged-block:last-child {
+    margin-bottom: 0;
   }
 
-  .stat-change {
-    font-variant-numeric: tabular-nums;
-    color: color-mix(in srgb, var(--accent, #7ec8ff) 70%, #fff 30%);
-    font-weight: 600;
-  }
-
-  .stat-details {
-    list-style: none;
-    margin: 0.35rem 0 0 0;
-    padding: 0 0 0 1.2rem;
-    display: flex;
-    flex-direction: column;
-    gap: 0.2rem;
-    color: var(--overlay-text-muted);
-    font-size: 0.85rem;
-  }
-
-  .preview-triggers {
-    margin-top: 0.75rem;
-    padding-top: 0.6rem;
-    border-top: 1px solid var(--overlay-divider-color);
-  }
-
-  .preview-triggers h5 {
-    margin: 0 0 0.3rem;
-    font-size: 0.85rem;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: color-mix(in srgb, var(--accent, #7ec8ff) 78%, #fff 22%);
-  }
-
-  .preview-triggers ul {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 0.35rem;
-    color: var(--overlay-text-muted);
-    font-size: 0.9rem;
-  }
-
-  .trigger-event {
-    font-weight: 600;
-  }
-
-  .trigger-description {
-    color: var(--overlay-text-muted);
-  }
-
-  .preview-panel[data-type='relic'] .stat-change {
-    color: #f9c97f;
+  .staged-block .section-title {
+    margin-top: 0;
   }
 
   .status {
@@ -1701,48 +1567,6 @@
               </div>
             {/each}
           </div>
-          {#each stagedCardPreviewDetails as detail (detail.key)}
-            <div class="preview-panel" data-type="card">
-              <h4 class="preview-heading">{detail.name} Preview</h4>
-              {#if detail.preview.summary}
-                <p class="preview-summary">{detail.preview.summary}</p>
-              {/if}
-              {#if detail.preview.stats.length > 0}
-                <ul class="preview-stats" role="list">
-                  {#each detail.preview.stats as stat (stat.id)}
-                    <li class="preview-stat" role="listitem">
-                      <div class="stat-row">
-                        <span class="stat-name">{stat.label}</span>
-                        <span class="stat-change">{stat.change}</span>
-                      </div>
-                      {#if stat.details.length > 0}
-                        <ul class="stat-details" role="list">
-                          {#each stat.details as item, index (`${stat.id}-detail-${index}`)}
-                            <li role="listitem">{item}</li>
-                          {/each}
-                        </ul>
-                      {/if}
-                    </li>
-                  {/each}
-                </ul>
-              {/if}
-              {#if detail.preview.triggers.length > 0}
-                <div class="preview-triggers" role="group" aria-label="Trigger effects">
-                  <h5>Triggers</h5>
-                  <ul role="list">
-                    {#each detail.preview.triggers as trigger (trigger.id)}
-                      <li role="listitem">
-                        <span class="trigger-event">{trigger.event}</span>
-                        {#if trigger.description}
-                          <span class="trigger-description"> — {trigger.description}</span>
-                        {/if}
-                      </li>
-                    {/each}
-                  </ul>
-                </div>
-              {/if}
-            </div>
-          {/each}
         </div>
       {/if}
 
@@ -1782,48 +1606,6 @@
               </div>
             {/each}
           </div>
-          {#each stagedRelicPreviewDetails as detail (detail.key)}
-            <div class="preview-panel" data-type="relic">
-              <h4 class="preview-heading">{detail.name} Preview</h4>
-              {#if detail.preview.summary}
-                <p class="preview-summary">{detail.preview.summary}</p>
-              {/if}
-              {#if detail.preview.stats.length > 0}
-                <ul class="preview-stats" role="list">
-                  {#each detail.preview.stats as stat (stat.id)}
-                    <li class="preview-stat" role="listitem">
-                      <div class="stat-row">
-                        <span class="stat-name">{stat.label}</span>
-                        <span class="stat-change">{stat.change}</span>
-                      </div>
-                      {#if stat.details.length > 0}
-                        <ul class="stat-details" role="list">
-                          {#each stat.details as item, index (`${stat.id}-detail-${index}`)}
-                            <li role="listitem">{item}</li>
-                          {/each}
-                        </ul>
-                      {/if}
-                    </li>
-                  {/each}
-                </ul>
-              {/if}
-              {#if detail.preview.triggers.length > 0}
-                <div class="preview-triggers" role="group" aria-label="Trigger effects">
-                  <h5>Triggers</h5>
-                  <ul role="list">
-                    {#each detail.preview.triggers as trigger (trigger.id)}
-                      <li role="listitem">
-                        <span class="trigger-event">{trigger.event}</span>
-                        {#if trigger.description}
-                          <span class="trigger-description"> — {trigger.description}</span>
-                        {/if}
-                      </li>
-                    {/each}
-                  </ul>
-                </div>
-              {/if}
-            </div>
-          {/each}
         </div>
       {/if}
 
