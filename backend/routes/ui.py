@@ -503,20 +503,25 @@ async def handle_ui_action() -> tuple[str, int, dict[str, Any]]:
                 if not staged_cards:
                     # Check if card selection is still pending (user hasn't chosen yet)
                     # vs already handled (staged card was confirmed by another process)
-                    if state.get("card_choice_options"):
+                    progression = state.get("reward_progression")
+                    in_progression = isinstance(progression, Mapping) and progression.get("current_step")
+
+                    if state.get("card_choice_options") and not in_progression:
+                        # No progression active, user needs to make a choice
                         return create_error_response("Cannot advance room while rewards are pending", 400)
-                    # No staged card and no choices means reward was already handled
-                    # Clear the flag and continue
-                    state["awaiting_card"] = False
-                    await asyncio.to_thread(save_map, run_id, state)
+                    elif not state.get("card_choice_options"):
+                        # No staged card and no choices means reward was already handled
+                        # Clear the flag and continue
+                        state["awaiting_card"] = False
+                        await asyncio.to_thread(save_map, run_id, state)
                 else:
                     try:
                         await confirm_reward(run_id, "card")
                     except ValueError as exc:
                         return create_error_response(str(exc), 400)
-                state, rooms = await asyncio.to_thread(load_map, run_id)
-                staging_raw = state.get("reward_staging")
-                staging = staging_raw if isinstance(staging_raw, Mapping) else None
+                    state, rooms = await asyncio.to_thread(load_map, run_id)
+                    staging_raw = state.get("reward_staging")
+                    staging = staging_raw if isinstance(staging_raw, Mapping) else None
 
             staged_relics = []
             staged_items = []
@@ -537,31 +542,36 @@ async def handle_ui_action() -> tuple[str, int, dict[str, Any]]:
                     if isinstance(snap, dict):
                         has_relic_choices = bool(snap.get("relic_choices"))
 
-                    if has_relic_choices:
+                    progression = state.get("reward_progression")
+                    in_progression = isinstance(progression, Mapping) and progression.get("current_step")
+
+                    if has_relic_choices and not in_progression:
+                        # No progression active, user needs to make a choice
                         return create_error_response("Cannot advance room while rewards are pending", 400)
-                    # No staged relic and no choices means reward was already handled
-                    # Clear the flag and continue
-                    state["awaiting_relic"] = False
-                    await asyncio.to_thread(save_map, run_id, state)
+                    elif not has_relic_choices:
+                        # No staged relic and no choices means reward was already handled
+                        # Clear the flag and continue
+                        state["awaiting_relic"] = False
+                        await asyncio.to_thread(save_map, run_id, state)
                 else:
                     try:
                         await confirm_reward(run_id, "relic")
                     except ValueError as exc:
                         return create_error_response(str(exc), 400)
 
-                state, rooms = await asyncio.to_thread(load_map, run_id)
-                staging_raw = state.get("reward_staging")
-                staging = staging_raw if isinstance(staging_raw, Mapping) else None
+                    state, rooms = await asyncio.to_thread(load_map, run_id)
+                    staging_raw = state.get("reward_staging")
+                    staging = staging_raw if isinstance(staging_raw, Mapping) else None
 
-                staged_relics = []
-                staged_items = []
-                if isinstance(staging, Mapping):
-                    relic_bucket = staging.get("relics")
-                    if isinstance(relic_bucket, list):
-                        staged_relics = relic_bucket
-                    item_bucket = staging.get("items")
-                    if isinstance(item_bucket, list):
-                        staged_items = item_bucket
+                    staged_relics = []
+                    staged_items = []
+                    if isinstance(staging, Mapping):
+                        relic_bucket = staging.get("relics")
+                        if isinstance(relic_bucket, list):
+                            staged_relics = relic_bucket
+                        item_bucket = staging.get("items")
+                        if isinstance(item_bucket, list):
+                            staged_items = item_bucket
 
             if state.get("awaiting_loot") and not staged_items:
                 # If awaiting_loot but no staged items, clear the flag and continue
