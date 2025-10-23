@@ -50,7 +50,7 @@
   import { registerAssetManifest } from '$lib/systems/assetLoader.js';
   import { browser, dev } from '$app/environment';
   import { normalizeShopPurchase, processSequentialPurchases } from '$lib/systems/shopPurchases.js';
-  import { normalizeRewardPreview } from '$lib/utils/rewardPreviewFormatter.js';
+  import { resolveRewardStagingPayload } from '$lib/utils/rewardStagingPayload.js';
   import { computeAutomationAction } from '$lib/utils/rewardAutomation.js';
 
   const runState = runStateStore;
@@ -980,37 +980,23 @@
     }
   }
 
-  function normalizeRewardStagingPayload(source, fallback) {
-    const effective = source && typeof source === 'object'
-      ? source
-      : fallback && typeof fallback === 'object'
-        ? fallback
-        : {};
-    const buckets = { cards: [], relics: [], items: [] };
-    for (const bucket of Object.keys(buckets)) {
-      const values = Array.isArray(effective[bucket]) ? effective[bucket] : [];
-      buckets[bucket] = values.map((entry) => {
-        if (!entry || typeof entry !== 'object') {
-          return entry;
-        }
-        const clone = { ...entry };
-        if (clone.preview) {
-          clone.preview = normalizeRewardPreview(clone.preview);
-        }
-        return clone;
-      });
-    }
-    return buckets;
-  }
-
   function cloneRewardEntries(list) {
     if (!Array.isArray(list)) return [];
     return list.map((entry) => (entry && typeof entry === 'object' ? { ...entry } : entry));
   }
 
   function applyRewardPayload(result, { type, intent } = {}) {
+    const normalizedType = type === 'card' || type === 'relic' ? type : null;
+    const normalizedIntent = typeof intent === 'string' ? intent : null;
+
     const base = roomData && typeof roomData === 'object' ? { ...roomData } : {};
-    base.reward_staging = normalizeRewardStagingPayload(result?.reward_staging, base.reward_staging);
+    const previousStaging = base.reward_staging;
+    base.reward_staging = resolveRewardStagingPayload({
+      current: previousStaging,
+      next: result?.reward_staging,
+      type: normalizedType,
+      intent: normalizedIntent
+    });
 
     const awaitingKeys = ['awaiting_card', 'awaiting_relic', 'awaiting_loot', 'awaiting_next'];
     for (const key of awaitingKeys) {
@@ -1026,9 +1012,6 @@
     if (typeof result?.next_room === 'string') {
       base.next_room = result.next_room;
     }
-
-    const normalizedType = type === 'card' || type === 'relic' ? type : null;
-    const normalizedIntent = typeof intent === 'string' ? intent : null;
 
     if (Object.prototype.hasOwnProperty.call(result ?? {}, 'card_choices')) {
       const nextCardChoices = Array.isArray(result?.card_choices) ? result.card_choices : [];
