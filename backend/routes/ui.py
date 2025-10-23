@@ -12,10 +12,12 @@ from quart import jsonify
 from quart import request
 from runs.encryption import get_save_manager
 from runs.lifecycle import REWARD_STEP_BATTLE_REVIEW
+from runs.lifecycle import REWARD_STEP_CARDS
+from runs.lifecycle import REWARD_STEP_DROPS
+from runs.lifecycle import REWARD_STEP_RELICS
 from runs.lifecycle import battle_snapshots
 from runs.lifecycle import battle_tasks
 from runs.lifecycle import ensure_reward_progression
-from runs.lifecycle import has_pending_rewards
 from runs.lifecycle import load_map
 from runs.lifecycle import normalise_reward_step
 from runs.lifecycle import save_map
@@ -503,13 +505,17 @@ async def handle_ui_action() -> tuple[str, int, dict[str, Any]]:
                 if not staged_cards:
                     # Check if card selection is still pending (user hasn't chosen yet)
                     # vs already handled (staged card was confirmed by another process)
+                    card_choices = state.get("card_choice_options")
+                    has_card_choices = isinstance(card_choices, list) and bool(card_choices)
                     progression = state.get("reward_progression")
-                    in_progression = isinstance(progression, Mapping) and progression.get("current_step")
+                    current_step = None
+                    if isinstance(progression, Mapping):
+                        current_step = normalise_reward_step(progression.get("current_step"))
 
-                    if state.get("card_choice_options") and not in_progression:
-                        # No progression active, user needs to make a choice
+                    # If we're in the cards phase and awaiting, user must select
+                    if current_step == REWARD_STEP_CARDS and has_card_choices:
                         return create_error_response("Cannot advance room while rewards are pending", 400)
-                    elif not state.get("card_choice_options"):
+                    elif not has_card_choices:
                         # No staged card and no choices means reward was already handled
                         # Clear the flag and continue
                         state["awaiting_card"] = False
@@ -543,10 +549,12 @@ async def handle_ui_action() -> tuple[str, int, dict[str, Any]]:
                         has_relic_choices = bool(snap.get("relic_choices"))
 
                     progression = state.get("reward_progression")
-                    in_progression = isinstance(progression, Mapping) and progression.get("current_step")
+                    current_step = None
+                    if isinstance(progression, Mapping):
+                        current_step = normalise_reward_step(progression.get("current_step"))
 
-                    if has_relic_choices and not in_progression:
-                        # No progression active, user needs to make a choice
+                    # If we're in the relics phase and awaiting, user must select
+                    if current_step == REWARD_STEP_RELICS and has_relic_choices:
                         return create_error_response("Cannot advance room while rewards are pending", 400)
                     elif not has_relic_choices:
                         # No staged relic and no choices means reward was already handled
@@ -573,13 +581,16 @@ async def handle_ui_action() -> tuple[str, int, dict[str, Any]]:
                         if isinstance(item_bucket, list):
                             staged_items = item_bucket
 
-            if state.get("awaiting_loot") and not staged_items:
-                # If awaiting_loot but no staged items, clear the flag and continue
-                # This handles cases where loot was already acknowledged
+            # Handle awaiting_loot and staged items
+            # Loot items are informational only and cleared when acknowledged
+            # Auto-acknowledge when advancing through phases
+            if state.get("awaiting_loot") or staged_items:
+                print(f"DEBUG: Before loot auto-ack: awaiting_card={state.get('awaiting_card')}, awaiting_relic={state.get('awaiting_relic')}")
                 state["awaiting_loot"] = False
+                if isinstance(staging, dict):
+                    staging["items"] = []
                 await asyncio.to_thread(save_map, run_id, state)
-            if has_pending_rewards(state):
-                return create_error_response("Cannot advance room while rewards are pending", 400)
+                print(f"DEBUG: After loot auto-ack: awaiting_card={state.get('awaiting_card')}, awaiting_relic={state.get('awaiting_relic')}")
 
             refreshed_progression = None
             progression, _ = ensure_reward_progression(state)
@@ -600,6 +611,27 @@ async def handle_ui_action() -> tuple[str, int, dict[str, Any]]:
                     completed_steps = progression.setdefault("completed", [])
                     if current_step and current_step not in completed_steps:
                         completed_steps.append(current_step)
+                        # Clear awaiting flags for the completed step
+                        if current_step == REWARD_STEP_DROPS:
+                            state["awaiting_loot"] = False
+                            if isinstance(staging, dict):
+                                staging["items"] = []
+                        elif current_step == REWARD_STEP_CARDS:
+                            state["awaiting_card"] = False
+                        elif current_step == REWARD_STEP_RELICS:
+                            state["awaiting_relic"] = False
+                        
+                        # Manually advance to next uncompleted step
+                        available_steps = progression.get("available", [])
+                        next_step = None
+                        for step in available_steps:
+                            if step not in completed_steps:
+                                next_step = step
+                                break
+                        if next_step:
+                            progression["current_step"] = next_step
+                    
+                    # Update progression to advance to next step
                     state["reward_progression"] = progression
 
                     refreshed_progression, _ = ensure_reward_progression(state)

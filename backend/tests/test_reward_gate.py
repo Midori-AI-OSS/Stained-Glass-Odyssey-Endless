@@ -75,51 +75,60 @@ async def test_advance_room_requires_reward_selection(app_with_db):
     }
 
     try:
-        # Cannot advance while any rewards are pending
+        # With the new phase-based advancement, we CAN advance from drops phase
+        # even if there are pending card/relic rewards in future phases
+        # The loot will be auto-acknowledged when advancing
+        resp = await client.post("/ui/action", json={"action": "advance_room"})
+        assert resp.status_code == 200
+        data = await resp.get_json()
+        print(f"DEBUG: Response data = {data}")
+        # Should advance progression from "drops" to "cards"
+        assert data.get("progression_advanced") is True
+        assert data.get("current_step") == "cards"
+        
+        # Now we're in the cards phase - cannot advance without selecting a card
         resp = await client.post("/ui/action", json={"action": "advance_room"})
         assert resp.status_code == 400
 
-        # Selecting card still leaves relic and loot to claim
+        # Selecting card should stage it but still allow advance (which will auto-confirm)
         await client.post(
             "/ui/action",
             json={"action": "choose_card", "params": {"card_id": "micro_blade"}},
         )
+        # Advancing now should auto-confirm the staged card and move to relics phase
         resp = await client.post("/ui/action", json={"action": "advance_room"})
-        assert resp.status_code == 400
+        assert resp.status_code == 200
+        data = await resp.get_json()
+        assert data.get("progression_advanced") is True
+        assert data.get("current_step") == "relics"
 
         state_after_card, _ = await asyncio.to_thread(load_map, run_id)
         assert state_after_card.get("awaiting_card") is False
 
-        # Staging a relic should auto-confirm during the advance gating step
+        # Now in relics phase - cannot advance without selecting a relic
+        resp = await client.post("/ui/action", json={"action": "advance_room"})
+        assert resp.status_code == 400
+        
+        # Staging a relic should allow advance (which will auto-confirm)
         await client.post(
             "/ui/action",
             json={"action": "choose_relic", "params": {"relic_id": "threadbare_cloak"}},
         )
         resp = await client.post("/ui/action", json={"action": "advance_room"})
-        assert resp.status_code == 400
+        # This should succeed and complete all progression
+        assert resp.status_code == 200
 
         state_after_relic, _ = await asyncio.to_thread(load_map, run_id)
         assert state_after_relic.get("awaiting_relic") is False
         staging_after_relic = state_after_relic.get("reward_staging", {})
         assert isinstance(staging_after_relic, dict)
         assert staging_after_relic.get("relics") == []
+        # Loot should have been auto-acknowledged during the first advance
+        assert state_after_relic.get("awaiting_loot") is False
+        assert staging_after_relic.get("items") == []
 
-        # Even with card and relic confirmed, loot acknowledgement keeps advancement blocked
-        resp = await client.post("/ui/action", json={"action": "advance_room"})
-        assert resp.status_code == 400
-
-        loot_resp = await client.post(f"/rewards/loot/{run_id}")
-        assert loot_resp.status_code == 200
-        loot_data = await loot_resp.get_json()
-        assert "next_room" in loot_data
-
-        state_after, _ = await asyncio.to_thread(load_map, run_id)
-        assert state_after.get("awaiting_loot") is False
-
-        resp = await client.post("/ui/action", json={"action": "advance_room"})
-        data = await resp.get_json()
-        assert resp.status_code == 200
-        assert data.get("next_room") is not None
+        # All rewards have been handled, should be awaiting_next
+        assert state_after_relic.get("awaiting_next") is True
     finally:
         battle_snapshots.pop(run_id, None)
 
