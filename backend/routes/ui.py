@@ -11,6 +11,7 @@ from quart import Blueprint
 from quart import jsonify
 from quart import request
 from runs.encryption import get_save_manager
+from runs.lifecycle import REWARD_STEP_BATTLE_REVIEW
 from runs.lifecycle import battle_snapshots
 from runs.lifecycle import battle_tasks
 from runs.lifecycle import ensure_reward_progression
@@ -18,7 +19,6 @@ from runs.lifecycle import has_pending_rewards
 from runs.lifecycle import load_map
 from runs.lifecycle import normalise_reward_step
 from runs.lifecycle import save_map
-from runs.lifecycle import REWARD_STEP_BATTLE_REVIEW
 from runs.party_manager import load_party
 from services.asset_service import get_asset_manifest
 from services.reward_service import cancel_reward
@@ -501,11 +501,19 @@ async def handle_ui_action() -> tuple[str, int, dict[str, Any]]:
                     staged_cards = bucket
             if state.get("awaiting_card"):
                 if not staged_cards:
-                    return create_error_response("Cannot advance room while rewards are pending", 400)
-                try:
-                    await confirm_reward(run_id, "card")
-                except ValueError as exc:
-                    return create_error_response(str(exc), 400)
+                    # Check if card selection is still pending (user hasn't chosen yet)
+                    # vs already handled (staged card was confirmed by another process)
+                    if state.get("card_choice_options"):
+                        return create_error_response("Cannot advance room while rewards are pending", 400)
+                    # No staged card and no choices means reward was already handled
+                    # Clear the flag and continue
+                    state["awaiting_card"] = False
+                    await asyncio.to_thread(save_map, run_id, state)
+                else:
+                    try:
+                        await confirm_reward(run_id, "card")
+                    except ValueError as exc:
+                        return create_error_response(str(exc), 400)
                 state, rooms = await asyncio.to_thread(load_map, run_id)
                 staging_raw = state.get("reward_staging")
                 staging = staging_raw if isinstance(staging_raw, Mapping) else None
@@ -522,12 +530,24 @@ async def handle_ui_action() -> tuple[str, int, dict[str, Any]]:
 
             if state.get("awaiting_relic"):
                 if not staged_relics:
-                    return create_error_response("Cannot advance room while rewards are pending", 400)
+                    # Check if relic selection is still pending (user hasn't chosen yet)
+                    # vs already handled (staged relic was confirmed by another process)
+                    snap = battle_snapshots.get(run_id)
+                    has_relic_choices = False
+                    if isinstance(snap, dict):
+                        has_relic_choices = bool(snap.get("relic_choices"))
 
-                try:
-                    await confirm_reward(run_id, "relic")
-                except ValueError as exc:
-                    return create_error_response(str(exc), 400)
+                    if has_relic_choices:
+                        return create_error_response("Cannot advance room while rewards are pending", 400)
+                    # No staged relic and no choices means reward was already handled
+                    # Clear the flag and continue
+                    state["awaiting_relic"] = False
+                    await asyncio.to_thread(save_map, run_id, state)
+                else:
+                    try:
+                        await confirm_reward(run_id, "relic")
+                    except ValueError as exc:
+                        return create_error_response(str(exc), 400)
 
                 state, rooms = await asyncio.to_thread(load_map, run_id)
                 staging_raw = state.get("reward_staging")
@@ -544,7 +564,10 @@ async def handle_ui_action() -> tuple[str, int, dict[str, Any]]:
                         staged_items = item_bucket
 
             if state.get("awaiting_loot") and not staged_items:
-                return create_error_response("Cannot advance room while rewards are pending", 400)
+                # If awaiting_loot but no staged items, clear the flag and continue
+                # This handles cases where loot was already acknowledged
+                state["awaiting_loot"] = False
+                await asyncio.to_thread(save_map, run_id, state)
             if has_pending_rewards(state):
                 return create_error_response("Cannot advance room while rewards are pending", 400)
 

@@ -503,6 +503,41 @@ async def advance_room(run_id: str) -> dict[str, object]:
     current_index = int(state.get("current", 0))
     current_room = rooms[current_index] if 0 <= current_index < len(rooms) else None
 
+    # Check for pending rewards, but be forgiving of stale flags
+    # If awaiting flags are set but staging is empty, it means rewards were already handled
+    staging = state.get("reward_staging", {})
+    staged_cards = staging.get("cards", []) if isinstance(staging, dict) else []
+    staged_relics = staging.get("relics", []) if isinstance(staging, dict) else []
+    staged_items = staging.get("items", []) if isinstance(staging, dict) else []
+
+    # Clear stale awaiting flags if staging is empty
+    state_modified = False
+    if state.get("awaiting_card") and not staged_cards:
+        # Only error if there are actual card choices pending
+        if state.get("card_choice_options"):
+            raise ValueError("pending rewards must be collected before advancing")
+        state["awaiting_card"] = False
+        state_modified = True
+
+    if state.get("awaiting_relic") and not staged_relics:
+        # Check if there are relic choices in the snapshot
+        snap = battle_snapshots.get(run_id)
+        has_relic_choices = bool(snap.get("relic_choices")) if isinstance(snap, dict) else False
+        if has_relic_choices:
+            raise ValueError("pending rewards must be collected before advancing")
+        state["awaiting_relic"] = False
+        state_modified = True
+
+    if state.get("awaiting_loot") and not staged_items:
+        # Clear stale loot flag
+        state["awaiting_loot"] = False
+        state_modified = True
+
+    # Save state if we cleared any flags
+    if state_modified:
+        await asyncio.to_thread(save_map, run_id, state)
+
+    # Final check for any remaining pending rewards
     if (
         state.get("awaiting_card")
         or state.get("awaiting_relic")
