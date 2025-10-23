@@ -15,6 +15,8 @@ from runs.encryption import get_fernet
 from runs.encryption import get_save_manager
 from runs.lifecycle import battle_snapshots
 from runs.lifecycle import emit_battle_end_for_runs
+from runs.lifecycle import empty_reward_staging
+from runs.lifecycle import has_pending_rewards
 from runs.lifecycle import load_map
 from runs.lifecycle import purge_all_run_state
 from runs.lifecycle import purge_run_state
@@ -199,7 +201,7 @@ async def start_run(
     modifier_context = build_run_modifier_context(configuration_snapshot)
     configuration_snapshot.setdefault("derived_effects", modifier_context.derived_metrics())
 
-    player_stat_multiplier = apply_player_modifier_context(party_members, modifier_context)
+    _ = apply_player_modifier_context(party_members, modifier_context)
 
     exp_multiplier_map: dict[str, float] = {}
     for member, info in zip(party_members, party_info):
@@ -243,6 +245,7 @@ async def start_run(
         "awaiting_relic": False,
         "awaiting_loot": False,
         "awaiting_next": False,
+        "reward_staging": empty_reward_staging(),
         "total_rooms_cleared": 0,
         "floors_cleared": 0,
         "current_pressure": int(pressure_value or 0),
@@ -346,6 +349,8 @@ async def start_run(
             "foe_stat_multipliers": modifier_context.foe_stat_multipliers,
             "foe_stat_deltas": modifier_context.foe_stat_deltas,
             "player_stat_multiplier": modifier_context.player_stat_multiplier,
+            "player_penalty_excess_stacks": modifier_context.player_penalty_excess_stacks,
+            "foe_overflow_multiplier": modifier_context.foe_overflow_multiplier,
             "elite_spawn_bonus_pct": modifier_context.elite_spawn_bonus_pct,
             "glitched_spawn_bonus_pct": modifier_context.glitched_spawn_bonus_pct,
             "prime_spawn_bonus_pct": modifier_context.prime_spawn_bonus_pct,
@@ -498,10 +503,46 @@ async def advance_room(run_id: str) -> dict[str, object]:
     current_index = int(state.get("current", 0))
     current_room = rooms[current_index] if 0 <= current_index < len(rooms) else None
 
+    # Check for pending rewards, but be forgiving of stale flags
+    # If awaiting flags are set but staging is empty, it means rewards were already handled
+    staging = state.get("reward_staging", {})
+    staged_cards = staging.get("cards", []) if isinstance(staging, dict) else []
+    staged_relics = staging.get("relics", []) if isinstance(staging, dict) else []
+    staged_items = staging.get("items", []) if isinstance(staging, dict) else []
+
+    # Clear stale awaiting flags if staging is empty
+    state_modified = False
+    if state.get("awaiting_card") and not staged_cards:
+        # Only error if there are actual card choices pending
+        if state.get("card_choice_options"):
+            raise ValueError("pending rewards must be collected before advancing")
+        state["awaiting_card"] = False
+        state_modified = True
+
+    if state.get("awaiting_relic") and not staged_relics:
+        # Check if there are relic choices in the snapshot
+        snap = battle_snapshots.get(run_id)
+        has_relic_choices = bool(snap.get("relic_choices")) if isinstance(snap, dict) else False
+        if has_relic_choices:
+            raise ValueError("pending rewards must be collected before advancing")
+        state["awaiting_relic"] = False
+        state_modified = True
+
+    if state.get("awaiting_loot") and not staged_items:
+        # Clear stale loot flag
+        state["awaiting_loot"] = False
+        state_modified = True
+
+    # Save state if we cleared any flags
+    if state_modified:
+        await asyncio.to_thread(save_map, run_id, state)
+
+    # Final check for any remaining pending rewards
     if (
         state.get("awaiting_card")
         or state.get("awaiting_relic")
         or state.get("awaiting_loot")
+        or has_pending_rewards(state)
     ):
         raise ValueError("pending rewards must be collected before advancing")
 

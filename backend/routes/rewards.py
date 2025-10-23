@@ -6,6 +6,8 @@ from quart import request
 from services.login_reward_service import claim_login_reward
 from services.login_reward_service import get_login_reward_status
 from services.reward_service import acknowledge_loot as acknowledge_loot_service
+from services.reward_service import cancel_reward as cancel_reward_service
+from services.reward_service import confirm_reward as confirm_reward_service
 from services.reward_service import select_card as select_card_service
 from services.reward_service import select_relic as select_relic_service
 
@@ -29,6 +31,24 @@ async def select_relic(run_id: str):
     relic_id = data.get("relic")
     try:
         result = await select_relic_service(run_id, relic_id)
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    return jsonify(result)
+
+
+@bp.post("/rewards/<reward_type>/<run_id>/confirm")
+async def confirm_reward(run_id: str, reward_type: str):
+    try:
+        result = await confirm_reward_service(run_id, reward_type)
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    return jsonify(result)
+
+
+@bp.post("/rewards/<reward_type>/<run_id>/cancel")
+async def cancel_reward(run_id: str, reward_type: str):
+    try:
+        result = await cancel_reward_service(run_id, reward_type)
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
     return jsonify(result)

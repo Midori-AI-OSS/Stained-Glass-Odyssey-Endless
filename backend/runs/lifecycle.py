@@ -14,6 +14,7 @@ from typing import Any
 from typing import Mapping
 
 from battle_logging.writers import end_run_logging
+from services.run_configuration import RunModifierContext
 from tracking import log_play_session_end
 from tracking import log_run_end
 
@@ -22,7 +23,6 @@ from autofighter.mapgen import MapNode
 from autofighter.party import Party
 from autofighter.rooms import BattleRoom
 from autofighter.stats import Stats
-from services.run_configuration import RunModifierContext
 
 from .encryption import get_save_manager
 from .party_manager import save_party
@@ -32,6 +32,244 @@ log = logging.getLogger(__name__)
 ITEM_UI_METADATA: dict[str, dict[str, object]] = {
     "ticket": {"label": "Gacha Ticket", "type": "pull_ticket"},
 }
+
+
+REWARD_STAGING_KEYS: tuple[str, str, str] = ("cards", "relics", "items")
+
+REWARD_STEP_DROPS = "drops"
+REWARD_STEP_CARDS = "cards"
+REWARD_STEP_RELICS = "relics"
+REWARD_STEP_BATTLE_REVIEW = "battle_review"
+
+REWARD_PROGRESSION_SEQUENCE: tuple[str, ...] = (
+    REWARD_STEP_DROPS,
+    REWARD_STEP_CARDS,
+    REWARD_STEP_RELICS,
+    REWARD_STEP_BATTLE_REVIEW,
+)
+
+_LEGACY_PROGRESSION_ALIASES: dict[str, str] = {
+    "card": REWARD_STEP_CARDS,
+    "cards": REWARD_STEP_CARDS,
+    "relic": REWARD_STEP_RELICS,
+    "relics": REWARD_STEP_RELICS,
+    "loot": REWARD_STEP_DROPS,
+    "drops": REWARD_STEP_DROPS,
+    "review": REWARD_STEP_BATTLE_REVIEW,
+    "battle_review": REWARD_STEP_BATTLE_REVIEW,
+}
+
+
+def empty_reward_staging() -> dict[str, list[object]]:
+    """Return a freshly initialised reward staging container."""
+
+    return {key: [] for key in REWARD_STAGING_KEYS}
+
+
+def ensure_reward_staging(state: dict[str, Any]) -> tuple[dict[str, list[object]], bool]:
+    """Ensure ``state`` contains a normalised ``reward_staging`` payload."""
+
+    raw = state.get("reward_staging")
+    changed = not isinstance(raw, Mapping)
+
+    staging: dict[str, Any]
+    if isinstance(raw, Mapping):
+        staging = {str(key): value for key, value in raw.items()}
+    else:
+        staging = {}
+
+    for key in REWARD_STAGING_KEYS:
+        value = staging.get(key)
+        if isinstance(value, list):
+            staging[key] = list(value)
+        else:
+            staging[key] = []
+            changed = True
+
+    state["reward_staging"] = staging
+    return staging, changed
+
+
+def _normalise_progression_step(value: object) -> str | None:
+    if value is None:
+        return None
+    candidate = str(value).strip().lower()
+    if not candidate:
+        return None
+    resolved = _LEGACY_PROGRESSION_ALIASES.get(candidate, candidate)
+    if resolved in REWARD_PROGRESSION_SEQUENCE:
+        return resolved
+    return None
+
+
+def normalise_reward_step(value: object) -> str | None:
+    """Public wrapper around the reward progression step normaliser."""
+
+    return _normalise_progression_step(value)
+
+
+def _should_include_battle_review(state: Mapping[str, Any]) -> bool:
+    keys_to_probe = (
+        "awaiting_battle_review",
+        "battle_review_pending",
+        "battle_review_available",
+        "battle_review_enabled",
+        "battle_review_requested",
+        "review_pending",
+        "review_ready",
+    )
+    for key in keys_to_probe:
+        value = state.get(key)
+        if isinstance(value, bool):
+            if value:
+                return True
+        elif value:
+            return True
+
+    preferences = state.get("reward_preferences")
+    if isinstance(preferences, Mapping):
+        value = preferences.get("battle_review")
+        if isinstance(value, bool):
+            return value
+        if value:
+            return True
+
+    return False
+
+
+def ensure_reward_progression(
+    state: dict[str, Any],
+) -> tuple[dict[str, Any] | None, bool]:
+    """Ensure ``state`` exposes a canonical ``reward_progression`` structure."""
+
+    staging, _ = ensure_reward_staging(state)
+
+    raw_progression = state.get("reward_progression")
+    changed = False
+    existing_available: list[str] = []
+    existing_completed: list[str] = []
+    existing_current: str | None = None
+
+    if isinstance(raw_progression, Mapping):
+        available_values = raw_progression.get("available", [])
+        if isinstance(available_values, list):
+            for entry in available_values:
+                step = _normalise_progression_step(entry)
+                if step and step not in existing_available:
+                    existing_available.append(step)
+        completed_values = raw_progression.get("completed", [])
+        if isinstance(completed_values, list):
+            for entry in completed_values:
+                step = _normalise_progression_step(entry)
+                if step and step not in existing_completed:
+                    existing_completed.append(step)
+        existing_current = _normalise_progression_step(
+            raw_progression.get("current_step")
+        )
+    elif raw_progression is not None:
+        changed = True
+
+    awaiting_card = bool(state.get("awaiting_card"))
+    awaiting_relic = bool(state.get("awaiting_relic"))
+    awaiting_loot = bool(state.get("awaiting_loot"))
+
+    if isinstance(staging, Mapping):
+        awaiting_card = awaiting_card or bool(staging.get("cards"))
+        awaiting_relic = awaiting_relic or bool(staging.get("relics"))
+        awaiting_loot = awaiting_loot or bool(staging.get("items"))
+
+    derived_steps: set[str] = set()
+    if awaiting_loot:
+        derived_steps.add(REWARD_STEP_DROPS)
+    if awaiting_card:
+        derived_steps.add(REWARD_STEP_CARDS)
+    if awaiting_relic:
+        derived_steps.add(REWARD_STEP_RELICS)
+    if _should_include_battle_review(state):
+        derived_steps.add(REWARD_STEP_BATTLE_REVIEW)
+
+    canonical_available_order = [
+        step
+        for step in REWARD_PROGRESSION_SEQUENCE
+        if step in derived_steps
+        or step in existing_available
+        or (existing_current == step)
+        or step in existing_completed
+    ]
+
+    if not canonical_available_order:
+        if "reward_progression" in state:
+            state.pop("reward_progression", None)
+            return None, True
+        return None, changed
+
+    progression: dict[str, Any]
+    if isinstance(raw_progression, Mapping):
+        progression = dict(raw_progression)
+    else:
+        progression = {
+            "available": [],
+            "completed": [],
+            "current_step": None,
+        }
+        changed = True
+
+    if progression.get("available") != canonical_available_order:
+        progression["available"] = canonical_available_order
+        changed = True
+
+    canonical_completed = [
+        step
+        for step in canonical_available_order
+        if step in existing_completed and step in canonical_available_order
+    ]
+
+    if progression.get("completed") != canonical_completed:
+        progression["completed"] = canonical_completed
+        changed = True
+
+    if existing_current not in canonical_available_order:
+        existing_current = None
+
+    if existing_current is None:
+        for step in canonical_available_order:
+            if step not in canonical_completed:
+                existing_current = step
+                break
+
+    if existing_current is None and canonical_available_order:
+        existing_current = canonical_available_order[0]
+
+    if progression.get("current_step") != existing_current:
+        progression["current_step"] = existing_current
+        changed = True
+
+    remaining_steps = [
+        step for step in canonical_available_order if step not in canonical_completed
+    ]
+    if not remaining_steps:
+        state.pop("reward_progression", None)
+        return None, True
+
+    state["reward_progression"] = progression
+    return progression, changed
+
+
+def _sync_snapshot_reward_staging(run_id: str, staging: Mapping[str, Any]) -> None:
+    """Ensure in-memory battle snapshots mirror the persisted staging payload."""
+
+    snapshot = battle_snapshots.get(run_id)
+    if not isinstance(snapshot, dict):
+        return
+
+    ensure_reward_staging(snapshot)
+    target = snapshot.get("reward_staging", {})
+    for key in REWARD_STAGING_KEYS:
+        source = staging.get(key, []) if isinstance(staging, Mapping) else []
+        if isinstance(source, list):
+            target[key] = list(source)
+        else:
+            target[key] = []
 
 
 def _apply_item_ui_metadata(entry: dict[str, object]) -> None:
@@ -48,6 +286,7 @@ def _apply_item_ui_metadata(entry: dict[str, object]) -> None:
 battle_tasks: dict[str, asyncio.Task] = {}
 battle_snapshots: dict[str, dict[str, Any]] = {}
 battle_locks: dict[str, asyncio.Lock] = {}
+reward_locks: dict[str, asyncio.Lock] = {}
 
 
 def purge_run_state(run_id: str, *, cancel_task: bool = True) -> None:
@@ -59,6 +298,7 @@ def purge_run_state(run_id: str, *, cancel_task: bool = True) -> None:
 
     battle_snapshots.pop(run_id, None)
     battle_locks.pop(run_id, None)
+    reward_locks.pop(run_id, None)
 
 
 def purge_all_run_state(*, cancel_tasks: bool = True) -> None:
@@ -67,6 +307,7 @@ def purge_all_run_state(*, cancel_tasks: bool = True) -> None:
     run_ids = set(battle_tasks)
     run_ids.update(battle_snapshots)
     run_ids.update(battle_locks)
+    run_ids.update(reward_locks)
 
     for run_id in list(run_ids):
         purge_run_state(run_id, cancel_task=cancel_tasks)
@@ -116,6 +357,7 @@ async def cleanup_battle_state() -> None:
     tasks_removed = 0
     snapshots_removed = 0
     locks_removed = 0
+    reward_locks_removed = 0
 
     for run_id in completed:
         state: dict[str, Any] = {}
@@ -153,19 +395,40 @@ async def cleanup_battle_state() -> None:
         preserve_snapshot = ended and run_result == "defeat"
 
         if ended or (not awaiting_next and not has_rewards):
+            if not state:
+                try:
+                    state, _ = await asyncio.to_thread(load_map, run_id)
+                except Exception:
+                    state = {}
+            if state:
+                staging, _ = ensure_reward_staging(state)
+                cleared = False
+                for key in REWARD_STAGING_KEYS:
+                    bucket = staging.get(key)
+                    if isinstance(bucket, list) and bucket:
+                        staging[key] = []
+                        cleared = True
+                if cleared:
+                    try:
+                        await asyncio.to_thread(save_map, run_id, state)
+                    except Exception:
+                        log.debug("Failed to clear reward staging for run %s", run_id, exc_info=True)
             if not preserve_snapshot:
                 if battle_snapshots.pop(run_id, None) is not None:
                     snapshots_removed += 1
-            if battle_locks.pop(run_id, None) is not None:
-                locks_removed += 1
+        if battle_locks.pop(run_id, None) is not None:
+            locks_removed += 1
+        if reward_locks.pop(run_id, None) is not None:
+            reward_locks_removed += 1
 
-    removed_total = tasks_removed + snapshots_removed + locks_removed
+    removed_total = tasks_removed + snapshots_removed + locks_removed + reward_locks_removed
     if removed_total:
         message = (
-            "Removed %d tasks, %d snapshots, %d locks",
+            "Removed %d tasks, %d snapshots, %d locks, %d reward locks",
             tasks_removed,
             snapshots_removed,
             locks_removed,
+            reward_locks_removed,
         )
         if removed_total > 10:
             log.warning(*message)
@@ -182,7 +445,20 @@ def get_battle_state_sizes() -> dict[str, int]:
         "tasks": len(battle_tasks),
         "snapshots": len(battle_snapshots),
         "locks": len(battle_locks),
+        "reward_locks": len(reward_locks),
     }
+
+
+def has_pending_rewards(state: Mapping[str, Any]) -> bool:
+    """Return ``True`` if the provided state still has staged rewards."""
+
+    staging = state.get("reward_staging")
+    if isinstance(staging, Mapping):
+        for key in REWARD_STAGING_KEYS:
+            bucket = staging.get(key)
+            if isinstance(bucket, list) and bucket:
+                return True
+    return False
 
 
 def load_map(run_id: str) -> tuple[dict, list[MapNode]]:
@@ -190,8 +466,13 @@ def load_map(run_id: str) -> tuple[dict, list[MapNode]]:
         cur = conn.execute("SELECT map FROM runs WHERE id = ?", (run_id,))
         row = cur.fetchone()
     if row is None:
-        return {"rooms": [], "current": 0, "battle": False}, []
+        default_state: dict[str, Any] = {"rooms": [], "current": 0, "battle": False}
+        staging, _ = ensure_reward_staging(default_state)
+        _sync_snapshot_reward_staging(run_id, staging)
+        return default_state, []
     state = json.loads(row[0])
+    staging, staging_changed = ensure_reward_staging(state)
+    progression, progression_changed = ensure_reward_progression(state)
     rooms = [MapNode.from_dict(n) for n in state.get("rooms", [])]
     raw_context = state.get("modifier_context")
     context: RunModifierContext | None = None
@@ -215,10 +496,18 @@ def load_map(run_id: str) -> tuple[dict, list[MapNode]]:
                 setattr(node, "run_modifier_context", context_candidate)
                 if not getattr(node, "metadata_hash", None):
                     node.metadata_hash = context_candidate.metadata_hash
+    if staging_changed or progression_changed:
+        try:
+            save_map(run_id, state)
+        except Exception:
+            log.exception("Failed to backfill reward staging for run %s", run_id)
+    _sync_snapshot_reward_staging(run_id, staging)
     return state, rooms
 
 
 def save_map(run_id: str, state: dict) -> None:
+    ensure_reward_staging(state)
+    ensure_reward_progression(state)
     with get_save_manager().connection() as conn:
         conn.execute(
             "UPDATE runs SET map = ? WHERE id = ?",
@@ -282,6 +571,8 @@ async def _run_battle(
             return
         state["battle"] = False
         try:
+            staging, staging_changed = ensure_reward_staging(state)
+            previous_loot_items = list(staging.get("items", []))
             if result.get("result") != "defeat":
                 try:
                     current_pull_tokens = int(getattr(party, "pull_tokens", 0) or 0)
@@ -293,6 +584,15 @@ async def _run_battle(
                     loot_items = loot_block.setdefault("items", [])
                     loot_items.extend({"id": "ticket", "stars": 0} for _ in range(delta))
             loot_items = result.get("loot", {}).get("items", [])
+            staged_loot_items: list[object] = []
+            if isinstance(loot_items, list):
+                for entry in loot_items:
+                    if isinstance(entry, dict):
+                        staged_loot_items.append(dict(entry))
+                    else:
+                        staged_loot_items.append(entry)
+            staging["items"] = staged_loot_items
+            loot_bucket_changed = staged_loot_items != previous_loot_items or staging_changed
             manager = GachaManager(get_save_manager())
             items = manager._get_items()
             for entry in loot_items:
@@ -420,62 +720,51 @@ async def _run_battle(
                 battle_tasks.pop(run_id, None)
                 battle_locks.pop(run_id, None)
                 return
-            has_card_choices = bool(result.get("card_choices"))
+            raw_card_choices = result.get("card_choices")
+            has_card_choices = bool(raw_card_choices)
             has_relic_choices = bool(result.get("relic_choices"))
-            # Check if there's loot to review (gold or items)
-            has_loot = bool(result.get("loot", {}).get("gold", 0) > 0 or
-                           len(result.get("loot", {}).get("items", [])) > 0)
+            loot_payload = result.get("loot", {})
+            loot_gold_raw = 0
+            if isinstance(loot_payload, Mapping):
+                loot_gold_raw = loot_payload.get("gold", 0)
+            has_loot_gold = False
+            try:
+                has_loot_gold = int(loot_gold_raw) > 0
+            except (TypeError, ValueError):
+                has_loot_gold = bool(loot_gold_raw)
+            has_loot_items = bool(staging.get("items"))
+            has_loot = has_loot_gold or has_loot_items
 
-            # Set up reward progression sequence for proper UI flow
-            if has_card_choices or has_relic_choices or has_loot:
-                progression = {
-                    "available": [],
-                    "completed": [],
-                    "current_step": None
-                }
-
-                # Build sequence of steps based on what rewards are available
-                if has_card_choices:
-                    progression["available"].append("card")
-                if has_relic_choices:
-                    progression["available"].append("relic")
-                if has_loot:
-                    progression["available"].append("loot")
-
-                # If there are no actual reward choices, allow immediate advancement
-                if not (has_card_choices or has_relic_choices or has_loot):
-                    # No rewards at all, ready to advance immediately
-                    state["awaiting_card"] = False
-                    state["awaiting_relic"] = False
-                    state["awaiting_loot"] = False
-                    state["awaiting_next"] = True
-                    next_type = (
-                        rooms[state["current"] + 1].room_type
-                        if state["current"] + 1 < len(rooms)
-                        else None
-                    )
-                else:
-                    # Start with first available step
-                    progression["current_step"] = progression["available"][0]
-
-                    state["reward_progression"] = progression
-                    state["awaiting_card"] = has_card_choices
-                    state["awaiting_relic"] = has_relic_choices
-                    state["awaiting_loot"] = has_loot
-                    state["awaiting_next"] = False
-                    next_type = None
+            state["awaiting_card"] = has_card_choices
+            if has_card_choices:
+                state["card_choice_options"] = [
+                    dict(choice)
+                    for choice in raw_card_choices
+                    if isinstance(choice, Mapping)
+                ]
             else:
-                # No rewards at all, ready to advance immediately
-                state["awaiting_card"] = False
-                state["awaiting_relic"] = False
-                state["awaiting_loot"] = False
+                state.pop("card_choice_options", None)
+            state["awaiting_relic"] = has_relic_choices
+            state["awaiting_loot"] = has_loot
+
+            progression, _ = ensure_reward_progression(state)
+            if progression is None:
                 state["awaiting_next"] = True
                 next_type = (
                     rooms[state["current"] + 1].room_type
                     if state["current"] + 1 < len(rooms)
                     else None
                 )
-            await asyncio.to_thread(save_map, run_id, state)
+            else:
+                state["awaiting_next"] = False
+                next_type = None
+            map_saved = False
+            if loot_bucket_changed:
+                await asyncio.to_thread(save_map, run_id, state)
+                map_saved = True
+                _sync_snapshot_reward_staging(run_id, staging)
+            if not map_saved:
+                await asyncio.to_thread(save_map, run_id, state)
             await asyncio.to_thread(save_party, run_id, party)
             result.update(
                 {
@@ -490,6 +779,11 @@ async def _run_battle(
                     "awaiting_next": state.get("awaiting_next", False),
                 }
             )
+            if loot_bucket_changed:
+                result["reward_staging"] = {
+                    key: list(staging.get(key, []))
+                    for key in REWARD_STAGING_KEYS
+                }
             battle_snapshots[run_id] = result
         except Exception as exc:
             log.exception("Battle processing failed for %s", run_id)
@@ -514,6 +808,15 @@ __all__ = [
     "get_battle_state_sizes",
     "load_map",
     "save_map",
+    "empty_reward_staging",
+    "ensure_reward_staging",
+    "ensure_reward_progression",
+    "normalise_reward_step",
+    "REWARD_STAGING_KEYS",
+    "REWARD_STEP_DROPS",
+    "REWARD_STEP_CARDS",
+    "REWARD_STEP_RELICS",
+    "REWARD_STEP_BATTLE_REVIEW",
     "battle_tasks",
     "battle_snapshots",
     "battle_locks",

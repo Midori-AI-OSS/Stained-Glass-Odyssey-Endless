@@ -3,6 +3,7 @@ import math
 import random
 
 import pytest
+from tests.helpers import call_maybe_async
 
 from autofighter.effects import EffectManager
 from autofighter.effects import HealingOverTime
@@ -12,11 +13,10 @@ from autofighter.stats import Stats
 from autofighter.stats import set_battle_active
 from plugins.damage_types.generic import Generic
 from plugins.effects.aftertaste import Aftertaste
+from plugins.event_bus import bus
 from plugins.passives.normal.ally_overload import AllyOverload
-from plugins.passives.normal.luna_lunar_reservoir import LunaLunarReservoir
 from plugins.passives.normal.hilander_critical_ferment import HilanderCriticalFerment
-from plugins.passives.normal.mezzy_gluttonous_bulwark import MezzyGluttonousBulwark
-from tests.helpers import call_maybe_async
+from plugins.passives.normal.luna_lunar_reservoir import LunaLunarReservoir
 
 
 @pytest.mark.asyncio
@@ -420,6 +420,51 @@ async def test_hilander_soft_cap_min_chance(monkeypatch):
         await registry.trigger("hit_landed", hilander)
 
     assert HilanderCriticalFerment.get_stacks(hilander) == 60
+
+
+@pytest.mark.asyncio
+async def test_hilander_cleanup_on_defeat():
+    """Defeat should remove Critical Ferment's event listener safely."""
+    registry = PassiveRegistry()
+
+    hilander = Stats(hp=1000, damage_type=Generic())
+    hilander.passives = ["hilander_critical_ferment"]
+
+    original_subscribers = list(bus._subs.get("critical_hit", []))
+    try:
+        await registry.trigger("hit_landed", hilander)
+        assert HilanderCriticalFerment.get_stacks(hilander) == 1
+
+        callback = getattr(hilander, "_hilander_crit_cb", None)
+        assert callback is not None
+
+        def _resolve(stored):
+            return stored() if callable(stored) else stored
+
+        assert any(
+            _resolve(stored) is callback
+            for stored, _ in bus._subs.get("critical_hit", [])
+        )
+
+        passive = HilanderCriticalFerment()
+        await passive.on_defeat(hilander)
+
+        assert not hasattr(hilander, "_hilander_crit_cb")
+        assert all(
+            _resolve(stored) is not callback
+            for stored, _ in bus._subs.get("critical_hit", [])
+        )
+
+        await passive.on_defeat(hilander)
+        assert bus._subs.get("critical_hit", []) == original_subscribers
+    finally:
+        if original_subscribers:
+            bus._subs["critical_hit"] = original_subscribers
+        else:
+            bus._subs.pop("critical_hit", None)
+        if hasattr(hilander, "_hilander_crit_cb"):
+            BUS.unsubscribe("critical_hit", getattr(hilander, "_hilander_crit_cb"))
+            delattr(hilander, "_hilander_crit_cb")
 
 
 @pytest.mark.asyncio

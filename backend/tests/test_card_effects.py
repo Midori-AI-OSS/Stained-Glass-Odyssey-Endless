@@ -2,6 +2,7 @@ import asyncio
 from unittest.mock import patch
 
 import pytest
+from tests.helpers import call_maybe_async
 
 from autofighter.action_queue import ActionQueue
 from autofighter.cards import apply_cards
@@ -13,7 +14,6 @@ from autofighter.rooms import battle as battle_module
 from autofighter.stats import BUS
 from autofighter.stats import GAUGE_START
 from plugins.characters._base import PlayerBase
-from tests.helpers import call_maybe_async
 
 
 def setup_event_loop():
@@ -284,3 +284,179 @@ async def test_apply_cards_cleans_up_bus_handlers(
     assert ally.ultimate_charge == expected_charge
 
     await BUS.emit_async("battle_end", None)
+
+
+@pytest.mark.asyncio
+async def test_guardians_beacon_heals_lowest_hp():
+    """Test that Guardian's Beacon heals the lowest-HP ally at turn end."""
+    party = Party()
+    ally1 = PlayerBase()
+    ally2 = PlayerBase()
+    ally1.hp = ally1.set_base_stat('max_hp', 1000)
+    ally2.hp = ally2.set_base_stat('max_hp', 1000)
+    ally1.id = "ally1"
+    ally2.id = "ally2"
+    party.members.extend([ally1, ally2])
+
+    # Set ally1 to 500 HP (50%), ally2 to 700 HP (70%)
+    ally1.hp = 500
+    ally2.hp = 700
+
+    # Award card and apply
+    award_card(party, "guardians_beacon")
+    await apply_cards(party)
+
+    # Trigger turn_end event
+    await BUS.emit_async("turn_end")
+    await asyncio.sleep(0.01)
+
+    # ally1 should have been healed (8% of 1000 = 80)
+    assert ally1.hp == 580, f"Expected ally1 HP 580, got {ally1.hp}"
+    # ally2 should not have been healed
+    assert ally2.hp == 700, f"Expected ally2 HP 700, got {ally2.hp}"
+
+
+@pytest.mark.asyncio
+async def test_guardians_beacon_light_mitigation():
+    """Test that Guardian's Beacon grants mitigation to Light allies."""
+    from plugins.damage_types.light import Light
+
+    party = Party()
+    light_ally = PlayerBase()
+    non_light_ally = PlayerBase()
+
+    light_ally.hp = light_ally.set_base_stat('max_hp', 1000)
+    light_ally.set_base_stat('mitigation', 1.0)
+    light_ally.damage_type = Light()
+    light_ally.id = "light_ally"
+
+    non_light_ally.hp = non_light_ally.set_base_stat('max_hp', 1000)
+    non_light_ally.set_base_stat('mitigation', 1.0)
+    non_light_ally.id = "non_light_ally"
+
+    party.members.extend([light_ally, non_light_ally])
+
+    # Set light_ally to lower HP (50%), non_light to 70%
+    light_ally.hp = 500
+    non_light_ally.hp = 700
+
+    # Award card and apply
+    award_card(party, "guardians_beacon")
+    await apply_cards(party)
+
+    # Get initial mitigation
+    initial_mitigation = light_ally.mitigation
+
+    # Trigger turn_end event
+    await BUS.emit_async("turn_end")
+    await asyncio.sleep(0.01)
+
+    # Light ally should have increased mitigation (+10%)
+    assert light_ally.mitigation > initial_mitigation, f"Expected mitigation > {initial_mitigation}, got {light_ally.mitigation}"
+
+
+@pytest.mark.asyncio
+async def test_guardians_beacon_no_light_bonus():
+    """Test that Guardian's Beacon doesn't grant mitigation to non-Light allies."""
+    from plugins.damage_types.fire import Fire
+
+    party = Party()
+    fire_ally = PlayerBase()
+    fire_ally.hp = fire_ally.set_base_stat('max_hp', 1000)
+    fire_ally.set_base_stat('mitigation', 1.0)
+    fire_ally.damage_type = Fire()
+    fire_ally.id = "fire_ally"
+    party.members.append(fire_ally)
+
+    # Set to low HP
+    fire_ally.hp = 500
+
+    # Award card and apply
+    award_card(party, "guardians_beacon")
+    await apply_cards(party)
+
+    # Get initial mitigation
+    initial_mitigation = fire_ally.mitigation
+
+    # Trigger turn_end event
+    await BUS.emit_async("turn_end")
+    await asyncio.sleep(0.01)
+
+    # Fire ally should NOT have increased mitigation beyond base card effects
+    # The card itself provides +55% DEF but no mitigation
+    assert fire_ally.mitigation == initial_mitigation, f"Expected mitigation {initial_mitigation}, got {fire_ally.mitigation}"
+
+
+@pytest.mark.asyncio
+async def test_guardians_beacon_skips_dead_allies():
+    """Test that Guardian's Beacon skips dead allies when finding lowest HP."""
+    party = Party()
+    dead_ally = PlayerBase()
+    alive_ally = PlayerBase()
+
+    dead_ally.hp = dead_ally.set_base_stat('max_hp', 1000)
+    alive_ally.hp = alive_ally.set_base_stat('max_hp', 1000)
+    dead_ally.id = "dead_ally"
+    alive_ally.id = "alive_ally"
+
+    party.members.extend([dead_ally, alive_ally])
+
+    # Set dead_ally to 0 HP, alive_ally to 700 HP
+    dead_ally.hp = 0
+    alive_ally.hp = 700
+
+    # Award card and apply
+    award_card(party, "guardians_beacon")
+    await apply_cards(party)
+
+    # Trigger turn_end event
+    await BUS.emit_async("turn_end")
+    await asyncio.sleep(0.01)
+
+    # dead_ally should stay at 0
+    assert dead_ally.hp == 0, f"Expected dead_ally HP 0, got {dead_ally.hp}"
+    # alive_ally should have been healed (8% of 1000 = 80)
+    assert alive_ally.hp == 780, f"Expected alive_ally HP 780, got {alive_ally.hp}"
+
+
+@pytest.mark.asyncio
+async def test_guardians_beacon_telemetry():
+    """Test that Guardian's Beacon emits proper telemetry events."""
+    party = Party()
+    ally = PlayerBase()
+    ally.hp = ally.set_base_stat('max_hp', 1000)
+    ally.id = "ally"
+    party.members.append(ally)
+
+    # Set to low HP
+    ally.hp = 500
+
+    # Award card and apply
+    award_card(party, "guardians_beacon")
+    await apply_cards(party)
+
+    # Capture telemetry events
+    events: list[tuple] = []
+
+    def capture(*args: object) -> None:
+        events.append(args)
+
+    BUS.subscribe("card_effect", capture)
+
+    # Trigger turn_end event
+    await BUS.emit_async("turn_end")
+    await asyncio.sleep(0.01)
+
+    BUS.unsubscribe("card_effect", capture)
+
+    # Check that telemetry was emitted (filtering out stat_buff events from card application)
+    heal_events = [e for e in events if e[2] == "turn_end_heal"]
+    assert len(heal_events) > 0, "Expected telemetry event"
+    card_id, actor, effect_type, value, metadata = heal_events[0]
+    assert card_id == "guardians_beacon"
+    assert effect_type == "turn_end_heal"
+    assert value == 80  # 8% of 1000
+    assert metadata["heal_percentage"] == 8
+    # HP percentage is measured at turn end, not before healing
+    assert metadata["hp_percentage"] >= 50.0  # Should be at least 50% after considering healing
+

@@ -5,7 +5,6 @@ import sys
 import types
 
 import pytest
-
 from tests.helpers import call_maybe_async
 
 battle_logging = types.ModuleType("battle_logging")

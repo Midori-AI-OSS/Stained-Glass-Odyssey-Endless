@@ -226,7 +226,7 @@
   }
   .mark {
     position: absolute;
-    background: rgba(200,200,200,0.16);
+    background: rgba(200,200,200,0.1);
     border-radius: 50%;
     filter: blur(0.6px);
     animation-name: drift;

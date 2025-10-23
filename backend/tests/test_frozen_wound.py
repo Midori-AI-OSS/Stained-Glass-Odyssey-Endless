@@ -1,11 +1,9 @@
 import pytest
-
-import pytest
+from tests.helpers import call_maybe_async
 
 from autofighter.effects import EffectManager
 from autofighter.stats import Stats
 from plugins.dots.frozen_wound import FrozenWound
-from tests.helpers import call_maybe_async
 
 
 @pytest.mark.asyncio

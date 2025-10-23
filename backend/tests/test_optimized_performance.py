@@ -8,10 +8,11 @@ Test script to measure performance improvements with async optimizations.
 import asyncio
 import time
 
+from tests.helpers import call_maybe_async
+
 from autofighter.effects import DamageOverTime
 from autofighter.effects import EffectManager
 from autofighter.stats import Stats
-from tests.helpers import call_maybe_async
 
 
 @pytest.mark.asyncio

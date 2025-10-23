@@ -2,8 +2,8 @@ from dataclasses import dataclass
 from dataclasses import field
 
 from autofighter.stats import BUS
-from plugins.effects.critical_boost import CriticalBoost
 from plugins.characters._base import PlayerBase
+from plugins.effects.critical_boost import CriticalBoost
 from plugins.relics._base import RelicBase
 
 

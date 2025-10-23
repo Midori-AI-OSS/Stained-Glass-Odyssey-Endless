@@ -10,7 +10,7 @@ Relic entries display their stack count and expose their description as tooltip
 text via the `about` field returned by the backend.
 
 ## Implemented Relics
- - 1★ Rusty Buckle – All allies bleed for 5% Max HP per stack at the start of each turn. When the party loses HP equal to its total Max HP (scaled +50% per extra stack), it fires 5 Aftertaste hits plus 3 per additional stack, each hit equal to 0.5% of total HP lost.
+- 1★ Rusty Buckle – All allies bleed for 5% Max HP per stack at the start of each turn. When the party loses HP equal to 50× (5000%) of its total Max HP per stack (adding another 10× / 1000% for each additional stack), it fires 5 Aftertaste hits plus 3 per extra stack, each hit equal to 0.5% of the total HP lost.
 - 1★ Threadbare Cloak – Allies start battle with a shield equal to 3% Max HP per stack.
 - 1★ Lucky Button – +3% Crit Rate; missed crits add +3% Crit Rate next turn.
  - 1★ Bent Dagger – +3% ATK; when a foe dies, allies gain +1% ATK for the rest of combat.
@@ -20,21 +20,30 @@ text via the `about` field returned by the backend.
  - 1★ Tattered Flag – +3% party Max HP; when an ally falls, survivors gain +3% ATK.
 - 1★ Wooden Idol – +3% Effect Res; resisting a debuff grants +1% Effect Res next turn.
 - 1★ Pocket Manual – +3% ATK; every 10th hit deals an extra 3% damage.
+- 1★ Featherweight Anklet – +2% SPD per stack; First action each battle grants +6% SPD per stack for 1 turn
+- 1★ Field Rations – After each battle, heal 2% Max HP per stack and grant +1 ultimate charge per stack to all allies
+- 1★ Copper Siphon – When an ally deals damage, heal them for 2% of damage per stack (min 1 HP); excess becomes shields
 - 2★ Vengeful Pendant – Reflects 15% of damage taken back to the attacker.
 - 2★ Arcane Flask – After an Ultimate, grant a shield equal to 20% Max HP per stack.
 - 2★ Echo Bell – First action each battle repeats at 15% power per stack.
 - 2★ Frost Sigil – Hits apply chill dealing 5% ATK as Aftertaste per stack.
 - 2★ Ember Stone – Below 25% HP, allies burn their attacker for 50% ATK.
 - 2★ Guardian Charm – Lowest-HP ally gains +20% DEF at battle start.
-- 2★ Killer Instinct – Ultimates grant +75% ATK for the turn; kills grant another turn.
+- 2★ Killer Instinct – Ultimates grant +75% ATK for the turn; killing blows upgrade that bonus into +50% SPD for two turns per stack.
+- 2★ Catalyst Vials – When an ally's DoT ticks, heal them for 5% of damage per stack and grant +5% Effect Hit Rate for 1 turn
+- 2★ Momentum Gyro – When an ally hits the same foe consecutively, build momentum stacks (max 5); grant attacker +5% ATK per stack per momentum level, and apply -5% mitigation to target per stack per momentum level (resets on target switch or miss)
+- 2★ Safeguard Prism – When an ally drops below 60% Max HP, grant a 15% Max HP shield and +12% mitigation for 1 turn per stack; each ally must wait 5 turns (+1 per five stacks) before the effect can trigger again.
 - 3★ Greed Engine – Party loses 1% HP per turn, gains +50% gold, and raises rare drop rate by 0.5% plus 0.1% per extra stack.
 - 3★ Stellar Compass – Critical hits grant permanent +1.5% ATK and gold rate.
 - 3★ Echoing Drum – First attack each battle repeats at 25% power.
+- 3★ Siege Banner – At battle start, all enemies lose 15% DEF for 2 turns per stack. Each enemy killed grants the party +4% ATK and +4% DEF permanently.
+- 3★ Command Beacon – At turn start, the fastest ally sacrifices Max HP (3% with multiplicative stacking) so every other ally gains a turn-long SPD boost (+15% per stack, multiplicative).
 - 4★ Null Lantern – Removes shops; fights drop additional pulls.
 - 4★ Traveler's Charm – When hit, gain +25% DEF and +10% mitigation next turn per stack.
-- 4★ Timekeeper's Hourglass – Each turn, 10% +1% per stack chance for extra turns.
+- 4★ Timekeeper's Hourglass – Each turn, 10% base chance (+1% per additional stack) for ready allies to gain a 2-turn +20% SPD buff per stack.
+- 4★ Entropy Mirror – At battle start, all foes gain +30% ATK per stack. When foes deal damage, they suffer recoil equal to 10% of damage dealt per stack.
 - 5★ Paradox Hourglass – 60% chance to sacrifice up to one ally per stack (max 4); survivors gain huge stat multipliers and foes lose defense.
-- 5★ Soul Prism – Revives fallen allies at 1% HP with penalties (placeholder).
+- 5★ Soul Prism – After battles, revives fallen allies at 1% HP, applies a stack-scaling Max HP penalty (75% minus 5% per extra stack), and grants +5% DEF/+5% mitigation plus +2% per additional stack.
 - 5★ Omega Core – Multiplies all stats by 6x plus 1x per stack for 10 turns +2 per stack before draining escalating HP.
 
 ## Testing

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import copy
 from collections.abc import Iterable
+import copy
 from dataclasses import dataclass
 from dataclasses import field
 from dataclasses import fields

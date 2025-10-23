@@ -3,9 +3,9 @@ from dataclasses import field
 import logging
 
 from autofighter.character import CharacterType
+from plugins.characters._base import PlayerBase
 from plugins.damage_types._base import DamageTypeBase
 from plugins.damage_types.fire import Fire
-from plugins.characters._base import PlayerBase
 
 log = logging.getLogger(__name__)
 

@@ -22,6 +22,7 @@ its pools dynamically so new recruits become pullable without code changes.
   form one higher star) and 4★ items remain at that tier. Auto-crafting is
   always active and no manual toggle or ticket conversion is available.
 - 5★ characters become available as pity rises from 0.001% to ~5% at pull 159, guaranteeing a 5★ at 180. 6★ characters roll independently at a flat 0.01% chance.
+- Rotating 6★ headliner banners currently feature Lady Fire and Ice, Lady Storm, Persona Light and Dark, and Ryne; Ryne’s Oracle-of-Balance passive feeds mitigation to Luna-linked parties, so rotations flag her banner as ideal for squads that field the duo.
 - Duplicate characters apply Vitality and stat bonuses. Each stat uses the first
   duplicate's value from the player plugin and increases by 5% per additional
   stack. Characters can stack duplicates endlessly; each extra pull increases

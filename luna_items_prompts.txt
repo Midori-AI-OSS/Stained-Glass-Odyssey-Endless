@@ -4,8 +4,20 @@ Balanced Diet: Luna seated at a sunlit wooden table, savoring a balanced plate p
 
 
 === Missing Cards Art ===
-None detected — card art glyphs present for plugin cards.
+
 
 === Missing Relics Art ===
-None detected — relic art glyphs present for plugin relics.
 
+Siege Banner (siegebanner): 
+
+Safeguard Prism (safeguardprism): Luna raising a hexagonal prism of refracted starlight as it blossoms into a rotating shield dome around wounded allies; layered light bands display a subtle turn counter etched in the aura, hinting at the protective cooldown before the prism can flare again.
+
+Momentum Gyro (momentumgyro): Luna spinning a gleaming brass gyroscope device with concentric rings that glow brighter with each rotation, while spectral momentum trails spiral outward showing her attacks becoming more focused and powerful against a single shadowy adversary; dynamic motion lines and energy buildup effects suggest escalating offensive momentum.
+
+Field Rations (fieldrations): Luna perched at a twilight camp table, unpacking a weathered satchel of neatly wrapped ration packs while lifting a steaming tin cup and a faintly glowing restorative vial; cool moonlight mixes with ember sparks to convey post-battle recovery.
+
+Featherweight Anklet (featherweightanklet): Luna fastening a sleek metal anklet studded with azure runes as translucent feather charms trail mid-sway above a blurred cobblestone path; subtle motion blur and airy lighting emphasize the surge of agility and speed she feels.
+
+Copper Siphon (coppersiphon): Luna holding an ornate copper siphon tube with intricate spiral engravings that glow crimson red, as ethereal wisps of vampiric energy flow from defeated foes into the tube and then shimmer into healing light around her wounds; dark battlefield background with scattered embers and faint blood-red mist.
+
+Entropy Mirror (entropymirror): Luna gazing into an ornate obsidian mirror with fractal cracks that pulse with chaotic energy, the reflection showing enemies growing stronger while simultaneously suffering from their own unleashed power; swirling red and violet energy streams connecting the mirror to shadowy adversaries in the background who appear both empowered and wounded.

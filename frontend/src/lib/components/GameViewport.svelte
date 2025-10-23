@@ -47,6 +47,7 @@
   export let fullIdleMode = false;
   export let animationSpeed = 1;
   export let shopProcessing = false;
+  export let advanceBusy = false;
 
   let randomBg = '';
   let roster = [];
@@ -419,6 +420,7 @@
         {flashEnrageCounter}
         {fullIdleMode}
         {skipBattleReview}
+        {advanceBusy}
         bind:animationSpeed
         {selectedParty}
         {battleActive}
@@ -429,6 +431,7 @@
       on:pauseCombat={() => dispatch('pauseCombat')}
       on:resumeCombat={() => dispatch('resumeCombat')}
       on:rewardSelect={(e) => dispatch('rewardSelect', e.detail)}
+      on:rewardAdvance={(e) => dispatch('rewardAdvance', e.detail)}
       on:nextRoom={() => dispatch('nextRoom')}
       on:lootAcknowledge={() => dispatch('lootAcknowledge')}
       on:editorSave={(e) => dispatch('editorSave', e.detail)}

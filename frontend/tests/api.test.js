@@ -46,7 +46,7 @@ describe('api calls', () => {
           pressure: 5,
           run_type: 'boss_rush',
           modifiers: { pressure: 5 },
-          metadata_version: '2025.02'
+          metadata_version: '2025.03'
         }
       });
       return {
@@ -62,7 +62,7 @@ describe('api calls', () => {
       pressure: 5,
       runType: 'boss_rush',
       modifiers: { pressure: 5 },
-      metadataVersion: '2025.02'
+      metadataVersion: '2025.03'
     });
     expect(result).toEqual({ run_id: 'abc', map: [] });
     expect(fetchMock.mock.calls.length).toBe(1);

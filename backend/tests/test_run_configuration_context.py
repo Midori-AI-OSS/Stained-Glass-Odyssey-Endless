@@ -1,7 +1,6 @@
 import math
 
 import pytest
-from autofighter.stats import Stats
 from services.run_configuration import RunModifierContext
 from services.run_configuration import apply_player_modifier_context
 from services.run_configuration import build_run_modifier_context
@@ -9,6 +8,8 @@ from services.run_configuration import get_modifier_snapshot
 from services.run_configuration import get_room_overrides
 from services.run_configuration import get_shop_modifier_summaries
 from services.run_configuration import validate_run_configuration
+
+from autofighter.stats import Stats
 
 
 def test_build_run_modifier_context_matches_snapshot_metadata():
@@ -40,6 +41,8 @@ def test_build_run_modifier_context_matches_snapshot_metadata():
     assert context.prime_spawn_bonus_pct == pytest.approx(prime_bonus)
     player_multiplier = selection.snapshot["modifiers"]["character_stat_down"]["details"]["effective_multiplier"]
     assert context.player_stat_multiplier == pytest.approx(player_multiplier)
+    assert context.player_penalty_excess_stacks == 0
+    assert context.foe_overflow_multiplier == pytest.approx(1.0)
     assert context.foe_exp_bonus == pytest.approx(selection.reward_bonuses["foe_modifier_bonus"])
     assert context.player_exp_bonus == pytest.approx(selection.reward_bonuses["player_modifier_bonus"])
     assert context.foe_rdr_bonus == pytest.approx(selection.reward_bonuses["foe_rdr_bonus"])
@@ -61,6 +64,8 @@ def test_build_run_modifier_context_matches_snapshot_metadata():
     assert serialized["player_exp_bonus"] == pytest.approx(context.player_exp_bonus)
     assert serialized["foe_rdr_bonus"] == pytest.approx(context.foe_rdr_bonus)
     assert serialized["player_rdr_bonus"] == pytest.approx(context.player_rdr_bonus)
+    assert serialized["player_penalty_excess_stacks"] == 0
+    assert serialized["foe_overflow_multiplier"] == pytest.approx(1.0)
     hydrated = RunModifierContext.from_dict(serialized)
     assert hydrated.shop_multiplier == pytest.approx(context.shop_multiplier)
     assert hydrated.encounter_slot_bonus == context.encounter_slot_bonus
@@ -69,6 +74,28 @@ def test_build_run_modifier_context_matches_snapshot_metadata():
     assert hydrated.player_exp_bonus == pytest.approx(context.player_exp_bonus)
     assert hydrated.foe_rdr_bonus == pytest.approx(context.foe_rdr_bonus)
     assert hydrated.player_rdr_bonus == pytest.approx(context.player_rdr_bonus)
+    assert hydrated.player_penalty_excess_stacks == context.player_penalty_excess_stacks
+    assert hydrated.foe_overflow_multiplier == pytest.approx(context.foe_overflow_multiplier)
+
+
+def test_build_run_modifier_context_applies_overflow_scaling():
+    stacks = 5010
+    selection = validate_run_configuration(
+        run_type="standard",
+        modifiers={"character_stat_down": stacks},
+    )
+    context = build_run_modifier_context(selection.snapshot)
+
+    cap_threshold = selection.snapshot["modifiers"]["character_stat_down"]["details"]["cap_threshold_stacks"]
+    assert context.player_penalty_excess_stacks == stacks - cap_threshold
+    assert context.player_penalty_excess_stacks > 0
+    assert context.foe_overflow_multiplier == pytest.approx(1.0 + 0.01 * context.player_penalty_excess_stacks)
+    for stat in ("max_hp", "atk", "defense", "spd", "vitality"):
+        assert context.foe_stat_multipliers[stat] == pytest.approx(context.foe_overflow_multiplier)
+
+    derived = context.derived_metrics()
+    assert derived["player_penalty_excess_stacks"] == pytest.approx(float(context.player_penalty_excess_stacks))
+    assert derived["foe_overflow_multiplier"] == pytest.approx(context.foe_overflow_multiplier)
 
 
 def test_get_modifier_snapshot_normalises_entries():

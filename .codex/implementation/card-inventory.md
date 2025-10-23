@@ -37,7 +37,7 @@ detail pane.
 - Bulwark Totem – +2% DEF & +2% HP; When lethal damage would drop an ally to 0 HP, siphon 5% of that hit from a healthy teammate to restore the victim (tiny soak)
 - Farsight Scope – +3% Crit Rate; Attacks against enemies under 50% HP gain +6% crit rate
 - Coated Armor – +3% Mitigation & +3% DEF; When mitigation reduces incoming damage, heal 1% HP
-- Guiding Compass – +3% EXP Gain & +3% Effect Hit Rate; First battle of a run grants a small extra XP bonus
+- Guiding Compass – +3% EXP Gain & +3% Effect Hit Rate; instantly grants a one-time full level up to all allies when acquired
 - Swift Bandanna – +3% Crit Rate & +3% Dodge Odds; On dodge, gain +1% crit rate for next action
 - Reinforced Cloak – +3% DEF & +3% Effect Res; 30% chance to reduce the starting duration of long debuffs by 1
 - Vital Core – +3% Vitality & +3% HP; When below 30% HP, gain +3% Vitality for 2 turns
@@ -45,6 +45,8 @@ detail pane.
 - Battle Meditation – +3% EXP Gain & +3% Vitality; If all allies start at full HP, grant +2% energy for the first turn
 - Guardian Shard – +2% DEF & +2% Mitigation; At battle end, if no allies died, grant +1 small mitigation for the next battle
 - Spiked Shield – +3% ATK & +3% DEF; When mitigation triggers (block threshold), deal small retaliatory damage (3% of attack)
+- Oracle Prayer Charm – +3% Effect Res & +3% Vitality; First time each ally drops below 45% HP in battle, grant 2-turn Radiant Regeneration HoT
+- Dynamo Wristbands – +3% ATK; When an ally deals Lightning damage, grant them +3% Crit Rate for 1 turn, stacking up to 2 times
 - 
 ## 2★ Cards
 - Critical Focus – +55% ATK; start of turn grants Critical Boost stack
@@ -54,11 +56,14 @@ detail pane.
 - Mystic Aegis – +55% Effect Res; resisting a debuff heals 5% Max HP
 - Vital Surge – +55% Max HP; while below 50% HP, +55% ATK
 - Elemental Spark – +55% ATK & +55% Effect Hit Rate; one ally's debuffs gain +5% potency
+- Guardian's Beacon – +55% DEF; at turn end, heal lowest-HP ally for 8% Max HP (+ 10% mitigation for 1 turn if Light)
+- Tempest Pathfinder – +55% Dodge Odds; when an ally crits, grant party-wide +12% dodge for 1 turn (once per turn cooldown)
 - 
 ## 3★ Cards
 - Critical Overdrive – +255% ATK; while an ally has Critical Boost, they gain +10% Crit Rate and convert excess Crit Rate to +2% Crit Damage.
 - Iron Resurgence – +200% DEF & +200% HP; the first ally death revives at 10% HP and refreshes every 4 turns.
 - Arc Lightning – +255% ATK; every attack chains 50% damage to a random foe.
+- Flux Convergence – +255% Effect Hit Rate; each debuff applied increments a Flux counter. At 5 stacks, deal 120% ATK dark damage to all foes and grant the debuffing ally +20% Effect Resistance for 1 turn.
 
 ## 4★ Cards
 - Overclock – +240% ATK & +240% Effect Hit Rate; at the start of each battle, all allies immediately take two actions back to back.

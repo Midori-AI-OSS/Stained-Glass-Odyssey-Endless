@@ -7,11 +7,11 @@ from quart import Blueprint
 from quart import jsonify
 from quart import request
 from runs.encryption import get_save_manager
-
-from autofighter.gacha import GachaManager
 from tracking import log_character_pull
 from tracking import log_menu_action
 from tracking import log_overlay_action
+
+from autofighter.gacha import GachaManager
 
 bp = Blueprint("gacha", __name__)
 

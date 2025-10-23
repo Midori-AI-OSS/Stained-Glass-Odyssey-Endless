@@ -8,11 +8,11 @@ import asyncio
 import time
 
 import pytest
+from tests.helpers import call_maybe_async
 
 from autofighter.effects import DamageOverTime
 from autofighter.effects import EffectManager
 from autofighter.stats import Stats
-from tests.helpers import call_maybe_async
 
 
 @pytest.mark.asyncio

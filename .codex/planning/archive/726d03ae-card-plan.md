@@ -43,6 +43,8 @@ Parent: [Web Game Plan](8a7d9c1e-web-game-plan.md)
 - **Battle Meditation** – +3% EXP Gain & +3% Vitality. If all allies start at full HP, grant +2% energy for the first turn.
 - **Guardian Shard** – +2% DEF & +2% Mitigation. At battle end, if no allies died, grant +1 small mitigation for the next battle.
 - **Spiked Shield** – +3% ATK & +3% DEF. When mitigation triggers (block threshold), deal small retaliatory damage (3% of attack).
+- **Oracle Prayer Charm** – +3% Effect Res & +3% Vitality. First time each ally drops below 45% HP in battle, grant 2-turn Radiant Regeneration HoT.
+- **Dynamo Wristbands** – +3% ATK. When an ally deals Lightning damage, grant them +3% Crit Rate for 1 turn, stacking up to 2 times.
 
 ## 2★ Cards
 - **Critical Focus** – Grants +55% ATK. At the start of each ally's turn they gain 1 stack of *Critical Boost*. *Critical Boost* stacks indefinitely, granting +0.5% Crit Rate and +5% Crit Damage per stack but vanishes when the unit is hit.
@@ -52,6 +54,8 @@ Parent: [Web Game Plan](8a7d9c1e-web-game-plan.md)
 - **Mystic Aegis** – +55% Effect Res; upon resisting a debuff, heal 5% Max HP.
 - **Vital Surge** – +55% Max HP; while below 50% HP, gain +55% ATK.
 - **Elemental Spark** – +55% ATK & +55% Effect Hit Rate; all debuffs a random ally applies gain +5% potency.
+- **Guardian's Beacon** – +55% DEF; at turn end, heal lowest-HP ally for 8% Max HP (+ 10% mitigation for 1 turn if Light).
+- **Tempest Pathfinder** – +55% Dodge Odds; when an ally crits, grant party-wide +12% dodge for 1 turn (once per turn cooldown).
 
 ## 3★ Cards
 - **Critical Overdrive** – While an ally has *Critical Boost*, their Crit Rate increases by 10%. Every 1% of excess Crit Rate converts to +2% Crit Damage. Grants +255% ATK.

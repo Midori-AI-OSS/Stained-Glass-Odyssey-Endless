@@ -3,20 +3,199 @@ from math import isclose
 
 import pytest
 
-import autofighter.stats as stats_module
 from autofighter.party import Party
 from autofighter.relics import apply_relics
 from autofighter.relics import award_relic
+import autofighter.stats as stats_module
 from autofighter.stats import BUS
 from autofighter.stats import Stats
 from autofighter.summons.manager import SummonManager
-from plugins.effects.aftertaste import Aftertaste
-import plugins.event_bus as event_bus_module
 from plugins.characters._base import PlayerBase
 from plugins.characters.becca import Becca
 from plugins.characters.luna import Luna
+from plugins.effects.aftertaste import Aftertaste
+import plugins.event_bus as event_bus_module
 import plugins.relics._base as relic_base_module
 import plugins.relics.echo_bell as echo_bell_module
+
+
+@pytest.mark.asyncio
+async def test_copper_siphon_lifesteal():
+    """Test that Copper Siphon heals attacker for 2% of damage dealt."""
+    event_bus_module.bus._subs.clear()
+    party = Party()
+    attacker = PlayerBase()
+    target = PlayerBase()
+    attacker.hp = attacker.set_base_stat('max_hp', 1000)
+    attacker.set_base_stat('atk', 100)
+    target.hp = target.set_base_stat('max_hp', 1000)
+    party.members.append(attacker)
+
+    # Reduce attacker HP to allow healing
+    attacker.hp = 900
+
+    # Award relic and apply
+    award_relic(party, "copper_siphon")
+    await apply_relics(party)
+
+    # Simulate dealing 100 damage - should heal for 2% = 2 HP
+    await BUS.emit_async("action_used", attacker, target, 100)
+    await asyncio.sleep(0.01)  # Allow async healing to complete
+
+    # Check that HP increased by 2
+    assert attacker.hp == 902, f"Expected HP 902, got {attacker.hp}"
+
+
+@pytest.mark.asyncio
+async def test_copper_siphon_minimum_healing():
+    """Test that Copper Siphon heals at least 1 HP even for small damage."""
+    event_bus_module.bus._subs.clear()
+    party = Party()
+    attacker = PlayerBase()
+    target = PlayerBase()
+    attacker.hp = attacker.set_base_stat('max_hp', 1000)
+    attacker.set_base_stat('atk', 100)
+    target.hp = target.set_base_stat('max_hp', 1000)
+    party.members.append(attacker)
+
+    # Reduce attacker HP to allow healing
+    attacker.hp = 900
+
+    # Award relic and apply
+    award_relic(party, "copper_siphon")
+    await apply_relics(party)
+
+    # Simulate dealing 10 damage - 2% = 0.2, but minimum is 1 HP
+    await BUS.emit_async("action_used", attacker, target, 10)
+    await asyncio.sleep(0.01)  # Allow async healing to complete
+
+    # Check that HP increased by at least 1
+    assert attacker.hp == 901, f"Expected HP 901, got {attacker.hp}"
+
+
+@pytest.mark.asyncio
+async def test_copper_siphon_stacks():
+    """Test that multiple Copper Siphon stacks increase lifesteal."""
+    event_bus_module.bus._subs.clear()
+    party = Party()
+    attacker = PlayerBase()
+    target = PlayerBase()
+    attacker.hp = attacker.set_base_stat('max_hp', 1000)
+    attacker.set_base_stat('atk', 100)
+    target.hp = target.set_base_stat('max_hp', 1000)
+    party.members.append(attacker)
+
+    # Reduce attacker HP to allow healing
+    attacker.hp = 900
+
+    # Award 2 stacks of copper_siphon (4% lifesteal)
+    award_relic(party, "copper_siphon")
+    award_relic(party, "copper_siphon")
+    await apply_relics(party)
+
+    # Simulate dealing 100 damage - should heal for 4% = 4 HP
+    await BUS.emit_async("action_used", attacker, target, 100)
+    await asyncio.sleep(0.01)  # Allow async healing to complete
+
+    # Check that HP increased by 4
+    assert attacker.hp == 904, f"Expected HP 904, got {attacker.hp}"
+
+
+@pytest.mark.asyncio
+async def test_copper_siphon_overheal_shields():
+    """Test that Copper Siphon converts excess healing to shields."""
+    event_bus_module.bus._subs.clear()
+    party = Party()
+    attacker = PlayerBase()
+    target = PlayerBase()
+    attacker.hp = attacker.set_base_stat('max_hp', 1000)
+    attacker.set_base_stat('atk', 100)
+    target.hp = target.set_base_stat('max_hp', 1000)
+    party.members.append(attacker)
+
+    # Attacker is at full HP
+    attacker.hp = 1000
+
+    # Award relic and apply
+    award_relic(party, "copper_siphon")
+    await apply_relics(party)
+
+    # Simulate dealing 100 damage - should heal for 2 HP, which becomes shield
+    await BUS.emit_async("action_used", attacker, target, 100)
+    await asyncio.sleep(0.01)  # Allow async healing to complete
+
+    # Check that shields were applied (HP stays at max, shields increase)
+    assert attacker.hp == 1000, f"Expected HP 1000, got {attacker.hp}"
+    assert attacker.shields == 2, f"Expected shields 2, got {attacker.shields}"
+
+
+@pytest.mark.asyncio
+async def test_copper_siphon_ignores_zero_damage():
+    """Test that Copper Siphon doesn't trigger on zero or negative damage."""
+    event_bus_module.bus._subs.clear()
+    party = Party()
+    attacker = PlayerBase()
+    target = PlayerBase()
+    attacker.hp = attacker.set_base_stat('max_hp', 1000)
+    attacker.set_base_stat('atk', 100)
+    target.hp = target.set_base_stat('max_hp', 1000)
+    party.members.append(attacker)
+
+    # Reduce attacker HP
+    attacker.hp = 900
+
+    # Award relic and apply
+    award_relic(party, "copper_siphon")
+    await apply_relics(party)
+
+    # Simulate dealing 0 damage - should not heal
+    await BUS.emit_async("action_used", attacker, target, 0)
+    await asyncio.sleep(0.01)
+
+    # HP should not change
+    assert attacker.hp == 900, f"Expected HP 900, got {attacker.hp}"
+
+
+@pytest.mark.asyncio
+async def test_copper_siphon_telemetry():
+    """Test that Copper Siphon emits proper telemetry events."""
+    event_bus_module.bus._subs.clear()
+    party = Party()
+    attacker = PlayerBase()
+    target = PlayerBase()
+    attacker.hp = attacker.set_base_stat('max_hp', 1000)
+    attacker.set_base_stat('atk', 100)
+    target.hp = target.set_base_stat('max_hp', 1000)
+    party.members.append(attacker)
+
+    # Reduce attacker HP
+    attacker.hp = 900
+
+    # Award relic and apply
+    award_relic(party, "copper_siphon")
+    await apply_relics(party)
+
+    # Capture telemetry events
+    events: list[tuple] = []
+
+    def capture(*args: object) -> None:
+        events.append(args)
+
+    BUS.subscribe("relic_effect", capture)
+
+    # Simulate dealing 100 damage
+    await BUS.emit_async("action_used", attacker, target, 100)
+    await asyncio.sleep(0.01)
+
+    # Check that telemetry was emitted
+    assert len(events) > 0, "Expected telemetry event"
+    relic_id, actor, effect_type, value, metadata = events[0]
+    assert relic_id == "copper_siphon"
+    assert effect_type == "lifesteal"
+    assert value == 2  # 2% of 100 damage
+    assert metadata["damage_dealt"] == 100
+    assert metadata["lifesteal_percentage"] == 2
+    assert metadata["stacks"] == 1
 
 
 class DummyPlayer(Stats):
@@ -592,4 +771,449 @@ async def test_echoing_drum_ignores_foe_attack_buffs():
             )
     finally:
         await SummonManager.remove_summon(summon, "test_cleanup")
+
+
+@pytest.mark.asyncio
+async def test_catalyst_vials_dot_healing():
+    """Test that Catalyst Vials heals attacker when DoT ticks."""
+    event_bus_module.bus._subs.clear()
+    party = Party()
+    attacker = PlayerBase()
+    target = PlayerBase()
+    attacker.hp = attacker.set_base_stat('max_hp', 1000)
+    attacker.set_base_stat('atk', 100)
+    target.hp = target.set_base_stat('max_hp', 1000)
+    party.members.append(attacker)
+
+    # Reduce attacker HP to allow healing
+    attacker.hp = 900
+
+    # Award relic and apply
+    award_relic(party, "catalyst_vials")
+    await apply_relics(party)
+
+    # Simulate DoT tick for 20 damage - should heal for 5% = 1 HP (min 1)
+    await BUS.emit_async("dot_tick", attacker, target, 20)
+    await asyncio.sleep(0.01)  # Allow async healing to complete
+
+    # Check that HP increased by 1
+    assert attacker.hp == 901, f"Expected HP 901, got {attacker.hp}"
+
+
+@pytest.mark.asyncio
+async def test_catalyst_vials_effect_hit_buff():
+    """Test that Catalyst Vials grants effect hit rate buff."""
+    event_bus_module.bus._subs.clear()
+    party = Party()
+    attacker = PlayerBase()
+    target = PlayerBase()
+    attacker.hp = attacker.set_base_stat('max_hp', 1000)
+    attacker.set_base_stat('atk', 100)
+    attacker.set_base_stat('effect_hit_rate', 1.0)
+    target.hp = target.set_base_stat('max_hp', 1000)
+    party.members.append(attacker)
+
+    # Award relic and apply
+    award_relic(party, "catalyst_vials")
+    await apply_relics(party)
+
+    # Get initial effect hit rate
+    initial_ehr = attacker.effect_hit_rate
+
+    # Simulate DoT tick for 100 damage - should grant +5% effect hit rate
+    await BUS.emit_async("dot_tick", attacker, target, 100)
+    await asyncio.sleep(0.01)
+
+    # Check that effect hit rate increased
+    assert attacker.effect_hit_rate > initial_ehr, f"Expected effect hit rate > {initial_ehr}, got {attacker.effect_hit_rate}"
+
+
+@pytest.mark.asyncio
+async def test_catalyst_vials_stacks():
+    """Test that multiple Catalyst Vials stacks increase healing and buff."""
+    event_bus_module.bus._subs.clear()
+    party = Party()
+    attacker = PlayerBase()
+    target = PlayerBase()
+    attacker.hp = attacker.set_base_stat('max_hp', 1000)
+    attacker.set_base_stat('atk', 100)
+    target.hp = target.set_base_stat('max_hp', 1000)
+    party.members.append(attacker)
+
+    # Reduce attacker HP to allow healing
+    attacker.hp = 900
+
+    # Award 2 stacks of catalyst_vials (10% healing)
+    award_relic(party, "catalyst_vials")
+    award_relic(party, "catalyst_vials")
+    await apply_relics(party)
+
+    # Simulate DoT tick for 100 damage - should heal for 10% = 10 HP
+    await BUS.emit_async("dot_tick", attacker, target, 100)
+    await asyncio.sleep(0.01)
+
+    # Check that HP increased by 10
+    assert attacker.hp == 910, f"Expected HP 910, got {attacker.hp}"
+
+
+@pytest.mark.asyncio
+async def test_catalyst_vials_ignores_non_party():
+    """Test that Catalyst Vials ignores DoT ticks from non-party members."""
+    event_bus_module.bus._subs.clear()
+    party = Party()
+    attacker = PlayerBase()
+    enemy_attacker = PlayerBase()
+    target = PlayerBase()
+    attacker.hp = attacker.set_base_stat('max_hp', 1000)
+    enemy_attacker.hp = enemy_attacker.set_base_stat('max_hp', 1000)
+    target.hp = target.set_base_stat('max_hp', 1000)
+    party.members.append(attacker)
+    # enemy_attacker is NOT in party
+
+    # Reduce enemy_attacker HP
+    enemy_attacker.hp = 900
+
+    # Award relic and apply
+    award_relic(party, "catalyst_vials")
+    await apply_relics(party)
+
+    # Simulate DoT tick from enemy - should not heal
+    await BUS.emit_async("dot_tick", enemy_attacker, target, 100)
+    await asyncio.sleep(0.01)
+
+    # HP should not change
+    assert enemy_attacker.hp == 900, f"Expected HP 900, got {enemy_attacker.hp}"
+
+
+@pytest.mark.asyncio
+async def test_catalyst_vials_ignores_zero_damage():
+    """Test that Catalyst Vials doesn't trigger on zero damage."""
+    event_bus_module.bus._subs.clear()
+    party = Party()
+    attacker = PlayerBase()
+    target = PlayerBase()
+    attacker.hp = attacker.set_base_stat('max_hp', 1000)
+    target.hp = target.set_base_stat('max_hp', 1000)
+    party.members.append(attacker)
+
+    # Reduce attacker HP
+    attacker.hp = 900
+
+    # Award relic and apply
+    award_relic(party, "catalyst_vials")
+    await apply_relics(party)
+
+    # Simulate DoT tick with 0 damage - should not heal
+    await BUS.emit_async("dot_tick", attacker, target, 0)
+    await asyncio.sleep(0.01)
+
+    # HP should not change
+    assert attacker.hp == 900, f"Expected HP 900, got {attacker.hp}"
+
+
+@pytest.mark.asyncio
+async def test_catalyst_vials_telemetry():
+    """Test that Catalyst Vials emits proper telemetry events."""
+    event_bus_module.bus._subs.clear()
+    party = Party()
+    attacker = PlayerBase()
+    target = PlayerBase()
+    attacker.hp = attacker.set_base_stat('max_hp', 1000)
+    target.hp = target.set_base_stat('max_hp', 1000)
+    party.members.append(attacker)
+
+    # Reduce attacker HP
+    attacker.hp = 900
+
+    # Award relic and apply
+    award_relic(party, "catalyst_vials")
+    await apply_relics(party)
+
+    # Capture telemetry events
+    events: list[tuple] = []
+
+    def capture(*args: object) -> None:
+        events.append(args)
+
+    BUS.subscribe("relic_effect", capture)
+
+    # Simulate DoT tick for 100 damage
+    await BUS.emit_async("dot_tick", attacker, target, 100)
+    await asyncio.sleep(0.01)
+
+    # Check that telemetry was emitted
+    assert len(events) > 0, "Expected telemetry event"
+    relic_id, actor, effect_type, value, metadata = events[0]
+    assert relic_id == "catalyst_vials"
+    assert effect_type == "dot_siphon"
+    assert value == 5  # 5% of 100 damage
+    assert metadata["dot_damage"] == 100
+    assert metadata["heal_percentage"] == 5
+    assert metadata["stacks"] == 1
+
+
+@pytest.mark.asyncio
+async def test_safeguard_prism_shield_on_low_hp():
+    """Test that Safeguard Prism grants shield when ally drops below 60% HP."""
+    event_bus_module.bus._subs.clear()
+    party = Party()
+    ally = PlayerBase()
+    enemy = PlayerBase()
+    ally.hp = ally.set_base_stat('max_hp', 1000)
+    ally.set_base_stat('atk', 100)
+    enemy.hp = enemy.set_base_stat('max_hp', 1000)
+    party.members.append(ally)
+
+    # Award relic and apply
+    award_relic(party, "safeguard_prism")
+    await apply_relics(party)
+
+    # Set HP below threshold (below 60% = below 600)
+    ally.hp = 500
+
+    # Simulate damage event
+    await BUS.emit_async("damage_taken", ally, enemy, 100)
+    await asyncio.sleep(0.01)
+
+    # Should have received shield (15% of 1000 = 150)
+    assert ally.shields == 150, f"Expected shields 150, got {ally.shields}"
+
+
+@pytest.mark.asyncio
+async def test_safeguard_prism_mitigation_buff():
+    """Test that Safeguard Prism grants mitigation buff."""
+    event_bus_module.bus._subs.clear()
+    party = Party()
+    ally = PlayerBase()
+    enemy = PlayerBase()
+    ally.hp = ally.set_base_stat('max_hp', 1000)
+    ally.set_base_stat('atk', 100)
+    ally.set_base_stat('mitigation', 1.0)
+    enemy.hp = enemy.set_base_stat('max_hp', 1000)
+    party.members.append(ally)
+
+    # Award relic and apply
+    award_relic(party, "safeguard_prism")
+    await apply_relics(party)
+
+    # Set HP below threshold
+    ally.hp = 500
+
+    # Get initial mitigation
+    initial_mitigation = ally.mitigation
+
+    # Simulate damage to trigger safeguard
+    await BUS.emit_async("damage_taken", ally, enemy, 100)
+    await asyncio.sleep(0.01)
+
+    # Should have increased mitigation (+12%)
+    assert ally.mitigation > initial_mitigation, f"Expected mitigation > {initial_mitigation}, got {ally.mitigation}"
+
+
+@pytest.mark.asyncio
+async def test_safeguard_prism_stacks():
+    """Test that multiple Safeguard Prism stacks increase shield and mitigation."""
+    event_bus_module.bus._subs.clear()
+    party = Party()
+    ally = PlayerBase()
+    enemy = PlayerBase()
+    ally.hp = ally.set_base_stat('max_hp', 1000)
+    enemy.hp = enemy.set_base_stat('max_hp', 1000)
+    party.members.append(ally)
+
+    # Award 2 stacks (30% shield, 24% mitigation)
+    award_relic(party, "safeguard_prism")
+    award_relic(party, "safeguard_prism")
+    await apply_relics(party)
+
+    # Set HP below threshold
+    ally.hp = 500
+
+    # Simulate damage to trigger safeguard
+    await BUS.emit_async("damage_taken", ally, enemy, 100)
+    await asyncio.sleep(0.01)
+
+    # Should have received double shield (30% of 1000 = 300)
+    assert ally.shields == 300, f"Expected shields 300, got {ally.shields}"
+
+
+@pytest.mark.asyncio
+async def test_safeguard_prism_requires_turn_cooldown():
+    """Safeguard Prism should not re-trigger until five turns pass."""
+    event_bus_module.bus._subs.clear()
+    party = Party()
+    ally = PlayerBase()
+    enemy = PlayerBase()
+    ally.hp = ally.set_base_stat('max_hp', 1000)
+    enemy.hp = enemy.set_base_stat('max_hp', 1000)
+    party.members.append(ally)
+
+    # Award 1 stack
+    award_relic(party, "safeguard_prism")
+    await apply_relics(party)
+
+    # Trigger safeguard first time
+    ally.hp = 500
+    await BUS.emit_async("damage_taken", ally, enemy, 100)
+    await asyncio.sleep(0.01)
+
+    # Should have received shield
+    assert ally.shields == 150, f"Expected shields 150, got {ally.shields}"
+
+    # Reset shields and try to trigger again before cooldown expires
+    ally.shields = 0
+    ally.hp = 400
+
+    await BUS.emit_async("damage_taken", ally, enemy, 100)
+    await asyncio.sleep(0.01)
+
+    # Should NOT have received shield yet (cooldown not elapsed)
+    assert ally.shields == 0, f"Expected shields 0, got {ally.shields}"
+
+    # Advance 4 turns (still on cooldown)
+    for _ in range(4):
+        await BUS.emit_async("turn_start")
+    await asyncio.sleep(0.01)
+
+    ally.hp = 350
+    await BUS.emit_async("damage_taken", ally, enemy, 100)
+    await asyncio.sleep(0.01)
+
+    # Still on cooldown after only 4 turns
+    assert ally.shields == 0, f"Expected shields 0, got {ally.shields}"
+
+    # Advance final turn to clear cooldown
+    await BUS.emit_async("turn_start")
+    await asyncio.sleep(0.01)
+
+    ally.hp = 300
+    await BUS.emit_async("damage_taken", ally, enemy, 100)
+    await asyncio.sleep(0.01)
+
+    # Cooldown complete; shield should apply again
+    assert ally.shields == 150, f"Expected shields 150, got {ally.shields}"
+
+
+@pytest.mark.asyncio
+async def test_safeguard_prism_extended_cooldown_scales_with_stacks():
+    """Five stacks should extend the cooldown to six turns."""
+    event_bus_module.bus._subs.clear()
+    party = Party()
+    ally = PlayerBase()
+    enemy = PlayerBase()
+    ally.hp = ally.set_base_stat('max_hp', 1000)
+    enemy.hp = enemy.set_base_stat('max_hp', 1000)
+    party.members.append(ally)
+
+    for _ in range(5):
+        award_relic(party, "safeguard_prism")
+    await apply_relics(party)
+
+    # Trigger safeguard first time
+    ally.hp = 500
+    await BUS.emit_async("damage_taken", ally, enemy, 100)
+    await asyncio.sleep(0.01)
+
+    # Should have received shield (75% = 750)
+    assert ally.shields == 750, f"Expected shields 750, got {ally.shields}"
+
+    # Reset shields and trigger again before cooldown expires
+    ally.shields = 0
+    ally.hp = 400
+    await BUS.emit_async("damage_taken", ally, enemy, 100)
+    await asyncio.sleep(0.01)
+
+    # Cooldown has not elapsed (6-turn lockout)
+    assert ally.shields == 0, f"Expected shields 0, got {ally.shields}"
+
+    # Advance 5 turns — still 1 turn short
+    for _ in range(5):
+        await BUS.emit_async("turn_start")
+    await asyncio.sleep(0.01)
+
+    ally.hp = 320
+    await BUS.emit_async("damage_taken", ally, enemy, 100)
+    await asyncio.sleep(0.01)
+    assert ally.shields == 0, f"Expected shields 0, got {ally.shields}"
+
+    # Advance the 6th turn; cooldown should expire
+    await BUS.emit_async("turn_start")
+    await asyncio.sleep(0.01)
+
+    ally.hp = 280
+    await BUS.emit_async("damage_taken", ally, enemy, 100)
+    await asyncio.sleep(0.01)
+
+    assert ally.shields == 750, f"Expected shields 750, got {ally.shields}"
+
+
+@pytest.mark.asyncio
+async def test_safeguard_prism_above_threshold():
+    """Test that Safeguard Prism doesn't trigger above 60% HP."""
+    event_bus_module.bus._subs.clear()
+    party = Party()
+    ally = PlayerBase()
+    enemy = PlayerBase()
+    ally.hp = ally.set_base_stat('max_hp', 1000)
+    enemy.hp = enemy.set_base_stat('max_hp', 1000)
+    party.members.append(ally)
+
+    # Award relic and apply
+    award_relic(party, "safeguard_prism")
+    await apply_relics(party)
+
+    # Set HP to 700 (70% - above threshold)
+    ally.hp = 700
+
+    # Simulate damage that keeps HP above 60% (to 650 HP)
+    await BUS.emit_async("damage_taken", ally, enemy, 50)
+    await asyncio.sleep(0.01)
+
+    # Should NOT have received shield
+    assert ally.shields == 0, f"Expected shields 0, got {ally.shields}"
+
+
+@pytest.mark.asyncio
+async def test_safeguard_prism_telemetry():
+    """Test that Safeguard Prism emits proper telemetry events."""
+    event_bus_module.bus._subs.clear()
+    party = Party()
+    ally = PlayerBase()
+    enemy = PlayerBase()
+    ally.hp = ally.set_base_stat('max_hp', 1000)
+    enemy.hp = enemy.set_base_stat('max_hp', 1000)
+    party.members.append(ally)
+
+    # Award relic and apply
+    award_relic(party, "safeguard_prism")
+    await apply_relics(party)
+
+    # Capture telemetry events
+    events: list[tuple] = []
+
+    def capture(*args: object) -> None:
+        events.append(args)
+
+    BUS.subscribe("relic_effect", capture)
+
+    # Trigger safeguard
+    ally.hp = 500
+    await BUS.emit_async("damage_taken", ally, enemy, 100)
+    await asyncio.sleep(0.01)
+
+    # Check that telemetry was emitted
+    assert len(events) > 0, "Expected telemetry event"
+    relic_id, actor, effect_type, value, metadata = events[0]
+    assert relic_id == "safeguard_prism"
+    assert effect_type == "emergency_shield"
+    assert value == 150  # 15% of 1000
+    assert metadata["hp_threshold_percentage"] == 60
+    assert metadata["hp_percentage_before"] == pytest.approx(50.0)
+    assert metadata["shield_percentage"] == 15
+    assert metadata["mitigation_bonus_percentage"] == 12
+    assert metadata["cooldown_turns"] == 5
+    assert metadata["turn_index"] == 0
+    assert metadata["next_available_turn"] == 5
+    assert metadata["turns_remaining"] == 5
+    assert metadata["stacks"] == 1
 

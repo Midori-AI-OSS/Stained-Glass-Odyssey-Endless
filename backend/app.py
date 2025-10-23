@@ -4,6 +4,8 @@ import asyncio
 import logging
 import os
 
+from error_context import format_exception_with_context
+
 # Import torch checker early to perform the one-time check
 from llms.torch_checker import is_torch_available
 from logging_config import configure_logging
@@ -38,8 +40,6 @@ from runs.party_manager import load_party  # noqa: F401
 from runs.party_manager import save_party  # noqa: F401
 from services.run_service import prune_runs_on_startup
 from werkzeug.exceptions import HTTPException
-
-from error_context import format_exception_with_context
 
 from autofighter.gacha import GachaManager  # noqa: F401  # re-export for tests
 from autofighter.rooms import _scale_stats  # noqa: F401

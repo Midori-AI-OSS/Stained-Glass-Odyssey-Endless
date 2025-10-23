@@ -62,7 +62,7 @@ Settings are stored in `localStorage` with schema versioning for backward compat
 
 The Gameplay tab's **End Run** button now attempts to end the current run by ID and falls back to clearing all runs when the ID is missing or the targeted request fails. When the cleanup completes successfully the root page opens a "Run Ended" confirmation overlay so players get positive feedback that their manual termination succeeded.
 
-The Gameplay tab also exposes an **Animation Speed** slider (0.1–2.0×). Adjusting it writes the selected multiplier to settings storage and posts the derived turn pacing (`base_turn_pacing / animationSpeed`) to `/config/turn_pacing` so backend battle pacing matches the UI setting.
+The Gameplay tab also exposes an **Animation Speed** slider (0.1–2.0×). Adjusting it writes the selected multiplier to settings storage and posts the derived turn pacing (`base_turn_pacing / animationSpeed`) to `/config/turn_pacing` so backend battle pacing matches the UI setting. The `base_turn_pacing` value is initialized from the backend default (0.5 s) so both sides display the same baseline immediately after a refresh.
 
 The **Skip Battle Review** toggle allows players to bypass the post-battle summary screen and advance directly to the next room. When enabled, the Battle Review overlay is suppressed and the game automatically progresses after battle completion, while still respecting reward handling logic. This setting defaults to `false` to preserve the existing review experience.
 

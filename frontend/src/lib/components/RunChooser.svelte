@@ -1432,6 +1432,8 @@ import WizardNavigation from './WizardNavigation.svelte';
   .party-standalone {
     display: flex;
     flex-direction: column;
+    flex: 1 1 auto;
+    width: 100%;
     height: 100%;
   }
 
@@ -1439,6 +1441,13 @@ import WizardNavigation from './WizardNavigation.svelte';
     flex: 1 1 auto;
     display: flex;
     flex-direction: column;
+    width: 100%;
+  }
+
+  .party-step :global(.panel) {
+    width: 100%;
+    max-width: 100%;
+    flex: 1 1 auto;
   }
 
   .wizard-button,

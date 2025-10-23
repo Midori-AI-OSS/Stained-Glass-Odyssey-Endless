@@ -30,6 +30,15 @@ def award_card(party: Party, card_id: str) -> CardBase | None:
     party.cards.append(card_id)
     return card_cls()
 
+
+def instantiate_card(card_id: str) -> CardBase | None:
+    """Return a fresh card instance without mutating the party."""
+
+    card_cls = _registry().get(card_id)
+    if card_cls is None:
+        return None
+    return card_cls()
+
 async def apply_cards(party: Party) -> None:
     registry = _registry()
     for cid in party.cards:

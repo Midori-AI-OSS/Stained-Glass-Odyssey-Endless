@@ -10,10 +10,11 @@ from options import get_option
 
 from autofighter.action_queue import ActionQueue
 from autofighter.stats import BUS
+from autofighter.stats import DEFAULT_ANIMATION_PER_TARGET
 from autofighter.stats import Stats
 from autofighter.stats import calc_animation_time
 
-DEFAULT_TURN_PACING = 0.2
+DEFAULT_TURN_PACING = 0.5
 _MIN_TURN_PACING = 0.05
 
 TURN_PACING = DEFAULT_TURN_PACING
@@ -161,6 +162,59 @@ async def pace_sleep(multiplier: float = 1.0) -> None:
             raise
         except Exception:
             pass
+
+
+def animation_per_target_duration(actor: Stats | None) -> float:
+    """Resolve the per-target pacing duration for an actor."""
+
+    try:
+        per = float(getattr(actor, "animation_per_target", DEFAULT_ANIMATION_PER_TARGET))
+    except Exception:
+        per = DEFAULT_ANIMATION_PER_TARGET
+
+    if not math.isfinite(per) or per <= 0:
+        per = TURN_PACING
+
+    return per
+
+
+def compute_multi_hit_timing(actor: Stats | None, hits: int) -> tuple[float, float, float]:
+    """Return base wait, per-target duration, and total animation length."""
+
+    safe_hits = max(int(hits), 1)
+    per = animation_per_target_duration(actor)
+    try:
+        total = float(calc_animation_time(actor, safe_hits))
+    except Exception:
+        total = 0.0
+
+    if not math.isfinite(total) or total < 0:
+        total = 0.0
+
+    additional_wait = per * max(safe_hits - 1, 0)
+    base_wait = total - additional_wait
+    if base_wait < 0:
+        base_wait = 0.0
+
+    total_wait = base_wait + additional_wait
+    return base_wait, per, total_wait
+
+
+async def pace_per_target(actor: Stats | None, *, duration: float | None = None) -> float:
+    """Sleep for one per-target interval and return the multiplier used."""
+
+    wait = animation_per_target_duration(actor) if duration is None else max(
+        float(duration),
+        0.0,
+    )
+
+    try:
+        multiplier = wait / TURN_PACING
+    except Exception:
+        multiplier = 1.0
+
+    await pace_sleep(multiplier)
+    return multiplier
 
 
 async def impact_pause(

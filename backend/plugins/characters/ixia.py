@@ -2,9 +2,9 @@ from dataclasses import dataclass
 from dataclasses import field
 
 from autofighter.character import CharacterType
+from plugins.characters._base import PlayerBase
 from plugins.damage_types import load_damage_type
 from plugins.damage_types._base import DamageTypeBase
-from plugins.characters._base import PlayerBase
 
 
 @dataclass

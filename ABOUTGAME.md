@@ -194,10 +194,13 @@ The roster in `backend/plugins/characters/` defines every playable combatant. Al
 | Mimic | C | 0★ | Any (randomized) | `mimic_player_copy` mirrors allied passives and stat gains. | Mirrors an active party member during scripted mirror fights; non-selectable. |
 | PersonaIce | A | 5★ | Ice | `persona_ice_cryo_cycle` layers mitigation and thaws stored frost into end-of-turn healing barriers. Opens battles with fortified tank stats emphasizing reinforced HP, defense, mitigation, and higher aggro. | Standard gacha recruit. |
 | PersonaLightAndDark | A | 6★ | Light / Dark (alternating) | `persona_light_and_dark_duality` flips elements every action, pulsing Light-form heals before Dark-form crit bursts that strip defenses. Begins with elite guardian baselines highlighted by elevated HP, defense, mitigation, and aggro. | 6★ gacha headliner. |
+| Ryne | B | 6★ | Light | `ryne_oracle_of_balance` channels Oracle-of-Light balance surges that layer self wards, feed mitigation pulses, and keep Luna tethered through shared healing bursts. | 6★ gacha headliner. |
 | Player | C | Story | Chosen (player-selected) | `player_level_up_bonus` scales with run progress, representing the customizable avatar. | Always available starter. |
 | Slime | C | 0★ | Any (randomized) | Baseline stat template that tags in as a helper for foe lineups, including boss slots. | Non-selectable foe support unit that appears when encounters need a fallback combatant. |
 
 Characters flagged as non-selectable (Mimic, Slime) surface in mirrored or fallback encounters—Mimic copies an active party member, while Slime reinforces enemy teams as needed—but neither can join the active party. Story characters like Luna and the Player bypass the gacha pool; the Player is available from the start, whereas Luna remains an encounter-only boss.
+
+The rotating 6★ headliner banners now spotlight Lady Fire and Ice, Lady Storm, Persona Light and Dark, and Ryne. Ryne’s Oracle-of-Light kit rewards parties that keep Luna close, with their friendship bonuses favoring squads that pair the duo alongside sustain-heavy supports.
 
 ## Technical Information
 

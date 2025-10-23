@@ -6,16 +6,25 @@ import json
 import sys
 from typing import Any
 
+from error_context import format_exception_with_context
 from quart import Blueprint
 from quart import jsonify
 from quart import request
 from runs.encryption import get_save_manager
+from runs.lifecycle import REWARD_STEP_BATTLE_REVIEW
+from runs.lifecycle import REWARD_STEP_CARDS
+from runs.lifecycle import REWARD_STEP_DROPS
+from runs.lifecycle import REWARD_STEP_RELICS
 from runs.lifecycle import battle_snapshots
 from runs.lifecycle import battle_tasks
+from runs.lifecycle import ensure_reward_progression
 from runs.lifecycle import load_map
+from runs.lifecycle import normalise_reward_step
 from runs.lifecycle import save_map
 from runs.party_manager import load_party
 from services.asset_service import get_asset_manifest
+from services.reward_service import cancel_reward
+from services.reward_service import confirm_reward
 from services.reward_service import select_card
 from services.reward_service import select_relic
 from services.room_service import BATTLE_ROOM_TYPES
@@ -34,8 +43,6 @@ from services.run_service import update_party
 from services.run_service import wipe_save
 from tracking import log_game_action
 from tracking import log_menu_action
-
-from error_context import format_exception_with_context
 
 from autofighter.rooms.shop import serialize_shop_payload
 
@@ -101,12 +108,12 @@ def determine_ui_mode(game_state: dict[str, Any]) -> str:
     # Check for reward progression sequence first
     progression = current_state.get("reward_progression")
     if progression and progression.get("current_step"):
-        step = progression["current_step"]
-        if step == "card":
+        step = normalise_reward_step(progression.get("current_step"))
+        if step == "cards":
             return "card_selection"
-        elif step == "relic":
+        elif step == "relics":
             return "relic_selection"
-        elif step == "loot":
+        elif step == "drops":
             return "loot"
         elif step == "battle_review":
             return "battle_review"
@@ -292,7 +299,7 @@ async def get_ui_state() -> tuple[str, int, dict[str, Any]]:
                             context = RunModifierContext.from_dict(stored_context)
                         except Exception:
                             context = None
-                
+
                 shop_view = serialize_shop_payload(
                     party_snapshot,
                     stored_stock,
@@ -487,20 +494,148 @@ async def handle_ui_action() -> tuple[str, int, dict[str, Any]]:
 
             # Load current map state to ensure rewards are resolved
             state, rooms = await asyncio.to_thread(load_map, run_id)
-            if (
-                state.get("awaiting_card")
-                or state.get("awaiting_relic")
-                or state.get("awaiting_loot")
-            ):
-                return create_error_response("Cannot advance room while rewards are pending", 400)
+            staging_raw = state.get("reward_staging")
+            staging = staging_raw if isinstance(staging_raw, Mapping) else None
+            staged_cards = []
+            pending_response: dict[str, Any] | None = None
+            pending_card_choices: list[dict[str, Any]] = []
+            pending_relic_choices: list[dict[str, Any]] = []
+            if isinstance(staging, Mapping):
+                bucket = staging.get("cards")
+                if isinstance(bucket, list):
+                    staged_cards = bucket
+            if state.get("awaiting_card"):
+                if not staged_cards:
+                    # Check if card selection is still pending (user hasn't chosen yet)
+                    # vs already handled (staged card was confirmed by another process)
+                    card_choice_options = state.get("card_choice_options")
+                    has_card_choices = isinstance(card_choice_options, list) and bool(card_choice_options)
+                    if has_card_choices:
+                        pending_card_choices = list(card_choice_options)
+                    progression = state.get("reward_progression")
+                    current_step = None
+                    if isinstance(progression, Mapping):
+                        current_step = normalise_reward_step(progression.get("current_step"))
 
-            progression = state.get("reward_progression")
+                    # If we're in the cards phase and awaiting, user must select
+                    if current_step == REWARD_STEP_CARDS and has_card_choices:
+                        pending_response = {
+                            "progression_advanced": False,
+                            "pending_rewards": True,
+                            "pending_type": "card",
+                            "message": "pending rewards must be collected before advancing",
+                            "reward_progression": progression,
+                            "awaiting_card": True,
+                            "awaiting_relic": bool(state.get("awaiting_relic")),
+                            "awaiting_loot": bool(state.get("awaiting_loot")),
+                            "awaiting_next": bool(state.get("awaiting_next")),
+                            "card_choice_options": pending_card_choices,
+                        }
+                    elif not has_card_choices:
+                        # No staged card and no choices means reward was already handled
+                        # Clear the flag and continue
+                        state["awaiting_card"] = False
+                        await asyncio.to_thread(save_map, run_id, state)
+                else:
+                    try:
+                        await confirm_reward(run_id, "card")
+                    except ValueError as exc:
+                        return create_error_response(str(exc), 400)
+                    state, rooms = await asyncio.to_thread(load_map, run_id)
+                    staging_raw = state.get("reward_staging")
+                    staging = staging_raw if isinstance(staging_raw, Mapping) else None
+
+            if pending_response:
+                return jsonify(pending_response)
+
+            staged_relics = []
+            staged_items = []
+            if isinstance(staging, Mapping):
+                relic_bucket = staging.get("relics")
+                if isinstance(relic_bucket, list):
+                    staged_relics = relic_bucket
+                item_bucket = staging.get("items")
+                if isinstance(item_bucket, list):
+                    staged_items = item_bucket
+
+            if state.get("awaiting_relic"):
+                if not staged_relics:
+                    # Check if relic selection is still pending (user hasn't chosen yet)
+                    # vs already handled (staged relic was confirmed by another process)
+                    snap = battle_snapshots.get(run_id)
+                    has_relic_choices = False
+                    if isinstance(snap, dict):
+                        relic_bucket = snap.get("relic_choices")
+                        if isinstance(relic_bucket, list) and relic_bucket:
+                            has_relic_choices = True
+                            pending_relic_choices = list(relic_bucket)
+
+                    progression = state.get("reward_progression")
+                    current_step = None
+                    if isinstance(progression, Mapping):
+                        current_step = normalise_reward_step(progression.get("current_step"))
+
+                    # If we're in the relics phase and awaiting, user must select
+                    if current_step == REWARD_STEP_RELICS and has_relic_choices:
+                        pending_response = {
+                            "progression_advanced": False,
+                            "pending_rewards": True,
+                            "pending_type": "relic",
+                            "message": "pending rewards must be collected before advancing",
+                            "reward_progression": progression,
+                            "awaiting_card": bool(state.get("awaiting_card")),
+                            "awaiting_relic": True,
+                            "awaiting_loot": bool(state.get("awaiting_loot")),
+                            "awaiting_next": bool(state.get("awaiting_next")),
+                            "relic_choice_options": pending_relic_choices,
+                        }
+                    elif not has_relic_choices:
+                        # No staged relic and no choices means reward was already handled
+                        # Clear the flag and continue
+                        state["awaiting_relic"] = False
+                        await asyncio.to_thread(save_map, run_id, state)
+                else:
+                    try:
+                        await confirm_reward(run_id, "relic")
+                    except ValueError as exc:
+                        return create_error_response(str(exc), 400)
+
+                    state, rooms = await asyncio.to_thread(load_map, run_id)
+                    staging_raw = state.get("reward_staging")
+                    staging = staging_raw if isinstance(staging_raw, Mapping) else None
+
+                    staged_relics = []
+                    staged_items = []
+                    if isinstance(staging, Mapping):
+                        relic_bucket = staging.get("relics")
+                        if isinstance(relic_bucket, list):
+                            staged_relics = relic_bucket
+                        item_bucket = staging.get("items")
+                        if isinstance(item_bucket, list):
+                            staged_items = item_bucket
+
+            if pending_response:
+                return jsonify(pending_response)
+
+            # Handle awaiting_loot and staged items
+            # Loot items are informational only and cleared when acknowledged
+            # Auto-acknowledge when advancing through phases
+            if state.get("awaiting_loot") or staged_items:
+                print(f"DEBUG: Before loot auto-ack: awaiting_card={state.get('awaiting_card')}, awaiting_relic={state.get('awaiting_relic')}")
+                state["awaiting_loot"] = False
+                if isinstance(staging, dict):
+                    staging["items"] = []
+                await asyncio.to_thread(save_map, run_id, state)
+                print(f"DEBUG: After loot auto-ack: awaiting_card={state.get('awaiting_card')}, awaiting_relic={state.get('awaiting_relic')}")
+
+            refreshed_progression = None
+            progression, _ = ensure_reward_progression(state)
 
             if progression and progression.get("current_step"):
-                current_step = progression["current_step"]
+                current_step = normalise_reward_step(progression.get("current_step"))
 
                 # Special handling for battle_review step - it's informational only
-                if current_step == "battle_review":
+                if current_step == REWARD_STEP_BATTLE_REVIEW:
                     # Complete battle_review and any remaining steps automatically
                     state["awaiting_next"] = True
                     state["awaiting_card"] = False
@@ -509,32 +644,59 @@ async def handle_ui_action() -> tuple[str, int, dict[str, Any]]:
                     del state["reward_progression"]
                 else:
                     # Complete the current step and advance progression
-                    progression["completed"].append(current_step)
+                    completed_steps = progression.setdefault("completed", [])
+                    if current_step and current_step not in completed_steps:
+                        completed_steps.append(current_step)
+                        # Clear awaiting flags for the completed step
+                        if current_step == REWARD_STEP_DROPS:
+                            state["awaiting_loot"] = False
+                            if isinstance(staging, dict):
+                                staging["items"] = []
+                        elif current_step == REWARD_STEP_CARDS:
+                            state["awaiting_card"] = False
+                        elif current_step == REWARD_STEP_RELICS:
+                            state["awaiting_relic"] = False
+                        
+                        # Manually advance to next uncompleted step
+                        available_steps = progression.get("available", [])
+                        next_step = None
+                        for step in available_steps:
+                            if step not in completed_steps:
+                                next_step = step
+                                break
+                        if next_step:
+                            progression["current_step"] = next_step
+                    
+                    # Update progression to advance to next step
+                    state["reward_progression"] = progression
 
-                    # Find next step in progression
-                    available = progression.get("available", [])
-                    completed = progression.get("completed", [])
-                    next_steps = [step for step in available if step not in completed]
+                    refreshed_progression, _ = ensure_reward_progression(state)
 
-                    if next_steps:
-                        # Move to next step in progression
-                        progression["current_step"] = next_steps[0]
-                        state["reward_progression"] = progression
+                    if refreshed_progression:
+                        state["awaiting_next"] = False
                     else:
                         # All progression steps completed, ready to advance room
                         state["awaiting_next"] = True
                         state["awaiting_card"] = False
                         state["awaiting_relic"] = False
                         state["awaiting_loot"] = False
-                        del state["reward_progression"]
 
                 await asyncio.to_thread(save_map, run_id, state)
 
                 # If we still have progression steps, return the updated state
-                if current_step != "battle_review" and progression and progression.get("current_step"):
+                if (
+                    current_step != REWARD_STEP_BATTLE_REVIEW
+                    and refreshed_progression
+                    and refreshed_progression.get("current_step")
+                ):
                     return jsonify({
                         "progression_advanced": True,
-                        "current_step": progression["current_step"]
+                        "current_step": refreshed_progression["current_step"],
+                        "reward_progression": refreshed_progression,
+                        "awaiting_card": bool(state.get("awaiting_card")),
+                        "awaiting_relic": bool(state.get("awaiting_relic")),
+                        "awaiting_loot": bool(state.get("awaiting_loot")),
+                        "awaiting_next": bool(state.get("awaiting_next")),
                     })
 
             try:
@@ -572,6 +734,46 @@ async def handle_ui_action() -> tuple[str, int, dict[str, Any]]:
 
             try:
                 result = await select_relic(run_id, relic_id)
+                return jsonify(result)
+            except ValueError as exc:
+                return create_error_response(str(exc), 400)
+
+        elif action == "confirm_card":
+            if not run_id:
+                return create_error_response("No active run", 400)
+
+            try:
+                result = await confirm_reward(run_id, "card")
+                return jsonify(result)
+            except ValueError as exc:
+                return create_error_response(str(exc), 400)
+
+        elif action == "confirm_relic":
+            if not run_id:
+                return create_error_response("No active run", 400)
+
+            try:
+                result = await confirm_reward(run_id, "relic")
+                return jsonify(result)
+            except ValueError as exc:
+                return create_error_response(str(exc), 400)
+
+        elif action == "cancel_card":
+            if not run_id:
+                return create_error_response("No active run", 400)
+
+            try:
+                result = await cancel_reward(run_id, "card")
+                return jsonify(result)
+            except ValueError as exc:
+                return create_error_response(str(exc), 400)
+
+        elif action == "cancel_relic":
+            if not run_id:
+                return create_error_response("No active run", 400)
+
+            try:
+                result = await cancel_reward(run_id, "relic")
                 return jsonify(result)
             except ValueError as exc:
                 return create_error_response(str(exc), 400)

@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
-import logging
+import math
 import random
+import logging
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Sequence
@@ -36,6 +37,36 @@ log = logging.getLogger(__name__)
 ELEMENTS = [element.lower() for element in ALL_DAMAGE_TYPES]
 
 
+def _generate_item_rewards(room: BattleRoom, temp_rdr: float) -> list[dict[str, Any]]:
+    """Create item rewards using bounded upgrades for very high rdr."""
+
+    multiplier = max(temp_rdr, 1.0)
+    baseline_stars = _pick_item_stars(room)
+
+    log_multiplier = math.log10(multiplier)
+    sequential_upgrades = int(log_multiplier)
+
+    stars = baseline_stars
+    applied_upgrades = 0
+    while applied_upgrades < sequential_upgrades and stars < 4:
+        stars += 1
+        applied_upgrades += 1
+    stars = min(stars, 4)
+
+    residual_multiplier = multiplier / (10 ** applied_upgrades)
+    capped_residual = min(residual_multiplier, 10.0)
+    extra_drop_chance = max(0.0, min((capped_residual - 1.0) / 9.0, 1.0))
+
+    element = random.choice(ELEMENTS)
+    items = [{"id": element, "stars": stars}]
+
+    if random.random() < extra_drop_chance:
+        consolation_stars = min(baseline_stars, stars)
+        items.append({"id": element, "stars": consolation_stars})
+
+    return items
+
+
 async def resolve_rewards(
     *,
     room: BattleRoom,
@@ -57,66 +88,43 @@ async def resolve_rewards(
 ) -> dict[str, Any]:
     """Assemble the battle victory payload including loot and choices."""
 
-    selected_cards: list[Any] = []
-    attempts = 0
+    card_options: list[Any] = []
     log.info(
-        "Starting card selection for run %s, party has %d cards",
+        "Generating card reward options for run %s, party has %d cards",
         getattr(combat_party, "cards", []),
         len(getattr(combat_party, "cards", [])),
     )
-    while len(selected_cards) < 3 and attempts < 30:
-        attempts += 1
-        base_stars = _pick_card_stars(room)
-        card_stars = _apply_rdr_to_stars(base_stars, temp_rdr)
+    base_stars = _pick_card_stars(room)
+    target_stars = _apply_rdr_to_stars(base_stars, temp_rdr)
+    star_buckets = [
+        stars for stars in range(target_stars, 0, -1) if stars > 0
+    ]
+    seen_ids: set[str] = set()
+    for stars in star_buckets:
+        if len(card_options) >= 3:
+            break
+        remaining = 3 - len(card_options)
+        choices = card_choices(combat_party, stars, count=remaining)
         log.debug(
-            "Card selection attempt %d: base_stars=%d, rdr_stars=%d",
-            attempts,
-            base_stars,
-            card_stars,
+            "Card option pass: stars=%d, requested=%d, received=%d",
+            stars,
+            remaining,
+            len(choices),
         )
-        choices = card_choices(combat_party, card_stars, count=1)
-        log.debug("  card_choices returned %d options", len(choices))
-        if not choices:
-            log.debug("  No cards available for star level %d", card_stars)
-            for fallback_stars in range(card_stars - 1, 0, -1):
-                log.debug(
-                    "  Attempting fallback star level %d for card selection",
-                    fallback_stars,
-                )
-                choices = card_choices(combat_party, fallback_stars, count=1)
-                log.debug(
-                    "    card_choices returned %d options for fallback",
-                    len(choices),
-                )
-                if choices:
-                    break
-                log.debug(
-                    "    No cards available for fallback star level %d",
-                    fallback_stars,
-                )
-            else:
+        for candidate in choices:
+            if candidate.id in seen_ids:
                 continue
-        candidate = choices[0]
-        log.debug(
-            "  Candidate card: %s (%s) - %d stars",
-            candidate.id,
-            candidate.name,
-            candidate.stars,
-        )
-        if any(card.id == candidate.id for card in selected_cards):
-            log.debug("  Card %s already selected, skipping", candidate.id)
-            continue
-        selected_cards.append(candidate)
-        log.debug("  Added card: %s", candidate.id)
+            seen_ids.add(candidate.id)
+            card_options.append(candidate)
+            if len(card_options) >= 3:
+                break
     log.info(
-        "Card selection complete: %d cards selected after %d attempts",
-        len(selected_cards),
-        attempts,
+        "Card reward options generated: %d choices (target_stars=%d)",
+        len(card_options),
+        target_stars,
     )
-    if selected_cards:
-        log.info("Selected cards: %s", [card.id for card in selected_cards])
-    else:
-        log.warning("No cards were selected!")
+    if not card_options:
+        log.warning("No card reward options available")
     card_choice_data = [
         {
             "id": card.id,
@@ -124,7 +132,7 @@ async def resolve_rewards(
             "stars": card.stars,
             "about": card.about,
         }
-        for card in selected_cards
+        for card in card_options
     ]
 
     relic_options: list[Any] = []
@@ -146,7 +154,7 @@ async def resolve_rewards(
             picked.append(relic)
         relic_options = picked
 
-    if not selected_cards:
+    if not card_options:
         fallback_relic = FallbackEssence()
         if not relic_options:
             relic_options = [fallback_relic]
@@ -168,15 +176,7 @@ async def resolve_rewards(
     party.gold += gold_reward
     await BUS.emit_async("gold_earned", gold_reward)
 
-    item_base = 1 * temp_rdr
-    base_int = int(item_base)
-    item_count = max(1, base_int)
-    if random.random() < item_base - base_int:
-        item_count += 1
-    items = [
-        {"id": random.choice(ELEMENTS), "stars": _pick_item_stars(room)}
-        for _ in range(item_count)
-    ]
+    items = _generate_item_rewards(room, temp_rdr)
     node = getattr(room, "node", None)
     is_floor_boss = getattr(node, "room_type", "") == "battle-boss-floor"
     is_boss_strength = getattr(room, "strength", 1.0) > 1.0

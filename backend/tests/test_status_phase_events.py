@@ -30,6 +30,7 @@ tracking_module.log_play_session_end = lambda *args, **kwargs: None  # noqa: E73
 tracking_module.log_run_end = lambda *args, **kwargs: None  # noqa: E731
 
 from runs.lifecycle import battle_snapshots
+from tests.helpers import call_maybe_async
 
 from autofighter.effects import DamageOverTime
 from autofighter.effects import EffectManager
@@ -38,7 +39,6 @@ from autofighter.rooms.battle.progress import build_battle_progress_payload
 from autofighter.rooms.battle.turns import EnrageState
 from autofighter.rooms.battle.turns import mutate_snapshot_overlay
 from autofighter.rooms.battle.turns import prepare_snapshot_overlay
-from tests.helpers import call_maybe_async
 from autofighter.rooms.battle.turns import register_snapshot_entities
 from autofighter.stats import BUS
 from autofighter.stats import Stats

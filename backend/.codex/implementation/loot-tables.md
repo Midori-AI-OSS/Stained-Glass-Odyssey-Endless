@@ -28,13 +28,25 @@ those values success isn't guaranteed.
 
 The band determines the maximum star rank; the minimum starts at the lower
 value and rises with floor, loop count, and Pressure. Results are capped at 4★
-and use the foe's element at random. Each battle drops at least one item by default and
-multiplies that quantity by the party's rare drop rate (`rdr`). Fractional results
-have a matching chance to award one extra item.
+and use the foe's element at random.
+
+Rare drop rate now upgrades item stars in single steps driven by orders of
+magnitude. We take `log10(max(rdr, 1.0))`, round down, and apply that many
+sequential +1 star bumps (10× → +1★, 100× → +2★, 1000× → +3★), clamping the
+result at 4★. For example, an item that rolls 2★ with 1,500% `rdr` gains three
+bumps and emerges as a 4★ reward.
+
+Any leftover multiplier after removing those full 10× steps is converted into at
+most one consolation item. The remainder (between 1× and <10×) maps to a
+probability `(residual - 1) / 9` for a second drop sharing the first item's
+element at its baseline star rank. That means even extreme `rdr` values still
+produce at most two upgrade items while providing a smooth curve for partial
+bonuses.
 
 If auto-crafting is enabled, 125 lower-star items combine into the next tier up
-to 4★, and sets of ten 4★ items convert into a gacha ticket. `rdr` only affects
-how many items appear—it never upgrades their star level.
+to 4★, and sets of ten 4★ items convert into a gacha ticket. `rdr` now
+influences both the upgrade item star bumping described above and the chance for
+that optional consolation drop.
 
 ## Pull Tickets
 - **Normal battles:** `0.05% × rdr` chance
@@ -45,9 +57,10 @@ These tickets drop alongside the other rewards listed above.
 
 ## RDR Effects
 `rdr` multiplies gold rewards, upgrade item counts, relic drop odds, and pull
-ticket chances. It can also roll to raise relic and card star ranks when `rdr`
-is extraordinarily high (3★→4★ at 1000%, 4★→5★ at 1,000,000%) but never
-upgrades item stars.
+ticket chances. It can also raise item, relic, and card star ranks when `rdr`
+is extraordinarily high: items use the single-step `log10` upgrade rule above,
+while relics and cards continue to follow their existing high-threshold rolls
+for extra stars (3★→4★ at 1000%, 4★→5★ at 1,000,000%).
 
 Top-tier drops may award 5★ cards like Phantom Ally, Temporal Shield, or
 Reality Split, each capable of dramatically altering battle flow.

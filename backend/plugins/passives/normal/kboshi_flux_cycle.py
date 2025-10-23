@@ -3,6 +3,7 @@ import random
 from typing import TYPE_CHECKING
 from typing import ClassVar
 
+from autofighter.effects import HealingOverTime
 from autofighter.stat_effect import StatEffect
 from plugins.damage_types.dark import Dark
 from plugins.damage_types.fire import Fire
@@ -64,13 +65,14 @@ class KboshiFluxCycle:
             if self._damage_stacks[entity_id] > 0 or self._hot_stacks[entity_id] > 0:
                 stacks = self._damage_stacks[entity_id]
 
-                # Remove existing bonus effects
-                target._active_effects = [
-                    effect
-                    for effect in target._active_effects
-                    if not effect.name.startswith(f"{self.id}_damage_bonus")
-                    and not effect.name.startswith(f"{self.id}_hot_heal")
-                ]
+                # Remove existing bonus effects using the public API
+                target.remove_effect_by_source(self.id)
+
+                # Clear any active HoTs from flux cycle
+                if hasattr(target, "effect_manager") and target.effect_manager:
+                    await target.effect_manager.remove_hots(
+                        lambda hot: hot.id.startswith(f"{self.id}_hot_{entity_id}")
+                    )
 
                 # Reset stacks
                 self._damage_stacks[entity_id] = 0
@@ -93,22 +95,38 @@ class KboshiFluxCycle:
             self._hot_stacks[entity_id] += 1
 
             # Apply 20% damage bonus per stack
+            base_attack = (
+                int(target.get_base_stat("atk"))
+                if hasattr(target, "get_base_stat")
+                else int(getattr(target, "_base_atk", target.atk))
+            )
+            bonus_amount = max(1, int(base_attack * 0.2))
             damage_bonus = StatEffect(
                 name=f"{self.id}_damage_bonus_{self._damage_stacks[entity_id]}",
-                stat_modifiers={"atk": int(target.atk * 0.2)},
+                stat_modifiers={"atk": bonus_amount},
                 duration=-1,  # Until element changes
                 source=self.id,
             )
             target.add_effect(damage_bonus)
 
-            # Apply small HoT for that turn
-            hot_heal = StatEffect(
-                name=f"{self.id}_hot_heal_{self._hot_stacks[entity_id]}",
-                stat_modifiers={},  # Would need HoT integration
-                duration=1,  # One turn
-                source=self.id,
+            # Apply small HoT for that turn - heal 5% max HP per stack
+            heal_amount = max(1, int(target.max_hp * 0.05 * self._hot_stacks[entity_id]))
+            hot = HealingOverTime(
+                name=f"Flux Cycle HoT (Stack {self._hot_stacks[entity_id]})",
+                healing=heal_amount,
+                turns=1,
+                id=f"{self.id}_hot_{entity_id}_{self._hot_stacks[entity_id]}",
+                source=target,
             )
-            target.add_effect(hot_heal)
+            # Add HoT through effect manager if available
+            mgr = getattr(target, "effect_manager", None)
+            if mgr is None:
+                from autofighter.effects import EffectManager
+
+                mgr = EffectManager(target)
+                target.effect_manager = mgr
+
+            await mgr.add_hot(hot)
 
     @classmethod
     def get_damage_stacks(cls, target: "Stats") -> int:

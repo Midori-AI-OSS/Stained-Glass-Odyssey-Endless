@@ -1,11 +1,18 @@
 <script>
-  import { createEventDispatcher, onDestroy } from 'svelte';
+  import { createEventDispatcher, onDestroy, onMount } from 'svelte';
   import { cubicOut } from 'svelte/easing';
   import { scale } from 'svelte/transition';
   import RewardCard from './RewardCard.svelte';
   import CurioChoice from './CurioChoice.svelte';
   import { getMaterialIcon, onMaterialIconError } from '../systems/assetLoader.js';
   import { createRewardDropSfx } from '../systems/sfx.js';
+  import {
+    rewardPhaseState,
+    rewardPhaseController,
+    advanceRewardPhase
+  } from '../systems/overlayState.js';
+  import { warn as logWarn } from '../systems/logger.js';
+  import { emitRewardTelemetry } from '../systems/rewardTelemetry.js';
 
   export let cards = [];
   export let relics = [];
@@ -17,8 +24,63 @@
   export let fullIdleMode = false;
   export let sfxVolume = 5;
   export let reducedMotion = false;
+  export let stagedCards = [];
+  export let stagedRelics = [];
+  export let awaitingCard = false;
+  export let awaitingRelic = false;
+  export let awaitingLoot = false;
+  export let awaitingNext = false;
+  export let advanceBusy = false;
 
   const dispatch = createEventDispatcher();
+
+  const DEFAULT_PHASE_SEQUENCE = ['drops', 'cards', 'relics', 'battle_review'];
+  const PHASE_LABELS = {
+    drops: 'Drops',
+    cards: 'Cards',
+    relics: 'Relics',
+    battle_review: 'Battle Review'
+  };
+  const DROPS_COMPLETE_EVENT = 'drops-complete';
+
+  const phaseListenerDisposers = [];
+  let overlayRootEl = null;
+  let advanceButtonEl = null;
+  let phaseAnnouncement = '';
+  let countdownAnnouncement = '';
+  let lastAnnouncedPhase = null;
+  let fallbackLogSignature = null;
+  let lastAdvanceFocusable = false;
+  let selectionAnnouncement = '';
+  let lastCardHighlightKey = null;
+  let lastRelicHighlightKey = null;
+  let lastSelectionMessage = '';
+  let stagedCardEntryMap = new Map();
+  let cardChoiceEntryMap = new Map();
+  let stagedRelicEntryMap = new Map();
+  let relicChoiceEntryMap = new Map();
+  let queuedCardConfirmation = null;
+  let queuedRelicConfirmation = null;
+  let cardConfirmDescription = 'Card selection';
+  let relicConfirmDescription = 'Relic selection';
+
+  onMount(() => {
+    const exitDisposer = rewardPhaseController.on('exit', (detail) => {
+      if (!detail || detail.phase !== 'drops') {
+        return;
+      }
+      emitRewardTelemetry(DROPS_COMPLETE_EVENT, {
+        from: detail.phase,
+        to: detail.to ?? null,
+        reason: detail.reason ?? 'exit',
+        next: detail.snapshot?.current ?? null,
+        sequence: Array.isArray(detail.snapshot?.sequence) ? detail.snapshot.sequence.slice() : []
+      });
+    });
+    if (typeof exitDisposer === 'function') {
+      phaseListenerDisposers.push(exitDisposer);
+    }
+  });
 
   // Render immediately; CSS animations handle reveal on mount
 
@@ -35,6 +97,115 @@
   $: hasLootItems = lootItems.length > 0;
   $: dataReducedMotion = reducedMotion ? 'true' : 'false';
   $: dataSfxVolume = String(normalizedSfxVolume);
+  $: phaseSnapshot = $rewardPhaseState;
+  $: rawPhaseSequence =
+    Array.isArray(phaseSnapshot?.sequence) && phaseSnapshot.sequence.length > 0
+      ? phaseSnapshot.sequence
+      : [];
+  $: phaseSequence = rawPhaseSequence.length > 0 ? rawPhaseSequence : DEFAULT_PHASE_SEQUENCE;
+  $: completedPhaseSet = new Set(Array.isArray(phaseSnapshot?.completed) ? phaseSnapshot.completed : []);
+  $: currentPhase = phaseSnapshot?.current ?? null;
+  $: nextPhase = phaseSnapshot?.next ?? null;
+  $: phaseDiagnostics = Array.isArray(phaseSnapshot?.diagnostics) ? phaseSnapshot.diagnostics : [];
+  $: fallbackActive =
+    rawPhaseSequence.length === 0 || !currentPhase || (phaseDiagnostics?.length ?? 0) > 0;
+  $: dropsPhaseActive = !fallbackActive && currentPhase === 'drops';
+  $: showDropsSection = fallbackActive
+    ? hasLootItems || awaitingLoot || gold > 0
+    : dropsPhaseActive && (hasLootItems || awaitingLoot || gold > 0);
+  $: nonDropContentHidden = fallbackActive ? false : dropsPhaseActive;
+  $: phaseEntries = phaseSequence.map((phase, index) => {
+    const resolvedLabel = PHASE_LABELS[phase] ?? phase.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+    const isCurrent = !fallbackActive && phase === currentPhase;
+    const status = fallbackActive
+      ? 'legacy'
+      : completedPhaseSet.has(phase)
+        ? 'completed'
+        : isCurrent
+          ? 'current'
+          : 'upcoming';
+    return {
+      phase,
+      index: index + 1,
+      label: resolvedLabel,
+      status,
+      isCurrent
+    };
+  });
+  $: nextPhaseLabel = !fallbackActive && nextPhase
+    ? PHASE_LABELS[nextPhase] ?? nextPhase.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+    : '';
+  $: fallbackPhaseMessage = fallbackActive
+    ? 'Reward phases unavailable. Showing legacy overlay.'
+    : '';
+
+  const ADVANCE_COUNTDOWN_SECONDS = 10;
+  let advanceCountdownSeconds = ADVANCE_COUNTDOWN_SECONDS;
+  let advanceCountdownTimer = null;
+  let advanceCountdownContext = null;
+  let advanceCountdownDeadline = 0;
+  let advanceInFlight = false;
+  let confirmFallbackMode = null;
+  let confirmFallbackKey = null;
+  let advancePanelActive = false;
+  let advanceButtonMode = 'advance';
+  let advanceHelperMessage = '';
+  let advanceButtonAriaLabel = '';
+  let advanceButtonDisabled = true;
+  let advanceStatusMessage = '';
+
+  $: advanceCountdownLabel = formatCountdown(advanceCountdownSeconds);
+  $: showAdvancePanel = !fallbackActive && Boolean(currentPhase && nextPhase);
+  $: phaseAdvanceAvailable = !fallbackActive && computeAdvanceAvailability(currentPhase, nextPhase);
+  $: advanceCountdownActive = Boolean(advanceCountdownTimer) && phaseAdvanceAvailable && !advanceBusy;
+
+  $: {
+    if (fallbackActive) {
+      lastAnnouncedPhase = null;
+      phaseAnnouncement = fallbackPhaseMessage;
+    } else if (currentPhase && currentPhase !== lastAnnouncedPhase) {
+      const label = PHASE_LABELS[currentPhase] ?? currentPhase.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+      const nextLabel = nextPhaseLabel || '';
+      phaseAnnouncement = nextLabel
+        ? `Entered ${label} phase. Next: ${nextLabel}.`
+        : `Entered ${label} phase. Final reward step.`;
+      lastAnnouncedPhase = currentPhase;
+    }
+  }
+
+  $: {
+    if (fallbackActive) {
+      const signature = JSON.stringify({
+        diagnostics: phaseDiagnostics,
+        currentPhase,
+        sequence: rawPhaseSequence
+      });
+      if (signature !== fallbackLogSignature) {
+        fallbackLogSignature = signature;
+        logWarn('RewardOverlay: reward progression invalid, falling back to legacy overlay', {
+          diagnostics: phaseDiagnostics,
+          snapshot: phaseSnapshot ?? null
+        });
+      }
+    } else {
+      fallbackLogSignature = null;
+    }
+  }
+
+  $: {
+    if (
+      showAdvancePanel &&
+      phaseAdvanceAvailable &&
+      currentPhase &&
+      nextPhase &&
+      !advanceInFlight &&
+      !advanceBusy
+    ) {
+      ensureAdvanceCountdown(currentPhase, nextPhase);
+    } else {
+      resetAdvanceCountdown(true);
+    }
+  }
 
   function titleForItem(item) {
     if (!item) return '';
@@ -102,6 +273,96 @@
       if (stacks > 0) return Math.floor(stacks);
     }
     return 1;
+  }
+
+  function rewardEntryKey(entry, index, prefix = 'reward') {
+    if (!entry || typeof entry !== 'object') {
+      return `${prefix}-${index}`;
+    }
+    if (entry.id != null && entry.id !== '') {
+      return String(entry.id);
+    }
+    if (entry.slug != null && entry.slug !== '') {
+      return String(entry.slug);
+    }
+    if (entry.key != null && entry.key !== '') {
+      return String(entry.key);
+    }
+    return `${prefix}-${index}`;
+  }
+
+  function selectionKeyFromDetail(detail, fallbackPrefix = 'reward') {
+    if (!detail || typeof detail !== 'object') return null;
+    if (detail.key != null) return String(detail.key);
+    if (detail.id != null) return String(detail.id);
+    if (detail.entry) {
+      return rewardEntryKey(detail.entry, 0, fallbackPrefix);
+    }
+    return null;
+  }
+
+  function labelForRewardEntry(entry, fallbackType = 'reward') {
+    const baseFallback =
+      fallbackType === 'card'
+        ? 'card selection'
+        : fallbackType === 'relic'
+          ? 'relic selection'
+          : 'reward selection';
+    if (!entry || typeof entry !== 'object') {
+      return baseFallback;
+    }
+    const source =
+      entry.entry && typeof entry.entry === 'object'
+        ? entry.entry
+        : entry;
+    if (!source || typeof source !== 'object') {
+      return baseFallback;
+    }
+    const uiMeta = source.ui && typeof source.ui === 'object' ? source.ui : null;
+    const candidates = [
+      uiMeta?.label,
+      uiMeta?.title,
+      source.name,
+      source.title,
+      source.id,
+      source.slug,
+      source.key
+    ];
+    for (const value of candidates) {
+      if (value == null) continue;
+      const normalized = String(value).trim();
+      if (normalized !== '') {
+        return normalized;
+      }
+    }
+    return baseFallback;
+  }
+
+  function describeRewardLabel(type, label) {
+    const prefix = type === 'relic' ? 'Relic' : 'Card';
+    const normalized = typeof label === 'string' ? label.trim() : '';
+    if (!normalized) {
+      return `${prefix} selection`;
+    }
+    const lower = normalized.toLowerCase();
+    if (lower.startsWith(prefix.toLowerCase())) {
+      return normalized;
+    }
+    return `${prefix} ${normalized}`;
+  }
+
+  function sendSelectionAnnouncement(message) {
+    const trimmed = typeof message === 'string' ? message.trim() : '';
+    if (!trimmed) return;
+    if (trimmed === lastSelectionMessage) {
+      selectionAnnouncement = '';
+      queueMicrotask(() => {
+        selectionAnnouncement = trimmed;
+      });
+      return;
+    }
+    lastSelectionMessage = trimmed;
+    selectionAnnouncement = trimmed;
   }
 
   $: dropEntries = (() => {
@@ -266,6 +527,153 @@
     return true;
   }
 
+  function formatCountdown(value) {
+    const numeric = Number(value);
+    if (!Number.isFinite(numeric) || numeric <= 0) {
+      return '00:00';
+    }
+    const clamped = Math.max(0, Math.floor(numeric));
+    const minutes = Math.floor(clamped / 60);
+    const seconds = clamped % 60;
+    return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+  }
+
+  function computeAdvanceAvailability(current, target) {
+    if (!current || !target) return false;
+    if (advanceInFlight) return false;
+    if (selectionInFlight || awaitingResolution) return false;
+    switch (current) {
+      case 'drops':
+        return true;
+      case 'cards':
+        if (!Array.isArray(cardChoices)) return false;
+        if (awaitingCard) return false;
+        if (Array.isArray(cardChoices) && cardChoices.length > 0) return false;
+        if (Array.isArray(stagedCardEntries) && stagedCardEntries.length > 0) return false;
+        return true;
+      case 'relics':
+        if (!Array.isArray(relicChoices)) return false;
+        if (awaitingRelic) return false;
+        if (Array.isArray(relicChoices) && relicChoices.length > 0) return false;
+        if (Array.isArray(stagedRelicEntries) && stagedRelicEntries.length > 0) return false;
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  function ensureAdvanceCountdown(phase, target) {
+    if (advanceBusy) return;
+    const context = `${phase}->${target}`;
+    if (advanceCountdownTimer && advanceCountdownContext === context) {
+      return;
+    }
+    resetAdvanceCountdown(false);
+    advanceCountdownContext = context;
+    advanceCountdownSeconds = ADVANCE_COUNTDOWN_SECONDS;
+    advanceCountdownDeadline = Date.now() + ADVANCE_COUNTDOWN_SECONDS * 1000;
+    advanceCountdownTimer = setInterval(syncAdvanceCountdown, 250);
+    syncAdvanceCountdown();
+  }
+
+  function resetAdvanceCountdown(resetValue = true) {
+    if (advanceCountdownTimer) {
+      clearInterval(advanceCountdownTimer);
+      advanceCountdownTimer = null;
+    }
+    advanceCountdownContext = null;
+    advanceCountdownDeadline = 0;
+    if (resetValue) {
+      advanceCountdownSeconds = ADVANCE_COUNTDOWN_SECONDS;
+    }
+  }
+
+  function syncAdvanceCountdown() {
+    if (!advanceCountdownTimer) return;
+    const remainingMs = Math.max(0, advanceCountdownDeadline - Date.now());
+    const remainingSeconds = Math.max(0, Math.ceil(remainingMs / 1000));
+    if (remainingSeconds !== advanceCountdownSeconds) {
+      advanceCountdownSeconds = remainingSeconds;
+    }
+    if (remainingSeconds <= 0) {
+      resetAdvanceCountdown(false);
+      triggerAdvance('auto');
+    }
+  }
+
+  function triggerAdvance(reason) {
+    if (!phaseAdvanceAvailable || advanceInFlight || fallbackActive || advanceBusy) return;
+    const snapshot =
+      typeof rewardPhaseController?.getSnapshot === 'function'
+        ? rewardPhaseController.getSnapshot()
+        : phaseSnapshot;
+    const fromPhase = snapshot?.current ?? currentPhase;
+    const targetPhase = snapshot?.next ?? nextPhase;
+    if (!fromPhase || !targetPhase) return;
+
+    advanceInFlight = true;
+    resetAdvanceCountdown(false);
+    advanceCountdownSeconds = ADVANCE_COUNTDOWN_SECONDS;
+
+    let nextSnapshot = null;
+    try {
+      nextSnapshot = advanceRewardPhase();
+    } finally {
+      advanceInFlight = false;
+    }
+
+    dispatch('advance', {
+      reason,
+      from: fromPhase,
+      to: nextSnapshot?.current ?? null,
+      target: targetPhase,
+      snapshot: nextSnapshot ?? null
+    });
+
+    if (reason === 'auto' && overlayRootEl) {
+      queueMicrotask(() => {
+        overlayRootEl?.focus?.();
+      });
+    }
+  }
+
+  function handleAdvanceClick() {
+    if (advanceButtonDisabled) {
+      return;
+    }
+    if (confirmFallbackMode === 'card') {
+      void handleConfirmClick('card');
+      return;
+    }
+    if (confirmFallbackMode === 'relic') {
+      void handleConfirmClick('relic');
+      return;
+    }
+    if (!phaseAdvanceAvailable || advanceInFlight || advanceBusy || fallbackActive) {
+      return;
+    }
+    triggerAdvance('manual');
+  }
+
+  function handleLayoutKeydown(event) {
+    handleLootSfxGesture(event);
+    if (event.defaultPrevented) return;
+    if (!overlayRootEl || event.target !== overlayRootEl) return;
+    if (advanceButtonDisabled) return;
+    if (fallbackActive) return;
+    if (advanceBusy) return;
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      if (confirmFallbackMode === 'card') {
+        void handleConfirmClick('card');
+      } else if (confirmFallbackMode === 'relic') {
+        void handleConfirmClick('relic');
+      } else if (phaseAdvanceAvailable && !advanceInFlight) {
+        triggerAdvance('keyboard');
+      }
+    }
+  }
+
   $: {
     const nextSignature = snapshotDropSignature(dropEntries);
     const unchangedSignature =
@@ -278,51 +686,581 @@
     }
   }
 
-  let cardsDone = false;
-  let pendingCardSelection = null;
-  let showNextButton = false;
-  $: showCards = cards.length > 0 && !cardsDone;
-  $: showRelics = relics.length > 0 && (cards.length === 0 || cardsDone);
-  $: remaining = (showCards ? cards.length : 0) + (showRelics ? relics.length : 0);
+  function normalizeRewardEntries(list) {
+    if (!Array.isArray(list)) return [];
+    return list
+      .filter((entry) => entry != null)
+      .map((entry) => (entry && typeof entry === 'object' ? { ...entry } : { id: entry }));
+  }
 
-  async function handleSelect(e) {
-    const baseDetail = e?.detail && typeof e.detail === 'object' ? e.detail : {};
-    const detail = { ...baseDetail };
-    const isCard = detail.type === 'card';
-    const previousCardsDone = cardsDone;
-    let cardSelectionToken;
+  $: cardChoices = Array.isArray(cards) ? cards : [];
+  $: cardChoiceEntries = cardChoices.map((card, index) => ({
+    entry: card,
+    key: rewardEntryKey(card, index, 'card')
+  }));
+  $: relicChoices = Array.isArray(relics) ? relics : [];
+  $: relicChoiceEntries = relicChoices.map((relic, index) => ({
+    entry: relic,
+    key: rewardEntryKey(relic, index, 'relic')
+  }));
+  $: stagedCardEntries = normalizeRewardEntries(stagedCards);
+  $: stagedRelicEntries = normalizeRewardEntries(stagedRelics);
+  $: stagedCardEntryMap = new Map(
+    stagedCardEntries.map((entry, index) => [rewardEntryKey(entry, index, 'staged-card'), entry])
+  );
+  $: cardChoiceEntryMap = new Map(cardChoiceEntries.map((choice) => [choice.key, choice.entry]));
+  $: stagedRelicEntryMap = new Map(
+    stagedRelicEntries.map((entry, index) => [rewardEntryKey(entry, index, 'staged-relic'), entry])
+  );
+  $: relicChoiceEntryMap = new Map(relicChoiceEntries.map((choice) => [choice.key, choice.entry]));
+
+  let pendingCardSelection = null;
+  let pendingRelicSelection = null;
+  let showNextButton = false;
+  let highlightedCardKey = null;
+  let highlightedRelicKey = null;
+  let autoCardSelectionInFlight = false;
+  let autoRelicSelectionInFlight = false;
+
+  $: cardSelectionLocked = pendingCardSelection !== null;
+  $: showCards = cardChoiceEntries.length > 0;
+  $: hasRelicChoices = relicChoiceEntries.length > 0;
+  $: hasStagedRelics = stagedRelicEntries.length > 0;
+  $: showRelics = (hasRelicChoices || hasStagedRelics) && !awaitingCard;
+
+  $: selectionInFlight = pendingCardSelection !== null || pendingRelicSelection !== null;
+
+  $: awaitingResolution =
+    (awaitingCard && stagedCardEntries.length > 0) || (awaitingRelic && stagedRelicEntries.length > 0);
+
+  $: remaining =
+    (showCards ? cardChoiceEntries.length : 0) +
+    (showRelics ? relicChoiceEntries.length : 0) +
+    (awaitingCard ? stagedCardEntries.length : 0) +
+    (awaitingRelic ? stagedRelicEntries.length : 0);
+
+  $: if (currentPhase !== 'cards' && highlightedCardKey !== null) {
+    highlightedCardKey = null;
+  }
+
+  $: if (
+    currentPhase === 'cards' &&
+    highlightedCardKey &&
+    !cardChoiceEntryMap.has(highlightedCardKey) &&
+    !stagedCardEntryMap.has(highlightedCardKey)
+  ) {
+    highlightedCardKey = null;
+  }
+
+  $: highlightedCardLabel = highlightedCardKey
+    ? labelForRewardEntry(
+        stagedCardEntryMap.get(highlightedCardKey) ?? cardChoiceEntryMap.get(highlightedCardKey),
+        'card'
+      )
+    : '';
+
+  $: highlightedCardEntry = highlightedCardKey
+    ? stagedCardEntryMap.get(highlightedCardKey) ?? cardChoiceEntryMap.get(highlightedCardKey)
+    : null;
+
+  $: if (currentPhase !== 'relics' && highlightedRelicKey !== null) {
+    highlightedRelicKey = null;
+  }
+
+  $: if (
+    currentPhase === 'relics' &&
+    highlightedRelicKey &&
+    !relicChoiceEntryMap.has(highlightedRelicKey) &&
+    !stagedRelicEntryMap.has(highlightedRelicKey)
+  ) {
+    highlightedRelicKey = null;
+  }
+
+  $: highlightedRelicLabel = highlightedRelicKey
+    ? labelForRewardEntry(
+        stagedRelicEntryMap.get(highlightedRelicKey) ?? relicChoiceEntryMap.get(highlightedRelicKey),
+        'relic'
+      )
+    : '';
+
+  $: highlightedRelicEntry = highlightedRelicKey
+    ? stagedRelicEntryMap.get(highlightedRelicKey) ?? relicChoiceEntryMap.get(highlightedRelicKey)
+    : null;
+
+  $: stagedCardHighlightKey = stagedCardEntries.length > 0
+    ? rewardEntryKey(stagedCardEntries[0], 0, 'staged-card')
+    : null;
+  $: stagedRelicHighlightKey = stagedRelicEntries.length > 0
+    ? rewardEntryKey(stagedRelicEntries[0], 0, 'staged-relic')
+    : null;
+
+  $: if (awaitingCard && stagedCardHighlightKey && highlightedCardKey !== stagedCardHighlightKey) {
+    highlightedCardKey = stagedCardHighlightKey;
+  }
+
+  $: if (awaitingRelic && stagedRelicHighlightKey && highlightedRelicKey !== stagedRelicHighlightKey) {
+    highlightedRelicKey = stagedRelicHighlightKey;
+  }
+
+  $: stagedCardSelection = awaitingCard && stagedCardEntries.length > 0 ? stagedCardEntries[0] : null;
+  $: stagedRelicSelection = awaitingRelic && stagedRelicEntries.length > 0 ? stagedRelicEntries[0] : null;
+
+  $: cardConfirmDescription = (() => {
+    const entry = stagedCardSelection ?? highlightedCardEntry;
+    if (!entry) return 'Card selection';
+    const label = labelForRewardEntry(entry, 'card');
+    return describeRewardLabel('card', label);
+  })();
+
+  $: relicConfirmDescription = (() => {
+    const entry = stagedRelicSelection ?? highlightedRelicEntry;
+    if (!entry) return 'Relic selection';
+    const label = labelForRewardEntry(entry, 'relic');
+    return describeRewardLabel('relic', label);
+  })();
+
+  $: {
+    const cardReady =
+      !fallbackActive &&
+      currentPhase === 'cards' &&
+      awaitingCard &&
+      stagedCardEntries.length > 0 &&
+      pendingCardSelection === null &&
+      !advanceInFlight &&
+      !advanceBusy;
+
+    const relicReady =
+      !fallbackActive &&
+      currentPhase === 'relics' &&
+      awaitingRelic &&
+      stagedRelicEntries.length > 0 &&
+      pendingRelicSelection === null &&
+      !advanceInFlight &&
+      !advanceBusy &&
+      !awaitingCard;
+
+    confirmFallbackMode = cardReady ? 'card' : relicReady ? 'relic' : null;
+
+    if (confirmFallbackMode === 'card') {
+      const stagedEntry = stagedCardEntries[0] ?? null;
+      confirmFallbackKey = stagedEntry ? rewardEntryKey(stagedEntry, 0, 'staged-card') : null;
+    } else if (confirmFallbackMode === 'relic') {
+      const stagedEntry = stagedRelicEntries[0] ?? null;
+      confirmFallbackKey = stagedEntry ? rewardEntryKey(stagedEntry, 0, 'staged-relic') : null;
+    } else {
+      confirmFallbackKey = null;
+    }
+
+    advanceButtonMode = confirmFallbackMode ? `confirm-${confirmFallbackMode}` : 'advance';
+    advancePanelActive = Boolean(confirmFallbackMode) || (phaseAdvanceAvailable && !fallbackActive);
+
+    const confirmReady =
+      confirmFallbackMode != null && confirmFallbackKey && !selectionInFlight && !advanceBusy;
+
+    advanceButtonAriaLabel =
+      confirmFallbackMode === 'card'
+        ? `Confirm ${cardConfirmDescription} with Advance`
+        : confirmFallbackMode === 'relic'
+          ? `Confirm ${relicConfirmDescription} with Advance`
+          : nextPhaseLabel
+            ? `Advance to ${nextPhaseLabel}`
+            : 'Advance to next phase';
+
+    advanceHelperMessage = confirmFallbackMode
+      ? 'Advance confirms the highlighted selection if double-click is unavailable.'
+      : '';
+
+    advanceButtonDisabled = (() => {
+      if (fallbackActive) return true;
+      if (advanceBusy || advanceInFlight) return true;
+      if (confirmFallbackMode) {
+        return !confirmReady;
+      }
+      return !phaseAdvanceAvailable;
+    })();
+
+    advanceStatusMessage = (() => {
+      if (!showAdvancePanel) return '';
+      if (advanceBusy) {
+        return 'Advancing to the next room…';
+      }
+      if (advanceInFlight) {
+        return 'Advancing…';
+      }
+      if (confirmFallbackMode) {
+        if (!confirmReady) {
+          return 'Finishing selection…';
+        }
+        return confirmFallbackMode === 'card'
+          ? `Highlighted card ready. Use Advance to confirm ${cardConfirmDescription}.`
+          : `Highlighted relic ready. Use Advance to confirm ${relicConfirmDescription}.`;
+      }
+      if (!phaseAdvanceAvailable) {
+        return 'Advance locked until this phase is complete.';
+      }
+      if (advanceCountdownActive) {
+        return `Advance ready. Auto in ${advanceCountdownLabel}.`;
+      }
+      return 'Advance ready.';
+    })();
+  }
+
+  $: countdownAnnouncement = showAdvancePanel ? advanceStatusMessage : '';
+
+  $: {
+    const focusable =
+      !fallbackActive &&
+      showAdvancePanel &&
+      advancePanelActive &&
+      !advanceButtonDisabled &&
+      advanceButtonEl != null;
+    if (focusable && !lastAdvanceFocusable) {
+      queueMicrotask(() => {
+        if (!advanceButtonEl) return;
+        if (document.activeElement !== advanceButtonEl) {
+          advanceButtonEl.focus();
+        }
+      });
+    }
+    if (!focusable && lastAdvanceFocusable) {
+      queueMicrotask(() => {
+        if (advanceButtonEl && document.activeElement === advanceButtonEl && overlayRootEl) {
+          overlayRootEl.focus();
+        }
+      });
+    }
+    lastAdvanceFocusable = focusable;
+  }
+
+  $: {
+    if (fallbackActive) {
+      if (selectionAnnouncement) {
+        selectionAnnouncement = '';
+      }
+      lastSelectionMessage = '';
+    }
+
+    if (!fallbackActive && currentPhase === 'cards') {
+      if (highlightedCardKey && highlightedCardKey !== lastCardHighlightKey) {
+        const label = describeRewardLabel('card', highlightedCardLabel);
+        sendSelectionAnnouncement(`${label} selected.`);
+      } else if (!highlightedCardKey && lastCardHighlightKey) {
+        sendSelectionAnnouncement('Card selection cleared.');
+      }
+      lastCardHighlightKey = highlightedCardKey;
+    } else {
+      lastCardHighlightKey = null;
+    }
+
+    if (!fallbackActive && currentPhase === 'relics') {
+      if (highlightedRelicKey && highlightedRelicKey !== lastRelicHighlightKey) {
+        const label = describeRewardLabel('relic', highlightedRelicLabel);
+        sendSelectionAnnouncement(`${label} selected.`);
+      } else if (!highlightedRelicKey && lastRelicHighlightKey) {
+        sendSelectionAnnouncement('Relic selection cleared.');
+      }
+      lastRelicHighlightKey = highlightedRelicKey;
+    } else {
+      lastRelicHighlightKey = null;
+    }
+  }
+
+  $: {
+    if (
+      highlightedRelicKey &&
+      !stagedRelicEntries.some(
+        (entry, index) => rewardEntryKey(entry, index, 'staged-relic') === highlightedRelicKey
+      ) &&
+      !relicChoiceEntries.some((choice) => choice.key === highlightedRelicKey)
+    ) {
+      highlightedRelicKey = relicChoiceEntries.length > 0 ? relicChoiceEntries[0].key : null;
+    }
+  }
+
+  $: if (queuedCardConfirmation?.type === 'card') {
+    if (awaitingCard && stagedCardEntries.length > 0) {
+      const stagedEntry = stagedCardEntries[0];
+      const confirmDetail = {
+        type: 'card',
+        intent: 'confirm',
+        id: stagedEntry?.id ?? queuedCardConfirmation.detail?.id ?? null,
+        key:
+          queuedCardConfirmation.detail?.key ?? rewardEntryKey(stagedEntry, 0, 'staged-card'),
+        entry: stagedEntry
+      };
+      queuedCardConfirmation = null;
+      queueMicrotask(() => {
+        void performRewardSelection(confirmDetail);
+      });
+    } else if (!awaitingCard && stagedCardEntries.length === 0 && pendingCardSelection === null) {
+      queuedCardConfirmation = null;
+    }
+  }
+
+  $: if (queuedRelicConfirmation?.type === 'relic') {
+    if (awaitingRelic && stagedRelicEntries.length > 0) {
+      const stagedEntry = stagedRelicEntries[0];
+      const confirmDetail = {
+        type: 'relic',
+        intent: 'confirm',
+        id: stagedEntry?.id ?? queuedRelicConfirmation.detail?.id ?? null,
+        key:
+          queuedRelicConfirmation.detail?.key ?? rewardEntryKey(stagedEntry, 0, 'staged-relic'),
+        entry: stagedEntry
+      };
+      queuedRelicConfirmation = null;
+      queueMicrotask(() => {
+        void performRewardSelection(confirmDetail);
+      });
+    } else if (!awaitingRelic && stagedRelicEntries.length === 0 && pendingRelicSelection === null) {
+      queuedRelicConfirmation = null;
+    }
+  }
+
+  async function performRewardSelection(detail) {
+    const type = detail?.type;
+    const isCard = type === 'card';
+    const isRelic = type === 'relic';
+    if (!isCard && !isRelic) return;
+
+    const intent = detail?.intent === 'confirm' || detail?.intent === 'cancel'
+      ? detail.intent
+      : 'select';
+
+    let selectionToken = null;
 
     let responded = false;
+    let responseValue = null;
     const responsePromise = new Promise((resolve) => {
       const respond = (value) => {
         if (responded) return;
         responded = true;
-        resolve(value);
+        responseValue = value && typeof value === 'object' ? value : { ok: false };
+        resolve(responseValue);
       };
-      dispatch('select', { ...detail, respond });
+      dispatch('select', { ...detail, intent, respond });
     });
 
     if (isCard) {
-      cardSelectionToken = Symbol('cardSelection');
-      pendingCardSelection = { token: cardSelectionToken, previous: previousCardsDone };
-      cardsDone = true;
+      selectionToken = Symbol('cardSelection');
+      pendingCardSelection = selectionToken;
+    } else if (isRelic) {
+      selectionToken = Symbol('relicSelection');
+      pendingRelicSelection = selectionToken;
     }
 
-    let response;
+    let result;
     try {
-      response = await responsePromise;
+      result = await responsePromise;
     } catch (error) {
-      response = { ok: false, error };
-    }
-
-    if (response && response.ok) {
-      if (isCard && pendingCardSelection?.token === cardSelectionToken) {
+      if (isCard && pendingCardSelection === selectionToken) {
         pendingCardSelection = null;
       }
-    } else if (isCard && pendingCardSelection?.token === cardSelectionToken) {
-      cardsDone = pendingCardSelection.previous;
+      if (isRelic && pendingRelicSelection === selectionToken) {
+        pendingRelicSelection = null;
+      }
+      return null;
+    }
+
+    if (isCard && pendingCardSelection === selectionToken) {
       pendingCardSelection = null;
     }
+    if (isRelic && pendingRelicSelection === selectionToken) {
+      pendingRelicSelection = null;
+    }
+
+    return result ?? responseValue ?? { ok: false };
+  }
+
+  async function handleSelect(e) {
+    const baseDetail = e?.detail && typeof e.detail === 'object' ? e.detail : {};
+    const detail = { ...baseDetail };
+    const type = detail.type;
+    const isCard = type === 'card';
+    const isRelic = type === 'relic';
+
+    if (!isCard && !isRelic) {
+      return;
+    }
+
+    const selectionKey = selectionKeyFromDetail(detail, isCard ? 'card' : 'relic');
+    if (!selectionKey) {
+      return;
+    }
+
+    const isDoubleClick = isCard
+      ? highlightedCardKey === selectionKey
+      : highlightedRelicKey === selectionKey;
+
+    const awaiting = isCard ? awaitingCard : awaitingRelic;
+    const stagedMap = isCard ? stagedCardEntryMap : stagedRelicEntryMap;
+    const choiceMap = isCard ? cardChoiceEntryMap : relicChoiceEntryMap;
+    const stagedEntry = stagedMap.get(selectionKey) ?? null;
+    const choiceEntry = choiceMap.get(selectionKey) ?? null;
+    const pending = isCard ? pendingCardSelection !== null : pendingRelicSelection !== null;
+
+    if (detail.key == null) {
+      detail.key = selectionKey;
+    }
+
+    if (detail.id == null) {
+      detail.id = detail.entry?.id ?? stagedEntry?.id ?? choiceEntry?.id ?? null;
+    }
+
+    if (!detail.entry && (stagedEntry || choiceEntry)) {
+      detail.entry = stagedEntry ?? choiceEntry;
+    }
+
+    if (isCard) {
+      highlightedCardKey = selectionKey;
+    } else {
+      highlightedRelicKey = selectionKey;
+    }
+
+    if (isDoubleClick) {
+      if (pending) {
+        const queuedDetail = {
+          type,
+          id: detail.id ?? stagedEntry?.id ?? choiceEntry?.id ?? null,
+          key: selectionKey,
+          entry: stagedEntry ?? detail.entry ?? choiceEntry ?? null
+        };
+        if (isCard) {
+          queuedCardConfirmation = { type: 'card', detail: queuedDetail };
+        } else {
+          queuedRelicConfirmation = { type: 'relic', detail: queuedDetail };
+        }
+        return;
+      }
+
+      if (!awaiting || !stagedEntry) {
+        const stageDetail = {
+          ...detail,
+          intent: 'select'
+        };
+        const stageResult = await performRewardSelection(stageDetail);
+        if (!stageResult?.ok) {
+          return;
+        }
+      }
+
+      const confirmDetail = {
+        ...detail,
+        intent: 'confirm',
+        entry: stagedMap.get(selectionKey) ?? stagedEntry ?? detail.entry ?? choiceEntry ?? null
+      };
+      await performRewardSelection(confirmDetail);
+      return;
+    }
+
+    if (!awaiting || !stagedEntry) {
+      if (!detail.id && !choiceEntry) {
+        return;
+      }
+      const selectDetail = {
+        ...detail,
+        intent: 'select',
+        entry: detail.entry ?? choiceEntry ?? null
+      };
+      await performRewardSelection(selectDetail);
+    }
+  }
+
+  async function handleConfirmClick(type) {
+    const isCard = type === 'card';
+    const isRelic = type === 'relic';
+    if (!isCard && !isRelic) return;
+
+    const selectionKey = isCard ? highlightedCardKey ?? stagedCardHighlightKey : highlightedRelicKey ?? stagedRelicHighlightKey;
+    if (!selectionKey) return;
+
+    const awaiting = isCard ? awaitingCard : awaitingRelic;
+    if (!awaiting) return;
+
+    const stagedEntries = isCard ? stagedCardEntries : stagedRelicEntries;
+    if (!Array.isArray(stagedEntries) || stagedEntries.length === 0) return;
+
+    const stagedEntry = (isCard ? stagedCardEntryMap : stagedRelicEntryMap).get(selectionKey) ?? stagedEntries[0];
+    if (!stagedEntry) return;
+
+    const detail = {
+      type,
+      intent: 'confirm',
+      id: stagedEntry?.id ?? null,
+      key: selectionKey,
+      entry: stagedEntry
+    };
+
+    const pending = isCard ? pendingCardSelection !== null : pendingRelicSelection !== null;
+    if (pending) {
+      if (isCard) {
+        queuedCardConfirmation = { type: 'card', detail };
+      } else {
+        queuedRelicConfirmation = { type: 'relic', detail };
+      }
+      return;
+    }
+
+    await performRewardSelection(detail);
+  }
+
+  $: if (
+    currentPhase === 'cards' &&
+    cardChoiceEntries.length > 0 &&
+    !awaitingCard &&
+    stagedCardEntries.length === 0 &&
+    pendingCardSelection === null &&
+    !autoCardSelectionInFlight
+  ) {
+    autoCardSelectionInFlight = true;
+    const firstChoice = cardChoiceEntries[0];
+    if (!highlightedCardKey) {
+      highlightedCardKey = firstChoice.key;
+    }
+    (async () => {
+      try {
+        await performRewardSelection({
+          type: 'card',
+          id: firstChoice.entry?.id,
+          entry: firstChoice.entry,
+          key: firstChoice.key
+        });
+      } finally {
+        autoCardSelectionInFlight = false;
+      }
+    })();
+  } else if (currentPhase !== 'cards') {
+    autoCardSelectionInFlight = false;
+  }
+
+  $: if (
+    currentPhase === 'relics' &&
+    relicChoiceEntries.length > 0 &&
+    !awaitingRelic &&
+    !awaitingCard &&
+    stagedRelicEntries.length === 0 &&
+    pendingRelicSelection === null &&
+    !autoRelicSelectionInFlight
+  ) {
+    autoRelicSelectionInFlight = true;
+    const firstChoice = relicChoiceEntries[0];
+    if (!highlightedRelicKey) {
+      highlightedRelicKey = firstChoice.key;
+    }
+    (async () => {
+      try {
+        await performRewardSelection({
+          type: 'relic',
+          id: firstChoice.entry?.id,
+          entry: firstChoice.entry,
+          key: firstChoice.key
+        });
+      } finally {
+        autoRelicSelectionInFlight = false;
+      }
+    })();
+  } else if (currentPhase !== 'relics') {
+    autoRelicSelectionInFlight = false;
   }
 
   // Auto-advance when there are no selectable rewards and no visible loot/gold.
@@ -331,8 +1269,8 @@
   $: {
     clearTimeout(autoTimer);
     const noChoices = remaining === 0;
-    const noLoot = (!gold || gold <= 0) && !hasLootItems;
-    if (noChoices && noLoot) {
+    const visibleLoot = (gold > 0) || hasLootItems || awaitingLoot;
+    if (noChoices && !selectionInFlight && !awaitingResolution && !visibleLoot && !advanceBusy) {
       autoTimer = setTimeout(() => dispatch('next'), 5000);
     }
   }
@@ -341,21 +1279,30 @@
     clearTimeout(autoTimer);
     clearDropRevealTimers();
     stopDropAudio(true);
+    resetAdvanceCountdown(true);
     lastDropSignature = null;
     lastReducedMotion = null;
     lootSfxEnabled = false;
     lootSfxBlocked = false;
     lootSfxNoticeLogged = false;
+    while (phaseListenerDisposers.length > 0) {
+      const dispose = phaseListenerDisposers.pop();
+      try {
+        dispose?.();
+      } catch {}
+    }
   });
 
   // Show Next Room button when there's loot but no choices
   $: {
     const noChoices = remaining === 0;
-    const hasLoot = (gold > 0) || hasLootItems;
-    showNextButton = noChoices && hasLoot;
+    const visibleLoot = (gold > 0) || hasLootItems || awaitingLoot;
+    const readyToAdvance = awaitingNext && !awaitingLoot;
+    showNextButton = noChoices && !selectionInFlight && !awaitingResolution && (visibleLoot || readyToAdvance);
   }
 
   function handleNextRoom() {
+    if (advanceBusy) return;
     dispatch('lootAcknowledge');
   }
 </script>
@@ -363,31 +1310,274 @@
 <style>
   .layout {
     display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    justify-content: center;
+    gap: clamp(1rem, 2vw, 2.5rem);
+    width: 100%;
+    min-height: clamp(380px, 48vh, 620px);
+    padding: clamp(0.3rem, 0.65vh, 0.8rem) 0;
+    /* Overlay theme tokens */
+    --overlay-warm-accent: var(--reward-overlay-warm-accent, #f7b267);
+    --overlay-text-primary: color-mix(in srgb, #f8fbff 90%, rgba(0, 0, 0, 0.12));
+    --overlay-text-muted: color-mix(in srgb, #f1f5ff 72%, rgba(0, 0, 0, 0.35));
+    --overlay-text-warm: color-mix(in srgb, var(--overlay-warm-accent) 60%, #fff 40%);
+    --overlay-panel-bg:
+      linear-gradient(186deg, rgba(10, 14, 24, 0.94), rgba(4, 6, 12, 0.96)),
+      var(--glass-bg);
+    --overlay-panel-border: var(--glass-border);
+    --overlay-panel-shadow: var(--glass-shadow), 0 18px 34px rgba(0, 0, 0, 0.46);
+    --overlay-chip-bg: color-mix(in srgb, rgba(255, 255, 255, 0.08) 55%, rgba(6, 10, 18, 0.92) 45%);
+    --overlay-chip-border: 1px solid color-mix(in srgb, rgba(118, 178, 248, 0.68) 60%, rgba(255, 255, 255, 0.08));
+    --overlay-chip-border-active: 1px solid color-mix(in srgb, var(--accent, #7ec8ff) 65%, rgba(255, 255, 255, 0.12));
+    --overlay-button-bg:
+      linear-gradient(184deg, rgba(16, 22, 34, 0.92), rgba(6, 10, 18, 0.96)),
+      var(--glass-bg);
+    --overlay-button-border: 1px solid color-mix(in srgb, var(--accent, #7ec8ff) 55%, rgba(255, 255, 255, 0.14));
+    --overlay-button-shadow: 0 12px 26px rgba(0, 0, 0, 0.52);
+    --overlay-divider-color: color-mix(in srgb, rgba(126, 200, 255, 0.6) 28%, rgba(255, 255, 255, 0.08));
+  }
+
+  .main-column {
+    flex: 1 1 0;
+    display: flex;
     flex-direction: column;
     align-items: center;
     gap: 1rem;
+    min-width: 0;
+    min-height: 100%;
+  }
+
+  .phase-rail {
+    flex: 0 0 280px;
+    display: flex;
+    flex-direction: column;
+    gap: 0.85rem;
+    padding: clamp(0.9rem, 1.8vw, 1.4rem);
+    border-radius: 0;
+    background: var(--overlay-panel-bg);
+    border: var(--overlay-panel-border);
+    box-shadow: var(--overlay-panel-shadow);
+    backdrop-filter: var(--glass-filter);
+    color: var(--overlay-text-primary);
+    min-height: 100%;
+  }
+
+  .phase-panel,
+  .advance-panel {
+    background: var(--overlay-panel-bg);
+    border-radius: 0;
+    padding: clamp(0.75rem, 1.6vw, 1.3rem);
+    border: var(--overlay-panel-border);
+    box-shadow: var(--overlay-panel-shadow);
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+  }
+
+  .phase-heading {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--overlay-text-warm);
+  }
+
+  .phase-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .phase-item {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.55rem 0.75rem;
+    border-radius: 0;
+    background: var(--overlay-chip-bg);
+    border: var(--overlay-chip-border);
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.05) inset;
+    font-size: 0.95rem;
+    color: var(--overlay-text-primary);
+  }
+
+  .phase-item.completed {
+    background: color-mix(in srgb, var(--overlay-chip-bg) 50%, rgba(20, 26, 40, 0.82) 50%);
+    border: var(--overlay-chip-border-active);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--overlay-warm-accent) 32%, transparent) inset;
+  }
+
+  .phase-item.current {
+    background: color-mix(in srgb, rgba(16, 24, 38, 0.92) 55%, var(--accent, #7ec8ff) 45%);
+    border: var(--overlay-chip-border-active);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent, #7ec8ff) 38%, transparent) inset;
+  }
+
+  .phase-index {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.9rem;
+    height: 1.9rem;
+    border-radius: 0;
+    background: color-mix(in srgb, rgba(8, 12, 22, 0.85) 70%, var(--overlay-warm-accent) 30%);
+    font-weight: 700;
+    color: var(--overlay-text-primary);
+  }
+
+  .phase-item.completed .phase-index {
+    background: color-mix(in srgb, var(--overlay-warm-accent) 60%, rgba(8, 12, 20, 0.65));
+  }
+
+  .phase-item.current .phase-index {
+    background: color-mix(in srgb, var(--accent, #7ec8ff) 60%, rgba(8, 12, 20, 0.65));
+  }
+
+  .phase-item.legacy {
+    opacity: 0.55;
+  }
+
+  .phase-label {
+    flex: 1 1 auto;
+    font-weight: 600;
+  }
+
+  .phase-note {
+    margin: 0;
+    font-size: 0.85rem;
+    color: var(--overlay-text-muted);
+  }
+
+  .phase-note.warning {
+    color: var(--overlay-text-warm);
+    font-weight: 600;
+  }
+
+  .advance-panel.locked {
+    opacity: 0.65;
+    filter: saturate(0.85);
+  }
+
+  .advance-panel.confirm-mode {
+    border: var(--overlay-chip-border-active);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent, #7ec8ff) 30%, transparent) inset,
+      var(--overlay-panel-shadow);
+  }
+
+  .advance-header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.75rem;
+  }
+
+  .advance-header h4 {
+    margin: 0;
+    font-size: 0.95rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--overlay-text-warm);
+  }
+
+  .advance-target {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: color-mix(in srgb, var(--accent, #7ec8ff) 75%, #fff 25%);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .advance-status {
+    margin: 0;
+    font-size: 0.9rem;
+    color: var(--overlay-text-muted);
+  }
+
+  .advance-helper {
+    margin: 0;
+    font-size: 0.85rem;
+    color: var(--overlay-text-primary);
+  }
+
+  .advance-panel.confirm-mode .advance-helper {
+    color: var(--overlay-text-warm);
+  }
+
+  .advance-button {
+    align-self: flex-start;
+    padding: 0.55rem 1.1rem;
+    border-radius: 0;
+    border: var(--overlay-button-border);
+    background: var(--overlay-button-bg);
+    color: var(--overlay-text-primary);
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    box-shadow: var(--overlay-button-shadow);
+    transition: background 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+    cursor: pointer;
+  }
+
+  .advance-button:hover,
+  .advance-button:focus-visible {
+    transform: translateY(-1px);
+    background: color-mix(in srgb, rgba(20, 28, 42, 0.92) 60%, var(--accent, #7ec8ff) 40%);
+    box-shadow: 0 14px 28px rgba(0, 0, 0, 0.52);
+    outline: none;
+  }
+
+  .advance-button:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+  }
+
+  @media (max-width: 1100px) {
+    .layout {
+      flex-direction: column;
+      align-items: stretch;
+      min-height: unset;
+      padding: clamp(1rem, 3vh, 1.5rem) 0;
+    }
+
+    .phase-rail {
+      width: 100%;
+      flex: 0 0 auto;
+    }
+
+    .main-column {
+      min-height: unset;
+    }
   }
 
   .section-title {
     margin: 0.25rem 0 0.5rem;
-    color: #fff;
-    text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+    color: var(--overlay-text-warm);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
   }
 
   .choices {
     display: grid;
-    grid-template-columns: repeat(3, minmax(200px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
     gap: 0.75rem;
     align-items: stretch;
     justify-items: center;
     width: 100%;
-    max-width: 960px;
+    max-width: 1320px;
   }
 
   .status {
     margin-top: 0.25rem;
     text-align: center;
-    color: #ddd;
+    color: var(--overlay-text-muted);
   }
 
   .drops-row {
@@ -397,7 +1587,7 @@
     align-items: flex-start;
     gap: 0.75rem;
     width: 100%;
-    max-width: 640px;
+    max-width: 880px;
     padding: 0.35rem 0;
   }
 
@@ -405,17 +1595,12 @@
     position: relative;
     width: 64px;
     height: 64px;
-    border-radius: 12px;
-    /* Fallback for browsers that don't support color-mix */
-    background: rgba(10, 12, 20, 0.92);
-    /* Enhanced with accent color overlay for supporting browsers */
-    background: linear-gradient(
-      to bottom,
-      rgba(255, 255, 255, 0.04),
-      rgba(10, 12, 20, 0.92)
-    );
-    border: 1px solid rgba(255, 255, 255, 0.12);
-    box-shadow: 0 10px 22px rgba(0, 0, 0, 0.35);
+    border-radius: 0;
+    background: var(--overlay-chip-bg);
+    border: var(--overlay-chip-border);
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.06) inset,
+      0 12px 24px rgba(0, 0, 0, 0.45);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -425,9 +1610,13 @@
     will-change: transform, opacity;
   }
 
-  .drop-tile:hover {
+  .drop-tile:hover,
+  .drop-tile:focus-visible {
     transform: translateY(-2px) scale(1.03);
-    box-shadow: 0 14px 26px rgba(0, 0, 0, 0.45);
+    box-shadow:
+      0 2px 0 rgba(255, 255, 255, 0.08) inset,
+      0 14px 26px rgba(6, 10, 18, 0.52);
+    outline: none;
   }
 
   .drop-icon {
@@ -441,9 +1630,9 @@
     position: absolute;
     bottom: 6px;
     right: 8px;
-    background: rgba(0, 0, 0, 0.78);
+    background: color-mix(in srgb, rgba(8, 12, 22, 0.9) 70%, var(--accent, #7ec8ff) 30%);
     color: #fff;
-    border-radius: 6px;
+    border-radius: 0;
     padding: 0 0.4rem;
     font-size: 0.75rem;
     font-weight: 700;
@@ -499,29 +1688,49 @@
     animation-delay: var(--delay, 0ms);
   }
 
+  /* Fix for reward selection visual bug: Ensure selected cards and relics have
+     full opacity to prevent reveal animation interference. The reveal animation
+     sets opacity: 0 initially and animates to opacity: 1. When a reward is
+     selected, the wiggle animation is applied, but the reveal animation's
+     opacity property can interfere, causing the reward to disappear. These
+     rules ensure selected rewards always have opacity: 1 regardless of the
+     reveal animation state. */
+  .reveal :global(.card-shell.selected .card-art),
+  .reveal :global(.curio-shell.selected .card-art) {
+    opacity: 1 !important;
+  }
+
   .next-button {
     margin-top: 1rem;
     padding: 0.75rem 2rem;
-    background: linear-gradient(145deg, #4a90e2, #357abd);
-    color: white;
-    border: none;
-    border-radius: 0.5rem;
+    border-radius: 0;
+    border: var(--overlay-button-border);
+    background: var(--overlay-button-bg);
+    color: var(--overlay-text-primary);
     font-size: 1rem;
     font-weight: 600;
     cursor: pointer;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-    transition: all 0.2s ease;
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.06) inset,
+      0 14px 28px rgba(0, 0, 0, 0.48);
+    transition: background 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
   }
 
-  .next-button:hover {
-    background: linear-gradient(145deg, #5ba0f2, #4a90e2);
-    transform: translateY(-2px);
-    box-shadow: 0 6px 12px rgba(0,0,0,0.3);
+  .next-button:hover,
+  .next-button:focus-visible {
+    transform: translateY(-1px);
+    background: color-mix(in srgb, rgba(22, 30, 44, 0.94) 55%, var(--accent, #7ec8ff) 45%);
+    box-shadow:
+      0 2px 0 rgba(255, 255, 255, 0.06) inset,
+      0 18px 34px rgba(0, 0, 0, 0.54);
+    outline: none;
   }
 
   .next-button:active {
     transform: translateY(0);
-    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    box-shadow: 0 8px 18px rgba(5, 8, 16, 0.45);
   }
 
   .next-room-overlay {
@@ -538,22 +1747,32 @@
     padding: 1rem 2.5rem;
     font-size: 1.1rem;
     font-weight: 700;
-    border-radius: 2rem;
-    background: linear-gradient(145deg, #4CAF50, #45a049);
-    box-shadow: 0 6px 20px rgba(0,0,0,0.3), 0 2px 6px rgba(76, 175, 80, 0.4);
-    backdrop-filter: blur(10px);
-    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-radius: 0;
+    border: var(--overlay-button-border);
+    background: var(--overlay-button-bg);
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.06) inset,
+      0 22px 44px rgba(0, 0, 0, 0.52);
+    color: var(--overlay-text-primary);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
   }
 
-  .next-button.overlay:hover {
-    background: linear-gradient(145deg, #5CBF60, #4CAF50);
-    transform: translateY(-3px);
-    box-shadow: 0 8px 25px rgba(0,0,0,0.4), 0 4px 10px rgba(76, 175, 80, 0.5);
+  .next-button.overlay:hover,
+  .next-button.overlay:focus-visible {
+    transform: translateY(-2px);
+    background: color-mix(in srgb, rgba(22, 30, 44, 0.94) 55%, var(--accent, #7ec8ff) 45%);
+    box-shadow:
+      0 2px 0 rgba(255, 255, 255, 0.06) inset,
+      0 26px 50px rgba(0, 0, 0, 0.55);
+    outline: none;
   }
 
   .next-button.overlay:active {
     transform: translateY(-1px);
-    box-shadow: 0 4px 15px rgba(0,0,0,0.3), 0 2px 6px rgba(76, 175, 80, 0.4);
+    box-shadow:
+      0 1px 0 rgba(255, 255, 255, 0.08) inset,
+      0 16px 32px rgba(32, 14, 6, 0.48);
   }
 
   @keyframes slideUp {
@@ -586,66 +1805,149 @@
 
 <div
   class="layout"
+  bind:this={overlayRootEl}
+  tabindex="-1"
   data-reduced-motion={dataReducedMotion}
   data-sfx-volume={dataSfxVolume}
   on:pointerdown={handleLootSfxGesture}
-  on:keydown={handleLootSfxGesture}
+  on:keydown={handleLayoutKeydown}
 >
-  {#if showCards}
-  <h3 class="section-title">Choose a Card</h3>
-  <div class="choices">
-        {#each cards.slice(0,3) as card, i (card.id)}
-          <div class:reveal={!reducedMotion} style={`--delay: ${revealDelay(i)}ms`}>
-            <RewardCard entry={card} type="card" quiet={iconQuiet} on:select={handleSelect} />
-          </div>
-        {/each}
-    </div>
-  {/if}
-  {#if showRelics}
-  <h3 class="section-title">Choose a Relic</h3>
-  <div class="choices">
-        {#each relics.slice(0,3) as relic, i (relic.id)}
-          <div class:reveal={!reducedMotion} style={`--delay: ${revealDelay(i)}ms`}>
-            <CurioChoice entry={relic} quiet={iconQuiet} on:select={handleSelect} />
-          </div>
-        {/each}
-    </div>
-  {/if}
-  
-  {#if hasLootItems}
-    <h3 class="section-title">Drops</h3>
-    <div class="drops-row" role="list">
-      {#each visibleDrops as entry (entry.key)}
-        <div
-          class="drop-tile"
-          role="listitem"
-          style={`--accent: ${entry.accent}`}
-          aria-label={`${entry.label}${entry.count > 1 ? ` x${entry.count}` : ''}`}
-          in:scale={dropPopTransition}
-        >
-          <img
-            class="drop-icon"
-            src={entry.icon}
-            alt=""
-            aria-hidden="true"
-            on:error={onMaterialIconError}
-          />
-          {#if entry.count > 1}
-            <span class="drop-count">x{entry.count}</span>
-          {/if}
-          <span class="sr-only">{entry.label}{entry.count > 1 ? ` x${entry.count}` : ''}</span>
+  <span class="sr-only" aria-live="assertive" aria-atomic="true">{phaseAnnouncement}</span>
+  <span class="sr-only" aria-live="polite" aria-atomic="true">{countdownAnnouncement}</span>
+  <span class="sr-only" aria-live="polite" aria-atomic="true">{selectionAnnouncement}</span>
+  <div class="main-column">
+    {#if showDropsSection}
+      <h3 class="section-title">Drops</h3>
+      {#if awaitingLoot && !hasLootItems}
+        <div class="status" role="status">Processing loot…</div>
+      {/if}
+      {#if hasLootItems}
+        <div class="drops-row" role="list">
+          {#each visibleDrops as entry (entry.key)}
+            <div
+              class="drop-tile"
+              role="listitem"
+              style={`--accent: ${entry.accent}`}
+              aria-label={`${entry.label}${entry.count > 1 ? ` x${entry.count}` : ''}`}
+              in:scale={dropPopTransition}
+            >
+              <img
+                class="drop-icon"
+                src={entry.icon}
+                alt=""
+                aria-hidden="true"
+                on:error={onMaterialIconError}
+              />
+              {#if entry.count > 1}
+                <span class="drop-count">x{entry.count}</span>
+              {/if}
+              <span class="sr-only">{entry.label}{entry.count > 1 ? ` x${entry.count}` : ''}</span>
+            </div>
+          {/each}
         </div>
-      {/each}
+      {/if}
+      {#if gold}
+        <div class="status">Gold +{gold}</div>
+      {/if}
+      {#if !awaitingLoot && !hasLootItems && !gold}
+        <div class="status">No drops this time.</div>
+      {/if}
+    {/if}
+
+    {#if !nonDropContentHidden}
+      {#if showCards}
+        <h3 class="section-title">Choose a Card</h3>
+        <div class="choices">
+          {#each cardChoiceEntries.slice(0,3) as choice, i (choice.key)}
+            <div class:reveal={!reducedMotion} style={`--delay: ${revealDelay(i)}ms`}>
+              <RewardCard
+                entry={choice.entry}
+                type="card"
+                quiet={iconQuiet}
+                selectionKey={choice.key}
+                selected={highlightedCardKey === choice.key}
+                reducedMotion={reducedMotion}
+                on:select={handleSelect}
+              />
+            </div>
+          {/each}
+        </div>
+      {/if}
+
+      {#if showRelics}
+        <h3 class="section-title">Choose a Relic</h3>
+        <div class="choices">
+          {#each relicChoiceEntries.slice(0,3) as relicChoice, i (relicChoice.key)}
+            <div class:reveal={!reducedMotion} style={`--delay: ${revealDelay(i)}ms`}>
+              <CurioChoice
+                entry={relicChoice.entry}
+                quiet={iconQuiet}
+                selectionKey={relicChoice.key}
+                selected={highlightedRelicKey === relicChoice.key}
+                reducedMotion={reducedMotion}
+                on:select={handleSelect}
+              />
+            </div>
+          {/each}
+        </div>
+      {/if}
+    {/if}
+
+    {#if showNextButton}
+      <div class="next-room-overlay">
+        <button class="next-button overlay" on:click={handleNextRoom} disabled={advanceBusy}>Next Room</button>
+      </div>
+    {/if}
+  </div>
+
+  <aside class="phase-rail" aria-label="Reward flow">
+    <div class="phase-panel">
+      <h3 class="phase-heading">Reward Flow</h3>
+      <ol class="phase-list" role="list">
+        {#each phaseEntries as entry (entry.phase)}
+          <li
+            class={`phase-item ${entry.status}`}
+            role="listitem"
+            aria-current={entry.status === 'current' ? 'step' : undefined}
+          >
+            <span class="phase-index" aria-hidden="true">{entry.status === 'completed' ? '✓' : entry.index}</span>
+            <span class="phase-label">{entry.label}</span>
+          </li>
+        {/each}
+      </ol>
     </div>
-  {/if}
-  {#if gold}
-    <div class="status">Gold +{gold}</div>
-  {/if}
-  
-  {#if showNextButton}
-    <div class="next-room-overlay">
-      <button class="next-button overlay" on:click={handleNextRoom}>Next Room</button>
-    </div>
-  {/if}
-  <!-- Auto-advance remains when no choices/loot -->
+    {#if fallbackPhaseMessage}
+      <p class="phase-note warning" role="status">{fallbackPhaseMessage}</p>
+    {:else if nextPhaseLabel && dropsPhaseActive}
+      <p class="phase-note">Next: {nextPhaseLabel}</p>
+    {/if}
+    {#if showAdvancePanel}
+      <div
+        class={`advance-panel ${advancePanelActive ? 'active' : 'locked'}${confirmFallbackMode ? ' confirm-mode' : ''}`}
+      >
+        <div class="advance-header">
+          <h4>Advance</h4>
+          {#if nextPhaseLabel}
+            <span class="advance-target">{nextPhaseLabel}</span>
+          {/if}
+        </div>
+        <p class="advance-status" data-testid="advance-countdown" aria-live="polite">{advanceStatusMessage}</p>
+        {#if advanceHelperMessage}
+          <p class="advance-helper" role="note">{advanceHelperMessage}</p>
+        {/if}
+        <button
+          class="icon-btn advance-button"
+          type="button"
+          bind:this={advanceButtonEl}
+          on:click={handleAdvanceClick}
+          disabled={advanceButtonDisabled}
+          aria-label={advanceButtonAriaLabel}
+          title={advanceHelperMessage || undefined}
+          data-mode={advanceButtonMode}
+        >
+          Advance
+        </button>
+      </div>
+    {/if}
+  </aside>
 </div>

@@ -40,19 +40,23 @@ class SoulPrism(RelicBase):
                 base = getattr(member, "_soul_prism_hp", member.max_hp)
                 member._soul_prism_hp = base
                 mod_id = f"{self.id}_{id(member)}"
-                existing = next(
-                    (m for m in member.effect_manager.mods if m.id == mod_id),
-                    None,
-                )
-                if existing:
-                    existing.remove()
-                    member.effect_manager.mods.remove(existing)
-                    if existing.id in member.mods:
-                        member.mods.remove(existing.id)
+
+                # Ensure effect_manager exists before trying to access mods
                 mgr = getattr(member, "effect_manager", None)
                 if mgr is None:
                     mgr = EffectManager(member)
                     member.effect_manager = mgr
+
+                # Remove existing modifier if present
+                existing = next(
+                    (m for m in mgr.mods if m.id == mod_id),
+                    None,
+                )
+                if existing:
+                    existing.remove()
+                    mgr.mods.remove(existing)
+                    if existing.id in member.mods:
+                        member.mods.remove(existing.id)
 
                 mod = create_stat_buff(
                     member,

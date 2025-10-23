@@ -24,6 +24,15 @@ def award_relic(party: Party, relic_id: str) -> RelicBase | None:
     return relic_cls()
 
 
+def instantiate_relic(relic_id: str) -> RelicBase | None:
+    """Return a fresh relic instance without mutating the party."""
+
+    relic_cls = _registry().get(relic_id)
+    if relic_cls is None:
+        return None
+    return relic_cls()
+
+
 def relic_choices(party: Party, stars: int, count: int = 3) -> list[RelicBase]:
     """Return up to `count` unique relic options for the given star level.
 

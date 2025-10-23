@@ -28,6 +28,25 @@ const vitestEnvironmentShim = {
 
     config.environments = environments;
     resolvedEnvironments = environments;
+
+    if (Array.isArray(config.plugins)) {
+      for (const plugin of config.plugins) {
+        if (plugin && plugin.load && typeof plugin.load.handler === 'function' && (plugin.name === 'vite-plugin-svelte:load-custom' || plugin.name === 'vite-plugin-svelte:load-compiled-css')) {
+          const original = plugin.load.handler;
+          plugin.load.handler = function guardedLoad(id, ...args) {
+            if (!this || !this.environment || !this.environment.config) {
+              return null;
+            }
+            try {
+              return original.call(this, id, ...args);
+            } catch (error) {
+              console.error('vite-plugin-svelte load error for', plugin.name, 'with id', id, error);
+              throw error;
+            }
+          };
+        }
+      }
+    }
   },
   configureServer(server) {
     if (!server) {

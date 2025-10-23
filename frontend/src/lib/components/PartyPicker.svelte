@@ -473,7 +473,7 @@
 {#if compact}
   <PartyRoster {roster} {selected} bind:previewId {compact} {reducedMotion} on:toggle={(e) => toggleMember(e.detail)} />
 {:else}
-  <MenuPanel {starColor} {reducedMotion}>
+  <MenuPanel {starColor} {reducedMotion} style="flex: 1 1 auto;">
     <div class="full" data-testid="party-picker">
       <PartyRoster {roster} {selected} bind:previewId {reducedMotion} on:toggle={(e) => toggleMember(e.detail)} />
       <PlayerPreview

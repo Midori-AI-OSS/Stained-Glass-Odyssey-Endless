@@ -3,6 +3,7 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 import pytest
+from tests.helpers import call_maybe_async
 
 from autofighter.effects import EffectManager
 from autofighter.stats import BUS
@@ -11,7 +12,6 @@ from plugins.cards.calm_beads import CalmBeads
 from plugins.cards.polished_shield import PolishedShield
 from plugins.damage_types.fire import Fire
 import plugins.event_bus as event_bus_module
-from tests.helpers import call_maybe_async
 
 
 async def _setup_ally_with_card(card_cls: type) -> Stats:

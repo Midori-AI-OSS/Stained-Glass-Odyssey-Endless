@@ -11,6 +11,8 @@
     roomAction,
     chooseCard,
     chooseRelic,
+    confirmCard,
+    confirmRelic,
     advanceRoom,
     getMap,
     getActiveRuns,
@@ -40,6 +42,7 @@
     syncBattlePolling,
     syncMapPolling
   } from '$lib';
+  import { rewardPhaseController } from '$lib/systems/overlayState.js';
   import { updateParty, acknowledgeLoot, resetRunConfigurationMetadataCache } from '$lib/systems/uiApi.js';
   import { getPlayers } from '$lib/systems/api.js';
   import { deriveSeedParty, sanitizePartyIds } from '$lib/systems/partySeed.js';
@@ -47,6 +50,8 @@
   import { registerAssetManifest } from '$lib/systems/assetLoader.js';
   import { browser, dev } from '$app/environment';
   import { normalizeShopPurchase, processSequentialPurchases } from '$lib/systems/shopPurchases.js';
+  import { resolveRewardStagingPayload } from '$lib/utils/rewardStagingPayload.js';
+  import { computeAutomationAction } from '$lib/utils/rewardAutomation.js';
 
   const runState = runStateStore;
 
@@ -74,9 +79,18 @@
   let roomTags = runSnapshot.roomTags;
   let battleActive = runSnapshot.battleActive;
   let lastBattleSnapshot = runSnapshot.lastBattleSnapshot;
+  let lootAckBlocked = false;
+  let lastAwaitingLoot = Boolean(roomData?.awaiting_loot);
 
   $: runSnapshot = $runState;
   $: ({ runId, mapRooms, currentIndex, currentRoomType, nextRoom, roomData, roomTags, battleActive, lastBattleSnapshot } = runSnapshot);
+  $: {
+    const awaitingLoot = Boolean(runSnapshot?.roomData?.awaiting_loot);
+    if (awaitingLoot !== lastAwaitingLoot) {
+      lastAwaitingLoot = awaitingLoot;
+      lootAckBlocked = false;
+    }
+  }
 
   function partiesEqual(a, b) {
     if (a === b) return true;
@@ -731,7 +745,21 @@
     const relics = (snap?.relic_choices?.length || 0) > 0;
     const lootItems = (snap?.loot?.items?.length || 0) > 0;
     const lootGold = (snap?.loot?.gold || 0) > 0;
-    return cards || relics || lootItems || lootGold;
+    const staging = snap?.reward_staging && typeof snap.reward_staging === 'object' ? snap.reward_staging : {};
+    const stagedCards = Array.isArray(staging.cards) && staging.cards.length > 0;
+    const stagedRelics = Array.isArray(staging.relics) && staging.relics.length > 0;
+    const awaitingCard = Boolean(snap?.awaiting_card);
+    const awaitingRelic = Boolean(snap?.awaiting_relic);
+    const awaitingLoot = Boolean(snap?.awaiting_loot);
+    return (
+      cards ||
+      relics ||
+      lootItems ||
+      lootGold ||
+      (awaitingCard && stagedCards) ||
+      (awaitingRelic && stagedRelics) ||
+      awaitingLoot
+    );
   }
 
   function scheduleMapRefresh() {
@@ -952,85 +980,228 @@
     }
   }
 
+  function cloneRewardEntries(list) {
+    if (!Array.isArray(list)) return [];
+    return list.map((entry) => (entry && typeof entry === 'object' ? { ...entry } : entry));
+  }
+
+  function applyRewardPayload(result, { type, intent } = {}) {
+    const normalizedType = type === 'card' || type === 'relic' ? type : null;
+    const normalizedIntent = typeof intent === 'string' ? intent : null;
+
+    const base = roomData && typeof roomData === 'object' ? { ...roomData } : {};
+    const previousStaging = base.reward_staging;
+    base.reward_staging = resolveRewardStagingPayload({
+      current: previousStaging,
+      next: result?.reward_staging,
+      type: normalizedType,
+      intent: normalizedIntent
+    });
+
+    const awaitingKeys = ['awaiting_card', 'awaiting_relic', 'awaiting_loot', 'awaiting_next'];
+    for (const key of awaitingKeys) {
+      if (Object.prototype.hasOwnProperty.call(result ?? {}, key)) {
+        base[key] = Boolean(result[key]);
+      }
+    }
+
+    if (Object.prototype.hasOwnProperty.call(result ?? {}, 'reward_progression')) {
+      base.reward_progression = result.reward_progression ?? null;
+    }
+
+    if (typeof result?.next_room === 'string') {
+      base.next_room = result.next_room;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(result ?? {}, 'card_choices')) {
+      const nextCardChoices = Array.isArray(result?.card_choices) ? result.card_choices : [];
+      base.card_choices = cloneRewardEntries(nextCardChoices);
+    } else if (normalizedType === 'card' && normalizedIntent === 'confirm') {
+      base.card_choices = [];
+    } else if (Array.isArray(base.card_choices)) {
+      base.card_choices = cloneRewardEntries(base.card_choices);
+    }
+
+    if (Object.prototype.hasOwnProperty.call(result ?? {}, 'relic_choices')) {
+      const nextRelicChoices = Array.isArray(result?.relic_choices) ? result.relic_choices : [];
+      base.relic_choices = cloneRewardEntries(nextRelicChoices);
+    } else if (normalizedType === 'relic' && normalizedIntent === 'confirm') {
+      base.relic_choices = [];
+    } else if (Array.isArray(base.relic_choices)) {
+      base.relic_choices = cloneRewardEntries(base.relic_choices);
+    }
+
+    runState.setRoomData(base);
+
+    if (typeof result?.next_room === 'string') {
+      runState.setCurrentRoom({ nextRoomType: result.next_room });
+    }
+  }
+
   async function handleRewardSelect(detail) {
     const selection = detail && typeof detail === 'object' ? detail : {};
     const respond = typeof selection.respond === 'function' ? selection.respond : null;
     const type = selection.type;
+    const intent = typeof selection.intent === 'string' ? selection.intent : 'select';
     const id = selection.id;
-    let result = { ok: false };
+    let result = { ok: false, intent };
 
-    try {
-      let res;
-      if (type === 'card') {
-        // chooseCard now routes via /ui/action and does not take runId
-        res = await chooseCard(id);
-        if (roomData) {
-          runState.setRoomData({ ...roomData, card_choices: [] });
-        }
-      } else if (type === 'relic') {
-        // chooseRelic now routes via /ui/action and does not take runId
-        res = await chooseRelic(id);
-        if (roomData) {
-          runState.setRoomData({ ...roomData, relic_choices: [] });
-        }
-      }
-      if (res && res.next_room) {
-        runState.setCurrentRoom({ nextRoomType: res.next_room });
-      }
-      result = { ok: true };
-    } catch (error) {
-      openOverlay('error', {
-        message: 'Failed to select reward.',
-        traceback: (error && error.stack) || ''
-      });
+    if (type === 'card' || type === 'relic') {
       try {
-        if (dev || !browser) {
-          const { error: logError } = await import('$lib/systems/logger.js');
-          logError('Failed to select reward.', error);
+        let res = null;
+        if (intent === 'confirm') {
+          res = type === 'card' ? await confirmCard() : await confirmRelic();
+        } else {
+          res = type === 'card' ? await chooseCard(id) : await chooseRelic(id);
         }
-      } catch {}
-    } finally {
-      if (respond) {
+        if (res) {
+          applyRewardPayload(res, { type, intent });
+        }
+        result = { ok: true, intent, payload: res ?? null };
+      } catch (error) {
+        openOverlay('error', {
+          message: intent === 'confirm' ? 'Failed to confirm reward.' : 'Failed to select reward.',
+          traceback: (error && error.stack) || '',
+          context: error?.context ?? null
+        });
         try {
-          respond(result);
+          if (dev || !browser) {
+            const { error: logError } = await import('$lib/systems/logger.js');
+            logError(intent === 'confirm' ? 'Failed to confirm reward.' : 'Failed to select reward.', error);
+          }
         } catch {}
       }
     }
 
+    if (respond) {
+      try {
+        respond(result);
+      } catch {}
+    }
+
     return result;
-    // Do not auto-advance; show Battle Review popup next.
+  }
+
+  async function handleRewardAdvance(detail) {
+    const payload = detail && typeof detail === 'object' ? detail : {};
+    const respond = typeof payload.respond === 'function' ? payload.respond : null;
+
+    if (!runId) {
+      if (respond) {
+        try {
+          respond({ ok: false, reason: 'no-run' });
+        } catch {}
+      }
+      return { ok: false };
+    }
+
+    if (rewardAdvanceInFlight || roomAdvanceInFlight) {
+      if (respond) {
+        try {
+          respond({ ok: false, reason: 'busy' });
+        } catch {}
+      }
+      return { ok: false };
+    }
+
+    if (lootAckBlocked) {
+      if (respond) {
+        try {
+          respond({ ok: false, reason: 'loot-blocked' });
+        } catch {}
+      }
+      return { ok: false };
+    }
+
+    rewardAdvanceInFlight = true;
+    try {
+      await handleNextRoom();
+      if (respond) {
+        try {
+          respond({ ok: true });
+        } catch {}
+      }
+      return { ok: true };
+    } catch (error) {
+      if (respond) {
+        try {
+          respond({ ok: false, error });
+        } catch {}
+      }
+      try {
+        if (dev || !browser) {
+          const { error: logError } = await import('$lib/systems/logger.js');
+          logError('Failed to advance reward progression.', error);
+        }
+      } catch {}
+      return { ok: false };
+    } finally {
+      rewardAdvanceInFlight = false;
+    }
   }
 
   let autoHandling = false;
+  let rewardAdvanceInFlight = false;
+  let roomAdvanceInFlight = false;
   async function maybeAutoHandle() {
-    if (!fullIdleMode || autoHandling || !runId || !roomData) return;
+    if (!fullIdleMode || autoHandling || rewardAdvanceInFlight || !runId || !roomData || lootAckBlocked) return;
     autoHandling = true;
     try {
-      if (roomData.card_choices?.length > 0) {
-        const choice = roomData.card_choices[0];
-        const res = await chooseCard(choice.id);
-        runState.setRoomData({ ...roomData, card_choices: [] });
-        if (res && res.next_room) { runState.setCurrentRoom({ nextRoomType: res.next_room }); }
-        return;
-      }
-      if (roomData.relic_choices?.length > 0) {
-        const choice = roomData.relic_choices[0];
-        const res = await chooseRelic(choice.id);
-        runState.setRoomData({ ...roomData, relic_choices: [] });
-        if (res && res.next_room) { runState.setCurrentRoom({ nextRoomType: res.next_room }); }
-        return;
-      }
-      const hasLoot = (roomData.loot?.gold || 0) > 0 || (roomData.loot?.items || []).length > 0;
-      if (roomData.awaiting_loot || hasLoot) {
-        await handleLootAcknowledge();
-        return;
-      }
-      if (roomData.result === 'shop') {
-        await handleNextRoom();
-        return;
-      }
-      if (roomData.awaiting_next) {
-        await handleNextRoom();
+      const staging = roomData.reward_staging && typeof roomData.reward_staging === 'object'
+        ? roomData.reward_staging
+        : {};
+      const stagedCards = Array.isArray(staging.cards) ? staging.cards : [];
+      const stagedRelics = Array.isArray(staging.relics) ? staging.relics : [];
+      const snapshot = typeof rewardPhaseController?.getSnapshot === 'function'
+        ? rewardPhaseController.getSnapshot()
+        : null;
+      const action = computeAutomationAction({
+        roomData,
+        snapshot,
+        stagedCards,
+        stagedRelics
+      });
+
+      switch (action.type) {
+        case 'select-card': {
+          if (action.choice) {
+            try {
+              const res = await chooseCard(action.choice.id);
+              if (res) {
+                applyRewardPayload(res, { type: 'card', intent: 'select' });
+              }
+            } catch {}
+          }
+          return;
+        }
+        case 'select-relic': {
+          if (action.choice) {
+            try {
+              const res = await chooseRelic(action.choice.id);
+              if (res) {
+                applyRewardPayload(res, { type: 'relic', intent: 'select' });
+              }
+            } catch {}
+          }
+          return;
+        }
+        case 'ack-loot': {
+          await handleLootAcknowledge();
+          return;
+        }
+        case 'next-room': {
+          await handleNextRoom();
+          return;
+        }
+        case 'advance': {
+          if (!rewardAdvanceInFlight) {
+            await handleRewardAdvance({ reason: 'automation', phase: action.phase ?? null });
+          }
+          return;
+        }
+        default: {
+          return;
+        }
       }
     } finally {
       autoHandling = false;
@@ -1143,11 +1314,57 @@
     await enterRoom();
   }
 
+  function resetLootAdvanceCountdown() {
+    try {
+      if (typeof rewardPhaseController?.reset === 'function') {
+        rewardPhaseController.reset();
+      }
+    } catch {}
+  }
+
+  async function attemptLootAcknowledge({ source }) {
+    if (!runId) {
+      return false;
+    }
+
+    try {
+      await acknowledgeLoot(runId);
+      return true;
+    } catch (error) {
+      const reason = (() => {
+        if (error && typeof error === 'object' && typeof error.message === 'string' && error.message.trim()) {
+          return error.message;
+        }
+        if (typeof error === 'string' && error.trim()) {
+          return error;
+        }
+        return 'Unknown error';
+      })();
+      lootAckBlocked = true;
+      resetLootAdvanceCountdown();
+      const contextPayload = {
+        source,
+        reason
+      };
+      if (error?.context !== undefined) {
+        contextPayload.detail = error.context;
+      }
+      openOverlay('error', {
+        message: 'Failed to acknowledge loot rewards.',
+        traceback: (error && error.stack) || '',
+        context: contextPayload
+      });
+      console.warn('Loot acknowledgement failed:', reason, error);
+      scheduleMapRefresh();
+      return false;
+    }
+  }
+
   async function handleNextRoom() {
-    if (!runId) return;
+    if (!runId || lootAckBlocked || roomAdvanceInFlight) return;
     // Ensure syncing is enabled when advancing to the next room
     haltSync = false;
-    
+
     // Check if we're currently in battle review mode by checking if review is open
     const inBattleReview = Boolean(
       roomData && (roomData.result === 'battle' || roomData.result === 'boss') && !battleActive &&
@@ -1165,124 +1382,130 @@
     }
     
     // If only loot remains, acknowledge it before advancing so the backend clears the gate.
+    roomAdvanceInFlight = true;
     try {
-      const hasLoot = Boolean((roomData?.loot?.gold || 0) > 0 || (roomData?.loot?.items || []).length > 0);
-      if (roomData?.awaiting_loot || hasLoot) {
-        stopBattlePolling();
-        try { await acknowledgeLoot(runId); } catch { /* ignore if already acknowledged */ }
-      }
-    } catch { /* no-op */ }
-    // If the run has ended due to defeat, clear state and show defeat popup immediately
-    if (roomData?.ended && roomData?.result === "defeat") {
-      handleDefeat();
-      return;
-    }
-    // Close reward overlay and unmount previous BattleView immediately
-    runState.setRoomData(null);
-    // GC last battle snapshot so review/combat viewer state doesn't linger
-    runState.setLastBattleSnapshot(null);
-    runState.setBattleActive(false);
-    stopBattlePolling();
-    // Do not start state polling here; we'll advance and enter the next room
-    // directly to avoid timing races that can require extra clicks.
-    try {
-      // Advance progression until the backend actually advances the room.
-      // This collapses any remaining progression steps (e.g., loot → review)
-      // so a single click proceeds.
-      let res = await advanceRoom();
-      let guard = 0;
-      while (res && res.progression_advanced && guard++ < 5) {
-        // Small delay to allow state write
-        await new Promise((r) => setTimeout(r, 50));
-        res = await advanceRoom();
-      }
-      if (res && typeof res.current_index === 'number') {
-        runState.setCurrentRoom({ index: res.current_index });
-        // When advancing floors, the mapRooms data becomes stale
-        // Use the next_room from the response instead of looking up in old mapRooms
-        if (res.next_room) {
-          runState.setCurrentRoom({ currentRoomType: res.next_room });
-        }
-        // Refresh map data to get the updated floor information
-        const mapData = await getMap(runId);
-        if (mapData?.map?.rooms) {
-          const updatedRooms = mapData.map.rooms;
-          runState.setMapRooms(updatedRooms);
-          runState.setCurrentRoom({ currentRoomType: updatedRooms?.[res.current_index]?.room_type || currentRoomType });
-        }
-      }
-      if (res && res.next_room) {
-        runState.setCurrentRoom({ nextRoomType: res.next_room });
-      }
-      // Try entering the next room with a few short retries to avoid timing issues
-      for (let i = 0; i < 5; i++) {
-        await new Promise((r) => setTimeout(r, 150 + i * 150));
-        await enterRoom();
-        const isBattleSnapshot = roomData && (roomData.result === 'battle' || roomData.result === 'boss');
-        const progressed = (roomData && (!isBattleSnapshot || battleActive));
-        if (progressed) break;
-      }
-      // If we still haven't progressed, resume polling to recover gracefully
-      if (!roomData) {
-        scheduleMapRefresh();
-      }
-    } catch (e) {
-      // If not ready (e.g., server 400), refresh snapshot so rewards remain visible.
       try {
-        if (haltSync || !runId) return;
-        const snap = mapStatuses(await roomAction("0", {"action": "snapshot"}));
-        runState.setRoomData(snap);
-        // If the backend still indicates we're awaiting the next room and
-        // there are no choices to make, attempt the advance again.
-        const noChoices = ((snap?.card_choices?.length || 0) === 0) && ((snap?.relic_choices?.length || 0) === 0);
-        if (snap?.awaiting_next && noChoices) {
-          try {
-            const res2 = await advanceRoom();
-            if (res2 && typeof res2.current_index === 'number') {
-              runState.setCurrentRoom({ index: res2.current_index });
-              // Refresh map data for retry attempts too
-              if (res2.next_room) {
-                runState.setCurrentRoom({ currentRoomType: res2.next_room });
-              }
-              const mapData = await getMap(runId);
-              if (mapData?.map?.rooms) {
-                const retryRooms = mapData.map.rooms;
-                runState.setMapRooms(retryRooms);
-                runState.setCurrentRoom({ currentRoomType: retryRooms?.[res2.current_index]?.room_type || currentRoomType });
-              }
-            }
-            if (res2 && res2.next_room) {
-              runState.setCurrentRoom({ nextRoomType: res2.next_room });
-            }
-            for (let i = 0; i < 5; i++) {
-              await new Promise((r) => setTimeout(r, 150 + i * 150));
-              await enterRoom();
-              const isBattleSnapshot = roomData && (roomData.result === 'battle' || roomData.result === 'boss');
-              const progressed = (roomData && (!isBattleSnapshot || battleActive));
-              if (progressed) break;
-            }
-            if (!roomData) {
-              scheduleMapRefresh();
-            }
+        const hasLoot = Boolean((roomData?.loot?.gold || 0) > 0 || (roomData?.loot?.items || []).length > 0);
+        if (roomData?.awaiting_loot || hasLoot) {
+          stopBattlePolling();
+          const acknowledged = await attemptLootAcknowledge({ source: 'next-room' });
+          if (!acknowledged) {
             return;
-          } catch {}
+          }
         }
-      } catch {
-        /* no-op */
+      } catch { /* no-op */ }
+      // If the run has ended due to defeat, clear state and show defeat popup immediately
+      if (roomData?.ended && roomData?.result === "defeat") {
+        handleDefeat();
+        return;
       }
+      // Close reward overlay and unmount previous BattleView immediately
+      runState.setRoomData(null);
+      // GC last battle snapshot so review/combat viewer state doesn't linger
+      runState.setLastBattleSnapshot(null);
+      runState.setBattleActive(false);
+      stopBattlePolling();
+      // Do not start state polling here; we'll advance and enter the next room
+      // directly to avoid timing races that can require extra clicks.
+      try {
+        // Advance progression until the backend actually advances the room.
+        // This collapses any remaining progression steps (e.g., loot → review)
+        // so a single click proceeds.
+        let res = await advanceRoom();
+        let guard = 0;
+        while (res && res.progression_advanced && guard++ < 5) {
+          // Small delay to allow state write
+          await new Promise((r) => setTimeout(r, 50));
+          res = await advanceRoom();
+        }
+        if (res && typeof res.current_index === 'number') {
+          runState.setCurrentRoom({ index: res.current_index });
+          // When advancing floors, the mapRooms data becomes stale
+          // Use the next_room from the response instead of looking up in old mapRooms
+          if (res.next_room) {
+            runState.setCurrentRoom({ currentRoomType: res.next_room });
+          }
+          // Refresh map data to get the updated floor information
+          const mapData = await getMap(runId);
+          if (mapData?.map?.rooms) {
+            const updatedRooms = mapData.map.rooms;
+            runState.setMapRooms(updatedRooms);
+            runState.setCurrentRoom({ currentRoomType: updatedRooms?.[res.current_index]?.room_type || currentRoomType });
+          }
+        }
+        if (res && res.next_room) {
+          runState.setCurrentRoom({ nextRoomType: res.next_room });
+        }
+        // Try entering the next room with a few short retries to avoid timing issues
+        for (let i = 0; i < 5; i++) {
+          await new Promise((r) => setTimeout(r, 150 + i * 150));
+          await enterRoom();
+          const isBattleSnapshot = roomData && (roomData.result === 'battle' || roomData.result === 'boss');
+          const progressed = roomData && (!isBattleSnapshot || battleActive);
+          if (progressed) break;
+        }
+        // If we still haven't progressed, resume polling to recover gracefully
+        if (!roomData) {
+          scheduleMapRefresh();
+        }
+      } catch (e) {
+        // If not ready (e.g., server 400), refresh snapshot so rewards remain visible.
+        try {
+          if (haltSync || !runId) return;
+          const snap = mapStatuses(await roomAction('0', { action: 'snapshot' }));
+          runState.setRoomData(snap);
+          // If the backend still indicates we're awaiting the next room and
+          // there are no choices to make, attempt the advance again.
+          const noChoices = ((snap?.card_choices?.length || 0) === 0) && ((snap?.relic_choices?.length || 0) === 0);
+          if (snap?.awaiting_next && noChoices) {
+            try {
+              const res2 = await advanceRoom();
+              if (res2 && typeof res2.current_index === 'number') {
+                runState.setCurrentRoom({ index: res2.current_index });
+                // Refresh map data for retry attempts too
+                if (res2.next_room) {
+                  runState.setCurrentRoom({ currentRoomType: res2.next_room });
+                }
+                const mapData = await getMap(runId);
+                if (mapData?.map?.rooms) {
+                  const retryRooms = mapData.map.rooms;
+                  runState.setMapRooms(retryRooms);
+                  runState.setCurrentRoom({ currentRoomType: retryRooms?.[res2.current_index]?.room_type || currentRoomType });
+                }
+              }
+              if (res2 && res2.next_room) {
+                runState.setCurrentRoom({ nextRoomType: res2.next_room });
+              }
+              for (let i = 0; i < 5; i++) {
+                await new Promise((r) => setTimeout(r, 150 + i * 150));
+                await enterRoom();
+                const isBattleSnapshot = roomData && (roomData.result === 'battle' || roomData.result === 'boss');
+                const progressed = roomData && (!isBattleSnapshot || battleActive);
+                if (progressed) break;
+              }
+              if (!roomData) {
+                scheduleMapRefresh();
+              }
+              return;
+            } catch {}
+          }
+        } catch {
+          /* no-op */
+        }
+      }
+    } finally {
+      roomAdvanceInFlight = false;
     }
   }
 
   async function handleLootAcknowledge() {
     if (!runId) return;
     stopBattlePolling();
-    try {
-      await acknowledgeLoot(runId);
-    } catch (e) {
-      console.warn('Loot acknowledgement failed:', e?.message || e);
-      scheduleMapRefresh();
+    const acknowledged = await attemptLootAcknowledge({ source: 'manual-loot' });
+    if (!acknowledged) {
       return;
     }
+    lootAckBlocked = false;
     await handleNextRoom();
   }
 
@@ -1299,7 +1522,7 @@
     // Start state polling when force advancing room
     scheduleMapRefresh();
     try {
-      const res = await advanceRoom();
+      const res = await advanceRoom({ skipRewardCheck: true });
       if (res && typeof res.current_index === 'number') {
         runState.setCurrentRoom({ index: res.current_index });
         if (res.next_room) runState.setCurrentRoom({ currentRoomType: res.next_room });
@@ -1451,6 +1674,7 @@
     mapRooms={mapRooms}
     currentIndex={currentIndex}
     currentRoomType={currentRoomType}
+    advanceBusy={roomAdvanceInFlight || rewardAdvanceInFlight}
     {shopProcessing}
     bind:selected={selectedParty}
     items={items}
@@ -1471,6 +1695,7 @@
     on:home={homeOverlay}
     on:settings={() => openOverlay('settings')}
     on:rewardSelect={(e) => handleRewardSelect(e.detail)}
+    on:rewardAdvance={(e) => handleRewardAdvance(e.detail)}
     on:loadRun={(e) => handleLoadExistingRun(e.detail)}
     on:startNewRun={handleStartNewRun}
     on:shopBuy={(e) => handleShopBuy(e.detail)}

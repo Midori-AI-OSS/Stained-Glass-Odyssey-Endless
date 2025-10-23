@@ -23,6 +23,19 @@ The script will automatically detect available tools and use the best option:
 - With `uv` and `bun`: Fast, modern tooling (same as CI)
 - Without `uv`/`bun`: Falls back to `python3`/`pip3` and `npm`
 
+### Backend Environment Setup
+
+The backend ships its own `pyproject.toml` in `backend/`. Create and hydrate the
+virtual environment with:
+
+```bash
+cd backend
+uv sync
+```
+
+All backend-only commands (linting, targeted tests) should be executed through
+`uv run` so they reuse the synced environment, e.g. `uv run pytest backend/tests`.
+
 ### Character Plugin Boundaries
 - Read the plugin boundary reminder in
   [`.codex/instructions/plugin-system.md`](.codex/instructions/plugin-system.md)

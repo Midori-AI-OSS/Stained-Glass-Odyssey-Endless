@@ -1,13 +1,13 @@
 import asyncio
 
 import pytest
+from tests.helpers import call_maybe_async
 
 from autofighter.effects import EffectManager
 from autofighter.stats import BUS
 from autofighter.stats import Stats
 from plugins.damage_types.wind import Wind
 from plugins.dots.blazing_torment import BlazingTorment
-from tests.helpers import call_maybe_async
 
 
 async def _use_ultimate(self):

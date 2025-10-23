@@ -20,6 +20,9 @@ Parent: [Web Game Plan](8a7d9c1e-web-game-plan.md)
  - [x] **Tattered Flag** – +3% party Max HP; when an ally falls, all survivors gain +3% ATK.
  - [x] **Wooden Idol** – +3% Effect Res; resisting a debuff grants +1% Effect Res for the next turn per stack.
  - [x] **Pocket Manual** – +3% damage; every 10th hit deals an extra 3% damage as Aftertaste.
+ - [x] **Featherweight Anklet** – +2% SPD per stack (multiplicative); first action each ally takes per battle grants +6% SPD per stack for 1 turn.
+ - [x] **Field Rations** – After each battle, heal 2% Max HP per stack and grant +1 ultimate charge per stack to all allies.
+ - [x] **Copper Siphon** – When an ally deals damage, heal them for 2% of damage per stack (min 1 HP); excess becomes shields.
 
 ## 2★ Relics
  - [x] **Vengeful Pendant** – Whenever an ally is hit, deal 15% of the damage taken back to the attacker, plus 15% per additional copy.
@@ -29,14 +32,19 @@ Parent: [Web Game Plan](8a7d9c1e-web-game-plan.md)
  - [x] **Ember Stone** – When an ally below 25% HP is hit, deal a burn equal to 50% ATK plus 50% per stack to the attacker.
  - [x] **Guardian Charm** – At the start of combat, the ally with the lowest HP gains +20% DEF plus 20% per stack.
  - [x] **Killer Instinct** – When an ally uses their Ultimate, they gain +75% ATK for that turn; if they kill a foe, they immediately take another turn.
+ - [x] **Catalyst Vials** – When an ally's DoT ticks on an enemy, heal them for 5% of damage per stack and grant +5% Effect Hit Rate for 1 turn.
+ - [x] **Safeguard Prism** – When an ally drops below 60% Max HP, grant a shield worth 15% Max HP per stack and +12% mitigation per stack for 1 turn; each ally then enters a 5-turn cooldown (+1 turn per five stacks) before it can trigger again.
 
 ## 3★ Relics
  - [ ] **Greed Engine** – All characters lose 1% HP per turn plus 0.5% per stack. Earn 50% more gold plus 25% per stack and increase rare drop rate by 0.5% plus 0.1% per additional stack.
  - [ ] **Stellar Compass** – Critical hits grant +1.5% ATK and +1.5% gold for the rest of combat, stacking without limit.
  - [ ] **Echoing Drum** – The first attack an ally uses each battle repeats at 25% power plus 25% per stack.
+ - [x] **Command Beacon** – At the start of each ally turn the fastest member spends 3% Max HP (multiplicative per stack) so every other ally gains a 1-turn SPD buff that scales multiplicatively (+15% per stack).
+ - [x] **Siege Banner** – At battle start, all enemies lose 15% DEF for 2 turns per stack. Each enemy killed grants the party +4% ATK and +4% DEF permanently.
 
 ## 4★ Relics
   - [ ] **Null Lantern** – Shops no longer appear. All foes are buffed by 150% for each fight cleared while holding this relic. Every fight now drops 1 pull plus 1 per stack.
+  - [x] **Entropy Mirror** – At battle start, all foes gain +30% ATK per stack. When they deal damage, they suffer recoil equal to 10% of the damage dealt per stack that bypasses mitigation.
   - [x] **Traveler's Charm** – When an ally is hit, they gain +25% DEF and +10% mitigation for the next turn plus 25% DEF and +10% mitigation per stack.
   - [x] **Timekeeper's Hourglass** – At the start of each turn, there is a 10% chance plus 1% per stack for all allies to take an additional turn.
 

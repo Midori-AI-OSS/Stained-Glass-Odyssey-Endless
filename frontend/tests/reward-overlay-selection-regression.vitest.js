@@ -1,24 +1,22 @@
-import { beforeEach, describe, expect, test } from 'vitest';
-import { JSDOM } from 'jsdom';
+import { afterEach, beforeAll, describe, expect, test } from 'vitest';
 
-process.env.SVELTE_ALLOW_RUNES_OUTSIDE_SVELTE = '1';
+process.env.SVELTE_ALLOW_RUNES_OUTSIDE_SVELTE = 'true';
 globalThis.SVELTE_ALLOW_RUNES_OUTSIDE_SVELTE = true;
-process.env.NODE_ENV = process.env.NODE_ENV || 'production';
-globalThis.__SVELTE_DEV__ = false;
+globalThis.DEV = false;
 
-const dom = new JSDOM('<!doctype html><html><body></body></html>', { url: 'http://localhost' });
-globalThis.window = dom.window;
-globalThis.document = dom.window.document;
-globalThis.navigator = dom.window.navigator;
-globalThis.HTMLElement = dom.window.HTMLElement;
-globalThis.CustomEvent = dom.window.CustomEvent;
-globalThis.requestAnimationFrame = dom.window.requestAnimationFrame ?? ((cb) => setTimeout(cb, 0));
-globalThis.cancelAnimationFrame = dom.window.cancelAnimationFrame ?? ((id) => clearTimeout(id));
+let cleanup;
+let fireEvent;
+let render;
+let RewardOverlay;
+let resetRewardProgression;
 
-const { cleanup, fireEvent, render, screen } = await import('@testing-library/svelte');
-const { default: RewardOverlay } = await import('../src/lib/components/RewardOverlay.svelte');
+beforeAll(async () => {
+  ({ cleanup, fireEvent, render } = await import('@testing-library/svelte'));
+  RewardOverlay = (await import('../src/lib/components/RewardOverlay.svelte')).default;
+  ({ resetRewardProgression } = await import('../src/lib/systems/overlayState.js'));
+});
 
-const baseProps = {
+const baseProps = Object.freeze({
   cards: [
     {
       id: 'radiant-beam',
@@ -35,27 +33,182 @@ const baseProps = {
   fullIdleMode: false,
   sfxVolume: 5,
   reducedMotion: false
-};
+});
+
+function renderOverlay(overrides = {}) {
+  const props = { ...baseProps, ...overrides };
+  return render(RewardOverlay, { props });
+}
+
+afterEach(() => {
+  resetRewardProgression?.();
+  cleanup();
+});
 
 describe('RewardOverlay selection regression', () => {
-  beforeEach(() => {
-    cleanup();
-  });
-
   test('keeps cards selectable when parent rejects the choice', async () => {
-    const { component } = render(RewardOverlay, { props: baseProps });
+    const { component, container } = renderOverlay();
 
     component.$on('select', (event) => {
       setTimeout(() => {
         event.detail?.respond?.({ ok: false });
-      }, 0);
+      });
     });
 
-    const cardButton = screen.getByRole('button', { name: /select card radiant beam/i });
-    await fireEvent.click(cardButton);
+    const cardButton = container.querySelector('button[aria-label^="Select card"]');
+    expect(cardButton).not.toBeNull();
+    if (!cardButton) return;
 
+    await fireEvent.click(cardButton);
     await new Promise((resolve) => setTimeout(resolve, 5));
 
-    expect(screen.getByRole('button', { name: /select card radiant beam/i })).toBeInTheDocument();
+    expect(container.querySelector('button[aria-label^="Select card"]')).not.toBeNull();
+  });
+
+  test('activates Advance confirm mode for staged cards', async () => {
+    const { container } = renderOverlay({
+      cards: [],
+      stagedCards: [{ id: 'radiant-beam', name: 'Radiant Beam', stars: 4 }],
+      awaitingCard: true
+    });
+
+    expect(container.querySelector('.confirm-panel')).toBeNull();
+
+    const advancePanel = container.querySelector('.advance-panel');
+    expect(advancePanel).not.toBeNull();
+    expect(advancePanel?.classList.contains('confirm-mode')).toBe(true);
+
+    const advanceButton = advancePanel?.querySelector('button.advance-button');
+    expect(advanceButton).not.toBeNull();
+    expect(advanceButton?.dataset.mode).toBe('confirm-card');
+    expect(advanceButton?.getAttribute('aria-label') ?? '').toContain('Confirm Card');
+
+    const stagedShell = container.querySelector('.card-shell.selected');
+    expect(stagedShell).not.toBeNull();
+  });
+
+  test('re-dispatches select events for staged cards', async () => {
+    const { component, container } = renderOverlay({
+      cards: [],
+      stagedCards: [{ id: 'radiant-beam', name: 'Radiant Beam', stars: 4 }],
+      awaitingCard: true
+    });
+
+    let selectDetail = null;
+    component.$on('select', (event) => {
+      selectDetail = event.detail;
+      event.detail?.respond?.({ ok: true });
+    });
+
+    const cardButton = container.querySelector('button[aria-label="Select card Radiant Beam"]');
+    expect(cardButton).not.toBeNull();
+    if (!cardButton) return;
+
+    await fireEvent.click(cardButton);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(selectDetail?.type).toBe('card');
+    expect(selectDetail?.id).toBe('radiant-beam');
+    expect(selectDetail?.intent).toBe('confirm');
+  });
+
+  test('omits staged preview panels when cards are already confirmed', () => {
+    const { container } = renderOverlay({
+      cards: [],
+      stagedCards: [
+        {
+          id: 'radiant-beam',
+          name: 'Radiant Beam',
+          stars: 4,
+          about: 'Deal extra damage to all foes.',
+          preview: {
+            summary: 'Deal extra damage to all foes.',
+            stats: [
+              { stat: 'atk', mode: 'percent', amount: 12, total_amount: 12, stacks: 1, target: 'party' }
+            ],
+            triggers: [{ event: 'on_turn_start', description: 'Gain 1 energy.' }]
+          }
+        }
+      ],
+      awaitingCard: true
+    });
+
+    expect(container.querySelector('.preview-panel')).toBeNull();
+  });
+
+  test('activates Advance confirm mode for staged relics', async () => {
+    const { container } = renderOverlay({
+      cards: [],
+      stagedRelics: [{ id: 'lucky-charm', name: 'Lucky Charm' }],
+      awaitingCard: false,
+      awaitingRelic: true
+    });
+
+    expect(container.querySelector('.confirm-panel')).toBeNull();
+
+    const advancePanel = container.querySelector('.advance-panel');
+    expect(advancePanel).not.toBeNull();
+    expect(advancePanel?.classList.contains('confirm-mode')).toBe(true);
+
+    const advanceButton = advancePanel?.querySelector('button.advance-button');
+    expect(advanceButton).not.toBeNull();
+    expect(advanceButton?.dataset.mode).toBe('confirm-relic');
+    expect(advanceButton?.getAttribute('aria-label') ?? '').toContain('Confirm Relic');
+  });
+
+  test('re-dispatches select events for staged relics', async () => {
+    const { component, container } = renderOverlay({
+      cards: [],
+      stagedRelics: [{ id: 'guardian-talisman', name: 'Guardian Talisman' }],
+      awaitingRelic: true,
+      awaitingCard: false
+    });
+
+    let selectDetail = null;
+    component.$on('select', (event) => {
+      selectDetail = event.detail;
+      event.detail?.respond?.({ ok: true });
+    });
+
+    const relicButton = container.querySelector('button[aria-label="Select relic Guardian Talisman"]');
+    expect(relicButton).not.toBeNull();
+    if (!relicButton) return;
+
+    await fireEvent.click(relicButton);
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(selectDetail?.type).toBe('relic');
+    expect(selectDetail?.id).toBe('guardian-talisman');
+    expect(selectDetail?.intent).toBe('confirm');
+  });
+
+  test('shows the next-room automation button when confirmations are clear', async () => {
+    const { container } = renderOverlay({
+      cards: [],
+      stagedCards: [],
+      stagedRelics: [],
+      awaitingCard: false,
+      awaitingRelic: false,
+      awaitingLoot: false,
+      awaitingNext: true
+    });
+
+    const nextButton = container.querySelector('button.next-button.overlay');
+    expect(nextButton).not.toBeNull();
+  });
+
+  test('hides the next-room automation button while loot confirmation is pending', async () => {
+    const { container } = renderOverlay({
+      cards: [],
+      stagedCards: [],
+      stagedRelics: [],
+      awaitingCard: false,
+      awaitingRelic: false,
+      awaitingLoot: true,
+      awaitingNext: true
+    });
+
+    const nextButton = container.querySelector('button.next-button.overlay');
+    expect(nextButton).toBeNull();
   });
 });

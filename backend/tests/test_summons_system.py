@@ -12,6 +12,7 @@ import pytest
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 import llms.torch_checker as torch_checker
+from tests.helpers import call_maybe_async
 
 from autofighter.mapgen import MapNode
 from autofighter.party import Party
@@ -25,7 +26,6 @@ from plugins.characters.becca import Becca
 from plugins.characters.foe_base import FoeBase
 from plugins.damage_types.lightning import Lightning
 from plugins.passives.normal.becca_menagerie_bond import BeccaMenagerieBond
-from tests.helpers import call_maybe_async
 
 
 def _reset_becca_passive_state() -> None:

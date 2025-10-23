@@ -42,6 +42,7 @@ NEW_CARDS: list[tuple[str, dict[str, float]]] = [
     ("guardian_shard", {"defense": 0.02, "mitigation": 0.02}),
     ("sturdy_boots", {"dodge_odds": 0.03, "defense": 0.03}),
     ("spiked_shield", {"atk": 0.03, "defense": 0.03}),
+    ("dynamo_wristbands", {"atk": 0.03}),
     ("critical_focus", {"atk": 0.55}),
     ("critical_transfer", {}),
     ("iron_guard", {"defense": 0.55}),

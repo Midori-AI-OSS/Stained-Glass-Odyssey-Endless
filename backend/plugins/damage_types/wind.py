@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import Any
 from typing import ClassVar
 
 from autofighter.effects import DamageOverTime
@@ -7,6 +8,46 @@ from autofighter.effects import create_stat_buff
 from autofighter.stats import BUS
 from plugins import damage_effects
 from plugins.damage_types._base import DamageTypeBase
+
+
+class WindTurnSpread:
+    """Helper coordinating Wind's multi-target turn spread behavior."""
+
+    __slots__ = ()
+
+    def collect_targets(
+        self,
+        context: Any,
+        target_index: int,
+        target_foe: Any,
+    ) -> list[tuple[Any, Any]]:
+        from autofighter.rooms.battle.turn_loop.player_turn import (
+            _collect_wind_spread_targets,
+        )
+
+        return _collect_wind_spread_targets(context, target_index, target_foe)
+
+    async def resolve(
+        self,
+        context: Any,
+        member: Any,
+        target_index: int,
+        *,
+        additional_targets: list[tuple[Any, Any]] | None = None,
+        per_duration: float | None = None,
+    ) -> int:
+        from autofighter.rooms.battle.turn_loop.player_turn import _handle_wind_spread
+
+        return await _handle_wind_spread(
+            context,
+            member,
+            target_index,
+            additional_targets=additional_targets,
+            per_duration=per_duration,
+        )
+
+
+_WIND_TURN_SPREAD = WindTurnSpread()
 
 
 @dataclass
@@ -37,10 +78,14 @@ class Wind(DamageTypeBase):
     def create_dot(self, damage: float, source) -> DamageOverTime | None:
         return damage_effects.create_dot(self.id, damage, source)
 
+    def get_turn_spread(self) -> WindTurnSpread:
+        """Expose Wind's normal-action spread helper to the turn loop."""
+
+        return _WIND_TURN_SPREAD
+
     async def ultimate(self, actor, allies, enemies):
         """Distribute attack across rapid hits on all foes."""
-        from autofighter.rooms.battle.pacing import YIELD_MULTIPLIER
-        from autofighter.rooms.battle.pacing import pace_sleep
+        from autofighter.rooms.battle.pacing import pace_per_target
         from autofighter.rooms.battle.targeting import select_aggro_target
 
         # Consume ultimate; bail if not ready
@@ -108,7 +153,7 @@ class Wind(DamageTypeBase):
                 rem -= 1
             per_hit = max(1, int(per_hit))
             dmg = await foe.apply_damage(per_hit, attacker=actor, action_name="Wind Ultimate")
-            await pace_sleep(YIELD_MULTIPLIER)
+            await pace_per_target(actor)
             try:
                 await BUS.emit_async("hit_landed", actor, foe, dmg, "attack", "wind_ultimate")
             except Exception:

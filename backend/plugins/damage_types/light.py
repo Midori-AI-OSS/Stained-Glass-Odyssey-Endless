@@ -19,39 +19,41 @@ class Light(DamageTypeBase):
         return damage_effects.create_dot(self.id, damage, source)
 
     async def on_action(self, actor, allies, enemies):
-        from autofighter.rooms.battle.pacing import YIELD_MULTIPLIER
-        from autofighter.rooms.battle.pacing import pace_sleep
+        from autofighter.rooms.battle.pacing import pace_per_target
 
         for ally in allies:
+            if getattr(ally, "hp", 0) <= 0:
+                continue
             mgr = getattr(ally, "effect_manager", None)
             if mgr is not None:
                 hot = damage_effects.create_hot(self.id, actor)
                 if hot is not None:
                     await mgr.add_hot(hot)
-            await pace_sleep(YIELD_MULTIPLIER)
+            await pace_per_target(actor)
 
         for ally in allies:
-            if ally.max_hp <= 0:
-                await pace_sleep(YIELD_MULTIPLIER)
+            max_hp = getattr(ally, "max_hp", 0)
+            if max_hp <= 0:
                 continue
-            if ally.hp > 0 and ally.hp / ally.max_hp < 0.25:
+            hp = getattr(ally, "hp", 0)
+            if hp <= 0:
+                continue
+            if hp / max_hp < 0.25:
                 await ally.apply_healing(actor.atk, healer=actor)
-                await pace_sleep(YIELD_MULTIPLIER)
+                await pace_per_target(actor)
                 return False
-            await pace_sleep(YIELD_MULTIPLIER)
+            await pace_per_target(actor)
 
         return True
 
     async def ultimate(self, actor, allies, enemies):
         """Fully heal allies, cleanse their DoTs, and weaken enemies."""
-        from autofighter.rooms.battle.pacing import YIELD_MULTIPLIER
-        from autofighter.rooms.battle.pacing import pace_sleep
+        from autofighter.rooms.battle.pacing import pace_per_target
 
         if not await self.consume_ultimate(actor):
             return False
         for ally in allies:
-            if ally.hp <= 0:
-                await pace_sleep(YIELD_MULTIPLIER)
+            if getattr(ally, "hp", 0) <= 0:
                 continue
             mgr = getattr(ally, "effect_manager", None)
             if mgr is None:
@@ -84,11 +86,10 @@ class Light(DamageTypeBase):
             missing = ally.max_hp - ally.hp
             if missing > 0:
                 await ally.apply_healing(missing, healer=actor, source_type="ultimate", source_name="Light Ultimate")
-            await pace_sleep(YIELD_MULTIPLIER)
+            await pace_per_target(actor)
 
         for enemy in enemies:
-            if enemy.hp <= 0:
-                await pace_sleep(YIELD_MULTIPLIER)
+            if getattr(enemy, "hp", 0) <= 0:
                 continue
             mgr = getattr(enemy, "effect_manager", None)
             if mgr is None:
@@ -101,7 +102,7 @@ class Light(DamageTypeBase):
                 defense_mult=0.75,
             )
             await mgr.add_modifier(mod)
-            await pace_sleep(YIELD_MULTIPLIER)
+            await pace_per_target(actor)
 
         await BUS.emit_async("light_ultimate", actor)
         return True

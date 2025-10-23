@@ -1,5 +1,6 @@
 import { derived, get, writable } from 'svelte/store';
 import { runStateStore } from './runState.js';
+import { createRewardPhaseController } from './rewardProgression.js';
 
 const defaultState = Object.freeze({
   rewardOpen: false,
@@ -45,6 +46,10 @@ export function createOverlayStateStore() {
 export const overlayStateStore = createOverlayStateStore();
 export const overlayState = overlayStateStore;
 
+const rewardPhaseMachine = createRewardPhaseController();
+export const rewardPhaseController = rewardPhaseMachine;
+export const rewardPhaseState = rewardPhaseMachine;
+
 export const overlayBlocking = derived(overlayStateStore, ($state) => {
   return Boolean($state.rewardOpen || ($state.reviewOpen && $state.reviewReady));
 });
@@ -75,8 +80,25 @@ export function setManualSyncHalt(halt) {
 
 export function resetOverlayState() {
   overlayStateStore.reset();
+  rewardPhaseMachine.reset();
 }
 
 export function setBattleActive(active) {
   runStateStore.setBattleActive(active);
+}
+
+export function updateRewardProgression(payload, options = {}) {
+  return rewardPhaseMachine.ingest(payload, options);
+}
+
+export function advanceRewardPhase() {
+  return rewardPhaseMachine.advance();
+}
+
+export function skipToRewardPhase(phase) {
+  return rewardPhaseMachine.skipTo(phase);
+}
+
+export function resetRewardProgression() {
+  return rewardPhaseMachine.reset();
 }
