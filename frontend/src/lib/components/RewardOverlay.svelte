@@ -59,6 +59,10 @@
   let cardChoiceEntryMap = new Map();
   let stagedRelicEntryMap = new Map();
   let relicChoiceEntryMap = new Map();
+  let queuedCardConfirmation = null;
+  let queuedRelicConfirmation = null;
+  let cardConfirmDescription = 'Card selection';
+  let relicConfirmDescription = 'Relic selection';
 
   onMount(() => {
     const exitDisposer = rewardPhaseController.on('exit', (detail) => {
@@ -141,26 +145,19 @@
   let advanceCountdownContext = null;
   let advanceCountdownDeadline = 0;
   let advanceInFlight = false;
+  let confirmFallbackMode = null;
+  let confirmFallbackKey = null;
+  let advancePanelActive = false;
+  let advanceButtonMode = 'advance';
+  let advanceHelperMessage = '';
+  let advanceButtonAriaLabel = '';
+  let advanceButtonDisabled = true;
+  let advanceStatusMessage = '';
 
   $: advanceCountdownLabel = formatCountdown(advanceCountdownSeconds);
   $: showAdvancePanel = !fallbackActive && Boolean(currentPhase && nextPhase);
   $: phaseAdvanceAvailable = !fallbackActive && computeAdvanceAvailability(currentPhase, nextPhase);
-  $: advanceButtonDisabled = !phaseAdvanceAvailable || advanceInFlight || fallbackActive || advanceBusy;
   $: advanceCountdownActive = Boolean(advanceCountdownTimer) && phaseAdvanceAvailable && !advanceBusy;
-  $: advanceStatusMessage = (() => {
-    if (!showAdvancePanel) return '';
-    if (!phaseAdvanceAvailable) {
-      return 'Advance locked until this phase is complete.';
-    }
-    if (advanceBusy) {
-      return 'Advancing to the next room…';
-    }
-    if (advanceCountdownActive) {
-      return `Advance ready. Auto in ${advanceCountdownLabel}.`;
-    }
-    return 'Advance ready.';
-  })();
-  $: countdownAnnouncement = showAdvancePanel ? advanceStatusMessage : '';
 
   $: {
     if (fallbackActive) {
@@ -193,31 +190,6 @@
     } else {
       fallbackLogSignature = null;
     }
-  }
-
-  $: {
-    const focusable =
-      !fallbackActive &&
-      showAdvancePanel &&
-      phaseAdvanceAvailable &&
-      !advanceButtonDisabled &&
-      advanceButtonEl != null;
-    if (focusable && !lastAdvanceFocusable) {
-      queueMicrotask(() => {
-        if (!advanceButtonEl) return;
-        if (document.activeElement !== advanceButtonEl) {
-          advanceButtonEl.focus();
-        }
-      });
-    }
-    if (!focusable && lastAdvanceFocusable) {
-      queueMicrotask(() => {
-        if (advanceButtonEl && document.activeElement === advanceButtonEl && overlayRootEl) {
-          overlayRootEl.focus();
-        }
-      });
-    }
-    lastAdvanceFocusable = focusable;
   }
 
   $: {
@@ -666,7 +638,20 @@
   }
 
   function handleAdvanceClick() {
-    if (!phaseAdvanceAvailable || advanceInFlight || advanceBusy) return;
+    if (advanceButtonDisabled) {
+      return;
+    }
+    if (confirmFallbackMode === 'card') {
+      void handleConfirmClick('card');
+      return;
+    }
+    if (confirmFallbackMode === 'relic') {
+      void handleConfirmClick('relic');
+      return;
+    }
+    if (!phaseAdvanceAvailable || advanceInFlight || advanceBusy || fallbackActive) {
+      return;
+    }
     triggerAdvance('manual');
   }
 
@@ -674,12 +659,18 @@
     handleLootSfxGesture(event);
     if (event.defaultPrevented) return;
     if (!overlayRootEl || event.target !== overlayRootEl) return;
-    if (!phaseAdvanceAvailable || advanceButtonDisabled) return;
+    if (advanceButtonDisabled) return;
     if (fallbackActive) return;
     if (advanceBusy) return;
     if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
-      triggerAdvance('keyboard');
+      if (confirmFallbackMode === 'card') {
+        void handleConfirmClick('card');
+      } else if (confirmFallbackMode === 'relic') {
+        void handleConfirmClick('relic');
+      } else if (phaseAdvanceAvailable && !advanceInFlight) {
+        triggerAdvance('keyboard');
+      }
     }
   }
 
@@ -732,9 +723,10 @@
   let autoRelicSelectionInFlight = false;
 
   $: cardSelectionLocked = pendingCardSelection !== null;
-  $: relicSelectionLocked = pendingRelicSelection !== null || stagedRelicEntries.length > 0;
   $: showCards = cardChoiceEntries.length > 0;
-  $: showRelics = relicChoiceEntries.length > 0 && !awaitingCard && !relicSelectionLocked;
+  $: hasRelicChoices = relicChoiceEntries.length > 0;
+  $: hasStagedRelics = stagedRelicEntries.length > 0;
+  $: showRelics = (hasRelicChoices || hasStagedRelics) && !awaitingCard;
 
   $: selectionInFlight = pendingCardSelection !== null || pendingRelicSelection !== null;
 
@@ -767,6 +759,10 @@
       )
     : '';
 
+  $: highlightedCardEntry = highlightedCardKey
+    ? stagedCardEntryMap.get(highlightedCardKey) ?? cardChoiceEntryMap.get(highlightedCardKey)
+    : null;
+
   $: if (currentPhase !== 'relics' && highlightedRelicKey !== null) {
     highlightedRelicKey = null;
   }
@@ -786,6 +782,155 @@
         'relic'
       )
     : '';
+
+  $: highlightedRelicEntry = highlightedRelicKey
+    ? stagedRelicEntryMap.get(highlightedRelicKey) ?? relicChoiceEntryMap.get(highlightedRelicKey)
+    : null;
+
+  $: stagedCardHighlightKey = stagedCardEntries.length > 0
+    ? rewardEntryKey(stagedCardEntries[0], 0, 'staged-card')
+    : null;
+  $: stagedRelicHighlightKey = stagedRelicEntries.length > 0
+    ? rewardEntryKey(stagedRelicEntries[0], 0, 'staged-relic')
+    : null;
+
+  $: if (awaitingCard && stagedCardHighlightKey && highlightedCardKey !== stagedCardHighlightKey) {
+    highlightedCardKey = stagedCardHighlightKey;
+  }
+
+  $: if (awaitingRelic && stagedRelicHighlightKey && highlightedRelicKey !== stagedRelicHighlightKey) {
+    highlightedRelicKey = stagedRelicHighlightKey;
+  }
+
+  $: stagedCardSelection = awaitingCard && stagedCardEntries.length > 0 ? stagedCardEntries[0] : null;
+  $: stagedRelicSelection = awaitingRelic && stagedRelicEntries.length > 0 ? stagedRelicEntries[0] : null;
+
+  $: cardConfirmDescription = (() => {
+    const entry = stagedCardSelection ?? highlightedCardEntry;
+    if (!entry) return 'Card selection';
+    const label = labelForRewardEntry(entry, 'card');
+    return describeRewardLabel('card', label);
+  })();
+
+  $: relicConfirmDescription = (() => {
+    const entry = stagedRelicSelection ?? highlightedRelicEntry;
+    if (!entry) return 'Relic selection';
+    const label = labelForRewardEntry(entry, 'relic');
+    return describeRewardLabel('relic', label);
+  })();
+
+  $: {
+    const cardReady =
+      !fallbackActive &&
+      currentPhase === 'cards' &&
+      awaitingCard &&
+      stagedCardEntries.length > 0 &&
+      pendingCardSelection === null &&
+      !advanceInFlight &&
+      !advanceBusy;
+
+    const relicReady =
+      !fallbackActive &&
+      currentPhase === 'relics' &&
+      awaitingRelic &&
+      stagedRelicEntries.length > 0 &&
+      pendingRelicSelection === null &&
+      !advanceInFlight &&
+      !advanceBusy &&
+      !awaitingCard;
+
+    confirmFallbackMode = cardReady ? 'card' : relicReady ? 'relic' : null;
+
+    if (confirmFallbackMode === 'card') {
+      const stagedEntry = stagedCardEntries[0] ?? null;
+      confirmFallbackKey = stagedEntry ? rewardEntryKey(stagedEntry, 0, 'staged-card') : null;
+    } else if (confirmFallbackMode === 'relic') {
+      const stagedEntry = stagedRelicEntries[0] ?? null;
+      confirmFallbackKey = stagedEntry ? rewardEntryKey(stagedEntry, 0, 'staged-relic') : null;
+    } else {
+      confirmFallbackKey = null;
+    }
+
+    advanceButtonMode = confirmFallbackMode ? `confirm-${confirmFallbackMode}` : 'advance';
+    advancePanelActive = Boolean(confirmFallbackMode) || (phaseAdvanceAvailable && !fallbackActive);
+
+    const confirmReady =
+      confirmFallbackMode != null && confirmFallbackKey && !selectionInFlight && !advanceBusy;
+
+    advanceButtonAriaLabel =
+      confirmFallbackMode === 'card'
+        ? `Confirm ${cardConfirmDescription} with Advance`
+        : confirmFallbackMode === 'relic'
+          ? `Confirm ${relicConfirmDescription} with Advance`
+          : nextPhaseLabel
+            ? `Advance to ${nextPhaseLabel}`
+            : 'Advance to next phase';
+
+    advanceHelperMessage = confirmFallbackMode
+      ? 'Advance confirms the highlighted selection if double-click is unavailable.'
+      : '';
+
+    advanceButtonDisabled = (() => {
+      if (fallbackActive) return true;
+      if (advanceBusy || advanceInFlight) return true;
+      if (confirmFallbackMode) {
+        return !confirmReady;
+      }
+      return !phaseAdvanceAvailable;
+    })();
+
+    advanceStatusMessage = (() => {
+      if (!showAdvancePanel) return '';
+      if (advanceBusy) {
+        return 'Advancing to the next room…';
+      }
+      if (advanceInFlight) {
+        return 'Advancing…';
+      }
+      if (confirmFallbackMode) {
+        if (!confirmReady) {
+          return 'Finishing selection…';
+        }
+        return confirmFallbackMode === 'card'
+          ? `Highlighted card ready. Use Advance to confirm ${cardConfirmDescription}.`
+          : `Highlighted relic ready. Use Advance to confirm ${relicConfirmDescription}.`;
+      }
+      if (!phaseAdvanceAvailable) {
+        return 'Advance locked until this phase is complete.';
+      }
+      if (advanceCountdownActive) {
+        return `Advance ready. Auto in ${advanceCountdownLabel}.`;
+      }
+      return 'Advance ready.';
+    })();
+  }
+
+  $: countdownAnnouncement = showAdvancePanel ? advanceStatusMessage : '';
+
+  $: {
+    const focusable =
+      !fallbackActive &&
+      showAdvancePanel &&
+      advancePanelActive &&
+      !advanceButtonDisabled &&
+      advanceButtonEl != null;
+    if (focusable && !lastAdvanceFocusable) {
+      queueMicrotask(() => {
+        if (!advanceButtonEl) return;
+        if (document.activeElement !== advanceButtonEl) {
+          advanceButtonEl.focus();
+        }
+      });
+    }
+    if (!focusable && lastAdvanceFocusable) {
+      queueMicrotask(() => {
+        if (advanceButtonEl && document.activeElement === advanceButtonEl && overlayRootEl) {
+          overlayRootEl.focus();
+        }
+      });
+    }
+    lastAdvanceFocusable = focusable;
+  }
 
   $: {
     if (fallbackActive) {
@@ -832,22 +977,68 @@
     }
   }
 
+  $: if (queuedCardConfirmation?.type === 'card') {
+    if (awaitingCard && stagedCardEntries.length > 0) {
+      const stagedEntry = stagedCardEntries[0];
+      const confirmDetail = {
+        type: 'card',
+        intent: 'confirm',
+        id: stagedEntry?.id ?? queuedCardConfirmation.detail?.id ?? null,
+        key:
+          queuedCardConfirmation.detail?.key ?? rewardEntryKey(stagedEntry, 0, 'staged-card'),
+        entry: stagedEntry
+      };
+      queuedCardConfirmation = null;
+      queueMicrotask(() => {
+        void performRewardSelection(confirmDetail);
+      });
+    } else if (!awaitingCard && stagedCardEntries.length === 0 && pendingCardSelection === null) {
+      queuedCardConfirmation = null;
+    }
+  }
+
+  $: if (queuedRelicConfirmation?.type === 'relic') {
+    if (awaitingRelic && stagedRelicEntries.length > 0) {
+      const stagedEntry = stagedRelicEntries[0];
+      const confirmDetail = {
+        type: 'relic',
+        intent: 'confirm',
+        id: stagedEntry?.id ?? queuedRelicConfirmation.detail?.id ?? null,
+        key:
+          queuedRelicConfirmation.detail?.key ?? rewardEntryKey(stagedEntry, 0, 'staged-relic'),
+        entry: stagedEntry
+      };
+      queuedRelicConfirmation = null;
+      queueMicrotask(() => {
+        void performRewardSelection(confirmDetail);
+      });
+    } else if (!awaitingRelic && stagedRelicEntries.length === 0 && pendingRelicSelection === null) {
+      queuedRelicConfirmation = null;
+    }
+  }
+
   async function performRewardSelection(detail) {
     const type = detail?.type;
     const isCard = type === 'card';
     const isRelic = type === 'relic';
     if (!isCard && !isRelic) return;
 
+    const intent = detail?.intent === 'confirm' || detail?.intent === 'cancel'
+      ? detail.intent
+      : 'select';
+
     let selectionToken = null;
 
     let responded = false;
+    let responseValue = null;
     const responsePromise = new Promise((resolve) => {
       const respond = (value) => {
         if (responded) return;
         responded = true;
-        resolve(value || { ok: false });
+        responseValue = value && typeof value === 'object' ? value : { ok: false };
+        resolve(responseValue);
       };
-      dispatch('select', { ...detail, respond });
+      dispatch('select', { ...detail, intent, respond });
     });
 
     if (isCard) {
@@ -858,8 +1049,9 @@
       pendingRelicSelection = selectionToken;
     }
 
+    let result;
     try {
-      await responsePromise;
+      result = await responsePromise;
     } catch (error) {
       if (isCard && pendingCardSelection === selectionToken) {
         pendingCardSelection = null;
@@ -867,7 +1059,7 @@
       if (isRelic && pendingRelicSelection === selectionToken) {
         pendingRelicSelection = null;
       }
-      return;
+      return null;
     }
 
     if (isCard && pendingCardSelection === selectionToken) {
@@ -876,6 +1068,8 @@
     if (isRelic && pendingRelicSelection === selectionToken) {
       pendingRelicSelection = null;
     }
+
+    return result ?? responseValue ?? { ok: false };
   }
 
   async function handleSelect(e) {
@@ -898,20 +1092,113 @@
       ? highlightedCardKey === selectionKey
       : highlightedRelicKey === selectionKey;
 
-    if (!isDoubleClick) {
-      if (isCard) {
-        highlightedCardKey = selectionKey;
-      } else {
-        highlightedRelicKey = selectionKey;
-      }
-      if (detail.key == null) {
-        detail.key = selectionKey;
-      }
-      return;
-    }
+    const awaiting = isCard ? awaitingCard : awaitingRelic;
+    const stagedMap = isCard ? stagedCardEntryMap : stagedRelicEntryMap;
+    const choiceMap = isCard ? cardChoiceEntryMap : relicChoiceEntryMap;
+    const stagedEntry = stagedMap.get(selectionKey) ?? null;
+    const choiceEntry = choiceMap.get(selectionKey) ?? null;
+    const pending = isCard ? pendingCardSelection !== null : pendingRelicSelection !== null;
 
     if (detail.key == null) {
       detail.key = selectionKey;
+    }
+
+    if (detail.id == null) {
+      detail.id = detail.entry?.id ?? stagedEntry?.id ?? choiceEntry?.id ?? null;
+    }
+
+    if (!detail.entry && (stagedEntry || choiceEntry)) {
+      detail.entry = stagedEntry ?? choiceEntry;
+    }
+
+    if (isCard) {
+      highlightedCardKey = selectionKey;
+    } else {
+      highlightedRelicKey = selectionKey;
+    }
+
+    if (isDoubleClick) {
+      if (pending) {
+        const queuedDetail = {
+          type,
+          id: detail.id ?? stagedEntry?.id ?? choiceEntry?.id ?? null,
+          key: selectionKey,
+          entry: stagedEntry ?? detail.entry ?? choiceEntry ?? null
+        };
+        if (isCard) {
+          queuedCardConfirmation = { type: 'card', detail: queuedDetail };
+        } else {
+          queuedRelicConfirmation = { type: 'relic', detail: queuedDetail };
+        }
+        return;
+      }
+
+      if (!awaiting || !stagedEntry) {
+        const stageDetail = {
+          ...detail,
+          intent: 'select'
+        };
+        const stageResult = await performRewardSelection(stageDetail);
+        if (!stageResult?.ok) {
+          return;
+        }
+      }
+
+      const confirmDetail = {
+        ...detail,
+        intent: 'confirm',
+        entry: stagedMap.get(selectionKey) ?? stagedEntry ?? detail.entry ?? choiceEntry ?? null
+      };
+      await performRewardSelection(confirmDetail);
+      return;
+    }
+
+    if (!awaiting || !stagedEntry) {
+      if (!detail.id && !choiceEntry) {
+        return;
+      }
+      const selectDetail = {
+        ...detail,
+        intent: 'select',
+        entry: detail.entry ?? choiceEntry ?? null
+      };
+      await performRewardSelection(selectDetail);
+    }
+  }
+
+  async function handleConfirmClick(type) {
+    const isCard = type === 'card';
+    const isRelic = type === 'relic';
+    if (!isCard && !isRelic) return;
+
+    const selectionKey = isCard ? highlightedCardKey ?? stagedCardHighlightKey : highlightedRelicKey ?? stagedRelicHighlightKey;
+    if (!selectionKey) return;
+
+    const awaiting = isCard ? awaitingCard : awaitingRelic;
+    if (!awaiting) return;
+
+    const stagedEntries = isCard ? stagedCardEntries : stagedRelicEntries;
+    if (!Array.isArray(stagedEntries) || stagedEntries.length === 0) return;
+
+    const stagedEntry = (isCard ? stagedCardEntryMap : stagedRelicEntryMap).get(selectionKey) ?? stagedEntries[0];
+    if (!stagedEntry) return;
+
+    const detail = {
+      type,
+      intent: 'confirm',
+      id: stagedEntry?.id ?? null,
+      key: selectionKey,
+      entry: stagedEntry
+    };
+
+    const pending = isCard ? pendingCardSelection !== null : pendingRelicSelection !== null;
+    if (pending) {
+      if (isCard) {
+        queuedCardConfirmation = { type: 'card', detail };
+      } else {
+        queuedRelicConfirmation = { type: 'relic', detail };
+      }
+      return;
     }
 
     await performRewardSelection(detail);
@@ -1028,8 +1315,8 @@
     justify-content: center;
     gap: clamp(1rem, 2vw, 2.5rem);
     width: 100%;
-    min-height: clamp(620px, 68vh, 880px);
-    padding: clamp(1rem, 1.75vh, 1.9rem) 0;
+    min-height: clamp(380px, 48vh, 620px);
+    padding: clamp(0.3rem, 0.65vh, 0.8rem) 0;
     /* Overlay theme tokens */
     --overlay-warm-accent: var(--reward-overlay-warm-accent, #f7b267);
     --overlay-text-primary: color-mix(in srgb, #f8fbff 90%, rgba(0, 0, 0, 0.12));
@@ -1176,6 +1463,12 @@
     filter: saturate(0.85);
   }
 
+  .advance-panel.confirm-mode {
+    border: var(--overlay-chip-border-active);
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent, #7ec8ff) 30%, transparent) inset,
+      var(--overlay-panel-shadow);
+  }
+
   .advance-header {
     display: flex;
     align-items: baseline;
@@ -1203,6 +1496,16 @@
     margin: 0;
     font-size: 0.9rem;
     color: var(--overlay-text-muted);
+  }
+
+  .advance-helper {
+    margin: 0;
+    font-size: 0.85rem;
+    color: var(--overlay-text-primary);
+  }
+
+  .advance-panel.confirm-mode .advance-helper {
+    color: var(--overlay-text-warm);
   }
 
   .advance-button {
@@ -1385,13 +1688,15 @@
     animation-delay: var(--delay, 0ms);
   }
 
-  /* Fix for card selection visual bug: Ensure selected cards have full opacity
-     to prevent reveal animation interference. The reveal animation sets opacity: 0
-     initially and animates to opacity: 1. When a card is selected, the wiggle animation
-     is applied, but the reveal animation's opacity property can interfere, causing the
-     card to disappear. This rule ensures selected cards always have opacity: 1 regardless
-     of the reveal animation state. */
-  .reveal :global(.card-shell.selected .card-art) {
+  /* Fix for reward selection visual bug: Ensure selected cards and relics have
+     full opacity to prevent reveal animation interference. The reveal animation
+     sets opacity: 0 initially and animates to opacity: 1. When a reward is
+     selected, the wiggle animation is applied, but the reveal animation's
+     opacity property can interfere, causing the reward to disappear. These
+     rules ensure selected rewards always have opacity: 1 regardless of the
+     reveal animation state. */
+  .reveal :global(.card-shell.selected .card-art),
+  .reveal :global(.curio-shell.selected .card-art) {
     opacity: 1 !important;
   }
 
@@ -1617,7 +1922,9 @@
       <p class="phase-note">Next: {nextPhaseLabel}</p>
     {/if}
     {#if showAdvancePanel}
-      <div class={`advance-panel ${phaseAdvanceAvailable ? 'active' : 'locked'}`}>
+      <div
+        class={`advance-panel ${advancePanelActive ? 'active' : 'locked'}${confirmFallbackMode ? ' confirm-mode' : ''}`}
+      >
         <div class="advance-header">
           <h4>Advance</h4>
           {#if nextPhaseLabel}
@@ -1625,12 +1932,18 @@
           {/if}
         </div>
         <p class="advance-status" data-testid="advance-countdown" aria-live="polite">{advanceStatusMessage}</p>
+        {#if advanceHelperMessage}
+          <p class="advance-helper" role="note">{advanceHelperMessage}</p>
+        {/if}
         <button
           class="icon-btn advance-button"
           type="button"
           bind:this={advanceButtonEl}
           on:click={handleAdvanceClick}
           disabled={advanceButtonDisabled}
+          aria-label={advanceButtonAriaLabel}
+          title={advanceHelperMessage || undefined}
+          data-mode={advanceButtonMode}
         >
           Advance
         </button>

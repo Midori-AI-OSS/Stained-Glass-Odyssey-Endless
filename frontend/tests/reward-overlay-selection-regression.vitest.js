@@ -65,15 +65,24 @@ describe('RewardOverlay selection regression', () => {
     expect(container.querySelector('button[aria-label^="Select card"]')).not.toBeNull();
   });
 
-  test('renders staged cards without confirm controls', async () => {
+  test('activates Advance confirm mode for staged cards', async () => {
     const { container } = renderOverlay({
       cards: [],
       stagedCards: [{ id: 'radiant-beam', name: 'Radiant Beam', stars: 4 }],
       awaitingCard: true
     });
 
-    expect(container.querySelector('.card-shell.confirmable')).toBeNull();
-    expect(container.querySelector('button.card-confirm')).toBeNull();
+    expect(container.querySelector('.confirm-panel')).toBeNull();
+
+    const advancePanel = container.querySelector('.advance-panel');
+    expect(advancePanel).not.toBeNull();
+    expect(advancePanel?.classList.contains('confirm-mode')).toBe(true);
+
+    const advanceButton = advancePanel?.querySelector('button.advance-button');
+    expect(advanceButton).not.toBeNull();
+    expect(advanceButton?.dataset.mode).toBe('confirm-card');
+    expect(advanceButton?.getAttribute('aria-label') ?? '').toContain('Confirm Card');
+
     const stagedShell = container.querySelector('.card-shell.selected');
     expect(stagedShell).not.toBeNull();
   });
@@ -100,6 +109,7 @@ describe('RewardOverlay selection regression', () => {
 
     expect(selectDetail?.type).toBe('card');
     expect(selectDetail?.id).toBe('radiant-beam');
+    expect(selectDetail?.intent).toBe('confirm');
   });
 
   test('omits staged preview panels when cards are already confirmed', () => {
@@ -126,7 +136,7 @@ describe('RewardOverlay selection regression', () => {
     expect(container.querySelector('.preview-panel')).toBeNull();
   });
 
-  test('renders staged relics without confirm or cancel controls', async () => {
+  test('activates Advance confirm mode for staged relics', async () => {
     const { container } = renderOverlay({
       cards: [],
       stagedRelics: [{ id: 'lucky-charm', name: 'Lucky Charm' }],
@@ -134,9 +144,16 @@ describe('RewardOverlay selection regression', () => {
       awaitingRelic: true
     });
 
-    expect(container.querySelector('.curio-shell.confirmable')).toBeNull();
-    expect(container.querySelector('button.curio-confirm')).toBeNull();
-    expect(container.querySelector('button.cancel-btn')).toBeNull();
+    expect(container.querySelector('.confirm-panel')).toBeNull();
+
+    const advancePanel = container.querySelector('.advance-panel');
+    expect(advancePanel).not.toBeNull();
+    expect(advancePanel?.classList.contains('confirm-mode')).toBe(true);
+
+    const advanceButton = advancePanel?.querySelector('button.advance-button');
+    expect(advanceButton).not.toBeNull();
+    expect(advanceButton?.dataset.mode).toBe('confirm-relic');
+    expect(advanceButton?.getAttribute('aria-label') ?? '').toContain('Confirm Relic');
   });
 
   test('re-dispatches select events for staged relics', async () => {
@@ -162,6 +179,7 @@ describe('RewardOverlay selection regression', () => {
 
     expect(selectDetail?.type).toBe('relic');
     expect(selectDetail?.id).toBe('guardian-talisman');
+    expect(selectDetail?.intent).toBe('confirm');
   });
 
   test('shows the next-room automation button when confirmations are clear', async () => {

@@ -16,6 +16,7 @@ describe('httpClient error context handling', () => {
 
   afterEach(() => {
     __setHttpClientTestOverrides({});
+    resetApiBase();
   });
 
   test('propagates backend context data to overlays and thrown errors', async () => {

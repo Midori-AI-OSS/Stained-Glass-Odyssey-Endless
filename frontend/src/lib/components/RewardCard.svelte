@@ -127,30 +127,31 @@
   }
 
   @keyframes reward-selection-wiggle {
-    0% {
-      transform: scale(1) rotate(0deg);
+    0%,
+    100% {
+      transform: translate3d(0, 0, 0) rotate(0deg);
     }
-    16% {
-      transform: scale(var(--reward-selection-wiggle-scale-max))
+    10%,
+    30%,
+    50% {
+      transform: translate3d(var(--reward-selection-wiggle-translate), 0, 0)
         rotate(var(--reward-selection-wiggle-rotation));
     }
-    34% {
-      transform: scale(var(--reward-selection-wiggle-scale-min))
+    20%,
+    40%,
+    60% {
+      transform: translate3d(calc(var(--reward-selection-wiggle-translate) * -1), 0, 0)
         rotate(calc(var(--reward-selection-wiggle-rotation) * -1));
     }
-    52% {
-      transform: scale(var(--reward-selection-wiggle-scale-max))
-        rotate(var(--reward-selection-wiggle-rotation));
-    }
-    70% {
-      transform: scale(1) rotate(0deg);
-    }
-    100% {
-      transform: scale(1) rotate(0deg);
+    70%,
+    80%,
+    90% {
+      transform: translate3d(0, 0, 0) rotate(0deg);
     }
   }
 
   .card-shell.selected[data-reduced-motion='false'] :global(.card-art) {
+    transform-origin: center;
     animation: reward-selection-wiggle var(--reward-selection-wiggle-duration)
       ease-in-out infinite;
   }

@@ -720,7 +720,8 @@ async def _run_battle(
                 battle_tasks.pop(run_id, None)
                 battle_locks.pop(run_id, None)
                 return
-            has_card_choices = bool(result.get("card_choices"))
+            raw_card_choices = result.get("card_choices")
+            has_card_choices = bool(raw_card_choices)
             has_relic_choices = bool(result.get("relic_choices"))
             loot_payload = result.get("loot", {})
             loot_gold_raw = 0
@@ -735,6 +736,14 @@ async def _run_battle(
             has_loot = has_loot_gold or has_loot_items
 
             state["awaiting_card"] = has_card_choices
+            if has_card_choices:
+                state["card_choice_options"] = [
+                    dict(choice)
+                    for choice in raw_card_choices
+                    if isinstance(choice, Mapping)
+                ]
+            else:
+                state.pop("card_choice_options", None)
             state["awaiting_relic"] = has_relic_choices
             state["awaiting_loot"] = has_loot
 

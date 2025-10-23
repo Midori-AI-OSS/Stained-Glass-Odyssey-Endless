@@ -141,6 +141,52 @@ describe('RewardOverlay relic phase interactions', () => {
     expect(stagedShell?.classList.contains('selected')).toBe(true);
   });
 
+  test('keeps relic grid visible and routes confirmation through Advance controls', async () => {
+    updateRewardProgression({
+      available: ['cards', 'relics', 'battle_review'],
+      completed: ['cards'],
+      current_step: 'relics'
+    });
+
+    const relicPool = [
+      { id: 'moon-charm', name: 'Moon Charm' },
+      { id: 'sun-charm', name: 'Sun Charm' }
+    ];
+
+    const { container, getByText } = render(RewardOverlay, {
+      props: {
+        ...baseProps,
+        relics: relicPool,
+        stagedRelics: [relicPool[0]],
+        awaitingRelic: true
+      }
+    });
+
+    await tick();
+
+    const relicHeading = getByText('Choose a Relic');
+    expect(relicHeading).not.toBeNull();
+
+    const relicGrid = relicHeading?.nextElementSibling;
+    expect(relicGrid).not.toBeNull();
+    expect(relicGrid?.classList.contains('choices')).toBe(true);
+    expect(relicGrid?.querySelectorAll('.curio-shell').length ?? 0).toBeGreaterThan(0);
+
+    expect(container.querySelector('.confirm-panel')).toBeNull();
+
+    const advancePanel = container.querySelector('.advance-panel');
+    expect(advancePanel).not.toBeNull();
+    expect(advancePanel?.classList.contains('confirm-mode')).toBe(true);
+
+    const helper = advancePanel?.querySelector('.advance-helper');
+    expect(helper?.textContent?.trim()).toMatch(/Advance confirms/i);
+
+    const advanceButton = advancePanel?.querySelector('button.advance-button');
+    expect(advanceButton).not.toBeNull();
+    expect(advanceButton?.dataset.mode).toBe('confirm-relic');
+    expect(advanceButton?.getAttribute('aria-label') ?? '').toContain('Confirm Relic');
+  });
+
   test('requires a second click on the highlighted relic to confirm', async () => {
     updateRewardProgression({
       available: ['relics'],

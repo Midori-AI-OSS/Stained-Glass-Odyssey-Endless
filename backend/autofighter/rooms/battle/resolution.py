@@ -88,66 +88,43 @@ async def resolve_rewards(
 ) -> dict[str, Any]:
     """Assemble the battle victory payload including loot and choices."""
 
-    selected_cards: list[Any] = []
-    attempts = 0
+    card_options: list[Any] = []
     log.info(
-        "Starting card selection for run %s, party has %d cards",
+        "Generating card reward options for run %s, party has %d cards",
         getattr(combat_party, "cards", []),
         len(getattr(combat_party, "cards", [])),
     )
-    while len(selected_cards) < 3 and attempts < 30:
-        attempts += 1
-        base_stars = _pick_card_stars(room)
-        card_stars = _apply_rdr_to_stars(base_stars, temp_rdr)
+    base_stars = _pick_card_stars(room)
+    target_stars = _apply_rdr_to_stars(base_stars, temp_rdr)
+    star_buckets = [
+        stars for stars in range(target_stars, 0, -1) if stars > 0
+    ]
+    seen_ids: set[str] = set()
+    for stars in star_buckets:
+        if len(card_options) >= 3:
+            break
+        remaining = 3 - len(card_options)
+        choices = card_choices(combat_party, stars, count=remaining)
         log.debug(
-            "Card selection attempt %d: base_stars=%d, rdr_stars=%d",
-            attempts,
-            base_stars,
-            card_stars,
+            "Card option pass: stars=%d, requested=%d, received=%d",
+            stars,
+            remaining,
+            len(choices),
         )
-        choices = card_choices(combat_party, card_stars, count=1)
-        log.debug("  card_choices returned %d options", len(choices))
-        if not choices:
-            log.debug("  No cards available for star level %d", card_stars)
-            for fallback_stars in range(card_stars - 1, 0, -1):
-                log.debug(
-                    "  Attempting fallback star level %d for card selection",
-                    fallback_stars,
-                )
-                choices = card_choices(combat_party, fallback_stars, count=1)
-                log.debug(
-                    "    card_choices returned %d options for fallback",
-                    len(choices),
-                )
-                if choices:
-                    break
-                log.debug(
-                    "    No cards available for fallback star level %d",
-                    fallback_stars,
-                )
-            else:
+        for candidate in choices:
+            if candidate.id in seen_ids:
                 continue
-        candidate = choices[0]
-        log.debug(
-            "  Candidate card: %s (%s) - %d stars",
-            candidate.id,
-            candidate.name,
-            candidate.stars,
-        )
-        if any(card.id == candidate.id for card in selected_cards):
-            log.debug("  Card %s already selected, skipping", candidate.id)
-            continue
-        selected_cards.append(candidate)
-        log.debug("  Added card: %s", candidate.id)
+            seen_ids.add(candidate.id)
+            card_options.append(candidate)
+            if len(card_options) >= 3:
+                break
     log.info(
-        "Card selection complete: %d cards selected after %d attempts",
-        len(selected_cards),
-        attempts,
+        "Card reward options generated: %d choices (target_stars=%d)",
+        len(card_options),
+        target_stars,
     )
-    if selected_cards:
-        log.info("Selected cards: %s", [card.id for card in selected_cards])
-    else:
-        log.warning("No cards were selected!")
+    if not card_options:
+        log.warning("No card reward options available")
     card_choice_data = [
         {
             "id": card.id,
@@ -155,7 +132,7 @@ async def resolve_rewards(
             "stars": card.stars,
             "about": card.about,
         }
-        for card in selected_cards
+        for card in card_options
     ]
 
     relic_options: list[Any] = []
@@ -177,7 +154,7 @@ async def resolve_rewards(
             picked.append(relic)
         relic_options = picked
 
-    if not selected_cards:
+    if not card_options:
         fallback_relic = FallbackEssence()
         if not relic_options:
             relic_options = [fallback_relic]

@@ -2,6 +2,7 @@
 
 `src/lib/components/RewardOverlay.svelte` presents the four-phase reward flow using `RewardCard.svelte` for cards and `CurioChoice.svelte` for relics.
 Both components wrap `CardArt.svelte`, which builds the Star Rail–style frame with a star-colored header, centered icon, star count, and description.
+Ambient orb marks inside the glyph area now use a lower 0.10 alpha so the floating lights read as a soft shimmer instead of a solid overlay on cards and relics.
 `OverlayHost.svelte` spawns `FloatingLoot.svelte` elements when `roomData.loot` is present, so gold and item drops briefly rise on screen and are omitted from the reward overlay.
 Assets are resolved by star folder and id through the centralized registry
 re-exported from `assetLoader.js`, so card, relic, and material lookups share
@@ -42,7 +43,7 @@ four explicit phases:
 | Phase key        | UI surface                                                                      |
 | ---------------- | ------------------------------------------------------------------------------- |
 | `drops`          | Drops grid, sequential reveal, no confirm controls.                              |
-| `cards`          | Card staging grid with highlight, wiggle animation, and on-card confirm button.  |
+| `cards`          | Card staging grid with highlight, wiggle animation, and double-click/Advance confirm support. |
 | `relics`         | Relic staging grid mirroring the card interaction model.                         |
 | `battle_review`  | Post-battle graphs and summary shell mounted via `BattleReview.svelte`.          |
 
@@ -60,15 +61,18 @@ phase transitions to screen readers, and publish analytics through
 ## Confirmation flow for staged rewards
 
 When the backend marks `awaiting_card` or `awaiting_relic` as `true` and
-provides staged entries under `reward_staging`, the overlay now surfaces a
-dedicated confirmation block. The highlighted card or relic keeps the primary
-grid visible so re-selection can happen without cancelling, auto-selects the
-first available option on entry, and renders a stained-glass **Confirm** button
-directly beneath the highlighted tile. The highlight applies a looping wiggle
-animation defined in `frontend/src/lib/constants/rewardAnimationTokens.js`;
-motion honours the player's reduced-motion preference. Second clicks (or
-keyboard activation) on the highlighted tile dispatch the confirm event
-immediately, matching the on-card button.
+provides staged entries under `reward_staging`, the overlay keeps the main
+selection grid visible and auto-selects the first available option on entry.
+The highlighted card or relic continues to use the shared wiggle animation from
+`frontend/src/lib/constants/rewardAnimationTokens.js` so staged entries remain
+obvious while respecting the player's reduced-motion preference. Instead of a
+dedicated confirmation block, the right-rail **Advance** panel switches into a
+confirm mode: its copy announces the highlighted reward, the button's
+`aria-label` becomes `Confirm Card …`/`Confirm Relic …`, and the helper note
+reminds players that Advance performs the confirmation when double-click is not
+available. Second clicks (or keyboard activation) on the highlighted tile still
+dispatch the confirm event immediately, so pointer and keyboard flows behave as
+before while the fallback lives in the shared Advance control.
 
 ### Stained-glass theme alignment
 
@@ -80,7 +84,13 @@ frosted glass. Status chips, preview panes, and loot tiles share a common
 `--overlay-chip-*` token set that keeps their borders crisp and neutral until
 the active state introduces an accent tint.
 
-Primary action buttons (Advance, Cancel, Next Room) were flattened into the
+To keep the presentation compact the root `.layout` flex wrapper now clamps its
+height to `clamp(380px, 48vh, 620px)` with matching top/bottom padding
+(`clamp(0.3rem, 0.65vh, 0.8rem)`), trimming the extra vertical space that made
+the flow feel overly tall on large monitors while still leaving breathing room
+for the phase rail and reward grids.
+
+Primary action buttons (Advance and Next Room) were flattened into the
 same rectangular glass pads used elsewhere in the web UI. They still pick up
 the run accent colour on hover/focus, but lose the oversized glow and rounded
 pill silhouette so they sit flush with the rest of the interface.
@@ -88,23 +98,21 @@ pill silhouette so they sit flush with the rest of the interface.
 - `RewardOverlay` receives `stagedCards`, `stagedRelics`, and the
   `awaiting_*` flags from `OverlayHost`. Both grids stay visible while a staged
   entry is pending so players can reselect without cancelling.
-- Clicking **Confirm** (either the on-card button or the highlighted card a
-  second time) dispatches a `confirm` event with the reward metadata so the
-  caller can invoke `/ui?action=confirm_card` or `/ui?action=confirm_relic`.
-  The detail includes the reward `type`, currently staged `key`, resolved
-  `id`, a human-readable `label`, the originating `phase`, and the staged
-  `entry` object (if available) alongside the `respond({ ok })` callback.
-  Buttons stay disabled until the parent responds via the provided callback.
-  After a successful confirmation the frontend immediately prunes the resolved
-  choice bucket so the overlay transitions to the next reward step without
-  briefly reopening the spent selection view.
-- Clicking **Cancel** dispatches a matching `cancel` event that triggers the
-  `/ui?action=cancel_*` endpoints and restores the choice list once the staging
-  bucket is cleared.
+- Confirming via a second click (or keyboard activation) on the highlighted
+  tile dispatches a `confirm` event with the reward metadata so the caller can
+  invoke `/ui?action=confirm_card` or `/ui?action=confirm_relic`. The detail
+  includes the reward `type`, currently staged `key`, resolved `id`, a
+  human-readable `label`, the originating `phase`, and the staged `entry`
+  object (if available) alongside the `respond({ ok })` callback. Once the
+  parent responds with `{ ok: true }` the frontend prunes the resolved choice
+  bucket so the overlay transitions without reopening the spent selection.
+- Pressing **Advance** while confirm mode is active triggers the same confirm
+  path. The button exposes a `data-mode` attribute (`confirm-card`/`confirm-relic`)
+  so tests and automation can detect the fallback state.
 - Idle mode relies on these events as well. Automation confirms staged rewards
   instead of calling `advance_room`, keeping the overlay visible until the
   backend reports `awaiting_next`.
-- The overlay's auto-advance timer and "Next Room" button now respect staged
+- The overlay's auto-advance timer and "Next Room" button respect staged
   confirmations so players cannot accidentally skip unconfirmed rewards.
 
 This UI contract mirrors the backend guardrails introduced for staged rewards,
@@ -255,11 +263,11 @@ mid‑acknowledgement.
 - Focus automatically shifts to the **Advance** button when a phase becomes
   actionable and falls back to the overlay container when auto-advance fires,
   keeping keyboard flows predictable.
-- Confirm buttons reuse the stained-glass styling tokens but retain native
-  button semantics, so keyboard activation, focus rings, and screen reader
-  labelling stay consistent across cards and relics.
-- Live regions announce when confirm buttons appear or disappear so screen
-  reader users hear when staged selections are ready or cleared.
+- The Advance button keeps native button semantics when switching into confirm
+  mode, preserving keyboard activation, focus rings, and screen reader labelling
+  while the helper copy clarifies its temporary role.
+- Live regions announce when confirm mode engages or resolves so screen reader
+  users hear when staged selections are ready or cleared.
 - Countdown updates respect Reduced Motion; when motion is disabled the timer
   posts updates every two seconds instead of animating per-second fades.
 
@@ -273,6 +281,7 @@ mid‑acknowledgement.
 - Confirm that automation hooks (`advance` events) log both manual and auto
   reasons during idle-mode runs.
 - Navigate the overlay using only the keyboard: verify focus order is
-  Drops grid → **Advance** → staged confirm → **Advance** again after each phase.
-- With a screen reader, listen for announcements when confirm buttons appear,
-  disappear, and when the countdown reaches zero.
+  Drops grid → **Advance** → highlighted selection (confirm via second press) →
+  **Advance** again after each phase.
+- With a screen reader, listen for announcements when confirm mode engages or
+  clears and when the countdown reaches zero.
