@@ -2,6 +2,7 @@
 
 `src/lib/components/RewardOverlay.svelte` presents the four-phase reward flow using `RewardCard.svelte` for cards and `CurioChoice.svelte` for relics.
 Both components wrap `CardArt.svelte`, which builds the Star Rail–style frame with a star-colored header, centered icon, star count, and description.
+Ambient orb marks inside the glyph area now use a lower 0.10 alpha so the floating lights read as a soft shimmer instead of a solid overlay on cards and relics.
 `OverlayHost.svelte` spawns `FloatingLoot.svelte` elements when `roomData.loot` is present, so gold and item drops briefly rise on screen and are omitted from the reward overlay.
 Assets are resolved by star folder and id through the centralized registry
 re-exported from `assetLoader.js`, so card, relic, and material lookups share
@@ -82,6 +83,12 @@ subtle deep-blue gradient overlay so every surface reads as a single sheet of
 frosted glass. Status chips, preview panes, and loot tiles share a common
 `--overlay-chip-*` token set that keeps their borders crisp and neutral until
 the active state introduces an accent tint.
+
+To keep the presentation compact the root `.layout` flex wrapper now clamps its
+height to `clamp(380px, 48vh, 620px)` with matching top/bottom padding
+(`clamp(0.3rem, 0.65vh, 0.8rem)`), trimming the extra vertical space that made
+the flow feel overly tall on large monitors while still leaving breathing room
+for the phase rail and reward grids.
 
 Primary action buttons (Advance and Next Room) were flattened into the
 same rectangular glass pads used elsewhere in the web UI. They still pick up

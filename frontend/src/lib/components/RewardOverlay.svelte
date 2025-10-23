@@ -1315,8 +1315,8 @@
     justify-content: center;
     gap: clamp(1rem, 2vw, 2.5rem);
     width: 100%;
-    min-height: clamp(620px, 68vh, 880px);
-    padding: clamp(1rem, 1.75vh, 1.9rem) 0;
+    min-height: clamp(380px, 48vh, 620px);
+    padding: clamp(0.3rem, 0.65vh, 0.8rem) 0;
     /* Overlay theme tokens */
     --overlay-warm-accent: var(--reward-overlay-warm-accent, #f7b267);
     --overlay-text-primary: color-mix(in srgb, #f8fbff 90%, rgba(0, 0, 0, 0.12));
