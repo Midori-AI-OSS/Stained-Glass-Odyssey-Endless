@@ -505,15 +505,17 @@ async def handle_ui_action() -> tuple[str, int, dict[str, Any]]:
                 if not staged_cards:
                     # Check if card selection is still pending (user hasn't chosen yet)
                     # vs already handled (staged card was confirmed by another process)
+                    card_choices = state.get("card_choice_options")
+                    has_card_choices = isinstance(card_choices, list) and bool(card_choices)
                     progression = state.get("reward_progression")
                     current_step = None
                     if isinstance(progression, Mapping):
                         current_step = normalise_reward_step(progression.get("current_step"))
-                    
+
                     # If we're in the cards phase and awaiting, user must select
-                    if current_step == REWARD_STEP_CARDS:
+                    if current_step == REWARD_STEP_CARDS and has_card_choices:
                         return create_error_response("Cannot advance room while rewards are pending", 400)
-                    elif not state.get("card_choice_options"):
+                    elif not has_card_choices:
                         # No staged card and no choices means reward was already handled
                         # Clear the flag and continue
                         state["awaiting_card"] = False
@@ -552,7 +554,7 @@ async def handle_ui_action() -> tuple[str, int, dict[str, Any]]:
                         current_step = normalise_reward_step(progression.get("current_step"))
 
                     # If we're in the relics phase and awaiting, user must select
-                    if current_step == REWARD_STEP_RELICS:
+                    if current_step == REWARD_STEP_RELICS and has_relic_choices:
                         return create_error_response("Cannot advance room while rewards are pending", 400)
                     elif not has_relic_choices:
                         # No staged relic and no choices means reward was already handled
