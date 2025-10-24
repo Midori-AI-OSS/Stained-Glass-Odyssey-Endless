@@ -42,6 +42,37 @@ class MomentumGyro(RelicBase):
 
         chains: dict[int, dict] = state.setdefault("chains", {})
 
+        def _remove_modifier(owner, modifier) -> None:
+            if modifier is None or owner is None:
+                return
+
+            try:
+                modifier.remove()
+            except Exception:  # pragma: no cover - defensive safeguard
+                log.exception("Failed removing Momentum Gyro modifier")
+
+            manager = getattr(owner, "effect_manager", None)
+            if manager is not None and modifier in manager.mods:
+                manager.mods.remove(modifier)
+
+            if getattr(owner, "mods", None) and modifier.id in owner.mods:
+                owner.mods.remove(modifier.id)
+
+        def _clear_chain_effects(attacker_obj, chain_entry: dict) -> None:
+            if not chain_entry:
+                return
+
+            _remove_modifier(attacker_obj, chain_entry.pop("atk_mod", None))
+            target_entry = chain_entry.pop("target_mod", None)
+            if target_entry:
+                target_obj, target_modifier = target_entry
+                _remove_modifier(target_obj, target_modifier)
+
+        def _reset_chain(attacker_obj, chain_entry: dict) -> None:
+            _clear_chain_effects(attacker_obj, chain_entry)
+            chain_entry["streak"] = 0
+            chain_entry["target"] = None
+
         async def _on_damage_dealt(
             attacker, target, damage, damage_type, source, source_action, action_name, details=None
         ):
@@ -61,19 +92,22 @@ class MomentumGyro(RelicBase):
             # Reset streak on zero damage (miss)
             if damage <= 0:
                 if attacker_id in chains:
-                    chains[attacker_id]["streak"] = 0
+                    _reset_chain(attacker, chains[attacker_id])
                 return
 
             # Get or initialize chain data for this attacker
             if attacker_id not in chains:
-                chains[attacker_id] = {"target": target, "streak": 0}
+                chains[attacker_id] = {"target": None, "streak": 0, "attacker": attacker}
 
             chain_data = chains[attacker_id]
+            chain_data["attacker"] = attacker
             last_target_id = id(chain_data.get("target")) if chain_data.get("target") else None
 
             # Check if we're hitting the same target
             if last_target_id != target_id:
                 # Target changed, reset streak
+                if chain_data.get("target") is not None:
+                    _reset_chain(attacker, chain_data)
                 chain_data["target"] = target
                 chain_data["streak"] = 1
             else:
@@ -104,6 +138,7 @@ class MomentumGyro(RelicBase):
                 atk_mult=1 + total_multiplier,
             )
             await attacker_mgr.add_modifier(atk_mod)
+            chain_data["atk_mod"] = atk_mod
 
             log.debug(
                 "Momentum Gyro: %s gained +%.1f%% ATK (streak %d, %d relic stacks, %d-turn duration)",
@@ -148,6 +183,7 @@ class MomentumGyro(RelicBase):
                 mitigation_mult=1 - total_multiplier,
             )
             await target_mgr.add_modifier(mit_mod)
+            chain_data["target_mod"] = (target, mit_mod)
 
             log.debug(
                 "Momentum Gyro: %s received -%.1f%% mitigation (streak %d, %d relic stacks, %d-turn duration)",
@@ -179,6 +215,9 @@ class MomentumGyro(RelicBase):
         def _cleanup(*_args) -> None:
             """Clean up subscriptions and state at battle end."""
             self.clear_subscriptions(party)
+            for chain_entry in chains.values():
+                attacker_obj = chain_entry.get("attacker")
+                _clear_chain_effects(attacker_obj, chain_entry)
             chains.clear()
             if getattr(party, "_momentum_gyro_state", None) is state:
                 delattr(party, "_momentum_gyro_state")
