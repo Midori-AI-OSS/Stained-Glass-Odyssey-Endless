@@ -12,5 +12,5 @@ Null Lantern dramatically changes routing, while Traveler's Charm and Timekeeper
 - Implement `backend/plugins/relics/graviton_locket.py` with helper cleanup, duration tracking, and a thorough `describe(stacks)` covering debuff values, duration scaling, and HP drain cost.
 - Add backend tests ensuring: enemies receive the debuff with correct magnitude/duration, HP drain only runs while gravity is active (and scales with stacks), and all modifiers clear after battle. Extend `backend/tests/test_relic_effects_advanced.py` or create a new dedicated module.
 - Update `.codex/implementation/relic-inventory.md` and the relic design plan to include Graviton Locket with final tuning notes.【F:.codex/implementation/relic-inventory.md†L33-L48】【F:.codex/planning/archive/bd48a561-relic-plan.md†L45-L65】
-- Supply a placeholder icon in `frontend/src/lib/assets/relics/4star/` and verify the asset resolves through the registry globs.【F:frontend/src/lib/systems/assetRegistry.js†L174-L1353】
+- Record a placeholder art prompt for Graviton Locket in `luna_items_prompts.txt` under the **Missing Relics Art** section so the Lead Developer can produce the final icon; include the relic slug for tracking.【F:luna_items_prompts.txt†L11-L27】
 - Capture balancing rationale (gravity duration vs. HP drain) in `.codex/docs/relics/` so future tuning has a paper trail.
