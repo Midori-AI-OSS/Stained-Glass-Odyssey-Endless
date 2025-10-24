@@ -26,4 +26,10 @@ Deliver a high-impact three-star reward that channels Kboshi's flux manipulation
 ## Player impact
 Flux Convergence gives debuff-centric teams—especially those fielding Kboshi or LadyDarkness—a reason to invest in multi-turn control loops, providing reliable AoE bursts and protection against incoming cleanses.
 
-ready for review
+## Audit (2025-02-24)
+
+- ✅ Validated the Flux counter workflow and burst execution in `FluxConvergence`, including foe tracking, debuff source attribution, dark-damage swapping, and resistance buff cleanup; multiplicative stat buff setup matches 3★ baselines.【F:backend/plugins/cards/flux_convergence.py†L1-L208】
+- ✅ Ran `uv run pytest tests/test_flux_convergence.py` to cover stat bonuses, counter increments, burst triggering at exactly five debuffs, resistance buff application, and counter reset behaviour (all passing).【2481e6†L1-L5】
+- ✅ Confirmed documentation alignment in `.codex/implementation/card-inventory.md`, ensuring the 3★ roster describes Flux Convergence with the implemented burst and resistance loop.【F:.codex/implementation/card-inventory.md†L33-L50】
+
+requesting review from the Task Master
