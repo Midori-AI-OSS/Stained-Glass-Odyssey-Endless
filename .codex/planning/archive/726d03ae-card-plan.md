@@ -61,6 +61,7 @@ Parent: [Web Game Plan](8a7d9c1e-web-game-plan.md)
 - **Critical Overdrive** – While an ally has *Critical Boost*, their Crit Rate increases by 10%. Every 1% of excess Crit Rate converts to +2% Crit Damage. Grants +255% ATK.
 - **Iron Resurgence** – +200% DEF & +200% HP; the first time an ally dies, revive them with 10% HP. Effect recharges every 4 turns.
 - **Arc Lightning** – +255% ATK; every attack chains 50% damage to a random foe.
+- **Guardian Choir Circuit** – +200% DEF & +150% Regain. The first direct heal each ally turn redirects 15% of the heal into a temporary shield on the lowest-HP teammate and grants them +12% mitigation for that turn. The shield dissipates at the start of that ally's next turn if not consumed.
 
 ## 4★ Cards
 - **Overclock** – +240% ATK & +240% Effect Hit Rate; at the start of each battle, all allies immediately take two actions back to back.
