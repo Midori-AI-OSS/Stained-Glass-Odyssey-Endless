@@ -1,0 +1,29 @@
+# Carly WebUI manifest template generated for version 2025.10.24.5 "finch"
+# Schema version 1 keeps manifests compatible with the current loader
+# Fill in the fields below and remove comments before publishing your manifest.
+
+manifest_version = 1
+# Unique identifier used with openApp / closeApp (use lowercase kebab-case).
+name = "example-app"
+# Placement in the UI: system, app, sidebar, or prototype.
+status = "app"
+# Number of loader slots required (1-3).
+slot_count = 1
+# Priority (1-20). Lower numbers receive slots first when space is limited.
+niceness = 10
+
+# Icon configuration (Lucide icons only).
+[icon]
+module = "lucide-react"
+# export = "NotebookText"
+
+# Component module relative to this manifest file.
+[component]
+module = "./YourComponent.jsx"
+# export = "YourComponent"
+
+# Optional metadata is passed through unchanged to your app.
+[metadata]
+# docs = "https://example.com/docs"
+# requires_auth = true
+
