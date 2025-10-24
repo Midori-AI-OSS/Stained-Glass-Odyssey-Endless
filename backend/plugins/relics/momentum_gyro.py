@@ -20,8 +20,8 @@ class MomentumGyro(RelicBase):
     effects: dict[str, float] = field(default_factory=dict)  # No baseline bonus
     about: str = (
         "Repeatedly striking the same foe builds momentum stacks (max 5). "
-        "Grants +5% ATK per stack; target loses 5% mitigation per stack for 1 turn. "
-        "Resets on target switch or miss."
+        "Grants +5% ATK per stack (extra relic copies beyond five grant +15% each) and "
+        "target loses the same mitigation for (5 + relic stacks) turns. Resets on target switch or miss."
     )
 
     async def apply(self, party) -> None:
@@ -83,10 +83,12 @@ class MomentumGyro(RelicBase):
             streak = chain_data["streak"]
 
             # Calculate bonuses
-            # ATK buff: +5% per streak level per relic stack
-            atk_bonus = 0.05 * current_stacks * streak
-            # Mitigation debuff: -5% per streak level per relic stack
-            mit_debuff = 0.05 * current_stacks * streak
+            base_stacks = min(current_stacks, 5)
+            overflow_stacks = max(current_stacks - 5, 0)
+            per_hit_multiplier = (base_stacks * 0.05) + (overflow_stacks * 0.15)
+            total_multiplier = per_hit_multiplier * streak
+
+            duration_turns = 5 + current_stacks
 
             # Apply ATK buff to attacker
             attacker_mgr = getattr(attacker, "effect_manager", None)
@@ -94,21 +96,22 @@ class MomentumGyro(RelicBase):
                 attacker_mgr = EffectManager(attacker)
                 attacker.effect_manager = attacker_mgr
 
-            # Create temporary ATK buff (1 turn)
+            # Create temporary ATK buff whose duration scales with relic copies
             atk_mod = create_stat_buff(
                 attacker,
                 name=f"{self.id}_momentum_atk",
-                turns=1,
-                atk_mult=1 + atk_bonus,
+                turns=duration_turns,
+                atk_mult=1 + total_multiplier,
             )
             await attacker_mgr.add_modifier(atk_mod)
 
             log.debug(
-                "Momentum Gyro: %s gained +%.1f%% ATK (streak %d, %d relic stacks)",
+                "Momentum Gyro: %s gained +%.1f%% ATK (streak %d, %d relic stacks, %d-turn duration)",
                 getattr(attacker, "id", "member"),
-                atk_bonus * 100,
+                total_multiplier * 100,
                 streak,
                 current_stacks,
+                duration_turns,
             )
 
             # Emit telemetry for attacker buff
@@ -117,13 +120,15 @@ class MomentumGyro(RelicBase):
                 self.id,
                 attacker,
                 "momentum_atk_buff",
-                int(atk_bonus * 100),
+                int(total_multiplier * 100),
                 {
-                    "atk_bonus_percent": atk_bonus * 100,
+                    "atk_bonus_percent": total_multiplier * 100,
                     "streak_level": streak,
                     "relic_stacks": current_stacks,
+                    "base_stack_contribution": base_stacks,
+                    "overflow_stack_contribution": overflow_stacks,
                     "target": getattr(target, "id", "unknown"),
-                    "duration": 1,
+                    "duration": duration_turns,
                 },
             )
 
@@ -133,23 +138,24 @@ class MomentumGyro(RelicBase):
                 target_mgr = EffectManager(target)
                 target.effect_manager = target_mgr
 
-            # Create mitigation debuff (1 turn)
+            # Create mitigation debuff (duration scales with relic copies)
             # Note: We use atk_mult as a placeholder since mitigation_mult should reduce mitigation
             # The actual stat is mitigation, so 1 - mit_debuff gives the multiplier
             mit_mod = create_stat_buff(
                 target,
                 name=f"{self.id}_momentum_debuff",
-                turns=1,
-                mitigation_mult=1 - mit_debuff,
+                turns=duration_turns,
+                mitigation_mult=1 - total_multiplier,
             )
             await target_mgr.add_modifier(mit_mod)
 
             log.debug(
-                "Momentum Gyro: %s received -%.1f%% mitigation (streak %d, %d relic stacks)",
+                "Momentum Gyro: %s received -%.1f%% mitigation (streak %d, %d relic stacks, %d-turn duration)",
                 getattr(target, "id", "foe"),
-                mit_debuff * 100,
+                total_multiplier * 100,
                 streak,
                 current_stacks,
+                duration_turns,
             )
 
             # Emit telemetry for target debuff
@@ -158,13 +164,15 @@ class MomentumGyro(RelicBase):
                 self.id,
                 target,
                 "momentum_mitigation_debuff",
-                int(mit_debuff * 100),
+                int(total_multiplier * 100),
                 {
-                    "mitigation_reduction_percent": mit_debuff * 100,
+                    "mitigation_reduction_percent": total_multiplier * 100,
                     "streak_level": streak,
                     "relic_stacks": current_stacks,
+                    "base_stack_contribution": base_stacks,
+                    "overflow_stack_contribution": overflow_stacks,
                     "attacker": getattr(attacker, "id", "unknown"),
-                    "duration": 1,
+                    "duration": duration_turns,
                 },
             )
 
@@ -180,17 +188,23 @@ class MomentumGyro(RelicBase):
 
     def describe(self, stacks: int) -> str:
         if stacks == 1:
+            duration_turns = 5 + stacks
             return (
                 "Repeatedly striking the same foe builds momentum stacks (max 5). "
-                "Grants +5% ATK per stack; target loses 5% mitigation per stack for 1 turn. "
+                "Grants +5% ATK per momentum stack; target loses 5% mitigation per momentum stack for "
+                f"{duration_turns} turns. "
+                "Additional relic copies beyond five boost the per-stack bonus to +15% each. "
                 "Resets on target switch."
             )
         else:
-            atk_per_stack = 5 * stacks
-            mit_per_stack = 5 * stacks
+            base_stacks = min(stacks, 5)
+            overflow_stacks = max(stacks - 5, 0)
+            atk_per_stack = (5 * base_stacks) + (15 * overflow_stacks)
+            mit_per_stack = atk_per_stack
+            duration_turns = 5 + stacks
             return (
                 f"Repeatedly striking the same foe builds momentum stacks (max 5, {stacks} relic stacks). "
-                f"Grants +{atk_per_stack}% ATK per momentum stack; "
-                f"target loses {mit_per_stack}% mitigation per momentum stack for 1 turn. "
+                f"Grants +{atk_per_stack}% ATK per momentum stack (first five relics give +5% each, extras +15%); "
+                f"target loses {mit_per_stack}% mitigation per momentum stack for {duration_turns} turns. "
                 "Resets on target switch."
             )
