@@ -12,5 +12,5 @@ Our 5★ set covers high-risk ally sacrifice (Paradox Hourglass), attrition-focu
 - Implement `backend/plugins/relics/eclipse_reactor.py` with clear state tracking (storing remaining surge duration, hooking `turn_start` to apply the post-surge drain) and a descriptive `describe(stacks)` documenting both phases.
 - Add comprehensive tests covering: initial HP drain clamping at 1 HP, buff duration stacking, transition into the post-surge drain, and cleanup on battle end. Extend `backend/tests/test_relic_effects_advanced.py` or add a new module.
 - Update `.codex/implementation/relic-inventory.md` and the relic plan with Eclipse Reactor's final parameters.【F:.codex/implementation/relic-inventory.md†L40-L47】【F:.codex/planning/archive/bd48a561-relic-plan.md†L52-L73】
-- Supply a placeholder asset under `frontend/src/lib/assets/relics/5star/` and ensure the description surfaces correctly through existing catalog endpoints.【F:frontend/src/lib/systems/assetRegistry.js†L174-L1353】
+- Record a placeholder art prompt for Eclipse Reactor in `luna_items_prompts.txt` under **Missing Relics Art**, noting the relic slug so the Lead Developer can hand-create the icon later without blocking this task.【F:luna_items_prompts.txt†L11-L27】
 - Capture balancing notes (HP drain math, buff multipliers) in `.codex/docs/relics/` for future tuning discussions.
