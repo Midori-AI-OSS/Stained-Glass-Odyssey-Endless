@@ -28,4 +28,6 @@ Ship a top-tier five-star reward centered on Ryne's balance mechanic, giving lat
 
 ## Player impact
 Equilibrium Prism introduces a balance-focused alternative to the existing offensive 5★ lineup, letting Ryne-led parties smooth sustain gaps while unleashing periodic Light detonations that reward careful formation play.
-ready for review
+
+Audit summary: Confirmed card metadata, HP redistribution safeguards, token burst flow, and Light damage hooks in `backend/plugins/cards/equilibrium_prism.py`; exercised new tests via `uv run pytest tests/test_five_star_cards.py -k equilibrium_prism` inside the backend venv.
+requesting review from the Task Master
