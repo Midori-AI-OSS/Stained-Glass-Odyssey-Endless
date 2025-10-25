@@ -12,3 +12,5 @@ Every existing 3★ reward is offensive—either crit conversion, revival armor,
 - Implement `backend/plugins/cards/guardian_choir_circuit.py` with stat boosts, heal listener, per-turn throttling, and cleanup following the patterns in Balanced Diet and Guardian Shard.
 - Write backend tests covering multi-target heals, overheal handling, and ensuring the mitigation buff and shield expire correctly between turns.
 - Update `.codex/implementation/card-inventory.md` plus the archived card plan to document the new sustain-focused 3★ card.【F:.codex/implementation/card-inventory.md†L58-L69】【F:.codex/planning/archive/726d03ae-card-plan.md†L56-L69】
+
+ready for review

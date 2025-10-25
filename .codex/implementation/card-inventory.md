@@ -63,6 +63,7 @@ detail pane.
 - Critical Overdrive – +255% ATK; while an ally has Critical Boost, they gain +10% Crit Rate and convert excess Crit Rate to +2% Crit Damage.
 - Iron Resurgence – +200% DEF & +200% HP; the first ally death revives at 10% HP and refreshes every 4 turns.
 - Arc Lightning – +255% ATK; every attack chains 50% damage to a random foe.
+- Guardian Choir Circuit – +200% DEF & +150% Regain; the first direct heal each ally turn redirects 15% of the heal into a one-turn shield for the lowest-HP teammate and grants them +12% mitigation for that turn.
 - Flux Convergence – +255% Effect Hit Rate; each debuff applied increments a Flux counter. At 5 stacks, deal 120% ATK dark damage to all foes and grant the debuffing ally +20% Effect Resistance for 1 turn.
 
 ## 4★ Cards
