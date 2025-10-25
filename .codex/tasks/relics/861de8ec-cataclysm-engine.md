@@ -1,12 +1,12 @@
 # Add 5★ "Cataclysm Engine" relic for mutually assured destruction runs
 
 ## Summary
-Design an endgame relic that supercharges the party at a steep vitality cost. "Cataclysm Engine" should detonate at battle start, shredding HP from both sides, granting massive stat multipliers to allies, and continuing to drain HP each turn. The relic should feel as run-defining as Omega Core or Paradox Hourglass while enabling fast, high-damage clears for teams that can survive the attrition.
+Design an endgame relic that supercharges the party at a steep vitality cost. "Cataclysm Engine" should detonate at battle start, shredding HP from both sides, granting massive stat multipliers to allies, and continuing to drain HP each turn. The relic should feel as run-defining as Omega Core or Paradox Hourglass while enabling fast, high-damage clears for teams that can survive the attrition.【F:backend/plugins/relics/omega_core.py†L13-L114】【F:backend/plugins/relics/paradox_hourglass.py†L13-L160】
 
 ## Details
 - Follow the existing relic plugin infrastructure so stacking, stat multipliers, and cleanup match other legendary relics.【F:backend/plugins/relics/_base.py†L39-L155】
 - Use `apply_cost_damage` and similar helpers to inflict unavoidable HP loss on allies (and optionally foes) without conflicting with shields or mitigation, mirroring how Omega Core handles its drain.【F:backend/plugins/relics/omega_core.py†L80-L106】
-- Update relic documentation covering 5★ effects so Cataclysm Engine sits alongside Paradox Hourglass, Soul Prism, and Omega Core in contributor references.【F:.codex/implementation/relic-inventory.md†L36-L38】
+- Ensure the plugin includes an `about` string that captures the initial blast, ongoing drain, and any foe-side effects so inventory and tooling stay self-documenting.
 
 ## Requirements
 - Implement a `CataclysmEngine` plugin that:
@@ -15,12 +15,11 @@ Design an endgame relic that supercharges the party at a steep vitality cost. "C
   - Tracks and removes its stat modifiers when the battle ends to prevent lingering buffs.
   - Emits descriptive `relic_effect` events for the initial blast and each subsequent drain tick so battle logs and overlays communicate the risk/reward profile.
 - Expand backend tests to cover initial detonation, per-turn drains, stacking behavior, and interaction with existing drain-heavy relics to prevent runaway double-counting.【F:backend/tests/test_relic_effects.py†L24-L116】
-- Refresh `.codex/implementation/relic-inventory.md` and related planning notes to document the new 5★ relic.
+- Write tests and inline comments so future contributors can understand the risk/reward profile without needing `.codex` roster updates.
 
 ## Validation
 - `uv run pytest backend/tests/test_relic_effects.py::test_cataclysm_engine_*`
 - `uv run pytest backend/tests/test_relic_effects_advanced.py`
 
 ## Documentation
-- `.codex/implementation/relic-inventory.md`
-- `.codex/planning/archive/bd48a561-relic-plan.md`
+- Covered by the plugin `about` string and code comments—no `.codex` roster changes required.

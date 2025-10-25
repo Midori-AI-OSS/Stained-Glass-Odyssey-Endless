@@ -192,105 +192,12 @@ class MultiTriggerPassive:
 
 ## Character Roster & Passives
 
-### Characters with Implemented Passives
-
-#### Luna - Lunar Reservoir
-- **ID**: `luna_lunar_reservoir`
-- **Trigger**: `action_taken`
-- **Mechanic**: Charge-based attack scaling (2→4→8→16→32 attacks at 350/500/700/850 thresholds)
-- **Max Charge**: 2000 points
-
-#### Graygray - Counter Maestro
-- **ID**: `graygray_counter_maestro`
-- **Trigger**: `damage_taken`
-- **Mechanic**: Counter-attacks with stacking attack/mitigation buffs
-
-#### Mezzy - Gluttonous Bulwark
-- **ID**: `mezzy_gluttonous_bulwark`
-- **Trigger**: `turn_start`
-- **Mechanic**: 20% damage reduction + stat siphoning from allies
-
-#### Ally - Overload
-- **ID**: `ally_overload`
-- **Trigger**: `action_taken`
-- **Mechanic**: Twin daggers (2 attacks) scaling to Overload mode (4 attacks); Overload clears existing HoTs, blocks new HoTs, and caps recoverable HP at 20%
-
-#### Hilander - Critical Ferment
-- **ID**: `hilander_critical_ferment`
-- **Trigger**: `hit_landed`
-- **Mechanic**: Crit stacking with Aftertaste damage on crits
-
-#### Kboshi - Flux Cycle
-- **ID**: `kboshi_flux_cycle`
-- **Trigger**: `turn_start`
-- **Mechanic**: Element switching with damage/HoT stacking on failures
-
-#### Player - Enhanced Growth
-- **ID**: `player_level_up_bonus`
-- **Trigger**: `level_up`
-- **Mechanic**: 1.35× multiplier on all level-up stat gains
-
-#### Bubbles - Bubble Burst
-- **ID**: `bubbles_bubble_burst`
-- **Trigger**: `hit_landed`
-- **Mechanic**: Element switching with bubble stacking and area damage
-
-#### Ixia - Tiny Titan
-- **ID**: `ixia_tiny_titan`
-- **Trigger**: `damage_taken`
-- **Mechanic**: Quadruples Vitality HP gain, converts 500% Vitality to attack, adds 0.01 Vitality on hit for mitigation, HoT, and defense penalty
-
-### Characters without Passives (Available for Future Implementation)
-
-#### Carly
-- **Character Type**: B
-- **Gacha Rarity**: 5
-- **Damage Type**: Light
-- **Special Mechanic**: Defense-focused stat gain (ATK → Defense)
-- **Passive Status**: *Not yet implemented*
-
-#### Becca
-- **Character Type**: B
-- **Gacha Rarity**: 5
-- **Damage Type**: Variable (Becca-specific)
-- **Passive Status**: *Not yet implemented*
-
-
-#### Mimic
-- **Character Type**: C
-- **Gacha Rarity**: 5
-- **Damage Type**: Variable (Mimic-specific)
-- **Passive Status**: *Not yet implemented*
-
-#### Lady Darkness
-- **Character Type**: B
-- **Gacha Rarity**: 5
-- **Damage Type**: Dark
-- **Passive Status**: *Not yet implemented*
-
-#### Lady Echo
-- **Character Type**: B
-- **Gacha Rarity**: 5
-- **Damage Type**: Lightning
-- **Passive Status**: *Not yet implemented*
-
-#### Lady Fire and Ice
-- **Character Type**: B
-- **Gacha Rarity**: 6
-- **Damage Type**: Variable (LadyFireAndIce-specific)
-- **Passive Status**: *Not yet implemented*
-
-#### Lady Light
-- **Character Type**: B
-- **Gacha Rarity**: 5
-- **Damage Type**: Light
-- **Passive Status**: *Not yet implemented*
-
-#### Lady of Fire
-- **Character Type**: B
-- **Gacha Rarity**: 5* (*rarity field missing in plugin)
-- **Damage Type**: Fire
-- **Passive Status**: *Not yet implemented*
+Passive rosters change whenever new character plugins land. Instead of
+duplicating that roster here, consult the implementations in
+`backend/plugins/passives/` and the character modules under
+`backend/plugins/characters/`. Their `about` strings and `passives` lists are the
+single source of truth for which heroes ship with abilities, how those abilities
+trigger, and any outstanding TODO markers.
 
 ## Battle System Integration
 

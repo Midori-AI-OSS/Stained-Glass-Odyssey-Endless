@@ -1,7 +1,7 @@
 # Eclipse Reactor: burst-for-blood 5★ relic
 
 ## Summary
-Our 5★ set covers high-risk ally sacrifice (Paradox Hourglass), attrition-focused revives (Soul Prism), and long-duration stat overclocks (Omega Core). We still lack a relic that trades a chunk of HP for an explosive short-term power spike before decaying into a drain, giving aggressive players a distinct pacing lever.【F:.codex/implementation/relic-inventory.md†L40-L47】【F:.codex/planning/archive/bd48a561-relic-plan.md†L52-L70】
+Our 5★ set covers high-risk ally sacrifice (Paradox Hourglass), attrition-focused revives (Soul Prism), and long-duration stat overclocks (Omega Core). We still lack a relic that trades a chunk of HP for an explosive short-term power spike before decaying into a drain, giving aggressive players a distinct pacing lever.【F:backend/plugins/relics/paradox_hourglass.py†L13-L160】【F:backend/plugins/relics/soul_prism.py†L11-L105】【F:backend/plugins/relics/omega_core.py†L13-L114】
 
 ## Details
 * Create **Eclipse Reactor**: on `battle_start`, drain 18% Max HP per stack from every ally (non-lethal) and apply a 3-turn buff (+180% ATK, +180% SPD, +60% crit damage per stack) representing the eclipse surge. When the buff expires, allies begin taking 2% Max HP damage per stack each turn for the remainder of the battle until combat ends.
@@ -11,6 +11,6 @@ Our 5★ set covers high-risk ally sacrifice (Paradox Hourglass), attrition-focu
 ## Requirements
 - Implement `backend/plugins/relics/eclipse_reactor.py` with clear state tracking (storing remaining surge duration, hooking `turn_start` to apply the post-surge drain) and a descriptive `describe(stacks)` documenting both phases.
 - Add comprehensive tests covering: initial HP drain clamping at 1 HP, buff duration stacking, transition into the post-surge drain, and cleanup on battle end. Extend `backend/tests/test_relic_effects_advanced.py` or add a new module.
-- Update `.codex/implementation/relic-inventory.md` and the relic plan with Eclipse Reactor's final parameters.【F:.codex/implementation/relic-inventory.md†L40-L47】【F:.codex/planning/archive/bd48a561-relic-plan.md†L52-L73】
+- Include a thorough `about` string in the plugin summarising surge values, drain pacing, and stacking rules so the roster stays self-documented.
 - Record a placeholder art prompt for Eclipse Reactor in `luna_items_prompts.txt` under **Missing Relics Art**, noting the relic slug so the Lead Developer can hand-create the icon later without blocking this task.【F:luna_items_prompts.txt†L11-L27】
 - Capture balancing notes (HP drain math, buff multipliers) in `.codex/docs/relics/` for future tuning discussions.

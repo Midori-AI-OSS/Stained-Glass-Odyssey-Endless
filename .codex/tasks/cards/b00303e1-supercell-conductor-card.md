@@ -16,12 +16,12 @@ Create a four-star reward that captures LadyStorm's slipstream-and-burst gamepla
 - Add the new plugin under `backend/plugins/cards/`, hooking into round start triggers and selecting the appropriate ally via initiative stats.
 - Implement the Tailwind bonus action by leveraging the existing extra-action utilities used by Swift Footwork, but scope it to the chosen ally and reduced damage.
 - Mitigation shred should reuse existing debuff helpers and expire at the next turn start.
-- Update `.codex/implementation/card-inventory.md` and `.codex/planning/archive/726d03ae-card-plan.md` with the card details, and adjust any UI copy if the cadence needs clarification.
+- Craft a thorough `about` string inside the new plugin so the inventory surfaces Tailwind cadence and mitigation shred without extra `.codex` edits.
 - Expand tests for 4★ cards to cover Tailwind scheduling, damage scaling, and mitigation debuff application.
 
 ## Deliverables
 - Functional Supercell Conductor plugin with stat bonuses, Tailwind cadence, and mitigation debuff handling.
-- Documentation updates enumerating the new card and clarifying its timing windows.
+- Plugin metadata (especially the `about` text) enumerating the new card and clarifying its timing windows.
 - Automated test coverage verifying the round-based trigger and reduced-damage action.
 
 ## Player impact

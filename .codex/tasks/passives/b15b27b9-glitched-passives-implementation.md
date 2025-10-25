@@ -18,10 +18,10 @@ and blocks future balance work.
   exposes the expected metadata (`id`, `name`, `trigger`, `max_stacks`, etc.), and implements the appropriate async hooks.
 - Ensure each plug-in registers cleanly with the `PluginLoader` (import side effects are enough, but include a simple unit test or
   loader smoke test in `backend/tests/` to prevent regressions).
-- Update `.codex/docs/character-passives.md` with a short description of the new glitched behaviour so the roster reference stays in sync.
+- Capture the glitched behaviour in each plugin's `about`/`describe()` output so roster references pull directly from code.
 
 ## Acceptance Criteria
 - All files in `backend/plugins/passives/glitched/` define real plug-in classes (no raw `pass` placeholders remain).
 - Loading the passive registry (e.g., via `PassiveRegistry()._registry`) exposes the glitched IDs without errors.
 - Automated coverage confirms at least one glitched passive executes its custom logic.
-- Documentation reflects the availability and intent of the glitched-tier passives.
+- Plugin metadata reflects the availability and intent of the glitched-tier passives.

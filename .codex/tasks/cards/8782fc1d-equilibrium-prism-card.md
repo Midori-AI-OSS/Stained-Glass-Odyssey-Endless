@@ -18,12 +18,12 @@ Ship a top-tier five-star reward centered on Ryne's balance mechanic, giving lat
 - Implement the plugin under `backend/plugins/cards/`, reusing healing helpers to avoid damage from redistribution and ensuring logs match existing heal events.
 - Balance token tracking can live on the party state or card instance; make sure it's accessible in multi-fight runs.
 - Confirm Light damage uses the correct damage type hooks so Ryne/LadyLight synergies trigger.
-- Update `.codex/implementation/card-inventory.md` and `.codex/planning/archive/726d03ae-card-plan.md` with detailed rules text.
+- Provide exhaustive rules text in the plugin's `about` string so inventory copy communicates redistribution, token cadence, and bursts without `.codex` updates.
 - Extend backend tests covering 5★ cards to verify HP redistribution never harms allies, tokens accumulate correctly, and the burst applies buffs plus targeted damage.
 
 ## Deliverables
 - Fully realized Equilibrium Prism plugin with stat bonuses, redistribution logic, token tracking, and burst resolution.
-- Documentation updates describing the card's mechanics in both reference and planning docs.
+- Plugin metadata describing the card's mechanics so reference views pull directly from code.
 - Automated tests ensuring healing math, token cadence, and Light damage bursts behave as expected.
 
 ## Player impact
