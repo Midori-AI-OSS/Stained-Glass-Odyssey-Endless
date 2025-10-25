@@ -26,3 +26,5 @@ Create a four-star reward that captures LadyStorm's slipstream-and-burst gamepla
 
 ## Player impact
 Supercell Conductor supplies Wind/Lightning lineups with periodic tempo spikes that soften enemy defenses, supporting aggressive combo lines distinct from Overclock's global action flood.
+
+ready for review
