@@ -13,4 +13,9 @@ Every existing 3★ reward is offensive—either crit conversion, revival armor,
 - Write backend tests covering multi-target heals, overheal handling, and ensuring the mitigation buff and shield expire correctly between turns.
 - Update `.codex/implementation/card-inventory.md` plus the archived card plan to document the new sustain-focused 3★ card.【F:.codex/implementation/card-inventory.md†L58-L69】【F:.codex/planning/archive/726d03ae-card-plan.md†L56-L69】
 
-ready for review
+## Audit Notes (2025-02-14)
+- Verified `backend/plugins/cards/guardian_choir_circuit.py` applies the +200% DEF/+150% Regain modifiers, throttles heal redirects to once per ally turn, tears down shields/mitigation correctly, and emits telemetry for debugging.【F:backend/plugins/cards/guardian_choir_circuit.py†L1-L222】
+- Confirmed unit tests in `backend/tests/test_guardian_choir_circuit.py` cover multi-target throttling, overheal diminishing returns, and turn-based cleanup. Tests pass under `uv run pytest tests/test_guardian_choir_circuit.py`.【F:backend/tests/test_guardian_choir_circuit.py†L1-L138】【d77f1f†L1-L5】
+- Documentation refreshed in `.codex/implementation/card-inventory.md` and `.codex/planning/archive/726d03ae-card-plan.md` to describe the new sustain-focused 3★ card effects.【F:.codex/implementation/card-inventory.md†L47-L83】【F:.codex/planning/archive/726d03ae-card-plan.md†L47-L78】
+
+requesting review from the Task Master
