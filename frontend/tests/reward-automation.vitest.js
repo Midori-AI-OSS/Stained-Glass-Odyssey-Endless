@@ -81,6 +81,21 @@ describe('reward automation helpers', () => {
     expect(action.phase).toBe('cards');
   });
 
+  test('advances relic phase once staging clears', () => {
+    const roomData = {
+      awaiting_relic: false,
+      relic_choices: [],
+      reward_staging: { relics: [] }
+    };
+    const action = computeAutomationAction({
+      roomData,
+      snapshot: snapshotFor('relics'),
+      stagedRelics: []
+    });
+    expect(action.type).toBe('advance');
+    expect(action.phase).toBe('relics');
+  });
+
   test('selects relic after cards complete', () => {
     const roomData = {
       awaiting_card: false,

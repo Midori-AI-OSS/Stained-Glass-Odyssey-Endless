@@ -18,3 +18,4 @@ Back the four-phase reward overlay redesign with automated checks that confirm D
 ## Out of scope
 - Backend contract tests; focus on frontend behaviour.
 
+ready for review
