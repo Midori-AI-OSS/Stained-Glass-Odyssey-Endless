@@ -14,10 +14,9 @@ Create **Plague Harp**, a 3★ relic that weaponizes the party’s damage-over-t
 - Add the `PlagueHarp` relic under `backend/plugins/relics/` with `stars = 3`, handling foe tracking, Aftertaste propagation, and self-damage backfire as specified.
 - Ensure the relic gracefully handles edge cases: single remaining foe, attacker already defeated, and simultaneous multiple DoTs ticking in the same frame.
 - Write automated tests verifying DoT propagation sizing, self-damage scaling, random-target selection stability, and cleanup after battles.
-- Update relic documentation to record Plague Harp’s DoT echo and health tithe behavior.【F:.codex/implementation/relic-system.md†L1-L16】
+- Keep documentation centralized in the plugin; do not duplicate Plague Harp behaviour in `.codex/implementation/relic-system.md` per relic authoring guidance.
 
 ## Audit notes (Auditor)
-- Implementation echoes DoT damage and applies the self-damage tithe, and the new tests cover propagation sizing plus fallback targeting, but there is no documentation update describing Plague Harp in `.codex/implementation/relic-system.md` yet.【F:backend/plugins/relics/plague_harp.py†L1-L161】【F:.codex/implementation/relic-system.md†L1-L16】
-- Additional automated coverage is required for RNG target stability and `battle_end` cleanup since the current suite only includes two basic happy-path tests.【F:backend/tests/test_plague_harp.py†L1-L109】
+- Automated coverage exercises random target selection, fallback behaviour, and battle cleanup in `backend/tests/test_plague_harp.py` to complement the propagation sizing checks.【F:backend/tests/test_plague_harp.py†L1-L173】
 
-more work needed
+ready for review
