@@ -23,5 +23,6 @@ Do not modify frontend flows; focus on backend testing and observability.
 - Verified the reconnect scenario clears the in-memory snapshot before attempting another confirmation and still records a `confirm_cards_blocked` event in `tests/test_reward_staging_confirmation.py`.【F:backend/tests/test_reward_staging_confirmation.py†L300-L338】
 - Observed the backend now logs `confirm_{bucket}_blocked` events whenever the staging bucket is empty, ensuring operations can detect duplicate activations.【F:backend/services/reward_service.py†L440-L475】
 - Documentation now details how to monitor the `confirm_*_blocked` telemetry, pointing operators to the `game_actions` records documented in `backend/.codex/implementation/battle-endpoint-payload.md`.【F:backend/.codex/implementation/battle-endpoint-payload.md†L147-L184】
+- Re-ran the reward confirmation suites to verify the duplicate guard and reconnect flows pass under pytest. 【0e0e22†L1-L3】【1067c8†L1-L3】
 
-ready for review
+requesting review from the Task Master
