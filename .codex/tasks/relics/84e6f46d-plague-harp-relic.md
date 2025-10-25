@@ -15,3 +15,5 @@ Create **Plague Harp**, a 3★ relic that weaponizes the party’s damage-over-t
 - Ensure the relic gracefully handles edge cases: single remaining foe, attacker already defeated, and simultaneous multiple DoTs ticking in the same frame.
 - Write automated tests verifying DoT propagation sizing, self-damage scaling, random-target selection stability, and cleanup after battles.
 - Update relic documentation to record Plague Harp’s DoT echo and health tithe behavior.【F:.codex/implementation/relic-system.md†L1-L16】
+
+ready for review
