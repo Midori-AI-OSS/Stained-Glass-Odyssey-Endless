@@ -21,3 +21,5 @@ Document the new staged reward pipeline so plugin authors, designers, and QA und
 
 ## Why this matters for players
 Clear documentation speeds up adoption of the staging system, meaning more rewards arrive with accurate previews and fewer bugs. Faster iteration keeps the game feeling polished and responsive to player feedback.
+
+ready for review

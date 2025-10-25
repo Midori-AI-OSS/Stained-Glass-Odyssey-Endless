@@ -32,6 +32,12 @@
 
   Card and relic plugins can override `build_preview` to emit additional data; any missing fields fall back to the
   canonical calculations in `build_preview_from_effects` so reconnects remain deterministic.【F:backend/plugins/cards/_base.py†L130-L169】【F:backend/plugins/relics/_base.py†L70-L105】
+- `reward_progression` (object | null): canonicalised four-phase state machine describing the Drops → Cards → Relics → Battle
+  Review flow. The backend normalises `available`, `completed`, and `current_step` fields whenever staging or `awaiting_*`
+  flags change so reconnects always learn the active phase.【F:backend/runs/lifecycle.py†L140-L220】【F:backend/services/reward_service.py†L324-L417】
+- `awaiting_card`, `awaiting_relic`, `awaiting_loot`, `awaiting_next` (booleans): gate buttons and automation by reporting which
+  buckets remain unresolved and whether the run is clear to advance. These values reflect both staged payloads and pending
+  selections; `awaiting_next` only flips true when every phase is complete.【F:backend/services/reward_service.py†L68-L205】【F:backend/services/reward_service.py†L324-L417】【F:backend/services/reward_service.py†L490-L541】
 - `reward_activation_log` (array): chronological snapshots of the last 20 reward confirmations. Each entry includes a `bucket`
   value (`cards`, `relics`, or `items`), the `activation_id` issued during confirmation, an ISO8601 `activated_at` timestamp,
   and a copy of the staged payload that was committed. Clients should surface this history when recovering from reconnects so
@@ -123,6 +129,16 @@ Example:
     "relics": [],
     "items": []
   },
+  "reward_progression": {
+    "available": ["drops", "cards", "relics", "battle_review"],
+    "completed": ["drops"],
+    "current_step": "cards"
+  },
+  "awaiting_card": true,
+  "awaiting_relic": false,
+  "awaiting_loot": false,
+  "awaiting_next": false,
+  "reward_activation_log": [],
   "foes": [
     {
       "id": "slime",

@@ -13,6 +13,15 @@ Describes the backend battle endpoint.
   Staged entries must include a `preview` payload (summary, stat deltas, and trigger hooks) so `RewardOverlay` can surface
   upcoming buffs before confirmation. Use the backend helpers in `autofighter.reward_preview` when wiring new card or relic
   plugins so preview data stays consistent across reconnects.【F:backend/autofighter/reward_preview.py†L55-L189】【F:frontend/src/lib/utils/rewardStagingPayload.js†L1-L61】
+  Backend reward handlers must also update `reward_progression` and the `awaiting_*` flags so the Drops → Cards → Relics → Battle
+  Review state machine remains accurate. Missing or malformed progression snapshots force the frontend into legacy mode and block
+  automation.【F:backend/services/reward_service.py†L68-L417】【F:frontend/src/lib/systems/rewardProgression.js†L1-L260】
+- The overlay’s advance panel runs a 10-second countdown for each phase and auto-confirms staged entries when the timer expires.
+  Ensure `/rewards/<type>/<run_id>/confirm` and `/rewards/<type>/<run_id>/cancel` return the updated staging payload so the
+  countdown resets correctly for reconnects and automation.【F:backend/services/reward_service.py†L490-L608】【F:frontend/src/lib/components/RewardOverlay.svelte†L760-L1040】
+- `/ui?action=advance_room` enforces the progression sequence. It returns `pending_rewards` when `reward_progression.current_step`
+  still expects a selection and auto-completes Battle Review when the only remaining step is informational. Do not bypass this
+  guard when adding new room actions—reward phases must finish before advancing the map.【F:backend/routes/ui.py†L495-L695】
 - After a battle, the overlay now includes a right-side stats column that lists each party member and their damage dealt.
 - Combat UI places the party in a resizable left column with stats beside each portrait and HoT/DoT markers below; foes mirror the layout on the right. Stats include HP, Attack, Defense, Mitigation, and Crit rate, and shared fallback art is used when portraits are missing. Duplicate HoT/DoT effects collapse into single icons that display stack counts in the bottom-right.
 - The frontend polls `roomAction(runId, 'battle', 'snapshot')` once per frame-rate tick to fetch full party and foe snapshots without overloading the CPU and only updates arrays when data differs to reduce re-renders.
