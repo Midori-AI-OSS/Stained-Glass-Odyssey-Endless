@@ -14,3 +14,8 @@ Requires guardrail logic from `6ebaed1b-reward-activation-atomicity.md`.
 
 ## Out of scope
 Do not modify frontend flows; focus on backend testing and observability.
+
+## Implementation notes
+- Added telemetry for blocked confirmations and extended backend/unit integration tests to cover duplicate submissions, reconnect reloads, and HTTP retries.
+
+ready for review
