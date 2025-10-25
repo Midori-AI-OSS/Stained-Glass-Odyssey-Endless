@@ -14,3 +14,5 @@ Complete backend and frontend preview tasks first to ensure documentation matche
 
 ## Out of scope
 No code or UI changes—this task is documentation-only.
+
+ready for review

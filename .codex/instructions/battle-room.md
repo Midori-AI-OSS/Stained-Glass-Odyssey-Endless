@@ -10,6 +10,9 @@ Describes the backend battle endpoint.
 - The top navigation bar remains visible during battles, with the home button replaced by a non-interactive battle icon.
 - Players can access their inventory during combat via the package icon in the top navigation, allowing them to review collected cards and relics while fighting.
 - The reward overlay centers on the battle viewport and sizes to a 1×3 card grid, expanding to 2×3 when six cards are offered.
+  Staged entries must include a `preview` payload (summary, stat deltas, and trigger hooks) so `RewardOverlay` can surface
+  upcoming buffs before confirmation. Use the backend helpers in `autofighter.reward_preview` when wiring new card or relic
+  plugins so preview data stays consistent across reconnects.【F:backend/autofighter/reward_preview.py†L55-L189】【F:frontend/src/lib/utils/rewardStagingPayload.js†L1-L61】
 - After a battle, the overlay now includes a right-side stats column that lists each party member and their damage dealt.
 - Combat UI places the party in a resizable left column with stats beside each portrait and HoT/DoT markers below; foes mirror the layout on the right. Stats include HP, Attack, Defense, Mitigation, and Crit rate, and shared fallback art is used when portraits are missing. Duplicate HoT/DoT effects collapse into single icons that display stack counts in the bottom-right.
 - The frontend polls `roomAction(runId, 'battle', 'snapshot')` once per frame-rate tick to fetch full party and foe snapshots without overloading the CPU and only updates arrays when data differs to reduce re-renders.

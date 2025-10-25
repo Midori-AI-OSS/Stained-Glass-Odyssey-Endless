@@ -40,7 +40,19 @@ Staged cards and relics now surface preview metadata returned by the backend. `R
 - Per-stat deltas formatted according to the preview `mode` (percent, flat, multiplier) and scoped to the target audience (party, foes, allies, etc.). Each stat line also lists stack counts and previous totals when supplied.
 - Trigger hooks with the normalized event name and optional description.
 
-Preview data is normalised on receipt so the frontend can render it idempotently across reconnects. The helper in `src/lib/utils/rewardPreviewFormatter.js` keeps formatting consistent between cards and relics.
+Preview data is normalised on receipt so the frontend can render it idempotently across reconnects. `normalizeRewardStagingPayload`
+performs a deep clone of the staging buckets, normalises each `preview` block, and keeps the UI resilient when the backend omits
+buckets from incremental responses.【F:frontend/src/lib/utils/rewardStagingPayload.js†L1-L61】 The formatter then converts preview
+stats into readable labels (`Attack`, `Crit Rate`, etc.), handles stack math, and renders per-target banners before the confirm
+controls.【F:frontend/src/lib/utils/rewardPreviewFormatter.js†L1-L129】【F:frontend/src/lib/utils/rewardPreviewFormatter.js†L144-L200】
+
+Backends populating previews should leverage `autofighter.reward_preview.build_preview_from_effects` or return a custom payload
+with `summary`, `stats`, and `triggers`. `merge_preview_payload` fills in any missing fields from the staged plugin's `effects`
+dict so reconnects and automation observe the same description every time.【F:backend/autofighter/reward_preview.py†L55-L189】【F:backend/services/reward_service.py†L42-L169】
+
+Worked examples for authors live alongside the battle endpoint payload reference; card and relic contributors should review that
+document before overriding `build_preview`. The Task Master board links this overlay to the preview schema work so the docs stay
+aligned with `b30ad6a1-reward-preview-schema.md` (backend) and `f2622706-reward-preview-frontend.md` (frontend).
 
 Screenshot references:
 
