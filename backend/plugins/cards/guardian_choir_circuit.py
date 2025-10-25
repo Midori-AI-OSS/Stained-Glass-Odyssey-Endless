@@ -32,6 +32,23 @@ class GuardianChoirCircuit(CardBase):
         triggered_turn: dict[int, int] = {}
         active_shields: dict[int, int] = {}
         active_mitigations: dict[int, bool] = {}
+        granted_overheal: set[int] = set()
+
+        def _maybe_disable_overheal(target) -> None:
+            target_id = id(target)
+            if target_id not in granted_overheal:
+                return
+            if not getattr(target, "overheal_enabled", False):
+                granted_overheal.discard(target_id)
+                return
+            remaining_shields = getattr(target, "shields", 0)
+            if not hasattr(target, "disable_overheal"):
+                granted_overheal.discard(target_id)
+                return
+            target.disable_overheal()
+            if remaining_shields > 0:
+                target.shields = remaining_shields
+            granted_overheal.discard(target_id)
 
         def _reset_state() -> None:
             for member_id, amount in list(active_shields.items()):
@@ -39,16 +56,21 @@ class GuardianChoirCircuit(CardBase):
                     if id(member) == member_id and getattr(member, "shields", 0) > 0:
                         to_remove = min(member.shields, amount)
                         member.shields = max(0, member.shields - to_remove)
+                        _maybe_disable_overheal(member)
                         break
             for member_id in list(active_mitigations):
                 for member in party.members:
                     if id(member) == member_id:
                         _remove_mitigation(member)
+                        _maybe_disable_overheal(member)
                         break
+            for member in party.members:
+                _maybe_disable_overheal(member)
             turn_counters.clear()
             triggered_turn.clear()
             active_shields.clear()
             active_mitigations.clear()
+            granted_overheal.clear()
 
         def _resolve_actor(healer, target):
             if healer in party.members:
@@ -106,9 +128,11 @@ class GuardianChoirCircuit(CardBase):
                 if pending_shield > 0 and getattr(actor, "shields", 0) > 0:
                     to_remove = min(actor.shields, pending_shield)
                     actor.shields = max(0, actor.shields - to_remove)
+                _maybe_disable_overheal(actor)
 
                 if active_mitigations.pop(actor_id, False):
                     _remove_mitigation(actor)
+                    _maybe_disable_overheal(actor)
 
         async def _on_battle_start(*_args) -> None:
             _reset_state()
@@ -141,8 +165,11 @@ class GuardianChoirCircuit(CardBase):
 
             triggered_turn[actor_id] = current_turn
 
+            recipient_id = id(recipient)
+
             if not getattr(recipient, "overheal_enabled", False):
                 recipient.enable_overheal()
+                granted_overheal.add(recipient_id)
 
             shield_before = getattr(recipient, "shields", 0)
             if shield_before <= 0:
@@ -151,7 +178,6 @@ class GuardianChoirCircuit(CardBase):
                 shield_applied = max(1, int(shield_request * 0.2))
 
             recipient.shields = shield_before + shield_applied
-            recipient_id = id(recipient)
             active_shields[recipient_id] = active_shields.get(recipient_id, 0) + shield_applied
 
             effect_manager: EffectManager | None = getattr(
