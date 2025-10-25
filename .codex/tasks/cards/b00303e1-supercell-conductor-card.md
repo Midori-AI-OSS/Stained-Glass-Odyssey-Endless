@@ -27,4 +27,8 @@ Create a four-star reward that captures LadyStorm's slipstream-and-burst gamepla
 ## Player impact
 Supercell Conductor supplies Wind/Lightning lineups with periodic tempo spikes that soften enemy defenses, supporting aggressive combo lines distinct from Overclock's global action flood.
 
-ready for review
+### Audit notes
+- Confirmed `backend/plugins/cards/supercell_conductor.py` implements battle-start scheduling, Wind/Lightning ally selection, Tailwind stat adjustments, and mitigation shred with cleanup. Verified the `about` string documents cadence and stat bonuses.
+- Exercised automated coverage via `uv run pytest tests/test_supercell_conductor.py` from the backend project; all targeted tests pass.
+
+requesting review from the Task Master
