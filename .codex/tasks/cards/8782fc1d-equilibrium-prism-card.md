@@ -28,3 +28,4 @@ Ship a top-tier five-star reward centered on Ryne's balance mechanic, giving lat
 
 ## Player impact
 Equilibrium Prism introduces a balance-focused alternative to the existing offensive 5★ lineup, letting Ryne-led parties smooth sustain gaps while unleashing periodic Light detonations that reward careful formation play.
+ready for review

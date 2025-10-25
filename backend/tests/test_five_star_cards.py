@@ -1,4 +1,5 @@
 import asyncio
+import math
 from pathlib import Path
 import random
 import sys
@@ -11,6 +12,7 @@ import llms.torch_checker as torch_checker
 from autofighter.party import Party
 from autofighter.stats import BUS
 from autofighter.stats import set_battle_active
+from plugins.cards.equilibrium_prism import EquilibriumPrism
 from plugins.cards.phantom_ally import PhantomAlly
 from plugins.cards.reality_split import RealitySplit
 from plugins.cards.temporal_shield import TemporalShield
@@ -160,4 +162,126 @@ async def test_reality_split_single_echo_after_back_to_back_battles(monkeypatch)
             await BUS.emit_async("battle_end", foe)
         for foe in foes:
             await BUS.emit_async("battle_end", foe)
+        set_battle_active(False)
+
+
+@pytest.mark.asyncio
+async def test_equilibrium_prism_redistribution_heals_without_harm(monkeypatch):
+    monkeypatch.setattr(torch_checker, "is_torch_available", lambda: False)
+    card = EquilibriumPrism()
+    frontline = Ally()
+    frontline.id = "frontline"
+    frontline.max_hp = 1200
+    frontline.hp = 1200
+    support = Becca()
+    support.id = "support"
+    support.max_hp = 900
+    support.hp = 180
+    party = Party(members=[frontline, support])
+
+    await card.apply(party)
+
+    expected_average = (
+        (frontline.hp / frontline.max_hp) + (support.hp / support.max_hp)
+    ) / 2
+    expected_support_hp = min(
+        support.max_hp,
+        max(support.hp, math.ceil(expected_average * support.max_hp)),
+    )
+
+    await BUS.emit_async("turn_start")
+
+    state = getattr(party, "_equilibrium_prism_state", {})
+    card_state = state.get(card.id, {}).get("state", {})
+
+    assert frontline.hp == 1200
+    assert support.hp == expected_support_hp
+    assert card_state.get("tokens") == 1
+
+
+@pytest.mark.asyncio
+async def test_equilibrium_prism_burst_buffs_and_damage(monkeypatch):
+    monkeypatch.setattr(torch_checker, "is_torch_available", lambda: False)
+    card = EquilibriumPrism()
+
+    a1 = Ally()
+    a1.id = "a1"
+    a1.max_hp = 1100
+    a1.hp = 1100
+    a1.atk = 600
+
+    a2 = Becca()
+    a2.id = "a2"
+    a2.max_hp = 1000
+    a2.hp = 1000
+    a2.atk = 550
+
+    a3 = Ally()
+    a3.id = "a3"
+    a3.max_hp = 950
+    a3.hp = 950
+    a3.atk = 500
+
+    party = Party(members=[a1, a2, a3])
+
+    foe_one = FoeBase()
+    foe_one.id = "foe_one"
+    foe_one.max_hp = 4200
+    foe_one.hp = 4200
+    foe_one.last_damage_taken = 0
+
+    foe_two = FoeBase()
+    foe_two.id = "foe_two"
+    foe_two.max_hp = 6400
+    foe_two.hp = 6400
+    foe_two.last_damage_taken = 0
+
+    await card.apply(party)
+
+    base_stats = {
+        member.id: {
+            "crit": member.crit_rate,
+            "mit": member.mitigation,
+        }
+        for member in party.members
+    }
+
+    events: list[tuple[str, int | float, dict[str, object], str | None]] = []
+
+    async def _on_card_effect(card_id, actor, effect, amount, extra):
+        if card_id == card.id:
+            events.append((effect, amount, extra, getattr(actor, "id", None)))
+
+    BUS.subscribe("card_effect", _on_card_effect)
+    set_battle_active(True)
+
+    await BUS.emit_async("battle_start", foe_one)
+    await BUS.emit_async("battle_start", foe_two)
+
+    try:
+        for _ in range(3):
+            a2.hp = int(a2.max_hp * 0.2)
+            a3.hp = int(a3.max_hp * 0.25)
+            await BUS.emit_async("turn_start")
+
+        state = getattr(party, "_equilibrium_prism_state", {})
+        card_state = state.get(card.id, {}).get("state", {})
+        assert card_state.get("tokens") == 0
+
+        for member in party.members:
+            baseline = base_stats[member.id]
+            assert member.crit_rate >= baseline["crit"] + 0.5
+            assert member.mitigation >= baseline["mit"] * 1.5
+
+        assert foe_two.last_damage_taken > 0
+        assert foe_two.hp == foe_two.max_hp - foe_two.last_damage_taken
+        assert foe_one.last_damage_taken == 0
+
+        effect_names = {effect for effect, *_ in events}
+        assert "balance_burst_damage" in effect_names
+        assert "balance_burst_buff" in effect_names
+    finally:
+        BUS.unsubscribe("card_effect", _on_card_effect)
+        await BUS.emit_async("battle_end", foe_one)
+        await BUS.emit_async("battle_end", foe_two)
         set_battle_active(False)
