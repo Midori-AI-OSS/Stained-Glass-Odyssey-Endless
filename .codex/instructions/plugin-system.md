@@ -111,3 +111,8 @@ The plugin ecosystem offers two primary coordination patterns:
 - **Passive registry** – Each entity creates its own dispatcher that iterates over its equipped passives.
 
 To align the registry with loop‑responsiveness guidelines, plan to insert a small delay such as `await asyncio.sleep(0.002)` inside long-running registry loops. This mirrors the event bus’s cooperative scheduling while retaining per-entity isolation.
+
+## Reward preview obligations
+
+- Card and relic plugins must either supply `effects` or override `build_preview` so the reward overlay can display preview metadata for staged selections. Use `autofighter.reward_preview.merge_preview_payload` to merge custom payloads with default stat math so reconnects remain deterministic.【F:backend/autofighter/reward_preview.py†L55-L189】【F:backend/services/reward_service.py†L68-L324】
+- Populate `preview_triggers` or embed trigger entries in the custom payload when rewards subscribe to event bus hooks. Without this metadata the Drops → Cards → Relics → Battle Review state machine cannot narrate upcoming activations for QA.【F:backend/plugins/cards/_base.py†L130-L190】【F:backend/plugins/relics/_base.py†L70-L150】

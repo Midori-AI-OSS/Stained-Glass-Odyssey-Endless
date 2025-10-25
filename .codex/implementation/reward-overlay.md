@@ -4,14 +4,26 @@ After a battle resolves, the backend returns a `loot` object summarizing gold an
 
 `RewardOverlay` also accepts a `partyStats` array derived from `_serialize`, rendering a right-hand table listing each party member and their `damage_dealt`. Placeholder columns reserve space for future metrics like damage taken or healing.
 
-The overlay now subscribes to the shared reward phase state machine so the experience plays out as a deterministic Drops → Cards → Relics → Battle Review flow. While the controller reports `current === 'drops'`, only loot tiles and gold summaries render and later-phase controls are kept out of the DOM. A right-rail "Reward Flow" panel reflects the active phase and upcoming steps without exposing the advance button (that arrives with the countdown task) so screen readers and automation can follow progress. Once the phase machine advances past Drops the usual card and relic widgets mount just as before.
+The overlay now subscribes to the shared reward phase state machine so the experience plays out as a deterministic Drops → Cards → Relics → Battle Review flow. `OverlayHost.svelte` ingests the backend `reward_progression` payload with `rewardPhaseController.ingest`, forwarding the normalised snapshot to `RewardOverlay` via the shared store. While `current === 'drops'`, only loot tiles and gold summaries render and later-phase controls stay out of the DOM. A right-rail "Reward Flow" panel reflects the active phase, completed steps, and upcoming stages without exposing the advance button until the countdown task signals the next phase. If the payload is missing or malformed the controller falls back to legacy rendering and surfaces a warning banner so QA can spot the regression.【F:frontend/src/lib/components/OverlayHost.svelte†L200-L320】【F:frontend/src/lib/systems/rewardProgression.js†L1-L260】【F:frontend/src/lib/components/RewardOverlay.svelte†L1-L220】
 
-When Drops finishes, `RewardOverlay` emits an `autofighter:reward-phase` telemetry event with the `drops-complete` kind so regression automation can confirm the transition before proceeding with card or relic checks.
+When Drops finishes, `RewardOverlay` emits an `autofighter:reward-phase` telemetry event with the `drops-complete` kind so regression automation can confirm the transition before proceeding with card or relic checks. Subsequent phase transitions fire ARIA announcements and update the confirm panel state for keyboard users.【F:frontend/src/lib/components/RewardOverlay.svelte†L1-L220】【F:frontend/src/lib/systems/rewardTelemetry.js†L1-L80】
+
+## Phase controller and countdown
+
+`RewardOverlay` listens for `enter` and `exit` events from `rewardPhaseController`, wiring analytics, countdown timers, and focus management into each transition. A dedicated advance panel opens once both `current` and `next` phases are available, displaying an `Advance` button and a 10-second countdown that auto-confirms staged entries when time elapses. The panel switches to confirm mode whenever a staged card or relic is highlighted so mouse and keyboard users see a single confirmation affordance instead of separate buttons.【F:frontend/src/lib/components/RewardOverlay.svelte†L200-L520】【F:frontend/src/lib/components/RewardOverlay.svelte†L760-L1040】
+
+The controller exposes imperative helpers (`advanceRewardPhase`, `skipToRewardPhase`, `resetRewardProgression`) that automation and idle-mode scripts consume to keep up with backend snapshots. When the snapshot lacks phases, the controller marks itself as a legacy flow; the overlay disables the countdown, shows a warning message, and relies on the older confirm buttons so QA can continue testing without blocking.【F:frontend/src/lib/systems/overlayState.js†L1-L120】【F:frontend/src/lib/systems/rewardProgression.js†L200-L420】【F:frontend/src/lib/components/RewardOverlay.svelte†L520-L760】
+
+## Automation hooks
+
+Idle-mode helpers in `rewardAutomation.js` inspect both the raw room data and the current phase snapshot to decide whether to auto-select a choice, acknowledge loot, or advance to the next step. The overlay exposes `rewardSelect` and `lootAcknowledge` events so automation can respond to countdown completions or pending staged entries, while manual users still drive the confirm workflow through the advance panel.【F:frontend/src/lib/utils/rewardAutomation.js†L1-L200】【F:frontend/src/lib/components/RewardOverlay.svelte†L1120-L1500】
 
 Selecting a card posts to `/cards/<run_id>` via the `chooseCard` API helper once the player confirms, clearing `card_choices`. The "Next Room" button remains disabled until all selections are resolved. Clicking it dismisses the popup, unmounts `BattleView`, and calls `/run/<id>/next` to advance the map.
 
 When a relic reward is selected, the overlay shows its `about` text so players
 see the effect with the next stack applied.
+
+Cancelling a staged entry emits `rewardSelect` with `intent: 'cancel'`, clears the confirm panel, and reopens the phase in the controller so reconnecting clients remain in sync with backend `awaiting_*` flags. The advance panel immediately reverts to countdown mode, signalling that a new selection is required before the run can progress.【F:frontend/src/lib/components/RewardOverlay.svelte†L960-L1200】【F:frontend/src/lib/components/RewardOverlay.svelte†L1500-L1800】
 
 ## Confirm control styling & accessibility
 
@@ -59,8 +71,16 @@ Screenshot references:
 - Card preview — see `.codex/screenshots/reward-overlay-card-preview.png`.
 - Relic preview — see `.codex/screenshots/reward-overlay-relic-preview.png`.
 
+## QA checklist
+
+- Verify phase announcements and countdown prompts when staging cards or relics. The advance panel should flip into confirm mode and display `Highlighted card ready` once a card is selected.【F:frontend/src/lib/components/RewardOverlay.svelte†L760-L1040】【F:frontend/tests/reward-overlay-confirmation-flow.vitest.js†L21-L133】
+- Trigger legacy fallback by omitting `reward_progression` from room data and confirm the overlay surfaces the warning banner instead of hanging the UI.【F:frontend/src/lib/components/RewardOverlay.svelte†L520-L760】【F:frontend/tests/reward-overlay-confirmation-flow.vitest.js†L134-L213】
+- Exercise automation helpers in idle mode to ensure they respect the current phase snapshot and stop issuing actions when staging buckets still contain entries.【F:frontend/src/lib/utils/rewardAutomation.js†L1-L200】【F:frontend/tests/reward-automation.vitest.js†L1-L120】
+
 ## Testing
-- `bun test frontend/tests/rewardoverlay.test.js`
+- `bun test frontend/tests/reward-overlay-confirmation-flow.vitest.js`
+- `bun test frontend/tests/reward-automation.vitest.js`
+- `bun test frontend/tests/reward-overlay-advance-panel.vitest.js`
 
 ## Visual notes
 - Card/relic artwork now renders at full opacity. Heavy darkening over the glyph image was removed from `CardArt.svelte` to avoid the gray overlay appearance while keeping a subtle highlight and border twinkles.
