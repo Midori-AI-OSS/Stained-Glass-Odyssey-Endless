@@ -17,10 +17,11 @@ Do not modify frontend flows; focus on backend testing and observability.
 
 ## Implementation notes
 - Added telemetry for blocked confirmations and extended backend/unit integration tests to cover duplicate submissions, reconnect reloads, and HTTP retries.
+- Documented how to monitor the `confirm_*_blocked` events in `backend/.codex/implementation/battle-endpoint-payload.md` so ops teams know where to pull the data.
 ## Audit notes
 - Confirmed the `/rewards/card/<run_id>/confirm` handler surfaces telemetry when a second HTTP confirmation arrives, exercising the duplicate guard in `tests/test_reward_gate.py`.【F:backend/tests/test_reward_gate.py†L360-L423】
 - Verified the reconnect scenario clears the in-memory snapshot before attempting another confirmation and still records a `confirm_cards_blocked` event in `tests/test_reward_staging_confirmation.py`.【F:backend/tests/test_reward_staging_confirmation.py†L300-L338】
 - Observed the backend now logs `confirm_{bucket}_blocked` events whenever the staging bucket is empty, ensuring operations can detect duplicate activations.【F:backend/services/reward_service.py†L440-L475】
-- Documentation still lacks guidance on monitoring the new `confirm_*_blocked` telemetry, so ops do not yet know where to watch for these signals.【F:backend/.codex/implementation/battle-endpoint-payload.md†L1-L139】
+- Documentation now details how to monitor the `confirm_*_blocked` telemetry, pointing operators to the `game_actions` records documented in `backend/.codex/implementation/battle-endpoint-payload.md`.【F:backend/.codex/implementation/battle-endpoint-payload.md†L147-L184】
 
-more work needed — Add monitoring guidance for the `confirm_*_blocked` telemetry (e.g., in `backend/.codex/implementation/battle-endpoint-payload.md` or a dedicated ops note).
+ready for review
