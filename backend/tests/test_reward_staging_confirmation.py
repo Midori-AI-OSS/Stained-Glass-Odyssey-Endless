@@ -246,6 +246,99 @@ async def test_confirm_card_is_single_use() -> None:
 
 
 @pytest.mark.asyncio()
+async def test_confirm_card_duplicate_attempt_is_tracked(monkeypatch: pytest.MonkeyPatch) -> None:
+    assert lifecycle is not None
+    assert reward_service is not None
+
+    run_id = "confirm-card-duplicate-telemetry"
+    party_payload = {
+        "members": ["player"],
+        "gold": 0,
+        "relics": [],
+        "cards": [],
+        "exp": {"player": 0},
+        "level": {"player": 1},
+        "player": {"pronouns": "", "damage_type": "Light", "stats": {}},
+    }
+    map_payload = {
+        "rooms": [
+            {"room_id": 0, "room_type": "battle-normal"},
+            {"room_id": 1, "room_type": "treasure"},
+        ],
+        "current": 0,
+        "battle": False,
+        "awaiting_card": True,
+        "awaiting_relic": False,
+        "awaiting_loot": False,
+        "awaiting_next": False,
+        "reward_progression": {
+            "available": ["cards"],
+            "completed": [],
+            "current_step": "cards",
+        },
+        "reward_staging": {"cards": [], "relics": [], "items": []},
+    }
+    _insert_run(run_id, party_payload, map_payload)
+
+    lifecycle.battle_snapshots[run_id] = {
+        "result": "battle",
+        "ended": True,
+        "card_choices": [
+            {
+                "id": "arc_lightning",
+                "name": "Arc Lightning",
+                "stars": 3,
+            }
+        ],
+        "relic_choices": [],
+        "reward_staging": {"cards": [], "relics": [], "items": []},
+    }
+
+    await reward_service.select_card(run_id, "arc_lightning")
+    await reward_service.confirm_reward(run_id, "card")
+
+    # Simulate a reconnect by forcing the in-memory snapshot to reload from disk.
+    lifecycle.battle_snapshots.pop(run_id, None)
+    state_after_confirm, _ = lifecycle.load_map(run_id)
+    assert state_after_confirm.get("awaiting_card") is False
+    assert state_after_confirm.get("awaiting_next") is True
+
+    calls: list[dict[str, object]] = []
+
+    async def record_action(
+        action_type: str,
+        *,
+        run_id: str | None = None,
+        room_id: str | None = None,
+        details: dict[str, object] | None = None,
+    ) -> None:
+        calls.append(
+            {
+                "action_type": action_type,
+                "run_id": run_id,
+                "room_id": room_id,
+                "details": details,
+            }
+        )
+
+    monkeypatch.setattr(reward_service, "log_game_action", record_action)
+
+    with pytest.raises(ValueError):
+        await reward_service.confirm_reward(run_id, "card")
+
+    assert calls, "duplicate confirmation should emit a telemetry event"
+    blocked_event = calls[-1]
+    assert blocked_event["action_type"] == "confirm_cards_blocked"
+    details = blocked_event.get("details")
+    assert isinstance(details, dict)
+    assert details["bucket"] == "cards"
+    assert details["reason"] == "empty_staging"
+    awaiting = details.get("awaiting")
+    assert isinstance(awaiting, dict)
+    assert awaiting == {"card": False, "relic": False, "loot": False}
+
+
+@pytest.mark.asyncio()
 async def test_cancel_card_reopens_progression_step() -> None:
     assert lifecycle is not None
     assert reward_service is not None

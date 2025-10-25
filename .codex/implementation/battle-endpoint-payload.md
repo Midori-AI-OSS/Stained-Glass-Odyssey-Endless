@@ -19,6 +19,10 @@
 - `reward_staging` (object): active staged rewards split into `cards`, `relics`, and `items`. Each staged entry now exposes a
   `preview` block summarizing stat changes (`stats`) and trigger hooks (`triggers`) so the UI can describe the pending effect
   before confirmation. Percentage modifiers report values in whole percents and include the number of stacks being applied.
+- `reward_activation_log` (array): chronological snapshots of the last 20 reward confirmations. Each entry includes a `bucket`
+  value (`cards`, `relics`, or `items`), the `activation_id` issued during confirmation, an ISO8601 `activated_at` timestamp,
+  and a copy of the staged payload that was committed. Clients should surface this history when recovering from reconnects so
+  duplicate confirmations remain transparent.
 - `foes` (array): stats for spawned foes. Each foe entry includes a `rank` string such as `"normal"` or `"boss"` indicating encounter difficulty.
 
 Generic damage types are reserved for the Luna player character; other combatants use elemental types such as Fire, Ice, Lightning, Light, Dark, or Wind.
@@ -146,6 +150,14 @@ Example:
 The preview block reports the percentage bonus the party will receive (`amount`) and the cumulative modifier once the staged
 reward is confirmed (`total_amount`). When a relic adds an additional stack, a `previous_total` field is included so clients can
 display the incremental change alongside the existing bonus.
+
+### Duplicate-confirmation telemetry
+
+Every `/rewards/<bucket>/<run_id>/confirm` request now emits a `confirm_<bucket>_blocked` telemetry record through
+`log_game_action` when staging is empty (for example, a duplicate submission or manual retry after the reward already locked in).
+The payload captures the run, current room identifier, the attempted `bucket`, and a snapshot of the `awaiting_*` flags. Live
+ops can monitor this signal for suspicious automation or reconnect storms; the associated API response remains a `400` with
+`"no staged reward to confirm"` so clients can retry safely.
 
 ## Testing
 - `uv run pytest tests/test_card_rewards.py::test_battle_offers_choices_and_applies_effect`

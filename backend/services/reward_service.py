@@ -443,9 +443,35 @@ async def confirm_reward(run_id: str, reward_type: str) -> dict[str, Any]:
     lock = reward_locks.setdefault(run_id, asyncio.Lock())
     async with lock:
         state, rooms = await asyncio.to_thread(load_map, run_id)
+        current_index = int(state.get("current", 0))
+        room = rooms[current_index] if 0 <= current_index < len(rooms) else None
+        if room is None:
+            room_identifier = str(current_index)
+        else:
+            room_identifier = str(
+                getattr(room, "room_id", getattr(room, "index", current_index))
+            )
+
         staging, _ = ensure_reward_staging(state)
         staged_values = staging.get(bucket, [])
         if not staged_values:
+            try:
+                await log_game_action(
+                    f"confirm_{bucket}_blocked",
+                    run_id=run_id,
+                    room_id=room_identifier,
+                    details={
+                        "bucket": bucket,
+                        "reason": "empty_staging",
+                        "awaiting": {
+                            "card": bool(state.get("awaiting_card")),
+                            "relic": bool(state.get("awaiting_relic")),
+                            "loot": bool(state.get("awaiting_loot")),
+                        },
+                    },
+                )
+            except Exception:
+                pass
             raise ValueError("no staged reward to confirm")
 
         party = await asyncio.to_thread(load_party, run_id)
@@ -525,7 +551,7 @@ async def confirm_reward(run_id: str, reward_type: str) -> dict[str, Any]:
             await log_game_action(
                 f"confirm_{reward_type}",
                 run_id=run_id,
-                room_id=str(state.get("current", "")),
+                room_id=room_identifier,
                 details={"bucket": bucket, "activation_id": activation_record["activation_id"]},
             )
         except Exception:
