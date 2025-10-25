@@ -15,4 +15,9 @@ Complete backend and frontend preview tasks first to ensure documentation matche
 ## Out of scope
 No code or UI changes—this task is documentation-only.
 
-ready for review
+## Auditor notes
+- Verified `.codex/implementation/reward-overlay.md` documents preview metadata handling, telemetry, and flow alignment with the reward service and formatter utilities.【F:.codex/implementation/reward-overlay.md†L1-L64】【F:.codex/implementation/reward-overlay.md†L74-L93】【F:.codex/implementation/reward-overlay.md†L95-L113】
+- Confirmed `.codex/implementation/battle-endpoint-payload.md` describes the staged preview payload shape, activation logging, and includes the required flat/conditional/passive worked examples referencing backend hooks.【F:.codex/implementation/battle-endpoint-payload.md†L13-L60】【F:.codex/implementation/battle-endpoint-payload.md†L92-L141】【F:.codex/implementation/battle-endpoint-payload.md†L143-L168】
+- Checked `.codex/instructions/battle-room.md` now directs contributors to emit preview payloads when wiring reward plugins.【F:.codex/instructions/battle-room.md†L9-L15】
+
+requesting review from the Task Master
