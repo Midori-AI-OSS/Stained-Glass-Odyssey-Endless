@@ -25,3 +25,4 @@ No event subscriptions exist for the passive, and `PassiveRegistry` never calls 
 - Lady Darkness passively heals when any DoT ticks on the battlefield and gains stacking attack buffs when she resists debuffs.
 - Event subscriptions are cleaned up to avoid leaks when battles end.
 - Automated tests cover both the DoT siphon and resist bonus flows.
+ready for review
