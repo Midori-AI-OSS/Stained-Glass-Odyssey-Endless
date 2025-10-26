@@ -79,11 +79,12 @@ class LadyDarknessEclipsingVeil:
         # Increase permanent attack bonus by 5%
         attack_increase = int(target.atk * 0.05)
         self._attack_bonuses[entity_id] += attack_increase
+        total_attack_bonus = self._attack_bonuses[entity_id]
 
-        # Apply the bonus immediately
+        # Apply the total bonus immediately so successive resists stack
         resist_bonus_effect = StatEffect(
             name=f"{self.id}_resist_bonus_{entity_id}",
-            stat_modifiers={"atk": attack_increase},
+            stat_modifiers={"atk": total_attack_bonus},
             duration=-1,  # Permanent for rest of battle
             source=self.id,
         )
