@@ -253,11 +253,27 @@ async def start_run(
         "run_configuration": configuration_snapshot,
     }
     if boss_choice is not None and nodes:
-        state["floor_boss"] = {
+        boss_node = nodes[-1]
+        boss_record = {
             "id": getattr(boss_choice, "id", type(boss_choice).__name__),
-            "floor": getattr(nodes[-1], "floor", 1),
-            "loop": getattr(nodes[-1], "loop", 1),
+            "floor": getattr(boss_node, "floor", 1),
+            "loop": getattr(boss_node, "loop", 1),
         }
+        try:
+            node_index = int(getattr(boss_node, "index", getattr(boss_node, "room_id", -1)))
+        except Exception:
+            node_index = None
+        if node_index is not None:
+            boss_record["index"] = node_index
+
+        try:
+            node_room = int(getattr(boss_node, "room_id", getattr(boss_node, "index", -1)))
+        except Exception:
+            node_room = None
+        if node_room is not None:
+            boss_record["room_id"] = node_room
+
+        state["floor_boss"] = boss_record
     pronouns, stats = await asyncio.to_thread(_load_player_customization)
 
     def get_player_damage_type():
@@ -598,11 +614,26 @@ async def advance_room(run_id: str) -> dict[str, object]:
             current_boss_floor_number = max(floors_cleared, 0) + 1
             setattr(boss_node, "boss_floor_number", current_boss_floor_number)
             boss_choice = _choose_foe(boss_node, party)
-            state["floor_boss"] = {
+            boss_record = {
                 "id": getattr(boss_choice, "id", type(boss_choice).__name__),
                 "floor": new_floor,
                 "loop": new_loop,
             }
+            try:
+                node_index = int(getattr(boss_node, "index", getattr(boss_node, "room_id", -1)))
+            except Exception:
+                node_index = None
+            if node_index is not None:
+                boss_record["index"] = node_index
+
+            try:
+                node_room = int(getattr(boss_node, "room_id", getattr(boss_node, "index", -1)))
+            except Exception:
+                node_room = None
+            if node_room is not None:
+                boss_record["room_id"] = node_room
+
+            state["floor_boss"] = boss_record
         else:
             state.pop("floor_boss", None)
         next_type = nodes[state["current"]].room_type if state["current"] < len(nodes) else None
