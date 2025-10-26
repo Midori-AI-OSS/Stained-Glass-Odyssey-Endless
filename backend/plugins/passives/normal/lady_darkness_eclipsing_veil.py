@@ -55,7 +55,7 @@ class LadyDarknessEclipsingVeil:
         # Apply current attack bonus from previous debuff resistances
         if self._attack_bonuses[entity_id] > 0:
             attack_bonus_effect = StatEffect(
-                name=f"{self.id}_debuff_resistance_bonus",
+                name=self._resist_effect_name(entity_id),
                 stat_modifiers={"atk": self._attack_bonuses[entity_id]},
                 duration=-1,  # Permanent for rest of battle
                 source=self.id,
@@ -83,7 +83,7 @@ class LadyDarknessEclipsingVeil:
 
         # Apply the total bonus immediately so successive resists stack
         resist_bonus_effect = StatEffect(
-            name=f"{self.id}_resist_bonus_{entity_id}",
+            name=self._resist_effect_name(entity_id),
             stat_modifiers={"atk": total_attack_bonus},
             duration=-1,  # Permanent for rest of battle
             source=self.id,
@@ -94,6 +94,10 @@ class LadyDarknessEclipsingVeil:
     def get_attack_bonus(cls, target: "Stats") -> int:
         """Get current attack bonus from debuff resistances."""
         return cls._attack_bonuses.get(id(target), 0)
+
+    @classmethod
+    def _resist_effect_name(cls, entity_id: int) -> str:
+        return f"{cls.id}_resist_bonus_{entity_id}"
 
     @classmethod
     def get_description(cls) -> str:
