@@ -24,4 +24,10 @@ Design an endgame relic that supercharges the party at a steep vitality cost. "C
 ## Documentation
 - Covered by the plugin `about` string and code comments—no `.codex` roster changes required.
 
-ready for review
+## Auditor Notes (2025-02-14)
+- Verified the plugin resets existing modifiers before reapplying, emits the required battle log events, and cleans up state on `battle_end`.【F:backend/plugins/relics/cataclysm_engine.py†L46-L257】
+- Confirmed coverage for the initial blast, per-turn drain escalation, stacking behaviour, and interaction with Greed Engine via the new test cases.【F:backend/tests/test_relic_effects.py†L1223-L1414】
+- Validation: `uv run pytest backend/tests/test_relic_effects.py::test_cataclysm_engine_battle_start_overclock backend/tests/test_relic_effects.py::test_cataclysm_engine_turn_drain_and_escalation backend/tests/test_relic_effects.py::test_cataclysm_engine_stacks_scale_damage backend/tests/test_relic_effects.py::test_cataclysm_engine_with_greed_engine_drain_additive` ✅【f0f41e†L1-L5】
+- Validation: `uv run pytest backend/tests/test_relic_effects_advanced.py` ❌ — existing unrelated failures (Frost Sigil, Traveler's Charm, Timekeeper's Hourglass, Greed Engine) reproduced outside this change.【d0321b†L1-L137】
+
+requesting review from the Task Master
