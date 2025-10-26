@@ -81,6 +81,12 @@ class FluxParadoxEngine(CardBase):
                 foes = state.get("foes")
                 if isinstance(foes, dict):
                     foes.clear()
+                state_store.pop(self.id, None)
+                if not state_store:
+                    try:
+                        delattr(party, "_flux_paradox_engine_state")
+                    except AttributeError:
+                        pass
                 return
 
             foes = state.get("foes")
