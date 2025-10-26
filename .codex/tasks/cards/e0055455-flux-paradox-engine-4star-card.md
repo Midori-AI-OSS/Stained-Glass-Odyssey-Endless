@@ -14,8 +14,8 @@ Current 4★ rewards hand out brute-force tempo (Overclock), revives (Iron Resol
 - Provide a rich `about` string inside the new plugin so the in-game inventory surfaces the stance loop without relying on `.codex` summaries.
 
 ## Audit notes (Auditor)
-- Verified the implementation in `backend/plugins/cards/flux_paradox_engine.py` applies the alternating Fire/Ice stance logic and emits telemetry as described.
-- Confirmed the accompanying tests in `backend/tests/test_flux_paradox_engine.py` cover stance rotation and single-trigger-per-turn behaviour, and reproduced the suite locally with `uv run pytest tests/test_flux_paradox_engine.py`.
-- Mitigation buff duration is not asserted in the new tests—acceptance criteria call for confirming the one-turn expiry, so additional coverage is still required.
+- Confirmed the plugin alternates Fire and Ice stances on each global `turn_start`, limits triggers to once per ally per round, applies the correct DoTs, and emits telemetry for stance shifts and hits.【F:backend/plugins/cards/flux_paradox_engine.py†L42-L188】
+- Verified `tests/test_flux_paradox_engine.py` covers Fire and Ice behaviour, including enforcing the one-turn mitigation expiry and per-stance resets.【F:backend/tests/test_flux_paradox_engine.py†L15-L133】
+- Rebuilt the backend environment with `uv sync` and reproduced the new suite via `uv run pytest tests/test_flux_paradox_engine.py` to ensure the card logic passes continuously.【1bae6a†L1-L33】【83b001†L1-L5】
 
-ready for review
+requesting review from the Task Master
