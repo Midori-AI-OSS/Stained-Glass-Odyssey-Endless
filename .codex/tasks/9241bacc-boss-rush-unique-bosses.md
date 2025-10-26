@@ -25,9 +25,9 @@ Update the boss spawning logic so that boss rush nodes roll a fresh foe instead 
 * `backend/services/run_service.py`
 * `backend/autofighter/mapgen.py`
 
-## Auditor findings (2025-03-19)
-- ✅ Confirmed the implementation adds `index`/`room_id` matching so unique bosses are rolled per node and new regression tests cover the scenario.
-- ❌ `uv run pytest tests/test_floor_boss_rotation.py` fails because `tests/conftest.py` seeds a stub `runs.lifecycle` module without the new `empty_reward_staging` export, causing an `ImportError` during collection. Extend the stub with the new attribute (and any other required helpers) so the suite can execute.
-- ⚠️ The change adds new keys to the persisted `floor_boss` snapshot, but there is no accompanying update under `backend/.codex/implementation/` documenting the new schema. Please add the documentation called for in the task brief.
+## Auditor findings (2025-10-26)
+- ✅ Confirmed `_boss_matches_node` now checks `index`/`room_id`, allowing boss rush nodes to roll distinct foes while normal floors still reuse their persisted boss. 【F:backend/services/room_service.py†L40-L79】【F:backend/services/run_service.py†L235-L309】
+- ✅ Ran `uv run pytest tests/test_floor_boss_rotation.py` and the new regression suite passes, demonstrating unique bosses across a rush floor. 【063c62†L1-L5】
+- ✅ Verified the persisted state snapshot includes the positional metadata and is documented in `backend/.codex/implementation/floor-boss-state.md`. 【F:backend/services/run_service.py†L270-L304】【F:backend/.codex/implementation/floor-boss-state.md†L1-L23】
 
-ready for review
+requesting review from the Task Master
