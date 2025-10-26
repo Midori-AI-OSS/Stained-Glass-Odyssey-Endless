@@ -24,4 +24,9 @@ The run start flow currently records the `foe_mitigation` and `foe_vitality` mod
 * Added regression coverage in `tests/test_run_configuration_context.py` verifying the new per-stack bonuses and spawn pressure clamping when diminishing returns are disabled.
 * Documented the revised scaling in `.codex/implementation/run-configuration-metadata.md` and exercised the backend test suite with `uv run pytest tests/test_run_configuration_context.py`.
 
-ready for review
+## Audit notes (Auditor)
+* Re-read Auditor mode guide and backend contributor instructions.
+* Confirmed mitigation/vitality modifiers now apply +2.5 per stack with corresponding spawn-pressure weighting adjustments in `services/run_configuration.py`.
+* Verified documentation and regression tests reflect the new scaling and pass locally via `uv run pytest tests/test_run_configuration_context.py`.
+
+requesting review from the Task Master
