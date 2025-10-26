@@ -33,4 +33,4 @@ No event subscriptions exist for the passive, and `PassiveRegistry` never calls 
   `lady_darkness_eclipsing_veil_resist_bonus_{id(target)}` effect remains active, so Lady gains +10% instead of the intended +5%
   after a single resist. Reuse the same effect name (or otherwise ensure only one attack buff effect remains) when reapplying the passive so cached stacks do not stack twice.
 
-more work needed — Resolve the duplicate attack-buff effect so cached stacks reapply without double-counting before re-requesting review.
+ready for review

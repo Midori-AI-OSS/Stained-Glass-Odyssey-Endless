@@ -109,3 +109,35 @@ async def test_eclipsing_veil_resist_grants_attack_bonus() -> None:
     entity_id = id(lady)
     assert entity_id not in LadyDarknessEclipsingVeil._dot_callbacks
     assert entity_id not in LadyDarknessEclipsingVeil._resist_callbacks
+
+
+@pytest.mark.asyncio
+async def test_eclipsing_veil_reapply_preserves_attack_bonus() -> None:
+    _reset_veil_state()
+    lady = Stats()
+    lady.id = "lady_darkness"
+    lady.passives = ["lady_darkness_eclipsing_veil"]
+
+    passive = LadyDarknessEclipsingVeil()
+    await passive.apply(lady, party=[lady])
+
+    await BUS.emit_async(
+        "effect_resisted",
+        "bleed",
+        lady,
+        None,
+        {"effect_type": "dot"},
+    )
+
+    effect_name = f"{LadyDarknessEclipsingVeil.id}_resist_bonus_{id(lady)}"
+    effects = [effect for effect in lady.get_active_effects() if effect.name == effect_name]
+    assert len(effects) == 1
+    first_bonus = effects[0].stat_modifiers["atk"]
+    assert first_bonus == LadyDarknessEclipsingVeil.get_attack_bonus(lady)
+
+    await passive.apply(lady, party=[lady])
+
+    effects_after = [effect for effect in lady.get_active_effects() if effect.name == effect_name]
+    assert len(effects_after) == 1
+    assert effects_after[0].stat_modifiers["atk"] == first_bonus
+    assert LadyDarknessEclipsingVeil.get_attack_bonus(lady) == first_bonus
