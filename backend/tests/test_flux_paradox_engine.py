@@ -1,3 +1,5 @@
+import asyncio
+
 import pytest
 
 from autofighter.party import Party
@@ -89,6 +91,15 @@ async def test_flux_paradox_engine_ice_stance_applies_cold_wound_and_mitigation(
 
         ice_events = [name for name, *_ in events if name == "ice_stance_dot"]
         assert len(ice_events) == 1
+
+        await BUS.emit_async("turn_start", ally)
+        await asyncio.sleep(0)
+        await asyncio.sleep(0)
+
+        await ally_mgr.tick()
+
+        assert not any(mod.id == f"{card.id}_mitigation" for mod in ally_mgr.mods)
+        assert ally.mitigation == pytest.approx(base_mitigation)
     finally:
         BUS.unsubscribe("card_effect", _on_card_effect)
         await BUS.emit_async("battle_end", ally)

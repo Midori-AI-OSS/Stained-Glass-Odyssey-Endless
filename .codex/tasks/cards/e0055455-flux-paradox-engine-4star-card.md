@@ -18,4 +18,4 @@ Current 4★ rewards hand out brute-force tempo (Overclock), revives (Iron Resol
 - Confirmed the accompanying tests in `backend/tests/test_flux_paradox_engine.py` cover stance rotation and single-trigger-per-turn behaviour, and reproduced the suite locally with `uv run pytest tests/test_flux_paradox_engine.py`.
 - Mitigation buff duration is not asserted in the new tests—acceptance criteria call for confirming the one-turn expiry, so additional coverage is still required.
 
-more work needed — please add an assertion that the mitigation buff expires after the following turn before resubmitting.
+ready for review
