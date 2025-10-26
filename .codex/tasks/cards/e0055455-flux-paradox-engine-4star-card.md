@@ -13,4 +13,9 @@ Current 4★ rewards hand out brute-force tempo (Overclock), revives (Iron Resol
 - Extend backend tests to cover both stances, ensuring stacks flip correctly across turns and mitigation buffs expire after one round.
 - Provide a rich `about` string inside the new plugin so the in-game inventory surfaces the stance loop without relying on `.codex` summaries.
 
-ready for review
+## Audit notes (Auditor)
+- Verified the implementation in `backend/plugins/cards/flux_paradox_engine.py` applies the alternating Fire/Ice stance logic and emits telemetry as described.
+- Confirmed the accompanying tests in `backend/tests/test_flux_paradox_engine.py` cover stance rotation and single-trigger-per-turn behaviour, and reproduced the suite locally with `uv run pytest tests/test_flux_paradox_engine.py`.
+- Mitigation buff duration is not asserted in the new tests—acceptance criteria call for confirming the one-turn expiry, so additional coverage is still required.
+
+more work needed — please add an assertion that the mitigation buff expires after the following turn before resubmitting.
