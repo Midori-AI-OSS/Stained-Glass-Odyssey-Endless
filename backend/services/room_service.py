@@ -50,12 +50,34 @@ def _with_room_tags(payload: dict[str, Any], node: Any) -> dict[str, Any]:
 
 def _boss_matches_node(info: Any, node: Any) -> bool:
     try:
-        return (
-            isinstance(info, dict)
-            and info.get("id")
-            and int(info.get("floor", -1)) == int(getattr(node, "floor", -1))
-            and int(info.get("loop", -1)) == int(getattr(node, "loop", -1))
-        )
+        if not isinstance(info, dict) or not info.get("id"):
+            return False
+
+        if int(info.get("floor", -1)) != int(getattr(node, "floor", -1)):
+            return False
+
+        if int(info.get("loop", -1)) != int(getattr(node, "loop", -1)):
+            return False
+
+        stored_index = info.get("index")
+        if stored_index is not None:
+            try:
+                node_index = int(getattr(node, "index", getattr(node, "room_id", -1)))
+            except Exception:
+                return False
+            if int(stored_index) != node_index:
+                return False
+
+        stored_room = info.get("room_id")
+        if stored_room is not None:
+            try:
+                node_room = int(getattr(node, "room_id", getattr(node, "index", -1)))
+            except Exception:
+                return False
+            if int(stored_room) != node_room:
+                return False
+
+        return True
     except Exception:
         return False
 
@@ -550,11 +572,26 @@ async def boss_room(run_id: str, data: dict[str, Any]) -> dict[str, Any]:
             foe = _instantiate_boss(boss_id)
         if foe is None:
             foe = _choose_foe(node, party)
-            state["floor_boss"] = {
+            boss_record = {
                 "id": getattr(foe, "id", type(foe).__name__),
                 "floor": getattr(node, "floor", 1),
                 "loop": getattr(node, "loop", 1),
             }
+            try:
+                node_index = int(getattr(node, "index", getattr(node, "room_id", -1)))
+            except Exception:
+                node_index = None
+            if node_index is not None:
+                boss_record["index"] = node_index
+
+            try:
+                node_room = int(getattr(node, "room_id", getattr(node, "index", -1)))
+            except Exception:
+                node_room = None
+            if node_room is not None:
+                boss_record["room_id"] = node_room
+
+            state["floor_boss"] = boss_record
         progression = {
             "total_rooms_cleared": state.get("total_rooms_cleared", 0),
             "floors_cleared": state.get("floors_cleared", 0),

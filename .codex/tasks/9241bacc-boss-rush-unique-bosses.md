@@ -24,3 +24,5 @@ Update the boss spawning logic so that boss rush nodes roll a fresh foe instead 
 * `backend/services/room_service.py`
 * `backend/services/run_service.py`
 * `backend/autofighter/mapgen.py`
+
+ready for review
