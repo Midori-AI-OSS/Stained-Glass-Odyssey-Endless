@@ -4,6 +4,9 @@ import sys
 
 import pytest
 
+from autofighter.stats import Stats
+from plugins.characters import CHARACTER_FOES
+
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # noqa: E402
 sys.modules.pop("services", None)
 sys.modules.pop("runs", None)
@@ -20,10 +23,12 @@ from test_app import app_with_db as _app_with_db  # noqa: F401
 app_with_db = _app_with_db
 
 
-class DummyFoe:
-    def __init__(self, ident: str) -> None:
-        self.id = ident
-        self.name = ident
+class DummyFoe(Stats):
+    def __init__(self, ident: str | None = None) -> None:
+        super().__init__()
+        resolved = ident or getattr(type(self), "id", "dummy")
+        self.id = resolved
+        self.name = resolved
         self.rank = "boss"
 
 
@@ -79,7 +84,9 @@ async def test_boss_rush_rolls_unique_bosses(app_with_db, monkeypatch):
     def choose_unique(node, party):  # noqa: ANN001
         ident = f"rush-boss-{len(picks)}"
         picks.append(ident)
-        return BossRushFoe(ident)
+        foe_cls = type(f"BossRushFoe_{len(picks)}", (BossRushFoe,), {"id": ident})
+        CHARACTER_FOES[ident] = foe_cls
+        return foe_cls()
 
     async def fake_run_battle(run_id, room, foes, party, data, state, rooms, progress):  # noqa: ANN001
         await progress({"result": "boss", "turn": 0, "party": [], "foes": []})
@@ -91,6 +98,7 @@ async def test_boss_rush_rolls_unique_bosses(app_with_db, monkeypatch):
 
     run_info = await start_run(["player"], run_type="boss_rush")
     run_id = run_info["run_id"]
+    picks.clear()
 
     state, rooms = await asyncio.to_thread(load_map, run_id)
     assert rooms[1].room_type == "battle-boss-floor"
@@ -118,3 +126,5 @@ async def test_boss_rush_rolls_unique_bosses(app_with_db, monkeypatch):
 
     assert len(picks) == 2
     assert picks[0] != picks[1]
+    for ident in picks:
+        CHARACTER_FOES.pop(ident, None)
