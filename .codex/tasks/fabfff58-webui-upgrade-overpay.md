@@ -28,3 +28,5 @@ Players who enter the roster upgrade view in the WebUI can only confirm an upgra
 * Players can start an upgrade with zero 1★ shards but sufficient higher-tier shards, see an explanatory prompt, and confirm an overpay that successfully upgrades the stat.
 * The upgrade confirmation payload is logged in dev tools showing `allowOverpay` (or similar) and omits a restrictive breakdown, letting `_consume_material_units` handle the conversion.
 * Automated tests covering the prompt visibility and payload dispatch pass, and documentation for the party UI upgrade flow is updated.
+
+ready for review

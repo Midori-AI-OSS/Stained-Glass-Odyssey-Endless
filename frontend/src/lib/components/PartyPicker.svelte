@@ -331,11 +331,14 @@
     if (upgradeContext?.pendingStat) return;
 
     const char = detail?.id ? roster.find((p) => p.id === detail.id) : roster.find((p) => p.id === previewId);
+    const allowOverpay = Boolean(detail?.allowOverpay);
+
     const payload = {
       ...(detail || {}),
       id: char?.id ?? previewId ?? null,
       character: char || null
     };
+    payload.allowOverpay = allowOverpay;
     const { id, stat } = payload;
     const rawRepeats = detail?.repeats ?? detail?.repeat ?? 1;
     let repeats = Number(rawRepeats);
@@ -353,7 +356,10 @@
         lastRequestedStat: stat || null,
         pendingStat: stat || null,
         message: '',
-        error: ''
+        error: '',
+        allowOverpay,
+        pendingOverpay: allowOverpay,
+        overpayEligible: false
       };
     }
 
@@ -369,6 +375,9 @@
     const budget = detail?.totalMaterials ?? detail?.total_materials ?? detail?.totalPoints ?? detail?.total_points ?? detail?.availableMaterials ?? null;
     if (budget != null) {
       options.total_materials = budget;
+    }
+    if (allowOverpay) {
+      options.allow_overpay = true;
     }
 
     try {
@@ -444,11 +453,39 @@
           lastRequestedStat: stat || null,
           pendingStat: null,
           message,
-          error: errorText
+          error: errorText,
+          allowOverpay: false,
+          pendingOverpay: false,
+          overpayEligible: false
         };
       }
     } catch (err) {
       if (isUpgradeMode) {
+        const availableUnitsAtRequest = Number(
+          detail?.totalMaterials ??
+          detail?.total_materials ??
+          detail?.availableMaterials ??
+          0
+        );
+        const expectedUnitsAtRequest = Number(
+          detail?.expectedUnits ??
+          detail?.expectedMaterials?.units ??
+          detail?.expected_materials?.units ??
+          0
+        );
+        const errorMessage = err?.message || `Unable to upgrade ${statLabel(stat || '')}.`;
+        const insufficient = typeof errorMessage === 'string' && errorMessage.toLowerCase().includes('insufficient materials');
+        const shouldOfferOverpay = !allowOverpay
+          && insufficient
+          && Number.isFinite(expectedUnitsAtRequest)
+          && expectedUnitsAtRequest > 0
+          && Number.isFinite(availableUnitsAtRequest)
+          && availableUnitsAtRequest >= expectedUnitsAtRequest;
+
+        if (shouldOfferOverpay) {
+          previewMode.set('upgrade');
+        }
+
         upgradeContext = {
           id,
           character: payload.character,
@@ -456,7 +493,10 @@
           lastRequestedStat: stat || null,
           pendingStat: null,
           message: '',
-          error: err?.message || `Unable to upgrade ${statLabel(stat || '')}.`
+          error: errorMessage,
+          allowOverpay,
+          pendingOverpay: false,
+          overpayEligible: shouldOfferOverpay
         };
       }
     }

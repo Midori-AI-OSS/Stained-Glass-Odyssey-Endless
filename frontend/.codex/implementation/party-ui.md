@@ -60,7 +60,18 @@ Implementation details:
 - `PlayerPreview.svelte` renders both the portrait and the upgrade sheet. The
   upgrade sheet reuses damage-type colors/icons, respects Reduced Motion, and
   exposes `open-upgrade`, `close-upgrade`, and `request-upgrade` events for the
-  picker to handle.
+  picker to handle. When the selected stat requires more 1★ shards than the
+  player currently holds but the combined higher-tier inventory can cover the
+  cost, the sheet surfaces an "Overpay" prompt. The prompt lists which higher-
+  tier items will be converted (e.g., `1× Water 2★ → 125× Water 1★`) and sends
+  a `request-upgrade` payload with `allowOverpay: true`, `totalMaterials`, and a
+  breakdown-free `expectedMaterials` so the backend can consume any tier.
+- `PartyPicker.svelte` forwards the new `allowOverpay` flag to
+  `upgradeStat()`, records the intent in `upgradeContext`, and reopens the
+  overpay prompt automatically if the backend replies with `insufficient
+  materials` while still reporting enough converted units to proceed. The cache
+  merge helper simulates material conversion so higher-tier shard counts remain
+  accurate after an overpay upgrade.
 
 ## Party seeding and hydration
 

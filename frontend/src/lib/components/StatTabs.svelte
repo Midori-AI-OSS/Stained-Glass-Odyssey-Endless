@@ -156,7 +156,9 @@
       stat: resolvedSelectedStat,
       expectedMaterials: materialRequest ?? nextCostUnits,
       expectedUnits: nextCostUnits,
-      availableMaterials
+      availableMaterials,
+      totalMaterials: availableMaterials,
+      total_materials: availableMaterials
     });
   }
 
