@@ -238,7 +238,7 @@ class CataclysmEngine(RelicBase):
             current_state = getattr(party, "_cataclysm_engine_state", state)
             current_state["foes"].pop(id(entity), None)
 
-            if isinstance(entity, FoeBase):
+            if isinstance(entity, FoeBase) and current_state["foes"]:
                 return
 
             current_state["activated"] = False
