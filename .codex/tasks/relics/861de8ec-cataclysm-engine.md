@@ -23,3 +23,5 @@ Design an endgame relic that supercharges the party at a steep vitality cost. "C
 
 ## Documentation
 - Covered by the plugin `about` string and code comments—no `.codex` roster changes required.
+
+ready for review
