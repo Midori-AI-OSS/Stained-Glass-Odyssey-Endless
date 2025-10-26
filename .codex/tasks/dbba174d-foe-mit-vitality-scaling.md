@@ -18,3 +18,10 @@ The run start flow currently records the `foe_mitigation` and `foe_vitality` mod
 * The run start wizard snapshots show `+2.50` per stack for both modifiers, and the persisted modifier context records the expected additive bonus.
 * Spawn pressure remains within the documented bounds after applying the revised bonuses (include reasoning or measurements in the PR notes/tests).
 * Tests covering the modifier context pass with the new scaling.
+
+## Implementation notes
+* Updated `services/run_configuration.py` so mitigation and vitality modifiers grant +2.50 per stack before diminishing returns and adjusted spawn pressure weighting to keep foe strength within the intended range.
+* Added regression coverage in `tests/test_run_configuration_context.py` verifying the new per-stack bonuses and spawn pressure clamping when diminishing returns are disabled.
+* Documented the revised scaling in `.codex/implementation/run-configuration-metadata.md` and exercised the backend test suite with `uv run pytest tests/test_run_configuration_context.py`.
+
+ready for review

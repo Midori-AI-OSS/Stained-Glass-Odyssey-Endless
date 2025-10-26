@@ -30,6 +30,10 @@ and stored with the run record.
   and current HP for each stack before diminishing returns. Preview rows show
   the raw multiplier alongside the diminished effective value so designers can
   size late-game encounters against the new scaling curve.
+- `foe_mitigation` and `foe_vitality` now apply +2.50 additive bonuses per stack
+  before diminishing returns. The metadata snapshot stores the full per-stack
+  value alongside the diminished effective bonus so downstream systems such as
+  spawn pressure and the foe factory can apply consistent scaling.
 - `character_stat_down` now applies a 0.0001× overflow penalty past 500 stacks
   and publishes the `cap_threshold_stacks` and `stacks_above_cap` values in the
   snapshot. Total penalties clamp below 100% (0.999) so player stats never hit
