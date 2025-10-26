@@ -25,4 +25,9 @@ Update the boss spawning logic so that boss rush nodes roll a fresh foe instead 
 * `backend/services/run_service.py`
 * `backend/autofighter/mapgen.py`
 
-ready for review
+## Auditor findings (2025-03-19)
+- ✅ Confirmed the implementation adds `index`/`room_id` matching so unique bosses are rolled per node and new regression tests cover the scenario.
+- ❌ `uv run pytest tests/test_floor_boss_rotation.py` fails because `tests/conftest.py` seeds a stub `runs.lifecycle` module without the new `empty_reward_staging` export, causing an `ImportError` during collection. Extend the stub with the new attribute (and any other required helpers) so the suite can execute.
+- ⚠️ The change adds new keys to the persisted `floor_boss` snapshot, but there is no accompanying update under `backend/.codex/implementation/` documenting the new schema. Please add the documentation called for in the task brief.
+
+more work needed — fix the failing pytest collection by updating the `runs.lifecycle` stub in `tests/conftest.py`, then document the new `floor_boss.index`/`floor_boss.room_id` fields in the backend implementation notes before resubmitting for review.
