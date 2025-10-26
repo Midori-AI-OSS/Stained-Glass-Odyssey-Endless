@@ -56,24 +56,35 @@ export function simulateMaterialConsumption(items = {}, elementKey = '', units =
 
   let remainingUnits = targetUnits;
 
+  const baseTier = tiers.find(({ tier }) => tier === 1);
+  const baseTierKey = baseTier ? baseTier.key : baseKey;
+  const higherTiers = tiers.filter(({ tier }) => tier !== 1);
+
   outer: while (remainingUnits > 0) {
-    for (const { tier, scale, key } of tiers) {
+    const baseAvailable = remaining[baseTierKey] ?? 0;
+    if (baseAvailable > 0) {
+      remaining[baseTierKey] = baseAvailable - 1;
+      consumed[baseTierKey] = (consumed[baseTierKey] || 0) + 1;
+      remainingUnits = Math.max(0, remainingUnits - 1);
+      continue;
+    }
+
+    for (const { scale, key } of higherTiers) {
       const available = remaining[key] ?? 0;
       if (available <= 0) continue;
-      if (tier === 1 || scale <= remainingUnits) {
+      if (scale <= remainingUnits) {
         remaining[key] = available - 1;
         consumed[key] = (consumed[key] || 0) + 1;
-        remainingUnits = Math.max(0, remainingUnits - (tier === 1 ? 1 : scale));
+        remainingUnits = Math.max(0, remainingUnits - scale);
         continue outer;
       }
     }
 
     let convertCandidate = null;
-    for (const { tier, key, scale } of tiers) {
-      if (tier === 1) continue;
+    for (const { key, scale } of higherTiers) {
       const available = remaining[key] ?? 0;
       if (available > 0) {
-        convertCandidate = { tier, key, scale };
+        convertCandidate = { key, scale };
         break;
       }
     }
@@ -84,7 +95,7 @@ export function simulateMaterialConsumption(items = {}, elementKey = '', units =
 
     remaining[convertCandidate.key] = (remaining[convertCandidate.key] ?? 0) - 1;
     consumed[convertCandidate.key] = (consumed[convertCandidate.key] || 0) + 1;
-    remaining[baseKey] = (remaining[baseKey] ?? 0) + convertCandidate.scale;
+    remaining[baseTierKey] = (remaining[baseTierKey] ?? 0) + convertCandidate.scale;
   }
 
   const fulfilled = remainingUnits <= 0;
