@@ -18,4 +18,8 @@ Back the four-phase reward overlay redesign with automated checks that confirm D
 ## Out of scope
 - Backend contract tests; focus on frontend behaviour.
 
-ready for review
+## Audit findings (Auditor Mode)
+- ✅ Confirmed the new test suite exercises the drops auto-advance timer, card highlight/confirmation, relic highlight reset, battle-review gating, and automation helpers through the dedicated specs under `frontend/tests/`. The coverage matches the acceptance criteria and reuses shared fixtures/utilities for readability.
+- ❌ Running the frontend test suite fails: `bun x vitest run tests/reward-overlay-four-phase-behaviour.vitest.js` immediately aborts with `Unknown Error: [object Object]`, so Vitest discovers zero tests. The same error appears when running the entire suite. Until the underlying unhandled rejection is fixed (and the suite passes), the task cannot be approved.
+
+more work needed
