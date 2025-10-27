@@ -27,4 +27,9 @@ The home screen currently advertises a dedicated “Party” entry in both the t
 - Updated frontend docs to reflect the streamlined main menu.
 - Ran `bun test tests/settings-migration.test.js`; full suite currently fails at PullResultsOverlay string assertion.
 
-ready for review
+### Audit notes (2025-10-28)
+- Verified the nav bar and right-rail menu no longer expose a standalone Party entry and the Run flow still launches the PartyPicker overlay.
+- `bun test` currently fails at `tests/stat-tabs-persistence.test.js` because `StatTabs.svelte` lacks the expected `context="module"` block.
+- `.codex/implementation/main-menu.md` still documents the legacy Map/Edit/Craft/Stats layout instead of the current Run/Warp/Inventory/Battle Review/Guidebook/Settings roster, so the task's documentation update is incomplete.
+
+more work needed
