@@ -78,6 +78,11 @@
     flex: 1 1 auto;
     width: 100%;
     min-height: 0;
+    overflow-x: hidden;
+    overflow-y: inherit;
+  }
+
+  .panel-content.panel-content--locked {
     overflow: hidden;
   }
 
@@ -112,7 +117,12 @@
   in:fly={flyInOptions}
   out:fly={flyOutOptions}
 >
-  <div class="panel-content" in:fade={fadeOptions} out:fade={fadeOptions}>
+  <div
+    class="panel-content"
+    class:panel-content--locked={!scrollable}
+    in:fade={fadeOptions}
+    out:fade={fadeOptions}
+  >
     <StarStorm color={starColor} reducedMotion={shouldReduceMotion} />
     <slot />
   </div>
