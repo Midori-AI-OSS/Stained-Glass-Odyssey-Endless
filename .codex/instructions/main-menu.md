@@ -10,6 +10,8 @@ The main menu uses an Arknights-style grid of large [Lucide](https://lucide.dev)
   fetch `/rewards/login` on load, highlight the active streak day, and offer a
   claim button wired to `POST /rewards/login/claim` once the three-room
   requirement is fulfilled.
+- The Run start overlay keeps the PartyPicker panel pinned inside the viewport; only the roster column scrolls and shows
+  gradient fades when additional squadmates exist beyond the fold.
 - Place quick-access corner icons (notifications, mail, etc.) away from main content.
 - Show a short tooltip on hover repeating each label for clarity.
 
