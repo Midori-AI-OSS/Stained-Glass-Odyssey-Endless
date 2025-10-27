@@ -9,9 +9,9 @@ Swarm Managers monitor task files in `.codex/tasks/` and automatically dispatch 
 
 ## Guidelines
 - Monitor task files in `.codex/tasks/` for state markers indicating next actions.
-- Use `codex cloud exec --env 688d75c9f8ec8191aee3e8de8a5285cc "{REQUEST}"` to dispatch work to specialist agents.
+- **Execute dispatch commands in the terminal as CLI commands.** Use `codex cloud exec --env 688d75c9f8ec8191aee3e8de8a5285cc "{REQUEST}"` to dispatch work to specialist agents by running the command in a terminal/shell.
 - **Important:** `{taskfile}` refers to the relative path from the repository root to the task file, for example: `.codex/tasks/1234abcd-fix-battle-logic.md`. Always use the full relative path including the `.codex/tasks/` directory prefix so specialists can locate the exact file.
-- Route tasks based on their state markers following this dispatch logic:
+- Route tasks based on their state markers following this dispatch logic (run each as a terminal command):
   - No marker (new task ready to start) → Dispatch to Coder: `codex cloud exec --env 688d75c9f8ec8191aee3e8de8a5285cc "Coder, please start work on task file {taskfile}"`
   - `more work needed` → Dispatch to Coder: `codex cloud exec --env 688d75c9f8ec8191aee3e8de8a5285cc "Coder, please continue work on task file {taskfile}"`
   - `ready for review` → Dispatch to Auditor or Reviewer: `codex cloud exec --env 688d75c9f8ec8191aee3e8de8a5285cc "Auditor, please review the task file {taskfile}"`
@@ -26,7 +26,7 @@ Swarm Managers monitor task files in `.codex/tasks/` and automatically dispatch 
 
 ## Typical Actions
 - Scan `.codex/tasks/` folder for task files and read their current state markers.
-- Dispatch tasks to specialists using `codex cloud exec --env 688d75c9f8ec8191aee3e8de8a5285cc` with appropriate routing based on state.
+- Execute dispatch commands in the terminal using `codex cloud exec --env 688d75c9f8ec8191aee3e8de8a5285cc` with appropriate routing based on state.
 - Monitor task file updates to detect when tasks transition between states (e.g., from "more work needed" to "ready for review").
 - Re-route tasks when specialists report blockers, dependencies, or need handoffs to other modes.
 - Document dispatch patterns, routing decisions, and lessons learned in `.codex/instructions/swarm/`.
