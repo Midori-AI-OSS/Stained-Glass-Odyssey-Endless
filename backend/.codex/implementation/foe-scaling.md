@@ -9,7 +9,10 @@
    applied through permanent stat adjustments so the baseline grows alongside the
    run progression.
 3. **Threshold enforcement** – Final clamps prevent edge cases such as very low
-   defense or HP rolls and synchronize `hp` with the updated `max_hp`.
+   defense or HP rolls and synchronize `hp` with the updated `max_hp`. Boss-ranked
+   encounters (`boss`, `prime boss`, `glitched boss`, `glitched prime boss`) now
+   receive a guaranteed 100 defense floor before pressure adjustments so their
+   mitigation baseline matches balance expectations.
 
 The spawn debuff now updates the stored baselines before later safeguards run, so
 foes retain their intended debuffed HP/ATK/DEF values instead of snapping back to

@@ -36,3 +36,15 @@ the scripted movesets.
 * Unit/regression tests covering the boss defense floor pass locally.
 * Foe scaling documentation references the boss defense clamp, keeping design notes aligned with
   implementation.
+
+### Implementation notes (2025-02-15)
+* Updated `backend/autofighter/rooms/foes/scaling.py::enforce_thresholds` to promote boss-ranked foes
+  (`boss`, `prime boss`, `glitched boss`, `glitched prime boss`) to a minimum 100 defense floor while
+  still honoring higher overrides and pressure rolls.
+* Added `test_enforce_thresholds_clamps_boss_defense_floor` alongside the existing scaling tests to
+  lock in the regression coverage for the new floor.
+* Documented the guaranteed floor in `backend/.codex/implementation/foe-scaling.md` so the balancing
+  notes match runtime behavior.
+* Verified the focused backend suite with `uv run pytest tests/rooms/foes/test_scaling.py`.
+
+ready for review
