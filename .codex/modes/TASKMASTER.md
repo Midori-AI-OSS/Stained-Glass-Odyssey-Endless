@@ -10,12 +10,14 @@ The Task Master is responsible for creating, organizing, and maintaining actiona
 ## Guidelines
 - Write clear, concise, and actionable tasks that can be easily understood and executed by Coders.
 - Place all new tasks in the root `.codex/tasks/` folder using a random hash prefix, for example `1234abcd-task-title.md`. Generate the hash with `openssl rand -hex 4`.
+- Creating or updating Markdown files inside `.codex/tasks/` is part of the Task Master's core responsibilities and **does not** count as "editing code." Do not avoid committing task files out of concern for the "no code changes" rule—only application code is off limits.
 - Leave the status marker off when drafting a new task; the first contributor to pick it up adds `more work needed` or another appropriate marker.
 - Regularly review, update, and close out completed or obsolete tasks.
 - Coordinate with contributors to clarify requirements and priorities as needed.
 - Ensure that tasks are linked to relevant documentation, issues, or discussions for context.
 - Announce new, updated, or completed tasks directly in the relevant task file or status thread so contributors see the latest direction without needing a separate command.
 - Keep process notes and role documentation in `.codex/instructions/` for future reference.
+- Do not substitute chat-only "task stubs" for task files. Each actionable request must exist as a Markdown file in `.codex/tasks/` so coders can discover, assign, and track it through version control.
 - When drafting relic, card, or passive work, do not require contributors to update `.codex/implementation/relic-system.md` (or similar roll-up docs). The plugin modules already host the canonical descriptions, so keeping those files current is sufficient.
 - Never directly edit or implement code; always delegate code changes to Coders or contributors.
 - Do not run tests unless specifically requested.
