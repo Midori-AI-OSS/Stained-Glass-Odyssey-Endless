@@ -39,4 +39,7 @@ Tested by the lead dev: This task was not done right as there is no scrolling fo
 - Reworked `PartyRoster` layout to keep the selected party pinned and allow the roster list to scroll independently.
 - Reverted unrelated `MenuPanel` sizing changes after confirming other overlays rely on the original behavior.
 
-ready for review
+## Audit Notes (Auditor)
+- `bun x vitest run tests/party-picker-scroll.vitest.js` aborts with an "Unknown Error: [object Object]" before loading any test files, so the newly added coverage never executes. Investigate and fix the Vitest environment so the roster scroll regression test can actually run.
+
+more work needed — Vitest run for the new roster scroll test errors out before collecting tests, leaving the automated coverage requirement unmet.
