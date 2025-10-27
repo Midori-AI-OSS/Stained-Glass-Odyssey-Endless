@@ -4,7 +4,7 @@
   Emits high-level navigation events without managing run logic.
 -->
 <script>
-  import { Diamond, Users, Settings, Swords, ArrowLeft, Package, Eye } from 'lucide-svelte';
+  import { Diamond, Settings, Swords, ArrowLeft, Package, Eye } from 'lucide-svelte';
   import { createEventDispatcher } from 'svelte';
   import Spinner from './Spinner.svelte';
 
@@ -53,9 +53,6 @@
         <Diamond size={22} color="#fff" />
       </button>
     {/if}
-    <button class="icon-btn" title="Party Menu" on:click={() => dispatch('openParty')} disabled={battleActive}>
-      <Users size={22} color="#fff" />
-    </button>
     {#if battleActive}
       <button class="icon-btn" title="Combat Viewer" on:click={() => dispatch('openCombatViewer')}>
         <Eye size={22} color="#fff" />
