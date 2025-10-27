@@ -513,36 +513,40 @@
 {#if compact}
   <PartyRoster {roster} {selected} bind:previewId {compact} {reducedMotion} on:toggle={(e) => toggleMember(e.detail)} />
 {:else}
-  <MenuPanel {starColor} {reducedMotion} style="flex: 1 1 auto;">
+  <MenuPanel {starColor} {reducedMotion} scrollable={false} style="flex: 1 1 auto;">
     <div class="full" data-testid="party-picker">
-      <PartyRoster {roster} {selected} bind:previewId {reducedMotion} on:toggle={(e) => toggleMember(e.detail)} />
-      <PlayerPreview
-        {roster}
-        {previewId}
-        overrideElement={previewElementOverride}
-        {allowElementChange}
-        mode={$previewMode}
-        upgradeContext={upgradeContext}
-        upgradeData={previewUpgradeState.data}
-        upgradeLoading={previewUpgradeState.loading}
-        upgradeError={previewUpgradeState.error}
-        selectedStat={previewStat}
-        {reducedMotion}
-        on:open-upgrade={(e) => handlePreviewMode(e.detail, 'upgrade')}
-        on:close-upgrade={(e) => handlePreviewMode(e.detail, 'portrait')}
-        on:request-upgrade={(e) => forwardUpgradeRequest(e.detail)}
-        on:select-upgrade={(e) => handleUpgradeSelection(e.detail)}
-        on:element-change={(e) => {
-          const el = e.detail?.element || '';
-          previewElementOverride = el || previewElementOverride;
-          // Propagate player element change to editor state so start_run gets damage_type
-          try { dispatch('editorChange', { damageType: el }); } catch {}
-          refreshRoster();
-          if (previewId) {
-            refreshUpgradeData(previewId, { force: true });
-          }
-        }}
-      />
+      <div class="roster-pane">
+        <PartyRoster {roster} {selected} bind:previewId {reducedMotion} on:toggle={(e) => toggleMember(e.detail)} />
+      </div>
+      <div class="preview-pane">
+        <PlayerPreview
+          {roster}
+          {previewId}
+          overrideElement={previewElementOverride}
+          {allowElementChange}
+          mode={$previewMode}
+          upgradeContext={upgradeContext}
+          upgradeData={previewUpgradeState.data}
+          upgradeLoading={previewUpgradeState.loading}
+          upgradeError={previewUpgradeState.error}
+          selectedStat={previewStat}
+          {reducedMotion}
+          on:open-upgrade={(e) => handlePreviewMode(e.detail, 'upgrade')}
+          on:close-upgrade={(e) => handlePreviewMode(e.detail, 'portrait')}
+          on:request-upgrade={(e) => forwardUpgradeRequest(e.detail)}
+          on:select-upgrade={(e) => handleUpgradeSelection(e.detail)}
+          on:element-change={(e) => {
+            const el = e.detail?.element || '';
+            previewElementOverride = el || previewElementOverride;
+            // Propagate player element change to editor state so start_run gets damage_type
+            try { dispatch('editorChange', { damageType: el }); } catch {}
+            refreshRoster();
+            if (previewId) {
+              refreshUpgradeData(previewId, { force: true });
+            }
+          }}
+        />
+      </div>
       <div class="right-col">
         <StatTabs
           {roster}
@@ -585,16 +589,37 @@
 <style>
   .full {
     display: grid;
-    grid-template-columns: minmax(8rem, 22%) 1fr minmax(12rem, 26%);
+    grid-template-columns: minmax(10rem, 24%) minmax(0, 46%) minmax(12rem, 30%);
     width: 100%;
-    height: 96%;
+    height: 100%;
     max-width: 100%;
-    max-height: 98%;
+    max-height: 100%;
     /* allow internal scrolling instead of clipping when content grows */
     position: relative;
     z-index: 0; /* establish stacking context so stars can sit behind */
+    min-height: 0;
   }
-  .right-col { display: flex; flex-direction: column; min-height: 0; }
+  .roster-pane,
+  .preview-pane,
+  .right-col {
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .roster-pane > :global(*) {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
+  .preview-pane > :global(*) {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
+  .right-col {
+    flex: 1 1 auto;
+  }
   
   .pressure-controls { margin-top: 0.5rem; }
   .pressure-label { display: block; color: #fff; font-size: 0.9rem; margin-bottom: 0.3rem; text-align: center; }

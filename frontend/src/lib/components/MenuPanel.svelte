@@ -9,6 +9,7 @@
   export let reducedMotion;
   export let starColor = '';
   export let style = '';
+  export let scrollable = true;
 
   const TRANSITION_DURATION = 220;
 
@@ -58,8 +59,8 @@
     flex-direction: column;
     box-sizing: border-box;
     padding: var(--padding);
-    overflow-y: auto;
     overflow-x: hidden;
+    overflow-y: auto;
     /* Slightly lighten the stained-glass background for better readability */
     background: linear-gradient(0deg, rgba(255,255,255,0.06), rgba(255,255,255,0.06)), var(--glass-bg);
     box-shadow: var(--glass-shadow);
@@ -67,12 +68,17 @@
     backdrop-filter: var(--glass-filter);
   }
 
+  .panel.locked {
+    overflow: hidden;
+  }
+
   .panel-content {
     display: flex;
     flex-direction: column;
     flex: 1 1 auto;
     width: 100%;
-    min-height: 100%;
+    min-height: 0;
+    overflow: hidden;
   }
 
   /* Themed scrollbars for dark UI */
@@ -101,6 +107,7 @@
 <div
   {...$$restProps}
   class={`panel ${$$props.class || ''}`}
+  class:locked={!scrollable}
   style={`--padding: ${padding}; ${style}`}
   in:fly={flyInOptions}
   out:fly={flyOutOptions}

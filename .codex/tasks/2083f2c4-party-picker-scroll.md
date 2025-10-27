@@ -25,3 +25,5 @@ When players open the PartyPicker via the run-start flow with a large roster, th
 * Opening PartyPicker with a large roster keeps the overlay anchored; only the roster list scrolls while the Party header remains visible.
 * Top and bottom fades render when the roster overflows and disappear when the list fits without scrolling.
 * Automated coverage captures the scroll container behavior, and the documentation describes the new layout.
+
+ready for review

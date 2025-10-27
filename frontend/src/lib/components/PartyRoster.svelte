@@ -1,7 +1,9 @@
 <script>
   import { getElementIcon, getElementColor } from '../systems/assetLoader.js';
   import { createEventDispatcher } from 'svelte';
+  import { afterUpdate } from 'svelte';
   import { onDestroy } from 'svelte';
+  import { onMount } from 'svelte';
   import { fly } from 'svelte/transition';
   import { flip } from 'svelte/animate';
 
@@ -20,6 +22,50 @@
   export let compact = false;
   export let reducedMotion = false;
   const dispatch = createEventDispatcher();
+
+  let rosterListEl = null;
+  let fadeObserver = null;
+  let showTopFade = false;
+  let showBottomFade = false;
+  const FADE_EPSILON = 1;
+
+  function updateFades() {
+    if (!rosterListEl || compact) {
+      showTopFade = false;
+      showBottomFade = false;
+      return;
+    }
+
+    const { scrollTop, scrollHeight, clientHeight } = rosterListEl;
+    showTopFade = scrollTop > FADE_EPSILON;
+    showBottomFade = scrollTop + clientHeight < scrollHeight - FADE_EPSILON;
+  }
+
+  function handleScroll() {
+    updateFades();
+  }
+
+  function observeList() {
+    if (!rosterListEl || compact || typeof ResizeObserver !== 'function') {
+      fadeObserver?.disconnect();
+      fadeObserver = null;
+      return;
+    }
+
+    fadeObserver?.disconnect();
+    fadeObserver = new ResizeObserver(() => updateFades());
+    fadeObserver.observe(rosterListEl);
+  }
+
+  onMount(() => {
+    updateFades();
+    observeList();
+  });
+
+  afterUpdate(() => {
+    updateFades();
+    observeList();
+  });
 
   let sortKey = 'name';
   let sortDir = 'asc';
@@ -154,6 +200,8 @@
   onDestroy(() => {
     clearTimeout(longTimer);
     clearStaged();
+    fadeObserver?.disconnect();
+    fadeObserver = null;
   });
 
   // Deterministic pseudo-random from an id string
@@ -208,7 +256,7 @@
   {/each}
 </div>
 {:else}
-<div class="roster-container">
+<div class="roster-container" data-testid="roster">
   <div class="roster-header">
     <span>{selected.length} / 5 party members</span>
     <div class="sort-controls">
@@ -230,7 +278,15 @@
     </div>
   </div>
   <div class="inline-divider" aria-hidden="true"></div>
-  <div class="roster-list">
+  <div class="roster-scroll">
+    <div
+      class="roster-list"
+      bind:this={rosterListEl}
+      on:scroll={handleScroll}
+      data-testid="party-roster-scroll"
+      data-show-top={showTopFade}
+      data-show-bottom={showBottomFade}
+    >
   {#if selectedCount > 0}
     <div class="section-label">Party</div>
     {#each roster.filter(c => selected.includes(c.id)).sort((a,b)=>{
@@ -298,6 +354,19 @@
         aria-hidden="true" />
     </button>
   {/each}
+    </div>
+    <div
+      class="scroll-fade top"
+      class:visible={showTopFade}
+      aria-hidden="true"
+      data-testid="roster-fade-top"
+    ></div>
+    <div
+      class="scroll-fade bottom"
+      class:visible={showBottomFade}
+      aria-hidden="true"
+      data-testid="roster-fade-bottom"
+    ></div>
   </div>
 </div>
 {/if}
@@ -307,6 +376,8 @@
   display: flex;
   flex-direction: column;
   height: 100%;
+  min-height: 0;
+  position: relative;
 }
 
 .roster-header {
@@ -342,14 +413,58 @@
 .sort-dir { background:#111; border:1px solid #555; color:#fff; border-radius: 0; padding: 0.25rem 0.5rem; }
 .sort-dir:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.5); }
 
+.roster-scroll {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
 .roster-list {
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
   padding: 0.4rem;
+  max-height: 100%;
   height: 100%;
   overflow-y: auto;
   min-width: 0;
+  scrollbar-width: thin;
+}
+
+.roster-list::-webkit-scrollbar {
+  width: 10px;
+}
+
+.roster-list::-webkit-scrollbar-thumb {
+  background: rgba(160, 160, 175, 0.45);
+  border-radius: 8px;
+}
+
+.scroll-fade {
+  position: absolute;
+  left: 0.4rem;
+  right: 0.4rem;
+  height: 1.5rem;
+  pointer-events: none;
+  z-index: 2;
+  opacity: 0;
+  transition: opacity 180ms ease;
+}
+
+.scroll-fade.top {
+  top: calc(0.4rem + 1px);
+  background: linear-gradient(180deg, rgba(6, 8, 18, 0.95), transparent);
+}
+
+.scroll-fade.bottom {
+  bottom: 0.4rem;
+  background: linear-gradient(180deg, transparent, rgba(6, 8, 18, 0.95));
+}
+
+.scroll-fade.visible {
+  opacity: 1;
 }
 
 /* Inline divider for section separation */
