@@ -278,6 +278,45 @@
     </div>
   </div>
   <div class="inline-divider" aria-hidden="true"></div>
+  {#if selectedCount > 0}
+    <div class="party-section" data-testid="party-selected">
+      <div class="section-label">Party</div>
+      <div class="party-list">
+        {#each roster.filter(c => selected.includes(c.id)).sort((a,b)=>{
+          const aKey = sortKey === 'element' ? a.element : (sortKey === 'id' ? String(a.id) : a.name);
+          const bKey = sortKey === 'element' ? b.element : (sortKey === 'id' ? String(b.id) : b.name);
+          return (sortDir === 'asc' ? 1 : -1) * (aKey > bKey ? 1 : (aKey < bKey ? -1 : 0));
+        }) as char (`party-${char.id}`)}
+          <button
+            type="button"
+            data-testid={`choice-${char.id}`}
+            class="char-row"
+            class:selected={selected.includes(char.id)}
+            class:armed={stagedToggleId === char.id}
+            class:reduced={reducedMotion}
+            animate:flip={{ duration: reducedMotion ? 0 : 300 }}
+            on:click={(e) => select(char, e)}
+            on:pointerdown={() => !char.is_player && onPointerDown(char)}
+            on:pointerup={onPointerUp}
+            on:pointerleave={onPointerUp}
+            on:introstart={(e) => onIntroStart(char.id, e)}
+            on:introend={onIntroEnd}
+            in:fly={{ x: -100, duration: reducedMotion ? 0 : 300 }}
+            out:fly={{ x: 100, duration: reducedMotion ? 0 : 300 }}
+            style={`border-color: ${getElementColor(char.element)}; --el-color: ${getElementColor(char.element)}; --sweep-delay: ${sweepDelay(char.id)}s; --sweep-duration: ${sweepDuration(char.id)}s;`}>
+            <img src={char.img} alt={char.name} class="row-img" />
+            <span class="row-name">{char.name}</span>
+            <svelte:component
+              this={getElementIcon(char.element)}
+              class="row-type"
+              style={`color: ${getElementColor(char.element)}`}
+              aria-hidden="true" />
+          </button>
+        {/each}
+      </div>
+    </div>
+    <div class="inline-divider" aria-hidden="true"></div>
+  {/if}
   <div class="roster-scroll">
     <div
       class="roster-list"
@@ -287,73 +326,38 @@
       data-show-top={showTopFade}
       data-show-bottom={showBottomFade}
     >
-  {#if selectedCount > 0}
-    <div class="section-label">Party</div>
-    {#each roster.filter(c => selected.includes(c.id)).sort((a,b)=>{
-      const aKey = sortKey === 'element' ? a.element : (sortKey === 'id' ? String(a.id) : a.name);
-      const bKey = sortKey === 'element' ? b.element : (sortKey === 'id' ? String(b.id) : b.name);
-      return (sortDir === 'asc' ? 1 : -1) * (aKey > bKey ? 1 : (aKey < bKey ? -1 : 0));
-    }) as char (`party-${char.id}`)}
-      <button
-        type="button"
-        data-testid={`choice-${char.id}`}
-        class="char-row"
-        class:selected={selected.includes(char.id)}
-        class:armed={stagedToggleId === char.id}
-        class:reduced={reducedMotion}
-        animate:flip={{ duration: reducedMotion ? 0 : 300 }}
-        on:click={(e) => select(char, e)}
-        on:pointerdown={() => !char.is_player && onPointerDown(char)}
-        on:pointerup={onPointerUp}
-        on:pointerleave={onPointerUp}
-        on:introstart={(e) => onIntroStart(char.id, e)}
-        on:introend={onIntroEnd}
-        in:fly={{ x: -100, duration: reducedMotion ? 0 : 300 }}
-        out:fly={{ x: 100, duration: reducedMotion ? 0 : 300 }}
-        style={`border-color: ${getElementColor(char.element)}; --el-color: ${getElementColor(char.element)}; --sweep-delay: ${sweepDelay(char.id)}s; --sweep-duration: ${sweepDuration(char.id)}s;`}>
-        <img src={char.img} alt={char.name} class="row-img" />
-        <span class="row-name">{char.name}</span>
-        <svelte:component
-          this={getElementIcon(char.element)}
-          class="row-type"
-          style={`color: ${getElementColor(char.element)}`}
-          aria-hidden="true" />
-      </button>
-    {/each}
-    <div class="inline-divider" aria-hidden="true"></div>
-  {/if}
-  <div class="section-label">Roster</div>
-  {#each roster.filter(c => !selected.includes(c.id)).sort((a,b)=>{
-    const aKey = sortKey === 'element' ? a.element : (sortKey === 'id' ? String(a.id) : a.name);
-    const bKey = sortKey === 'element' ? b.element : (sortKey === 'id' ? String(b.id) : b.name);
-    return (sortDir === 'asc' ? 1 : -1) * (aKey > bKey ? 1 : (aKey < bKey ? -1 : 0));
-  }) as char (`roster-${char.id}`)}
-    <button
-      type="button"
-      data-testid={`choice-${char.id}`}
-      class="char-row"
-      class:selected={selected.includes(char.id)}
-      class:armed={stagedToggleId === char.id}
-      class:reduced={reducedMotion}
-      animate:flip={{ duration: reducedMotion ? 0 : 300 }}
-      on:click={(e) => select(char, e)}
-      on:pointerdown={() => !char.is_player && onPointerDown(char)}
-      on:pointerup={onPointerUp}
-      on:pointerleave={onPointerUp}
-      on:introstart={(e) => onIntroStart(char.id, e)}
-      on:introend={onIntroEnd}
-      in:fly={{ x: -100, duration: reducedMotion ? 0 : 300 }}
-      out:fly={{ x: 100, duration: reducedMotion ? 0 : 300 }}
-      style={`border-color: ${getElementColor(char.element)}; --el-color: ${getElementColor(char.element)}; --sweep-delay: ${sweepDelay(char.id)}s; --sweep-duration: ${sweepDuration(char.id)}s;`}>
-      <img src={char.img} alt={char.name} class="row-img" />
-      <span class="row-name">{char.name}</span>
-      <svelte:component
-        this={getElementIcon(char.element)}
-        class="row-type"
-        style={`color: ${getElementColor(char.element)}`}
-        aria-hidden="true" />
-    </button>
-  {/each}
+      <div class="section-label">Roster</div>
+      {#each roster.filter(c => !selected.includes(c.id)).sort((a,b)=>{
+        const aKey = sortKey === 'element' ? a.element : (sortKey === 'id' ? String(a.id) : a.name);
+        const bKey = sortKey === 'element' ? b.element : (sortKey === 'id' ? String(b.id) : b.name);
+        return (sortDir === 'asc' ? 1 : -1) * (aKey > bKey ? 1 : (aKey < bKey ? -1 : 0));
+      }) as char (`roster-${char.id}`)}
+        <button
+          type="button"
+          data-testid={`choice-${char.id}`}
+          class="char-row"
+          class:selected={selected.includes(char.id)}
+          class:armed={stagedToggleId === char.id}
+          class:reduced={reducedMotion}
+          animate:flip={{ duration: reducedMotion ? 0 : 300 }}
+          on:click={(e) => select(char, e)}
+          on:pointerdown={() => !char.is_player && onPointerDown(char)}
+          on:pointerup={onPointerUp}
+          on:pointerleave={onPointerUp}
+          on:introstart={(e) => onIntroStart(char.id, e)}
+          on:introend={onIntroEnd}
+          in:fly={{ x: -100, duration: reducedMotion ? 0 : 300 }}
+          out:fly={{ x: 100, duration: reducedMotion ? 0 : 300 }}
+          style={`border-color: ${getElementColor(char.element)}; --el-color: ${getElementColor(char.element)}; --sweep-delay: ${sweepDelay(char.id)}s; --sweep-duration: ${sweepDuration(char.id)}s;`}>
+          <img src={char.img} alt={char.name} class="row-img" />
+          <span class="row-name">{char.name}</span>
+          <svelte:component
+            this={getElementIcon(char.element)}
+            class="row-type"
+            style={`color: ${getElementColor(char.element)}`}
+            aria-hidden="true" />
+        </button>
+      {/each}
     </div>
     <div
       class="scroll-fade top"
@@ -376,8 +380,10 @@
   display: flex;
   flex-direction: column;
   height: 100%;
+  max-height: 100%;
   min-height: 0;
   position: relative;
+  overflow: hidden;
 }
 
 .roster-header {
@@ -413,12 +419,27 @@
 .sort-dir { background:#111; border:1px solid #555; color:#fff; border-radius: 0; padding: 0.25rem 0.5rem; }
 .sort-dir:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.5); }
 
+.party-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 0.4rem;
+}
+
+.party-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
 .roster-scroll {
   position: relative;
   flex: 1 1 auto;
   min-height: 0;
+  max-height: 100%;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .roster-list {
@@ -426,8 +447,8 @@
   flex-direction: column;
   gap: 0.4rem;
   padding: 0.4rem;
-  max-height: 100%;
   height: 100%;
+  max-height: 100%;
   overflow-y: auto;
   min-width: 0;
   scrollbar-width: thin;

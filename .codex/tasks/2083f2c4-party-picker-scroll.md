@@ -26,4 +26,17 @@ When players open the PartyPicker via the run-start flow with a large roster, th
 * Top and bottom fades render when the roster overflows and disappear when the list fits without scrolling.
 * Automated coverage captures the scroll container behavior, and the documentation describes the new layout.
 
+---
+
+## Status Update (Luna)
+
+Tested by the lead dev: This task was not done right as there is no scrolling for the roster side... We made need to rescope as thats not the issue, Ill ask a coder to see if I can fix it with them. This update seems to have made the battle review screen stop working...
+
+---
+
+## Status Update (Nova)
+- Scoped overflow to the PartyPicker grid so the overlay caps to the viewport while the roster column manages scrolling.
+- Reworked `PartyRoster` layout to keep the selected party pinned and allow the roster list to scroll independently.
+- Reverted unrelated `MenuPanel` sizing changes after confirming other overlays rely on the original behavior.
+
 ready for review

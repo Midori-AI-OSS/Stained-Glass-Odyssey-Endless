@@ -513,7 +513,12 @@
 {#if compact}
   <PartyRoster {roster} {selected} bind:previewId {compact} {reducedMotion} on:toggle={(e) => toggleMember(e.detail)} />
 {:else}
-  <MenuPanel {starColor} {reducedMotion} scrollable={false} style="flex: 1 1 auto;">
+  <MenuPanel
+    {starColor}
+    {reducedMotion}
+    scrollable={false}
+    style="flex: 1 1 auto; min-height: 0; max-height: 100%;"
+  >
     <div class="full" data-testid="party-picker">
       <div class="roster-pane">
         <PartyRoster {roster} {selected} bind:previewId {reducedMotion} on:toggle={(e) => toggleMember(e.detail)} />
@@ -593,23 +598,25 @@
     width: 100%;
     height: 100%;
     max-width: 100%;
-    max-height: 100%;
+    max-height: min(88vh, calc(100dvh - 2.5rem));
     /* allow internal scrolling instead of clipping when content grows */
     position: relative;
     z-index: 0; /* establish stacking context so stars can sit behind */
     min-height: 0;
+    overflow: hidden;
   }
   .roster-pane,
   .preview-pane,
   .right-col {
-    min-height: 0;
     display: flex;
     flex-direction: column;
+    min-height: 0;
   }
 
   .roster-pane > :global(*) {
     flex: 1 1 auto;
     min-height: 0;
+    overflow: hidden;
   }
 
   .preview-pane > :global(*) {
