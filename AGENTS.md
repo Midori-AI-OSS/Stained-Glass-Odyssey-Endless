@@ -63,6 +63,7 @@ Refer to your mode's cheat sheet for quick reminders and update it as needed.
 
 - **Task Master Mode** (`.codex/modes/TASKMASTER.md`)
 - **Manager Mode** (`.codex/modes/MANAGER.md`)
+- **Swarm Manager Mode** (`.codex/modes/SWARMMANAGER.md`)
 - **Coder Mode** (`.codex/modes/CODER.md`)
 - **Reviewer Mode** (`.codex/modes/REVIEWER.md`)
 - **Auditor Mode** (`.codex/modes/AUDITOR.md`)
