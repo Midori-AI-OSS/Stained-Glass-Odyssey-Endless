@@ -29,4 +29,10 @@ Players who enter the roster upgrade view in the WebUI can only confirm an upgra
 * The upgrade confirmation payload is logged in dev tools showing `allowOverpay` (or similar) and omits a restrictive breakdown, letting `_consume_material_units` handle the conversion.
 * Automated tests covering the prompt visibility and payload dispatch pass, and documentation for the party UI upgrade flow is updated.
 
-ready for review
+### Audit notes (2025-02-14)
+* Reviewed `PlayerPreview.svelte` and `PartyPicker.svelte` to confirm the overpay prompt appears when base shards are short, the dispatched upgrade payload strips tier breakdowns, and insufficient-material responses reopen the prompt with `allowOverpay`.
+* Checked `upgradeCacheUtils.js` and its new vitest coverage to ensure higher-tier consumption is simulated and cached inventories stay in sync after conversions.
+* Verified `frontend/.codex/implementation/party-ui.md` documents the overpay flow and that the new `playerpreview-overpay.vitest.js` test exercises the CTA.
+* Attempted to run `bun x vitest run --config frontend/vitest.config.js`; the runner exits before collecting tests with `Unknown Error: [object Object]`, so the new test could not be executed locally.
+
+requesting review from the Task Master
