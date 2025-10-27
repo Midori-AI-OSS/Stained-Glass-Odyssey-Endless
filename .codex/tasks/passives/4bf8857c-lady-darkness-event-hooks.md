@@ -28,9 +28,8 @@ No event subscriptions exist for the passive, and `PassiveRegistry` never calls 
 
 ### Audit Findings (2025-02-15)
 - ✅ Event subscriptions exist and DoT siphon healing triggers through the standard healing pipeline.
-- ⚠️ Attack buffs are double-counted after the next `apply()` call. The follow-up instance restores the cached bonus with a new
-  `lady_darkness_eclipsing_veil_debuff_resistance_bonus` effect while the previous
-  `lady_darkness_eclipsing_veil_resist_bonus_{id(target)}` effect remains active, so Lady gains +10% instead of the intended +5%
-  after a single resist. Reuse the same effect name (or otherwise ensure only one attack buff effect remains) when reapplying the passive so cached stacks do not stack twice.
+- ✅ Attack bonuses persist correctly after reapplying the passive. `Stats.add_effect()` removes any existing
+  `lady_darkness_eclipsing_veil_resist_bonus_*` effect before adding the refreshed instance, and
+  `test_eclipsing_veil_reapply_preserves_attack_bonus` verifies only a single buff remains active.
 
-ready for review
+requesting review from the Task Master

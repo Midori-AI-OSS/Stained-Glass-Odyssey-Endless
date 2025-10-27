@@ -103,6 +103,31 @@ def test_enforce_thresholds_applies_pressure_defense_floor() -> None:
     assert foe.get_base_stat("defense") == expected_defense
 
 
+def test_enforce_thresholds_clamps_boss_defense_floor() -> None:
+    node = MapNode(
+        room_id=7,
+        room_type="battle-boss",
+        floor=1,
+        index=1,
+        loop=1,
+        pressure=0,
+    )
+    config = dict(ROOM_BALANCE_CONFIG)
+    foe = DummyFoe()
+    foe.rank = "boss"
+    foe.set_base_stat("defense", 12)
+
+    enforce_thresholds(
+        foe,
+        node,
+        config,
+        cumulative_rooms=calculate_cumulative_rooms(node),
+        foe_debuff=config["foe_base_debuff"],
+    )
+
+    assert foe.get_base_stat("defense") == 100
+
+
 def test_enforce_thresholds_clamps_vitality_and_mitigation() -> None:
     node = MapNode(
         room_id=1,
