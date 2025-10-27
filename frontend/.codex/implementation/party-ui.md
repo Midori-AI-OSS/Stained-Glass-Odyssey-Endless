@@ -38,7 +38,7 @@ Implementation details:
   can be disabled via Settings.
 - `RunChooser.svelte` stretches the party step wrapper so the embedded
   `PartyPicker` keeps the full Menu Panel footprint during the start-run flow,
-  matching the sizing used when opening the Party menu from the main menu.
+  matching the sizing previously used by the standalone Party overlay.
 - `StatTabs.svelte` uses flexible sizing so the panel fills its side and now
   surfaces a read-only stat summary alongside a compact upgrade recap rather
   than embedding the inline Character Editor. In upgrade mode the stats list

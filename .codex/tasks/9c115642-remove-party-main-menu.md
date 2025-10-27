@@ -21,3 +21,10 @@ The home screen currently advertises a dedicated “Party” entry in both the t
 * The home screen shows no Party icon/button outside of the Run start flow, and keyboard/mouse navigation remains smooth.
 * Clicking **Run** still opens the expected PartyPicker step before a run begins.
 * Documentation describing the main menu no longer lists a standalone Party entry.
+
+### Status notes (2025-10-27)
+- Removed the nav-bar party button and right-rail menu entry; Run chooser still handles lineup edits.
+- Updated frontend docs to reflect the streamlined main menu.
+- Ran `bun test tests/settings-migration.test.js`; full suite currently fails at PullResultsOverlay string assertion.
+
+ready for review

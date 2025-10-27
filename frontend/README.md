@@ -21,14 +21,9 @@ At startup the dev server probes common backend hosts and exposes the first
 reachable one as `VITE_API_BASE` and through an `/api-base` endpoint. The
 browser reads this value instead of scanning the network directly.
 
-- Party: Opens a responsive party picker overlay that fetches available
-  characters and lets you add/remove allies with one click. Selected members
-  are now clearly indicated by an element‑tinted ambient sweep behind their
-  row. This effect starts smoothly, honors Reduced Motion, and no longer
-  obscures the photo/name/type. Gray side bars were removed; the stats panel on
-  the right fills its column.
-- Run: Posts the selected party to `/run/start` and reveals the generated
-  floor map.
+- Run: Opens the start-run flow. New runs walk through the Party Picker step
+  so players can confirm or edit their lineup before the map loads; existing
+  runs resume immediately and skip the party overlay.
 - Settings: Opens a panel with sliders for sound effects, music, and voice
   that auto‑save and briefly show a “Saved” status. Also includes Reduced
   Motion and “End Run” controls. End Run now immediately halts battle polling
@@ -36,7 +31,7 @@ browser reads this value instead of scanning the network directly.
 - Edit Player: Uses `/player/editor` to save pronouns, starting damage type,
   and stat allocations. The stats panel now shows HP as `current/max` so HP
   investment is visible. These edits apply to new runs and to the roster view
-  (open the Party overlay to refresh), but do not retroactively modify an
+  (reopen the Run flow to refresh), but do not retroactively modify an
   active battle.
 - Pulls: Calls `/gacha/pull` so players can recruit 5★ or 6★ characters or
   earn 1★–4★ upgrade items between runs. Pity raises the odds of higher‑tier

@@ -1544,7 +1544,6 @@
   $: items = buildRunMenu(
     {
       openRun,
-      handleParty,
       openPulls,
       openFeedback,
       openDiscord,
