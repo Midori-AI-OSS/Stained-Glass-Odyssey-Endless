@@ -1,4 +1,5 @@
 import asyncio
+import math
 from dataclasses import dataclass
 import random
 
@@ -33,8 +34,12 @@ class Lightning(DamageTypeBase):
 
     async def ultimate(self, actor, allies, enemies) -> bool:
         """Zap all foes, seed random DoTs, and build Aftertaste stacks."""
+        from autofighter.rooms.battle.pacing import TURN_PACING
+        from autofighter.rooms.battle.pacing import YIELD_MULTIPLIER
         from autofighter.rooms.battle.pacing import pace_per_target
+        from autofighter.rooms.battle.pacing import pace_sleep
         from autofighter.rooms.battle.targeting import select_aggro_target
+        from autofighter.rooms.battle.turn_loop import TURN_TIMEOUT_SECONDS
 
         if not await self.consume_ultimate(actor):
             return False
@@ -43,6 +48,41 @@ class Lightning(DamageTypeBase):
         base_damage = int(getattr(actor, "atk", 0))
 
         hit_budget = sum(1 for enemy in enemies if getattr(enemy, "hp", 0) > 0)
+
+        try:
+            turn_pacing = float(TURN_PACING)
+        except Exception:
+            turn_pacing = 0.0
+
+        if not math.isfinite(turn_pacing) or turn_pacing <= 0:
+            turn_pacing = 0.5
+
+        try:
+            timeout_seconds = float(TURN_TIMEOUT_SECONDS)
+        except Exception:
+            timeout_seconds = 35.0
+
+        if not math.isfinite(timeout_seconds) or timeout_seconds <= 0:
+            timeout_seconds = 35.0
+
+        max_pacing_seconds = max(timeout_seconds - turn_pacing, 0.0)
+        pacing_seconds = 0.0
+        pacing_budget_spent = False
+
+        async def wait_per_target(duration: float | None = None) -> None:
+            nonlocal pacing_seconds
+            nonlocal pacing_budget_spent
+
+            if pacing_budget_spent:
+                await pace_sleep(YIELD_MULTIPLIER)
+                return
+
+            multiplier = await pace_per_target(actor, duration=duration)
+            wait_seconds = max(multiplier, 0.0) * turn_pacing
+            pacing_seconds += wait_seconds
+
+            if pacing_seconds >= max_pacing_seconds:
+                pacing_budget_spent = True
         for _ in range(hit_budget):
             try:
                 _, enemy = select_aggro_target(enemies)
@@ -51,18 +91,22 @@ class Lightning(DamageTypeBase):
 
             if base_damage > 0:
                 await enemy.apply_damage(base_damage, attacker=actor, action_name="Lightning Ultimate")
-                await pace_per_target(actor)
+                await wait_per_target()
 
             mgr = getattr(enemy, "effect_manager", None)
             if mgr is not None:
                 types = ["Fire", "Ice", "Wind", "Lightning", "Light", "Dark"]
                 dmg = int(getattr(actor, "atk", 0) * 0.05)
+                dots_added = 0
                 for _ in range(10):
                     effect = damage_effects.create_dot(random.choice(types), dmg, actor)
                     if effect is None:
                         continue
                     await mgr.add_dot(effect)
-                    await pace_per_target(actor)
+                    dots_added += 1
+
+                if dots_added > 0:
+                    await pace_sleep(YIELD_MULTIPLIER)
 
         # Set up aftertaste stacks
         stacks = getattr(actor, "_lightning_aftertaste_stacks", 0) + 1
