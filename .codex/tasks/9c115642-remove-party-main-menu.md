@@ -32,4 +32,9 @@ The home screen currently advertises a dedicated “Party” entry in both the t
 - `bun test` currently fails at `tests/stat-tabs-persistence.test.js` because `StatTabs.svelte` lacks the expected `context="module"` block.
 - `.codex/implementation/main-menu.md` still documents the legacy Map/Edit/Craft/Stats layout instead of the current Run/Warp/Inventory/Battle Review/Guidebook/Settings roster, so the task's documentation update is incomplete.
 
-more work needed
+### Status notes (2025-10-29)
+- Updated `frontend/README.md` to describe the streamlined Run/Warp/Inventory/Battle Review/Guidebook/Settings lineup and added Discord/Website quick links.
+- Revised `.codex/implementation/main-menu.md` and `.codex/instructions/main-menu.md` so documentation matches the current action column and removed Party shortcut.
+- Replaced the obsolete StatTabs persistence test with coverage for the new upgrade overlay so `bun test tests/stat-tabs-persistence.test.js` runs cleanly.
+
+ready for review
