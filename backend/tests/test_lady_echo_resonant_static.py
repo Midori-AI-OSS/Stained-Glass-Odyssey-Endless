@@ -1,6 +1,8 @@
 """Tests for the Lady Echo Resonant Static passive."""
 
+import random
 import asyncio
+import itertools
 
 import pytest
 from tests.helpers import call_maybe_async
@@ -9,6 +11,7 @@ from autofighter.effects import DamageOverTime
 from autofighter.effects import EffectManager
 from autofighter.stats import BUS
 from autofighter.stats import Stats
+from plugins.damage_types.lightning import Lightning
 from plugins.passives.normal.lady_echo_resonant_static import LadyEchoResonantStatic
 
 
@@ -173,3 +176,55 @@ async def test_battle_end_event_triggers_cleanup():
         effect.name == f"{passive.id}_party_crit" for effect in attacker._active_effects
     )
 
+
+@pytest.mark.asyncio
+async def test_lightning_ultimate_mass_targets_completes_under_timeout(monkeypatch):
+    """Lightning ultimate should finish promptly even with large enemy counts."""
+
+    class LightningActor(Stats):
+        async def use_ultimate(self) -> bool:
+            if not getattr(self, "ultimate_ready", False):
+                return False
+
+            self.ultimate_charge = 0
+            self.ultimate_ready = False
+            return True
+
+    from autofighter.rooms.battle import turn_loop as battle_turn_loop
+    from autofighter.rooms.battle.turn_loop import timeouts as turn_timeouts
+
+    lightning = Lightning()
+    actor = LightningActor()
+    actor._base_atk = 120
+    actor.animation_per_target = 0.1
+    actor.damage_type = lightning
+    actor.ultimate_charge = actor.ultimate_charge_max
+    actor.ultimate_ready = True
+
+    monkeypatch.setattr(turn_timeouts, "TURN_TIMEOUT_SECONDS", 1.0, raising=False)
+    monkeypatch.setattr(battle_turn_loop, "TURN_TIMEOUT_SECONDS", 1.0, raising=False)
+
+    elements = ("Fire", "Ice", "Wind", "Lightning", "Light", "Dark")
+    cycle = itertools.cycle(elements)
+    monkeypatch.setattr(random, "choice", lambda _seq: next(cycle))
+
+    async def _record_damage(self, *_args, **_kwargs):
+        self._hit_count = getattr(self, "_hit_count", 0) + 1
+        return 0
+
+    foes: list[Stats] = []
+    for idx in range(48):
+        foe = Stats()
+        foe.id = f"foe-{idx}"
+        foe.hp = 1_000
+        foe.effect_manager = EffectManager(foe)
+        foe._hit_count = 0
+        foe.apply_damage = _record_damage.__get__(foe, Stats)
+        foes.append(foe)
+
+    result = await asyncio.wait_for(lightning.ultimate(actor, [], foes), timeout=1.5)
+
+    assert result is True
+    assert any(foe._hit_count > 0 for foe in foes)
+    for foe in foes:
+        assert len(foe.effect_manager.dots) == foe._hit_count * 10
