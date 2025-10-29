@@ -8,12 +8,20 @@
 # - Running in background and killing manually
 # - Understanding exit codes
 #
+# NOTE: The endless-sleep.sh script now includes Ollama installation and setup.
+# The 15-second timeout in this test will interrupt the setup process before
+# completion. For full Ollama integration testing, run endless-sleep.sh with
+# a longer timeout (e.g., timeout 120 ./endless-sleep.sh)
+#
 
 set -e
 
 echo "======================================================================"
 echo "Testing Endless Sleep Script - Behavior Demonstration"
 echo "======================================================================"
+echo ""
+echo "NOTE: This test uses short timeouts that will interrupt Ollama setup."
+echo "      For full Ollama testing, run: timeout 120 ./endless-sleep.sh"
 echo ""
 
 # Test 1: Run with timeout
