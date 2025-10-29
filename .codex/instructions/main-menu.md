@@ -10,6 +10,8 @@ The main menu uses a Lucide-driven action column anchored to the right side of t
   distinct as secondary entries.
 - The PartyPicker panel stays on the left alongside the viewport banner; editing the lineup only happens inside the Run flow and
   no longer has a dedicated main-menu button.
+- The PartyPicker overlay keeps the roster column as the sole scrollable region. The glass panel itself stays fixed height, and
+  gradient fades appear when the roster overflows to hint that more heroes are available off-screen.
 - Leave room for the Daily Login Rewards banner above the panel stack.
 - Keep Lucide icons at 48px with text labels below for readability across desktop and tablet breakpoints.
 

@@ -5,16 +5,20 @@ import StubPlayerPreview from './__fixtures__/StubPlayerPreview.svelte';
 import StubStarStorm from './__fixtures__/StubStarStorm.svelte';
 import StubStatTabs from './__fixtures__/StubStatTabs.svelte';
 
-const rosterEntries = Array.from({ length: 14 }, (_, index) => ({
-  id: index + 1,
-  name: `Hero ${index + 1}`,
-  about: 'Test hero',
-  owned: true,
-  is_player: index === 0,
-  element: 'Aurora',
-  stats: { hp: 100, atk: 20, defense: 10, level: 1 },
-  ui: {}
+const hoisted = vi.hoisted(() => ({
+  rosterEntries: Array.from({ length: 14 }, (_, index) => ({
+    id: index + 1,
+    name: `Hero ${index + 1}`,
+    about: 'Test hero',
+    owned: true,
+    is_player: index === 0,
+    element: 'Aurora',
+    stats: { hp: 100, atk: 20, defense: 10, level: 1 },
+    ui: {}
+  }))
 }));
+
+const { rosterEntries } = hoisted;
 
 vi.mock('$lib/components/PlayerPreview.svelte', () => ({
   default: StubPlayerPreview
@@ -29,7 +33,7 @@ vi.mock('$lib/components/StarStorm.svelte', () => ({
 }));
 
 vi.mock('$lib/systems/api.js', () => ({
-  getPlayers: vi.fn().mockResolvedValue({ players: rosterEntries, user: { level: 5 } }),
+  getPlayers: vi.fn().mockResolvedValue({ players: hoisted.rosterEntries, user: { level: 5 } }),
   getUpgrade: vi.fn().mockResolvedValue({}),
   upgradeStat: vi.fn().mockResolvedValue({})
 }));
