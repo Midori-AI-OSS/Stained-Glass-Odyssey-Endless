@@ -565,7 +565,7 @@
 }
 
 /* Sparkle trail when moving into party */
-.char-row.sparkle::after {
+:global(.char-row.sparkle)::after {
   content: '';
   position: absolute;
   inset: 0;
@@ -588,7 +588,9 @@
 }
 
 /* Ensure content renders above the animated sweep */
-.row-img, .row-name, .row-type {
+.row-img,
+.row-name,
+:global(.row-type) {
   position: relative;
   z-index: 1;
 }
@@ -606,7 +608,7 @@
   color: #fff;
   font-size: 0.9rem;
 }
-.row-type { width: 20px; height: 20px; flex-shrink: 0; }
+:global(.row-type) { width: 20px; height: 20px; flex-shrink: 0; }
 
 /* compact mode */
 .roster.list.compact {
