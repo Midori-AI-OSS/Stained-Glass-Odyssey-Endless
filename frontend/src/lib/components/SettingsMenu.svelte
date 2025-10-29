@@ -37,6 +37,8 @@
   export let flashEnrageCounter = true;
   export let fullIdleMode = false;
   export let skipBattleReview = false;
+  export let skipBattleReviewPreference = false;
+  export let skipBattleReviewLocked = false;
   export let animationSpeed = 1;
   export let lrmModel = '';
   export let runId = '';
@@ -52,6 +54,7 @@
   let testReply = '';
   let activeTab = 'audio';
   let baseTurnPacing = DEFAULT_TURN_PACING;
+  let lastFullIdleMode = Boolean(fullIdleMode);
   let lastServerTurnPacing = null;
   let lastSavedAnimationSpeed = (() => {
     const numeric = Number(animationSpeed);
@@ -156,6 +159,26 @@
   });
   $: (activeTab === 'system') && refreshHealth(false);
 
+  $: if (!skipBattleReviewLocked) {
+    const normalized = Boolean(skipBattleReview);
+    if (skipBattleReviewPreference !== normalized) {
+      skipBattleReviewPreference = normalized;
+    }
+  }
+
+  $: if (Boolean(fullIdleMode) !== lastFullIdleMode) {
+    if (fullIdleMode) {
+      const preserved = skipBattleReviewPreference ?? skipBattleReview;
+      skipBattleReviewPreference = Boolean(preserved);
+      if (!skipBattleReview) {
+        skipBattleReview = true;
+      }
+    } else {
+      skipBattleReview = Boolean(skipBattleReviewPreference);
+    }
+    lastFullIdleMode = Boolean(fullIdleMode);
+  }
+
   async function save() {
     const sanitizedSpeed = sanitizeSpeed(animationSpeed);
     animationSpeed = sanitizedSpeed;
@@ -171,6 +194,7 @@
       showTurnCounter,
       flashEnrageCounter,
       skipBattleReview,
+      skipBattleReviewPreference,
       animationSpeed: sanitizedSpeed
     };
     saveSettings(payload);
@@ -352,6 +376,8 @@
       bind:flashEnrageCounter
       bind:fullIdleMode
       bind:skipBattleReview
+      bind:skipBattleReviewPreference
+      {skipBattleReviewLocked}
       bind:animationSpeed
       baseTurnPacing={resolvedBaseTurnPacing()}
       {scheduleSave}

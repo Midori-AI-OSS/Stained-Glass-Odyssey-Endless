@@ -9,9 +9,12 @@ describe('Skip Battle Review setting', () => {
 
     // Check load logic
     expect(content).toContain('if (data.skipBattleReview !== undefined) data.skipBattleReview = Boolean(data.skipBattleReview);');
+    expect(content).toContain('data.skipBattleReviewPreference = data.skipBattleReview ?? defaults.skipBattleReviewPreference;');
 
     // Check save logic
     expect(content).toContain('if (merged.skipBattleReview !== undefined) merged.skipBattleReview = Boolean(merged.skipBattleReview);');
+    expect(content).toContain('merged.skipBattleReviewPreference = nextPreference;');
+    expect(content).toContain('if (merged.fullIdleMode) {');
   });
 
   test('settings storage handles display toggles', () => {
@@ -31,6 +34,7 @@ describe('Skip Battle Review setting', () => {
     const content = readFileSync(viewportFile, 'utf8');
 
     expect(content).toContain('skipBattleReview: saved.skipBattleReview ?? false');
+    expect(content).toContain('skipBattleReviewPreference: saved.skipBattleReviewPreference ?? (saved.skipBattleReview ?? false)');
     expect(content).toContain('showTurnCounter: saved.showTurnCounter ?? true');
     expect(content).toContain('flashEnrageCounter: saved.flashEnrageCounter ?? true');
   });
@@ -41,12 +45,16 @@ describe('Skip Battle Review setting', () => {
 
     // Check for export
     expect(content).toContain('export let skipBattleReview = false;');
+    expect(content).toContain('export let skipBattleReviewPreference = false;');
+    expect(content).toContain('export let skipBattleReviewLocked = false;');
     expect(content).toContain('export let showTurnCounter = true;');
     expect(content).toContain('export let flashEnrageCounter = true;');
 
     // Check for UI control
     expect(content).toContain('Skip Battle Review');
     expect(content).toContain('bind:checked={skipBattleReview}');
+    expect(content).toContain('disabled={skipBattleReviewLocked}');
+    expect(content).toContain('data-testid="skip-lock-note"');
     expect(content).toContain('SkipForward');
     expect(content).toContain('Show Turn Counter');
     expect(content).toContain('Flash Enrage Counter');
@@ -70,6 +78,8 @@ describe('Skip Battle Review setting', () => {
 
     // Check that it passes the prop to SettingsMenu
     expect(content).toContain('{skipBattleReview}');
+    expect(content).toContain('{skipBattleReviewPreference}');
+    expect(content).toContain('{skipBattleReviewLocked}');
     expect(content).toContain('{showTurnCounter}');
     expect(content).toContain('{flashEnrageCounter}');
 
@@ -84,16 +94,21 @@ describe('Skip Battle Review setting', () => {
 
     // Check for export
     expect(content).toContain('export let skipBattleReview = false;');
+    expect(content).toContain('export let skipBattleReviewPreference = false;');
+    expect(content).toContain('export let skipBattleReviewLocked = false;');
     expect(content).toContain('export let showTurnCounter = true;');
     expect(content).toContain('export let flashEnrageCounter = true;');
 
     // Check for save payload
     expect(content).toContain('skipBattleReview,');
+    expect(content).toContain('skipBattleReviewPreference,');
     expect(content).toContain('showTurnCounter,');
     expect(content).toContain('flashEnrageCounter,');
 
     // Check for GameplaySettings prop
     expect(content).toContain('bind:skipBattleReview');
+    expect(content).toContain('bind:skipBattleReviewPreference');
+    expect(content).toContain('{skipBattleReviewLocked}');
     expect(content).toContain('bind:showTurnCounter');
     expect(content).toContain('bind:flashEnrageCounter');
   });
@@ -103,15 +118,19 @@ describe('Skip Battle Review setting', () => {
     const content = readFileSync(gameviewportFile, 'utf8');
 
     // Check that skipBattleReview is included in the saveSettings handler destructuring
-    expect(content).toContain('on:saveSettings={(e) => ({ sfxVolume, musicVolume, voiceVolume, framerate, reducedMotion, showActionValues, showTurnCounter, flashEnrageCounter, fullIdleMode, skipBattleReview, animationSpeed } = e.detail)}');
+    expect(content).toContain('on:saveSettings={(e) => ({ sfxVolume, musicVolume, voiceVolume, framerate, reducedMotion, showActionValues, showTurnCounter, flashEnrageCounter, fullIdleMode, skipBattleReview, skipBattleReviewPreference, animationSpeed } = e.detail)}');
 
     // Check that skipBattleReview is declared as a local variable
     expect(content).toContain('let skipBattleReview = false;');
+    expect(content).toContain('let skipBattleReviewPreference = false;');
+    expect(content).toContain('let skipBattleReviewLocked = false;');
     expect(content).toContain('let showTurnCounter = true;');
     expect(content).toContain('let flashEnrageCounter = true;');
 
     // Check that skipBattleReview is passed to OverlayHost
     expect(content).toContain('{skipBattleReview}');
+    expect(content).toContain('{skipBattleReviewPreference}');
+    expect(content).toContain('{skipBattleReviewLocked}');
     expect(content).toContain('{showTurnCounter}');
     expect(content).toContain('{flashEnrageCounter}');
   });

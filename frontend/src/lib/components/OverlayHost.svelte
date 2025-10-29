@@ -55,6 +55,8 @@
   export let flashEnrageCounter = true;
   export let fullIdleMode = false;
   export let skipBattleReview = false;
+  export let skipBattleReviewPreference = false;
+  export let skipBattleReviewLocked = false;
   export let advanceBusy = false;
   export let animationSpeed = 1;
   export let selectedParty = [];
@@ -456,6 +458,8 @@
       {flashEnrageCounter}
       {fullIdleMode}
       {skipBattleReview}
+      {skipBattleReviewPreference}
+      {skipBattleReviewLocked}
       bind:animationSpeed
       {runId}
       {backendFlavor}

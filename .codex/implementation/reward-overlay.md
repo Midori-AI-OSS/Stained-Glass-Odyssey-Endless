@@ -18,6 +18,8 @@ The controller exposes imperative helpers (`advanceRewardPhase`, `skipToRewardPh
 
 Idle-mode helpers in `rewardAutomation.js` inspect both the raw room data and the current phase snapshot to decide whether to auto-select a choice, acknowledge loot, or advance to the next step. The overlay exposes `rewardSelect` and `lootAcknowledge` events so automation can respond to countdown completions or pending staged entries, while manual users still drive the confirm workflow through the advance panel.【F:frontend/src/lib/utils/rewardAutomation.js†L1-L200】【F:frontend/src/lib/components/RewardOverlay.svelte†L1120-L1500】
 
+Automation now runs through `RewardAutomationScheduler`, a lightweight queue that enforces one action at a time and inserts human-like pauses between steps. The scheduler samples 600–900 ms delays before loot acknowledgements, 750–1200 ms before selecting cards or relics, and ~500–950 ms before advancing phases. These bounds collapse when global Reduced Motion is enabled so accessibility toggles keep automation responsive. The scheduler revalidates the intended action against the latest reward snapshot immediately before firing so stale timers are discarded instead of issuing incorrect commands.【F:frontend/src/lib/utils/rewardAutomationScheduler.js†L1-L154】【F:frontend/src/routes/+page.svelte†L1120-L1240】
+
 Selecting a card posts to `/cards/<run_id>` via the `chooseCard` API helper once the player confirms, clearing `card_choices`. The "Next Room" button remains disabled until all selections are resolved. Clicking it dismisses the popup, unmounts `BattleView`, and calls `/run/<id>/next` to advance the map.
 
 When a relic reward is selected, the overlay shows its `about` text so players

@@ -31,3 +31,5 @@ Full Idle Mode currently fires reward actions as soon as the overlay exposes the
 * Skip Battle Review toggles on automatically whenever Full Idle Mode is active, cannot be disabled during automation, and restores the prior user preference after disabling Full Idle Mode.
 * Vitest coverage confirms the queued delays and skip-battle coupling, and all existing automation tests remain green with the new behaviour.
 * Documentation under `.codex/` reflects the updated automation pacing and settings contract so future contributors understand the intent.
+
+ready for review

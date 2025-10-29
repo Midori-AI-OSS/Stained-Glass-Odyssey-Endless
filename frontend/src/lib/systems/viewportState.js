@@ -123,6 +123,7 @@ export async function loadInitialState() {
     flashEnrageCounter: saved.flashEnrageCounter ?? true,
     fullIdleMode: saved.fullIdleMode ?? false,
     skipBattleReview: saved.skipBattleReview ?? false,
+    skipBattleReviewPreference: saved.skipBattleReviewPreference ?? (saved.skipBattleReview ?? false),
     animationSpeed: (() => {
       const raw = Number(saved.animationSpeed);
       if (!Number.isFinite(raw) || raw <= 0) return 1;
