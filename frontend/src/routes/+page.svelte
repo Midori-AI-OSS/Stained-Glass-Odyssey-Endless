@@ -1212,6 +1212,15 @@
           }
           break;
         }
+        case 'confirm-card': {
+          try {
+            const res = await confirmCard();
+            if (res) {
+              applyRewardPayload(res, { type: 'card', intent: 'confirm' });
+            }
+          } catch {}
+          break;
+        }
         case 'select-relic': {
           if (action.choice) {
             try {
@@ -1221,6 +1230,15 @@
               }
             } catch {}
           }
+          break;
+        }
+        case 'confirm-relic': {
+          try {
+            const res = await confirmRelic();
+            if (res) {
+              applyRewardPayload(res, { type: 'relic', intent: 'confirm' });
+            }
+          } catch {}
           break;
         }
         case 'ack-loot': {

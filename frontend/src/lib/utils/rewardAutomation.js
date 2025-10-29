@@ -23,8 +23,16 @@ function computeLegacyAction({ roomData, stagedCards, stagedRelics }) {
     return { type: 'select-card', choice: roomData.card_choices[0] };
   }
 
+  if (roomData.awaiting_card && Array.isArray(stagedCards) && stagedCards.length > 0) {
+    return { type: 'confirm-card' };
+  }
+
   if (!roomData.awaiting_card && Array.isArray(roomData.relic_choices) && roomData.relic_choices.length > 0) {
     return { type: 'select-relic', choice: roomData.relic_choices[0] };
+  }
+
+  if (roomData.awaiting_relic && Array.isArray(stagedRelics) && stagedRelics.length > 0) {
+    return { type: 'confirm-relic' };
   }
 
   if (roomData.awaiting_loot || hasLootAvailable(roomData)) {
@@ -57,6 +65,9 @@ function computePhaseAction({ roomData, snapshot, stagedCards, stagedRelics }) {
       break;
     }
     case 'cards': {
+      if (roomData.awaiting_card && stagedCards.length > 0) {
+        return { type: 'confirm-card', phase };
+      }
       if (Array.isArray(roomData.card_choices) && roomData.card_choices.length > 0) {
         return { type: 'select-card', choice: roomData.card_choices[0] };
       }
@@ -66,6 +77,9 @@ function computePhaseAction({ roomData, snapshot, stagedCards, stagedRelics }) {
       break;
     }
     case 'relics': {
+      if (roomData.awaiting_relic && stagedRelics.length > 0) {
+        return { type: 'confirm-relic', phase };
+      }
       if (!roomData.awaiting_card && Array.isArray(roomData.relic_choices) && roomData.relic_choices.length > 0) {
         return { type: 'select-relic', choice: roomData.relic_choices[0] };
       }

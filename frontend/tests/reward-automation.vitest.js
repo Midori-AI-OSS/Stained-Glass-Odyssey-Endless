@@ -7,6 +7,7 @@ import {
 import {
   RewardAutomationScheduler,
   resolveAutomationDelay,
+  actionsEqual,
   __INTERNAL_DELAY_BOUNDS__
 } from '../src/lib/utils/rewardAutomationScheduler.js';
 
@@ -60,7 +61,7 @@ describe('reward automation helpers', () => {
     expect(action.choice).toEqual({ id: 'a' });
   });
 
-  test('pauses when awaiting card resolution without new choices', () => {
+  test('confirms when awaiting card resolution with staged selection', () => {
     const roomData = {
       awaiting_card: true,
       reward_staging: { cards: [{ id: 'a' }] }
@@ -70,7 +71,90 @@ describe('reward automation helpers', () => {
       snapshot: snapshotFor('cards'),
       stagedCards: [{ id: 'a' }]
     });
-    expect(action.type).toBe('none');
+    expect(action.type).toBe('confirm-card');
+  });
+
+  test('card automation progresses select, confirm, advance', () => {
+    const snapshot = snapshotFor('cards');
+    const cardChoice = { id: 'card-a' };
+
+    const selectAction = computeAutomationAction({
+      roomData: {
+        awaiting_card: false,
+        card_choices: [cardChoice],
+        reward_staging: { cards: [] }
+      },
+      snapshot,
+      stagedCards: []
+    });
+    expect(selectAction.type).toBe('select-card');
+    expect(selectAction.choice).toEqual(cardChoice);
+
+    const confirmAction = computeAutomationAction({
+      roomData: {
+        awaiting_card: true,
+        card_choices: [],
+        reward_staging: { cards: [cardChoice] }
+      },
+      snapshot,
+      stagedCards: [cardChoice]
+    });
+    expect(confirmAction.type).toBe('confirm-card');
+
+    const advanceAction = computeAutomationAction({
+      roomData: {
+        awaiting_card: false,
+        card_choices: [],
+        reward_staging: { cards: [] }
+      },
+      snapshot,
+      stagedCards: []
+    });
+    expect(advanceAction.type).toBe('advance');
+    expect(advanceAction.phase).toBe('cards');
+  });
+
+  test('relic automation progresses select, confirm, advance', () => {
+    const snapshot = snapshotFor('relics');
+    const relicChoice = { id: 'relic-a' };
+
+    const selectAction = computeAutomationAction({
+      roomData: {
+        awaiting_card: false,
+        awaiting_relic: false,
+        relic_choices: [relicChoice],
+        reward_staging: { relics: [] }
+      },
+      snapshot,
+      stagedRelics: []
+    });
+    expect(selectAction.type).toBe('select-relic');
+    expect(selectAction.choice).toEqual(relicChoice);
+
+    const confirmAction = computeAutomationAction({
+      roomData: {
+        awaiting_card: false,
+        awaiting_relic: true,
+        relic_choices: [],
+        reward_staging: { relics: [relicChoice] }
+      },
+      snapshot,
+      stagedRelics: [relicChoice]
+    });
+    expect(confirmAction.type).toBe('confirm-relic');
+
+    const advanceAction = computeAutomationAction({
+      roomData: {
+        awaiting_card: false,
+        awaiting_relic: false,
+        relic_choices: [],
+        reward_staging: { relics: [] }
+      },
+      snapshot,
+      stagedRelics: []
+    });
+    expect(advanceAction.type).toBe('advance');
+    expect(advanceAction.phase).toBe('relics');
   });
 
   test('advances when card phase has no choices or staging', () => {
@@ -203,6 +287,160 @@ describe('reward automation helpers', () => {
     scheduler.schedule({ type: 'next-room' }, { execute: noop, validate: () => false });
     expect(recordedDelay).toBe(150);
     scheduler.cancel();
+  });
+
+  test('Full Idle Mode automation confirms rewards and advances automatically', async () => {
+    const cardChoice = { id: 'card-a' };
+    const relicChoice = { id: 'relic-a' };
+    let snapshot = snapshotFor('cards');
+    let roomData = {
+      result: 'battle',
+      loot: { items: [], gold: 0 },
+      awaiting_card: false,
+      awaiting_relic: false,
+      awaiting_next: false,
+      card_choices: [cardChoice],
+      relic_choices: [],
+      reward_staging: { cards: [], relics: [], items: [] }
+    };
+    let stagedCards = [];
+    let stagedRelics = [];
+    const executed = [];
+
+    const scheduler = new RewardAutomationScheduler({
+      getDelay: () => 0,
+      setTimeoutFn: (fn) => {
+        let cancelled = false;
+        queueMicrotask(() => {
+          if (!cancelled) {
+            fn();
+          }
+        });
+        return {
+          cancel() {
+            cancelled = true;
+          }
+        };
+      },
+      clearTimeoutFn: (handle) => {
+        handle?.cancel?.();
+      }
+    });
+
+    function compute() {
+      return computeAutomationAction({ roomData, snapshot, stagedCards, stagedRelics });
+    }
+
+    function maybeHandle() {
+      const action = compute();
+      if (!action || action.type === 'none') {
+        return;
+      }
+      scheduler.schedule(action, {
+        execute: async (pending) => {
+          executed.push(pending.type);
+          switch (pending.type) {
+            case 'select-card': {
+              stagedCards = [cardChoice];
+              const currentStaging = roomData.reward_staging || { cards: [], relics: [], items: [] };
+              roomData = {
+                ...roomData,
+                awaiting_card: true,
+                card_choices: [],
+                reward_staging: { ...currentStaging, cards: [...stagedCards] }
+              };
+              break;
+            }
+            case 'confirm-card': {
+              stagedCards = [];
+              const currentStaging = roomData.reward_staging || { cards: [], relics: [], items: [] };
+              roomData = {
+                ...roomData,
+                awaiting_card: false,
+                awaiting_next: true,
+                reward_staging: { ...currentStaging, cards: [] }
+              };
+              break;
+            }
+            case 'select-relic': {
+              stagedRelics = [relicChoice];
+              const currentStaging = roomData.reward_staging || { cards: [], relics: [], items: [] };
+              roomData = {
+                ...roomData,
+                awaiting_relic: true,
+                relic_choices: [],
+                reward_staging: { ...currentStaging, relics: [...stagedRelics] }
+              };
+              break;
+            }
+            case 'confirm-relic': {
+              stagedRelics = [];
+              const currentStaging = roomData.reward_staging || { cards: [], relics: [], items: [] };
+              roomData = {
+                ...roomData,
+                awaiting_relic: false,
+                awaiting_next: true,
+                reward_staging: { ...currentStaging, relics: [] }
+              };
+              break;
+            }
+            case 'advance': {
+              if (pending.phase === 'cards') {
+                snapshot = snapshotFor('relics');
+                const currentStaging = roomData.reward_staging || { cards: [], relics: [], items: [] };
+                roomData = {
+                  ...roomData,
+                  awaiting_next: false,
+                  awaiting_relic: false,
+                  card_choices: [],
+                  relic_choices: [relicChoice],
+                  reward_staging: { ...currentStaging, cards: [], relics: [] }
+                };
+              } else if (pending.phase === 'relics') {
+                snapshot = null;
+                const currentStaging = roomData.reward_staging || { cards: [], relics: [], items: [] };
+                roomData = {
+                  ...roomData,
+                  awaiting_next: false,
+                  awaiting_relic: false,
+                  relic_choices: [],
+                  reward_staging: { ...currentStaging, cards: [], relics: [] }
+                };
+              }
+              break;
+            }
+            default:
+              break;
+          }
+        },
+        validate: (pending) => {
+          const next = compute();
+          return Boolean(next) && actionsEqual(pending, next);
+        },
+        onSettled: () => {
+          maybeHandle();
+        }
+      });
+    }
+
+    maybeHandle();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(executed).toEqual([
+      'select-card',
+      'confirm-card',
+      'advance',
+      'select-relic',
+      'confirm-relic',
+      'advance'
+    ]);
+    expect(scheduler.getPendingAction()).toBeNull();
+  });
+
+  test('actionsEqual treats confirm automation actions as type-only', () => {
+    expect(actionsEqual({ type: 'confirm-card', phase: 'cards' }, { type: 'confirm-card' })).toBe(true);
+    expect(actionsEqual({ type: 'confirm-relic', phase: 'relics' }, { type: 'confirm-card' })).toBe(false);
   });
 
   test('automation pauses battle review advances while combat is active', async () => {

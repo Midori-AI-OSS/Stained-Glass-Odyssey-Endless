@@ -7,9 +7,17 @@ const DEFAULT_DELAY_BOUNDS = {
     normal: [750, 1200],
     reduced: [320, 480]
   },
+  'confirm-card': {
+    normal: [520, 820],
+    reduced: [260, 420]
+  },
   'select-relic': {
     normal: [750, 1200],
     reduced: [320, 480]
+  },
+  'confirm-relic': {
+    normal: [520, 820],
+    reduced: [260, 420]
   },
   advance: {
     normal: [520, 780],
@@ -63,6 +71,9 @@ export function actionsEqual(a, b) {
     const aId = a.choice?.id ?? a.choice?.value ?? null;
     const bId = b.choice?.id ?? b.choice?.value ?? null;
     if (aId !== bId) return false;
+  }
+  if (a.type === 'confirm-card' || a.type === 'confirm-relic') {
+    return true;
   }
   if (a.type === 'advance') {
     if ((a.phase ?? null) !== (b.phase ?? null)) {
