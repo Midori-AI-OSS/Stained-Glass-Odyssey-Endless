@@ -1,6 +1,6 @@
 <script>
   import { onDestroy, onMount } from 'svelte';
-  import { Clock3, Gift, RefreshCw, Star, Sparkles } from 'lucide-svelte';
+  import { Clock3, Flame, Gift, RefreshCw, Star, Sparkles } from 'lucide-svelte';
 
   import { getLoginRewardStatus } from '$lib/systems/uiApi.js';
 
@@ -50,6 +50,43 @@
       return percent.toFixed(1);
     }
     return percent.toFixed(2);
+  }
+
+  function formatPercentDisplay(entry) {
+    if (!entry) return '';
+    if (typeof entry === 'object') {
+      if (typeof entry.formatted_with_sign === 'string' && entry.formatted_with_sign) {
+        return entry.formatted_with_sign;
+      }
+      if (typeof entry.formatted === 'string' && entry.formatted) {
+        return entry.formatted;
+      }
+      if (typeof entry.value === 'number') {
+        return `+${formatBonusPercent(entry.value)}%`;
+      }
+    }
+    if (typeof entry === 'number') {
+      return `+${formatBonusPercent(entry)}%`;
+    }
+    return '';
+  }
+
+  function formatStatKey(key) {
+    switch (key) {
+      case 'exp_multiplier':
+        return 'EXP Gain';
+      case 'all_stat_multiplier':
+        return 'Core Stats';
+      case 'crit_rate_bonus':
+        return 'Crit Rate';
+      case 'crit_damage_bonus':
+        return 'Crit Damage';
+      default:
+        return key
+          .split('_')
+          .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
+          .join(' ');
+    }
   }
 
 
@@ -189,6 +226,17 @@
   $: streakDays = computeVisibleDays(streak);
   $: resetLabel = formatResetLabel(status?.reset_at);
   $: countdownLabel = formatCountdown(countdownSeconds);
+  $: themePayload = status?.daily_theme ?? null;
+  $: activeTheme = themePayload?.active_theme ?? null;
+  $: themeWeekday = activeTheme?.weekday_name ?? '';
+  $: themeTitle = activeTheme?.label ?? 'Daily Theme Bonus';
+  $: themeSummary = activeTheme?.display?.summary ?? '';
+  $: themeDamageTypes = Array.isArray(activeTheme?.damage_types) ? activeTheme.damage_types : [];
+  $: themeStatBonuses = activeTheme?.stat_bonuses ?? {};
+  $: themeBonusDisplay =
+    formatPercentDisplay(activeTheme?.display?.bonus_percent) ||
+    `+${formatBonusPercent(Math.max(0, Number(activeTheme?.bonus_value ?? 0)))}%`;
+  $: themeHasDetails = themeDamageTypes.length > 0 || Object.keys(themeStatBonuses).length > 0;
   $: groupedRewardItems = status?.reward_items?.length
     ? Array.from(
         status.reward_items.reduce((map, item) => {
@@ -294,6 +342,58 @@
           Bonus scales with a {streak}-day streak and {roomsOverRequirement} extra room{roomsOverRequirement === 1 ? '' : 's'} cleared today.
         {:else}
           Clear extra rooms after meeting today's goal to start building this bonus.
+        {/if}
+      </p>
+    </div>
+
+    <div class="theme-card" aria-label="Daily theme bonus">
+      <div class="theme-header">
+        <span class="theme-icon"><Flame size={14} aria-hidden="true" /></span>
+        <div class="theme-title-group">
+          <span class="theme-title">{themeTitle}</span>
+          {#if themeWeekday}
+            <span class="theme-subtitle">{themeWeekday}</span>
+          {/if}
+        </div>
+        <span class="theme-bonus" title={`Theme bonus ${themeBonusDisplay}`}>{themeBonusDisplay}</span>
+      </div>
+      {#if themeHasDetails}
+        <div class="theme-body">
+          {#if themeDamageTypes.length > 0}
+            <ul class="theme-effects" aria-label="Damage type bonuses">
+              {#each themeDamageTypes as effect (effect.id)}
+                <li class="theme-effect">
+                  <span class="effect-label">{effect.label}</span>
+                  {#if effect.damage_bonus_display}
+                    <span class="effect-metric">DMG {formatPercentDisplay(effect.damage_bonus_display)}</span>
+                  {/if}
+                  {#if effect.damage_reduction_display}
+                    <span class="effect-metric">Resist {formatPercentDisplay(effect.damage_reduction_display)}</span>
+                  {/if}
+                  {#if effect.drop_weight_display}
+                    <span class="effect-metric">Drops {formatPercentDisplay(effect.drop_weight_display)}</span>
+                  {/if}
+                </li>
+              {/each}
+            </ul>
+          {/if}
+          {#if Object.keys(themeStatBonuses).length > 0}
+            <ul class="theme-effects" aria-label="Stat bonuses">
+              {#each Object.entries(themeStatBonuses) as [key, payload] (key)}
+                <li class="theme-effect">
+                  <span class="effect-label">{formatStatKey(key)}</span>
+                  <span class="effect-metric">{formatPercentDisplay(payload)}</span>
+                </li>
+              {/each}
+            </ul>
+          {/if}
+        </div>
+      {/if}
+      <p class="theme-hint">
+        {#if themeSummary}
+          {themeSummary}
+        {:else}
+          Bonuses scale with extra rooms cleared while the streak grows.
         {/if}
       </p>
     </div>
@@ -625,6 +725,101 @@
     font-size: 0.78rem;
     line-height: 1.3;
     opacity: 0.82;
+  }
+
+  .theme-card {
+    background: rgba(10, 14, 24, 0.38);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    padding: 0.75rem 0.85rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+  }
+
+  .theme-header {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+  }
+
+  .theme-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.65rem;
+    height: 1.65rem;
+    border-radius: 999px;
+    background: rgba(255, 200, 120, 0.18);
+    border: 1px solid rgba(255, 200, 120, 0.35);
+  }
+
+  .theme-title-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.12rem;
+    flex: 1;
+  }
+
+  .theme-title {
+    font-size: 0.92rem;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+  }
+
+  .theme-subtitle {
+    font-size: 0.7rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    opacity: 0.72;
+  }
+
+  .theme-bonus {
+    font-size: 0.95rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    color: #ffd8a3;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .theme-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+  }
+
+  .theme-effects {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+
+  .theme-effect {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem 0.75rem;
+    align-items: baseline;
+  }
+
+  .effect-label {
+    font-size: 0.82rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+  }
+
+  .effect-metric {
+    font-size: 0.78rem;
+    opacity: 0.85;
+    letter-spacing: 0.03em;
+  }
+
+  .theme-hint {
+    margin: 0;
+    font-size: 0.76rem;
+    opacity: 0.8;
+    line-height: 1.35;
   }
 
   .reward-items {

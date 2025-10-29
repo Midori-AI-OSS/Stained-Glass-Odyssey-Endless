@@ -5,6 +5,7 @@ from __future__ import annotations
 import math
 import random
 import logging
+from collections.abc import Mapping
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Sequence
@@ -37,7 +38,43 @@ log = logging.getLogger(__name__)
 ELEMENTS = [element.lower() for element in ALL_DAMAGE_TYPES]
 
 
-def _generate_item_rewards(room: BattleRoom, temp_rdr: float) -> list[dict[str, Any]]:
+def _pick_weighted_element(
+    drop_weights: Mapping[str, float] | None,
+) -> str:
+    weights = {element: 1.0 for element in ELEMENTS}
+    if isinstance(drop_weights, Mapping):
+        for key, value in drop_weights.items():
+            try:
+                bonus = float(value)
+            except (TypeError, ValueError):
+                continue
+            if bonus <= 0:
+                continue
+            lowered = str(key or "").lower()
+            if lowered == "all" or not lowered:
+                for element in weights:
+                    weights[element] += bonus
+            elif lowered in weights:
+                weights[lowered] += bonus
+    total = sum(weight for weight in weights.values() if weight > 0)
+    if total <= 0:
+        return random.choice(ELEMENTS)
+    pick = random.random() * total
+    cumulative = 0.0
+    for element, weight in weights.items():
+        if weight <= 0:
+            continue
+        cumulative += weight
+        if pick <= cumulative:
+            return element
+    return ELEMENTS[-1]
+
+
+def _generate_item_rewards(
+    room: BattleRoom,
+    temp_rdr: float,
+    drop_weights: Mapping[str, float] | None = None,
+) -> list[dict[str, Any]]:
     """Create item rewards using bounded upgrades for very high rdr."""
 
     multiplier = max(temp_rdr, 1.0)
@@ -57,7 +94,7 @@ def _generate_item_rewards(room: BattleRoom, temp_rdr: float) -> list[dict[str, 
     capped_residual = min(residual_multiplier, 10.0)
     extra_drop_chance = max(0.0, min((capped_residual - 1.0) / 9.0, 1.0))
 
-    element = random.choice(ELEMENTS)
+    element = _pick_weighted_element(drop_weights)
     items = [{"id": element, "stars": stars}]
 
     if random.random() < extra_drop_chance:
@@ -176,7 +213,8 @@ async def resolve_rewards(
     party.gold += gold_reward
     await BUS.emit_async("gold_earned", gold_reward)
 
-    items = _generate_item_rewards(room, temp_rdr)
+    drop_weights = getattr(party, "login_theme_drop_weights", None)
+    items = _generate_item_rewards(room, temp_rdr, drop_weights)
     node = getattr(room, "node", None)
     is_floor_boss = getattr(node, "room_type", "") == "battle-boss-floor"
     is_boss_strength = getattr(room, "strength", 1.0) > 1.0

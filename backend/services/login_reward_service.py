@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import calendar
 from dataclasses import dataclass
 from dataclasses import field
 from datetime import date
@@ -29,6 +30,98 @@ DAILY_RDR_BONUS_KEY = "daily_rdr_bonus"
 DAILY_RDR_TIER_WIDTH = 0.15
 DAILY_RDR_DIMINISHING_FACTOR = 10.0
 DAILY_RDR_BASE_CHUNK = 1.0
+
+DAILY_THEME_BONUS_KEY = "daily_theme_bonuses"
+
+THEME_CONFIG: dict[int, dict[str, Any]] = {
+    6: {
+        "identifier": "exp_theme",
+        "title": "EXP Overflow",
+        "icon": "exp",
+        "base_rate": 0.00001,
+        "stat_bonuses": ("exp_multiplier",),
+        "damage_types": (),
+        "damage_adjustments": False,
+        "drop_scope": "matching",
+    },
+    0: {
+        "identifier": "fire_theme",
+        "title": "Fire Infusion",
+        "icon": "fire",
+        "base_rate": 0.05,
+        "stat_bonuses": (),
+        "damage_types": (
+            {"id": "fire", "label": "Fire", "icon": "fire"},
+        ),
+        "damage_adjustments": True,
+        "drop_scope": "matching",
+    },
+    1: {
+        "identifier": "ice_theme",
+        "title": "Ice Harmony",
+        "icon": "ice",
+        "base_rate": 0.05,
+        "stat_bonuses": (),
+        "damage_types": (
+            {"id": "ice", "label": "Ice", "icon": "ice"},
+        ),
+        "damage_adjustments": True,
+        "drop_scope": "matching",
+    },
+    2: {
+        "identifier": "light_dark_theme",
+        "title": "Light & Dark Concord",
+        "icon": "light-dark",
+        "base_rate": 0.05,
+        "stat_bonuses": (),
+        "damage_types": (
+            {"id": "light", "label": "Light", "icon": "light"},
+            {"id": "dark", "label": "Dark", "icon": "dark"},
+        ),
+        "damage_adjustments": True,
+        "drop_scope": "matching",
+    },
+    3: {
+        "identifier": "wind_theme",
+        "title": "Wind Uplift",
+        "icon": "wind",
+        "base_rate": 0.05,
+        "stat_bonuses": (),
+        "damage_types": (
+            {"id": "wind", "label": "Wind", "icon": "wind"},
+        ),
+        "damage_adjustments": True,
+        "drop_scope": "matching",
+    },
+    4: {
+        "identifier": "lightning_theme",
+        "title": "Lightning Flux",
+        "icon": "lightning",
+        "base_rate": 0.05,
+        "stat_bonuses": (),
+        "damage_types": (
+            {"id": "lightning", "label": "Lightning", "icon": "lightning"},
+        ),
+        "damage_adjustments": True,
+        "drop_scope": "matching",
+    },
+    5: {
+        "identifier": "all_stats_theme",
+        "title": "All-Stat Resonance",
+        "icon": "all-stats",
+        "base_rate": 0.000001,
+        "stat_bonuses": (
+            "all_stat_multiplier",
+            "crit_rate_bonus",
+            "crit_damage_bonus",
+        ),
+        "damage_types": (
+            {"id": "all", "label": "All Elements", "icon": "all"},
+        ),
+        "damage_adjustments": False,
+        "drop_scope": "all",
+    },
+}
 
 STATE_LOCK = asyncio.Lock()
 STATE_THREAD_LOCK = threading.RLock()
@@ -109,13 +202,22 @@ def _build_reward_entry(damage_type: str, stars: int) -> dict[str, Any]:
     }
 
 
-def _calculate_daily_rdr_bonus(rooms_completed: int, streak: int) -> float:
+def _calculate_scaled_bonus(
+    rooms_completed: int,
+    streak: int,
+    *,
+    base_rate: float,
+) -> float:
     extra_rooms = max(_as_positive_int(rooms_completed) - ROOMS_REQUIRED, 0)
     effective_streak = max(_as_positive_int(streak), 0)
-    if extra_rooms <= 0 or effective_streak <= 0:
+    try:
+        rate = float(base_rate)
+    except (TypeError, ValueError):
+        rate = 0.0
+    if extra_rooms <= 0 or effective_streak <= 0 or rate <= 0:
         return 0.0
 
-    raw_bonus = 0.0001 * extra_rooms * effective_streak
+    raw_bonus = rate * extra_rooms * effective_streak
     if raw_bonus <= 0:
         return 0.0
 
@@ -141,6 +243,188 @@ def _calculate_daily_rdr_bonus(rooms_completed: int, streak: int) -> float:
         bonus += partial * math.pow(base_multiplier, tier_count + 1)
 
     return bonus
+
+
+def _calculate_daily_rdr_bonus(rooms_completed: int, streak: int) -> float:
+    return _calculate_scaled_bonus(rooms_completed, streak, base_rate=0.0001)
+
+
+def _format_percent(value: float) -> str:
+    try:
+        numeric = float(value)
+    except (TypeError, ValueError):
+        numeric = 0.0
+    numeric = max(numeric, 0.0)
+    percent = numeric * 100.0
+    if percent >= 1000:
+        return f"{percent:.0f}%"
+    if percent >= 100:
+        return f"{percent:.1f}%"
+    return f"{percent:.2f}%"
+
+
+def _percent_payload(value: float) -> dict[str, Any]:
+    try:
+        numeric = float(value)
+    except (TypeError, ValueError):
+        numeric = 0.0
+    numeric = max(numeric, 0.0)
+    formatted = _format_percent(numeric)
+    signed = formatted if numeric <= 0 else f"+{formatted}"
+    return {
+        "value": numeric,
+        "percent": numeric * 100.0,
+        "formatted": formatted,
+        "formatted_with_sign": signed,
+    }
+
+
+def _build_theme_entry(
+    weekday: int,
+    config: dict[str, Any],
+    rooms_completed: int,
+    streak: int,
+    scalar: float,
+) -> dict[str, Any]:
+    weekday_index = weekday % 7
+    weekday_name = calendar.day_name[weekday_index]
+    identifier = str(config.get("identifier") or f"theme_{weekday_index}")
+    title = str(config.get("title") or identifier.replace("_", " ").title())
+    base_rate = float(config.get("base_rate", 0.0) or 0.0)
+    drop_scope = str(config.get("drop_scope", "matching") or "matching")
+    adjustments = bool(config.get("damage_adjustments", False))
+
+    entry: dict[str, Any] = {
+        "weekday": weekday_index,
+        "weekday_name": weekday_name,
+        "identifier": identifier,
+        "title": title,
+        "label": f"{weekday_name} • {title}",
+        "icon": str(config.get("icon") or identifier),
+        "base_rate": base_rate,
+        "rooms_completed": max(_as_positive_int(rooms_completed), 0),
+        "streak": max(_as_positive_int(streak), 0),
+        "bonus_value": float(scalar),
+        "drop_scope": drop_scope,
+        "stat_bonuses": {},
+        "damage_types": [],
+        "display": {
+            "bonus_percent": _percent_payload(scalar),
+        },
+    }
+
+    stat_entries: dict[str, Any] = {}
+    for stat_name in config.get("stat_bonuses", ()):  # type: ignore[arg-type]
+        key = str(stat_name)
+        stat_entries[key] = _percent_payload(scalar)
+    if stat_entries:
+        entry["stat_bonuses"] = stat_entries
+
+    damage_types: list[dict[str, Any]] = []
+    for raw in config.get("damage_types", ()):  # type: ignore[arg-type]
+        if not isinstance(raw, dict):
+            continue
+        type_id = str(raw.get("id") or "").lower() or "unknown"
+        label = str(raw.get("label") or type_id.title())
+        icon = str(raw.get("icon") or type_id)
+        damage_value = scalar if adjustments else 0.0
+        damage_types.append(
+            {
+                "id": type_id,
+                "label": label,
+                "icon": icon,
+                "damage_bonus": damage_value,
+                "damage_bonus_display": _percent_payload(damage_value),
+                "damage_reduction": damage_value,
+                "damage_reduction_display": _percent_payload(damage_value),
+                "drop_weight_bonus": scalar,
+                "drop_weight_display": _percent_payload(scalar),
+            }
+        )
+    if damage_types:
+        entry["damage_types"] = damage_types
+
+    summary_parts: list[str] = []
+    if stat_entries:
+        for key, payload in stat_entries.items():
+            formatted = payload["formatted_with_sign"]
+            if key == "exp_multiplier":
+                summary_parts.append(f"EXP gain {formatted}")
+            elif key == "all_stat_multiplier":
+                summary_parts.append(f"Core stats {formatted}")
+            elif key == "crit_rate_bonus":
+                summary_parts.append(f"Crit rate {formatted}")
+            elif key == "crit_damage_bonus":
+                summary_parts.append(f"Crit damage {formatted}")
+            else:
+                summary_parts.append(f"{key.replace('_', ' ').title()} {formatted}")
+    if damage_types:
+        type_names = "/".join(dt["label"] for dt in damage_types)
+        drop_display = damage_types[0]["drop_weight_display"]["formatted_with_sign"]
+        if adjustments and scalar > 0:
+            damage_display = damage_types[0]["damage_bonus_display"]["formatted_with_sign"]
+            reduction_display = damage_types[0]["damage_reduction_display"]["formatted_with_sign"]
+            summary_parts.append(f"{type_names} damage dealt {damage_display}")
+            summary_parts.append(f"{type_names} damage taken {reduction_display}")
+        summary_parts.append(f"{type_names} drops {drop_display}")
+    entry["display"]["summary"] = " • ".join(summary_parts) if summary_parts else ""
+
+    return entry
+
+
+def _build_theme_map(state: LoginRewardState, now: datetime) -> dict[str, Any]:
+    entries: dict[int, dict[str, Any]] = {}
+    for weekday, config in THEME_CONFIG.items():
+        scalar = _calculate_scaled_bonus(
+            state.rooms_completed,
+            state.streak,
+            base_rate=config.get("base_rate", 0.0),
+        )
+        entries[weekday] = _build_theme_entry(
+            weekday,
+            config,
+            state.rooms_completed,
+            state.streak,
+            scalar,
+        )
+
+    active_weekday = _reward_day(now).weekday()
+    payload = {
+        "active_weekday": active_weekday,
+        "active_theme": entries.get(active_weekday),
+        "themes": {str(key): value for key, value in entries.items()},
+        "updated_at": now.isoformat(),
+    }
+    return payload
+
+
+def _get_daily_theme_bonus_value(state: LoginRewardState) -> dict[str, Any]:
+    extra = state.extra
+    if not isinstance(extra, dict):
+        extra = {}
+        state.extra = extra
+    payload = extra.get(DAILY_THEME_BONUS_KEY)
+    if isinstance(payload, dict):
+        return payload
+    return {
+        "active_weekday": None,
+        "active_theme": None,
+        "themes": {},
+    }
+
+
+def _update_daily_theme_bonuses(
+    state: LoginRewardState, now: datetime
+) -> bool:
+    if not isinstance(state.extra, dict):
+        state.extra = {}
+
+    payload = _build_theme_map(state, now)
+    previous = state.extra.get(DAILY_THEME_BONUS_KEY)
+    if previous != payload:
+        state.extra[DAILY_THEME_BONUS_KEY] = payload
+        return True
+    return False
 
 
 @dataclass(slots=True)
@@ -350,6 +634,9 @@ def _refresh_state(state: LoginRewardState, now: datetime, *, mark_login: bool) 
     if _update_daily_rdr_bonus(state):
         updated = True
 
+    if _update_daily_theme_bonuses(state, now):
+        updated = True
+
     return updated
 
 
@@ -437,6 +724,7 @@ async def get_login_reward_status(now: datetime | None = None) -> dict[str, Any]
             "claimed_today": claimed_today,
             "reward_items": [dict(item) for item in state.reward_items],
             "daily_rdr_bonus": _get_daily_rdr_bonus_value(state),
+            "daily_theme": _get_daily_theme_bonus_value(state),
             "seconds_until_reset": max(int((reset_at - current_time).total_seconds()), 0),
             "reset_at": reset_at.isoformat(),
         }
@@ -463,6 +751,9 @@ async def record_room_completion(now: datetime | None = None) -> None:
             changed = True
 
         if _update_daily_rdr_bonus(state):
+            changed = True
+
+        if _update_daily_theme_bonuses(state, current_time):
             changed = True
 
         auto_granted = False
@@ -530,3 +821,39 @@ def get_daily_rdr_bonus_sync(now: datetime | None = None) -> float:
         if changed:
             _save_state_sync(state.to_dict())
         return _get_daily_rdr_bonus_value(state)
+
+
+async def get_daily_theme_bonuses(now: datetime | None = None) -> dict[str, Any]:
+    async with STATE_LOCK:
+        state = await _load_state()
+        current_time = _ensure_timezone(now)
+        changed = _refresh_state(state, current_time, mark_login=False)
+        theme_changed = _update_daily_theme_bonuses(state, current_time)
+        if changed or theme_changed:
+            await _save_state(state)
+        return _get_daily_theme_bonus_value(state)
+
+
+def get_daily_theme_bonuses_sync(now: datetime | None = None) -> dict[str, Any]:
+    current_time = _ensure_timezone(now)
+    loop_info = _get_registered_state_loop()
+    if loop_info:
+        loop, thread_id = loop_info
+        if loop.is_running() and thread_id != threading.get_ident():
+            try:
+                future = asyncio.run_coroutine_threadsafe(
+                    get_daily_theme_bonuses(current_time),
+                    loop,
+                )
+            except RuntimeError:
+                pass
+            else:
+                return future.result()
+    with STATE_THREAD_LOCK:
+        raw_state = _load_state_sync()
+        state = LoginRewardState.from_dict(raw_state)
+        changed = _refresh_state(state, current_time, mark_login=False)
+        theme_changed = _update_daily_theme_bonuses(state, current_time)
+        if changed or theme_changed:
+            _save_state_sync(state.to_dict())
+        return _get_daily_theme_bonus_value(state)
