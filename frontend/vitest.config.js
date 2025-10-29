@@ -86,6 +86,7 @@ export default defineConfig({
     })
   ],
   resolve: {
+    conditions: ['browser', 'module', 'import', 'default'],
     alias: {
       $lib: path.resolve('./src/lib'),
       '$app/environment': path.resolve('./src/lib/mocks/app-environment.js')

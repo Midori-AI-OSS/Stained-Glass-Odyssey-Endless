@@ -14,3 +14,5 @@ An `UpgradePanel` sits below the editor so any character can convert upgrade ite
   header and sort controls.
 - Gradient fades appear at the top and bottom of the roster list when additional heroes are available. The fades disappear when
   the list fits without scrolling to hint at the available motion affordance without introducing extra buttons.
+- Regression coverage lives in `frontend/tests/party-picker-scroll.vitest.js`; run `bun x vitest run tests/party-picker-scroll.vitest.js`
+  to verify the roster column remains scrollable and the gradient indicators toggle on scroll.
