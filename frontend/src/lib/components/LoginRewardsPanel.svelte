@@ -1,7 +1,8 @@
 <script>
   import { onDestroy, onMount } from 'svelte';
-  import { Clock3, Flame, Gift, RefreshCw, Star, Sparkles } from 'lucide-svelte';
+  import { Clock3, Gift, RefreshCw, Star, Sparkles } from 'lucide-svelte';
 
+  import { getDamageTypeColor, getDamageTypeIcon, normalizeDamageTypeId } from '$lib/systems/assetLoader.js';
   import { getLoginRewardStatus } from '$lib/systems/uiApi.js';
 
   // When true, renders in an embedded layout suitable for panels
@@ -228,15 +229,77 @@
   $: countdownLabel = formatCountdown(countdownSeconds);
   $: themePayload = status?.daily_theme ?? null;
   $: activeTheme = themePayload?.active_theme ?? null;
-  $: themeWeekday = activeTheme?.weekday_name ?? '';
-  $: themeTitle = activeTheme?.label ?? 'Daily Theme Bonus';
-  $: themeSummary = activeTheme?.display?.summary ?? '';
-  $: themeDamageTypes = Array.isArray(activeTheme?.damage_types) ? activeTheme.damage_types : [];
+  $: themeWeekday = (activeTheme?.weekday_name ?? '').trim();
+  $: themeSummary = (activeTheme?.display?.summary ?? '').trim();
+  $: themeSummarySegments = (() => {
+    if (!themeSummary) return [];
+    const parts = themeSummary
+      .split('•')
+      .map((segment) => segment.replace(/^[\s·\-]+/, '').trim())
+      .filter(Boolean);
+    if (parts.length <= 1) {
+      return [themeSummary];
+    }
+    return parts;
+  })();
+  $: themeDamageTypesRaw = Array.isArray(activeTheme?.damage_types) ? activeTheme.damage_types : [];
+  $: themeDamageIconIds = (() => {
+    const ids = [];
+    const MAX_DAMAGE_ICONS = 2;
+    const append = (value) => {
+      if (!value || ids.length >= MAX_DAMAGE_ICONS) return;
+      const normalized = normalizeDamageTypeId(value);
+      if (!normalized || normalized === 'generic' || ids.includes(normalized)) {
+        return;
+      }
+      ids.push(normalized);
+    };
+    const consider = (value) => {
+      if (!value || ids.length >= MAX_DAMAGE_ICONS) return;
+      if (Array.isArray(value)) {
+        value.forEach((item) => consider(item));
+        return;
+      }
+      if (typeof value === 'string') {
+        const tokens = value
+          .split(/[^a-zA-Z]+/)
+          .map((token) => token.trim())
+          .filter(Boolean);
+        if (tokens.length > 1) {
+          tokens.forEach((token) => append(token));
+        } else {
+          append(value);
+        }
+        return;
+      }
+      if (typeof value === 'object') {
+        consider(value.element ?? value.damage_type ?? value.type ?? value.id ?? value.key);
+        consider(value.elements ?? value.damage_types ?? value.ids ?? value.types);
+      }
+    };
+    themeDamageTypesRaw.forEach((entry) => consider(entry));
+    if (ids.length < MAX_DAMAGE_ICONS) {
+      consider(activeTheme?.primary_damage_type || activeTheme?.damage_type || activeTheme?.element);
+    }
+    if (ids.length < MAX_DAMAGE_ICONS) {
+      consider(themePayload?.damage_type || themePayload?.element);
+    }
+    if (!ids.length) {
+      ids.push('generic');
+    }
+    return ids.slice(0, MAX_DAMAGE_ICONS);
+  })();
+  $: themePrimaryId = themeDamageIconIds[0] || 'generic';
+  $: themeSecondaryId = themeDamageIconIds[1] || null;
+  $: themePrimaryIcon = getDamageTypeIcon(themePrimaryId);
+  $: themeSecondaryIcon = themeSecondaryId ? getDamageTypeIcon(themeSecondaryId) : null;
+  $: themePrimaryColor = getDamageTypeColor(themePrimaryId);
+  $: themeSecondaryColor = themeSecondaryId ? getDamageTypeColor(themeSecondaryId) : '';
   $: themeStatBonuses = activeTheme?.stat_bonuses ?? {};
   $: themeBonusDisplay =
     formatPercentDisplay(activeTheme?.display?.bonus_percent) ||
     `+${formatBonusPercent(Math.max(0, Number(activeTheme?.bonus_value ?? 0)))}%`;
-  $: themeHasDetails = themeDamageTypes.length > 0 || Object.keys(themeStatBonuses).length > 0;
+  $: themeHasDetails = Object.keys(themeStatBonuses).length > 0;
   $: groupedRewardItems = status?.reward_items?.length
     ? Array.from(
         status.reward_items.reduce((map, item) => {
@@ -327,6 +390,11 @@
       {:else if status.claimed_today}
         <p class="progress-hint success">Today's bundle has been delivered to your inventory.</p>
       {/if}
+      {#if dailyRdrBonus > 0}
+        <p class="progress-meta">
+          Bonus scales with a {streak}-day streak and {roomsOverRequirement} extra room{roomsOverRequirement === 1 ? '' : 's'} cleared today.
+        </p>
+      {/if}
     </div>
 
     <div class="bonus-card" aria-label="Daily run drop rate bonus">
@@ -337,46 +405,35 @@
       <div class="bonus-value" class:positive={dailyRdrBonus > 0} title={`+${dailyRdrBonusLabel}% daily RDR`}>
         +{dailyRdrBonusLabel}%
       </div>
-      <p class="bonus-hint">
-        {#if dailyRdrBonus > 0}
-          Bonus scales with a {streak}-day streak and {roomsOverRequirement} extra room{roomsOverRequirement === 1 ? '' : 's'} cleared today.
-        {:else}
-          Clear extra rooms after meeting today's goal to start building this bonus.
-        {/if}
-      </p>
+      {#if dailyRdrBonus > 0}
+        <p class="bonus-hint">Today's runs are benefiting from this drop rate bonus.</p>
+      {:else}
+        <p class="bonus-hint">Clear extra rooms after meeting today's goal to start building this bonus.</p>
+      {/if}
     </div>
 
     <div class="theme-card" aria-label="Daily theme bonus">
       <div class="theme-header">
-        <span class="theme-icon"><Flame size={14} aria-hidden="true" /></span>
-        <div class="theme-title-group">
-          <span class="theme-title">{themeTitle}</span>
-          {#if themeWeekday}
-            <span class="theme-subtitle">{themeWeekday}</span>
+        <span class="theme-icon-cluster" aria-hidden="true">
+          <span class="theme-icon" style={`color:${themePrimaryColor};`}>
+            <svelte:component this={themePrimaryIcon} size={16} />
+          </span>
+          {#if themeSecondaryIcon}
+            <span class="theme-icon secondary" style={`color:${themeSecondaryColor};`}>
+              <svelte:component this={themeSecondaryIcon} size={16} />
+            </span>
           {/if}
-        </div>
+        </span>
+        <span>Daily Theme Bonus</span>
+        {#if themeWeekday}
+          <span class="theme-weekday">~ {themeWeekday}</span>
+        {/if}
+      </div>
+      <div class="theme-main">
         <span class="theme-bonus" title={`Theme bonus ${themeBonusDisplay}`}>{themeBonusDisplay}</span>
       </div>
       {#if themeHasDetails}
         <div class="theme-body">
-          {#if themeDamageTypes.length > 0}
-            <ul class="theme-effects" aria-label="Damage type bonuses">
-              {#each themeDamageTypes as effect (effect.id)}
-                <li class="theme-effect">
-                  <span class="effect-label">{effect.label}</span>
-                  {#if effect.damage_bonus_display}
-                    <span class="effect-metric">DMG {formatPercentDisplay(effect.damage_bonus_display)}</span>
-                  {/if}
-                  {#if effect.damage_reduction_display}
-                    <span class="effect-metric">Resist {formatPercentDisplay(effect.damage_reduction_display)}</span>
-                  {/if}
-                  {#if effect.drop_weight_display}
-                    <span class="effect-metric">Drops {formatPercentDisplay(effect.drop_weight_display)}</span>
-                  {/if}
-                </li>
-              {/each}
-            </ul>
-          {/if}
           {#if Object.keys(themeStatBonuses).length > 0}
             <ul class="theme-effects" aria-label="Stat bonuses">
               {#each Object.entries(themeStatBonuses) as [key, payload] (key)}
@@ -390,8 +447,10 @@
         </div>
       {/if}
       <p class="theme-hint">
-        {#if themeSummary}
-          {themeSummary}
+        {#if themeSummarySegments.length > 0}
+          {#each themeSummarySegments as line, index}
+            <span>{line}</span>{#if index < themeSummarySegments.length - 1}<br />{/if}
+          {/each}
         {:else}
           Bonuses scale with extra rooms cleared while the streak grows.
         {/if}
@@ -685,6 +744,13 @@
     opacity: 0.78;
   }
 
+  .progress-meta {
+    margin: 0;
+    font-size: 0.76rem;
+    opacity: 0.75;
+    line-height: 1.35;
+  }
+
   .progress-hint.success {
     color: #c0ffda;
     opacity: 1;
@@ -728,57 +794,65 @@
   }
 
   .theme-card {
-    background: rgba(10, 14, 24, 0.38);
-    border: 1px solid rgba(255, 255, 255, 0.16);
+    background: rgba(0, 0, 0, 0.32);
+    border: 1px solid rgba(255, 255, 255, 0.14);
     padding: 0.75rem 0.85rem;
     display: flex;
     flex-direction: column;
-    gap: 0.45rem;
+    gap: 0.4rem;
   }
 
   .theme-header {
     display: flex;
     align-items: center;
-    gap: 0.65rem;
+    gap: 0.35rem;
+    font-size: 0.78rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    opacity: 0.85;
+    flex-wrap: wrap;
+  }
+
+  .theme-icon-cluster {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+    position: relative;
   }
 
   .theme-icon {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 1.65rem;
-    height: 1.65rem;
-    border-radius: 999px;
-    background: rgba(255, 200, 120, 0.18);
-    border: 1px solid rgba(255, 200, 120, 0.35);
   }
 
-  .theme-title-group {
+  .theme-icon.secondary {
+    margin-left: -0.3rem;
+  }
+
+  .theme-icon :global(svg) {
+    width: 1.1rem;
+    height: 1.1rem;
+  }
+
+  .theme-weekday {
+    letter-spacing: 0.08em;
+    opacity: 0.75;
+  }
+
+  .theme-main {
     display: flex;
-    flex-direction: column;
-    gap: 0.12rem;
-    flex: 1;
-  }
-
-  .theme-title {
-    font-size: 0.92rem;
-    font-weight: 600;
-    letter-spacing: 0.03em;
-  }
-
-  .theme-subtitle {
-    font-size: 0.7rem;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
-    opacity: 0.72;
+    align-items: baseline;
+    justify-content: space-between;
   }
 
   .theme-bonus {
-    font-size: 0.95rem;
+    font-size: 1.25rem;
     font-weight: 600;
     letter-spacing: 0.04em;
-    color: #ffd8a3;
+    color: #9fe5ff;
     font-variant-numeric: tabular-nums;
+    white-space: nowrap;
   }
 
   .theme-body {
@@ -807,17 +881,19 @@
     font-size: 0.82rem;
     font-weight: 600;
     letter-spacing: 0.04em;
+    color: rgba(255, 255, 255, 0.95);
   }
 
   .effect-metric {
     font-size: 0.78rem;
     opacity: 0.85;
     letter-spacing: 0.03em;
+    color: rgba(255, 255, 255, 0.75);
   }
 
   .theme-hint {
     margin: 0;
-    font-size: 0.76rem;
+    font-size: 0.78rem;
     opacity: 0.8;
     line-height: 1.35;
   }
