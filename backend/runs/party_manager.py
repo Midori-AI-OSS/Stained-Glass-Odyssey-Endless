@@ -249,6 +249,22 @@ def load_party(run_id: str) -> Party:
         run_user_level = int(data.get("user_level", 1) or 1)
     except Exception:
         run_user_level = 1
+
+    theme_payload: Any = {}
+    daily_bonus = 0.0
+    try:
+        from services.login_reward_service import (
+            get_daily_rdr_bonus_sync,  # local import to avoid circular dependency
+            get_daily_theme_bonuses_sync,
+        )
+
+        daily_bonus = float(get_daily_rdr_bonus_sync())
+        theme_payload = get_daily_theme_bonuses_sync()
+    except Exception:
+        log.exception("Failed to resolve daily RDR bonus; falling back to base value")
+        theme_payload = {}
+        daily_bonus = 0.0
+
     theme_payload_data = theme_payload if isinstance(theme_payload, dict) else {}
     active_theme = theme_payload_data.get("active_theme")
     if not isinstance(active_theme, dict):
@@ -441,19 +457,6 @@ def load_party(run_id: str) -> Party:
         stored_rdr = float(stored_rdr_raw)
     except (TypeError, ValueError):
         stored_rdr = 1.0
-
-    try:
-        from services.login_reward_service import (
-            get_daily_rdr_bonus_sync,  # local import to avoid circular dependency
-            get_daily_theme_bonuses_sync,
-        )
-
-        daily_bonus = float(get_daily_rdr_bonus_sync())
-        theme_payload = get_daily_theme_bonuses_sync()
-    except Exception:
-        log.exception("Failed to resolve daily RDR bonus; falling back to base value")
-        daily_bonus = 0.0
-        theme_payload = {}
 
     apply_player_modifier_context(members, hydrated_context or raw_modifier_context)
 
