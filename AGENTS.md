@@ -49,6 +49,20 @@ This document summarizes common development practices for all services in this r
 
 ---
 
+## Commit and Pull Request Workflow
+Follow this checklist whenever you are ready to publish work:
+
+1. Stage and review your changes locally (`git status`, `git diff`) before committing.
+2. Create a descriptive commit that begins with the appropriate `[TYPE]` prefix.
+3. Verify the working tree is clean after committing—`git status` must show **no pending changes**.
+4. Immediately call the `make_pr` tool to draft the pull request summary and title once the commit is created.
+5. Never call `make_pr` before your changes are committed, and never finish a task without creating a pull request for committed work.
+6. If you did not modify the repository, do **not** commit or call `make_pr`.
+
+These steps apply to **all** contributor modes. Managers should remind their teams of this workflow whenever new instructions are published.
+
+---
+
 ## Contributor Modes
 The repository supports several contributor modes to clarify expectations and best practices for different types of contributions:
 
