@@ -1182,7 +1182,15 @@
   }
 
   function validateAutomationAction(action) {
-    if (!fullIdleMode || lootAckBlocked || !runId || !roomData || rewardAdvanceInFlight || roomAdvanceInFlight) {
+    if (
+      !fullIdleMode ||
+      lootAckBlocked ||
+      !runId ||
+      !roomData ||
+      rewardAdvanceInFlight ||
+      roomAdvanceInFlight ||
+      battleActive
+    ) {
       return false;
     }
     const next = automationActionForState();
@@ -1238,7 +1246,16 @@
   }
 
   function maybeAutoHandle() {
-    if (!fullIdleMode || autoHandling || rewardAdvanceInFlight || roomAdvanceInFlight || !runId || !roomData || lootAckBlocked) {
+    if (
+      !fullIdleMode ||
+      autoHandling ||
+      rewardAdvanceInFlight ||
+      roomAdvanceInFlight ||
+      !runId ||
+      !roomData ||
+      lootAckBlocked ||
+      battleActive
+    ) {
       resetAutomationQueue();
       return;
     }
@@ -1260,12 +1277,12 @@
     });
   }
 
-  $: fullIdleMode && roomData && maybeAutoHandle();
-  $: if (!fullIdleMode) {
-    resetAutomationQueue();
-  }
-  $: if (!roomData) {
-    resetAutomationQueue();
+  $: {
+    if (fullIdleMode && roomData && !battleActive) {
+      maybeAutoHandle();
+    } else {
+      resetAutomationQueue();
+    }
   }
 
   onDestroy(() => {
