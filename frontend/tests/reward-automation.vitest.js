@@ -204,4 +204,56 @@ describe('reward automation helpers', () => {
     expect(recordedDelay).toBe(150);
     scheduler.cancel();
   });
+
+  test('automation pauses battle review advances while combat is active', async () => {
+    vi.useFakeTimers();
+    try {
+      let battleActive = true;
+      const roomData = { awaiting_next: true };
+      const snapshot = snapshotFor('battle_review');
+      const action = computeAutomationAction({ roomData, snapshot });
+      expect(action.type).toBe('advance');
+
+      const scheduler = new RewardAutomationScheduler({
+        getDelay: () => 0
+      });
+      const handleRewardAdvance = vi.fn(async () => {});
+      const validate = vi.fn(() => !battleActive);
+
+      scheduler.schedule(action, {
+        execute: handleRewardAdvance,
+        validate,
+        onSettled: () => {}
+      });
+
+      expect(scheduler.getPendingAction()).toEqual(action);
+
+      vi.runAllTimers();
+      await Promise.resolve();
+
+      expect(validate).toHaveBeenCalledTimes(1);
+      expect(handleRewardAdvance).not.toHaveBeenCalled();
+      expect(scheduler.getPendingAction()).toBeNull();
+
+      // Simulate automation reset when combat starts.
+      scheduler.cancel();
+
+      battleActive = false;
+
+      scheduler.schedule(action, {
+        execute: handleRewardAdvance,
+        validate,
+        onSettled: () => {}
+      });
+
+      vi.runAllTimers();
+      await Promise.resolve();
+
+      expect(validate).toHaveBeenCalledTimes(2);
+      expect(handleRewardAdvance).toHaveBeenCalledTimes(1);
+      scheduler.cancel();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });
