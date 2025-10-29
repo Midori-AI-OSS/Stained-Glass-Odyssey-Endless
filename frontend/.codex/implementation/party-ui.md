@@ -28,6 +28,13 @@ Implementation details:
   slide smoothly when their order changes. Choosing a character slides it out
   and back in from the left with an element‑colored sparkle trail that is
   skipped entirely when Reduced Motion is enabled.
+- The start-run flow lets the party roster column expand to the available
+  height while the list itself scrolls, keeping the overall `MenuPanel`
+  footprint steady.
+- Roster rows now opt out of flex shrinking so their portrait/buttons stay at a
+  consistent size while the list scrolls within its capped column.
+- Scroll fades at the top/bottom of the roster list now use a lighter,
+  translucent gradient to hint at overflow without the heavy dark bars.
 - `PartyRoster.svelte` stages a roster entry on the first tap/click. A second
   tap (or a long-press, even without staging first) immediately toggles party
   membership, keeping the interaction to two deliberate actions.

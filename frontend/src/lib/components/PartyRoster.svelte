@@ -447,10 +447,10 @@
   flex-direction: column;
   gap: 0.4rem;
   padding: 0.4rem;
-  height: 100%;
-  max-height: 100%;
+  flex: 1 1 auto;
   overflow-y: auto;
   min-width: 0;
+  min-height: 0;
   scrollbar-width: thin;
 }
 
@@ -465,9 +465,9 @@
 
 .scroll-fade {
   position: absolute;
-  left: 0.4rem;
-  right: 0.4rem;
-  height: 1.5rem;
+  left: 0;
+  right: 0;
+  height: 2rem;
   pointer-events: none;
   z-index: 2;
   opacity: 0;
@@ -475,13 +475,13 @@
 }
 
 .scroll-fade.top {
-  top: calc(0.4rem + 1px);
-  background: linear-gradient(180deg, rgba(6, 8, 18, 0.95), transparent);
+  top: 0;
+  background: linear-gradient(180deg, rgba(17, 23, 38, 0.55), rgba(17, 23, 38, 0));
 }
 
 .scroll-fade.bottom {
-  bottom: 0.4rem;
-  background: linear-gradient(180deg, transparent, rgba(6, 8, 18, 0.95));
+  bottom: 0;
+  background: linear-gradient(180deg, rgba(17, 23, 38, 0), rgba(17, 23, 38, 0.55));
 }
 
 .scroll-fade.visible {
@@ -513,6 +513,7 @@
   position: relative;
   overflow: hidden;
   z-index: 0; /* establish stacking context */
+  flex-shrink: 0;
   /* Derived element colors for the sweep effect */
   --el-dark: color-mix(in srgb, var(--el-color) 20%, black 80%);
   --el-5darker: color-mix(in srgb, var(--el-color) 95%, black 5%);
