@@ -628,13 +628,10 @@
     flex: 1 1 auto;
   }
   
-  .pressure-controls { margin-top: 0.5rem; }
-  .pressure-label { display: block; color: #fff; font-size: 0.9rem; margin-bottom: 0.3rem; text-align: center; }
-  .pressure-input { display: flex; align-items: center; justify-content: center; gap: 0.5rem; }
-  .pressure-btn { 
-    background: rgba(0,0,0,0.5); 
-    border: 1px solid rgba(255,255,255,0.35); 
-    color: #fff; 
+  .pressure-btn {
+    background: rgba(0,0,0,0.5);
+    border: 1px solid rgba(255,255,255,0.35);
+    color: #fff;
     padding: 0.3rem 0.5rem; 
     cursor: pointer;
     border-radius: 3px;
