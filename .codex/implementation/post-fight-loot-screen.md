@@ -40,6 +40,8 @@ Applied (awaiting_next = True) → `/run/<id>/next`
 
 The UI announces each phase transition, activates the confirm panel when staging entries exist, and returns to Drops if cancellation reopens a bucket. When `reward_progression` is missing or malformed the overlay falls back to legacy behaviour and surfaces a warning banner for QA.【F:frontend/src/lib/components/RewardOverlay.svelte†L1-L220】【F:frontend/src/lib/components/RewardOverlay.svelte†L600-L760】
 
+Full Idle Mode now drives these transitions through `RewardAutomationScheduler`, which introduces 0.6–1.2 second pauses between reward actions to mimic human timing. The helper revalidates the queued action against the latest `reward_progression` snapshot before executing so reconnects or manual inputs cannot trigger stale automation. Reduced Motion preferences shrink the delay window, keeping accessibility-respecting runs snappy while still serialising requests.【F:frontend/src/lib/utils/rewardAutomationScheduler.js†L1-L154】【F:frontend/src/routes/+page.svelte†L1120-L1240】
+
 ## API contracts
 
 ### `POST /rewards/cards/<run_id>`
@@ -74,6 +76,7 @@ Reward interactions stream structured telemetry through `log_game_action` with u
 - Confirm that loot acknowledgement advances Drops and unblocks Cards without leaving stray staged items. Check `/ui?action=advance_room` returns `pending_rewards` until all buckets clear.【F:backend/services/reward_service.py†L288-L341】【F:backend/routes/ui.py†L495-L695】
 - Reconnect mid-flow and ensure the overlay restores staged previews, countdowns, and `awaiting_*` flags from the snapshot payload. Fallback warnings should only appear when `reward_progression` is absent or malformed.【F:backend/services/reward_service.py†L324-L417】【F:frontend/src/lib/components/RewardOverlay.svelte†L600-L760】
 - Run automation helpers in idle mode and confirm they continue to auto-select choices and advance phases when staging is empty.【F:frontend/src/lib/utils/rewardAutomation.js†L1-L200】【F:frontend/tests/reward-automation.vitest.js†L1-L120】
+- Enable Full Idle Mode in the options menu and verify Skip Battle Review is forced on, the lock hint renders, and disabling automation restores the previous skip preference.【F:frontend/src/lib/components/GameplaySettings.svelte†L1-L220】【F:frontend/src/lib/components/SettingsMenu.svelte†L1-L360】
 
 ## Testing
 - `uv run pytest backend/tests/test_loot_summary.py`

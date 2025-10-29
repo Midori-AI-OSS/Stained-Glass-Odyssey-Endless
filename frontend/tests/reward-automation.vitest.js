@@ -1,9 +1,14 @@
-import { describe, expect, test } from 'vitest';
+import { describe, expect, test, vi } from 'vitest';
 import {
   computeAutomationAction,
   hasLootAvailable,
   shouldUseLegacyAutomation
 } from '../src/lib/utils/rewardAutomation.js';
+import {
+  RewardAutomationScheduler,
+  resolveAutomationDelay,
+  __INTERNAL_DELAY_BOUNDS__
+} from '../src/lib/utils/rewardAutomationScheduler.js';
 
 function snapshotFor(phase, overrides = {}) {
   const sequence = ['drops', 'cards', 'relics', 'battle_review'];
@@ -148,5 +153,55 @@ describe('reward automation helpers', () => {
       snapshot: null
     });
     expect(action.type).toBe('next-room');
+  });
+
+  test('resolveAutomationDelay respects reduced motion toggles', () => {
+    const action = { type: 'select-card', choice: { id: 'card-a' } };
+    const normal = resolveAutomationDelay(action, { reducedMotion: false, random: () => 0 });
+    const reduced = resolveAutomationDelay(action, { reducedMotion: true, random: () => 0 });
+    expect(normal).toBe(__INTERNAL_DELAY_BOUNDS__['select-card'].normal[0]);
+    expect(reduced).toBe(__INTERNAL_DELAY_BOUNDS__['select-card'].reduced[0]);
+  });
+
+  test('RewardAutomationScheduler waits before executing actions', async () => {
+    vi.useFakeTimers();
+    const scheduler = new RewardAutomationScheduler({
+      getDelay: () => 500
+    });
+    const execute = vi.fn(async () => {});
+    scheduler.schedule({ type: 'ack-loot' }, {
+      execute,
+      validate: () => true,
+      onSettled: () => {}
+    });
+    expect(execute).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(499);
+    await Promise.resolve();
+    expect(execute).not.toHaveBeenCalled();
+    vi.advanceTimersByTime(1);
+    await Promise.resolve();
+    expect(execute).toHaveBeenCalledTimes(1);
+    scheduler.cancel();
+    vi.useRealTimers();
+  });
+
+  test('RewardAutomationScheduler adapts delays when reduced motion changes', () => {
+    let recordedDelay = null;
+    const scheduler = new RewardAutomationScheduler({
+      getDelay: (_action, { reducedMotion }) => (reducedMotion ? 150 : 720),
+      setTimeoutFn: (_fn, delay) => {
+        recordedDelay = delay;
+        return {};
+      },
+      clearTimeoutFn: () => {}
+    });
+    const noop = async () => {};
+    scheduler.schedule({ type: 'next-room' }, { execute: noop, validate: () => false });
+    expect(recordedDelay).toBe(720);
+    scheduler.cancel();
+    scheduler.updateReducedMotion(true);
+    scheduler.schedule({ type: 'next-room' }, { execute: noop, validate: () => false });
+    expect(recordedDelay).toBe(150);
+    scheduler.cancel();
   });
 });

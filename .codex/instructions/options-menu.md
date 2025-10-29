@@ -105,6 +105,8 @@ The Options submenu lets players adjust audio levels, presentation, system behav
 - **Full Idle Mode**
   - Toggle that automates reward selection and room progression.
   - Tooltip: `Automate rewards and room progression.`
+  - Automation queues a single reward action at a time with ~0.6–1.2 s delays so the cadence feels player driven.
+  - Enabling the toggle also forces Skip Battle Review on and keeps it locked until automation is disabled.
 
 - **Animation Speed**
   - Slider that scales the global `TURN_PACING` for all actions.
