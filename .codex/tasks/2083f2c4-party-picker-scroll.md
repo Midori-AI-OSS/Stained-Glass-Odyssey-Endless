@@ -54,4 +54,9 @@ Tested by the lead dev: This task was not done right as there is no scrolling fo
 - Removed stale pressure-control styles and marked dynamic roster selectors as `:global(...)` to silence the unused-selector warnings.
 - Re-ran `bun x vitest run tests/party-picker-scroll.vitest.js` to confirm a clean signal.
 
-ready for review
+## Audit Notes (Auditor — 2025-10-29)
+- Re-read the PartyPicker, PartyRoster, and MenuPanel components to confirm the panel locks its height while the roster list owns scrolling and fade affordances only appear in full-size mode.
+- Exercised the Vitest regression (`bun x vitest run tests/party-picker-scroll.vitest.js`) after `bun install`; the suite passes cleanly with no compiler warnings.
+- Verified documentation in `.codex/implementation/party-ui.md` and `.codex/instructions/main-menu.md` now reflects the anchored overlay and gradient hints.
+
+requesting review from the Task Master
