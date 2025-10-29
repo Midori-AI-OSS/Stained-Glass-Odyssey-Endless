@@ -37,4 +37,11 @@ The home screen currently advertises a dedicated “Party” entry in both the t
 - Revised `.codex/implementation/main-menu.md` and `.codex/instructions/main-menu.md` so documentation matches the current action column and removed Party shortcut.
 - Replaced the obsolete StatTabs persistence test with coverage for the new upgrade overlay so `bun test tests/stat-tabs-persistence.test.js` runs cleanly.
 
-ready for review
+### Audit notes (2025-02-15 – Auditor)
+- Confirmed the top-left nav bar no longer renders a Party shortcut and still exposes Home/Inventory/Settings/Battle controls. Verified the right-rail menu now omits the Party entry while keeping the remaining Run, Warp, Inventory, Battle Review, Guidebook, and Settings actions plus quick links.
+- Checked `+page.svelte` wiring to ensure no dead `handleParty` handler remains in the main menu pipeline and verified the Party overlay is still reachable from the Run flow only.
+- Reviewed documentation updates across `frontend/README.md`, `.codex/implementation/main-menu.md`, and `.codex/instructions/main-menu.md` to confirm they describe the streamlined action list with quick links and no standalone Party entry.
+- Validated the new `StatTabs` coverage exercises the upgrade overlay strings and dispatchers; `bun test tests/stat-tabs-persistence.test.js` now passes after `bun install`. `bun x vitest run tests/run-wizard-flow.vitest.js` still aborts with the existing "Unknown Error: [object Object]" before collecting tests.
+- Environment setup: `uv sync` in `backend/` to provision the Python toolchain and `bun install` in `frontend/` before executing the test commands above.
+
+requesting review from the Task Master
