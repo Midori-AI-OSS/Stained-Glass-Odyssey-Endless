@@ -40,11 +40,13 @@ Tested by the lead dev: This task was not done right as there is no scrolling fo
 - Reverted unrelated `MenuPanel` sizing changes after confirming other overlays rely on the original behavior.
 
 ## Audit Notes (Auditor)
-- `bun x vitest run tests/party-picker-scroll.vitest.js` aborts with an "Unknown Error: [object Object]" before loading any test files, so the newly added coverage never executes. Investigate and fix the Vitest environment so the roster scroll regression test can actually run.
+- Rebuilt the frontend workspace with `bun install` and reran `bun x vitest run tests/party-picker-scroll.vitest.js`. The test now executes, but the run surfaces a cascade of Svelte compiler warnings for unused stub props and several unused selectors (`.pressure-controls`, `.pressure-label`, `.pressure-input`, `.char-row.sparkle::after`, `.row-type`). Frontend guidance blocks approval when warnings remain, so the Vitest suite needs to run clean.
+- Please drop the stale pressure-control styles that no longer have matching markup and either mark the `row-type`/sparkle selectors as global or refactor them so Svelte recognises their usage. The stub component warnings can be resolved by flipping their unused `export let` bindings to `export const` per the compiler hint.
+- Once the warnings are addressed, rerun `bun x vitest run tests/party-picker-scroll.vitest.js` (and any impacted suites) to confirm a clean signal before handing the task back.
 
 ## Status Update (Coder — 2025-02-18)
 - Downgraded `@sveltejs/vite-plugin-svelte` to 5.0.0 and added a `browser` resolve condition so Vitest exercises the client runtime without aborting.
 - Hoisted roster fixtures in the Vitest suite and verified gradients/scrolling by running `bun x vitest run tests/party-picker-scroll.vitest.js`.
 - Updated `.codex/implementation/party-ui.md` and `.codex/instructions/main-menu.md` to describe the locked overlay and gradient hints.
 
-ready for review — Vitest now runs `tests/party-picker-scroll.vitest.js` cleanly, the roster column remains the only scrolling region, and gradients signal overflow.
+more work needed — Vitest still reports unused-prop and unused-selector warnings; clean up the stub exports and stale CSS so the suite runs without warnings per frontend guidelines.
