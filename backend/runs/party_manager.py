@@ -249,6 +249,121 @@ def load_party(run_id: str) -> Party:
         run_user_level = int(data.get("user_level", 1) or 1)
     except Exception:
         run_user_level = 1
+
+    theme_payload: Any = {}
+    daily_bonus = 0.0
+    try:
+        from services.login_reward_service import (
+            get_daily_rdr_bonus_sync,  # local import to avoid circular dependency
+            get_daily_theme_bonuses_sync,
+        )
+
+        daily_bonus = float(get_daily_rdr_bonus_sync())
+        theme_payload = get_daily_theme_bonuses_sync()
+    except Exception:
+        log.exception("Failed to resolve daily RDR bonus; falling back to base value")
+        theme_payload = {}
+        daily_bonus = 0.0
+
+    theme_payload_data = theme_payload if isinstance(theme_payload, dict) else {}
+    active_theme = theme_payload_data.get("active_theme")
+    if not isinstance(active_theme, dict):
+        active_theme = {}
+
+    raw_stat_bonuses = active_theme.get("stat_bonuses", {})
+    if not isinstance(raw_stat_bonuses, dict):
+        raw_stat_bonuses = {}
+
+    def _bonus_value(key: str) -> float:
+        entry = raw_stat_bonuses.get(key)
+        if isinstance(entry, dict):
+            try:
+                return max(float(entry.get("value", 0.0)), 0.0)
+            except (TypeError, ValueError):
+                return 0.0
+        try:
+            return max(float(entry), 0.0)
+        except (TypeError, ValueError):
+            return 0.0
+
+    exp_bonus = _bonus_value("exp_multiplier")
+    all_stat_mult = _bonus_value("all_stat_multiplier")
+    crit_rate_bonus = _bonus_value("crit_rate_bonus")
+    crit_damage_bonus = _bonus_value("crit_damage_bonus")
+
+    raw_damage_entries = active_theme.get("damage_types", [])
+    if not isinstance(raw_damage_entries, list):
+        raw_damage_entries = []
+
+    damage_bonus_map: dict[str, float] = {}
+    damage_reduction_map: dict[str, float] = {}
+    drop_weight_map: dict[str, float] = {}
+    exported_damage_types: list[dict[str, object]] = []
+
+    drop_scope = str(active_theme.get("drop_scope", "matching") or "matching")
+    theme_identifier = str(active_theme.get("identifier", "")) or ""
+    theme_label = str(active_theme.get("label", "")) or ""
+
+    for entry in raw_damage_entries:
+        if not isinstance(entry, dict):
+            continue
+        type_id_raw = entry.get("id")
+        type_id = str(type_id_raw or "").lower()
+        label = str(entry.get("label") or (type_id.title() if type_id else ""))
+        try:
+            bonus_val = max(float(entry.get("damage_bonus", 0.0) or 0.0), 0.0)
+        except (TypeError, ValueError):
+            bonus_val = 0.0
+        try:
+            reduction_val = max(float(entry.get("damage_reduction", bonus_val) or 0.0), 0.0)
+        except (TypeError, ValueError):
+            reduction_val = 0.0
+        try:
+            drop_bonus_val = max(float(entry.get("drop_weight_bonus", 0.0) or 0.0), 0.0)
+        except (TypeError, ValueError):
+            drop_bonus_val = 0.0
+
+        key = type_id or "all"
+        if key:
+            damage_bonus_map[key] = bonus_val
+            damage_reduction_map[key] = reduction_val
+
+        if drop_bonus_val > 0:
+            if drop_scope == "all" or key == "all":
+                drop_weight_map["all"] = drop_weight_map.get("all", 0.0) + drop_bonus_val
+            elif key:
+                drop_weight_map[key] = drop_weight_map.get(key, 0.0) + drop_bonus_val
+
+        exported_damage_types.append(
+            {
+                "id": key,
+                "label": label,
+                "damage_bonus": bonus_val,
+                "damage_reduction": reduction_val,
+                "drop_weight_bonus": drop_bonus_val,
+            }
+        )
+
+    sanitized_stat_bonuses = {
+        key: value
+        for key, value in {
+            "exp_multiplier": exp_bonus,
+            "all_stat_multiplier": all_stat_mult,
+            "crit_rate_bonus": crit_rate_bonus,
+            "crit_damage_bonus": crit_damage_bonus,
+        }.items()
+        if value > 0
+    }
+
+    theme_context = {
+        "identifier": theme_identifier,
+        "label": theme_label,
+        "stat_bonuses": sanitized_stat_bonuses,
+        "damage_types": exported_damage_types,
+        "drop_scope": drop_scope,
+        "drop_weights": drop_weight_map,
+    }
+
     for pid in data.get("members", []):
         for name in player_plugins.__all__:
             cls = getattr(player_plugins, name)
@@ -297,6 +412,43 @@ def load_party(run_id: str) -> Party:
                     inst._base_vitality *= mult
                 except Exception:
                     pass
+                try:
+                    if exp_bonus > 0:
+                        inst.exp_multiplier *= 1.0 + exp_bonus
+                except Exception:
+                    pass
+                if all_stat_mult > 0:
+                    try:
+                        theme_mult = 1.0 + all_stat_mult
+                        inst._base_max_hp = int(inst._base_max_hp * theme_mult)
+                        inst._base_atk = int(inst._base_atk * theme_mult)
+                        inst._base_defense = int(inst._base_defense * theme_mult)
+                    except Exception:
+                        pass
+                if crit_rate_bonus > 0:
+                    try:
+                        inst._base_crit_rate += crit_rate_bonus
+                    except Exception:
+                        pass
+                if crit_damage_bonus > 0:
+                    try:
+                        inst._base_crit_damage += crit_damage_bonus
+                    except Exception:
+                        pass
+                setattr(
+                    inst,
+                    "login_theme_stat_bonuses",
+                    {
+                        "exp_multiplier": exp_bonus,
+                        "all_stat_multiplier": all_stat_mult,
+                        "crit_rate_bonus": crit_rate_bonus,
+                        "crit_damage_bonus": crit_damage_bonus,
+                    },
+                )
+                setattr(inst, "login_theme_identifier", theme_identifier)
+                setattr(inst, "login_theme_damage_bonus", damage_bonus_map.copy())
+                setattr(inst, "login_theme_damage_reduction", damage_reduction_map.copy())
+                setattr(inst, "login_theme_drop_scope", drop_scope)
                 apply_status_hooks(inst)
                 members.append(inst)
                 break
@@ -305,16 +457,6 @@ def load_party(run_id: str) -> Party:
         stored_rdr = float(stored_rdr_raw)
     except (TypeError, ValueError):
         stored_rdr = 1.0
-
-    try:
-        from services.login_reward_service import (
-            get_daily_rdr_bonus_sync,  # local import to avoid circular dependency
-        )
-
-        daily_bonus = float(get_daily_rdr_bonus_sync())
-    except Exception:
-        log.exception("Failed to resolve daily RDR bonus; falling back to base value")
-        daily_bonus = 0.0
 
     apply_player_modifier_context(members, hydrated_context or raw_modifier_context)
 
@@ -329,6 +471,13 @@ def load_party(run_id: str) -> Party:
     )
     setattr(party, "login_rdr_bonus", daily_bonus)
     setattr(party, "base_rdr", stored_rdr)
+    setattr(party, "login_theme_bonuses", theme_context)
+    setattr(party, "login_theme_drop_weights", drop_weight_map)
+    setattr(party, "login_theme_damage_bonus", damage_bonus_map)
+    setattr(party, "login_theme_damage_reduction", damage_reduction_map)
+    setattr(party, "login_theme_identifier", theme_identifier)
+    if theme_label:
+        setattr(party, "login_theme_label", theme_label)
     if "config" in data:
         setattr(party, "run_config", data.get("config"))
     if hydrated_context is not None:

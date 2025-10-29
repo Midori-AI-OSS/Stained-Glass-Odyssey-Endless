@@ -63,3 +63,5 @@ The daily login rewards system currently exposes a single "Run Drop Rate" (RDR) 
 * The Login Rewards panel surfaces the active themed buff alongside the RDR bonus with updated copy/tooltips, backed by automated tests.
 * Documentation in `.codex/implementation` and `.codex/docs` is synchronized with the new feature.
 * Automated tests covering the new logic pass locally.
+
+ready for review
