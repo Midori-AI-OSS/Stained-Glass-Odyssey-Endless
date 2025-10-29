@@ -32,4 +32,9 @@ Full Idle Mode currently fires reward actions as soon as the overlay exposes the
 * Vitest coverage confirms the queued delays and skip-battle coupling, and all existing automation tests remain green with the new behaviour.
 * Documentation under `.codex/` reflects the updated automation pacing and settings contract so future contributors understand the intent.
 
-ready for review
+## Audit notes (2025-02-14)
+* Reviewed `frontend/src/routes/+page.svelte` to confirm the new `RewardAutomationScheduler` queues one automation action at a time, honours reduced-motion preferences, and revalidates state before executing. Verified `rewardAutomation.js` and the new scheduler helper align with task requirements and maintain guards for staged rewards and `lootAckBlocked`.
+* Confirmed the settings flow forces Skip Battle Review on when Full Idle Mode is active, locks the toggle in `GameplaySettings.svelte`, preserves the stored preference in `SettingsMenu.svelte`, and restores it once automation is disabled.
+* Checked documentation updates in `.codex/instructions/options-menu.md` and `.codex/implementation/reward-overlay.md` for the new pacing details and skip-review coupling. Ran `bun x vitest run tests/reward-automation.vitest.js` and `bun test tests/skip-battle-review-setting.test.js` to validate coverage.
+
+requesting review from the Task Master
