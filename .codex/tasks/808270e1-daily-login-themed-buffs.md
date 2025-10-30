@@ -1,7 +1,7 @@
 # Implement themed daily login buffs tied to streak progress
 
 ## Problem
-The daily login rewards system currently exposes a single "Run Drop Rate" (RDR) bonus that scales with extra rooms cleared on a reward day. Design wants each reward day of the week to apply a themed bonus that still scales off Rooms Cleared × Daily Streak with diminishing returns while keeping the existing RDR bonus intact. Sunday should continue to reward EXP gain for characters, Saturday should still boost all core stats, and Monday–Friday must revolve around elemental damage types (Fire, Ice, dual Light/Dark, Wind, and Lightning). For those weekdays we also need to grant extra drops aligned with the themed damage type and simultaneously increase the party's outgoing damage while reducing incoming damage of the matching type. None of the backend, party hydration, or frontend paths understand these new mixed stat/damage-type bonuses today.
+The daily login rewards system currently exposes a single "Run Drop Rate" (RDR) bonus that scales with extra rooms cleared on a reward day. Design wants each reward day of the week to apply a themed bonus that still scales off Rooms Cleared × Daily Streak with diminishing returns while keeping the existing RDR bonus intact. Sunday should continue to reward EXP gain for characters, Saturday should still boost all core stats, and Monday–Friday must revolve around elemental damage types (Fire, Ice, dual Light/Dark, Wind, and Lightning). For those weekdays we also need to grant extra drops aligned with the themed damage type and simultaneously increase the party's outgoing damage while reducing incoming damage of the matching type. None of the backend, party hydration, or frontend paths understand these new mixed stat/damage-type bonuses today. The modernized Login Rewards menu layout has already landed, so we must keep the updated structure while fixing the now-broken component tests that still assume the previous markup.
 
 ## Why this matters
 * Themed buffs give players a reason to keep logging in on specific days and to continue clearing rooms after the automatic bundle unlocks.
@@ -42,10 +42,10 @@ The daily login rewards system currently exposes a single "Run Drop Rate" (RDR) 
   * Add unit coverage verifying that the damage-type drop weights change when the login theme bonuses are present and revert when the bonus expires.
 
 * **Frontend – Login Rewards panel (`frontend/src/lib/components/LoginRewardsPanel.svelte`):**
-  * Consume the new API fields to render the active weekday buff. Update the UI so players can see both the RDR bonus and the themed buff (e.g., add a second card or expand the existing bonus card with tabular rows).
-  * Include clear labels (e.g., "Monday • Fire Infusion"), formatted percent/additive values, the impacted damage types (two badges on Wednesdays), and tooltips explaining how extra rooms past the auto-claim threshold scale the buff, including the drop bonus and incoming-damage reduction.
-  * Ensure accessibility attributes (ARIA labels, screen-reader text) remain intact or updated for any new elements.
-  * Add a Vitest/Playwright test under `frontend/tests/` that stubs the API response and verifies the buff label/value renders for at least two weekdays (one single-element day and Wednesday’s dual Light/Dark entry).
+  * Preserve the recently merged menu layout/styling improvements; treat the new structure as the baseline while addressing regressions.
+  * Update the Vitest/Playwright suites under `frontend/tests/` so selectors, snapshots, and mocked payloads reflect the current DOM and copy, covering both the RDR bonus and the themed buff display (exercise at least one single-element weekday and Wednesday’s dual Light/Dark scenario).
+  * Add or refresh assertions that verify the descriptive labels/tooltips introduced with the redesign so the improved UX remains covered by automated checks.
+  * Re-validate ARIA attributes and screen-reader text in the tests to confirm accessibility stays aligned with the new markup.
 
 * **Documentation and planning sync:**
   * Update `.codex/implementation/login-reward-system.md` with a new section describing themed buffs, including the weekday mapping, scaling math, and persistence details, and now highlighting the damage-type bonuses/drop weighting.
@@ -60,8 +60,8 @@ The daily login rewards system currently exposes a single "Run Drop Rate" (RDR) 
 * Backend state tracking returns both RDR and themed buff outputs, persists them across reward days, and exposes helpers so other systems can consume the data.
 * Party hydration applies the correct stat bonuses for the active reward day, exposes metadata for verification, and combat hooks respect the outgoing/incoming damage modifiers.
 * Loot generation increases the drop weight for the specified damage-type upgrade items on the correct weekdays.
-* The Login Rewards panel surfaces the active themed buff alongside the RDR bonus with updated copy/tooltips, backed by automated tests.
+* The Login Rewards panel retains the refreshed layout while surfacing the active themed buff alongside the RDR bonus with updated copy/tooltips, and the adjusted automated tests pass.
 * Documentation in `.codex/implementation` and `.codex/docs` is synchronized with the new feature.
 * Automated tests covering the new logic pass locally.
 
-ready for review
+more work needed — adjust Vitest/Playwright suites to match the refreshed Login Rewards layout
