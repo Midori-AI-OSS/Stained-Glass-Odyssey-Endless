@@ -12,3 +12,4 @@ Our 5★ options currently cover summon tempo, near-invulnerability, and crit-st
 - Implement `backend/plugins/cards/eclipse_theater_sigil.py` with stat mods, turn-based polarity toggles, ally/foe effect application, crit buff cleanup, and subscription teardown patterned after Reality Split and Temporal Shield.
 - Extend backend tests to cover alternating turns, ensuring cleanses happen only on Light turns, Dark debuffs/buffs fire once per turn, and polarity resets between battles.
 - Ensure the plugin's `about` string spells out the alternating Light/Dark cadence so inventory and documentation tooling stay accurate without `.codex` roster updates.
+ready for review
