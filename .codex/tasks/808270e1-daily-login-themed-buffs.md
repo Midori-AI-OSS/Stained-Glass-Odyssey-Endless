@@ -63,5 +63,6 @@ The daily login rewards system currently exposes a single "Run Drop Rate" (RDR) 
 * The Login Rewards panel retains the refreshed layout while surfacing the active themed buff alongside the RDR bonus with updated copy/tooltips, and the adjusted automated tests pass.
 * Documentation in `.codex/implementation` and `.codex/docs` is synchronized with the new feature.
 * Automated tests covering the new logic pass locally.
+* Updated `frontend/tests/login-rewards-panel.vitest.js` assertions so the redesigned panel layout passes Vitest again.
 
-more work needed — adjust Vitest/Playwright suites to match the refreshed Login Rewards layout
+ready for review
