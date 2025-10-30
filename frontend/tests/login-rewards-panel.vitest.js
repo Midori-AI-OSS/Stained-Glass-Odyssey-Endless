@@ -83,10 +83,13 @@ describe('LoginRewardsPanel reward grouping', () => {
     const soloReward = await screen.findByText('Aqua Core');
     expect(soloReward.textContent?.trim()).toBe('Aqua Core');
 
-    expect(await screen.findByText('Monday • Fire Infusion')).toBeTruthy();
-    expect(screen.getByText(/DMG \+12\.00%/i)).toBeTruthy();
-    expect(screen.getByText(/Drops \+12\.00%/i)).toBeTruthy();
-    expect(screen.getByText(/Bonuses scale with extra rooms/i)).toBeTruthy();
+    expect(screen.getByText('Run Drop Rate Bonus')).toBeTruthy();
+    expect(screen.getByText('+5.00%')).toBeTruthy();
+
+    expect(screen.getByText('Daily Theme Bonus')).toBeTruthy();
+    expect(screen.getByText(/~ Monday/i)).toBeTruthy();
+    expect(screen.getByText('+12.00%')).toBeTruthy();
+    expect(screen.getByText(/Bonuses scale with extra rooms cleared while the streak grows\./i)).toBeTruthy();
 
     expect(mockGetLoginRewardStatus).toHaveBeenCalledTimes(1);
   });
