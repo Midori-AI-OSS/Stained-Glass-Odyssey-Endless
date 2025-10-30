@@ -65,4 +65,9 @@ The daily login rewards system currently exposes a single "Run Drop Rate" (RDR) 
 * Automated tests covering the new logic pass locally.
 * Updated `frontend/tests/login-rewards-panel.vitest.js` assertions so the redesigned panel layout passes Vitest again.
 
-ready for review
+## Audit notes (2025-02-14)
+- Confirmed backend login reward service persists themed bonuses, exposes async/sync accessors, and party hydration/combat/loot flows consume the data, including drop-weight weighting and damage adjustments.
+- Reviewed Svelte panel updates and accompanying documentation to ensure the new summary copy and icon handling match the backend payload.
+- Tests: `uv run pytest backend/tests/test_login_rewards.py`, `bun x vitest run tests/login-rewards-panel.vitest.js`.
+
+requesting review from the Task Master
