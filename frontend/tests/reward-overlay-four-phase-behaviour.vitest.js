@@ -81,7 +81,7 @@ beforeAll(async () => {
   rewardPhaseController = overlayState.rewardPhaseController;
   const uiApi = await import('../src/lib/systems/uiApi.js');
   getBattleSummarySpy = vi.spyOn(uiApi, 'getBattleSummary').mockResolvedValue({ damage_by_type: {} });
-});
+}, 30000);
 
 beforeEach(() => {
   resetRewardProgression?.();
@@ -100,17 +100,16 @@ describe('four-phase reward overlay behaviour', () => {
   test('drops phase renders loot-only view and auto-advances after countdown', async () => {
     updateRewardProgression(fourPhaseProgression());
 
-    const { component, container } = render(RewardOverlay, {
+    const advances = [];
+    const { container } = render(RewardOverlay, {
       props: {
         ...baseOverlayProps,
         items: [{ id: 'ancient-coin', ui: { label: 'Ancient Coin' }, amount: 1 }],
         gold: 25,
-        awaitingLoot: true
+        awaitingLoot: true,
+        onadvance: (event) => advances.push(event.detail)
       }
     });
-
-    const advances = [];
-    component.$on('advance', (event) => advances.push(event.detail));
 
     await flushOverlayTicks(2);
 
@@ -138,15 +137,10 @@ describe('four-phase reward overlay behaviour', () => {
       { id: 'echo-lace', name: 'Echo Lace', stars: 4 }
     ];
 
-    const { component, container } = render(RewardOverlay, {
-      props: {
-        ...baseOverlayProps,
-        cards
-      }
-    });
-
     const selectEvents = [];
-    component.$on('select', (event) => {
+    let component;
+    
+    const onselect = (event) => {
       const detail = event.detail;
       selectEvents.push(detail);
       detail?.respond?.({ ok: true });
@@ -162,7 +156,8 @@ describe('four-phase reward overlay behaviour', () => {
             cards,
             stagedCards: [staged],
             awaitingCard: true,
-            awaitingLoot: false
+            awaitingLoot: false,
+            onselect
           });
         });
       } else if (detail?.intent === 'confirm' && detail?.type === 'card') {
@@ -170,12 +165,24 @@ describe('four-phase reward overlay behaviour', () => {
           component.$set({
             ...baseOverlayProps,
             relics: [{ id: 'guardian-talisman', name: 'Guardian Talisman' }],
-            awaitingRelic: false
+            awaitingRelic: false,
+            onselect
           });
           updateRewardProgression(afterCardsProgression());
         });
       }
+    };
+    
+    const rendered = render(RewardOverlay, {
+      props: {
+        ...baseOverlayProps,
+        cards,
+        onselect
+      }
     });
+    
+    component = rendered.component;
+    const container = rendered.container;
 
     await flushOverlayTicks(2);
 
@@ -217,14 +224,9 @@ describe('four-phase reward overlay behaviour', () => {
       { id: 'tidal-charm', name: 'Tidal Charm' }
     ];
 
-    const { component, container } = render(RewardOverlay, {
-      props: {
-        ...baseOverlayProps,
-        relics
-      }
-    });
-
-    component.$on('select', (event) => {
+    let component;
+    
+    const onselect = (event) => {
       const detail = event.detail;
       detail?.respond?.({ ok: true });
       if (detail?.intent === 'select' && detail?.type === 'relic') {
@@ -238,19 +240,32 @@ describe('four-phase reward overlay behaviour', () => {
             ...baseOverlayProps,
             relics,
             stagedRelics: [staged],
-            awaitingRelic: true
+            awaitingRelic: true,
+            onselect
           });
         });
       } else if (detail?.intent === 'confirm' && detail?.type === 'relic') {
         queueMicrotask(() => {
           component.$set({
             ...baseOverlayProps,
-            awaitingNext: true
+            awaitingNext: true,
+            onselect
           });
           updateRewardProgression(afterRelicsProgression());
         });
       }
+    };
+
+    const rendered = render(RewardOverlay, {
+      props: {
+        ...baseOverlayProps,
+        relics,
+        onselect
+      }
     });
+    
+    component = rendered.component;
+    const container = rendered.container;
 
     await flushOverlayTicks(2);
 
@@ -318,16 +333,15 @@ describe('battle review gating', () => {
     });
 
     const nextRoomEvents = [];
-    const { component, container } = render(OverlayHost, {
+    const { container } = render(OverlayHost, {
       props: {
         ...baseOverlayHostProps,
         roomData: reviewRoom,
-        skipBattleReview: true
+        skipBattleReview: true,
+        onnextRoom: (event) => {
+          nextRoomEvents.push(event.detail ?? {});
+        }
       }
-    });
-
-    component.$on('nextRoom', (event) => {
-      nextRoomEvents.push(event.detail ?? {});
     });
 
     await flushOverlayTicks(4);
