@@ -32,6 +32,12 @@
   export let awaitingNext = false;
   export let advanceBusy = false;
 
+  // Svelte 5 callback props for events
+  export let onselect = undefined;
+  export let onadvance = undefined;
+  export let onnext = undefined;
+  export let onlootAcknowledge = undefined;
+
   const dispatch = createEventDispatcher();
 
   const DEFAULT_PHASE_SEQUENCE = ['drops', 'cards', 'relics', 'battle_review'];
@@ -629,6 +635,13 @@
       target: targetPhase,
       snapshot: nextSnapshot ?? null
     });
+    onadvance?.({
+      reason,
+      from: fromPhase,
+      to: nextSnapshot?.current ?? null,
+      target: targetPhase,
+      snapshot: nextSnapshot ?? null
+    });
 
     if (reason === 'auto' && overlayRootEl) {
       queueMicrotask(() => {
@@ -1038,7 +1051,9 @@
         responseValue = value && typeof value === 'object' ? value : { ok: false };
         resolve(responseValue);
       };
-      dispatch('select', { ...detail, intent, respond });
+      const payload = { ...detail, intent, respond };
+      dispatch('select', payload);
+      onselect?.(payload);
     });
 
     if (isCard) {

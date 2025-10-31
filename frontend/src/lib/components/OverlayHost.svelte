@@ -63,6 +63,17 @@
   export let battleActive = false;
   export let backendFlavor = '';
 
+  // Svelte 5 callback props for events
+  export let onnextRoom = undefined;
+  export let onrewardSelect = undefined;
+  export let onrewardAdvance = undefined;
+  export let onlootAcknowledge = undefined;
+  export let onsaveParty = undefined;
+  export let oneditorChange = undefined;
+  export let onback = undefined;
+  export let onloadRun = undefined;
+  export let onstartRun = undefined;
+
   // Use granular motion settings with fallback to legacy prop
   $: motionSettings = $motionStore || { 
     globalReducedMotion: false, 
@@ -206,6 +217,7 @@
   $: if (reviewOpen && !rewardOpen && reviewReady && skipBattleReview) {
     // Battle is complete and ready for review, but user wants to skip - advance immediately
     dispatch('nextRoom');
+    onnextRoom?.();
   }
 
   $: {

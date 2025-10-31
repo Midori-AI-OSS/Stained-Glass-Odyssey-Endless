@@ -106,10 +106,16 @@ describe('four-phase reward overlay behaviour', () => {
         ...baseOverlayProps,
         items: [{ id: 'ancient-coin', ui: { label: 'Ancient Coin' }, amount: 1 }],
         gold: 25,
-        awaitingLoot: true,
-        onadvance: (event) => advances.push(event.detail)
+        awaitingLoot: true
       }
     });
+    
+    const rootElement = container.querySelector('.layout');
+    if (rootElement) {
+      rootElement.addEventListener('advance', (event) => {
+        advances.push(event.detail);
+      });
+    }
 
     await flushOverlayTicks(6);
 
@@ -145,8 +151,7 @@ describe('four-phase reward overlay behaviour', () => {
       props: {
         ...baseOverlayProps,
         cards,
-        onselect: (event) => {
-          const detail = event.detail;
+        onselect: (detail) => {
           selectEvents.push(detail);
           detail?.respond?.({ ok: true });
           if (detail?.intent === 'select' && detail?.type === 'card') {
@@ -231,44 +236,41 @@ describe('four-phase reward overlay behaviour', () => {
     const rendered = render(RewardOverlay, {
       props: {
         ...baseOverlayProps,
-        relics
+        relics,
+        onselect: (detail) => {
+          detail?.respond?.({ ok: true });
+          if (detail?.intent === 'select' && detail?.type === 'relic') {
+            queueMicrotask(() => {
+              const staged = buildStagedRelic(
+                detail?.id ?? relics[0].id,
+                detail?.entry?.name ?? relics[0].name,
+                detail?.entry ?? relics[0]
+              );
+              component.$set({
+                ...baseOverlayProps,
+                relics,
+                stagedRelics: [staged],
+                awaitingRelic: true
+              });
+            });
+          } else if (detail?.intent === 'confirm' && detail?.type === 'relic') {
+            queueMicrotask(() => {
+              component.$set({
+                ...baseOverlayProps,
+                relics,
+                stagedRelics: [],
+                awaitingRelic: false,
+                awaitingNext: true
+              });
+              updateRewardProgression(afterRelicsProgression());
+            });
+          }
+        }
       }
     });
     
     component = rendered.component;
     const container = rendered.container;
-    
-    const rootElement = container.querySelector('.layout');
-    rootElement.addEventListener('select', (event) => {
-      const detail = event.detail;
-      detail?.respond?.({ ok: true });
-      if (detail?.intent === 'select' && detail?.type === 'relic') {
-        queueMicrotask(() => {
-          const staged = buildStagedRelic(
-            detail?.id ?? relics[0].id,
-            detail?.entry?.name ?? relics[0].name,
-            detail?.entry ?? relics[0]
-          );
-          component.$set({
-            ...baseOverlayProps,
-            relics,
-            stagedRelics: [staged],
-            awaitingRelic: true
-          });
-        });
-      } else if (detail?.intent === 'confirm' && detail?.type === 'relic') {
-        queueMicrotask(() => {
-          component.$set({
-            ...baseOverlayProps,
-            relics,
-            stagedRelics: [],
-            awaitingRelic: false,
-            awaitingNext: true
-          });
-          updateRewardProgression(afterRelicsProgression());
-        });
-      }
-    });
 
     await flushOverlayTicks(2);
 
@@ -341,8 +343,8 @@ describe('battle review gating', () => {
         ...baseOverlayHostProps,
         roomData: reviewRoom,
         skipBattleReview: true,
-        onnextRoom: (event) => {
-          nextRoomEvents.push(event.detail ?? {});
+        onnextRoom: (detail) => {
+          nextRoomEvents.push(detail ?? {});
         }
       }
     });
