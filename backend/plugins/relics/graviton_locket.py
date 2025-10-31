@@ -120,13 +120,16 @@ class GravitonLocket(RelicBase):
             if not isinstance(entity, FoeBase):
                 return
 
-            # Remove all active modifiers
-            for mod in state["mods"]:
-                mod.remove()
+            # Only clean up once
+            if not state.get("cleaned_up", False):
+                # Remove all active modifiers
+                for mod in state["mods"]:
+                    mod.remove()
 
-            state["active_debuffs"].clear()
-            state["mods"].clear()
-            self.clear_subscriptions(party)
+                state["active_debuffs"].clear()
+                state["mods"].clear()
+                state["cleaned_up"] = True
+                self.clear_subscriptions(party)
 
         self.subscribe(party, "battle_start", _battle_start)
         self.subscribe(party, "turn_start", _turn_start)
