@@ -12,9 +12,3 @@ services:
     volumes:
       - ./backend:/app
       - ${HOME}/.cache:/.cache
-    networks:
-      - autofighter-network
-
-networks:
-  autofighter-network:
-    external: true
