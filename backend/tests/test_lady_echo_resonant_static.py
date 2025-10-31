@@ -1,8 +1,8 @@
 """Tests for the Lady Echo Resonant Static passive."""
 
-import random
 import asyncio
 import itertools
+import random
 
 import pytest
 from tests.helpers import call_maybe_async

@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-import math
 from dataclasses import dataclass
 from dataclasses import field
+import math
 from typing import Optional
 
 from autofighter.effects import EffectManager

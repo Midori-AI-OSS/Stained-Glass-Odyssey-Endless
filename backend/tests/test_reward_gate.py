@@ -1,6 +1,5 @@
 import asyncio
 import importlib.util
-
 from pathlib import Path
 import sys
 
@@ -101,7 +100,7 @@ async def test_advance_room_requires_reward_selection(app_with_db):
         # Should advance progression from "drops" to "cards"
         assert data.get("progression_advanced") is True
         assert data.get("current_step") == "cards"
-        
+
         # Now we're in the cards phase - cannot advance without selecting a card
         resp = await client.post("/ui/action", json={"action": "advance_room"})
         assert resp.status_code == 200
@@ -128,7 +127,7 @@ async def test_advance_room_requires_reward_selection(app_with_db):
         # Now in relics phase - cannot advance without selecting a relic
         resp = await client.post("/ui/action", json={"action": "advance_room"})
         assert resp.status_code == 200
-        
+
         # Staging a relic should allow advance (which will auto-confirm)
         await client.post(
             "/ui/action",

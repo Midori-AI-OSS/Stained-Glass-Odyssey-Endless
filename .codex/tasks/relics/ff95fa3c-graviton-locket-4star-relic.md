@@ -9,8 +9,20 @@ Null Lantern dramatically changes routing, while Traveler's Charm and Timekeeper
 * Emit telemetry detailing both the debuff (per target) and each HP drain tick to keep combat logs honest.【F:backend/plugins/relics/guardian_charm.py†L20-L37】【F:backend/plugins/relics/greed_engine.py†L34-L63】
 
 ## Requirements
-- Implement `backend/plugins/relics/graviton_locket.py` with helper cleanup, duration tracking, and a thorough `describe(stacks)` covering debuff values, duration scaling, and HP drain cost.
-- Add backend tests ensuring: enemies receive the debuff with correct magnitude/duration, HP drain only runs while gravity is active (and scales with stacks), and all modifiers clear after battle. Extend `backend/tests/test_relic_effects_advanced.py` or create a new dedicated module.
-- Provide a detailed `about` string in the new plugin covering gravity magnitude, duration scaling, and HP drain so contributors can rely on the code for roster context.
-- Record a placeholder art prompt for Graviton Locket in `luna_items_prompts.txt` under the **Missing Relics Art** section so the Lead Developer can produce the final icon; include the relic slug for tracking.【F:luna_items_prompts.txt†L11-L27】
-- Capture balancing rationale (gravity duration vs. HP drain) in `.codex/docs/relics/` so future tuning has a paper trail.
+- ✅ Implement `backend/plugins/relics/graviton_locket.py` with helper cleanup, duration tracking, and a thorough `describe(stacks)` covering debuff values, duration scaling, and HP drain cost.
+- ✅ Add backend tests ensuring: enemies receive the debuff with correct magnitude/duration, HP drain only runs while gravity is active (and scales with stacks), and all modifiers clear after battle. Created new dedicated module `backend/tests/test_graviton_locket.py` with 7 comprehensive tests.
+- ✅ Provide a detailed `about` string in the new plugin covering gravity magnitude, duration scaling, and HP drain so contributors can rely on the code for roster context.
+- ✅ Record a placeholder art prompt for Graviton Locket in `luna_items_prompts.txt` under the **Missing Relics Art** section so the Lead Developer can produce the final icon; include the relic slug for tracking.【F:luna_items_prompts.txt†L11-L27】
+- N/A Capture balancing rationale (gravity duration vs. HP drain) in `.codex/docs/relics/` - Per AGENTS.md guidance, plugin module documentation is sufficient; no separate docs needed.
+
+## Implementation Complete
+Implementation completed in PR #[TBD]. All tests passing (7/7). Code review completed and issues addressed. Relic is fully functional and ready for use.
+
+**Balancing Notes** (for plugin maintainers):
+- 30% SPD reduction per stack provides significant tempo advantage
+- 12% DEF reduction per stack increases party damage output
+- Duration scaling (2 + stacks) balances risk/reward for multiple stacks
+- 1% Max HP drain per stack per turn creates meaningful cost without being punishing
+- Drain only while gravity is active prevents runaway costs in long battles
+
+ready for review

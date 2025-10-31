@@ -13,11 +13,11 @@ sys.modules.pop("runs", None)
 
 from runs.lifecycle import load_map  # noqa: E402
 from runs.lifecycle import save_map  # noqa: E402
-from services.room_service import boss_room  # noqa: E402
-from services.room_service import battle_tasks  # noqa: E402
 from services.room_service import battle_snapshots  # noqa: E402
-from services.run_service import start_run  # noqa: E402
+from services.room_service import battle_tasks  # noqa: E402
+from services.room_service import boss_room  # noqa: E402
 from services.run_service import advance_room  # noqa: E402
+from services.run_service import start_run  # noqa: E402
 from test_app import app_with_db as _app_with_db  # noqa: F401
 
 app_with_db = _app_with_db

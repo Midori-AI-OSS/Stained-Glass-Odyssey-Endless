@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
+import logging
 import math
 import random
-import logging
-from collections.abc import Mapping
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Sequence

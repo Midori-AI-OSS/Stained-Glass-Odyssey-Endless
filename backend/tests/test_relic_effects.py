@@ -11,8 +11,8 @@ from autofighter.stats import BUS
 from autofighter.stats import Stats
 from autofighter.summons.manager import SummonManager
 from plugins.characters._base import PlayerBase
-from plugins.characters.foe_base import FoeBase
 from plugins.characters.becca import Becca
+from plugins.characters.foe_base import FoeBase
 from plugins.characters.luna import Luna
 from plugins.effects.aftertaste import Aftertaste
 import plugins.event_bus as event_bus_module

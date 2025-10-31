@@ -6,9 +6,9 @@ from autofighter.effects import EffectManager
 from autofighter.party import Party
 from autofighter.stats import BUS
 from plugins.cards.eclipse_theater_sigil import EclipseTheaterSigil
-from plugins.dots.celestial_atrophy import CelestialAtrophy
 from plugins.characters.foe_base import FoeBase
 from plugins.characters.player import Player
+from plugins.dots.celestial_atrophy import CelestialAtrophy
 
 
 @pytest.mark.asyncio

@@ -9,8 +9,8 @@ from .lifecycle import battle_tasks
 from .lifecycle import cleanup_battle_state
 from .lifecycle import empty_reward_staging
 from .lifecycle import ensure_reward_staging
-from .lifecycle import has_pending_rewards
 from .lifecycle import get_battle_state_sizes
+from .lifecycle import has_pending_rewards
 from .lifecycle import load_map
 from .lifecycle import reward_locks
 from .lifecycle import save_map
