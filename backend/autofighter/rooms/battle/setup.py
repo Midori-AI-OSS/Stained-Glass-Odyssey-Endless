@@ -110,6 +110,8 @@ async def setup_battle(
         combat_party.pull_tokens = getattr(party, "pull_tokens", 0)
     if hasattr(party, "_null_lantern_cleared"):
         setattr(combat_party, "_null_lantern_cleared", getattr(party, "_null_lantern_cleared", 0))
+    if hasattr(party, "_blood_debt_tithe_total_defeats"):
+        setattr(combat_party, "_blood_debt_tithe_total_defeats", getattr(party, "_blood_debt_tithe_total_defeats", 0))
     if hasattr(party, "guiding_compass_bonus_used"):
         setattr(
             combat_party,
