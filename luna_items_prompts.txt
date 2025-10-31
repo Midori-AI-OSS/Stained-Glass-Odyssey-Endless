@@ -8,6 +8,8 @@ Balanced Diet: Luna seated at a sunlit wooden table, savoring a balanced plate p
 
 === Missing Relics Art ===
 
+Blood Debt Tithe (blood_debt_tithe): Luna standing before an ominous crimson altar adorned with ancient runes, as ethereal streams of blood-red energy flow upward from defeated enemy silhouettes below, transforming into glowing treasure coins and rare loot orbs that circle her; in the background, strengthening shadowy adversaries grow larger and more menacing with each sacrifice, their eyes glowing with empowered fury; dark gothic atmosphere with contrasting warm treasure light and cold enemy power.
+
 Graviton Locket (graviton_locket): Luna holding a sleek obsidian locket that emanates pulsing gravity waves distorting the space around it; ethereal purple-blue gravitational field lines radiate outward, visibly slowing down shadowy enemies caught in the distortion while Luna appears slightly drained from channeling the gravity pulse; dark cosmic background with warping light trails.
 
 Siege Banner (siegebanner): 
