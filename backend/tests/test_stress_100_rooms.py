@@ -57,9 +57,19 @@ async def test_stress_100_rooms_full_party():
     Gain a random relic stack after each battle.
     Foe count determined by FoeFactory based on party size and pressure.
     """
+    print("\n" + "="*80)
+    print("STRESS TEST STARTING")
+    print("="*80)
+    print("Configuration:")
+    print(f"  - Total Battles: {TOTAL_BATTLES}")
+    print(f"  - Random Seed: {STRESS_TEST_SEED}")
+    print(f"  - Progress Logging: Every {PROGRESS_LOG_INTERVAL} floors")
+    print("="*80 + "\n")
+
     random.seed(STRESS_TEST_SEED)  # For reproducibility
 
     # Discover all relics and cards
+    print("🔍 Discovering plugins...")
     log.info("Discovering plugins...")
     loader = PluginLoader()
     loader.discover("plugins/relics")
@@ -68,6 +78,7 @@ async def test_stress_100_rooms_full_party():
     relics = loader.get_plugins("relic")
     cards = loader.get_plugins("card")
 
+    print(f"✓ Found {len(relics)} relics and {len(cards)} cards")
     log.info(f"Found {len(relics)} relics and {len(cards)} cards")
 
     # Get all relic and card IDs
@@ -75,6 +86,7 @@ async def test_stress_100_rooms_full_party():
     all_card_ids = list(cards.keys())
 
     # Create party with all 5 characters
+    print("👥 Creating party with 5 characters...")
     party_members = [
         Player(),
         Carly(),
@@ -92,9 +104,11 @@ async def test_stress_100_rooms_full_party():
         rdr=1.0,
     )
 
+    print(f"✓ Party initialized: {len(party.members)} members, {len(party.relics)} relics, {len(party.cards)} cards")
     log.info(f"Party initialized with {len(party.members)} members, {len(party.relics)} relics, {len(party.cards)} cards")
 
     # Create foe factory
+    print("⚔️  Initializing battle system...")
     foe_factory = FoeFactory()
 
     # Track statistics
@@ -102,8 +116,13 @@ async def test_stress_100_rooms_full_party():
     battles_lost = 0
     total_foes_defeated = 0
 
+    print(f"\n{'='*80}")
+    print(f"🎮 STARTING {TOTAL_BATTLES} BATTLES")
+    print(f"{'='*80}\n")
+
     # Run battles
     for floor in range(1, TOTAL_BATTLES + 1):
+        print(f"⚔️  Floor {floor}/{TOTAL_BATTLES} - Starting battle...")
         log.info(f"\n{'='*60}")
         log.info(f"Starting Floor {floor}/{TOTAL_BATTLES}")
         log.info(f"{'='*60}")
@@ -123,6 +142,7 @@ async def test_stress_100_rooms_full_party():
         # With 5 party members and increasing pressure, it will generate appropriate foes
         foes = foe_factory.build_encounter(node, party)
 
+        print(f"   🎯 Generated {len(foes)} foes: {[f.id for f in foes][:3]}{'...' if len(foes) > 3 else ''}")
         log.info(f"Generated {len(foes)} foes: {[f.id for f in foes]}")
         log.info(f"Party has {len(party.relics)} relic stacks, {len(party.cards)} cards")
 
@@ -142,9 +162,11 @@ async def test_stress_100_rooms_full_party():
             if result.get("victory", False):
                 battles_won += 1
                 total_foes_defeated += len(foes)
+                print(f"   ✅ VICTORY! (Total: {battles_won}W/{battles_lost}L)")
                 log.info(f"✓ Floor {floor} - VICTORY! ({battles_won} wins, {battles_lost} losses)")
             else:
                 battles_lost += 1
+                print(f"   ❌ DEFEAT (Total: {battles_won}W/{battles_lost}L)")
                 log.info(f"✗ Floor {floor} - DEFEAT ({battles_won} wins, {battles_lost} losses)")
 
                 # Revive party for next battle
@@ -159,6 +181,12 @@ async def test_stress_100_rooms_full_party():
 
             # Progress update at intervals
             if floor % PROGRESS_LOG_INTERVAL == 0:
+                print(f"\n{'='*80}")
+                print(f"📊 PROGRESS UPDATE: {floor}/{TOTAL_BATTLES} battles completed")
+                print(f"   Stats: {battles_won} wins, {battles_lost} losses")
+                print(f"   Foes Defeated: {total_foes_defeated}")
+                print(f"   Party: {len(party.relics)} relic stacks, {len(party.cards)} cards")
+                print(f"{'='*80}\n")
                 log.info(f"\n{'='*60}")
                 log.info(f"Progress: {floor}/{TOTAL_BATTLES} floors completed")
                 log.info(f"Stats: {battles_won} wins, {battles_lost} losses, {total_foes_defeated} foes defeated")
@@ -166,6 +194,7 @@ async def test_stress_100_rooms_full_party():
                 log.info(f"{'='*60}\n")
 
         except Exception as e:
+            print(f"   ⚠️  ERROR in battle {floor}: {e}")
             log.error(f"Battle {floor} failed with error: {e}", exc_info=True)
             battles_lost += 1
 
@@ -175,6 +204,16 @@ async def test_stress_100_rooms_full_party():
                     member.hp = member.max_hp
 
     # Final statistics
+    print(f"\n{'='*80}")
+    print("🎉 STRESS TEST COMPLETED")
+    print(f"{'='*80}")
+    print(f"Total Battles: {TOTAL_BATTLES}")
+    print(f"Wins: {battles_won}")
+    print(f"Losses: {battles_lost}")
+    print(f"Foes Defeated: {total_foes_defeated}")
+    print(f"Final Relic Stacks: {len(party.relics)}")
+    print(f"Final Card Count: {len(party.cards)}")
+    print(f"{'='*80}\n")
     log.info(f"\n{'='*60}")
     log.info("STRESS TEST COMPLETED")
     log.info(f"{'='*60}")
@@ -191,6 +230,7 @@ async def test_stress_100_rooms_full_party():
 
     # The test passes if we made it through all battles without hanging or crashing
     # We don't require winning all battles, just completing them all
+    print(f"✅ Stress test passed: Completed {TOTAL_BATTLES} rooms without timeout or crash\n")
     log.info(f"✓ Stress test passed: Completed {TOTAL_BATTLES} rooms without timeout or crash")
 
 

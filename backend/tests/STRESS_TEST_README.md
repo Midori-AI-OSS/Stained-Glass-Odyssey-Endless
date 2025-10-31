@@ -45,7 +45,16 @@ uv run pytest -v -m stress tests/test_stress_100_rooms.py
 The stress test uses a dedicated `compose.stress-test.yaml` file with the following configuration:
 - `tty: true` - Enables interactive terminal for better output display
 - `restart: "no"` - Prevents automatic restart on failure (test should run once)
+- `-s` flag - Shows test output immediately (no capture)
+- `--log-cli-level=INFO` - Displays INFO level logs during test execution
 - External network - Uses the existing `autofighter-network`
+
+The test provides real-time feedback with:
+- 🔍 Plugin discovery progress
+- 👥 Party initialization status
+- ⚔️ Battle-by-battle progress with results
+- 📊 Progress updates every 10 floors
+- 🎉 Final statistics summary
 
 To run the test, ensure the main application network exists:
 ```bash

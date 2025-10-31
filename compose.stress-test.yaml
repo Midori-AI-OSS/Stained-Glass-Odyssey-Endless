@@ -3,7 +3,7 @@ services:
     build:
       context: ./backend
       dockerfile: ../Dockerfile.python
-    command: uv run pytest -v -m stress tests/test_stress_100_rooms.py
+    command: uv run pytest -v -s --log-cli-level=INFO -m stress tests/test_stress_100_rooms.py
     tty: true
     restart: "no"
     environment:
