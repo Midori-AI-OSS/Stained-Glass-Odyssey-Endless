@@ -187,9 +187,6 @@ async def run_battle(
 
     if hasattr(combat_party, "pull_tokens"):
         party.pull_tokens = getattr(combat_party, "pull_tokens", getattr(party, "pull_tokens", 0))
-    if hasattr(combat_party, "_null_lantern_cleared"):
-        cleared = getattr(combat_party, "_null_lantern_cleared", 0)
-        setattr(party, "_null_lantern_cleared", cleared)
     if hasattr(combat_party, "guiding_compass_bonus_used"):
         setattr(
             party,
