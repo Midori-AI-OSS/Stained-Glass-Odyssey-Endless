@@ -40,9 +40,9 @@ log = logging.getLogger(__name__)
 
 # Test configuration constants
 STRESS_TEST_SEED = 42  # Random seed for reproducibility
-LOOP_INCREMENT = 10    # Floors per loop increment
-PRESSURE_PER_FLOOR = 5 # Pressure increase per floor
-TOTAL_BATTLES = 100    # Number of battles to run
+LOOP_INCREMENT = 10  # Floors per loop increment
+PRESSURE_PER_FLOOR = 5  # Pressure increase per floor
+TOTAL_BATTLES = 100  # Number of battles to run
 PROGRESS_LOG_INTERVAL = 10  # Log progress every N floors
 
 
