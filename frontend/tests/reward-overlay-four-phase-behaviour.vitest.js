@@ -106,10 +106,12 @@ describe('four-phase reward overlay behaviour', () => {
         ...baseOverlayProps,
         items: [{ id: 'ancient-coin', ui: { label: 'Ancient Coin' }, amount: 1 }],
         gold: 25,
-        awaitingLoot: true,
-        onadvance: (event) => advances.push(event.detail)
+        awaitingLoot: true
       }
     });
+    
+    const rootElement = container.querySelector('.layout');
+    rootElement.addEventListener('advance', (event) => advances.push(event.detail));
 
     await flushOverlayTicks(2);
 
@@ -140,7 +142,18 @@ describe('four-phase reward overlay behaviour', () => {
     const selectEvents = [];
     let component;
     
-    const onselect = (event) => {
+    const rendered = render(RewardOverlay, {
+      props: {
+        ...baseOverlayProps,
+        cards
+      }
+    });
+    
+    component = rendered.component;
+    const container = rendered.container;
+    
+    const rootElement = container.querySelector('.layout');
+    rootElement.addEventListener('select', (event) => {
       const detail = event.detail;
       selectEvents.push(detail);
       detail?.respond?.({ ok: true });
@@ -156,8 +169,7 @@ describe('four-phase reward overlay behaviour', () => {
             cards,
             stagedCards: [staged],
             awaitingCard: true,
-            awaitingLoot: false,
-            onselect
+            awaitingLoot: false
           });
         });
       } else if (detail?.intent === 'confirm' && detail?.type === 'card') {
@@ -165,24 +177,12 @@ describe('four-phase reward overlay behaviour', () => {
           component.$set({
             ...baseOverlayProps,
             relics: [{ id: 'guardian-talisman', name: 'Guardian Talisman' }],
-            awaitingRelic: false,
-            onselect
+            awaitingRelic: false
           });
           updateRewardProgression(afterCardsProgression());
         });
       }
-    };
-    
-    const rendered = render(RewardOverlay, {
-      props: {
-        ...baseOverlayProps,
-        cards,
-        onselect
-      }
     });
-    
-    component = rendered.component;
-    const container = rendered.container;
 
     await flushOverlayTicks(2);
 
@@ -226,7 +226,18 @@ describe('four-phase reward overlay behaviour', () => {
 
     let component;
     
-    const onselect = (event) => {
+    const rendered = render(RewardOverlay, {
+      props: {
+        ...baseOverlayProps,
+        relics
+      }
+    });
+    
+    component = rendered.component;
+    const container = rendered.container;
+    
+    const rootElement = container.querySelector('.layout');
+    rootElement.addEventListener('select', (event) => {
       const detail = event.detail;
       detail?.respond?.({ ok: true });
       if (detail?.intent === 'select' && detail?.type === 'relic') {
@@ -240,32 +251,19 @@ describe('four-phase reward overlay behaviour', () => {
             ...baseOverlayProps,
             relics,
             stagedRelics: [staged],
-            awaitingRelic: true,
-            onselect
+            awaitingRelic: true
           });
         });
       } else if (detail?.intent === 'confirm' && detail?.type === 'relic') {
         queueMicrotask(() => {
           component.$set({
             ...baseOverlayProps,
-            awaitingNext: true,
-            onselect
+            awaitingNext: true
           });
           updateRewardProgression(afterRelicsProgression());
         });
       }
-    };
-
-    const rendered = render(RewardOverlay, {
-      props: {
-        ...baseOverlayProps,
-        relics,
-        onselect
-      }
     });
-    
-    component = rendered.component;
-    const container = rendered.container;
 
     await flushOverlayTicks(2);
 
@@ -337,11 +335,12 @@ describe('battle review gating', () => {
       props: {
         ...baseOverlayHostProps,
         roomData: reviewRoom,
-        skipBattleReview: true,
-        onnextRoom: (event) => {
-          nextRoomEvents.push(event.detail ?? {});
-        }
+        skipBattleReview: true
       }
+    });
+    
+    container.addEventListener('nextRoom', (event) => {
+      nextRoomEvents.push(event.detail ?? {});
     });
 
     await flushOverlayTicks(4);
