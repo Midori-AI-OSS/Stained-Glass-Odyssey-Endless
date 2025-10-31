@@ -105,12 +105,20 @@ async def test_stress_100_rooms_full_party():
             pressure=floor * 5,       # Increase pressure each floor
         )
 
-        # Generate 10 random foes for this battle
+        # Generate foes for this battle (aim for 10)
+        # FoeFactory determines count based on party size, pressure, and config
+        # With 5 party members and increasing pressure, we should get multiple foes
         foes = []
-        for foe_idx in range(10):
-            encounter = foe_factory.build_encounter(node, party, max_foes=1)
-            if encounter and len(encounter) > 0:
-                foes.append(encounter[0])
+        max_attempts = 10
+        for attempt in range(max_attempts):
+            encounter = foe_factory.build_encounter(node, party)
+            if encounter:
+                foes.extend(encounter)
+            if len(foes) >= 10:
+                break
+
+        # Limit to exactly 10 foes
+        foes = foes[:10]
 
         if len(foes) < 10:
             log.warning(f"Only generated {len(foes)} foes, expected 10")
