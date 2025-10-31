@@ -38,6 +38,14 @@ from plugins.plugin_loader import PluginLoader
 log = logging.getLogger(__name__)
 
 
+# Test configuration constants
+STRESS_TEST_SEED = 42  # Random seed for reproducibility
+LOOP_INCREMENT = 10    # Floors per loop increment
+PRESSURE_PER_FLOOR = 5 # Pressure increase per floor
+TOTAL_BATTLES = 100    # Number of battles to run
+PROGRESS_LOG_INTERVAL = 10  # Log progress every N floors
+
+
 @pytest.mark.stress
 @pytest.mark.asyncio
 async def test_stress_100_rooms_full_party():
@@ -49,7 +57,7 @@ async def test_stress_100_rooms_full_party():
     Gain a random relic stack after each battle.
     Foe count determined by FoeFactory based on party size and pressure.
     """
-    random.seed(42)  # For reproducibility
+    random.seed(STRESS_TEST_SEED)  # For reproducibility
 
     # Discover all relics and cards
     log.info("Discovering plugins...")
@@ -94,10 +102,10 @@ async def test_stress_100_rooms_full_party():
     battles_lost = 0
     total_foes_defeated = 0
 
-    # Run 100 battles
-    for floor in range(1, 101):
+    # Run battles
+    for floor in range(1, TOTAL_BATTLES + 1):
         log.info(f"\n{'='*60}")
-        log.info(f"Starting Floor {floor}/100")
+        log.info(f"Starting Floor {floor}/{TOTAL_BATTLES}")
         log.info(f"{'='*60}")
 
         # Create battle node for this floor
@@ -106,8 +114,8 @@ async def test_stress_100_rooms_full_party():
             room_type="battle-normal",
             floor=floor,
             index=floor,
-            loop=(floor // 10) + 1,  # Increase loop every 10 floors
-            pressure=floor * 5,       # Increase pressure each floor
+            loop=(floor // LOOP_INCREMENT) + 1,  # Increase loop every N floors
+            pressure=floor * PRESSURE_PER_FLOOR,  # Increase pressure each floor
         )
 
         # Generate foes for this battle
@@ -149,10 +157,10 @@ async def test_stress_100_rooms_full_party():
             party.relics.append(random_relic_id)
             log.info(f"Added relic stack: {random_relic_id} (now {party.relics.count(random_relic_id)} stacks)")
 
-            # Progress update every 10 floors
-            if floor % 10 == 0:
+            # Progress update at intervals
+            if floor % PROGRESS_LOG_INTERVAL == 0:
                 log.info(f"\n{'='*60}")
-                log.info(f"Progress: {floor}/100 floors completed")
+                log.info(f"Progress: {floor}/{TOTAL_BATTLES} floors completed")
                 log.info(f"Stats: {battles_won} wins, {battles_lost} losses, {total_foes_defeated} foes defeated")
                 log.info(f"Party: {len(party.relics)} relic stacks, {len(party.cards)} cards")
                 log.info(f"{'='*60}\n")
@@ -170,7 +178,7 @@ async def test_stress_100_rooms_full_party():
     log.info(f"\n{'='*60}")
     log.info("STRESS TEST COMPLETED")
     log.info(f"{'='*60}")
-    log.info("Total Battles: 100")
+    log.info(f"Total Battles: {TOTAL_BATTLES}")
     log.info(f"Wins: {battles_won}")
     log.info(f"Losses: {battles_lost}")
     log.info(f"Foes Defeated: {total_foes_defeated}")
@@ -178,12 +186,12 @@ async def test_stress_100_rooms_full_party():
     log.info(f"Final Card Count: {len(party.cards)}")
     log.info(f"{'='*60}\n")
 
-    # Assert that we completed all 100 battles without catastrophic failures
-    assert battles_won + battles_lost == 100, "Not all battles were completed"
+    # Assert that we completed all battles without catastrophic failures
+    assert battles_won + battles_lost == TOTAL_BATTLES, f"Not all battles were completed: {battles_won + battles_lost}/{TOTAL_BATTLES}"
 
-    # The test passes if we made it through all 100 rooms without hanging or crashing
+    # The test passes if we made it through all battles without hanging or crashing
     # We don't require winning all battles, just completing them all
-    log.info("✓ Stress test passed: Completed 100 rooms without timeout or crash")
+    log.info(f"✓ Stress test passed: Completed {TOTAL_BATTLES} rooms without timeout or crash")
 
 
 if __name__ == "__main__":
