@@ -255,8 +255,8 @@ def load_party(run_id: str) -> Party:
     try:
         from services.login_reward_service import (
             get_daily_rdr_bonus_sync,  # local import to avoid circular dependency
-            get_daily_theme_bonuses_sync,
         )
+        from services.login_reward_service import get_daily_theme_bonuses_sync
 
         daily_bonus = float(get_daily_rdr_bonus_sync())
         theme_payload = get_daily_theme_bonuses_sync()

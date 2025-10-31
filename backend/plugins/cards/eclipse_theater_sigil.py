@@ -11,9 +11,9 @@ from autofighter.effects import create_stat_buff
 from autofighter.stats import BUS
 from autofighter.stats import Stats
 from plugins.cards._base import CardBase
+from plugins.characters.foe_base import FoeBase
 from plugins.dots.abyssal_weakness import AbyssalWeakness
 from plugins.hots.radiant_regeneration import RadiantRegeneration
-from plugins.characters.foe_base import FoeBase
 
 
 @dataclass

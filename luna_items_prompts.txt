@@ -8,6 +8,8 @@ Balanced Diet: Luna seated at a sunlit wooden table, savoring a balanced plate p
 
 === Missing Relics Art ===
 
+Graviton Locket (graviton_locket): Luna holding a sleek obsidian locket that emanates pulsing gravity waves distorting the space around it; ethereal purple-blue gravitational field lines radiate outward, visibly slowing down shadowy enemies caught in the distortion while Luna appears slightly drained from channeling the gravity pulse; dark cosmic background with warping light trails.
+
 Siege Banner (siegebanner): 
 
 Safeguard Prism (safeguardprism): Luna raising a hexagonal prism of refracted starlight as it blossoms into a rotating shield dome around wounded allies; layered light bands display a subtle turn counter etched in the aura, hinting at the protective cooldown before the prism can flare again.

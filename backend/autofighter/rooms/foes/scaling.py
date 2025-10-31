@@ -12,7 +12,6 @@ from autofighter.mapgen import MapNode
 from autofighter.stats import Stats
 from plugins.characters.foe_base import FoeBase
 
-
 BOSS_RANKS = {
     "boss",
     "prime boss",

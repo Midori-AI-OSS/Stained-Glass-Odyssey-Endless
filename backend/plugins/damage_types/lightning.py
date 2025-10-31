@@ -1,6 +1,6 @@
 import asyncio
-import math
 from dataclasses import dataclass
+import math
 import random
 
 from autofighter.effects import DamageOverTime

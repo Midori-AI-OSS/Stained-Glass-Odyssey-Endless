@@ -2,9 +2,9 @@
 
 import asyncio
 import copy
+from enum import Enum
 import json
 import os
-from enum import Enum
 from pathlib import Path
 import sys
 import types

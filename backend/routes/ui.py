@@ -656,7 +656,7 @@ async def handle_ui_action() -> tuple[str, int, dict[str, Any]]:
                             state["awaiting_card"] = False
                         elif current_step == REWARD_STEP_RELICS:
                             state["awaiting_relic"] = False
-                        
+
                         # Manually advance to next uncompleted step
                         available_steps = progression.get("available", [])
                         next_step = None
@@ -666,7 +666,7 @@ async def handle_ui_action() -> tuple[str, int, dict[str, Any]]:
                                 break
                         if next_step:
                             progression["current_step"] = next_step
-                    
+
                     # Update progression to advance to next step
                     state["reward_progression"] = progression
 

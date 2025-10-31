@@ -1,13 +1,13 @@
-import random
 import asyncio
-import itertools
 import importlib.util
+import itertools
 from pathlib import Path
+import random
 
 import pytest
 
-import autofighter.rooms.battle.core as rooms_module
 from autofighter.rooms.battle import resolution as resolution_module
+import autofighter.rooms.battle.core as rooms_module
 
 
 @pytest.fixture()
