@@ -2,7 +2,7 @@
 Stress test for 100 rooms with full party, all relics, and all cards.
 
 This test is marked as 'stress' and will not run during regular test execution.
-Run it explicitly with: docker compose run backend pytest -v -m stress tests/test_stress_100_rooms.py
+Run it explicitly with: docker compose -f compose.stress-test.yaml run stress-test
 
 The test verifies:
 - All relics can be applied and work correctly

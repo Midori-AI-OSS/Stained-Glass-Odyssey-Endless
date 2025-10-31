@@ -75,19 +75,6 @@ services:
       - autofighter-network
     profiles:
       - llm-cpu
-  stress-test:
-    <<: *backend-base
-    command: uv run pytest -v -m stress tests/test_stress_100_rooms.py
-    environment:
-      AF_DB_PATH: /app/save.db
-      AF_DB_KEY: ${AF_DB_KEY}
-    volumes:
-      - ./backend:/app
-      - ${HOME}/.cache:/.cache
-    networks:
-      - autofighter-network
-    profiles:
-      - stress-test
 
 networks:
   autofighter-network:

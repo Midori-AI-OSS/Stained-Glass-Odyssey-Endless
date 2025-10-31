@@ -18,11 +18,11 @@ The test validates:
 
 ## Running the Test
 
-### Option 1: Docker Compose (Recommended)
+### Option 1: Docker Compose with Separate File (Recommended)
 
 ```bash
-# Run with docker compose using the stress-test profile
-docker compose --profile stress-test run stress-test
+# Run with dedicated compose file
+docker compose -f compose.stress-test.yaml run stress-test
 ```
 
 ### Option 2: Direct Docker Command
@@ -38,6 +38,22 @@ docker compose run backend uv run pytest -v -m stress tests/test_stress_100_room
 # From the backend directory
 cd backend
 uv run pytest -v -m stress tests/test_stress_100_rooms.py
+```
+
+## Docker Compose Configuration
+
+The stress test uses a dedicated `compose.stress-test.yaml` file with the following configuration:
+- `tty: true` - Enables interactive terminal for better output display
+- `restart: "no"` - Prevents automatic restart on failure (test should run once)
+- External network - Uses the existing `autofighter-network`
+
+To run the test, ensure the main application network exists:
+```bash
+# Create network if it doesn't exist
+docker network create autofighter-network
+
+# Run stress test
+docker compose -f compose.stress-test.yaml run stress-test
 ```
 
 ## Test Behavior

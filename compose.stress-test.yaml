@@ -1,0 +1,20 @@
+services:
+  stress-test:
+    build:
+      context: ./backend
+      dockerfile: ../Dockerfile.python
+    command: uv run pytest -v -m stress tests/test_stress_100_rooms.py
+    tty: true
+    restart: "no"
+    environment:
+      AF_DB_PATH: /app/save.db
+      AF_DB_KEY: ${AF_DB_KEY}
+    volumes:
+      - ./backend:/app
+      - ${HOME}/.cache:/.cache
+    networks:
+      - autofighter-network
+
+networks:
+  autofighter-network:
+    external: true
