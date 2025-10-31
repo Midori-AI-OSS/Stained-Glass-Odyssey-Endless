@@ -1,5 +1,5 @@
 """
-Stress test for 100 rooms with full party, all relics, all cards, and 10 foes per battle.
+Stress test for 100 rooms with full party, all relics, and all cards.
 
 This test is marked as 'stress' and will not run during regular test execution.
 Run it explicitly with: docker compose run backend pytest -v -m stress tests/test_stress_100_rooms.py
@@ -10,6 +10,10 @@ The test verifies:
 - Async operations don't timeout over 100 battles
 - Characters (Player, Carly, Lady Echo, Lady Darkness, Lady Light) function properly
 - Passives trigger correctly throughout extended gameplay
+- FoeFactory generates appropriate encounters based on party size and pressure
+
+Note: This test uses FoeFactory to generate encounters, then passes them to BattleRoom
+to ensure we're testing the same foe generation logic used in actual gameplay.
 """
 import logging
 from pathlib import Path
@@ -38,11 +42,12 @@ log = logging.getLogger(__name__)
 @pytest.mark.asyncio
 async def test_stress_100_rooms_full_party():
     """
-    Stress test: 100 battles with 5 party members vs 10 foes each.
+    Stress test: 100 battles with 5 party members vs multiple foes.
 
     Party: Player, Carly, Lady Echo, Lady Darkness, Lady Light
     Start with 1 of every relic and card.
     Gain a random relic stack after each battle.
+    Foe count determined by FoeFactory based on party size and pressure.
     """
     random.seed(42)  # For reproducibility
 
@@ -105,23 +110,10 @@ async def test_stress_100_rooms_full_party():
             pressure=floor * 5,       # Increase pressure each floor
         )
 
-        # Generate foes for this battle (aim for 10)
-        # FoeFactory determines count based on party size, pressure, and config
-        # With 5 party members and increasing pressure, we should get multiple foes
-        foes = []
-        max_attempts = 10
-        for attempt in range(max_attempts):
-            encounter = foe_factory.build_encounter(node, party)
-            if encounter:
-                foes.extend(encounter)
-            if len(foes) >= 10:
-                break
-
-        # Limit to exactly 10 foes
-        foes = foes[:10]
-
-        if len(foes) < 10:
-            log.warning(f"Only generated {len(foes)} foes, expected 10")
+        # Generate foes for this battle
+        # Let FoeFactory determine count based on party size, pressure, and config
+        # With 5 party members and increasing pressure, it will generate appropriate foes
+        foes = foe_factory.build_encounter(node, party)
 
         log.info(f"Generated {len(foes)} foes: {[f.id for f in foes]}")
         log.info(f"Party has {len(party.relics)} relic stacks, {len(party.cards)} cards")

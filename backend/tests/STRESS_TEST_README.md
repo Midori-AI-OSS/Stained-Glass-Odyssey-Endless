@@ -3,7 +3,7 @@
 This stress test verifies the game engine can handle extended gameplay with:
 - 5 party members (Player, Carly, Lady Echo, Lady Darkness, Lady Light)
 - All relics and cards enabled
-- 10 random foes per battle
+- Multiple foes per battle (determined by FoeFactory based on party size and pressure)
 - 100 consecutive battles
 - Relic stacking after each battle
 
@@ -47,7 +47,7 @@ The test will:
 2. Create a party with 5 specific characters
 3. Initialize the party with 1 of every relic and card
 4. Run 100 battles sequentially:
-   - Each battle has 10 randomly generated foes
+   - Each battle generates foes using FoeFactory (count based on party size and pressure)
    - Floor difficulty increases with pressure and loop values
    - After each battle, a random relic is added (stacking)
 5. Log progress every 10 floors
@@ -76,7 +76,7 @@ Success criteria:
 - No catastrophic errors or crashes
 - Async operations handle properly
 
-The test does NOT require winning all battles - some losses are expected with 10 foes per battle. The key validation is that the system remains stable throughout extended play.
+The test does NOT require winning all battles - some losses are expected depending on foe count and difficulty. The key validation is that the system remains stable throughout extended play.
 
 ## Troubleshooting
 
@@ -90,6 +90,6 @@ If the test fails or hangs:
 
 To adjust test parameters, edit `backend/tests/test_stress_100_rooms.py`:
 - `range(1, 101)`: Change to test fewer/more battles
-- `max_foes=1` with loop: Adjust foe count per battle
-- `random.seed(42)`: Change or remove for different random outcomes
+- `pressure=floor * 5`: Adjust pressure scaling
 - Party members: Add/remove characters from the party
+- FoeFactory config: Modify ROOM_BALANCE_CONFIG for different foe counts
