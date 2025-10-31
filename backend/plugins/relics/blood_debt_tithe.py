@@ -62,7 +62,8 @@ class BloodDebtTithe(RelicBase):
             if not _is_foe(entity):
                 return
 
-            entity_id = id(entity)
+            # Use entity's id attribute for stable tracking across the battle
+            entity_id = getattr(entity, "id", id(entity))
             current_state["seen_foes_this_battle"].add(entity_id)
 
         async def _on_battle_start(entity) -> None:
