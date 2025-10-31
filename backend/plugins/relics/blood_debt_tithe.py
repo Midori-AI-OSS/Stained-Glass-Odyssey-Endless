@@ -29,8 +29,8 @@ class BloodDebtTithe(RelicBase):
 
         stacks = party.relics.count(self.id)
 
-        # Get persistent defeat count from the party (survives battle cloning)
-        total_defeats = getattr(party, "_blood_debt_tithe_total_defeats", 0)
+        # Get persistent defeat count from party's relic_persistent_state dictionary
+        total_defeats = party.relic_persistent_state.get("blood_debt_tithe_total_defeats", 0)
 
         # Initialize state tracking
         state = getattr(party, "_blood_debt_tithe_state", None)
@@ -147,9 +147,9 @@ class BloodDebtTithe(RelicBase):
             if new_defeats <= 0:
                 return
 
-            # Update total defeats in both state and persistent party attribute
+            # Update total defeats in both state and persistent party dictionary
             current_state["total_defeats"] += new_defeats
-            party._blood_debt_tithe_total_defeats = current_state["total_defeats"]
+            party.relic_persistent_state["blood_debt_tithe_total_defeats"] = current_state["total_defeats"]
 
             # Increase rare drop rate: 0.2 percentage points per stack per defeat
             rdr_increase = 0.002 * current_stacks * new_defeats

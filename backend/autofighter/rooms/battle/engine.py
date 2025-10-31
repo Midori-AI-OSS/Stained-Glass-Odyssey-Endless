@@ -183,15 +183,13 @@ async def run_battle(
     party.cards = combat_party.cards
     party.no_shops = getattr(combat_party, "no_shops", getattr(party, "no_shops", False))
     party.no_rests = getattr(combat_party, "no_rests", getattr(party, "no_rests", False))
+    party.relic_persistent_state = combat_party.relic_persistent_state.copy()
 
     if hasattr(combat_party, "pull_tokens"):
         party.pull_tokens = getattr(combat_party, "pull_tokens", getattr(party, "pull_tokens", 0))
     if hasattr(combat_party, "_null_lantern_cleared"):
         cleared = getattr(combat_party, "_null_lantern_cleared", 0)
         setattr(party, "_null_lantern_cleared", cleared)
-    if hasattr(combat_party, "_blood_debt_tithe_total_defeats"):
-        total_defeats = getattr(combat_party, "_blood_debt_tithe_total_defeats", 0)
-        setattr(party, "_blood_debt_tithe_total_defeats", total_defeats)
     if hasattr(combat_party, "guiding_compass_bonus_used"):
         setattr(
             party,
