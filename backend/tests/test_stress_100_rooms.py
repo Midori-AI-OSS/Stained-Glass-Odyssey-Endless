@@ -40,8 +40,8 @@ log = logging.getLogger(__name__)
 
 # Test configuration constants
 STRESS_TEST_SEED = 42  # Random seed for reproducibility
-LOOP_INCREMENT = 10  # Rooms per loop increment
-PRESSURE_PER_ROOM = 5  # Pressure increase per room
+LOOP_INCREMENT = 10  # Rooms per loop increment (not used - all rooms at loop 1)
+PRESSURE_PER_ROOM = 0  # Pressure per room (set to 0 for consistent testing)
 TOTAL_ROOMS = 100  # Number of rooms to run
 PROGRESS_LOG_INTERVAL = 10  # Log progress every N rooms
 
@@ -128,13 +128,14 @@ async def test_stress_100_rooms_full_party():
         log.info(f"{'='*60}")
 
         # Create battle node for this room
+        # All rooms at same difficulty (floor=1, loop=1, pressure=0) for consistent stress testing
         node = MapNode(
             room_id=room,
             room_type="battle-normal",
-            floor=room,  # In game terms, each room is also a floor/stage
-            index=room,
-            loop=(room // LOOP_INCREMENT) + 1,  # Increase loop every N rooms
-            pressure=room * PRESSURE_PER_ROOM,  # Increase pressure each room
+            floor=1,  # Hard set to 1 - all rooms at same floor level
+            index=room,  # Index tracks which room we're on (1-100)
+            loop=1,  # Hard set to 1 - no loop progression
+            pressure=0,  # Hard set to 0 - no pressure scaling
         )
 
         # Generate foes for this battle

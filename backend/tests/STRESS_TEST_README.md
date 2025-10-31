@@ -72,8 +72,8 @@ The test will:
 2. Create a party with 5 specific characters
 3. Initialize the party with 1 of every relic and card
 4. Run 100 rooms sequentially:
-   - Each room generates foes using FoeFactory (count based on party size and pressure)
-   - Room difficulty increases with pressure and loop values
+   - Each room generates foes using FoeFactory at consistent difficulty (floor=1, loop=1, pressure=0)
+   - All rooms at same base difficulty to properly stress test relics, cards, and passives
    - After each room, a random relic is added (stacking)
 5. Log progress every 10 rooms
 6. Report final statistics
@@ -115,7 +115,7 @@ If the test fails or hangs:
 
 To adjust test parameters, edit `backend/tests/test_stress_100_rooms.py`:
 - `TOTAL_ROOMS = 100`: Change to test fewer/more rooms
-- `PRESSURE_PER_ROOM = 5`: Adjust pressure scaling per room
-- `LOOP_INCREMENT = 10`: Change how often loop difficulty increases
+- Room difficulty: Currently set to floor=1, loop=1, pressure=0 for all rooms (consistent difficulty)
+- To enable difficulty scaling, modify the MapNode creation in the test
 - Party members: Add/remove characters from the party
 - FoeFactory config: Modify ROOM_BALANCE_CONFIG for different foe counts
