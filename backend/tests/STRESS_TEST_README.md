@@ -1,18 +1,18 @@
-# Stress Test: 100 Room Battle
+# Stress Test: 100 Rooms
 
 This stress test verifies the game engine can handle extended gameplay with:
 - 5 party members (Player, Carly, Lady Echo, Lady Darkness, Lady Light)
 - All relics and cards enabled
-- Multiple foes per battle (determined by FoeFactory based on party size and pressure)
-- 100 consecutive battles
-- Relic stacking after each battle
+- Multiple foes per room (determined by FoeFactory based on party size and pressure)
+- 100 consecutive rooms (battle rooms)
+- Relic stacking after each room
 
 ## Purpose
 
 The test validates:
 - **Relics**: All relic plugins work correctly and can be stacked
 - **Cards**: All card plugins can be added to the party
-- **Async Operations**: No timeouts or deadlocks over 100 battles
+- **Async Operations**: No timeouts or deadlocks over 100 rooms
 - **Characters**: All party members function properly in combat
 - **Passives**: Character abilities and passives trigger correctly
 
@@ -52,8 +52,8 @@ The stress test uses a dedicated `compose.stress-test.yaml` file with the follow
 The test provides real-time feedback with:
 - 🔍 Plugin discovery progress
 - 👥 Party initialization status
-- ⚔️ Battle-by-battle progress with results
-- 📊 Progress updates every 10 floors
+- ⚔️ Room-by-room progress with results
+- 📊 Progress updates every 10 rooms
 - 🎉 Final statistics summary
 
 To run the test, ensure the main application network exists:
@@ -71,11 +71,11 @@ The test will:
 1. Discover all available relic and card plugins
 2. Create a party with 5 specific characters
 3. Initialize the party with 1 of every relic and card
-4. Run 100 battles sequentially:
-   - Each battle generates foes using FoeFactory (count based on party size and pressure)
-   - Floor difficulty increases with pressure and loop values
-   - After each battle, a random relic is added (stacking)
-5. Log progress every 10 floors
+4. Run 100 rooms sequentially:
+   - Each room generates foes using FoeFactory (count based on party size and pressure)
+   - Room difficulty increases with pressure and loop values
+   - After each room, a random relic is added (stacking)
+5. Log progress every 10 rooms
 6. Report final statistics
 
 ## Expected Duration
@@ -97,7 +97,7 @@ It must be explicitly invoked using the `-m stress` marker.
 ## Interpreting Results
 
 Success criteria:
-- All 100 battles complete without timeout
+- All 100 rooms complete without timeout
 - No catastrophic errors or crashes
 - Async operations handle properly
 
@@ -106,7 +106,7 @@ The test does NOT require winning all battles - some losses are expected dependi
 ## Troubleshooting
 
 If the test fails or hangs:
-1. Check the logs for the specific floor where failure occurred
+1. Check the logs for the specific room where failure occurred
 2. Verify all plugin dependencies are installed
 3. Ensure sufficient system resources (CPU/memory)
 4. Check for infinite loops in relic/passive interactions
@@ -114,7 +114,8 @@ If the test fails or hangs:
 ## Modifying the Test
 
 To adjust test parameters, edit `backend/tests/test_stress_100_rooms.py`:
-- `range(1, 101)`: Change to test fewer/more battles
-- `pressure=floor * 5`: Adjust pressure scaling
+- `TOTAL_ROOMS = 100`: Change to test fewer/more rooms
+- `PRESSURE_PER_ROOM = 5`: Adjust pressure scaling per room
+- `LOOP_INCREMENT = 10`: Change how often loop difficulty increases
 - Party members: Add/remove characters from the party
 - FoeFactory config: Modify ROOM_BALANCE_CONFIG for different foe counts

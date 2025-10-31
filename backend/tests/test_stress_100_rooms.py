@@ -7,7 +7,7 @@ Run it explicitly with: docker compose -f compose.stress-test.yaml run stress-te
 The test verifies:
 - All relics can be applied and work correctly
 - All cards can be added to the party
-- Async operations don't timeout over 100 battles
+- Async operations don't timeout over 100 rooms
 - Characters (Player, Carly, Lady Echo, Lady Darkness, Lady Light) function properly
 - Passives trigger correctly throughout extended gameplay
 - FoeFactory generates appropriate encounters based on party size and pressure
@@ -40,17 +40,17 @@ log = logging.getLogger(__name__)
 
 # Test configuration constants
 STRESS_TEST_SEED = 42  # Random seed for reproducibility
-LOOP_INCREMENT = 10  # Floors per loop increment
-PRESSURE_PER_FLOOR = 5  # Pressure increase per floor
-TOTAL_BATTLES = 100  # Number of battles to run
-PROGRESS_LOG_INTERVAL = 10  # Log progress every N floors
+LOOP_INCREMENT = 10  # Rooms per loop increment
+PRESSURE_PER_ROOM = 5  # Pressure increase per room
+TOTAL_ROOMS = 100  # Number of rooms to run
+PROGRESS_LOG_INTERVAL = 10  # Log progress every N rooms
 
 
 @pytest.mark.stress
 @pytest.mark.asyncio
 async def test_stress_100_rooms_full_party():
     """
-    Stress test: 100 battles with 5 party members vs multiple foes.
+    Stress test: 100 rooms with 5 party members vs multiple foes.
 
     Party: Player, Carly, Lady Echo, Lady Darkness, Lady Light
     Start with 1 of every relic and card.
@@ -61,9 +61,9 @@ async def test_stress_100_rooms_full_party():
     print("STRESS TEST STARTING")
     print("="*80)
     print("Configuration:")
-    print(f"  - Total Battles: {TOTAL_BATTLES}")
+    print(f"  - Total Rooms: {TOTAL_ROOMS}")
     print(f"  - Random Seed: {STRESS_TEST_SEED}")
-    print(f"  - Progress Logging: Every {PROGRESS_LOG_INTERVAL} floors")
+    print(f"  - Progress Logging: Every {PROGRESS_LOG_INTERVAL} rooms")
     print("="*80 + "\n")
 
     random.seed(STRESS_TEST_SEED)  # For reproducibility
@@ -117,24 +117,24 @@ async def test_stress_100_rooms_full_party():
     total_foes_defeated = 0
 
     print(f"\n{'='*80}")
-    print(f"🎮 STARTING {TOTAL_BATTLES} BATTLES")
+    print(f"🎮 STARTING {TOTAL_ROOMS} ROOMS")
     print(f"{'='*80}\n")
 
-    # Run battles
-    for floor in range(1, TOTAL_BATTLES + 1):
-        print(f"⚔️  Floor {floor}/{TOTAL_BATTLES} - Starting battle...")
+    # Run rooms (battles)
+    for room in range(1, TOTAL_ROOMS + 1):
+        print(f"⚔️  Room {room}/{TOTAL_ROOMS} - Starting battle...")
         log.info(f"\n{'='*60}")
-        log.info(f"Starting Floor {floor}/{TOTAL_BATTLES}")
+        log.info(f"Starting Room {room}/{TOTAL_ROOMS}")
         log.info(f"{'='*60}")
 
-        # Create battle node for this floor
+        # Create battle node for this room
         node = MapNode(
-            room_id=floor,
+            room_id=room,
             room_type="battle-normal",
-            floor=floor,
-            index=floor,
-            loop=(floor // LOOP_INCREMENT) + 1,  # Increase loop every N floors
-            pressure=floor * PRESSURE_PER_FLOOR,  # Increase pressure each floor
+            floor=room,  # In game terms, each room is also a floor/stage
+            index=room,
+            loop=(room // LOOP_INCREMENT) + 1,  # Increase loop every N rooms
+            pressure=room * PRESSURE_PER_ROOM,  # Increase pressure each room
         )
 
         # Generate foes for this battle
@@ -152,22 +152,22 @@ async def test_stress_100_rooms_full_party():
                 member.hp = member.max_hp
 
         # Create and run battle
-        room = BattleRoom(node)
+        battle_room = BattleRoom(node)
 
         try:
             # Run the battle with custom foes
-            result = await room.resolve(party, {}, foe=foes)
+            result = await battle_room.resolve(party, {}, foe=foes)
 
             # Check battle result
             if result.get("victory", False):
                 battles_won += 1
                 total_foes_defeated += len(foes)
                 print(f"   ✅ VICTORY! (Total: {battles_won}W/{battles_lost}L)")
-                log.info(f"✓ Floor {floor} - VICTORY! ({battles_won} wins, {battles_lost} losses)")
+                log.info(f"✓ Room {room} - VICTORY! ({battles_won} wins, {battles_lost} losses)")
             else:
                 battles_lost += 1
                 print(f"   ❌ DEFEAT (Total: {battles_won}W/{battles_lost}L)")
-                log.info(f"✗ Floor {floor} - DEFEAT ({battles_won} wins, {battles_lost} losses)")
+                log.info(f"✗ Room {room} - DEFEAT ({battles_won} wins, {battles_lost} losses)")
 
                 # Revive party for next battle
                 for member in party.members:
@@ -180,22 +180,22 @@ async def test_stress_100_rooms_full_party():
             log.info(f"Added relic stack: {random_relic_id} (now {party.relics.count(random_relic_id)} stacks)")
 
             # Progress update at intervals
-            if floor % PROGRESS_LOG_INTERVAL == 0:
+            if room % PROGRESS_LOG_INTERVAL == 0:
                 print(f"\n{'='*80}")
-                print(f"📊 PROGRESS UPDATE: {floor}/{TOTAL_BATTLES} battles completed")
+                print(f"📊 PROGRESS UPDATE: {room}/{TOTAL_ROOMS} rooms completed")
                 print(f"   Stats: {battles_won} wins, {battles_lost} losses")
                 print(f"   Foes Defeated: {total_foes_defeated}")
                 print(f"   Party: {len(party.relics)} relic stacks, {len(party.cards)} cards")
                 print(f"{'='*80}\n")
                 log.info(f"\n{'='*60}")
-                log.info(f"Progress: {floor}/{TOTAL_BATTLES} floors completed")
+                log.info(f"Progress: {room}/{TOTAL_ROOMS} rooms completed")
                 log.info(f"Stats: {battles_won} wins, {battles_lost} losses, {total_foes_defeated} foes defeated")
                 log.info(f"Party: {len(party.relics)} relic stacks, {len(party.cards)} cards")
                 log.info(f"{'='*60}\n")
 
         except Exception as e:
-            print(f"   ⚠️  ERROR in battle {floor}: {e}")
-            log.error(f"Battle {floor} failed with error: {e}", exc_info=True)
+            print(f"   ⚠️  ERROR in room {room}: {e}")
+            log.error(f"Room {room} failed with error: {e}", exc_info=True)
             battles_lost += 1
 
             # Revive party for next battle
@@ -207,7 +207,7 @@ async def test_stress_100_rooms_full_party():
     print(f"\n{'='*80}")
     print("🎉 STRESS TEST COMPLETED")
     print(f"{'='*80}")
-    print(f"Total Battles: {TOTAL_BATTLES}")
+    print(f"Total Rooms: {TOTAL_ROOMS}")
     print(f"Wins: {battles_won}")
     print(f"Losses: {battles_lost}")
     print(f"Foes Defeated: {total_foes_defeated}")
@@ -217,7 +217,7 @@ async def test_stress_100_rooms_full_party():
     log.info(f"\n{'='*60}")
     log.info("STRESS TEST COMPLETED")
     log.info(f"{'='*60}")
-    log.info(f"Total Battles: {TOTAL_BATTLES}")
+    log.info(f"Total Rooms: {TOTAL_ROOMS}")
     log.info(f"Wins: {battles_won}")
     log.info(f"Losses: {battles_lost}")
     log.info(f"Foes Defeated: {total_foes_defeated}")
@@ -225,13 +225,13 @@ async def test_stress_100_rooms_full_party():
     log.info(f"Final Card Count: {len(party.cards)}")
     log.info(f"{'='*60}\n")
 
-    # Assert that we completed all battles without catastrophic failures
-    assert battles_won + battles_lost == TOTAL_BATTLES, f"Not all battles were completed: {battles_won + battles_lost}/{TOTAL_BATTLES}"
+    # Assert that we completed all rooms without catastrophic failures
+    assert battles_won + battles_lost == TOTAL_ROOMS, f"Not all rooms were completed: {battles_won + battles_lost}/{TOTAL_ROOMS}"
 
-    # The test passes if we made it through all battles without hanging or crashing
+    # The test passes if we made it through all rooms without hanging or crashing
     # We don't require winning all battles, just completing them all
-    print(f"✅ Stress test passed: Completed {TOTAL_BATTLES} rooms without timeout or crash\n")
-    log.info(f"✓ Stress test passed: Completed {TOTAL_BATTLES} rooms without timeout or crash")
+    print(f"✅ Stress test passed: Completed {TOTAL_ROOMS} rooms without timeout or crash\n")
+    log.info(f"✓ Stress test passed: Completed {TOTAL_ROOMS} rooms without timeout or crash")
 
 
 if __name__ == "__main__":
