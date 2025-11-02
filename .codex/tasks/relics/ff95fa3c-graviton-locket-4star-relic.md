@@ -25,4 +25,34 @@ Implementation completed in PR #[TBD]. All tests passing (7/7). Code review comp
 - 1% Max HP drain per stack per turn creates meaningful cost without being punishing
 - Drain only while gravity is active prevents runaway costs in long battles
 
-ready for review
+## Audit Completed (2025-11-02, Auditor Mode)
+
+### Summary
+The Graviton Locket relic implementation is **COMPLETE** and fully satisfies all acceptance criteria. All code changes have been committed, all tests pass, and the implementation follows repository patterns correctly.
+
+### Audit Findings
+- ✅ **Implementation**: `backend/plugins/relics/graviton_locket.py` correctly implements all required functionality
+- ✅ **Tests**: 7 comprehensive tests in `backend/tests/test_graviton_locket.py` all pass (7/7 in 0.41s)
+- ✅ **Code Quality**: Passes linting with no issues
+- ✅ **Documentation**: Clear `about` string and detailed `describe()` method
+- ✅ **Art Prompt**: Added to `luna_items_prompts.txt` line 13
+- ✅ **Mechanics**: Gravity debuff (30% SPD, 12% DEF reduction per stack), duration scaling (2 + stacks turns), HP drain (1% Max HP per stack per turn while active)
+- ✅ **Telemetry**: Proper event emission for gravity application and HP drain
+- ✅ **Cleanup**: All modifiers and subscriptions properly cleared on battle_end
+- ✅ **Edge Cases**: Multiple enemies, gravity expiration, and stack scaling all tested
+
+### Verified Test Coverage
+1. `test_graviton_locket_applies_gravity_debuff_to_enemies` - Confirms debuff application
+2. `test_graviton_locket_hp_drain_while_gravity_active` - Verifies HP drain mechanic
+3. `test_graviton_locket_no_drain_after_gravity_expires` - Ensures drain stops when gravity expires
+4. `test_graviton_locket_duration_scales_with_stacks` - Validates duration scaling
+5. `test_graviton_locket_cleanup_on_battle_end` - Confirms proper cleanup
+6. `test_graviton_locket_describe` - Tests description generation
+7. `test_graviton_locket_multiple_enemies` - Verifies AoE application
+
+### Notes
+- Per AGENTS.md guidance, plugin module documentation is sufficient; no separate `.codex/docs/relics/` documentation is required
+- Balancing notes are appropriately captured in the task file for maintainer reference
+- Implementation follows the same patterns as other relics (Greed Engine for HP drain, Null Lantern for enemy debuffs)
+
+requesting review from the Task Master
