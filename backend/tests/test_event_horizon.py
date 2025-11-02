@@ -8,10 +8,6 @@ from plugins.characters._base import PlayerBase
 from plugins.characters.foe_base import FoeBase
 from plugins.relics.event_horizon import EventHorizon
 
-"""Test suite for Event Horizon relic."""
-
-
-
 
 def create_fresh_party():
     """Create a fresh test party with two members."""
