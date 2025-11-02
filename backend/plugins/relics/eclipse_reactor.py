@@ -142,7 +142,7 @@ class EclipseReactor(RelicBase):
                     },
                 )
 
-        async def _turn_start() -> None:
+        async def _turn_start(_entity=None, *_ignored) -> None:
             current_state = getattr(party, "_eclipse_reactor_state", state)
             if not current_state.get("surge_active"):
                 return
