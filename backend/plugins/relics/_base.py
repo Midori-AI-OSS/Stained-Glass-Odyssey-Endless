@@ -84,7 +84,12 @@ class RelicBase:
         self._mods = []
 
     def describe(self, stacks: int) -> str:
-        return self.summarized_about
+        """Return the summarized description of this relic.
+
+        During migration, falls back to empty string if summarized_about is not set.
+        Plugin developers should update their relics to provide summarized_about.
+        """
+        return self.summarized_about or ""
 
     def preview_summary(self) -> str | None:
         summarized = getattr(self, "summarized_about", "")

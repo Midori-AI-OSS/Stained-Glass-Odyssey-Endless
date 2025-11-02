@@ -49,6 +49,14 @@ class CardBase:
     )
 
     def __post_init__(self) -> None:
+        """Initialize card subscriptions and auto-generate summarized_about if needed.
+
+        Auto-generation behavior:
+        - Only triggers if summarized_about is empty AND effects dict is non-empty
+        - Generates a simple comma-separated list of effect changes (e.g., "+5% atk, +3% defense")
+        - Providing any value for summarized_about disables auto-generation entirely
+        - Plugin developers should typically provide both full_about and summarized_about explicitly
+        """
         self._subscriptions = SubscriptionRegistry()
         if not self.summarized_about and self.effects:
             parts: list[str] = []

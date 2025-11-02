@@ -177,6 +177,52 @@ See `.codex/tasks/00-card-relic-documentation-overview.md` for the complete migr
 
 This is a breaking change that requires all existing card and relic plugins to be updated. The migration is tracked through individual task files, with contributors able to pick up tasks as they have time.
 
+### Migration Phases:
+
+1. **Phase 1 (Complete):** Base class updates
+   - CardBase and RelicBase now support the new field structure
+   - Migration guide published
+   - Auto-generation fallback for simple cards
+
+2. **Phase 2 (In Progress):** Plugin migration
+   - 61 card plugins to update
+   - 41 relic plugins to update
+   - Task files available in `.codex/tasks/cards/` and `.codex/tasks/relics/`
+
+3. **Phase 3 (Future):** Test updates and validation
+   - Update affected test files
+   - Verify all plugins load correctly
+   - Validate UI displays correct descriptions
+
+### Expected Duration:
+- Individual plugin updates: 5-10 minutes each
+- Total migration effort: ~8-12 hours distributed across contributors
+- Timeline: Complete within 2-4 weeks depending on contributor availability
+
 ## Backward Compatibility
 
 There is **no backward compatibility** for the `about` field. All plugins must be updated to use the new fields. The base classes will auto-generate `summarized_about` from effects if not provided, but this is only a temporary fallback for cards with simple stat modifications.
+
+### Temporary Measures:
+- CardBase auto-generates `summarized_about` for simple stat-only cards
+- RelicBase `describe()` returns empty string if `summarized_about` is not set
+- These fallbacks are transitional and should not be relied upon long-term
+
+## Conclusion
+
+This migration establishes a foundation for better game documentation and future AI-powered features. The structured approach with individual task files ensures the migration can be completed incrementally without blocking other development work.
+
+### Key Benefits:
+- **Better tooltips:** Concise `summarized_about` for UI display
+- **Comprehensive docs:** Detailed `full_about` for help systems
+- **AI integration:** Structured data enables LLM-based features
+- **Consistency:** Uniform documentation across all plugins
+
+### Getting Started:
+1. Review this migration guide
+2. Pick a task from `.codex/tasks/cards/` or `.codex/tasks/relics/`
+3. Update the plugin following the examples above
+4. Test that the plugin loads correctly
+5. Mark the task as complete
+
+For questions or issues during migration, refer to the task overview at `.codex/tasks/00-card-relic-documentation-overview.md` or add comments to relevant task files.
