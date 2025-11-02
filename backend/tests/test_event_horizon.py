@@ -181,9 +181,9 @@ async def test_event_horizon_minimum_damage():
         ally = party.members[0]
         await BUS.emit_async("turn_start", ally)
 
-        # 12% of 5 HP = 0.6, should be rounded to 1 minimum
+        # 12% of 5 HP = 0.6, should be minimum 2 (1 per stack)
         assert len(events) == 1
-        assert events[0] >= 1
+        assert events[0] == 2  # Minimum 1 per stack with 2 stacks
     finally:
         BUS.unsubscribe("relic_effect", track_event)
         relic.clear_subscriptions(party)

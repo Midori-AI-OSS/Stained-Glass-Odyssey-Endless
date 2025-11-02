@@ -79,9 +79,9 @@ class EventHorizon(RelicBase):
                 if foe_hp <= 0 or foe_max_hp <= 0:
                     continue
 
-                # Calculate 6% of foe's current HP per stack, minimum 1
+                # Calculate 6% of foe's current HP per stack, minimum 1 per stack
                 raw_damage = foe_hp * 0.06 * current_stacks
-                damage = max(1, int(raw_damage))
+                damage = max(current_stacks, int(raw_damage))
 
                 await BUS.emit_async(
                     "relic_effect",
