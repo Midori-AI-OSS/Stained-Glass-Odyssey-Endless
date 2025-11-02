@@ -32,7 +32,7 @@ class EventHorizon(RelicBase):
         if state is None:
             state = {
                 "stacks": stacks,
-                "foes": [],
+                "foes": {},
             }
             party._event_horizon_state = state
         else:
@@ -52,8 +52,7 @@ class EventHorizon(RelicBase):
 
             # Track foes when they start their turn
             if isinstance(entity, FoeBase):
-                if entity not in current_state["foes"]:
-                    current_state["foes"].append(entity)
+                current_state["foes"][id(entity)] = entity
                 return
 
             # Only process gravity pulses for allies
@@ -65,7 +64,11 @@ class EventHorizon(RelicBase):
                 return
 
             # Get living foes
-            living_foes = [foe for foe in current_state["foes"] if getattr(foe, "hp", 0) > 0]
+            living_foes = [
+                foe
+                for foe in current_state["foes"].values()
+                if getattr(foe, "hp", 0) > 0
+            ]
 
             # Skip if no living foes
             if not living_foes:
