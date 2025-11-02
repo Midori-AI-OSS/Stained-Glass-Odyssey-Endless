@@ -1,9 +1,9 @@
 /**
  * Check if PR changes contain "ready to review" or "ready for review" markers
- * in .codex/tasks files and add "auditable" label if found.
- * 
- * This script is designed to run in GitHub Actions context with @actions/github
- * and @actions/core packages available.
+ * in .codex/tasks files and add the "auditable" label if found.
+ *
+ * NOTE: This trimmed script only adds the label. It no longer posts comments
+ * to the PR or triggers any automated audit agent/workflow.
  */
 
 module.exports = async ({ github, context, core }) => {
@@ -77,8 +77,9 @@ module.exports = async ({ github, context, core }) => {
 
     if (foundReadyMarker) {
       core.info(`Found "ready to review" in ${filesWithMarker.length} file(s): ${filesWithMarker.join(', ')}`);
-      
-      // Add "auditable" label to the PR
+
+      // Add the "auditable" label to the PR. Do NOT post comments or trigger
+      // any auto-audit workflows from this script.
       try {
         await github.rest.issues.addLabels({
           owner: context.repo.owner,
@@ -87,17 +88,8 @@ module.exports = async ({ github, context, core }) => {
           labels: ['auditable']
         });
         core.info('✓ Added "auditable" label to PR');
-        
-        // Post a comment to notify that audit will be triggered
-        await github.rest.issues.createComment({
-          owner: context.repo.owner,
-          repo: context.repo.repo,
-          issue_number: prNumber,
-          body: `🔍 Detected task file(s) ready for audit:\n${filesWithMarker.map(f => `- \`${f}\``).join('\n')}\n\nThe auto-audit workflow will run shortly. Please wait for the audit to complete before merging.`
-        });
-        core.info('✓ Posted notification comment on PR');
       } catch (error) {
-        core.error(`Failed to add label or comment: ${error.message}`);
+        core.error(`Failed to add label: ${error.message}`);
         throw error;
       }
     } else {
