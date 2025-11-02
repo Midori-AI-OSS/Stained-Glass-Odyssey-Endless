@@ -106,3 +106,41 @@ Test the following to verify the fix:
 - The term "conscience description" in the original request likely means "concise description"
 - This bug may have existed before the `full_about`/`summarized_about` migration, so it may need to work with whatever fields are currently available
 - Consider whether the fix should be a quick patch for existing functionality or a more comprehensive implementation that anticipates the new field structure
+
+---
+
+## Audit Report
+
+**Full audit report**: [.codex/audit/3a125d68-buff-debuff-display-bug.audit.md](../.codex/audit/3a125d68-buff-debuff-display-bug.audit.md)
+
+### Executive Summary (Revised 2025-11-02)
+
+**Status**: ✅ ROOT CAUSE IDENTIFIED
+
+**Critical Finding**: The bug is NOT missing descriptions - it's a **frontend prop mapping error** in `BattleView.svelte`.
+
+**Root Cause**: Lines 2433, 2636, and 2703 incorrectly pass `member.passives` to the `active_effects` prop of StatusIcons, instead of passing `member.active_effects`. This explains why:
+- Only passive abilities show up in the buff bar
+- Buffs/debuffs from relics and cards don't appear at all  
+- Passives show "Unknown Effect" (wrong data structure for effect rendering)
+
+**The Fix**: Change 3 lines in `frontend/src/lib/components/BattleView.svelte`:
+```diff
+- active_effects={(member.passives || []).slice(0, 6)}
++ active_effects={(member.active_effects || []).slice(0, 6)}
+```
+
+**Corrected Complexity**: 1-2 hours (was 8-15 hours in original audit)
+- Frontend fix: 15 minutes
+- Testing: 30-60 minutes  
+- Optional description improvements: 30-60 minutes
+
+**Risk Level**: Low (simple prop name change, high impact)
+
+**Original Audit Errors**: Initial audit incorrectly identified the issue as backend serialization/missing description fields. User feedback and screenshot analysis revealed the true scope.
+
+See full audit report for complete analysis, testing checklist, and lessons learned.
+
+---
+
+_Audit completed by Auditor on 2025-11-02. Revised based on user feedback. Ready for coder assignment._
