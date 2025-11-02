@@ -8,6 +8,11 @@ on:
       - main
     types: [opened, synchronize, reopened]
 
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
 jobs:
   auditpr:
     runs-on: ubuntu-latest
@@ -45,3 +50,41 @@ jobs:
           fi
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Post PR hold comment and add thumbs-down reaction
+        if: ${{ contains(env.ALLOWED_USERS, github.event.pull_request.user.login) }}
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const tasksPath = '.codex/tasks';
+            let found = false;
+            if (fs.existsSync(tasksPath)) {
+              const entries = fs.readdirSync(tasksPath, { withFileTypes: true });
+              for (const e of entries) {
+                if (e.isFile()) {
+                  const content = fs.readFileSync(`${tasksPath}/${e.name}`, 'utf8');
+                  if (content.toLowerCase().includes('ready to review')) { found = true; break; }
+                }
+              }
+            }
+            if (found) {
+              const prNumber = context.payload.pull_request.number;
+              const body = "Automated audit started — please wait to merge this PR. Adding a thumbs-down reaction so other systems can react.";
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: prNumber,
+                body
+              });
+              // add a thumbs-down reaction to the PR (issues API covers PRs)
+              await github.rest.reactions.createForIssue({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: prNumber,
+                content: '-1'
+              });
+              core.info(`Posted hold comment and added thumbs-down reaction to PR #${prNumber}`);
+            } else {
+              core.info("No 'ready to review' marker found in .codex/tasks; skipping comment/reaction.");
+            }
