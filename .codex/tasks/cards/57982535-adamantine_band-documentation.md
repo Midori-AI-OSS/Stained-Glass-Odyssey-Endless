@@ -16,13 +16,14 @@ The game is adding structured documentation fields to all cards and relics to en
 **File to modify:** `backend/plugins/cards/adamantine_band.py`
 
 **Changes required:**
-1. Add a `full_about` field to the card class with a detailed description of the card's mechanics
-2. Add a `summarized_about` field to the card class with a brief, concise description (1-2 sentences)
+1. Remove the existing `about` field
+2. Add a `full_about` field to the card class with a detailed description of the card's mechanics
+3. Add a `summarized_about` field to the card class with a brief, concise description (1-2 sentences)
 
 **Guidelines:**
 - The `full_about` should explain all mechanics, triggers, and interactions in detail
 - The `summarized_about` should be suitable for quick reference in game UI
-- Keep descriptions clear, accurate, and consistent with the existing `about` field
+- Keep descriptions clear, accurate, and consistent with the content from the old `about` field
 - Reference the current `about` field content for accuracy
 - Follow the style and tone of other card descriptions in the game
 
@@ -34,13 +35,14 @@ class AdamantineBandCard(CardBase):
     id: str = "adamantine_band"
     name: str = "Adamantine Band"
     # ... existing fields ...
-    about: str = "existing description"
+    # about field removed - replaced with full_about and summarized_about
     full_about: str = "Detailed description explaining all mechanics..."
     summarized_about: str = "Brief summary for UI"
 ```
 
 ## Acceptance Criteria
 
+- [ ] Old `about` field removed
 - [ ] `full_about` field added with comprehensive description
 - [ ] `summarized_about` field added with concise description
 - [ ] Both descriptions are accurate to the card's actual mechanics

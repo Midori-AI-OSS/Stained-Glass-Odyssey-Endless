@@ -2,7 +2,7 @@
 
 ## Summary
 
-This document provides an overview of the card and relic documentation enhancement project. Individual task files have been created for each card and relic to add `full_about` and `summarized_about` fields.
+This document provides an overview of the card and relic documentation enhancement project. Individual task files have been created for each card and relic to replace the old `about` field with new `full_about` and `summarized_about` fields.
 
 ## Objective
 
@@ -50,14 +50,16 @@ Relic list:
 ## Implementation Guidelines
 
 Each task includes:
-1. **Objective** - Clear statement of what needs to be added
+1. **Objective** - Clear statement of what needs to be changed
 2. **Background** - Context on why these fields are needed
-3. **Task Details** - Specific file to modify and changes required
+3. **Task Details** - Specific file to modify and changes required (remove old `about`, add new fields)
 4. **Guidelines** - Best practices for writing descriptions
 5. **Example Structure** - Code example showing where fields should go
 6. **Acceptance Criteria** - Checklist for completion
 
 ### Field Requirements
+
+**Important:** The old `about` field should be removed and replaced with these two new fields.
 
 **full_about:**
 - Detailed description of mechanics
