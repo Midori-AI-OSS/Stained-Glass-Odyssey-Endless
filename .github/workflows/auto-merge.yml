@@ -15,9 +15,6 @@ jobs:
       image: lunamidori5/pixelarch:quartz
       options: --cpus 1 --user root
     env:
-      # A list of usernames (one per line). This is a YAML "list" style block
-      # so it's easy to edit. The workflow will treat this as a single
-      # multiline env var and we use `contains()` to check membership.
       ALLOWED_USERS: |
         lunamidori5
 
