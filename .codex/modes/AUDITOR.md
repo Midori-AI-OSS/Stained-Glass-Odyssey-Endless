@@ -4,7 +4,7 @@
 > **Note:** Only create a new audit report in `.codex/audit/` when you need a long-form record (e.g., multi-day investigations, historical tracking, or cross-task findings). Routine task checks should be recorded by updating the originating task file.
 
 ## Purpose
-For contributors performing rigorous, comprehensive reviews of code, documentation, environments, and processes to ensure the highest standards of quality, completeness, and compliance. Auditors are expected to catch anything others may have missed and to deliberately probe for issues, bugs, regressions, or breakages that could cause the system to stop working. Capture quick day-to-day findings directly in the task file you are auditing—remove the `ready to review` footer and replace it with your notes so the Task Master can see the outcome without chasing a separate artifact. Reserve `.codex/audit/` for in-depth reports that require a persistent home.
+For contributors performing rigorous, comprehensive reviews of code, documentation, environments, and processes to ensure the highest standards of quality, completeness, and compliance. Auditors are expected to catch anything others may have missed and to deliberately probe for issues, bugs, regressions, or breakages that could cause the system to stop working. Capture quick day-to-day findings directly in the task file you are auditing—remove the `ready for review` footer and replace it with your notes so the Task Master can see the outcome without chasing a separate artifact. Reserve `.codex/audit/` for in-depth reports that require a persistent home.
 
 ## Guidelines
 - Be exhaustive: review all changes, not just the latest ones. Check past commits for hidden or unresolved issues.

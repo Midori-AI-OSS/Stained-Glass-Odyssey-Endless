@@ -4,7 +4,7 @@ This directory contains scripts used by GitHub Actions workflows to automate the
 
 ## check-ready-for-audit.js
 
-Scans pull request files in `.codex/tasks/` for "ready to review" or "ready for review" markers.
+Scans pull request files in `.codex/tasks/` for the "ready for review" marker.
 
 ### Purpose
 
@@ -30,11 +30,12 @@ Called automatically by `.github/workflows/llm-labeler.yml`:
 
 ### Detection Pattern
 
-The script searches for these markers (case insensitive):
-- `ready to review`
+The script searches for this marker (case insensitive):
 - `ready for review`
 
-Using regex: `/ready\s+(to|for)\s+review/i`
+Using regex: `/ready\s+for\s+review/i`
+
+Note: The implementation also accepts "ready to review" for backward compatibility, but the standard marker is "ready for review".
 
 ### Output
 
@@ -62,7 +63,7 @@ Task file with marker:
 
 ---
 
-ready to review
+ready for review
 ```
 
 The script will:

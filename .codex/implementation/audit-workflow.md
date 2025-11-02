@@ -1,10 +1,10 @@
 # Auto-Audit Workflow
 
-The auto-audit workflow automatically triggers code audits for task files that are marked as "ready to review" in pull requests.
+The auto-audit workflow automatically triggers code audits for task files that are marked as "ready for review" in pull requests.
 
 ## Overview
 
-The workflow is designed to catch task files in `.codex/tasks/` that contain the "ready to review" or "ready for review" marker and automatically create agent tasks to audit them according to the Auditor mode guidelines.
+The workflow is designed to catch task files in `.codex/tasks/` that contain the "ready for review" marker and automatically create agent tasks to audit them according to the Auditor mode guidelines.
 
 ## How It Works
 
@@ -16,7 +16,7 @@ When a pull request is opened or updated:
 2. **Custom Script** (`.github/scripts/check-ready-for-audit.js`) checks all changed files
 3. For files in `.codex/tasks/` that are added or modified:
    - Fetches the file content from the PR branch
-   - Searches for "ready to review" or "ready for review" (case insensitive)
+   - Searches for "ready for review" (case insensitive)
    - If found, adds the "auditable" label to the PR
    - Posts a notification comment listing the files ready for audit
 4. **Auto-Audit Workflow** (`.github/workflows/auto-audit.yml`) triggers on the "auditable" label
@@ -62,7 +62,7 @@ env:
 
 ### Agent Task Creation
 
-For each task file with "ready to review":
+For each task file with "ready for review":
 ```bash
 gh agent-task create "As an Auditor (read the codex mode file) audit <filepath>" --follow
 ```
@@ -71,11 +71,12 @@ The agent follows the Auditor mode guidelines from `.codex/modes/AUDITOR.md`.
 
 ### Audit Marker Detection
 
-The script searches for these patterns (case insensitive):
-- `ready to review`
+The script searches for this pattern (case insensitive):
 - `ready for review`
 
-Using regex: `/ready\s+(to|for)\s+review/i`
+Using regex: `/ready\s+for\s+review/i`
+
+Note: The implementation also accepts the variant "ready to review" for backward compatibility, but the standard marker is "ready for review".
 
 ## Workflow Behavior
 
@@ -90,7 +91,7 @@ check-ready-for-audit.js script runs
   ↓
 Checks PR changed files in .codex/tasks/
   ↓
-If "ready to review" found:
+If "ready for review" found:
   ├─ Add "auditable" label
   ├─ Post notification comment
   └─ Trigger auto-audit workflow
@@ -131,7 +132,7 @@ If found:
 ### Automatic Trigger
 
 1. Developer creates task file `.codex/tasks/relics/new-relic.md`
-2. Adds "ready to review" footer to the file
+2. Adds "ready for review" footer to the file
 3. Opens PR with the changes
 4. Labeler workflow runs and adds "auditable" label
 5. Auto-audit workflow triggers automatically
