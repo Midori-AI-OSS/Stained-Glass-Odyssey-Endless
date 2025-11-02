@@ -231,16 +231,33 @@
   $: activeTheme = themePayload?.active_theme ?? null;
   $: themeWeekday = (activeTheme?.weekday_name ?? '').trim();
   $: themeSummary = (activeTheme?.display?.summary ?? '').trim();
+  $: themeStatBonuses = activeTheme?.stat_bonuses ?? {};
+  $: themeHasDetails = Object.keys(themeStatBonuses).length > 0;
   $: themeSummarySegments = (() => {
     if (!themeSummary) return [];
-    const parts = themeSummary
+    const rawParts = themeSummary
       .split('•')
       .map((segment) => segment.replace(/^[\s·\-]+/, '').trim())
       .filter(Boolean);
-    if (parts.length <= 1) {
-      return [themeSummary];
-    }
-    return parts;
+    const baseParts = rawParts.length > 0 ? rawParts : [themeSummary];
+    const statLineSet = new Set(
+      Object.entries(themeStatBonuses).map(([key, payload]) =>
+        `${formatStatKey(key)} ${formatPercentDisplay(payload)}`.replace(/\s+/g, ' ').trim().toLowerCase()
+      )
+    );
+    const uniqueSegments = [];
+    baseParts.forEach((segment) => {
+      const normalized = segment.replace(/\s+/g, ' ').trim();
+      if (!normalized) return;
+      const lower = normalized.toLowerCase();
+      if (themeHasDetails && statLineSet.has(lower)) {
+        return;
+      }
+      if (!uniqueSegments.some((value) => value.toLowerCase() === lower)) {
+        uniqueSegments.push(normalized);
+      }
+    });
+    return uniqueSegments;
   })();
   $: themeDamageTypesRaw = Array.isArray(activeTheme?.damage_types) ? activeTheme.damage_types : [];
   $: themeDamageIconIds = (() => {
@@ -295,11 +312,9 @@
   $: themeSecondaryIcon = themeSecondaryId ? getDamageTypeIcon(themeSecondaryId) : null;
   $: themePrimaryColor = getDamageTypeColor(themePrimaryId);
   $: themeSecondaryColor = themeSecondaryId ? getDamageTypeColor(themeSecondaryId) : '';
-  $: themeStatBonuses = activeTheme?.stat_bonuses ?? {};
   $: themeBonusDisplay =
     formatPercentDisplay(activeTheme?.display?.bonus_percent) ||
     `+${formatBonusPercent(Math.max(0, Number(activeTheme?.bonus_value ?? 0)))}%`;
-  $: themeHasDetails = Object.keys(themeStatBonuses).length > 0;
   $: groupedRewardItems = status?.reward_items?.length
     ? Array.from(
         status.reward_items.reduce((map, item) => {
