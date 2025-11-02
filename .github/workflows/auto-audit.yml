@@ -6,7 +6,9 @@ on:
     branches-ignore:
       - master
       - main
-    types: [opened, synchronize, reopened]
+    types: [labeled]
+  issue_comment:
+    types: [created]
 
 permissions:
   contents: read
@@ -16,6 +18,14 @@ permissions:
 jobs:
   auditpr:
     runs-on: ubuntu-latest
+    # Only run if:
+    # 1. PR was labeled with "auditable", OR
+    # 2. Comment contains "@auditor" trigger from allowed user
+    if: |
+      (github.event_name == 'pull_request' && github.event.label.name == 'auditable') ||
+      (github.event_name == 'issue_comment' && 
+       github.event.issue.pull_request && 
+       contains(github.event.comment.body, '@auditor'))
     container:
       image: lunamidori5/pixelarch:quartz
       options: --cpus 1 --user root
@@ -26,65 +36,77 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v5
+        with:
+          # For comment triggers, checkout the PR branch
+          ref: ${{ github.event_name == 'issue_comment' && format('refs/pull/{0}/head', github.event.issue.number) || '' }}
 
-      - name: Create Copilot agent task via GitHub CLI
-        if: ${{ contains(env.ALLOWED_USERS, github.event.pull_request.user.login) }}
+      - name: Find task files ready for audit
+        id: find_tasks
+        if: ${{ contains(env.ALLOWED_USERS, github.event.pull_request.user.login || github.event.issue.user.login) }}
         run: |
-          # Only create an agent task when a task file in .codex/tasks contains the marker 'ready to review'
-          echo "Checking .codex/tasks for 'ready to review'..."
-          if [ -d ".codex/tasks" ] && grep -R -i -n "ready to review" .codex/tasks >/dev/null 2>&1; then
-            echo "Found 'ready to review' in .codex/tasks - creating agent task(s) for matching file(s)"
-            # collect file paths containing the marker (one per line)
-            matches=$(grep -R -i -l "ready to review" .codex/tasks || true)
-            if [ -z "$matches" ]; then
-              echo "No matching files found after grep -- unexpected; exiting."
+          echo "Finding task files with 'ready to review' marker..."
+          if [ -d ".codex/tasks" ]; then
+            # Find all files with "ready to review" or "ready for review" marker
+            matches=$(grep -R -i -l "ready\s\+\(to\|for\)\s\+review" .codex/tasks 2>/dev/null || true)
+            if [ -n "$matches" ]; then
+              echo "Found task files ready for audit:"
+              echo "$matches"
+              # Save matches to output for next step
+              echo "task_files<<EOF" >> $GITHUB_OUTPUT
+              echo "$matches" >> $GITHUB_OUTPUT
+              echo "EOF" >> $GITHUB_OUTPUT
+              echo "has_tasks=true" >> $GITHUB_OUTPUT
             else
-              # create an agent task for each matching task file, include the file path in the task description
-              echo "$matches" | while IFS= read -r f; do
-                echo "Creating agent task for: $f"
-                gh agent-task create "As an Auditor (read the codex mode file) audit $f" --follow
-              done
+              echo "No task files found with 'ready to review' marker"
+              echo "has_tasks=false" >> $GITHUB_OUTPUT
             fi
           else
-            echo "No 'ready to review' marker found in .codex/tasks; skipping agent task creation."
+            echo "No .codex/tasks directory found"
+            echo "has_tasks=false" >> $GITHUB_OUTPUT
           fi
+
+      - name: Create Copilot agent task via GitHub CLI
+        if: ${{ steps.find_tasks.outputs.has_tasks == 'true' && contains(env.ALLOWED_USERS, github.event.pull_request.user.login || github.event.issue.user.login) }}
+        run: |
+          echo "Creating agent task(s) for audit..."
+          echo "${{ steps.find_tasks.outputs.task_files }}" | while IFS= read -r f; do
+            if [ -n "$f" ]; then
+              echo "Creating agent task for: $f"
+              gh agent-task create "As an Auditor (read the codex mode file) audit $f" --follow
+            fi
+          done
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Post PR hold comment and add thumbs-down reaction
-        if: ${{ contains(env.ALLOWED_USERS, github.event.pull_request.user.login) }}
+        if: ${{ steps.find_tasks.outputs.has_tasks == 'true' && contains(env.ALLOWED_USERS, github.event.pull_request.user.login || github.event.issue.user.login) }}
         uses: actions/github-script@v7
         with:
           script: |
-            const fs = require('fs');
-            const tasksPath = '.codex/tasks';
-            let found = false;
-            if (fs.existsSync(tasksPath)) {
-              const entries = fs.readdirSync(tasksPath, { withFileTypes: true });
-              for (const e of entries) {
-                if (e.isFile()) {
-                  const content = fs.readFileSync(`${tasksPath}/${e.name}`, 'utf8');
-                  if (content.toLowerCase().includes('ready to review')) { found = true; break; }
-                }
-              }
+            const prNumber = context.payload.pull_request?.number || context.payload.issue?.number;
+            if (!prNumber) {
+              core.info('Could not determine PR number, skipping comment');
+              return;
             }
-            if (found) {
-              const prNumber = context.payload.pull_request.number;
-              const body = "Automated audit started — please wait to merge this PR. Adding a thumbs-down reaction so other systems can react.";
-              await github.rest.issues.createComment({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: prNumber,
-                body
-              });
-              // add a thumbs-down reaction to the PR (issues API covers PRs)
-              await github.rest.reactions.createForIssue({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: prNumber,
-                content: '-1'
-              });
-              core.info(`Posted hold comment and added thumbs-down reaction to PR #${prNumber}`);
-            } else {
-              core.info("No 'ready to review' marker found in .codex/tasks; skipping comment/reaction.");
-            }
+            
+            const taskFiles = `${{ steps.find_tasks.outputs.task_files }}`.trim();
+            const fileList = taskFiles.split('\n').filter(f => f).map(f => `- \`${f}\``).join('\n');
+            
+            const body = `🔍 Automated audit started for:\n${fileList}\n\nPlease wait to merge this PR. Adding a thumbs-down reaction so other systems can react.`;
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              body
+            });
+            
+            // Add a thumbs-down reaction to the PR
+            await github.rest.reactions.createForIssue({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              content: '-1'
+            });
+            
+            core.info(`Posted hold comment and added thumbs-down reaction to PR #${prNumber}`);
