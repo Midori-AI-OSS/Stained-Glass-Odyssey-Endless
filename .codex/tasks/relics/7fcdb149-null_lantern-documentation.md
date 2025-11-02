@@ -18,7 +18,7 @@ The game is adding structured documentation fields to all cards and relics to en
 **Changes required:**
 1. Remove the existing `about` field
 2. Add a `full_about` field to the relic class with a detailed description of the relic's mechanics
-3. Add a `summarized_about` field to the relic class with a brief, concise description (1-2 sentences)
+3. Add a `summarized_about` field to the relic class with a concise description (1-2 sentences)
 
 **Guidelines:**
 - The `full_about` should explain all mechanics, triggers, stacking behavior, and interactions in detail
