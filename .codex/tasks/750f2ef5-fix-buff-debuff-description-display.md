@@ -109,141 +109,38 @@ Test the following to verify the fix:
 
 ---
 
-## Audit Report (2025-11-02)
+## Audit Report
 
-### Audit Summary
-✅ **TASK IS DOABLE** - The task is well-structured, technically feasible, and ready for implementation with minor clarifications.
+**Full audit report**: [.codex/audit/3a125d68-buff-debuff-display-bug.audit.md](../.codex/audit/3a125d68-buff-debuff-display-bug.audit.md)
 
-### Verification Results
+### Executive Summary (Revised 2025-11-02)
 
-#### File References: ✅ VERIFIED
-All mentioned files exist and are correctly referenced:
-- `backend/autofighter/effects.py` - Contains StatModifier, DamageOverTime, HealingOverTime
-- `backend/autofighter/stat_effect.py` - Contains StatEffect class
-- `frontend/src/lib/battle/StatusIcons.svelte` - Contains tooltip rendering logic
-- `frontend/src/lib/systems/assetLoader.js` - Contains effect image helpers
+**Status**: ✅ ROOT CAUSE IDENTIFIED
 
-**Minor Issue**: Line numbers in StatusIcons.svelte are slightly off:
-- Task says formatEffectTooltip() is at lines 33-46
-- Actual location is lines 29-52
-- Impact: Negligible - content matches perfectly
+**Critical Finding**: The bug is NOT missing descriptions - it's a **frontend prop mapping error** in `BattleView.svelte`.
 
-#### Bug Verification: ✅ CONFIRMED
-The described bug is real and accurately documented:
+**Root Cause**: Lines 2433, 2636, and 2703 incorrectly pass `member.passives` to the `active_effects` prop of StatusIcons, instead of passing `member.active_effects`. This explains why:
+- Only passive abilities show up in the buff bar
+- Buffs/debuffs from relics and cards don't appear at all  
+- Passives show "Unknown Effect" (wrong data structure for effect rendering)
 
-1. **DoT/HoT Issue**: In `backend/autofighter/rooms/utils.py` (lines 204-232), DoTs and HoTs are serialized with `{id, name, damage/healing, turns, source, element, stacks}` but **NO description field**.
+**The Fix**: Change 3 lines in `frontend/src/lib/components/BattleView.svelte`:
+```diff
+- active_effects={(member.passives || []).slice(0, 6)}
++ active_effects={(member.active_effects || []).slice(0, 6)}
+```
 
-2. **StatModifier Issue**: In `backend/autofighter/rooms/utils.py` (lines 239-249), active_effects get descriptions via `_get_effect_description()` (lines 47-59), but this function only handles:
-   - "aftertaste" → returns Aftertaste.get_description()
-   - "critical_boost" → returns CriticalBoost.get_description()  
-   - Everything else → returns "Unknown effect"
+**Corrected Complexity**: 1-2 hours (was 8-15 hours in original audit)
+- Frontend fix: 15 minutes
+- Testing: 30-60 minutes  
+- Optional description improvements: 30-60 minutes
 
-3. **Frontend Fallback**: StatusIcons.svelte (lines 29-52) has basic fallback logic that builds descriptions from modifiers, but it's limited and doesn't handle all cases well.
+**Risk Level**: Low (simple prop name change, high impact)
 
-#### Technical Feasibility: ✅ ALL SOLUTIONS ARE VIABLE
+**Original Audit Errors**: Initial audit incorrectly identified the issue as backend serialization/missing description fields. User feedback and screenshot analysis revealed the true scope.
 
-**Solution 1** (Add backend description fields):
-- Requires adding `about`/`full_about`/`summarized_about` fields to effect dataclasses
-- Need to find all effect creation points (create_stat_buff(), create_dot() helpers)
-- Update serialization in rooms/utils.py
-- Impact: Medium complexity, permanent fix
-
-**Solution 2** (Improve frontend fallbacks):
-- Enhance formatEffectTooltip() logic
-- Generate better descriptions from names and modifiers
-- Impact: Low complexity, quick win
-
-**Solution 3** (Coordinate with about field migration):
-- Align with full_about/summarized_about pattern from cards/relics
-- Consider "Concise Descriptions" UI setting
-- Impact: Medium complexity, future-proof
-
-#### Acceptance Criteria: ✅ WELL-DEFINED (1 minor issue)
-All 8 criteria are clear and testable except:
-- Criterion 8: "compatible with the ongoing about field migration" is vague
-- Recommendation: Clarify what "compatible" means (same field names? same formatting?)
-
-#### Testing Scenarios: ✅ COMPREHENSIVE
-All 7 test scenarios are specific and cover:
-- Stat buffs/debuffs, DoTs, HoTs, special effects, stacking, multiple effects
-- Well aligned with acceptance criteria
-
-### Identified Issues & Concerns
-
-#### Minor Issues:
-1. **Typo**: Task references "conscience description" (should be "concise description") - already noted in task
-2. **Line number drift**: StatusIcons.svelte line numbers are slightly off
-3. **Scope separation**: Task doesn't explicitly separate DoT/HoT vs StatModifier as distinct issues
-
-#### Questions for Implementer:
-1. **Plugin Discovery**: Need to audit plugin directory to find all places where effects are created
-2. **Backwards Compatibility**: What happens to saved games or in-flight battles when we add new fields?
-3. **Implementation Order**: Should this be done before or after task 00dc6da8 (concise description setting)?
-4. **Damage Type Awareness**: Should DoT/HoT descriptions be element-specific (e.g., "Burning" vs "Freezing")?
-5. **Visual Verification**: User mentioned posting photos - need to verify bug visually in running application
-
-#### Not Blockers:
-- These questions can be answered during implementation
-- The core task is still clearly doable
-
-### Recommendations for Implementation
-
-#### Recommended Approach:
-1. **Phase 1 (Quick Win)**: Implement Solution 2 first
-   - Enhance frontend fallback logic in formatEffectTooltip()
-   - Generate better descriptions from effect names and modifiers
-   - This provides immediate improvement with minimal risk
-
-2. **Phase 2 (Proper Fix)**: Implement Solution 1
-   - Add description fields to effect classes
-   - Update create_stat_buff() and create_dot() helpers to accept descriptions
-   - Update rooms/utils.py serialization
-   - Audit plugins directory for all effect creation points
-
-3. **Phase 3 (Future-Proof)**: Coordinate Solution 3
-   - Align field names with cards/relics pattern
-   - Add support for full_about/summarized_about
-   - Integrate with "Concise Descriptions" UI setting when available
-
-#### Code Changes Required:
-- **Backend**: 
-  - `backend/autofighter/effects.py` - Add description fields to dataclasses
-  - `backend/autofighter/rooms/utils.py` - Update serialization (lines 204-249)
-  - Effect creation helpers and plugins
-
-- **Frontend**:
-  - `frontend/src/lib/battle/StatusIcons.svelte` - Enhance formatEffectTooltip() and formatTooltip()
-
-#### Testing Strategy:
-- Start battle and observe tooltips for all effect types
-- Test both overlay and bar layouts
-- Verify with multiple simultaneous effects
-- Check stacking behavior
-
-### Audit Conclusion
-
-**Status**: ✅ READY FOR IMPLEMENTATION
-
-**Confidence Level**: High - Task is well-researched and technically sound
-
-**Risk Level**: Low-Medium
-- Low risk for Solution 2 (frontend only)
-- Medium risk for Solution 1 (backend changes affect data model)
-
-**Estimated Complexity**: Medium
-- Frontend changes: ~2-4 hours
-- Backend changes: ~4-8 hours
-- Testing: ~2-3 hours
-- Total: ~8-15 hours of work
-
-**Blocking Issues**: None
-
-**Dependencies**: 
-- Optional coordination with task 00dc6da8 (concise description setting)
-- May benefit from awaiting user's visual evidence photos
-
-**Auditor Notes**: This is a legitimate bug that affects user experience. The task is well-prepared with accurate technical details, clear acceptance criteria, and feasible solutions. The implementer should have no trouble completing this task successfully.
+See full audit report for complete analysis, testing checklist, and lessons learned.
 
 ---
 
-_Audit completed by Auditor on 2025-11-02. Task verified as ready for coder assignment._
+_Audit completed by Auditor on 2025-11-02. Revised based on user feedback. Ready for coder assignment._
