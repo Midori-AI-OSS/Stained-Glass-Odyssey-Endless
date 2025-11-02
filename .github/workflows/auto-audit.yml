@@ -20,12 +20,13 @@ jobs:
     runs-on: ubuntu-latest
     # Only run if:
     # 1. PR was labeled with "auditable", OR
-    # 2. Comment contains "@auditor" trigger from allowed user
+    # 2. Comment contains "@auditor" trigger from allowed user AND comment is not from a bot
     if: |
       (github.event_name == 'pull_request' && github.event.label.name == 'auditable') ||
       (github.event_name == 'issue_comment' && 
        github.event.issue.pull_request && 
-       contains(github.event.comment.body, '@auditor'))
+       contains(github.event.comment.body, '@auditor') &&
+       github.event.comment.user.type != 'Bot')
     container:
       image: lunamidori5/pixelarch:quartz
       options: --cpus 1 --user root
@@ -48,7 +49,8 @@ jobs:
           echo "Finding task files with 'ready to review' marker..."
           if [ -d ".codex/tasks" ]; then
             # Find all files with "ready to review" or "ready for review" marker
-            matches=$(grep -R -i -l "ready\s\+\(to\|for\)\s\+review" .codex/tasks 2>/dev/null || true)
+            # Using -E for extended regex and [[:space:]] for better portability
+            matches=$(grep -R -i -E -l "ready[[:space:]]+(to|for)[[:space:]]+review" .codex/tasks 2>/dev/null || true)
             if [ -n "$matches" ]; then
               echo "Found task files ready for audit:"
               echo "$matches"

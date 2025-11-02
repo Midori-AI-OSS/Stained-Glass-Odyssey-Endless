@@ -49,7 +49,7 @@ For manual override or re-running audits:
 
 The auto-audit workflow runs when:
 - A PR receives the "auditable" label, OR
-- A comment containing "@auditor" is posted on a PR
+- A comment containing "@auditor" is posted on a PR by a non-bot user (prevents self-triggering)
 
 ### User Authorization
 
@@ -74,9 +74,9 @@ The agent follows the Auditor mode guidelines from `.codex/modes/AUDITOR.md`.
 The script searches for this pattern (case insensitive):
 - `ready for review`
 
-Using regex: `/ready\s+for\s+review/i`
+Using regex (with extended regex mode): `/ready[[:space:]]+(to|for)[[:space:]]+review/i`
 
-Note: The implementation also accepts the variant "ready to review" for backward compatibility, but the standard marker is "ready for review".
+Note: The implementation accepts both "ready for review" (standard) and "ready to review" (backward compatibility) variants.
 
 ## Workflow Behavior
 
@@ -157,3 +157,4 @@ If found:
 - The "auditable" label is automatically created if it doesn't exist
 - Failed audits should be addressed before the label is removed or before re-running
 - The workflow runs in a container: `lunamidori5/pixelarch:quartz`
+- **Bot Protection**: The workflow includes protection against self-triggering by excluding comments from bot users (`github.event.comment.user.type != 'Bot'`). This prevents the workflow's own comments from triggering additional runs.
