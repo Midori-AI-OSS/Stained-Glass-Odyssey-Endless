@@ -1,0 +1,47 @@
+
+name: Auto-Audit PR (SAFE)
+
+on:
+  pull_request:
+    branches-ignore:
+      - master
+      - main
+    types: [opened, synchronize, reopened]
+
+jobs:
+  auditpr:
+    runs-on: ubuntu-latest
+    container:
+      image: lunamidori5/pixelarch:quartz
+      options: --cpus 1 --user root
+    env:
+      ALLOWED_USERS: |
+        lunamidori5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Create Copilot agent task via GitHub CLI
+        if: ${{ contains(env.ALLOWED_USERS, github.event.pull_request.user.login) }}
+        run: |
+          # Only create an agent task when a task file in .codex/tasks contains the marker 'ready to review'
+          echo "Checking .codex/tasks for 'ready to review'..."
+          if [ -d ".codex/tasks" ] && grep -R -i -n "ready to review" .codex/tasks >/dev/null 2>&1; then
+            echo "Found 'ready to review' in .codex/tasks - creating agent task(s) for matching file(s)"
+            # collect file paths containing the marker (one per line)
+            matches=$(grep -R -i -l "ready to review" .codex/tasks || true)
+            if [ -z "$matches" ]; then
+              echo "No matching files found after grep -- unexpected; exiting."
+            else
+              # create an agent task for each matching task file, include the file path in the task description
+              echo "$matches" | while IFS= read -r f; do
+                echo "Creating agent task for: $f"
+                gh agent-task create "As an Auditor (read the codex mode file) audit $f" --follow
+              done
+            fi
+          else
+            echo "No 'ready to review' marker found in .codex/tasks; skipping agent task creation."
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
