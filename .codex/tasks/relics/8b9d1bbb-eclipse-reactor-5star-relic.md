@@ -14,3 +14,4 @@ Our 5★ set covers high-risk ally sacrifice (Paradox Hourglass), attrition-focu
 - Include a thorough `about` string in the plugin summarising surge values, drain pacing, and stacking rules so the roster stays self-documented.
 - Record a placeholder art prompt for Eclipse Reactor in `luna_items_prompts.txt` under **Missing Relics Art**, noting the relic slug so the Lead Developer can hand-create the icon later without blocking this task.【F:luna_items_prompts.txt†L11-L27】
 - Capture balancing notes (HP drain math, buff multipliers) in `.codex/docs/relics/` for future tuning discussions.
+ready for review

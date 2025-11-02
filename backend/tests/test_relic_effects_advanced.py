@@ -19,6 +19,7 @@ from autofighter.relics import award_relic
 from autofighter.rooms.battle.turn_loop import player_turn
 from autofighter.stats import BUS
 from autofighter.stats import Stats
+from autofighter.stats import set_battle_active
 from plugins.characters._base import PlayerBase
 from plugins.effects.aftertaste import Aftertaste
 import plugins.event_bus as event_bus_module
@@ -882,3 +883,132 @@ async def test_blood_debt_tithe_foe_buff_scaling():
     # So we should see noticeably more than 9% and 6% increases
     assert foe.atk >= initial_atk * 1.12  # At least 12% increase even with diminishing
     assert foe.spd >= initial_spd * 1.08  # At least 8% increase even with diminishing
+
+
+@pytest.mark.asyncio
+async def test_eclipse_reactor_initial_drain_clamps_to_one_hp():
+    event_bus_module.bus._subs.clear()
+
+    party = Party()
+    ally = PlayerBase()
+    ally.id = "eclipse-survivor"
+    ally.set_base_stat("max_hp", 50)
+    ally.hp = ally.max_hp
+    ally.hp = 4
+    party.members.append(ally)
+
+    award_relic(party, "eclipse_reactor")
+    await apply_relics(party)
+
+    set_battle_active(True)
+    try:
+        await BUS.emit_async("battle_start", ally)
+        await asyncio.sleep(0)
+
+        assert ally.hp == 1
+    finally:
+        set_battle_active(False)
+
+
+@pytest.mark.asyncio
+async def test_eclipse_reactor_surge_duration_and_post_drain():
+    event_bus_module.bus._subs.clear()
+
+    party = Party()
+    ally = PlayerBase()
+    ally.id = "eclipse-burst"
+    ally.set_base_stat("max_hp", 100)
+    ally.hp = ally.max_hp
+    ally.set_base_stat("atk", 100)
+    ally.set_base_stat("spd", 50)
+    ally.set_base_stat("crit_damage", 2.0)
+    party.members.append(ally)
+
+    award_relic(party, "eclipse_reactor")
+    award_relic(party, "eclipse_reactor")
+    await apply_relics(party)
+
+    base_atk = ally.get_base_stat("atk")
+    base_spd = ally.get_base_stat("spd")
+    base_cd = ally.get_base_stat("crit_damage")
+
+    set_battle_active(True)
+    try:
+        await BUS.emit_async("battle_start", ally)
+        await asyncio.sleep(0)
+
+        stacks = party.relics.count("eclipse_reactor")
+        surge_atk_mult = 1 + 1.8 * stacks
+        surge_spd_mult = 1 + 1.8 * stacks
+        surge_cd_mult = 1 + 0.6 * stacks
+        initial_drain = min(int(ally.max_hp * 0.18 * stacks), ally.max_hp - 1)
+
+        assert ally.atk == int(base_atk * surge_atk_mult)
+        assert ally.spd == int(base_spd * surge_spd_mult)
+        assert ally.crit_damage == pytest.approx(base_cd * surge_cd_mult)
+        assert ally.hp == ally.max_hp - initial_drain
+
+        for _ in range(2):
+            await BUS.emit_async("turn_start")
+            await asyncio.sleep(0)
+            assert ally.atk == int(base_atk * surge_atk_mult)
+            assert ally.spd == int(base_spd * surge_spd_mult)
+            assert ally.crit_damage == pytest.approx(base_cd * surge_cd_mult)
+
+        await BUS.emit_async("turn_start")
+        await asyncio.sleep(0)
+
+        assert ally.atk == base_atk
+        assert ally.spd == base_spd
+        assert ally.crit_damage == pytest.approx(base_cd)
+        assert ally.hp == ally.max_hp - initial_drain
+
+        await BUS.emit_async("turn_start")
+        await asyncio.sleep(0)
+
+        post_drain = int(ally.max_hp * 0.02 * stacks)
+        assert ally.hp == ally.max_hp - initial_drain - post_drain
+    finally:
+        set_battle_active(False)
+
+
+@pytest.mark.asyncio
+async def test_eclipse_reactor_cleans_up_on_battle_end():
+    event_bus_module.bus._subs.clear()
+
+    party = Party()
+    ally = PlayerBase()
+    ally.id = "eclipse-cleanup"
+    ally.set_base_stat("max_hp", 100)
+    ally.hp = ally.max_hp
+    party.members.append(ally)
+
+    award_relic(party, "eclipse_reactor")
+    await apply_relics(party)
+
+    set_battle_active(True)
+    try:
+        await BUS.emit_async("battle_start", ally)
+        await asyncio.sleep(0)
+
+        for _ in range(3):
+            await BUS.emit_async("turn_start")
+            await asyncio.sleep(0)
+
+        await BUS.emit_async("turn_start")
+        await asyncio.sleep(0)
+        hp_after_drain = ally.hp
+
+        from plugins.characters.foe_base import FoeBase
+
+        await BUS.emit_async("battle_end", FoeBase())
+        await asyncio.sleep(0)
+
+        ally.hp = hp_after_drain
+        await BUS.emit_async("turn_start")
+        await asyncio.sleep(0)
+
+        assert ally.hp == hp_after_drain
+        assert ally.atk == ally.get_base_stat("atk")
+    finally:
+        set_battle_active(False)
