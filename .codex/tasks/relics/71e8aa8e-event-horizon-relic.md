@@ -15,3 +15,21 @@ Ship **Event Horizon**, a 5★ relic that detonates a gravity pulse at the start
 - Ensure pulses handle extra turns (the event fires again) and gracefully skip if no foes are alive.
 - Add unit tests covering AoE damage math, self-drain scaling, extra-turn handling, and per-battle cleanup.
 - Update relic documentation with Event Horizon’s gravity pulse behavior so high-tier options are documented.【F:.codex/implementation/relic-system.md†L1-L16】
+
+## Implementation Notes
+- Created `backend/plugins/relics/event_horizon.py` with all required mechanics
+- Implemented 9 comprehensive unit tests in `backend/tests/test_event_horizon.py` covering:
+  * Basic pulse mechanics with damage calculation
+  * Multiple stack scaling
+  * Minimum damage enforcement
+  * No living foes handling  
+  * Foe turns don't trigger pulses
+  * Extra turns trigger additional pulses
+  * Battle end cleanup
+  * Dead allies don't trigger pulses
+  * Describe method with different stacks
+- All tests passing
+- Linting passed
+- Documentation complete (plugin file is source of truth per relic-system.md)
+
+ready for review
