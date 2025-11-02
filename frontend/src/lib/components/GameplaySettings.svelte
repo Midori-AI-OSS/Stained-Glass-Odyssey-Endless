@@ -13,6 +13,8 @@
   export let flashEnrageCounter = true;
   export let fullIdleMode = false;
   export let skipBattleReview = false;
+  export let skipBattleReviewPreference = false;
+  export let skipBattleReviewLocked = false;
   export let animationSpeed = DEFAULT_ANIMATION_SPEED;
   export let baseTurnPacing = 0.5;
   export let scheduleSave;
@@ -71,6 +73,8 @@
     if (!Number.isFinite(numeric) || numeric <= 0) return '1.0';
     return numeric.toFixed(1);
   })();
+
+  $: skipPreferenceLabel = skipBattleReviewPreference ? 'On' : 'Off';
 
   // Show the effective pacing as seconds in the label: (Xs)
   $: turnSeconds = (() => {
@@ -140,9 +144,20 @@
       </Tooltip>
     </div>
     <div class="control-right">
-      <input type="checkbox" bind:checked={skipBattleReview} on:change={scheduleSave} />
+      <input
+        type="checkbox"
+        bind:checked={skipBattleReview}
+        on:change={scheduleSave}
+        disabled={skipBattleReviewLocked}
+        aria-disabled={skipBattleReviewLocked ? 'true' : 'false'}
+      />
     </div>
   </div>
+  {#if skipBattleReviewLocked}
+    <p class="hint lock-note" data-testid="skip-lock-note">
+      Locked while Full Idle Mode is active. Original preference: {skipPreferenceLabel}.
+    </p>
+  {/if}
   <div class="control">
     <div class="control-left">
       <Tooltip text="Scale battle animation pacing. Higher is faster.">
@@ -179,4 +194,14 @@
 
 <style>
   @import './settings-shared.css';
+
+  .hint {
+    margin: 0.25rem 0 0 0;
+    font-size: 0.85rem;
+    color: rgba(255, 255, 255, 0.68);
+  }
+
+  .lock-note {
+    margin-left: 2.75rem;
+  }
 </style>

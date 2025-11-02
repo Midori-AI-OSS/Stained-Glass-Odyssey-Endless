@@ -14,13 +14,29 @@ jobs:
     container:
       image: lunamidori5/pixelarch:quartz
       options: --cpus 1 --user root
-    if: github.event.pull_request.user.login == 'lunamidori5'
+    env:
+      ALLOWED_USERS: |
+        lunamidori5
+        Copilot
+
     steps:
       - name: Setup Node
         uses: actions/setup-node@v6
       - name: Checkout
         uses: actions/checkout@v5
+
       - name: Enable Pull Request Automerge
+        if: ${{ contains(env.ALLOWED_USERS, github.event.pull_request.user.login) }}
         run: bash .github/auto-merge.sh "${{ github.event.pull_request.number }}"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Collect other users for automerge
+        if: ${{ !contains(env.ALLOWED_USERS, github.event.pull_request.user.login) }}
+        run: |
+          echo "Author '${{ github.event.pull_request.user.login }}' is not in ALLOWED_USERS."
+          echo "ALLOWED_USERS:";
+          echo "$ALLOWED_USERS";
+          echo "Requested reviewers: ${{ join(github.event.pull_request.requested_reviewers.*.login, ',') }}"
+          echo "Assignees: ${{ join(github.event.pull_request.assignees.*.login, ',') }}"
+          echo "You can add usernames to the ALLOWED_USERS list at the top of this job to allow automerge."

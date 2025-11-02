@@ -196,6 +196,11 @@ class Stats:
     hots: list[str] = field(default_factory=list)
     mods: list[str] = field(default_factory=list)
     _aggro_passives: list[str] = field(default_factory=list, init=False)
+    login_theme_stat_bonuses: dict[str, float] = field(default_factory=dict, init=False)
+    login_theme_damage_bonus: dict[str, float] = field(default_factory=dict, init=False)
+    login_theme_damage_reduction: dict[str, float] = field(default_factory=dict, init=False)
+    login_theme_drop_scope: str = field(default="matching", init=False)
+    login_theme_identifier: str = field(default="", init=False)
 
     # Effects system
     _active_effects: list[StatEffect] = field(default_factory=list, init=False)
@@ -792,6 +797,7 @@ class Stats:
                 action_name or "attack",
             )
         critical = False
+        attacker_type_key = ""
         if attacker_obj is not None:
             if random.random() < self.dodge_odds:
                 log.info(
@@ -815,6 +821,17 @@ class Stats:
                 )
                 return 0
             atk_type = _ensure(attacker_obj)
+            attacker_type_key = str(getattr(atk_type, "id", "")).lower()
+            bonus_map = getattr(attacker_obj, "login_theme_damage_bonus", None)
+            if isinstance(bonus_map, dict):
+                theme_bonus = bonus_map.get(attacker_type_key)
+                if theme_bonus is None:
+                    theme_bonus = bonus_map.get("all")
+                if theme_bonus:
+                    try:
+                        amount *= 1.0 + max(float(theme_bonus), 0.0)
+                    except (TypeError, ValueError):
+                        pass
             # Avoid recursive chains from secondary effects (e.g., Lightning on-hit reactions)
             if trigger_on_hit:
                 atk_type.on_hit(attacker_obj, self)
@@ -822,6 +839,20 @@ class Stats:
                 critical = True
                 amount *= attacker_obj.crit_damage
             amount = atk_type.on_damage(amount, attacker_obj, self)
+        reduction_map = getattr(self, "login_theme_damage_reduction", None)
+        if isinstance(reduction_map, dict):
+            reduction_value = None
+            if attacker_type_key:
+                reduction_value = reduction_map.get(attacker_type_key)
+            if reduction_value is None:
+                reduction_value = reduction_map.get("all")
+            if reduction_value:
+                try:
+                    reduction = max(float(reduction_value), 0.0)
+                except (TypeError, ValueError):
+                    reduction = 0.0
+                if reduction > 0:
+                    amount *= max(0.0, 1.0 - reduction)
         self_type = _ensure(self)
         amount = self_type.on_damage_taken(amount, attacker_obj, self)
         amount = self_type.on_party_damage_taken(amount, attacker_obj, self)

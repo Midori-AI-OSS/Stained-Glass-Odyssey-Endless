@@ -33,7 +33,12 @@ frontend timelines stay synchronised.
 * Normal attacks that trigger spread damage (e.g., `_handle_wind_spread`) and
   damage-type ultimates await `pace_per_target` before every follow-up hit. Do
   this **before** recomputing hit metadata so `attack_sequence` increments match
-  the visual pacing.
+  the visual pacing. When an ability can fan out to dozens of enemies (for
+  example Lightning's ultimate against summon-heavy encounters), track the
+  cumulative pacing budget and fall back to a lightweight `pace_sleep` once the
+  sum approaches `TURN_TIMEOUT_SECONDS`. This keeps the total awaited time below
+  the per-turn timeout while still yielding frequently enough for cooperative
+  scheduling.
 * Skip the pacing call when a candidate target is already defeated—otherwise the
   loop spends unnecessary time waiting for a hit that will be skipped. After the
   delay, re-check the target's HP because another effect may have removed the
@@ -44,7 +49,9 @@ frontend timelines stay synchronised.
 * Reuse the `base_wait` segment to align BUS events (`animation_start`/
   `animation_end`) with the visual animation. The default player turn loop
   demonstrates this by awaiting `pace_sleep(base_wait / TURN_PACING)` between
-  the main hit and `animation_end`.
+  the main hit and `animation_end`. Effects that rapidly enqueue many DoTs
+  should now batch their pacing into a single `pace_sleep(YIELD_MULTIPLIER)`
+  once the DoTs are applied instead of yielding after each addition.
 
 ### Testing and instrumentation
 

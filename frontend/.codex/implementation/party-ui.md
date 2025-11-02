@@ -28,6 +28,13 @@ Implementation details:
   slide smoothly when their order changes. Choosing a character slides it out
   and back in from the left with an element‑colored sparkle trail that is
   skipped entirely when Reduced Motion is enabled.
+- The start-run flow lets the party roster column expand to the available
+  height while the list itself scrolls, keeping the overall `MenuPanel`
+  footprint steady.
+- Roster rows now opt out of flex shrinking so their portrait/buttons stay at a
+  consistent size while the list scrolls within its capped column.
+- Scroll fades at the top/bottom of the roster list now use a lighter,
+  translucent gradient to hint at overflow without the heavy dark bars.
 - `PartyRoster.svelte` stages a roster entry on the first tap/click. A second
   tap (or a long-press, even without staging first) immediately toggles party
   membership, keeping the interaction to two deliberate actions.
@@ -38,7 +45,7 @@ Implementation details:
   can be disabled via Settings.
 - `RunChooser.svelte` stretches the party step wrapper so the embedded
   `PartyPicker` keeps the full Menu Panel footprint during the start-run flow,
-  matching the sizing used when opening the Party menu from the main menu.
+  matching the sizing previously used by the standalone Party overlay.
 - `StatTabs.svelte` uses flexible sizing so the panel fills its side and now
   surfaces a read-only stat summary alongside a compact upgrade recap rather
   than embedding the inline Character Editor. In upgrade mode the stats list
@@ -60,7 +67,18 @@ Implementation details:
 - `PlayerPreview.svelte` renders both the portrait and the upgrade sheet. The
   upgrade sheet reuses damage-type colors/icons, respects Reduced Motion, and
   exposes `open-upgrade`, `close-upgrade`, and `request-upgrade` events for the
-  picker to handle.
+  picker to handle. When the selected stat requires more 1★ shards than the
+  player currently holds but the combined higher-tier inventory can cover the
+  cost, the sheet surfaces an "Overpay" prompt. The prompt lists which higher-
+  tier items will be converted (e.g., `1× Water 2★ → 125× Water 1★`) and sends
+  a `request-upgrade` payload with `allowOverpay: true`, `totalMaterials`, and a
+  breakdown-free `expectedMaterials` so the backend can consume any tier.
+- `PartyPicker.svelte` forwards the new `allowOverpay` flag to
+  `upgradeStat()`, records the intent in `upgradeContext`, and reopens the
+  overpay prompt automatically if the backend replies with `insufficient
+  materials` while still reporting enough converted units to proceed. The cache
+  merge helper simulates material conversion so higher-tier shard counts remain
+  accurate after an overpay upgrade.
 
 ## Party seeding and hydration
 

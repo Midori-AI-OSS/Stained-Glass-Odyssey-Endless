@@ -29,6 +29,7 @@ settings.json
 package-lock.json
 
 # logs
+error.log
 logs/
 backend/logs/
 frontend/logs/

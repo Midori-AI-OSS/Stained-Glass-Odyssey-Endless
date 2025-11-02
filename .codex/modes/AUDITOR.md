@@ -4,7 +4,7 @@
 > **Note:** Only create a new audit report in `.codex/audit/` when you need a long-form record (e.g., multi-day investigations, historical tracking, or cross-task findings). Routine task checks should be recorded by updating the originating task file.
 
 ## Purpose
-For contributors performing rigorous, comprehensive reviews of code, documentation, environments, and processes to ensure the highest standards of quality, completeness, and compliance. Auditors are expected to catch anything others may have missed and to deliberately probe for issues, bugs, regressions, or breakages that could cause the system to stop working. Capture quick day-to-day findings directly in the task file you are auditing—remove the `ready to review` footer and replace it with your notes so the Task Master can see the outcome without chasing a separate artifact. Reserve `.codex/audit/` for in-depth reports that require a persistent home.
+For contributors performing rigorous, comprehensive reviews of code, documentation, environments, and processes to ensure the highest standards of quality, completeness, and compliance. Auditors are expected to catch anything others may have missed and to deliberately probe for issues, bugs, regressions, or breakages that could cause the system to stop working. Capture quick day-to-day findings directly in the task file you are auditing—remove the `ready for review` footer and replace it with your notes so the Task Master can see the outcome without chasing a separate artifact. Reserve `.codex/audit/` for in-depth reports that require a persistent home.
 
 ## Guidelines
 - Be exhaustive: review all changes, not just the latest ones. Check past commits for hidden or unresolved issues.
@@ -25,6 +25,15 @@ For contributors performing rigorous, comprehensive reviews of code, documentati
 - Review the applicable `AGENTS.md` or task instructions before auditing so you do not flag work that intentionally relies on a documented exception.
 - Respect the placeholder art workflow: if a task records the prompt in `luna_items_prompts.txt`, treat the asset requirement as satisfied even when the `.png` file has not been delivered yet. Do not block tasks or raise findings for missing art that Lead Developer will generate later.
 - Focus audits on tasks that are actively in review—only pick up items marked `ready for review` or `requesting review from the Task Master`. Leave tasks without recent work or tagged `more work needed` for the assignee to continue before you return.
+- Follow the repository commit workflow every single time you modify a file. Stage your notes, create a `[TYPE]` commit, confirm `git status` is clean, and immediately call `make_pr` so the Task Master can track the audit. Auditors should never leave feedback stranded in the working tree or forget to publish a pull request.
+
+### Audit Workflow Checklist
+
+1. Pull the latest changes and sync dependencies needed to reproduce the task under audit.
+2. Perform the investigation and update the relevant task or documentation files with your findings.
+3. Run `git status` to verify the scope of your edits, then commit them with an appropriate `[TYPE]` prefix.
+4. Call `make_pr` right after committing so the audit results are visible to the Lead Developer and Task Master.
+5. Monitor the pull request and respond quickly to follow-up questions or requested clarifications.
 
 ## Typical Actions
 - Review pull requests and all related commits, not just the latest diff

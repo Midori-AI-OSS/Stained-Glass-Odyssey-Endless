@@ -25,7 +25,9 @@ class NullLantern(RelicBase):
         party.no_rests = True
         stacks = party.relics.count(self.id)
         state = getattr(party, "_null_lantern_state", None)
-        cleared = getattr(party, "_null_lantern_cleared", 0)
+
+        # Get cleared count from persistent state dictionary
+        cleared = party.relic_persistent_state.get("null_lantern_cleared", 0)
 
         if state is None:
             state = {
@@ -36,6 +38,7 @@ class NullLantern(RelicBase):
             party._null_lantern_state = state
         else:
             state["stacks"] = stacks
+            state["cleared"] = cleared
 
         if not hasattr(party, "pull_tokens"):
             party.pull_tokens = 0
@@ -116,7 +119,10 @@ class NullLantern(RelicBase):
                 return
             current_state["awarded_in_battle"] = True
             current_state["cleared"] += 1
-            party._null_lantern_cleared = current_state["cleared"]
+
+            # Store in persistent state dictionary
+            party.relic_persistent_state["null_lantern_cleared"] = current_state["cleared"]
+
             pull_reward = 1 + current_stacks
 
             try:

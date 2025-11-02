@@ -304,10 +304,10 @@ _MODIFIER_DEFINITIONS: dict[str, dict[str, Any]] = {
         "min_stacks": 0,
         "stack_step": 1,
         "grants_reward_bonus": True,
-        "description": "Adds +0.00001 mitigation per stack with diminishing returns to curb runaway defenses.",
+        "description": "Adds +2.50 mitigation per stack with diminishing returns to curb runaway defenses.",
         "effects_metadata": {
             "stat": "mitigation",
-            "per_stack": 0.00001,
+            "per_stack": 2.5,
             "scaling_type": "additive",
         },
         "diminishing_returns": {
@@ -320,7 +320,7 @@ _MODIFIER_DEFINITIONS: dict[str, dict[str, Any]] = {
             "rdr_bonus_per_stack": 0.01,
         },
         "preview_stacks": [0, 1, 5, 10],
-        "effects": lambda stacks: _foe_modifier_effect("mitigation", 0.00001, stacks),
+        "effects": lambda stacks: _foe_modifier_effect("mitigation", 2.5, stacks),
         "diminishing_stat": "mitigation",
     },
     "foe_vitality": {
@@ -330,10 +330,10 @@ _MODIFIER_DEFINITIONS: dict[str, dict[str, Any]] = {
         "min_stacks": 0,
         "stack_step": 1,
         "grants_reward_bonus": True,
-        "description": "Adds +0.00001 vitality per stack before diminishing returns for regeneration-heavy foes.",
+        "description": "Adds +2.50 vitality per stack before diminishing returns for regeneration-heavy foes.",
         "effects_metadata": {
             "stat": "vitality",
-            "per_stack": 0.00001,
+            "per_stack": 2.5,
             "scaling_type": "additive",
         },
         "diminishing_returns": {
@@ -346,7 +346,7 @@ _MODIFIER_DEFINITIONS: dict[str, dict[str, Any]] = {
             "rdr_bonus_per_stack": 0.01,
         },
         "preview_stacks": [0, 1, 5, 10],
-        "effects": lambda stacks: _foe_modifier_effect("vitality", 0.00001, stacks),
+        "effects": lambda stacks: _foe_modifier_effect("vitality", 2.5, stacks),
         "diminishing_stat": "vitality",
     },
     "foe_glitched_rate": {
@@ -1108,8 +1108,8 @@ def build_run_modifier_context(snapshot: Mapping[str, Any]) -> RunModifierContex
     spawn_pressure = 1.0 + max(0.0, foe_exp_bonus) * 0.25
     spawn_pressure += max(0.0, hp_multiplier - 1.0) * 0.3
     spawn_pressure += max(0.0, speed_multiplier - 1.0) * 0.2
-    spawn_pressure += max(0.0, mitigation_effect) * 2500.0
-    spawn_pressure += max(0.0, vitality_effect) * 2000.0
+    spawn_pressure += max(0.0, mitigation_effect) * 0.01
+    spawn_pressure += max(0.0, vitality_effect) * 0.008
     spawn_pressure = max(1.0, min(spawn_pressure, 5.0))
 
     # Include the snapshot version in the hash to keep context stable even when

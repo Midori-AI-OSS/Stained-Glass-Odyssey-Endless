@@ -44,6 +44,36 @@ items for logging in and actively clearing rooms each day.
 - Claimed rewards are merged into the `upgrade_items` inventory with the normal
   `GachaManager` auto-crafting pass.
 
+## Themed Daily Buffs
+- Every reward day now includes a themed login buff that scales with
+  `rooms_completed` × `streak` using the same diminishing-return ladder as the
+  daily RDR bonus. The base rates are:
+  - **Sunday** – EXP Overflow (`0.00001`): increases `exp_multiplier` across the
+    party.
+  - **Monday** – Fire Infusion (`0.05`): Fire-aligned characters deal more
+    damage, take less incoming damage, and earn a higher Fire upgrade drop
+    weight.
+  - **Tuesday** – Ice Harmony (`0.05`): mirrors Monday for Ice-aligned
+    characters.
+  - **Wednesday** – Light & Dark Concord (`0.05`): applies the character buffs
+    to both Light- and Dark-aligned members simultaneously.
+  - **Thursday** – Wind Uplift (`0.05`): empowers Wind-aligned characters with
+    the same damage, mitigation, and drop-weight bonuses.
+  - **Friday** – Lightning Flux (`0.05`): grants the bonuses to Lightning
+    characters.
+  - **Saturday** – All-Stat Resonance (`0.000001`): multiplies core HP/ATK/DEF,
+    adds to crit stats, and nudges all elemental drop weights for the whole
+    party.
+- The computed map is stored in `LoginRewardState.extra['daily_theme_bonuses']`
+  and exposed through `get_login_reward_status`, `get_daily_theme_bonuses`, and
+  `get_daily_theme_bonuses_sync`.
+- Party hydration applies the active buff once per load—stat multipliers are
+  baked into `Stats`, damage bonuses are stored on each member for combat, and
+  the `Party` instance exposes `login_theme_bonuses` plus
+  `login_theme_drop_weights` for loot weighting.
+- Battle resolution consults the drop-weight map when rolling elemental upgrade
+  items so the day's theme is reflected in post-fight loot.
+
 ## API Endpoints
 - `GET /rewards/login`
   - Refreshes the login streak for the current PT window.

@@ -104,12 +104,11 @@ async def setup_battle(
         rdr=party.rdr,
         no_shops=getattr(party, "no_shops", False),
         no_rests=getattr(party, "no_rests", False),
+        relic_persistent_state=party.relic_persistent_state.copy(),
     )
 
     if hasattr(party, "pull_tokens"):
         combat_party.pull_tokens = getattr(party, "pull_tokens", 0)
-    if hasattr(party, "_null_lantern_cleared"):
-        setattr(combat_party, "_null_lantern_cleared", getattr(party, "_null_lantern_cleared", 0))
     if hasattr(party, "guiding_compass_bonus_used"):
         setattr(
             combat_party,

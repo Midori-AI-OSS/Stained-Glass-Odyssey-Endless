@@ -2,24 +2,27 @@ import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'fs';
 import { join } from 'path';
 
-describe('StatTabs editor persistence', () => {
+describe('StatTabs upgrade view', () => {
   const content = readFileSync(join(import.meta.dir, '../src/lib/components/StatTabs.svelte'), 'utf8');
 
-  test('stores editor values by character id', () => {
-    expect(content).toContain('context="module"');
-    expect(content).toMatch(/editorConfigs\s*=\s*new Map/);
-    expect(content).toContain('editorConfigs.set(previewId, { ...editorVals });');
+  test('exposes upgrade flow dispatchers', () => {
+    expect(content).toContain("dispatch('open-upgrade'");
+    expect(content).toContain("dispatch('close-upgrade'");
+    expect(content).toContain("dispatch('request-upgrade'");
   });
 
-  test('restores cached values when switching', () => {
-    expect(content).toContain('const cached = editorConfigs.get(previewChar.id)');
+  test('renders upgrade overlay copy and actions', () => {
+    expect(content).toContain('<h3>{activeStatLabel} Upgrade</h3>');
+    expect(content).toContain('class="upgrade-summary"');
+    expect(content).toContain('class="upgrade-actions"');
+    expect(content).toContain('Upgrade stats');
   });
 
   test('shows global buff note after Regain row', () => {
     expect(content).toContain('export let userBuffPercent = 0');
-    expect(content).toContain('Global Buff: +{userBuffPercent}%');
     const regainIndex = content.indexOf('<div><span>Regain</span>');
     const buffIndex = content.indexOf('Global Buff: +{userBuffPercent}%');
-    expect(regainIndex).toBeLessThan(buffIndex);
+    expect(regainIndex).toBeGreaterThanOrEqual(0);
+    expect(buffIndex).toBeGreaterThan(regainIndex);
   });
 });

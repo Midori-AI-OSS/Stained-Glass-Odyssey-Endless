@@ -12,6 +12,7 @@ from autofighter.stats import Stats
 from autofighter.summons.manager import SummonManager
 from plugins.characters._base import PlayerBase
 from plugins.characters.becca import Becca
+from plugins.characters.foe_base import FoeBase
 from plugins.characters.luna import Luna
 from plugins.effects.aftertaste import Aftertaste
 import plugins.event_bus as event_bus_module
@@ -1217,3 +1218,197 @@ async def test_safeguard_prism_telemetry():
     assert metadata["turns_remaining"] == 5
     assert metadata["stacks"] == 1
 
+
+@pytest.mark.asyncio
+async def test_cataclysm_engine_battle_start_overclock():
+    event_bus_module.bus._subs.clear()
+    stats_module.set_battle_active(True)
+    try:
+        party = Party()
+        ally_one = PlayerBase()
+        ally_one.set_base_stat('max_hp', 1000)
+        ally_one.hp = ally_one.max_hp
+        ally_one.set_base_stat('atk', 120)
+        ally_one.set_base_stat('defense', 80)
+        ally_one.set_base_stat('spd', 12)
+        ally_one.set_base_stat('crit_rate', 0.1)
+        ally_one.set_base_stat('crit_damage', 2.0)
+        ally_one.set_base_stat('mitigation', 1.0)
+
+        ally_two = PlayerBase()
+        ally_two.set_base_stat('max_hp', 800)
+        ally_two.hp = ally_two.max_hp
+        ally_two.set_base_stat('atk', 90)
+        ally_two.set_base_stat('defense', 60)
+        ally_two.set_base_stat('spd', 10)
+        ally_two.set_base_stat('mitigation', 1.0)
+
+        party.members.extend([ally_one, ally_two])
+
+        award_relic(party, "cataclysm_engine")
+        await apply_relics(party)
+
+        foe = FoeBase()
+        foe.set_base_stat('max_hp', 1200)
+        foe.hp = foe.max_hp
+
+        base_atk = ally_one.get_base_stat('atk')
+        base_defense = ally_one.get_base_stat('defense')
+        base_spd = ally_one.get_base_stat('spd')
+        base_crit_rate = ally_one.get_base_stat('crit_rate')
+        base_crit_damage = ally_one.get_base_stat('crit_damage')
+        base_mitigation = ally_one.get_base_stat('mitigation')
+
+        start_hp_one = ally_one.hp
+        start_hp_two = ally_two.hp
+        start_hp_foe = foe.hp
+
+        await BUS.emit_async("battle_start", foe)
+        await BUS.emit_async("battle_start", ally_one)
+        await asyncio.sleep(0)
+        await asyncio.sleep(0)
+
+        expected_blast_one = int(ally_one.max_hp * 0.15)
+        expected_blast_two = int(ally_two.max_hp * 0.15)
+        expected_blast_foe = int(foe.max_hp * 0.15)
+
+        assert start_hp_one - ally_one.hp == expected_blast_one
+        assert start_hp_two - ally_two.hp == expected_blast_two
+        assert start_hp_foe - foe.hp == expected_blast_foe
+
+        assert ally_one.atk == pytest.approx(base_atk * 2.5)
+        assert ally_one.defense == pytest.approx(base_defense * 2.0)
+        assert ally_one.spd == pytest.approx(base_spd * 1.5)
+        assert ally_one.crit_rate == pytest.approx(base_crit_rate * 1.35)
+        assert ally_one.crit_damage == pytest.approx(base_crit_damage * 1.5)
+        assert ally_one.mitigation == pytest.approx(base_mitigation * 1.2)
+    finally:
+        stats_module.set_battle_active(False)
+
+
+@pytest.mark.asyncio
+async def test_cataclysm_engine_turn_drain_and_escalation():
+    event_bus_module.bus._subs.clear()
+    stats_module.set_battle_active(True)
+    try:
+        party = Party()
+        ally = PlayerBase()
+        ally.set_base_stat('max_hp', 1000)
+        ally.hp = ally.max_hp
+        ally.set_base_stat('mitigation', 1.0)
+        party.members.append(ally)
+
+        award_relic(party, "cataclysm_engine")
+        await apply_relics(party)
+
+        await BUS.emit_async("battle_start", FoeBase())
+        await BUS.emit_async("battle_start", ally)
+        await asyncio.sleep(0)
+        await asyncio.sleep(0)
+
+        base_mitigation = ally.get_base_stat('mitigation')
+        hp_after_blast = ally.hp
+
+        await BUS.emit_async("turn_start")
+        await asyncio.sleep(0)
+        await asyncio.sleep(0)
+
+        first_expected = int(ally.max_hp * 0.05)
+        assert hp_after_blast - ally.hp == first_expected
+        first_mitigation = ally.mitigation
+        assert first_mitigation == pytest.approx(base_mitigation * (1.2 + 1.05 - 1))
+
+        hp_before_second = ally.hp
+        await BUS.emit_async("turn_start")
+        await asyncio.sleep(0)
+        await asyncio.sleep(0)
+
+        second_expected = int(ally.max_hp * 0.05)
+        assert hp_before_second - ally.hp == second_expected
+        second_mitigation = ally.mitigation
+        assert second_mitigation == pytest.approx(base_mitigation * (1.2 + (1.05 ** 2) - 1))
+        assert second_mitigation > first_mitigation
+    finally:
+        stats_module.set_battle_active(False)
+
+
+@pytest.mark.asyncio
+async def test_cataclysm_engine_stacks_scale_damage():
+    event_bus_module.bus._subs.clear()
+    stats_module.set_battle_active(True)
+    try:
+        party = Party()
+        ally = PlayerBase()
+        ally.set_base_stat('max_hp', 1000)
+        ally.hp = ally.max_hp
+        ally.set_base_stat('atk', 100)
+        ally.set_base_stat('mitigation', 1.0)
+        party.members.append(ally)
+
+        award_relic(party, "cataclysm_engine")
+        award_relic(party, "cataclysm_engine")
+        await apply_relics(party)
+
+        foe = FoeBase()
+        foe.set_base_stat('max_hp', 1500)
+        foe.hp = foe.max_hp
+
+        base_atk = ally.get_base_stat('atk')
+        start_hp_ally = ally.hp
+        start_hp_foe = foe.hp
+
+        await BUS.emit_async("battle_start", foe)
+        await BUS.emit_async("battle_start", ally)
+        await asyncio.sleep(0)
+        await asyncio.sleep(0)
+
+        expected_blast_ally = int(ally.max_hp * 0.20)
+        expected_blast_foe = int(foe.max_hp * 0.20)
+        assert start_hp_ally - ally.hp == expected_blast_ally
+        assert start_hp_foe - foe.hp == expected_blast_foe
+        assert ally.atk == pytest.approx(base_atk * 3.0)
+
+        hp_after_blast = ally.hp
+        await BUS.emit_async("turn_start")
+        await asyncio.sleep(0)
+        await asyncio.sleep(0)
+
+        expected_drain = int(ally.max_hp * 0.07)
+        assert hp_after_blast - ally.hp == expected_drain
+        expected_mitigation = ally.get_base_stat('mitigation') * (1.3 + 1.1 - 1)
+        assert ally.mitigation == pytest.approx(expected_mitigation)
+    finally:
+        stats_module.set_battle_active(False)
+
+
+@pytest.mark.asyncio
+async def test_cataclysm_engine_with_greed_engine_drain_additive():
+    event_bus_module.bus._subs.clear()
+    stats_module.set_battle_active(True)
+    try:
+        party = Party()
+        ally = PlayerBase()
+        ally.set_base_stat('max_hp', 900)
+        ally.hp = ally.max_hp
+        ally.set_base_stat('mitigation', 1.0)
+        party.members.append(ally)
+
+        award_relic(party, "cataclysm_engine")
+        award_relic(party, "greed_engine")
+        await apply_relics(party)
+
+        await BUS.emit_async("battle_start", FoeBase())
+        await BUS.emit_async("battle_start", ally)
+        await asyncio.sleep(0)
+        await asyncio.sleep(0)
+
+        hp_before_turn = ally.hp
+        await BUS.emit_async("turn_start")
+        await asyncio.sleep(0)
+        await asyncio.sleep(0)
+
+        cataclysm_drain = int(ally.max_hp * 0.05)
+        greed_drain = int(ally.max_hp * 0.01)
+        assert hp_before_turn - ally.hp == cataclysm_drain + greed_drain
+    finally:
+        stats_module.set_battle_active(False)

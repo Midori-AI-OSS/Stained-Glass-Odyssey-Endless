@@ -19,6 +19,7 @@ from autofighter.relics import award_relic
 from autofighter.rooms.battle.turn_loop import player_turn
 from autofighter.stats import BUS
 from autofighter.stats import Stats
+from autofighter.stats import set_battle_active
 from plugins.characters._base import PlayerBase
 from plugins.effects.aftertaste import Aftertaste
 import plugins.event_bus as event_bus_module
@@ -581,3 +582,433 @@ async def test_echoing_drum_overflow_aftertaste_hits(monkeypatch):
         await asyncio.gather(*created_tasks)
         created_tasks.clear()
     assert triggered_hits == [2]
+
+
+@pytest.mark.asyncio
+async def test_blood_debt_tithe_basic_defeat_tracking():
+    """Test that Blood Debt Tithe tracks defeats and increases RDR."""
+    event_bus_module.bus._subs.clear()
+
+    from plugins.characters.foe_base import FoeBase
+
+    party = Party()
+    party.members.append(PlayerBase())
+
+    # Start with known RDR
+    initial_rdr = party.rdr
+
+    # Award one stack
+    award_relic(party, "blood_debt_tithe")
+    await apply_relics(party)
+
+    # Create a foe
+    foe = FoeBase()
+    foe.id = "test_foe_1"
+    foe.hp = 0  # Defeated
+
+    # Track relic effects
+    relic_events = []
+
+    def _capture_relic_effect(
+        relic_id: str,
+        recipient,
+        event_name: str,
+        value: int,
+        payload: dict[str, object],
+        *_extra: object,
+    ) -> None:
+        if relic_id == "blood_debt_tithe":
+            relic_events.append((event_name, value, payload))
+
+    BUS.subscribe("relic_effect", _capture_relic_effect)
+
+    # Emit defeat and battle end
+    await BUS.emit_async("entity_defeat", foe)
+    await BUS.emit_async("battle_end", foe)
+
+    # RDR should increase by 0.2% (0.002) per stack per defeat = 0.002 * 1 * 1
+    expected_rdr = initial_rdr + 0.002
+    assert party.rdr == pytest.approx(expected_rdr, rel=1e-5)
+
+    # Check telemetry
+    defeats_events = [e for e in relic_events if e[0] == "defeats_banked"]
+    assert len(defeats_events) == 1
+    _, value, payload = defeats_events[0]
+    assert value == 1
+    assert payload["new_defeats"] == 1
+    assert payload["total_defeats"] == 1
+    assert payload["stacks"] == 1
+
+
+@pytest.mark.asyncio
+async def test_blood_debt_tithe_duplicate_defeat_suppression():
+    """Test that duplicate defeats in same battle don't inflate count."""
+    event_bus_module.bus._subs.clear()
+
+    from plugins.characters.foe_base import FoeBase
+
+    party = Party()
+    party.members.append(PlayerBase())
+    initial_rdr = party.rdr
+
+    award_relic(party, "blood_debt_tithe")
+    await apply_relics(party)
+
+    foe = FoeBase()
+    foe.id = "test_foe_1"
+    foe.hp = 0
+
+    # Emit defeat multiple times (simulating multiple calls)
+    await BUS.emit_async("entity_defeat", foe)
+    await BUS.emit_async("entity_defeat", foe)
+    await BUS.emit_async("entity_defeat", foe)
+    await BUS.emit_async("battle_end", foe)
+
+    # RDR should only increase once for the unique foe
+    expected_rdr = initial_rdr + 0.002
+    assert party.rdr == pytest.approx(expected_rdr, rel=1e-5)
+
+
+@pytest.mark.asyncio
+async def test_blood_debt_tithe_multiple_foes():
+    """Test tracking multiple different foes in one battle."""
+    event_bus_module.bus._subs.clear()
+
+    from plugins.characters.foe_base import FoeBase
+
+    party = Party()
+    party.members.append(PlayerBase())
+    initial_rdr = party.rdr
+
+    award_relic(party, "blood_debt_tithe")
+    await apply_relics(party)
+
+    # Create three unique foes
+    foe1 = FoeBase()
+    foe1.id = "foe_1"
+    foe1.hp = 0
+
+    foe2 = FoeBase()
+    foe2.id = "foe_2"
+    foe2.hp = 0
+
+    foe3 = FoeBase()
+    foe3.id = "foe_3"
+    foe3.hp = 0
+
+    # Emit defeats for all three
+    await BUS.emit_async("entity_defeat", foe1)
+    await BUS.emit_async("entity_defeat", foe2)
+    await BUS.emit_async("entity_defeat", foe3)
+    await BUS.emit_async("battle_end", foe1)
+
+    # RDR should increase by 0.002 * 3 = 0.006
+    expected_rdr = initial_rdr + 0.006
+    assert party.rdr == pytest.approx(expected_rdr, rel=1e-5)
+
+
+@pytest.mark.asyncio
+async def test_blood_debt_tithe_stacking():
+    """Test that multiple stacks multiply the RDR bonus."""
+    event_bus_module.bus._subs.clear()
+
+    from plugins.characters.foe_base import FoeBase
+
+    party = Party()
+    party.members.append(PlayerBase())
+    initial_rdr = party.rdr
+
+    # Award two stacks
+    award_relic(party, "blood_debt_tithe")
+    award_relic(party, "blood_debt_tithe")
+    await apply_relics(party)
+
+    foe = FoeBase()
+    foe.id = "test_foe"
+    foe.hp = 0
+
+    await BUS.emit_async("entity_defeat", foe)
+    await BUS.emit_async("battle_end", foe)
+
+    # RDR should increase by 0.002 * 2 stacks * 1 defeat = 0.004
+    expected_rdr = initial_rdr + 0.004
+    assert party.rdr == pytest.approx(expected_rdr, rel=1e-5)
+
+
+@pytest.mark.asyncio
+async def test_blood_debt_tithe_foe_buffing():
+    """Test that foes are buffed based on stored defeats."""
+    event_bus_module.bus._subs.clear()
+
+    from plugins.characters.foe_base import FoeBase
+
+    party = Party()
+    party.members.append(PlayerBase())
+
+    award_relic(party, "blood_debt_tithe")
+    await apply_relics(party)
+
+    # Simulate previous battles - manually set defeats
+    state = party._blood_debt_tithe_state
+    state["total_defeats"] = 5
+
+    # Create a new foe for next battle
+    foe = FoeBase()
+    foe.id = "buffed_foe"
+    base_atk = 100
+    base_spd = 100
+    foe.set_base_stat("atk", base_atk)
+    foe.set_base_stat("spd", base_spd)
+
+    relic_events = []
+
+    def _capture_relic_effect(
+        relic_id: str,
+        recipient,
+        event_name: str,
+        value: int,
+        payload: dict[str, object],
+        *_extra: object,
+    ) -> None:
+        if relic_id == "blood_debt_tithe" and event_name == "foe_buffed":
+            relic_events.append(payload)
+
+    BUS.subscribe("relic_effect", _capture_relic_effect)
+
+    initial_atk = foe.atk
+    initial_spd = foe.spd
+
+    await BUS.emit_async("battle_start", foe)
+
+    # Foe stats should be buffed (exact values depend on diminishing returns)
+    # Just check they increased
+    assert foe.atk > initial_atk
+    assert foe.spd > initial_spd
+
+    # Check telemetry
+    assert len(relic_events) == 1
+    payload = relic_events[0]
+    assert payload["total_defeats"] == 5
+    assert payload["atk_multiplier"] == pytest.approx(1.15, rel=1e-5)
+    assert payload["spd_multiplier"] == pytest.approx(1.10, rel=1e-5)
+
+
+@pytest.mark.asyncio
+async def test_blood_debt_tithe_cross_battle_persistence():
+    """Test that defeat counter persists across battles."""
+    event_bus_module.bus._subs.clear()
+
+    from plugins.characters.foe_base import FoeBase
+
+    party = Party()
+    party.members.append(PlayerBase())
+    initial_rdr = party.rdr
+
+    award_relic(party, "blood_debt_tithe")
+    await apply_relics(party)
+
+    # First battle - 2 defeats
+    foe1 = FoeBase()
+    foe1.id = "battle1_foe1"
+    foe1.hp = 0
+
+    foe2 = FoeBase()
+    foe2.id = "battle1_foe2"
+    foe2.hp = 0
+
+    await BUS.emit_async("entity_defeat", foe1)
+    await BUS.emit_async("entity_defeat", foe2)
+    await BUS.emit_async("battle_end", foe1)
+    await BUS.emit_async("battle_end", foe2)
+
+    rdr_after_battle1 = party.rdr
+    assert rdr_after_battle1 == pytest.approx(initial_rdr + 0.004, rel=1e-5)
+
+    # Re-apply relics for battle 2 (simulating new battle setup)
+    await apply_relics(party)
+
+    # Second battle - 1 defeat
+    foe3 = FoeBase()
+    foe3.id = "battle2_foe1"
+    foe3.hp = 0
+
+    await BUS.emit_async("entity_defeat", foe3)
+    await BUS.emit_async("battle_end", foe3)
+
+    # Total should be 3 defeats = 0.002 * 3 = 0.006
+    expected_rdr = initial_rdr + 0.006
+    assert party.rdr == pytest.approx(expected_rdr, rel=1e-5)
+
+    # Check stored state
+    assert party._blood_debt_tithe_state["total_defeats"] == 3
+
+
+@pytest.mark.asyncio
+async def test_blood_debt_tithe_foe_buff_scaling():
+    """Test that foe buffs scale with both defeats and stacks."""
+    event_bus_module.bus._subs.clear()
+
+    from plugins.characters.foe_base import FoeBase
+
+    party = Party()
+    party.members.append(PlayerBase())
+
+    # Award 2 stacks
+    award_relic(party, "blood_debt_tithe")
+    award_relic(party, "blood_debt_tithe")
+    await apply_relics(party)
+
+    # Set 3 stored defeats
+    state = party._blood_debt_tithe_state
+    state["total_defeats"] = 3
+
+    foe = FoeBase()
+    foe.id = "scaled_foe"
+    foe.set_base_stat("atk", 100)
+    foe.set_base_stat("spd", 100)
+
+    initial_atk = foe.atk
+    initial_spd = foe.spd
+
+    await BUS.emit_async("battle_start", foe)
+
+    # Foe stats should be significantly buffed (more than single stack case)
+    # Expected multipliers: 1.18 for ATK, 1.12 for SPD
+    # With diminishing returns, actual increase will be less but still substantial
+    assert foe.atk > initial_atk
+    assert foe.spd > initial_spd
+
+    # The buff should be more than what a single stack would provide
+    # Single stack with 3 defeats would be ~1.09 ATK, 1.06 SPD
+    # So we should see noticeably more than 9% and 6% increases
+    assert foe.atk >= initial_atk * 1.12  # At least 12% increase even with diminishing
+    assert foe.spd >= initial_spd * 1.08  # At least 8% increase even with diminishing
+
+
+@pytest.mark.asyncio
+async def test_eclipse_reactor_initial_drain_clamps_to_one_hp():
+    event_bus_module.bus._subs.clear()
+
+    party = Party()
+    ally = PlayerBase()
+    ally.id = "eclipse-survivor"
+    ally.set_base_stat("max_hp", 50)
+    ally.hp = ally.max_hp
+    ally.hp = 4
+    party.members.append(ally)
+
+    award_relic(party, "eclipse_reactor")
+    await apply_relics(party)
+
+    set_battle_active(True)
+    try:
+        await BUS.emit_async("battle_start", ally)
+        await asyncio.sleep(0)
+
+        assert ally.hp == 1
+    finally:
+        set_battle_active(False)
+
+
+@pytest.mark.asyncio
+async def test_eclipse_reactor_surge_duration_and_post_drain():
+    event_bus_module.bus._subs.clear()
+
+    party = Party()
+    ally = PlayerBase()
+    ally.id = "eclipse-burst"
+    ally.set_base_stat("max_hp", 100)
+    ally.hp = ally.max_hp
+    ally.set_base_stat("atk", 100)
+    ally.set_base_stat("spd", 50)
+    ally.set_base_stat("crit_damage", 2.0)
+    party.members.append(ally)
+
+    award_relic(party, "eclipse_reactor")
+    award_relic(party, "eclipse_reactor")
+    await apply_relics(party)
+
+    base_atk = ally.get_base_stat("atk")
+    base_spd = ally.get_base_stat("spd")
+    base_cd = ally.get_base_stat("crit_damage")
+
+    set_battle_active(True)
+    try:
+        await BUS.emit_async("battle_start", ally)
+        await asyncio.sleep(0)
+
+        stacks = party.relics.count("eclipse_reactor")
+        surge_atk_mult = 1 + 1.8 * stacks
+        surge_spd_mult = 1 + 1.8 * stacks
+        surge_cd_mult = 1 + 0.6 * stacks
+        initial_drain = min(int(ally.max_hp * 0.18 * stacks), ally.max_hp - 1)
+
+        assert ally.atk == int(base_atk * surge_atk_mult)
+        assert ally.spd == int(base_spd * surge_spd_mult)
+        assert ally.crit_damage == pytest.approx(base_cd * surge_cd_mult)
+        assert ally.hp == ally.max_hp - initial_drain
+
+        for _ in range(2):
+            await BUS.emit_async("turn_start")
+            await asyncio.sleep(0)
+            assert ally.atk == int(base_atk * surge_atk_mult)
+            assert ally.spd == int(base_spd * surge_spd_mult)
+            assert ally.crit_damage == pytest.approx(base_cd * surge_cd_mult)
+
+        await BUS.emit_async("turn_start")
+        await asyncio.sleep(0)
+
+        assert ally.atk == base_atk
+        assert ally.spd == base_spd
+        assert ally.crit_damage == pytest.approx(base_cd)
+        assert ally.hp == ally.max_hp - initial_drain
+
+        await BUS.emit_async("turn_start")
+        await asyncio.sleep(0)
+
+        post_drain = int(ally.max_hp * 0.02 * stacks)
+        assert ally.hp == ally.max_hp - initial_drain - post_drain
+    finally:
+        set_battle_active(False)
+
+
+@pytest.mark.asyncio
+async def test_eclipse_reactor_cleans_up_on_battle_end():
+    event_bus_module.bus._subs.clear()
+
+    party = Party()
+    ally = PlayerBase()
+    ally.id = "eclipse-cleanup"
+    ally.set_base_stat("max_hp", 100)
+    ally.hp = ally.max_hp
+    party.members.append(ally)
+
+    award_relic(party, "eclipse_reactor")
+    await apply_relics(party)
+
+    set_battle_active(True)
+    try:
+        await BUS.emit_async("battle_start", ally)
+        await asyncio.sleep(0)
+
+        for _ in range(3):
+            await BUS.emit_async("turn_start")
+            await asyncio.sleep(0)
+
+        await BUS.emit_async("turn_start")
+        await asyncio.sleep(0)
+        hp_after_drain = ally.hp
+
+        from plugins.characters.foe_base import FoeBase
+
+        await BUS.emit_async("battle_end", FoeBase())
+        await asyncio.sleep(0)
+
+        ally.hp = hp_after_drain
+        await BUS.emit_async("turn_start")
+        await asyncio.sleep(0)
+
+        assert ally.hp == hp_after_drain
+        assert ally.atk == ally.get_base_stat("atk")
+    finally:
+        set_battle_active(False)

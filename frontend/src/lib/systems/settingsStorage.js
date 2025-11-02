@@ -61,6 +61,7 @@ function getDefaultSettings() {
     flashEnrageCounter: true,
     fullIdleMode: false,
     skipBattleReview: false,
+    skipBattleReviewPreference: false,
     animationSpeed: 1.0
   };
 }
@@ -135,6 +136,9 @@ export function loadSettings() {
     if (data.flashEnrageCounter !== undefined) data.flashEnrageCounter = Boolean(data.flashEnrageCounter);
     if (data.fullIdleMode !== undefined) data.fullIdleMode = Boolean(data.fullIdleMode);
     if (data.skipBattleReview !== undefined) data.skipBattleReview = Boolean(data.skipBattleReview);
+    if (data.skipBattleReviewPreference !== undefined) {
+      data.skipBattleReviewPreference = Boolean(data.skipBattleReviewPreference);
+    }
     if (data.animationSpeed !== undefined) {
       const numeric = Number(data.animationSpeed);
       if (Number.isFinite(numeric) && numeric > 0) {
@@ -165,6 +169,9 @@ export function loadSettings() {
     if (data.flashEnrageCounter === undefined) {
       data.flashEnrageCounter = defaults.flashEnrageCounter;
     }
+    if (data.skipBattleReviewPreference === undefined) {
+      data.skipBattleReviewPreference = data.skipBattleReview ?? defaults.skipBattleReviewPreference;
+    }
     
     // Update stores
     motionStore.set(data.motion);
@@ -181,8 +188,11 @@ export function loadSettings() {
 
 export function saveSettings(settings) {
   try {
+    const safeSettings = settings ?? {};
+    const skipProvided = Object.prototype.hasOwnProperty.call(safeSettings, 'skipBattleReview');
+    const preferenceProvided = Object.prototype.hasOwnProperty.call(safeSettings, 'skipBattleReviewPreference');
     const current = loadSettings();
-    const merged = { ...current, ...settings };
+    const merged = { ...current, ...safeSettings };
     
     // Ensure version is set
     merged.version = SETTINGS_VERSION;
@@ -192,6 +202,26 @@ export function saveSettings(settings) {
     if (merged.showTurnCounter !== undefined) merged.showTurnCounter = Boolean(merged.showTurnCounter);
     if (merged.flashEnrageCounter !== undefined) merged.flashEnrageCounter = Boolean(merged.flashEnrageCounter);
     if (merged.skipBattleReview !== undefined) merged.skipBattleReview = Boolean(merged.skipBattleReview);
+    const fallbackPreference = current.skipBattleReviewPreference ?? current.skipBattleReview ?? false;
+    let nextPreference;
+    if (preferenceProvided) {
+      nextPreference = Boolean(safeSettings.skipBattleReviewPreference);
+    } else if (skipProvided) {
+      nextPreference = Boolean(safeSettings.skipBattleReview);
+    } else if (merged.skipBattleReviewPreference !== undefined) {
+      nextPreference = Boolean(merged.skipBattleReviewPreference);
+    } else if (merged.skipBattleReview !== undefined) {
+      nextPreference = Boolean(merged.skipBattleReview);
+    } else {
+      nextPreference = fallbackPreference;
+    }
+    merged.skipBattleReviewPreference = nextPreference;
+
+    if (merged.fullIdleMode) {
+      merged.skipBattleReview = true;
+    } else if (!skipProvided && merged.skipBattleReview === undefined) {
+      merged.skipBattleReview = nextPreference;
+    }
     if (merged.animationSpeed !== undefined) {
       const numeric = Number(merged.animationSpeed);
       if (Number.isFinite(numeric) && numeric > 0) {

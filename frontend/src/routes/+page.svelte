@@ -52,6 +52,8 @@
   import { normalizeShopPurchase, processSequentialPurchases } from '$lib/systems/shopPurchases.js';
   import { resolveRewardStagingPayload } from '$lib/utils/rewardStagingPayload.js';
   import { computeAutomationAction } from '$lib/utils/rewardAutomation.js';
+  import { RewardAutomationScheduler, actionsEqual as automationActionEquals } from '$lib/utils/rewardAutomationScheduler.js';
+  import { motionStore } from '$lib/systems/settingsStorage.js';
 
   const runState = runStateStore;
 
@@ -1143,25 +1145,61 @@
   let autoHandling = false;
   let rewardAdvanceInFlight = false;
   let roomAdvanceInFlight = false;
-  async function maybeAutoHandle() {
-    if (!fullIdleMode || autoHandling || rewardAdvanceInFlight || !runId || !roomData || lootAckBlocked) return;
+
+  const automationScheduler = new RewardAutomationScheduler();
+  let automationMotionUnsub = null;
+  if (browser) {
+    automationMotionUnsub = motionStore.subscribe((settings) => {
+      automationScheduler.updateReducedMotion(Boolean(settings?.globalReducedMotion));
+    });
+  }
+
+  function resetAutomationQueue() {
+    automationScheduler.cancel();
+    autoHandling = false;
+  }
+
+  function buildAutomationContext() {
+    const staging = roomData?.reward_staging && typeof roomData.reward_staging === 'object'
+      ? roomData.reward_staging
+      : {};
+    const stagedCards = Array.isArray(staging.cards) ? staging.cards : [];
+    const stagedRelics = Array.isArray(staging.relics) ? staging.relics : [];
+    const snapshot = typeof rewardPhaseController?.getSnapshot === 'function'
+      ? rewardPhaseController.getSnapshot()
+      : null;
+    return { stagedCards, stagedRelics, snapshot };
+  }
+
+  function automationActionForState() {
+    const { stagedCards, stagedRelics, snapshot } = buildAutomationContext();
+    return computeAutomationAction({
+      roomData,
+      snapshot,
+      stagedCards,
+      stagedRelics
+    });
+  }
+
+  function validateAutomationAction(action) {
+    if (
+      !fullIdleMode ||
+      lootAckBlocked ||
+      !runId ||
+      !roomData ||
+      rewardAdvanceInFlight ||
+      roomAdvanceInFlight ||
+      battleActive
+    ) {
+      return false;
+    }
+    const next = automationActionForState();
+    return automationActionEquals(action, next);
+  }
+
+  async function executeAutomationAction(action) {
     autoHandling = true;
     try {
-      const staging = roomData.reward_staging && typeof roomData.reward_staging === 'object'
-        ? roomData.reward_staging
-        : {};
-      const stagedCards = Array.isArray(staging.cards) ? staging.cards : [];
-      const stagedRelics = Array.isArray(staging.relics) ? staging.relics : [];
-      const snapshot = typeof rewardPhaseController?.getSnapshot === 'function'
-        ? rewardPhaseController.getSnapshot()
-        : null;
-      const action = computeAutomationAction({
-        roomData,
-        snapshot,
-        stagedCards,
-        stagedRelics
-      });
-
       switch (action.type) {
         case 'select-card': {
           if (action.choice) {
@@ -1172,7 +1210,16 @@
               }
             } catch {}
           }
-          return;
+          break;
+        }
+        case 'confirm-card': {
+          try {
+            const res = await confirmCard();
+            if (res) {
+              applyRewardPayload(res, { type: 'card', intent: 'confirm' });
+            }
+          } catch {}
+          break;
         }
         case 'select-relic': {
           if (action.choice) {
@@ -1183,32 +1230,88 @@
               }
             } catch {}
           }
-          return;
+          break;
+        }
+        case 'confirm-relic': {
+          try {
+            const res = await confirmRelic();
+            if (res) {
+              applyRewardPayload(res, { type: 'relic', intent: 'confirm' });
+            }
+          } catch {}
+          break;
         }
         case 'ack-loot': {
           await handleLootAcknowledge();
-          return;
+          break;
         }
         case 'next-room': {
           await handleNextRoom();
-          return;
+          break;
         }
         case 'advance': {
           if (!rewardAdvanceInFlight) {
             await handleRewardAdvance({ reason: 'automation', phase: action.phase ?? null });
           }
-          return;
+          break;
         }
-        default: {
-          return;
-        }
+        default:
+          break;
       }
     } finally {
       autoHandling = false;
     }
   }
 
-  $: fullIdleMode && roomData && maybeAutoHandle();
+  function maybeAutoHandle() {
+    if (
+      !fullIdleMode ||
+      autoHandling ||
+      rewardAdvanceInFlight ||
+      roomAdvanceInFlight ||
+      !runId ||
+      !roomData ||
+      lootAckBlocked ||
+      battleActive
+    ) {
+      resetAutomationQueue();
+      return;
+    }
+
+    const action = automationActionForState();
+    if (!action || action.type === 'none') {
+      resetAutomationQueue();
+      return;
+    }
+
+    automationScheduler.schedule(action, {
+      execute: executeAutomationAction,
+      validate: validateAutomationAction,
+      onSettled: () => {
+        if (fullIdleMode) {
+          maybeAutoHandle();
+        }
+      }
+    });
+  }
+
+  $: {
+    if (fullIdleMode && roomData && !battleActive) {
+      maybeAutoHandle();
+    } else {
+      resetAutomationQueue();
+    }
+  }
+
+  onDestroy(() => {
+    resetAutomationQueue();
+    if (automationMotionUnsub) {
+      try {
+        automationMotionUnsub();
+      } catch {}
+      automationMotionUnsub = null;
+    }
+  });
   async function handleShopBuy(item) {
     if (!runId) return;
     const rawEntries = (() => {
@@ -1544,7 +1647,6 @@
   $: items = buildRunMenu(
     {
       openRun,
-      handleParty,
       openPulls,
       openFeedback,
       openDiscord,

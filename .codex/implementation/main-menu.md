@@ -1,24 +1,22 @@
 # Main Menu
 
-The Svelte front page presents a high-contrast grid of icon buttons inspired by
-Arknights. Menu items include **Run**, **Map**, **Party**, **Edit**, **Pulls**,
-**Craft**, **Guidebook**, **Settings**, **Feedback**, and **Stats**, each showing a Lucide icon above a label.
-**Craft** opens a menu to upgrade items and toggle auto-crafting. **Feedback** launches a pre-filled GitHub issue using `FEEDBACK_URL`.
-**Settings** opens its own overlay within the viewport using the shared menu surface. Layout is
-determined by `layoutForWidth`:
-- **Desktop:** menu grid with the PartyPicker panel alongside it. StatsPanel is
-  planned but not displayed yet.
-- **Tablet:** menu grid beside the PartyPicker panel.
-- **Phone:** only the menu grid is shown for clarity.
+The home screen presents a high-contrast column layout with the run action grid on the right rail and the viewport banner and PartyPicker shell on the left. Primary actions are rendered through `RunButtons.svelte`, which builds a single list of Lucide-powered buttons rather than the old 2×3 grid.
 
-Choosing **Run** opens the PartyPicker overlay to review the lineup before a run.
-Selecting **Map** fetches the current run's layout and displays it in
-`MapDisplay`. **Edit** retrieves the player's configuration and launches the
-`PlayerEditor` for pronoun, damage-type, and stat tweaks. **Guidebook** opens a
-reference overlay with tabs for Damage Types, Ults, UI, Shops, Mechs, and Passives sourced from backend endpoints. **Pulls** opens a
-gacha panel that shows the current pity counter and updates currency and
-results after invoking `/gacha/pull`.
+## Actions
+- **Run** — opens the run chooser. If no active runs exist it launches the PartyPicker step so the lineup can be reviewed before map generation. Existing runs skip directly to resume.
+- **Warp** — opens the gacha/pulls overlay (`openPulls`). Disabled while a battle is active.
+- **Inventory** — surfaces the in-run inventory overlay so players can inspect cards, relics, and upgrade materials between encounters.
+- **Battle Review** — opens the battle-review menu overlay, allowing players to revisit previous fights.
+- **Guidebook** — navigates to the reference overlay with tabs for damage types, ultimates, UI notes, shops, mechs, and passives.
+- **Settings** — launches the settings overlay with audio sliders, Reduced Motion, and End Run controls.
+
+Quick links for **Feedback**, **Discord**, and the project **Website** follow the primary actions and open external pages in a new window. These links remain available during runs so testers can report issues without leaving the game.
+
+## Layout Notes
+- The PartyPicker no longer has a dedicated "Party" button on the home menu; editing happens inside the Run flow only.
+- Inventory access still mirrors the top-left NavBar entry so players can inspect loot without starting a run.
+- Button spacing and keyboard navigation should remain consistent after removing the legacy Party entry.
 
 ## Testing
-- `bun test frontend/tests/layout.test.js`
-- `bun test frontend/tests/feedback.test.js`
+- `bun test tests/run-wizard-flow.vitest.js`
+- `bun test tests/shopmenu.test.js`

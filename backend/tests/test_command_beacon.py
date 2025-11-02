@@ -8,8 +8,8 @@ from autofighter.party import Party
 from autofighter.relics import apply_relics
 from autofighter.relics import award_relic
 from autofighter.stats import BUS
-from autofighter.stats import set_battle_active
 from autofighter.stats import Stats
+from autofighter.stats import set_battle_active
 
 
 @pytest.mark.asyncio

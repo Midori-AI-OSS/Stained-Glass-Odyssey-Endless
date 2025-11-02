@@ -2,6 +2,7 @@
   import { onDestroy, onMount } from 'svelte';
   import { Clock3, Gift, RefreshCw, Star, Sparkles } from 'lucide-svelte';
 
+  import { getDamageTypeColor, getDamageTypeIcon, normalizeDamageTypeId } from '$lib/systems/assetLoader.js';
   import { getLoginRewardStatus } from '$lib/systems/uiApi.js';
 
   // When true, renders in an embedded layout suitable for panels
@@ -50,6 +51,43 @@
       return percent.toFixed(1);
     }
     return percent.toFixed(2);
+  }
+
+  function formatPercentDisplay(entry) {
+    if (!entry) return '';
+    if (typeof entry === 'object') {
+      if (typeof entry.formatted_with_sign === 'string' && entry.formatted_with_sign) {
+        return entry.formatted_with_sign;
+      }
+      if (typeof entry.formatted === 'string' && entry.formatted) {
+        return entry.formatted;
+      }
+      if (typeof entry.value === 'number') {
+        return `+${formatBonusPercent(entry.value)}%`;
+      }
+    }
+    if (typeof entry === 'number') {
+      return `+${formatBonusPercent(entry)}%`;
+    }
+    return '';
+  }
+
+  function formatStatKey(key) {
+    switch (key) {
+      case 'exp_multiplier':
+        return 'EXP Gain';
+      case 'all_stat_multiplier':
+        return 'Core Stats';
+      case 'crit_rate_bonus':
+        return 'Crit Rate';
+      case 'crit_damage_bonus':
+        return 'Crit Damage';
+      default:
+        return key
+          .split('_')
+          .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
+          .join(' ');
+    }
   }
 
 
@@ -189,6 +227,94 @@
   $: streakDays = computeVisibleDays(streak);
   $: resetLabel = formatResetLabel(status?.reset_at);
   $: countdownLabel = formatCountdown(countdownSeconds);
+  $: themePayload = status?.daily_theme ?? null;
+  $: activeTheme = themePayload?.active_theme ?? null;
+  $: themeWeekday = (activeTheme?.weekday_name ?? '').trim();
+  $: themeSummary = (activeTheme?.display?.summary ?? '').trim();
+  $: themeStatBonuses = activeTheme?.stat_bonuses ?? {};
+  $: themeHasDetails = Object.keys(themeStatBonuses).length > 0;
+  $: themeSummarySegments = (() => {
+    if (!themeSummary) return [];
+    const rawParts = themeSummary
+      .split('•')
+      .map((segment) => segment.replace(/^[\s·\-]+/, '').trim())
+      .filter(Boolean);
+    const baseParts = rawParts.length > 0 ? rawParts : [themeSummary];
+    const statLineSet = new Set(
+      Object.entries(themeStatBonuses).map(([key, payload]) =>
+        `${formatStatKey(key)} ${formatPercentDisplay(payload)}`.replace(/\s+/g, ' ').trim().toLowerCase()
+      )
+    );
+    const uniqueSegments = [];
+    baseParts.forEach((segment) => {
+      const normalized = segment.replace(/\s+/g, ' ').trim();
+      if (!normalized) return;
+      const lower = normalized.toLowerCase();
+      if (themeHasDetails && statLineSet.has(lower)) {
+        return;
+      }
+      if (!uniqueSegments.some((value) => value.toLowerCase() === lower)) {
+        uniqueSegments.push(normalized);
+      }
+    });
+    return uniqueSegments;
+  })();
+  $: themeDamageTypesRaw = Array.isArray(activeTheme?.damage_types) ? activeTheme.damage_types : [];
+  $: themeDamageIconIds = (() => {
+    const ids = [];
+    const MAX_DAMAGE_ICONS = 2;
+    const append = (value) => {
+      if (!value || ids.length >= MAX_DAMAGE_ICONS) return;
+      const normalized = normalizeDamageTypeId(value);
+      if (!normalized || normalized === 'generic' || ids.includes(normalized)) {
+        return;
+      }
+      ids.push(normalized);
+    };
+    const consider = (value) => {
+      if (!value || ids.length >= MAX_DAMAGE_ICONS) return;
+      if (Array.isArray(value)) {
+        value.forEach((item) => consider(item));
+        return;
+      }
+      if (typeof value === 'string') {
+        const tokens = value
+          .split(/[^a-zA-Z]+/)
+          .map((token) => token.trim())
+          .filter(Boolean);
+        if (tokens.length > 1) {
+          tokens.forEach((token) => append(token));
+        } else {
+          append(value);
+        }
+        return;
+      }
+      if (typeof value === 'object') {
+        consider(value.element ?? value.damage_type ?? value.type ?? value.id ?? value.key);
+        consider(value.elements ?? value.damage_types ?? value.ids ?? value.types);
+      }
+    };
+    themeDamageTypesRaw.forEach((entry) => consider(entry));
+    if (ids.length < MAX_DAMAGE_ICONS) {
+      consider(activeTheme?.primary_damage_type || activeTheme?.damage_type || activeTheme?.element);
+    }
+    if (ids.length < MAX_DAMAGE_ICONS) {
+      consider(themePayload?.damage_type || themePayload?.element);
+    }
+    if (!ids.length) {
+      ids.push('generic');
+    }
+    return ids.slice(0, MAX_DAMAGE_ICONS);
+  })();
+  $: themePrimaryId = themeDamageIconIds[0] || 'generic';
+  $: themeSecondaryId = themeDamageIconIds[1] || null;
+  $: themePrimaryIcon = getDamageTypeIcon(themePrimaryId);
+  $: themeSecondaryIcon = themeSecondaryId ? getDamageTypeIcon(themeSecondaryId) : null;
+  $: themePrimaryColor = getDamageTypeColor(themePrimaryId);
+  $: themeSecondaryColor = themeSecondaryId ? getDamageTypeColor(themeSecondaryId) : '';
+  $: themeBonusDisplay =
+    formatPercentDisplay(activeTheme?.display?.bonus_percent) ||
+    `+${formatBonusPercent(Math.max(0, Number(activeTheme?.bonus_value ?? 0)))}%`;
   $: groupedRewardItems = status?.reward_items?.length
     ? Array.from(
         status.reward_items.reduce((map, item) => {
@@ -279,6 +405,11 @@
       {:else if status.claimed_today}
         <p class="progress-hint success">Today's bundle has been delivered to your inventory.</p>
       {/if}
+      {#if dailyRdrBonus > 0}
+        <p class="progress-meta">
+          Bonus scales with a {streak}-day streak and {roomsOverRequirement} extra room{roomsOverRequirement === 1 ? '' : 's'} cleared today.
+        </p>
+      {/if}
     </div>
 
     <div class="bonus-card" aria-label="Daily run drop rate bonus">
@@ -289,11 +420,54 @@
       <div class="bonus-value" class:positive={dailyRdrBonus > 0} title={`+${dailyRdrBonusLabel}% daily RDR`}>
         +{dailyRdrBonusLabel}%
       </div>
-      <p class="bonus-hint">
-        {#if dailyRdrBonus > 0}
-          Bonus scales with a {streak}-day streak and {roomsOverRequirement} extra room{roomsOverRequirement === 1 ? '' : 's'} cleared today.
+      {#if dailyRdrBonus > 0}
+        <p class="bonus-hint">Today's runs are benefiting from this drop rate bonus.</p>
+      {:else}
+        <p class="bonus-hint">Clear extra rooms after meeting today's goal to start building this bonus.</p>
+      {/if}
+    </div>
+
+    <div class="theme-card" aria-label="Daily theme bonus">
+      <div class="theme-header">
+        <span class="theme-icon-cluster" aria-hidden="true">
+          <span class="theme-icon" style={`color:${themePrimaryColor};`}>
+            <svelte:component this={themePrimaryIcon} size={16} />
+          </span>
+          {#if themeSecondaryIcon}
+            <span class="theme-icon secondary" style={`color:${themeSecondaryColor};`}>
+              <svelte:component this={themeSecondaryIcon} size={16} />
+            </span>
+          {/if}
+        </span>
+        <span>Daily Theme Bonus</span>
+        {#if themeWeekday}
+          <span class="theme-weekday">~ {themeWeekday}</span>
+        {/if}
+      </div>
+      <div class="theme-main">
+        <span class="theme-bonus" title={`Theme bonus ${themeBonusDisplay}`}>{themeBonusDisplay}</span>
+      </div>
+      {#if themeHasDetails}
+        <div class="theme-body">
+          {#if Object.keys(themeStatBonuses).length > 0}
+            <ul class="theme-effects" aria-label="Stat bonuses">
+              {#each Object.entries(themeStatBonuses) as [key, payload] (key)}
+                <li class="theme-effect">
+                  <span class="effect-label">{formatStatKey(key)}</span>
+                  <span class="effect-metric">{formatPercentDisplay(payload)}</span>
+                </li>
+              {/each}
+            </ul>
+          {/if}
+        </div>
+      {/if}
+      <p class="theme-hint">
+        {#if themeSummarySegments.length > 0}
+          {#each themeSummarySegments as line, index}
+            <span>{line}</span>{#if index < themeSummarySegments.length - 1}<br />{/if}
+          {/each}
         {:else}
-          Clear extra rooms after meeting today's goal to start building this bonus.
+          Bonuses scale with extra rooms cleared while the streak grows.
         {/if}
       </p>
     </div>
@@ -585,6 +759,13 @@
     opacity: 0.78;
   }
 
+  .progress-meta {
+    margin: 0;
+    font-size: 0.76rem;
+    opacity: 0.75;
+    line-height: 1.35;
+  }
+
   .progress-hint.success {
     color: #c0ffda;
     opacity: 1;
@@ -625,6 +806,111 @@
     font-size: 0.78rem;
     line-height: 1.3;
     opacity: 0.82;
+  }
+
+  .theme-card {
+    background: rgba(0, 0, 0, 0.32);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    padding: 0.75rem 0.85rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+
+  .theme-header {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.78rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    opacity: 0.85;
+    flex-wrap: wrap;
+  }
+
+  .theme-icon-cluster {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+    position: relative;
+  }
+
+  .theme-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .theme-icon.secondary {
+    margin-left: -0.3rem;
+  }
+
+  .theme-icon :global(svg) {
+    width: 1.1rem;
+    height: 1.1rem;
+  }
+
+  .theme-weekday {
+    letter-spacing: 0.08em;
+    opacity: 0.75;
+  }
+
+  .theme-main {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+  }
+
+  .theme-bonus {
+    font-size: 1.25rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    color: #9fe5ff;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  .theme-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0.45rem;
+  }
+
+  .theme-effects {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+
+  .theme-effect {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem 0.75rem;
+    align-items: baseline;
+  }
+
+  .effect-label {
+    font-size: 0.82rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    color: rgba(255, 255, 255, 0.95);
+  }
+
+  .effect-metric {
+    font-size: 0.78rem;
+    opacity: 0.85;
+    letter-spacing: 0.03em;
+    color: rgba(255, 255, 255, 0.75);
+  }
+
+  .theme-hint {
+    margin: 0;
+    font-size: 0.78rem;
+    opacity: 0.8;
+    line-height: 1.35;
   }
 
   .reward-items {

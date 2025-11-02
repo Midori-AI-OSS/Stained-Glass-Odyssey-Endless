@@ -17,8 +17,31 @@
 - `relic_choices` (array): up to three relic options with `id`, `name`, and `stars`.
 - `loot` (object): summary of rewards with `gold`, `card_choices`, `relic_choices`, and `items` arrays.
 - `reward_staging` (object): active staged rewards split into `cards`, `relics`, and `items`. Each staged entry now exposes a
-  `preview` block summarizing stat changes (`stats`) and trigger hooks (`triggers`) so the UI can describe the pending effect
-  before confirmation. Percentage modifiers report values in whole percents and include the number of stacks being applied.
+  `preview` block produced by `autofighter.reward_preview.merge_preview_payload`, which resolves author-provided payloads and
+  fills gaps from default `effects` metadata.【F:backend/services/reward_service.py†L42-L126】【F:backend/autofighter/reward_preview.py†L55-L189】
+  Frontend consumers should expect the following shape:
+
+  | Field | Type | Notes |
+  | --- | --- | --- |
+  | `summary` | string | Optional rich-text summary; defaults to the staged `about` copy once trimmed. |
+  | `stats` | array | Zero or more stat deltas. Each entry carries `stat`, `mode` (`percent`, `flat`, or `multiplier`),
+  `amount` (friendly value already scaled for display), `target` (`party`, `allies`, `foe`, etc.), and stack metadata
+  (`stacks`, `total_amount`, `previous_total`). Percentages are represented as whole percents so 0.12 becomes `12.0`. |
+  | `triggers` | array | Normalised event hooks with an `event` identifier and optional `description` explaining the
+  activation condition. |
+
+  Card and relic plugins can override `build_preview` to emit additional data; any missing fields fall back to the
+  canonical calculations in `build_preview_from_effects` so reconnects remain deterministic.【F:backend/plugins/cards/_base.py†L130-L169】【F:backend/plugins/relics/_base.py†L70-L105】
+- `reward_progression` (object | null): canonicalised four-phase state machine describing the Drops → Cards → Relics → Battle
+  Review flow. The backend normalises `available`, `completed`, and `current_step` fields whenever staging or `awaiting_*`
+  flags change so reconnects always learn the active phase.【F:backend/runs/lifecycle.py†L140-L220】【F:backend/services/reward_service.py†L324-L417】
+- `awaiting_card`, `awaiting_relic`, `awaiting_loot`, `awaiting_next` (booleans): gate buttons and automation by reporting which
+  buckets remain unresolved and whether the run is clear to advance. These values reflect both staged payloads and pending
+  selections; `awaiting_next` only flips true when every phase is complete.【F:backend/services/reward_service.py†L68-L205】【F:backend/services/reward_service.py†L324-L417】【F:backend/services/reward_service.py†L490-L541】
+- `reward_activation_log` (array): chronological snapshots of the last 20 reward confirmations. Each entry includes a `bucket`
+  value (`cards`, `relics`, or `items`), the `activation_id` issued during confirmation, an ISO8601 `activated_at` timestamp,
+  and a copy of the staged payload that was committed. Clients should surface this history when recovering from reconnects so
+  duplicate confirmations remain transparent.
 - `foes` (array): stats for spawned foes. Each foe entry includes a `rank` string such as `"normal"` or `"boss"` indicating encounter difficulty.
 
 Generic damage types are reserved for the Luna player character; other combatants use elemental types such as Fire, Ice, Lightning, Light, Dark, or Wind.
@@ -106,6 +129,16 @@ Example:
     "relics": [],
     "items": []
   },
+  "reward_progression": {
+    "available": ["drops", "cards", "relics", "battle_review"],
+    "completed": ["drops"],
+    "current_step": "cards"
+  },
+  "awaiting_card": true,
+  "awaiting_relic": false,
+  "awaiting_loot": false,
+  "awaiting_next": false,
+  "reward_activation_log": [],
   "foes": [
     {
       "id": "slime",
@@ -146,6 +179,60 @@ Example:
 The preview block reports the percentage bonus the party will receive (`amount`) and the cumulative modifier once the staged
 reward is confirmed (`total_amount`). When a relic adds an additional stack, a `previous_total` field is included so clients can
 display the incremental change alongside the existing bonus.
+
+### Preview authoring examples
+
+> These examples assume the backend preview schema task (`b30ad6a1-reward-preview-schema.md`) and frontend overlay task
+> (`f2622706-reward-preview-frontend.md`) have landed; coordinate with the Task Master board so doc updates ship alongside
+> those deliverables.
+
+**Flat stat buff (card)**
+
+Cards that only alter base stats can rely on `CardBase.build_preview`, which pipes the card's `effects` dict into
+`build_preview_from_effects` and emits a single `percent` stat entry per attribute.【F:backend/plugins/cards/_base.py†L130-L169】
+No manual override is required—set `effects = {"atk": 0.25, "crit_rate": 0.1}` and the preview will report +25% ATK and +10%
+crit rate for the party. Use `preview_summary` (defaults to the trimmed `about` string) to control the summary line.
+
+**Conditional trigger (card)**
+
+When a reward hinges on an event hook—e.g., "On battle start, gain 2 Balance tokens"—supply a `preview_triggers` iterable on
+the plugin. `CardBase.build_preview` merges that iterable with the stat entries so the frontend lists each trigger with a
+normalized `event` label and optional `description`. Example:
+
+```python
+class EquilibriumPrism(CardBase):
+    preview_triggers = (
+        {"event": "battle_start", "description": "Gain 2 Balance tokens."},
+    )
+```
+
+**Passive subscription (relic)**
+
+Relics that subscribe to the event bus or accumulate stacks should override `build_preview` to surface stack-sensitive values.
+Call `merge_preview_payload` with a custom payload so you can describe subscriptions and per-stack math while still falling
+back to `effects` for core stats.【F:backend/services/reward_service.py†L113-L169】 For example:
+
+```python
+class CataclysmEngine(RelicBase):
+    def build_preview(self, *, stacks: int, previous_stacks: int = 0):
+        payload = super().build_preview(stacks=stacks, previous_stacks=previous_stacks)
+        payload["triggers"].append({
+            "event": "turn_start",
+            "description": f"Queue Cataclysm pulse ({stacks} stacks).",
+        })
+        return payload
+```
+
+Preview totals automatically reflect the requested stack count, so passing `stacks=party.relics.count(self.id) + 1` from
+`RewardService.select_relic` keeps overlays accurate for duplicate copies.【F:backend/services/reward_service.py†L113-L160】
+
+### Duplicate-confirmation telemetry
+
+Every `/rewards/<bucket>/<run_id>/confirm` request now emits a `confirm_<bucket>_blocked` telemetry record through
+`log_game_action` when staging is empty (for example, a duplicate submission or manual retry after the reward already locked in).
+The payload captures the run, current room identifier, the attempted `bucket`, and a snapshot of the `awaiting_*` flags. Live
+ops can monitor this signal for suspicious automation or reconnect storms; the associated API response remains a `400` with
+`"no staged reward to confirm"` so clients can retry safely.
 
 ## Testing
 - `uv run pytest tests/test_card_rewards.py::test_battle_offers_choices_and_applies_effect`

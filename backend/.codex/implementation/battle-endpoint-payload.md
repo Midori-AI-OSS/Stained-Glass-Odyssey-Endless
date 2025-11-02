@@ -143,3 +143,42 @@ the next reward phase without a full `/ui` poll:
 
 The `reward_progression` field persists in every `/ui` and advance-room payload
 until the sequence fully resolves, mirroring the confirmation endpoints above.
+
+## Telemetry and monitoring
+
+Reward confirmation routes also emit game-action telemetry so operations can
+spot suspicious duplicate submissions. Every successful confirmation writes a
+`confirm_<reward_type>` record through `tracking.service.log_game_action`, and
+requests that arrive with an empty staging bucket trigger a
+`confirm_<bucket>_blocked` entry.
+
+- **Action type:** The suffix uses the canonical bucket name (`cards`, `relics`,
+  or `items`) regardless of the alias supplied to the endpoint.
+- **Details payload:**
+  - `bucket` repeats the canonical bucket name so downstream log processors can
+    group the signals without parsing the action type.
+  - `reason` currently reports `"empty_staging"`, distinguishing duplicate
+    submissions from future guardrails.
+  - `awaiting` snapshots the `awaiting_*` flags to help triage whether the UI is
+    still prompting the player (`true`) or the flow completed before the retry
+    arrived (`false`).
+
+### Operational guidance
+
+- **Live alerting:** Surface `confirm_%_blocked` counts in whichever metrics
+  sink ingests `game_actions`. Spikes indicate players or automation are
+  re-submitting a confirmation without staging a new reward.
+- **On-demand investigations:** Use the tracking database to pull the raw
+  records when debugging reports. For example:
+
+  ```sql
+  SELECT action_type, run_id, room_id, ts, details_json
+    FROM game_actions
+   WHERE action_type LIKE 'confirm_%_blocked'
+ORDER BY ts DESC
+   LIMIT 20;
+  ```
+
+  The JSON payload mirrors the fields described above, giving support staff
+  enough context to reconcile the player's UI state with the guardrail that
+  rejected the confirmation.

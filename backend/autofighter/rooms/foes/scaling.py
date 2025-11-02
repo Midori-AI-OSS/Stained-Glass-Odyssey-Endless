@@ -12,6 +12,13 @@ from autofighter.mapgen import MapNode
 from autofighter.stats import Stats
 from plugins.characters.foe_base import FoeBase
 
+BOSS_RANKS = {
+    "boss",
+    "prime boss",
+    "glitched boss",
+    "glitched prime boss",
+}
+
 
 def apply_permanent_scaling(
     stats: Stats,
@@ -362,6 +369,13 @@ def enforce_thresholds(
                     min_def = max(int(override), 0)
                 else:
                     min_def = 2 + cumulative_rooms
+                rank_value = getattr(stats, "rank", "")
+                if isinstance(rank_value, str):
+                    normalized_rank = rank_value.strip().lower()
+                else:
+                    normalized_rank = ""
+                if normalized_rank in BOSS_RANKS:
+                    min_def = max(min_def, 100)
                 if current < min_def:
                     stats.set_base_stat("defense", min_def)
     except Exception:

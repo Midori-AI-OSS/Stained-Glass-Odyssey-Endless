@@ -23,9 +23,8 @@ the numbers back to a 50% threshold.
 
 ## Related References
 
-- `.codex/implementation/relic-inventory.md` – summarizes how the Rusty Buckle
-  behaves in the player-facing relic catalog and captures the same 50× / 5000%
-  trigger math.
+- `backend/plugins/relics/rusty_buckle.py` – the plugin's `about` string and
+  `describe()` output communicate the 50× / 5000% trigger math to the UI.
 - `backend/plugins/relics/rusty_buckle.py` – hosts the implementation and
   inline commentary describing the intentionally inflated threshold used by the
   Aftertaste volley.

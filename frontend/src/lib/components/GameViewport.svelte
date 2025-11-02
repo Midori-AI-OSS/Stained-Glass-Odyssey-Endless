@@ -61,6 +61,8 @@
     let showTurnCounter = true;
     let flashEnrageCounter = true;
     let skipBattleReview = false;
+    let skipBattleReviewPreference = false;
+    let skipBattleReviewLocked = false;
   let selectedParty = [];
   let snapshotLoading = false;
 
@@ -71,8 +73,9 @@
       randomBg = getHourlyBackground();
     }
     const init = await loadInitialState();
-      ({ sfxVolume, musicVolume, voiceVolume, framerate, reducedMotion, showActionValues, showTurnCounter, flashEnrageCounter, fullIdleMode, skipBattleReview, animationSpeed } =
+      ({ sfxVolume, musicVolume, voiceVolume, framerate, reducedMotion, showActionValues, showTurnCounter, flashEnrageCounter, fullIdleMode, skipBattleReview, skipBattleReviewPreference, animationSpeed } =
         init.settings);
+    skipBattleReviewPreference = init.settings.skipBattleReviewPreference ?? skipBattleReview;
     roster = init.roster;
     userState = init.user;
     // Ensure music starts after first user gesture if autoplay was blocked
@@ -101,6 +104,10 @@
   $: info = roomInfo(mapRooms, currentIndex, currentRoomType, roomData, roomTags);
   $: rewardOpen = computeRewardOpen(roomData, battleActive);
   $: reviewOpen = Boolean(roomData && (roomData.result === 'battle' || roomData.result === 'boss') && !battleActive);
+  $: skipBattleReviewLocked = Boolean(fullIdleMode);
+  $: if (!skipBattleReviewLocked) {
+    skipBattleReviewPreference = skipBattleReview;
+  }
 
   let lastMusicKey = '';
   let lastBattleId = '';
@@ -420,6 +427,8 @@
         {flashEnrageCounter}
         {fullIdleMode}
         {skipBattleReview}
+        {skipBattleReviewPreference}
+        {skipBattleReviewLocked}
         {advanceBusy}
         bind:animationSpeed
         {selectedParty}
@@ -438,7 +447,7 @@
       on:editorChange={(e) => dispatch('editorChange', e.detail)}
       on:loadRun={(e) => dispatch('loadRun', e.detail)}
       on:startNewRun={() => dispatch('startNewRun')}
-      on:saveSettings={(e) => ({ sfxVolume, musicVolume, voiceVolume, framerate, reducedMotion, showActionValues, showTurnCounter, flashEnrageCounter, fullIdleMode, skipBattleReview, animationSpeed } = e.detail)}
+      on:saveSettings={(e) => ({ sfxVolume, musicVolume, voiceVolume, framerate, reducedMotion, showActionValues, showTurnCounter, flashEnrageCounter, fullIdleMode, skipBattleReview, skipBattleReviewPreference, animationSpeed } = e.detail)}
       on:endRun={(e) => dispatch('endRun', e.detail)}
       on:shopBuy={(e) => dispatch('shopBuy', e.detail)}
       on:shopReroll={() => dispatch('shopReroll')}

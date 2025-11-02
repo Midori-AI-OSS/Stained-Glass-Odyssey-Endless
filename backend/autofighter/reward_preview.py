@@ -1,10 +1,10 @@
 from __future__ import annotations
+
+from typing import Iterable
 from typing import Literal
 from typing import Mapping
-from typing import Iterable
 from typing import Sequence
 from typing import TypedDict
-
 
 PreviewTarget = Literal["party", "foe", "run", "self", "allies"]
 PreviewMode = Literal["percent", "flat", "multiplier"]

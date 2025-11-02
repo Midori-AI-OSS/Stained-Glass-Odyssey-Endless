@@ -2,7 +2,9 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest';
 import { render, screen, cleanup } from '@testing-library/svelte';
 import LoginRewardsPanel from '../src/lib/components/LoginRewardsPanel.svelte';
 
-const mockGetLoginRewardStatus = vi.fn();
+const { mockGetLoginRewardStatus } = vi.hoisted(() => ({
+  mockGetLoginRewardStatus: vi.fn()
+}));
 
 vi.mock('../src/lib/systems/uiApi.js', () => ({
   getLoginRewardStatus: mockGetLoginRewardStatus
@@ -16,6 +18,29 @@ describe('LoginRewardsPanel reward grouping', () => {
       rooms_completed: 1,
       rooms_required: 3,
       daily_rdr_bonus: 0.05,
+      daily_theme: {
+        active_weekday: 0,
+        active_theme: {
+          identifier: 'fire_theme',
+          label: 'Monday • Fire Infusion',
+          weekday_name: 'Monday',
+          bonus_value: 0.12,
+          display: {
+            bonus_percent: { formatted_with_sign: '+12.00%', formatted: '12.00%' }
+          },
+          damage_types: [
+            {
+              id: 'fire',
+              label: 'Fire',
+              damage_bonus_display: { formatted_with_sign: '+12.00%', formatted: '12.00%' },
+              damage_reduction_display: { formatted_with_sign: '+12.00%', formatted: '12.00%' },
+              drop_weight_display: { formatted_with_sign: '+12.00%', formatted: '12.00%' }
+            }
+          ],
+          stat_bonuses: {}
+        },
+        themes: {}
+      },
       claimed_today: false,
       streak: 4,
       reward_items: [
@@ -50,13 +75,21 @@ describe('LoginRewardsPanel reward grouping', () => {
     const { container } = render(LoginRewardsPanel);
 
     const groupedReward = await screen.findByText('Photon Blade (2x)');
-    expect(groupedReward).toBeInTheDocument();
+    expect(groupedReward).toBeTruthy();
 
     const chips = container.querySelectorAll('.reward-chip');
     expect(chips).toHaveLength(2);
 
     const soloReward = await screen.findByText('Aqua Core');
     expect(soloReward.textContent?.trim()).toBe('Aqua Core');
+
+    expect(screen.getByText('Run Drop Rate Bonus')).toBeTruthy();
+    expect(screen.getByText('+5.00%')).toBeTruthy();
+
+    expect(screen.getByText('Daily Theme Bonus')).toBeTruthy();
+    expect(screen.getByText(/~ Monday/i)).toBeTruthy();
+    expect(screen.getByText('+12.00%')).toBeTruthy();
+    expect(screen.getByText(/Bonuses scale with extra rooms cleared while the streak grows\./i)).toBeTruthy();
 
     expect(mockGetLoginRewardStatus).toHaveBeenCalledTimes(1);
   });

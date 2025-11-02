@@ -168,3 +168,46 @@ def test_apply_player_modifier_context_scales_stats():
     assert member.get_base_stat("max_hp") == pytest.approx(baseline_hp * expected_mult, abs=1)
     assert member.get_base_stat("atk") == pytest.approx(baseline_atk * expected_mult, abs=1)
     assert member.hp == member.max_hp
+
+
+def test_foe_mitigation_vitality_scaling_without_diminishing(monkeypatch):
+    monkeypatch.setattr(
+        "services.run_configuration.calculate_diminishing_returns",
+        lambda *_, **__: 1.0,
+    )
+
+    selection = validate_run_configuration(
+        run_type="standard",
+        modifiers={
+            "foe_mitigation": 1,
+            "foe_vitality": 1,
+        },
+    )
+
+    mitigation_details = selection.snapshot["modifiers"]["foe_mitigation"]["details"]
+    vitality_details = selection.snapshot["modifiers"]["foe_vitality"]["details"]
+
+    assert mitigation_details["per_stack"] == pytest.approx(2.5)
+    assert mitigation_details["effective_bonus"] == pytest.approx(2.5)
+    assert vitality_details["per_stack"] == pytest.approx(2.5)
+    assert vitality_details["effective_bonus"] == pytest.approx(2.5)
+
+
+def test_spawn_pressure_stays_within_bounds_with_overpowered_deltas(monkeypatch):
+    monkeypatch.setattr(
+        "services.run_configuration.calculate_diminishing_returns",
+        lambda *_, **__: 1.0,
+    )
+
+    selection = validate_run_configuration(
+        run_type="standard",
+        modifiers={
+            "foe_mitigation": 10,
+            "foe_vitality": 10,
+        },
+    )
+
+    context = build_run_modifier_context(selection.snapshot)
+
+    assert context.foe_strength_score == pytest.approx(context.foe_spawn_multiplier)
+    assert 1.0 <= context.foe_strength_score <= 5.0

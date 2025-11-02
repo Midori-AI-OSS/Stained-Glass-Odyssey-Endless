@@ -15,11 +15,10 @@ us from giving bosses the enhanced behaviours their data files expect and risks 
 - Add defensive logic so that bosses gracefully clean up event subscriptions on defeat/battle end (mirroring the patterns used in the
   normal passives).
 - Extend the passive registry tests to assert that every boss file registers a class and that instantiation works without raising.
-- Update `.codex/docs/character-passives.md` (or add a boss-specific appendix) to describe how the boss passives differ from the
-  baseline versions.
+- Encode the boss-tier differences directly in each plugin's `about`/`describe()` output so UI copy and logs communicate the upgraded behaviour.
 
 ## Acceptance Criteria
 - Every module in `backend/plugins/passives/boss/` defines at least one concrete passive class with `plugin_type = "passive"`.
 - Passive discovery reports boss IDs, and smoke tests confirm they can be instantiated and triggered.
 - Battle simulations (unit or integration tests) verify representative boss passives execute their intended effects.
-- Documentation captures the presence and purpose of the boss-specific passives.
+- Plugin metadata documents the presence and purpose of the boss-specific passives.

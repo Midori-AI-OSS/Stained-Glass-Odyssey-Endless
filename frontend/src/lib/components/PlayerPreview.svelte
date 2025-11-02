@@ -9,6 +9,7 @@
   import { savePlayerConfig } from '../systems/api.js';
   import { Heart, Sword, Shield, Crosshair, Zap, HeartPulse, ShieldPlus } from 'lucide-svelte';
   import {
+    ITEM_UNIT_SCALE,
     formatCost,
     formatPercent,
     formatMaterialQuantity,
@@ -17,6 +18,7 @@
     computeUnitsFromBreakdown,
     prepareMaterialRequest
   } from '../utils/upgradeFormatting.js';
+  import { simulateMaterialConsumption } from './upgradeCacheUtils.js';
 
   export let roster = [];
   export let previewId;
@@ -85,6 +87,7 @@
   $: upgradeMaterialKey = `${upgradeElementKey}_1`;
   $: elementInventory = extractElementBreakdown(upgradeItems, upgradeElementKey);
   $: availableMaterials = computeUnitsFromBreakdown(elementInventory);
+  $: pendingAction = Boolean(upgradeContext?.pendingStat);
   $: availableSummary = (() => {
     const summary = formatCost({ item: upgradeMaterialKey, units: availableMaterials, breakdown: elementInventory });
     if (summary === '—') {
@@ -92,7 +95,27 @@
     }
     return summary;
   })();
-  $: pendingAction = Boolean(upgradeContext?.pendingStat);
+  $: baseMaterialUnits = Number(elementInventory?.[upgradeMaterialKey] ?? 0);
+  $: activeCostUnits = Number(activeNextCost?.units ?? activeNextCost?.count ?? 0);
+  $: shortageUnits = Math.max(0, activeCostUnits - baseMaterialUnits);
+  $: totalUnitsSufficient = activeCostUnits > 0 && availableMaterials >= activeCostUnits;
+  $: overpaySimulation = (() => {
+    if (!totalUnitsSufficient || shortageUnits <= 0 || !upgradeElementKey) return null;
+    const simulation = simulateMaterialConsumption(elementInventory, upgradeElementKey, activeCostUnits);
+    if (!simulation?.fulfilled) return null;
+    return simulation;
+  })();
+  $: overpayBreakdown = overpaySimulation
+    ? buildOverpaySteps(overpaySimulation.consumed, upgradeMaterialKey)
+    : [];
+  $: canShowOverpay = Boolean(
+    overpayBreakdown.length > 0 &&
+    !pendingAction &&
+    activeStatKey &&
+    totalUnitsSufficient &&
+    shortageUnits > 0
+  );
+  $: overpayShortage = shortageUnits > 0 ? formatMaterialQuantity(shortageUnits, upgradeMaterialKey) : '';
   $: activeStatKey = highlightedStat || UPGRADE_STATS[0]?.key || null;
   $: activeStatLevel = activeStatKey ? statLevel(activeStatKey) : 0;
   $: activeStatLabel = activeStatKey ? statLabel(activeStatKey) : '';
@@ -106,6 +129,44 @@
   }
   function statLevel(stat) {
     return Number(upgradeCounts?.[stat] ?? 0);
+  }
+
+  function parseMaterialTierId(materialId) {
+    if (!materialId) return null;
+    const segments = String(materialId).trim().toLowerCase().split('_');
+    const last = segments[segments.length - 1];
+    const tier = Number.parseInt(last, 10);
+    return Number.isFinite(tier) ? tier : null;
+  }
+
+  function buildOverpaySteps(consumedMap, baseMaterialKey) {
+    if (!consumedMap || typeof consumedMap !== 'object') return [];
+    const entries = Object.entries(consumedMap)
+      .map(([key, value]) => ({ key: String(key), count: Number(value) }))
+      .filter((entry) => Number.isFinite(entry.count) && entry.count > 0);
+
+    entries.sort((a, b) => {
+      const tierA = parseMaterialTierId(a.key) ?? 0;
+      const tierB = parseMaterialTierId(b.key) ?? 0;
+      if (tierA === tierB) {
+        return a.key.localeCompare(b.key);
+      }
+      return tierB - tierA;
+    });
+
+    return entries
+      .filter((entry) => (parseMaterialTierId(entry.key) ?? 1) > 1)
+      .map((entry) => {
+        const tier = parseMaterialTierId(entry.key) ?? 1;
+        const scale = ITEM_UNIT_SCALE[tier] ?? 1;
+        const units = entry.count * scale;
+        return {
+          key: entry.key,
+          tier,
+          label: formatMaterialQuantity(entry.count, entry.key),
+          conversion: formatMaterialQuantity(units, baseMaterialKey)
+        };
+      });
   }
 
   function formatStatTotal(value) {
@@ -281,18 +342,43 @@
     dispatch('close-upgrade', { id: selected.id, reason });
   }
 
-  function requestUpgrade(stat) {
+  function requestUpgrade(stat, options = {}) {
     if (!selected || !stat || pendingAction) return;
     const materialRequest = prepareMaterialRequest(upgradeCosts?.[stat]);
     const nextUnits = Number(upgradeCosts?.[stat]?.units ?? upgradeCosts?.[stat]?.count ?? 0);
-    dispatch('request-upgrade', {
+    const allowOverpay = Boolean(options.allowOverpay);
+
+    let expectedMaterials;
+    if (materialRequest) {
+      expectedMaterials = { ...materialRequest };
+      if (allowOverpay) {
+        const unitsOnly = Number.isFinite(Number(expectedMaterials.units))
+          ? Number(expectedMaterials.units)
+          : nextUnits;
+        expectedMaterials = { units: unitsOnly ?? nextUnits };
+      }
+    } else if (allowOverpay) {
+      expectedMaterials = { units: nextUnits };
+    } else {
+      expectedMaterials = nextUnits;
+    }
+
+    const payload = {
       id: selected.id,
       stat,
       repeats: upgradeRepeat,
-      expectedMaterials: materialRequest ?? nextUnits,
+      expectedMaterials,
       expectedUnits: nextUnits,
-      availableMaterials
-    });
+      availableMaterials,
+      totalMaterials: availableMaterials,
+      total_materials: availableMaterials
+    };
+
+    if (allowOverpay) {
+      payload.allowOverpay = true;
+    }
+
+    dispatch('request-upgrade', payload);
   }
 
   function selectUpgrade(stat) {
@@ -471,6 +557,29 @@
               {/if}
               <span class="materials">Available: {availableSummary}</span>
             </div>
+            {#if canShowOverpay}
+              <div class="overpay-offer" role="group" aria-label="Overpay upgrade option">
+                <p class="overpay-text">
+                  Missing {overpayShortage}. Convert higher-tier shards to continue:
+                </p>
+                <ul class="overpay-breakdown">
+                  {#each overpayBreakdown as step (step.key)}
+                    <li>
+                      <span class="overpay-item">{step.label}</span>
+                      <span class="overpay-conversion">({step.conversion} converted)</span>
+                    </li>
+                  {/each}
+                </ul>
+                <button
+                  type="button"
+                  class="overpay-button"
+                  on:click={() => requestUpgrade(activeStatKey, { allowOverpay: true })}
+                  disabled={!activeStatKey}
+                >
+                  Overpay with higher-tier shards
+                </button>
+              </div>
+            {/if}
             <div class="repeat-controls" aria-label="Upgrade repeats" on:click|stopPropagation>
               {#each REPEAT_OPTIONS as option}
                 {#key option}
@@ -631,6 +740,64 @@
   .upgrade-bottom .status.error { color: #ffc4c4; }
   .upgrade-bottom .status.note { color: rgba(220,228,255,0.8); }
   .upgrade-bottom .materials { margin-left: auto; color: #fff; font-weight: 600; }
+  .overpay-offer {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    margin: 0.35rem 0 0;
+    padding: 0.55rem 0.65rem;
+    background: rgba(18, 24, 36, 0.65);
+    border: 1px solid rgba(255,255,255,0.18);
+    border-radius: 8px;
+  }
+  .overpay-text {
+    margin: 0;
+    color: rgba(231, 239, 255, 0.92);
+    font-size: 0.88rem;
+    line-height: 1.35;
+  }
+  .overpay-breakdown {
+    margin: 0;
+    padding-left: 1.2rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+  .overpay-breakdown li {
+    color: rgba(216, 228, 255, 0.88);
+    font-size: 0.82rem;
+    list-style: disc;
+  }
+  .overpay-item {
+    font-weight: 600;
+    margin-right: 0.3rem;
+  }
+  .overpay-conversion {
+    color: rgba(208, 220, 255, 0.75);
+    font-size: 0.78rem;
+  }
+  .overpay-button {
+    align-self: flex-start;
+    background: rgba(0,0,0,0.5);
+    border: 1px solid rgba(255,255,255,0.35);
+    color: #fff;
+    font-size: 0.88rem;
+    padding: 0.35rem 0.7rem;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 140ms ease, border-color 140ms ease, transform 140ms ease;
+  }
+  .overpay-button:hover:not(:disabled),
+  .overpay-button:focus-visible:not(:disabled) {
+    background: rgba(255,255,255,0.12);
+    border-color: rgba(255,255,255,0.6);
+    transform: translateY(-1px);
+    outline: none;
+  }
+  .overpay-button:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
   .upgrade-bottom .next-cost,
   .upgrade-bottom .level,
   .upgrade-bottom .summary {

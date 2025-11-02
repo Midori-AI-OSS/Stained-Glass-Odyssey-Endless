@@ -15,10 +15,10 @@ also make it ambiguous whether prime passives should exist at all, which blocks 
 - Ensure the new classes expose meaningful `describe()`/`get_description()` output so the UI can explain the enhancements.
 - Add automated coverage (unit tests or snapshot checks) verifying that prime passives load through `PassiveRegistry` and apply their
   special rules without raising.
-- Update the passive documentation in `.codex/docs/character-passives.md` to outline how prime passives differ from the base kits.
+- Document the upgrades directly in each plugin's `about`/`describe()` output so the UI and inventory surface the differences without extra `.codex` updates.
 
 ## Acceptance Criteria
 - The prime passive directory no longer contains raw placeholders; each file provides a usable passive class.
 - Loading the passive registry includes prime IDs, and tests confirm they can be instantiated and invoked.
 - Prime passives demonstrate tier-appropriate enhancements compared to their normal counterparts.
-- Documentation clearly describes the intent and behaviour of the prime-tier passives.
+- Plugin metadata (`about` strings or `describe()` output) clearly conveys the intent and behaviour of the prime-tier passives.

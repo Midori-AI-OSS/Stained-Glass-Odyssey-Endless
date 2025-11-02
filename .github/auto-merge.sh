@@ -55,6 +55,19 @@ for (( attempt=1; attempt<=MAX_POLL_ATTEMPTS; attempt++ )); do
     exit 0
   fi
 
+  # First, check for any thumbs-down reactions and abort if present.
+  minus_one_reactions="$(gh api \
+    -H 'Accept: application/vnd.github.squirrel-girl-preview+json' \
+    --jq 'map(select(.content == "-1")) | length' \
+    "/repos/${REPO_NAME_WITH_OWNER}/issues/${PR_NUMBER_VALUE}/reactions")"
+
+  echo "[auto-merge] Found ${minus_one_reactions} 👎 reaction(s)."
+
+  if [[ "$minus_one_reactions" -gt 0 ]]; then
+    echo "[auto-merge] Detected 👎 reaction; aborting auto-merge until reviewed." >&2
+    exit 0
+  fi
+
   plus_one_reactions="$(gh api \
     -H 'Accept: application/vnd.github.squirrel-girl-preview+json' \
     --jq 'map(select(.content == "+1")) | length' \

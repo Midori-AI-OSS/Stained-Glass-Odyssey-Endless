@@ -1,7 +1,9 @@
 <script>
   import { getElementIcon, getElementColor } from '../systems/assetLoader.js';
   import { createEventDispatcher } from 'svelte';
+  import { afterUpdate } from 'svelte';
   import { onDestroy } from 'svelte';
+  import { onMount } from 'svelte';
   import { fly } from 'svelte/transition';
   import { flip } from 'svelte/animate';
 
@@ -20,6 +22,50 @@
   export let compact = false;
   export let reducedMotion = false;
   const dispatch = createEventDispatcher();
+
+  let rosterListEl = null;
+  let fadeObserver = null;
+  let showTopFade = false;
+  let showBottomFade = false;
+  const FADE_EPSILON = 1;
+
+  function updateFades() {
+    if (!rosterListEl || compact) {
+      showTopFade = false;
+      showBottomFade = false;
+      return;
+    }
+
+    const { scrollTop, scrollHeight, clientHeight } = rosterListEl;
+    showTopFade = scrollTop > FADE_EPSILON;
+    showBottomFade = scrollTop + clientHeight < scrollHeight - FADE_EPSILON;
+  }
+
+  function handleScroll() {
+    updateFades();
+  }
+
+  function observeList() {
+    if (!rosterListEl || compact || typeof ResizeObserver !== 'function') {
+      fadeObserver?.disconnect();
+      fadeObserver = null;
+      return;
+    }
+
+    fadeObserver?.disconnect();
+    fadeObserver = new ResizeObserver(() => updateFades());
+    fadeObserver.observe(rosterListEl);
+  }
+
+  onMount(() => {
+    updateFades();
+    observeList();
+  });
+
+  afterUpdate(() => {
+    updateFades();
+    observeList();
+  });
 
   let sortKey = 'name';
   let sortDir = 'asc';
@@ -154,6 +200,8 @@
   onDestroy(() => {
     clearTimeout(longTimer);
     clearStaged();
+    fadeObserver?.disconnect();
+    fadeObserver = null;
   });
 
   // Deterministic pseudo-random from an id string
@@ -208,7 +256,7 @@
   {/each}
 </div>
 {:else}
-<div class="roster-container">
+<div class="roster-container" data-testid="roster">
   <div class="roster-header">
     <span>{selected.length} / 5 party members</span>
     <div class="sort-controls">
@@ -230,74 +278,99 @@
     </div>
   </div>
   <div class="inline-divider" aria-hidden="true"></div>
-  <div class="roster-list">
   {#if selectedCount > 0}
-    <div class="section-label">Party</div>
-    {#each roster.filter(c => selected.includes(c.id)).sort((a,b)=>{
-      const aKey = sortKey === 'element' ? a.element : (sortKey === 'id' ? String(a.id) : a.name);
-      const bKey = sortKey === 'element' ? b.element : (sortKey === 'id' ? String(b.id) : b.name);
-      return (sortDir === 'asc' ? 1 : -1) * (aKey > bKey ? 1 : (aKey < bKey ? -1 : 0));
-    }) as char (`party-${char.id}`)}
-      <button
-        type="button"
-        data-testid={`choice-${char.id}`}
-        class="char-row"
-        class:selected={selected.includes(char.id)}
-        class:armed={stagedToggleId === char.id}
-        class:reduced={reducedMotion}
-        animate:flip={{ duration: reducedMotion ? 0 : 300 }}
-        on:click={(e) => select(char, e)}
-        on:pointerdown={() => !char.is_player && onPointerDown(char)}
-        on:pointerup={onPointerUp}
-        on:pointerleave={onPointerUp}
-        on:introstart={(e) => onIntroStart(char.id, e)}
-        on:introend={onIntroEnd}
-        in:fly={{ x: -100, duration: reducedMotion ? 0 : 300 }}
-        out:fly={{ x: 100, duration: reducedMotion ? 0 : 300 }}
-        style={`border-color: ${getElementColor(char.element)}; --el-color: ${getElementColor(char.element)}; --sweep-delay: ${sweepDelay(char.id)}s; --sweep-duration: ${sweepDuration(char.id)}s;`}>
-        <img src={char.img} alt={char.name} class="row-img" />
-        <span class="row-name">{char.name}</span>
-        <svelte:component
-          this={getElementIcon(char.element)}
-          class="row-type"
-          style={`color: ${getElementColor(char.element)}`}
-          aria-hidden="true" />
-      </button>
-    {/each}
+    <div class="party-section" data-testid="party-selected">
+      <div class="section-label">Party</div>
+      <div class="party-list">
+        {#each roster.filter(c => selected.includes(c.id)).sort((a,b)=>{
+          const aKey = sortKey === 'element' ? a.element : (sortKey === 'id' ? String(a.id) : a.name);
+          const bKey = sortKey === 'element' ? b.element : (sortKey === 'id' ? String(b.id) : b.name);
+          return (sortDir === 'asc' ? 1 : -1) * (aKey > bKey ? 1 : (aKey < bKey ? -1 : 0));
+        }) as char (`party-${char.id}`)}
+          <button
+            type="button"
+            data-testid={`choice-${char.id}`}
+            class="char-row"
+            class:selected={selected.includes(char.id)}
+            class:armed={stagedToggleId === char.id}
+            class:reduced={reducedMotion}
+            animate:flip={{ duration: reducedMotion ? 0 : 300 }}
+            on:click={(e) => select(char, e)}
+            on:pointerdown={() => !char.is_player && onPointerDown(char)}
+            on:pointerup={onPointerUp}
+            on:pointerleave={onPointerUp}
+            on:introstart={(e) => onIntroStart(char.id, e)}
+            on:introend={onIntroEnd}
+            in:fly={{ x: -100, duration: reducedMotion ? 0 : 300 }}
+            out:fly={{ x: 100, duration: reducedMotion ? 0 : 300 }}
+            style={`border-color: ${getElementColor(char.element)}; --el-color: ${getElementColor(char.element)}; --sweep-delay: ${sweepDelay(char.id)}s; --sweep-duration: ${sweepDuration(char.id)}s;`}>
+            <img src={char.img} alt={char.name} class="row-img" />
+            <span class="row-name">{char.name}</span>
+            <svelte:component
+              this={getElementIcon(char.element)}
+              class="row-type"
+              style={`color: ${getElementColor(char.element)}`}
+              aria-hidden="true" />
+          </button>
+        {/each}
+      </div>
+    </div>
     <div class="inline-divider" aria-hidden="true"></div>
   {/if}
-  <div class="section-label">Roster</div>
-  {#each roster.filter(c => !selected.includes(c.id)).sort((a,b)=>{
-    const aKey = sortKey === 'element' ? a.element : (sortKey === 'id' ? String(a.id) : a.name);
-    const bKey = sortKey === 'element' ? b.element : (sortKey === 'id' ? String(b.id) : b.name);
-    return (sortDir === 'asc' ? 1 : -1) * (aKey > bKey ? 1 : (aKey < bKey ? -1 : 0));
-  }) as char (`roster-${char.id}`)}
-    <button
-      type="button"
-      data-testid={`choice-${char.id}`}
-      class="char-row"
-      class:selected={selected.includes(char.id)}
-      class:armed={stagedToggleId === char.id}
-      class:reduced={reducedMotion}
-      animate:flip={{ duration: reducedMotion ? 0 : 300 }}
-      on:click={(e) => select(char, e)}
-      on:pointerdown={() => !char.is_player && onPointerDown(char)}
-      on:pointerup={onPointerUp}
-      on:pointerleave={onPointerUp}
-      on:introstart={(e) => onIntroStart(char.id, e)}
-      on:introend={onIntroEnd}
-      in:fly={{ x: -100, duration: reducedMotion ? 0 : 300 }}
-      out:fly={{ x: 100, duration: reducedMotion ? 0 : 300 }}
-      style={`border-color: ${getElementColor(char.element)}; --el-color: ${getElementColor(char.element)}; --sweep-delay: ${sweepDelay(char.id)}s; --sweep-duration: ${sweepDuration(char.id)}s;`}>
-      <img src={char.img} alt={char.name} class="row-img" />
-      <span class="row-name">{char.name}</span>
-      <svelte:component
-        this={getElementIcon(char.element)}
-        class="row-type"
-        style={`color: ${getElementColor(char.element)}`}
-        aria-hidden="true" />
-    </button>
-  {/each}
+  <div class="roster-scroll">
+    <div
+      class="roster-list"
+      bind:this={rosterListEl}
+      on:scroll={handleScroll}
+      data-testid="party-roster-scroll"
+      data-show-top={showTopFade}
+      data-show-bottom={showBottomFade}
+    >
+      <div class="section-label">Roster</div>
+      {#each roster.filter(c => !selected.includes(c.id)).sort((a,b)=>{
+        const aKey = sortKey === 'element' ? a.element : (sortKey === 'id' ? String(a.id) : a.name);
+        const bKey = sortKey === 'element' ? b.element : (sortKey === 'id' ? String(b.id) : b.name);
+        return (sortDir === 'asc' ? 1 : -1) * (aKey > bKey ? 1 : (aKey < bKey ? -1 : 0));
+      }) as char (`roster-${char.id}`)}
+        <button
+          type="button"
+          data-testid={`choice-${char.id}`}
+          class="char-row"
+          class:selected={selected.includes(char.id)}
+          class:armed={stagedToggleId === char.id}
+          class:reduced={reducedMotion}
+          animate:flip={{ duration: reducedMotion ? 0 : 300 }}
+          on:click={(e) => select(char, e)}
+          on:pointerdown={() => !char.is_player && onPointerDown(char)}
+          on:pointerup={onPointerUp}
+          on:pointerleave={onPointerUp}
+          on:introstart={(e) => onIntroStart(char.id, e)}
+          on:introend={onIntroEnd}
+          in:fly={{ x: -100, duration: reducedMotion ? 0 : 300 }}
+          out:fly={{ x: 100, duration: reducedMotion ? 0 : 300 }}
+          style={`border-color: ${getElementColor(char.element)}; --el-color: ${getElementColor(char.element)}; --sweep-delay: ${sweepDelay(char.id)}s; --sweep-duration: ${sweepDuration(char.id)}s;`}>
+          <img src={char.img} alt={char.name} class="row-img" />
+          <span class="row-name">{char.name}</span>
+          <svelte:component
+            this={getElementIcon(char.element)}
+            class="row-type"
+            style={`color: ${getElementColor(char.element)}`}
+            aria-hidden="true" />
+        </button>
+      {/each}
+    </div>
+    <div
+      class="scroll-fade top"
+      class:visible={showTopFade}
+      aria-hidden="true"
+      data-testid="roster-fade-top"
+    ></div>
+    <div
+      class="scroll-fade bottom"
+      class:visible={showBottomFade}
+      aria-hidden="true"
+      data-testid="roster-fade-bottom"
+    ></div>
   </div>
 </div>
 {/if}
@@ -307,6 +380,10 @@
   display: flex;
   flex-direction: column;
   height: 100%;
+  max-height: 100%;
+  min-height: 0;
+  position: relative;
+  overflow: hidden;
 }
 
 .roster-header {
@@ -342,14 +419,73 @@
 .sort-dir { background:#111; border:1px solid #555; color:#fff; border-radius: 0; padding: 0.25rem 0.5rem; }
 .sort-dir:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.5); }
 
+.party-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 0.4rem;
+}
+
+.party-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.roster-scroll {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
 .roster-list {
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
   padding: 0.4rem;
-  height: 100%;
+  flex: 1 1 auto;
   overflow-y: auto;
   min-width: 0;
+  min-height: 0;
+  scrollbar-width: thin;
+}
+
+.roster-list::-webkit-scrollbar {
+  width: 10px;
+}
+
+.roster-list::-webkit-scrollbar-thumb {
+  background: rgba(160, 160, 175, 0.45);
+  border-radius: 8px;
+}
+
+.scroll-fade {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 2rem;
+  pointer-events: none;
+  z-index: 2;
+  opacity: 0;
+  transition: opacity 180ms ease;
+}
+
+.scroll-fade.top {
+  top: 0;
+  background: linear-gradient(180deg, rgba(17, 23, 38, 0.55), rgba(17, 23, 38, 0));
+}
+
+.scroll-fade.bottom {
+  bottom: 0;
+  background: linear-gradient(180deg, rgba(17, 23, 38, 0), rgba(17, 23, 38, 0.55));
+}
+
+.scroll-fade.visible {
+  opacity: 1;
 }
 
 /* Inline divider for section separation */
@@ -377,6 +513,7 @@
   position: relative;
   overflow: hidden;
   z-index: 0; /* establish stacking context */
+  flex-shrink: 0;
   /* Derived element colors for the sweep effect */
   --el-dark: color-mix(in srgb, var(--el-color) 20%, black 80%);
   --el-5darker: color-mix(in srgb, var(--el-color) 95%, black 5%);
@@ -429,7 +566,7 @@
 }
 
 /* Sparkle trail when moving into party */
-.char-row.sparkle::after {
+:global(.char-row.sparkle)::after {
   content: '';
   position: absolute;
   inset: 0;
@@ -452,7 +589,9 @@
 }
 
 /* Ensure content renders above the animated sweep */
-.row-img, .row-name, .row-type {
+.row-img,
+.row-name,
+:global(.row-type) {
   position: relative;
   z-index: 1;
 }
@@ -470,7 +609,7 @@
   color: #fff;
   font-size: 0.9rem;
 }
-.row-type { width: 20px; height: 20px; flex-shrink: 0; }
+:global(.row-type) { width: 20px; height: 20px; flex-shrink: 0; }
 
 /* compact mode */
 .roster.list.compact {

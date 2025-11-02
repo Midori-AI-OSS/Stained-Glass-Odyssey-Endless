@@ -13,3 +13,4 @@ class Party:
     rdr: float = 1.0
     no_shops: bool = False
     no_rests: bool = False
+    relic_persistent_state: dict[str, object] = field(default_factory=dict)

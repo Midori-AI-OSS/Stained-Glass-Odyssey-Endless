@@ -331,11 +331,14 @@
     if (upgradeContext?.pendingStat) return;
 
     const char = detail?.id ? roster.find((p) => p.id === detail.id) : roster.find((p) => p.id === previewId);
+    const allowOverpay = Boolean(detail?.allowOverpay);
+
     const payload = {
       ...(detail || {}),
       id: char?.id ?? previewId ?? null,
       character: char || null
     };
+    payload.allowOverpay = allowOverpay;
     const { id, stat } = payload;
     const rawRepeats = detail?.repeats ?? detail?.repeat ?? 1;
     let repeats = Number(rawRepeats);
@@ -353,7 +356,10 @@
         lastRequestedStat: stat || null,
         pendingStat: stat || null,
         message: '',
-        error: ''
+        error: '',
+        allowOverpay,
+        pendingOverpay: allowOverpay,
+        overpayEligible: false
       };
     }
 
@@ -369,6 +375,9 @@
     const budget = detail?.totalMaterials ?? detail?.total_materials ?? detail?.totalPoints ?? detail?.total_points ?? detail?.availableMaterials ?? null;
     if (budget != null) {
       options.total_materials = budget;
+    }
+    if (allowOverpay) {
+      options.allow_overpay = true;
     }
 
     try {
@@ -444,11 +453,39 @@
           lastRequestedStat: stat || null,
           pendingStat: null,
           message,
-          error: errorText
+          error: errorText,
+          allowOverpay: false,
+          pendingOverpay: false,
+          overpayEligible: false
         };
       }
     } catch (err) {
       if (isUpgradeMode) {
+        const availableUnitsAtRequest = Number(
+          detail?.totalMaterials ??
+          detail?.total_materials ??
+          detail?.availableMaterials ??
+          0
+        );
+        const expectedUnitsAtRequest = Number(
+          detail?.expectedUnits ??
+          detail?.expectedMaterials?.units ??
+          detail?.expected_materials?.units ??
+          0
+        );
+        const errorMessage = err?.message || `Unable to upgrade ${statLabel(stat || '')}.`;
+        const insufficient = typeof errorMessage === 'string' && errorMessage.toLowerCase().includes('insufficient materials');
+        const shouldOfferOverpay = !allowOverpay
+          && insufficient
+          && Number.isFinite(expectedUnitsAtRequest)
+          && expectedUnitsAtRequest > 0
+          && Number.isFinite(availableUnitsAtRequest)
+          && availableUnitsAtRequest >= expectedUnitsAtRequest;
+
+        if (shouldOfferOverpay) {
+          previewMode.set('upgrade');
+        }
+
         upgradeContext = {
           id,
           character: payload.character,
@@ -456,7 +493,10 @@
           lastRequestedStat: stat || null,
           pendingStat: null,
           message: '',
-          error: err?.message || `Unable to upgrade ${statLabel(stat || '')}.`
+          error: errorMessage,
+          allowOverpay,
+          pendingOverpay: false,
+          overpayEligible: shouldOfferOverpay
         };
       }
     }
@@ -473,36 +513,45 @@
 {#if compact}
   <PartyRoster {roster} {selected} bind:previewId {compact} {reducedMotion} on:toggle={(e) => toggleMember(e.detail)} />
 {:else}
-  <MenuPanel {starColor} {reducedMotion} style="flex: 1 1 auto;">
+  <MenuPanel
+    {starColor}
+    {reducedMotion}
+    scrollable={false}
+    style="flex: 1 1 auto; min-height: 0; max-height: 100%;"
+  >
     <div class="full" data-testid="party-picker">
-      <PartyRoster {roster} {selected} bind:previewId {reducedMotion} on:toggle={(e) => toggleMember(e.detail)} />
-      <PlayerPreview
-        {roster}
-        {previewId}
-        overrideElement={previewElementOverride}
-        {allowElementChange}
-        mode={$previewMode}
-        upgradeContext={upgradeContext}
-        upgradeData={previewUpgradeState.data}
-        upgradeLoading={previewUpgradeState.loading}
-        upgradeError={previewUpgradeState.error}
-        selectedStat={previewStat}
-        {reducedMotion}
-        on:open-upgrade={(e) => handlePreviewMode(e.detail, 'upgrade')}
-        on:close-upgrade={(e) => handlePreviewMode(e.detail, 'portrait')}
-        on:request-upgrade={(e) => forwardUpgradeRequest(e.detail)}
-        on:select-upgrade={(e) => handleUpgradeSelection(e.detail)}
-        on:element-change={(e) => {
-          const el = e.detail?.element || '';
-          previewElementOverride = el || previewElementOverride;
-          // Propagate player element change to editor state so start_run gets damage_type
-          try { dispatch('editorChange', { damageType: el }); } catch {}
-          refreshRoster();
-          if (previewId) {
-            refreshUpgradeData(previewId, { force: true });
-          }
-        }}
-      />
+      <div class="roster-pane">
+        <PartyRoster {roster} {selected} bind:previewId {reducedMotion} on:toggle={(e) => toggleMember(e.detail)} />
+      </div>
+      <div class="preview-pane">
+        <PlayerPreview
+          {roster}
+          {previewId}
+          overrideElement={previewElementOverride}
+          {allowElementChange}
+          mode={$previewMode}
+          upgradeContext={upgradeContext}
+          upgradeData={previewUpgradeState.data}
+          upgradeLoading={previewUpgradeState.loading}
+          upgradeError={previewUpgradeState.error}
+          selectedStat={previewStat}
+          {reducedMotion}
+          on:open-upgrade={(e) => handlePreviewMode(e.detail, 'upgrade')}
+          on:close-upgrade={(e) => handlePreviewMode(e.detail, 'portrait')}
+          on:request-upgrade={(e) => forwardUpgradeRequest(e.detail)}
+          on:select-upgrade={(e) => handleUpgradeSelection(e.detail)}
+          on:element-change={(e) => {
+            const el = e.detail?.element || '';
+            previewElementOverride = el || previewElementOverride;
+            // Propagate player element change to editor state so start_run gets damage_type
+            try { dispatch('editorChange', { damageType: el }); } catch {}
+            refreshRoster();
+            if (previewId) {
+              refreshUpgradeData(previewId, { force: true });
+            }
+          }}
+        />
+      </div>
       <div class="right-col">
         <StatTabs
           {roster}
@@ -545,24 +594,44 @@
 <style>
   .full {
     display: grid;
-    grid-template-columns: minmax(8rem, 22%) 1fr minmax(12rem, 26%);
+    grid-template-columns: minmax(10rem, 24%) minmax(0, 46%) minmax(12rem, 30%);
     width: 100%;
-    height: 96%;
+    height: 100%;
     max-width: 100%;
-    max-height: 98%;
+    max-height: min(88vh, calc(100dvh - 2.5rem));
     /* allow internal scrolling instead of clipping when content grows */
     position: relative;
     z-index: 0; /* establish stacking context so stars can sit behind */
+    min-height: 0;
+    overflow: hidden;
   }
-  .right-col { display: flex; flex-direction: column; min-height: 0; }
+  .roster-pane,
+  .preview-pane,
+  .right-col {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  .roster-pane > :global(*) {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .preview-pane > :global(*) {
+    flex: 1 1 auto;
+    min-height: 0;
+  }
+
+  .right-col {
+    flex: 1 1 auto;
+  }
   
-  .pressure-controls { margin-top: 0.5rem; }
-  .pressure-label { display: block; color: #fff; font-size: 0.9rem; margin-bottom: 0.3rem; text-align: center; }
-  .pressure-input { display: flex; align-items: center; justify-content: center; gap: 0.5rem; }
-  .pressure-btn { 
-    background: rgba(0,0,0,0.5); 
-    border: 1px solid rgba(255,255,255,0.35); 
-    color: #fff; 
+  .pressure-btn {
+    background: rgba(0,0,0,0.5);
+    border: 1px solid rgba(255,255,255,0.35);
+    color: #fff;
     padding: 0.3rem 0.5rem; 
     cursor: pointer;
     border-radius: 3px;
