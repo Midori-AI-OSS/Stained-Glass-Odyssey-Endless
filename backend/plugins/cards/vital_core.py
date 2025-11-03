@@ -14,7 +14,8 @@ class VitalCore(CardBase):
     name: str = "Vital Core"
     stars: int = 1
     effects: dict[str, float] = field(default_factory=lambda: {"vitality": 0.03, "max_hp": 0.03})
-    about: str = "+3% Vitality & +3% HP; When below 30% HP, gain +3% Vitality for 2 turns"
+    full_about: str = "+3% Vitality & +3% HP; when below 30% HP, gain +3% Vitality for 2 turns"
+    summarized_about: str = "Boosts vitality and hp; grants additional vitality when low on health"
 
     async def apply(self, party) -> None:  # type: ignore[override]
         await super().apply(party)

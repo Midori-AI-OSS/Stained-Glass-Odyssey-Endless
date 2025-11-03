@@ -17,10 +17,14 @@ class GravitonLocket(RelicBase):
     name: str = "Graviton Locket"
     stars: int = 4
     effects: dict[str, float] = field(default_factory=dict)
-    about: str = (
+    full_about: str = (
         "On battle start, applies gravity debuff to all enemies reducing SPD by 30% "
         "and increasing damage taken by 12% per stack. Duration: 2 turns +1 per stack. "
         "While any enemy has gravity, party loses 1% Max HP per stack each turn."
+    )
+    summarized_about: str = (
+        "Applies gravity debuff to enemies at battle start; "
+        "drains party HP while gravity is active"
     )
 
     async def apply(self, party) -> None:
@@ -134,6 +138,10 @@ class GravitonLocket(RelicBase):
         self.subscribe(party, "battle_start", _battle_start)
         self.subscribe(party, "turn_start", _turn_start)
         self.subscribe(party, "battle_end", _battle_end)
+
+    def full_about_stacks(self, stacks: int) -> str:
+        """Provide stack-aware description by reusing existing describe logic."""
+        return self.describe(stacks)
 
     def describe(self, stacks: int) -> str:
         """Generate human-readable description of the relic's effects."""

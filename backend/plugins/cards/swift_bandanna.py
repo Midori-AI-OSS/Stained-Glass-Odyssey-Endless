@@ -13,7 +13,8 @@ class SwiftBandanna(CardBase):
     name: str = "Swift Bandanna"
     stars: int = 1
     effects: dict[str, float] = field(default_factory=lambda: {"crit_rate": 0.03, "dodge_odds": 0.03})
-    about: str = "+3% Crit Rate & +3% Dodge Odds; On dodge, gain +1% crit rate for next action"
+    full_about: str = "+3% Crit Rate & +3% Dodge Odds; on dodge, gain +1% crit rate for next action"
+    summarized_about: str = "Boosts crit rate and dodge odds; dodging grants bonus crit rate"
 
     async def apply(self, party) -> None:  # type: ignore[override]
         await super().apply(party)

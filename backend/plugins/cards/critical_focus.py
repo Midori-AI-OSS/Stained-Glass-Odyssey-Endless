@@ -12,7 +12,8 @@ class CriticalFocus(CardBase):
     name: str = "Critical Focus"
     stars: int = 2
     effects: dict[str, float] = field(default_factory=lambda: {"atk": 0.55})
-    about: str = "+55% ATK; allies gain Critical Boost each turn."
+    full_about: str = "+55% ATK; allies gain Critical Boost each turn"
+    summarized_about: str = "Boosts atk; grants Critical Boost to allies each turn"
 
     async def apply(self, party) -> None:  # type: ignore[override]
         await super().apply(party)

@@ -18,10 +18,15 @@ class MomentumGyro(RelicBase):
     name: str = "Momentum Gyro"
     stars: int = 2
     effects: dict[str, float] = field(default_factory=dict)  # No baseline bonus
-    about: str = (
+    full_about: str = (
         "Repeatedly striking the same foe builds momentum stacks (max 5). "
         "Grants +5% ATK per stack (extra relic copies beyond five grant +15% each) and "
-        "target loses the same mitigation for (5 + relic stacks) turns. Resets on target switch or miss."
+        "target loses the same mitigation for 5 turns (plus 1 turn per relic stack). "
+        "Resets on target switch or miss."
+    )
+    summarized_about: str = (
+        "Rewards focused assault on same target with stacking buffs and enemy debuffs; "
+        "resets on target switch"
     )
 
     async def apply(self, party) -> None:
@@ -224,6 +229,10 @@ class MomentumGyro(RelicBase):
 
         self.subscribe(party, "damage_dealt", _on_damage_dealt)
         self.subscribe(party, "battle_end", _cleanup)
+
+    def full_about_stacks(self, stacks: int) -> str:
+        """Provide stack-aware description by reusing existing describe logic."""
+        return self.describe(stacks)
 
     def describe(self, stacks: int) -> str:
         if stacks == 1:

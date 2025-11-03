@@ -18,8 +18,12 @@ class ParadoxHourglass(RelicBase):
     name: str = "Paradox Hourglass"
     stars: int = 5
     effects: dict[str, float] = field(default_factory=lambda: {"atk": 2.0, "defense": 2.0})
-    about: str = (
-        "At battle start may sacrifice allies to supercharge survivors and shred foe defense."
+    full_about: str = (
+        "60% chance to sacrifice up to 1 random ally (max 4, min 1 survivor). "
+        "Survivors gain 3x stats and foes' DEF is divided by 4."
+    )
+    summarized_about: str = (
+        "May sacrifice allies at battle start to supercharge survivors and shred foe defense"
     )
 
     async def apply(self, party) -> None:
@@ -150,6 +154,10 @@ class ParadoxHourglass(RelicBase):
 
         self.subscribe(party, "battle_start", _battle_start)
         self.subscribe(party, "battle_end", _battle_end)
+
+    def full_about_stacks(self, stacks: int) -> str:
+        """Provide stack-aware description by reusing existing describe logic."""
+        return self.describe(stacks)
 
     def describe(self, stacks: int) -> str:
         div = 4 + (stacks - 1)

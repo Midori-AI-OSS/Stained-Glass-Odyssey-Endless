@@ -167,7 +167,7 @@ async def resolve_rewards(
             "id": card.id,
             "name": card.name,
             "stars": card.stars,
-            "about": card.about,
+            "about": card.get_about_str(),
         }
         for card in card_options
     ]
