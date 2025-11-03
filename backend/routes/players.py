@@ -8,6 +8,8 @@ import math
 from typing import Dict
 from typing import List
 
+from options import OptionKey
+from options import get_option
 from quart import Blueprint
 from quart import jsonify
 from quart import request
@@ -173,6 +175,10 @@ async def get_players() -> tuple[str, int, dict[str, str]]:
     export_names = getattr(
         player_plugins, "_PLAYABLE_EXPORTS", tuple(player_plugins.__all__)
     )
+
+    # Check if user wants concise descriptions
+    concise = get_option(OptionKey.CONCISE_DESCRIPTIONS, "false").lower() == "true"
+
     for name in export_names:
         cls = getattr(player_plugins, name, None)
         if cls is None:
@@ -188,6 +194,12 @@ async def get_players() -> tuple[str, int, dict[str, str]]:
         inst_about = getattr(inst, "about", "") or ""
         if inst_about == "Player description placeholder":
             inst_about = getattr(type(inst), "about", inst_about)
+
+        # Use summarized_about if concise is enabled and it exists, otherwise use about
+        if concise:
+            inst_about = getattr(inst, "summarized_about", None) or getattr(inst, "about", inst_about)
+        else:
+            inst_about = getattr(inst, "full_about", None) or inst_about
 
         if inst.id in roster:
             continue
