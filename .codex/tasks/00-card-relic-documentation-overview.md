@@ -76,26 +76,34 @@ Each task includes:
 - Default: "Missing summarized card/relic description, please report this"
 - **For relics**: Never includes stack-specific information (always shows base behavior)
 
-**New Method:**
+**New Methods:**
 - **CardBase**: `get_about_str()` - Returns appropriate string based on user settings
 - **RelicBase**: `get_about_str(stacks: int = 1)` - Returns appropriate string with stack support
-- The method automatically checks the CONCISE_DESCRIPTIONS option
+- **RelicBase**: `full_about_stacks(stacks: int)` - Override this to provide stack-specific formatting
+- The methods automatically check the CONCISE_DESCRIPTIONS option
 - When concise mode is enabled, returns `summarized_about` (no stack info)
-- When concise mode is disabled, returns `full_about` (may include stack info if overridden)
+- When concise mode is disabled, calls `full_about_stacks(stacks)` which can be overridden
 - The old `preview_summary()` and `describe(stacks)` methods have been removed from base classes
 - All code now uses `get_about_str()` to retrieve description strings
 
 **For Relics with Dynamic Stack Descriptions:**
-Relics that need to show different descriptions based on stack count (like showing "gains 50% more gold" for 1 stack vs "gains 75% more gold" for 2 stacks) should:
-1. Keep the old `describe(stacks)` method (for backward compatibility during migration)
-2. Override `get_about_str(stacks)` to call `describe(stacks)` when NOT in concise mode:
+Relics that need to show different descriptions based on stack count (like showing "gains 50% more gold" for 1 stack vs "gains 75% more gold" for 2 stacks) should simply:
+1. Override `full_about_stacks(stacks)` to return stack-specific formatted strings
+2. Optionally keep the old `describe(stacks)` method for backward compatibility
+
+**Example:**
 ```python
-def get_about_str(self, stacks: int = 1) -> str:
-    from options import OptionKey, get_option
-    concise = get_option(OptionKey.CONCISE_DESCRIPTIONS, "false").lower() == "true"
-    if concise:
-        return self.summarized_about
-    # Use custom describe method for stack-specific formatting
+def full_about_stacks(self, stacks: int) -> str:
+    """Provide stack-aware description."""
+    gold = 50 + 25 * (stacks - 1)
+    hp = 1 + 0.5 * (stacks - 1)
+    return f"Party loses {hp:.1f}% HP per action, gains {gold:.0f}% more gold"
+```
+
+Or reuse existing describe method:
+```python
+def full_about_stacks(self, stacks: int) -> str:
+    """Reuse existing describe logic."""
     return self.describe(stacks)
 ```
 
@@ -121,6 +129,7 @@ All 102 tasks are currently **unassigned** and ready for implementation.
 - ✅ Old `describe(stacks)` method removed from RelicBase (but individual relics can still have it)
 - ✅ New `get_about_str()` method added to CardBase
 - ✅ New `get_about_str(stacks)` method added to RelicBase with stack support
+- ✅ New `full_about_stacks(stacks)` method added to RelicBase as override point for plugins
 - ✅ All backend routes updated to use new method with stack information
 - ✅ Default "Missing..." messages set for all plugins
 - ✅ Stack information properly passed through all call sites
@@ -130,8 +139,9 @@ Individual card and relic plugins need to be updated to provide actual content f
 
 For relics with dynamic stacking (41 relics have custom `describe()` methods), contributors should:
 1. Add `full_about` and `summarized_about` fields
-2. Override `get_about_str(stacks)` to call their existing `describe(stacks)` when NOT in concise mode
-3. Optionally migrate the logic from `describe()` into `get_about_str()` and remove `describe()`
+2. Override `full_about_stacks(stacks)` to provide stack-specific formatting
+3. Can reuse existing `describe(stacks)` logic by calling it from `full_about_stacks()`
+4. Optionally remove old `describe()` method after migration
 
 Until plugins are updated, they will display the default "Missing..." messages.
 

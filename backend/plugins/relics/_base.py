@@ -83,19 +83,35 @@ class RelicBase:
             mod.remove()
         self._mods = []
 
+    def full_about_stacks(self, stacks: int) -> str:
+        """Return stack-specific full description.
+
+        Override this method in subclasses to provide dynamic descriptions
+        based on stack count (e.g., "gains 50% gold" for 1 stack, "gains 75%
+        gold" for 2 stacks).
+
+        Args:
+            stacks: Number of stacks of this relic
+
+        Returns:
+            Stack-specific description string (base implementation returns full_about)
+        """
+        return self.full_about
+
     def get_about_str(self, stacks: int = 1) -> str:
         """Return the appropriate about string based on user settings.
 
         Automatically checks the CONCISE_DESCRIPTIONS option to determine
-        which version to return. For relics, can include stack information
-        in the full description.
+        which version to return. For relics, full mode calls full_about_stacks()
+        to allow stack-specific formatting.
 
         Args:
             stacks: Number of stacks of this relic (for stack-specific descriptions)
 
         Returns:
             summarized_about if user has concise mode enabled (no stack info),
-            otherwise full_about (may include stack info if overridden by subclass)
+            otherwise result from full_about_stacks(stacks) which may include
+            stack-specific formatting
         """
         from options import OptionKey
         from options import get_option
@@ -104,9 +120,9 @@ class RelicBase:
         if concise:
             # Concise mode: never show stack information
             return self.summarized_about
-        # Full mode: base implementation returns full_about, but subclasses
-        # can override to provide stack-specific formatting
-        return self.full_about
+        # Full mode: call full_about_stacks() which subclasses can override
+        # for stack-specific formatting
+        return self.full_about_stacks(stacks)
 
     def build_preview(
         self,
