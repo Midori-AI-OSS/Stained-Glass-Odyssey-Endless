@@ -13,7 +13,8 @@ class AdamantineBand(CardBase):
     name: str = "Adamantine Band"
     stars: int = 1
     effects: dict[str, float] = field(default_factory=lambda: {"max_hp": 0.04})
-    about: str = "+4% HP; If lethal damage would reduce you below 1 HP, reduce that damage by 10%"
+    full_about: str = "+4% HP; If lethal damage would reduce you below 1 HP, reduce that damage by 10%"
+    summarized_about: str = "Adds some HP; reduces lethal damage"
 
     async def apply(self, party) -> None:  # type: ignore[override]
         await super().apply(party)

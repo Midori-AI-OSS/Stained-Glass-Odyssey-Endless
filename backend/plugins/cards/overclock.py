@@ -21,10 +21,11 @@ class Overclock(CardBase):
     effects: dict[str, float] = field(
         default_factory=lambda: {"atk": 5, "effect_hit_rate": 5}
     )
-    about: str = (
+    full_about: str = (
         "+500% ATK & +500% Effect Hit Rate; at the start of each battle, "
         "all allies gain +200% SPD for 2 turns."
     )
+    summarized_about: str = "Boosts atk and effect hit rate; grants speed boost to all allies at battle start"
 
     async def apply(self, party) -> None:  # type: ignore[override]
         await super().apply(party)
