@@ -106,3 +106,33 @@ async def update_turn_pacing() -> tuple[str, int, dict[str, float]]:
     except Exception:
         pass
     return jsonify({"turn_pacing": value, "default": _TURN_PACING_DEFAULT})
+
+
+@bp.get("/concise_descriptions")
+async def get_concise_descriptions() -> tuple[str, int, dict[str, bool]]:
+    value = get_option(OptionKey.CONCISE_DESCRIPTIONS, "false")
+    enabled = value.lower() == "true"
+    payload = {"enabled": enabled}
+    try:
+        await log_menu_action("Settings", "view_concise_descriptions", {"enabled": enabled})
+        await log_overlay_action("settings", {"section": "concise_descriptions"})
+    except Exception:
+        pass
+    return jsonify(payload)
+
+
+@bp.post("/concise_descriptions")
+async def update_concise_descriptions() -> tuple[str, int, dict[str, bool]]:
+    data = await request.get_json()
+    if not isinstance(data, dict) or "enabled" not in data:
+        return jsonify({"error": "enabled is required"}), 400
+
+    enabled = bool(data["enabled"])
+    old = get_option(OptionKey.CONCISE_DESCRIPTIONS, "false")
+    set_option(OptionKey.CONCISE_DESCRIPTIONS, "true" if enabled else "false")
+    try:
+        await log_settings_change("concise_descriptions", old, enabled)
+        await log_menu_action("Settings", "update_concise_descriptions", {"old": old, "new": enabled})
+    except Exception:
+        pass
+    return jsonify({"enabled": enabled})

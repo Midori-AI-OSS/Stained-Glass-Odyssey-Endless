@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from options import OptionKey
+from options import get_option
 from quart import Blueprint
 from quart import jsonify
 from tracking import log_menu_action
@@ -16,14 +18,24 @@ bp = Blueprint("catalog", __name__, url_prefix="/catalog")
 async def list_cards():
     reg = card_registry()
     cards = []
+
+    # Check if user wants concise descriptions
+    concise = get_option(OptionKey.CONCISE_DESCRIPTIONS, "false").lower() == "true"
+
     for cls in reg.values():
         try:
             c = cls()
+            # Use summarized_about if concise is enabled, otherwise use full_about
+            if concise:
+                about_text = getattr(c, "summarized_about", "")
+            else:
+                about_text = getattr(c, "full_about", "")
+
             cards.append({
                 "id": c.id,
                 "name": c.name,
                 "stars": c.stars,
-                "about": getattr(c, "about", ""),
+                "about": about_text,
             })
         except Exception:
             # Skip malformed plugins rather than erroring the whole list
@@ -41,15 +53,25 @@ async def list_cards():
 async def list_relics():
     reg = relic_registry()
     relics = []
+
+    # Check if user wants concise descriptions
+    concise = get_option(OptionKey.CONCISE_DESCRIPTIONS, "false").lower() == "true"
+
     for cls in reg.values():
         try:
             r = cls()
+            # Use summarized_about if concise is enabled, otherwise use full_about
+            if concise:
+                about_text = getattr(r, "summarized_about", "")
+            else:
+                about_text = getattr(r, "full_about", "")
+
             relics.append({
                 "id": r.id,
                 "name": r.name,
                 "stars": r.stars,
                 # Base about text; inventory display does not vary by stacks
-                "about": getattr(r, "about", ""),
+                "about": about_text,
             })
         except Exception:
             continue
