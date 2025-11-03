@@ -27,6 +27,21 @@ The game is adding structured documentation fields to all cards and relics to en
 - Reference the current `about` field content and `describe()` method for accuracy
 - Note that relics can stack, so mention stacking behavior when relevant
 - Follow the style and tone of other relic descriptions in the game
+**Description Format Standards:**
+
+- **`summarized_about`**: Use qualitative descriptions WITHOUT specific numbers or percentages
+  - Focus on the general effect type, not exact values
+  - Use phrases like "boosts atk", "lowers def", "adds some hp", "reduces damage"
+  - Example: "Boosts atk" instead of "Boosts atk by 500%"
+  - Example: "Lowers def" instead of "Reduces def by 20%"
+  - Example: "Grants shield based on max hp" instead of "Grants shield equal to 20% max HP"
+  
+- **`full_about`**: Include ALL specific numbers, percentages, and exact values
+  - Explain all mechanics with precise details
+  - Include exact values like "+500% ATK", "20% Max HP", "2 turns", "10% damage reduction", etc.
+  - Example: "+500% ATK & +500% Effect Hit Rate; at the start of each battle, all allies gain +200% SPD for 2 turns"
+  - Example: "+4% HP; if lethal damage would reduce you below 1 HP, reduce that damage by 10%"
+  - Example: "After an Ultimate, grant a shield equal to 20% Max HP per stack"
 
 ## Example Structure
 
