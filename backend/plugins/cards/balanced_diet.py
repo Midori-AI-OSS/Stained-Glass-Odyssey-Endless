@@ -13,7 +13,8 @@ class BalancedDiet(CardBase):
     name: str = "Balanced Diet"
     stars: int = 1
     effects: dict[str, float] = field(default_factory=lambda: {"max_hp": 0.03, "defense": 0.03})
-    about: str = "+3% HP & +3% DEF; When healed, grant the healed unit +2% DEF for 1 turn"
+    full_about: str = "+3% HP & +3% DEF; When healed, grant the healed unit +2% DEF for 1 turn"
+    summarized_about: str = "Boosts hp and def; when healed, grants temporary def bonus"
 
     async def apply(self, party) -> None:  # type: ignore[override]
         await super().apply(party)

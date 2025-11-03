@@ -11,7 +11,8 @@ class EnduringWill(CardBase):
     name: str = "Enduring Will"
     stars: int = 1
     effects: dict[str, float] = field(default_factory=lambda: {"mitigation": 0.03, "vitality": 0.03})
-    about: str = "+3% Mitigation & +3% Vitality; If no allies die during combat, grant +0.2% mitigation next battle"
+    full_about: str = "+3% Mitigation & +3% Vitality; If no allies die during combat, grant +0.2% mitigation next battle"
+    summarized_about: str = "Boosts mitigation and vitality; surviving battles grants mitigation bonus next battle"
 
     async def apply(self, party) -> None:  # type: ignore[override]
         await super().apply(party)

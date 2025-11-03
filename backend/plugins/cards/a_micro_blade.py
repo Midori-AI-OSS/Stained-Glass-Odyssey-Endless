@@ -18,10 +18,11 @@ class MicroBlade(CardBase):
     name: str = "Micro Blade"
     stars: int = 1
     effects: dict[str, float] = field(default_factory=lambda: {"atk": 0.03})
-    about: str = (
+    full_about: str = (
         "+3% ATK; Attacks have a 6% chance to deal +8% bonus damage that matches "
         "the attacker's element"
     )
+    summarized_about: str = "Boosts atk; attacks have a chance to deal bonus elemental damage"
 
     async def apply(self, party) -> None:  # type: ignore[override]
         await super().apply(party)
