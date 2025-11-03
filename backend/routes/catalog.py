@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from options import OptionKey
-from options import get_option
 from quart import Blueprint
 from quart import jsonify
 from tracking import log_menu_action
@@ -19,17 +17,11 @@ async def list_cards():
     reg = card_registry()
     cards = []
 
-    # Check if user wants concise descriptions
-    concise = get_option(OptionKey.CONCISE_DESCRIPTIONS, "false").lower() == "true"
-
     for cls in reg.values():
         try:
             c = cls()
-            # Use summarized_about if concise is enabled, otherwise use full_about
-            if concise:
-                about_text = getattr(c, "summarized_about", "")
-            else:
-                about_text = getattr(c, "full_about", "")
+            # Use the new get_about_str method that automatically checks user settings
+            about_text = c.get_about_str()
 
             cards.append({
                 "id": c.id,
@@ -54,17 +46,12 @@ async def list_relics():
     reg = relic_registry()
     relics = []
 
-    # Check if user wants concise descriptions
-    concise = get_option(OptionKey.CONCISE_DESCRIPTIONS, "false").lower() == "true"
-
     for cls in reg.values():
         try:
             r = cls()
-            # Use summarized_about if concise is enabled, otherwise use full_about
-            if concise:
-                about_text = getattr(r, "summarized_about", "")
-            else:
-                about_text = getattr(r, "full_about", "")
+            # Use the new get_about_str method that automatically checks user settings
+            # Pass stacks=1 as this is the catalog view showing base descriptions
+            about_text = r.get_about_str(stacks=1)
 
             relics.append({
                 "id": r.id,

@@ -201,7 +201,7 @@ async def select_relic(run_id: str, relic_id: str) -> dict[str, Any]:
             "stars": relic.stars,
             "stacks": existing_stacks + 1,
         }
-        about = relic.describe(existing_stacks + 1)
+        about = relic.get_about_str(stacks=existing_stacks + 1)
         if about:
             staged_relic["about"] = about
 
