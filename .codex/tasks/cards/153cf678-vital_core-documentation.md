@@ -64,4 +64,20 @@ class VitalCoreCard(CardBase):
 - [x] Code follows existing style and conventions
 - [x] Changes are tested (card still loads and functions correctly)
 
-ready for review
+## Audit Review (Auditor)
+
+**Status:** ✅ APPROVED - All criteria met
+
+**Reviewed:** backend/plugins/cards/vital_core.py
+
+**Findings:**
+- ✅ Old `about` field: Removed
+- ✅ `full_about`: Present with detailed mechanics including '+3% Vitality & +3% HP', '30% HP threshold', '2 turns'
+- ✅ `summarized_about`: Present with qualitative description ('Boosts vitality and hp; grants additional vitality when low on health')
+- ✅ Format compliance: `full_about` includes all specific numbers, `summarized_about` is qualitative
+- ✅ Accuracy: Descriptions match code (triggers below 30% HP, grants +3% vitality for 2 turns)
+- ✅ Code style: Follows existing conventions
+
+**Verified by Auditor on 2025-11-03**
+
+requesting review from the Task Master

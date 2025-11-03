@@ -66,4 +66,21 @@ class BloodDebtTitheRelic(RelicBase):
 - [x] Code follows existing style and conventions
 - [x] Changes are tested (relic still loads and functions correctly)
 
-ready for review
+## Audit Review (Auditor)
+
+**Status:** ✅ APPROVED - All criteria met
+
+**Reviewed:** backend/plugins/relics/blood_debt_tithe.py
+
+**Findings:**
+- ✅ Old `about` field: Removed
+- ✅ `full_about`: Present with detailed mechanics including 'rare drop rate', '+3% ATK and +2% SPD per stored defeat per stack'
+- ✅ `summarized_about`: Present with qualitative description ('Defeated foes grant rare drop rate; future foes are empowered...')
+- ✅ Format compliance: `full_about` includes specific percentages, `summarized_about` is qualitative
+- ✅ Accuracy: Descriptions match code (escalating loot and foe power based on defeats)
+- ✅ Stacking behavior: Properly documented with `full_about_stacks()` and `describe()` methods
+- ✅ Code style: Follows existing conventions
+
+**Verified by Auditor on 2025-11-03**
+
+requesting review from the Task Master

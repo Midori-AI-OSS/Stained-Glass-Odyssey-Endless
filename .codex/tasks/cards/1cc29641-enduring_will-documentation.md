@@ -65,4 +65,20 @@ class EnduringWillCard(CardBase):
 - [ ] Changes are tested (card still loads and functions correctly)
 
 
-ready for review
+## Audit Review (Auditor)
+
+**Status:** ✅ APPROVED - All criteria met
+
+**Reviewed:** backend/plugins/cards/enduring_will.py
+
+**Findings:**
+- ✅ Old `about` field: Removed
+- ✅ `full_about`: Present with detailed mechanics including '+3% Mitigation & +3% Vitality', '+0.2% mitigation'
+- ✅ `summarized_about`: Present with qualitative description ('Boosts mitigation and vitality; surviving battles grants mitigation bonus next battle')
+- ✅ Format compliance: `full_about` includes specific percentages, `summarized_about` is qualitative
+- ✅ Accuracy: Descriptions match code (no deaths grants +0.2% mitigation next battle)
+- ✅ Code style: Follows existing conventions
+
+**Verified by Auditor on 2025-11-03**
+
+requesting review from the Task Master
