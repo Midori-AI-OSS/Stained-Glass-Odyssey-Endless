@@ -10,6 +10,9 @@ from typing import TYPE_CHECKING
 from typing import Any
 from typing import Sequence
 
+from options import OptionKey
+from options import get_option
+
 from autofighter.cards import card_choices
 from autofighter.relics import relic_choices
 from autofighter.stats import BUS
@@ -162,12 +165,16 @@ async def resolve_rewards(
     )
     if not card_options:
         log.warning("No card reward options available")
+
+    # Check if user wants concise descriptions
+    concise = get_option(OptionKey.CONCISE_DESCRIPTIONS, "false").lower() == "true"
+
     card_choice_data = [
         {
             "id": card.id,
             "name": card.name,
             "stars": card.stars,
-            "about": card.about,
+            "about": getattr(card, "summarized_about", "") if concise else getattr(card, "full_about", ""),
         }
         for card in card_options
     ]
