@@ -15,7 +15,8 @@ class LuckyButton(RelicBase):
     name: str = "Lucky Button"
     stars: int = 1
     effects: dict[str, float] = field(default_factory=lambda: {"crit_rate": 0.03})
-    about: str = "+3% Crit Rate; missed crits grant Critical Boost next turn."
+    full_about: str = "+3% Crit Rate per stack (multiplicative stacking); each missed critical hit is tracked and grants one stack of Critical Boost effect at the start of the next turn. The boost lasts until the end of that turn."
+    summarized_about: str = "Boosts crit rate; missed crits grant a damage boost next turn"
 
     async def apply(self, party) -> None:
         await super().apply(party)

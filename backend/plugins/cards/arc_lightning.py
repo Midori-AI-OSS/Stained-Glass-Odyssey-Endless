@@ -15,9 +15,8 @@ class ArcLightning(CardBase):
     name: str = "Arc Lightning"
     stars: int = 3
     effects: dict[str, float] = field(default_factory=lambda: {"atk": 2.55})
-    about: str = (
-        "+255% ATK; every attack chains 50% of dealt damage to a random foe."
-    )
+    full_about: str = "+255% ATK; every attack chains 50% of dealt damage to a random foe (excluding the original target). The chain damage does not trigger on-hit effects."
+    summarized_about: str = "Greatly boosts atk; attacks chain damage to another random foe"
 
     async def apply(self, party: Party) -> None:
         await super().apply(party)
