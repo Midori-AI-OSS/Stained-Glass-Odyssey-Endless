@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from options import OptionKey
-from options import get_option
 from quart import Blueprint
 from quart import jsonify
 from tracking import log_menu_action
@@ -19,14 +17,11 @@ async def list_cards():
     reg = card_registry()
     cards = []
 
-    # Check if user wants concise descriptions
-    concise = get_option(OptionKey.CONCISE_DESCRIPTIONS, "false").lower() == "true"
-
     for cls in reg.values():
         try:
             c = cls()
-            # Use the new get_about_str method that returns the appropriate version
-            about_text = c.get_about_str(concise=concise)
+            # Use the new get_about_str method that automatically checks user settings
+            about_text = c.get_about_str()
 
             cards.append({
                 "id": c.id,
@@ -51,14 +46,11 @@ async def list_relics():
     reg = relic_registry()
     relics = []
 
-    # Check if user wants concise descriptions
-    concise = get_option(OptionKey.CONCISE_DESCRIPTIONS, "false").lower() == "true"
-
     for cls in reg.values():
         try:
             r = cls()
-            # Use the new get_about_str method that returns the appropriate version
-            about_text = r.get_about_str(concise=concise)
+            # Use the new get_about_str method that automatically checks user settings
+            about_text = r.get_about_str()
 
             relics.append({
                 "id": r.id,

@@ -135,15 +135,19 @@ class CardBase:
         """Remove all tracked subscriptions."""
         self._subscriptions.clear()
 
-    def get_about_str(self, concise: bool = False) -> str:
-        """Return the appropriate about string based on user preference.
+    def get_about_str(self) -> str:
+        """Return the appropriate about string based on user settings.
 
-        Args:
-            concise: If True, return summarized_about; otherwise return full_about
+        Automatically checks the CONCISE_DESCRIPTIONS option to determine
+        which version to return.
 
         Returns:
-            The appropriate description string
+            summarized_about if user has concise mode enabled, otherwise full_about
         """
+        from options import OptionKey
+        from options import get_option
+
+        concise = get_option(OptionKey.CONCISE_DESCRIPTIONS, "false").lower() == "true"
         if concise:
             return self.summarized_about
         return self.full_about
@@ -151,7 +155,7 @@ class CardBase:
     def build_preview(self) -> RewardPreviewPayload:
         return build_preview_from_effects(
             effects=self.effects,
-            summary=self.get_about_str(concise=False),
+            summary=self.get_about_str(),
             triggers=self.preview_triggers,
             stacks=1,
             previous_stacks=0,
