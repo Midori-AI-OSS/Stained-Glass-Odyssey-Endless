@@ -64,4 +64,17 @@ class EnergizingTeaCard(CardBase):
 - [x] Code follows existing style and conventions
 - [x] Changes are tested (card still loads and functions correctly)
 
-ready for review
+## Audit Summary (2025-11-03)
+
+**Status: APPROVED**
+
+Audited by reviewing `backend/plugins/cards/energizing_tea.py`. All acceptance criteria met:
+- ✓ Old `about` field removed (confirmed absent)
+- ✓ `full_about` properly implemented: "+3% Regain; At battle start, gain +1 ultimate charge on the first turn"
+- ✓ `summarized_about` properly implemented: "Boosts regain; grants ultimate charge at battle start"
+- ✓ Description format standards followed (summarized has no numbers, full has "+3%", "+1")
+- ✓ Descriptions accurate to battle start ultimate charge mechanics
+- ✓ Code style consistent with repository conventions
+- ✓ Proper one-time trigger with cleanup
+
+Requesting review from the Task Master.

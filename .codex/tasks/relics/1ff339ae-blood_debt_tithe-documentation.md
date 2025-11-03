@@ -66,4 +66,21 @@ class BloodDebtTitheRelic(RelicBase):
 - [x] Code follows existing style and conventions
 - [x] Changes are tested (relic still loads and functions correctly)
 
-ready for review
+## Audit Summary (2025-11-03)
+
+**Status: APPROVED**
+
+Audited by reviewing `backend/plugins/relics/blood_debt_tithe.py`. All acceptance criteria met:
+- ✓ Old `about` field removed (confirmed absent)
+- ✓ `full_about` properly implemented: "Every defeated foe increases the party's rare drop rate for the rest of the run. Future encounters begin with foes empowered proportionally to the number of sacrifices already collected (+3% ATK and +2% SPD per stored defeat per stack)."
+- ✓ `summarized_about` properly implemented: "Defeated foes grant rare drop rate; future foes are empowered based on defeats"
+- ✓ Description format standards followed (summarized has no numbers, full has "+3%", "+2%")
+- ✓ Descriptions accurate to defeat tracking and foe buffing mechanics
+- ✓ Stacking behavior properly documented and implemented
+- ✓ Code style consistent with repository conventions
+- ✓ Proper `full_about_stacks()` and `describe()` methods implemented
+- ✓ Complex persistent state tracking across battles
+
+This is a sophisticated 4-star relic with excellent implementation of run-persistent mechanics.
+
+Requesting review from the Task Master.

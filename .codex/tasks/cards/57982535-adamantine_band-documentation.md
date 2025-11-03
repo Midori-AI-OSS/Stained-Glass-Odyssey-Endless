@@ -64,4 +64,17 @@ class AdamantineBandCard(CardBase):
 - [x] Code follows existing style and conventions
 - [x] Changes are tested (card still loads and functions correctly)
 
-ready for review
+## Audit Summary (2025-11-03)
+
+**Status: APPROVED**
+
+Audited by reviewing `backend/plugins/cards/adamantine_band.py`. All acceptance criteria met:
+- ✓ Old `about` field removed (confirmed absent)
+- ✓ `full_about` properly implemented: "+4% HP; If lethal damage would reduce you below 1 HP, reduce that damage by 10%"
+- ✓ `summarized_about` properly implemented: "Adds some HP; reduces lethal damage"
+- ✓ Description format standards followed (summarized has no numbers, full has "+4%", "10%")
+- ✓ Descriptions accurate to lethal protection mechanics
+- ✓ Code style consistent with repository conventions
+- ✓ Proper damage reduction calculation with HP restoration
+
+Requesting review from the Task Master.

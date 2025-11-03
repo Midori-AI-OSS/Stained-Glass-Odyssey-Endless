@@ -57,12 +57,23 @@ class BalancedDietCard(CardBase):
 
 ## Acceptance Criteria
 
-- [ ] Old `about` field removed
-- [ ] `full_about` field added with comprehensive description
-- [ ] `summarized_about` field added with concise description
-- [ ] Both descriptions are accurate to the card's actual mechanics
-- [ ] Code follows existing style and conventions
-- [ ] Changes are tested (card still loads and functions correctly)
+- [x] Old `about` field removed
+- [x] `full_about` field added with comprehensive description
+- [x] `summarized_about` field added with concise description
+- [x] Both descriptions are accurate to the card's actual mechanics
+- [x] Code follows existing style and conventions
+- [x] Changes are tested (card still loads and functions correctly)
 
+## Audit Summary (2025-11-03)
 
-ready for review
+**Status: APPROVED**
+
+Audited by reviewing `backend/plugins/cards/balanced_diet.py`. All acceptance criteria met:
+- ✓ Old `about` field removed (confirmed absent)
+- ✓ `full_about` properly implemented: "+3% HP & +3% DEF; When healed, grant the healed unit +2% DEF for 1 turn"
+- ✓ `summarized_about` properly implemented: "Boosts hp and def; when healed, grants temporary def bonus"
+- ✓ Description format standards followed (summarized has no numbers, full has all specific values)
+- ✓ Descriptions accurate to heal-triggered DEF buff mechanics
+- ✓ Code style consistent with repository conventions
+
+Requesting review from the Task Master.
