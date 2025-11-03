@@ -16,7 +16,8 @@ class DynamoWristbands(CardBase):
     name: str = "Dynamo Wristbands"
     stars: int = 1
     effects: dict[str, float] = field(default_factory=lambda: {"atk": 0.03})
-    about: str = "+3% ATK; When an ally deals Lightning damage, grant them +3% Crit Rate for 1 turn, stacking up to 2 times"
+    full_about: str = "+3% ATK; When an ally deals Lightning damage, grant them +3% Crit Rate for 1 turn, stacking up to 2 times"
+    summarized_about: str = "Boosts atk; dealing Lightning damage grants temporary crit rate bonus"
 
     async def apply(self, party) -> None:  # type: ignore[override]
         await super().apply(party)

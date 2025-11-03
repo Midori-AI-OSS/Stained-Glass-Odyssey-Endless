@@ -14,7 +14,8 @@ class EnduringCharm(CardBase):
     name: str = "Enduring Charm"
     stars: int = 1
     effects: dict[str, float] = field(default_factory=lambda: {"vitality": 0.03})
-    about: str = "+3% Vitality; When below 30% HP, gain +3% Vitality for 2 turns"
+    full_about: str = "+3% Vitality; When below 30% HP, gain +3% Vitality for 2 turns"
+    summarized_about: str = "Boosts vitality; when low on hp, grants additional vitality bonus"
 
     async def apply(self, party) -> None:  # type: ignore[override]
         await super().apply(party)

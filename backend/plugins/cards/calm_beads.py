@@ -11,7 +11,8 @@ class CalmBeads(CardBase):
     name: str = "Calm Beads"
     stars: int = 1
     effects: dict[str, float] = field(default_factory=lambda: {"effect_resistance": 0.03})
-    about: str = "+3% Effect Res; On resisting a debuff, gain +1 small ultimate charge for next action"
+    full_about: str = "+3% Effect Res; On resisting a debuff, gain +1 small ultimate charge for next action"
+    summarized_about: str = "Boosts effect resistance; resisting debuffs grants ultimate charge"
 
     async def apply(self, party) -> None:  # type: ignore[override]
         await super().apply(party)

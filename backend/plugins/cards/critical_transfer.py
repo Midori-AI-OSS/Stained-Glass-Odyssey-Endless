@@ -14,9 +14,10 @@ class CriticalTransfer(CardBase):
     name: str = "Critical Transfer"
     stars: int = 2
     effects: dict[str, float] = field(default_factory=dict)
-    about: str = (
+    full_about: str = (
         "Ultimates absorb all Critical Boost stacks and grant +4% ATK per stack for that turn."
     )
+    summarized_about: str = "Ultimates absorb all Critical Boost stacks and convert them to atk bonus"
 
     async def apply(self, party) -> None:  # type: ignore[override]
         await super().apply(party)

@@ -26,11 +26,12 @@ class EclipseTheaterSigil(CardBase):
     effects: dict[str, float] = field(
         default_factory=lambda: {"max_hp": 15.0, "atk": 15.0}
     )
-    about: str = (
+    full_about: str = (
         "+1500% Max HP & ATK. Alternates Light/Dark each turn: Light cleanses one DoT "
         "per ally and grants 2-turn Radiant Regeneration, Dark inflicts Abyssal "
         "Weakness on foes and gives allies a one-action +50% crit burst."
     )
+    summarized_about: str = "Massively boosts hp and atk; alternates Light and Dark effects each turn"
 
     async def apply(self, party):  # type: ignore[override]
         await super().apply(party)
