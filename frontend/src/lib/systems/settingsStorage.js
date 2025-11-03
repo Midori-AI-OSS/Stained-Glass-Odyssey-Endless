@@ -6,6 +6,7 @@ const SETTINGS_VERSION = 2;
 // Create reactive stores for settings
 export const motionStore = writable(null);
 export const themeStore = writable(null);
+export const uiStore = writable(null);
 
 // Theme definitions
 export const THEMES = {
@@ -51,6 +52,9 @@ function getDefaultSettings() {
       simplifyOverlayTransitions: false,
       disableStarStorm: false,
       enableBattleFx: false
+    },
+    ui: {
+      conciseDescriptions: false
     },
     // Legacy settings for backward compatibility
     framerate: 60,
@@ -104,6 +108,11 @@ function migrateSettings(data) {
         migrated.theme = defaults.theme;
       }
       
+      // Initialize ui settings if not present
+      if (!data.ui) {
+        migrated.ui = defaults.ui;
+      }
+      
       return migrated;
     }
   }
@@ -119,6 +128,7 @@ export function loadSettings() {
       // Initialize stores
       motionStore.set(defaults.motion);
       themeStore.set(defaults.theme);
+      uiStore.set(defaults.ui);
       return defaults;
     }
     
@@ -162,6 +172,11 @@ export function loadSettings() {
       data.theme = defaults.theme;
     }
 
+    // Ensure ui settings exist
+    if (!data.ui) {
+      data.ui = defaults.ui;
+    }
+
     if (data.showTurnCounter === undefined) {
       data.showTurnCounter = defaults.showTurnCounter;
     }
@@ -176,12 +191,14 @@ export function loadSettings() {
     // Update stores
     motionStore.set(data.motion);
     themeStore.set(data.theme);
+    uiStore.set(data.ui);
     
     return data;
   } catch {
     const defaults = getDefaultSettings();
     motionStore.set(defaults.motion);
     themeStore.set(defaults.theme);
+    uiStore.set(defaults.ui);
     return defaults;
   }
 }
@@ -252,6 +269,9 @@ export function saveSettings(settings) {
     if (merged.theme) {
       themeStore.set(merged.theme);
     }
+    if (merged.ui) {
+      uiStore.set(merged.ui);
+    }
   } catch {
     // ignore write errors
   }
@@ -286,6 +306,20 @@ export function updateMotionSettings(motionUpdates) {
     reducedMotion: updatedMotion.globalReducedMotion
   });
   motionStore.set(updatedMotion);
+}
+
+export function getUISettings() {
+  const settings = loadSettings();
+  return settings.ui || getDefaultSettings().ui;
+}
+
+export function updateUISettings(uiUpdates) {
+  const current = loadSettings();
+  const updatedUI = { ...current.ui, ...uiUpdates };
+  saveSettings({
+    ui: updatedUI
+  });
+  uiStore.set(updatedUI);
 }
 
 export function clearSettings() {
