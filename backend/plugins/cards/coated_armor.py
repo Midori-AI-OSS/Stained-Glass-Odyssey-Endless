@@ -11,7 +11,8 @@ class CoatedArmor(CardBase):
     name: str = "Coated Armor"
     stars: int = 1
     effects: dict[str, float] = field(default_factory=lambda: {"mitigation": 0.03, "defense": 0.03})
-    about: str = "+3% Mitigation & +3% DEF; When mitigation reduces incoming damage, heal 1% HP"
+    full_about: str = "+3% Mitigation & +3% DEF; when mitigation reduces incoming damage, heal 1% HP"
+    summarized_about: str = "Boosts mitigation and defense; heals when mitigation triggers"
 
     async def apply(self, party) -> None:  # type: ignore[override]
         await super().apply(party)
