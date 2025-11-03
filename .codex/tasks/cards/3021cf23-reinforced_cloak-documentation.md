@@ -63,4 +63,11 @@ class ReinforcedCloakCard(CardBase):
 - [ ] Both descriptions are accurate to the card's actual mechanics
 - [ ] Code follows existing style and conventions
 - [ ] Changes are tested (card still loads and functions correctly)
-ready for review
+## Audit Notes (2025-11-03)
+✅ All acceptance criteria met
+✅ Linting passes
+✅ `summarized_about` uses qualitative descriptions (no specific numbers)
+✅ `full_about` includes all specific mechanics (+3% DEF, +3% Effect Res, 30% chance, 3+ turn debuffs, -1 turn)
+✅ Descriptions accurately match code implementation (lines 15-19, 30, 73)
+
+requesting review from the Task Master

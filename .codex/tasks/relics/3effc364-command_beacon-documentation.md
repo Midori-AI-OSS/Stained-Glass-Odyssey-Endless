@@ -65,4 +65,14 @@ class CommandBeaconRelic(RelicBase):
 - [ ] Stacking behavior is mentioned if applicable
 - [ ] Code follows existing style and conventions
 - [ ] Changes are tested (relic still loads and functions correctly)
-ready for review
+## Audit Notes (2025-11-03)
+✅ All acceptance criteria met
+✅ Linting passes
+✅ `summarized_about` uses qualitative descriptions (no specific numbers)
+✅ `full_about` includes all specific mechanics (3% Max HP per stack, +15% SPD per stack, turn start, fastest ally sacrifices, others gain)
+✅ Stacking behavior properly documented (multiplicative for both HP cost and SPD boost)
+✅ Descriptions accurately match complex code implementation (lines 21-25, 61-63, 120-124)
+✅ `describe()` method provides stack-specific details
+✅ Sophisticated 3-star relic with coordination mechanics
+
+requesting review from the Task Master

@@ -65,4 +65,14 @@ class CatalystVialsRelic(RelicBase):
 - [ ] Stacking behavior is mentioned if applicable
 - [ ] Code follows existing style and conventions
 - [ ] Changes are tested (relic still loads and functions correctly)
-ready for review
+## Audit Notes (2025-11-03)
+✅ All acceptance criteria met
+✅ Linting passes
+✅ `summarized_about` uses qualitative descriptions (no specific numbers)
+✅ `full_about` includes all specific mechanics (5% heal per stack, +5% Effect Hit Rate per stack, 1 turn)
+✅ Stacking behavior properly documented (additive stacking for both effects)
+✅ Descriptions accurately match code implementation (lines 19-23, 52, 66)
+✅ `describe()` method provides stack-specific details
+✅ 2-star relic with DoT synergy
+
+requesting review from the Task Master
