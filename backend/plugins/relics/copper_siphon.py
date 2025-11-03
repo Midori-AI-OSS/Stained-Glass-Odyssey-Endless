@@ -14,7 +14,8 @@ class CopperSiphon(RelicBase):
     name: str = "Copper Siphon"
     stars: int = 1
     effects: dict[str, float] = field(default_factory=dict)
-    about: str = "When an ally deals damage, heal them for 2% of damage per stack (min 1 HP); excess becomes shields."
+    full_about: str = "When an ally deals damage, heal them for 2% of damage per stack (min 1 HP); excess becomes shields."
+    summarized_about: str = "Allies gain lifesteal when dealing damage; excess healing becomes shields"
 
     async def apply(self, party) -> None:
         await super().apply(party)
@@ -76,6 +77,10 @@ class CopperSiphon(RelicBase):
         self.subscribe(party, "action_used", _on_action_used)
         self.subscribe(party, "attack_used", _on_action_used)
         self.subscribe(party, "battle_end", _cleanup)
+
+    def full_about_stacks(self, stacks: int) -> str:
+        """Provide stack-aware description."""
+        return self.describe(stacks)
 
     def describe(self, stacks: int) -> str:
         pct = 2 * stacks
