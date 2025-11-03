@@ -6,6 +6,7 @@ from quart import Blueprint
 from quart import jsonify
 from tracking import log_menu_action
 from tracking import log_overlay_action
+from utils.descriptions import get_description_text
 
 # Import plugin registries directly to build metadata
 from autofighter.cards import _registry as card_registry
@@ -25,11 +26,7 @@ async def list_cards():
     for cls in reg.values():
         try:
             c = cls()
-            # Use summarized_about if concise is enabled and it exists, otherwise use about
-            if concise:
-                about_text = getattr(c, "summarized_about", None) or getattr(c, "about", "")
-            else:
-                about_text = getattr(c, "full_about", None) or getattr(c, "about", "")
+            about_text = get_description_text(c, use_concise=concise)
 
             cards.append({
                 "id": c.id,
@@ -60,11 +57,7 @@ async def list_relics():
     for cls in reg.values():
         try:
             r = cls()
-            # Use summarized_about if concise is enabled and it exists, otherwise use about
-            if concise:
-                about_text = getattr(r, "summarized_about", None) or getattr(r, "about", "")
-            else:
-                about_text = getattr(r, "full_about", None) or getattr(r, "about", "")
+            about_text = get_description_text(r, use_concise=concise)
 
             relics.append({
                 "id": r.id,
