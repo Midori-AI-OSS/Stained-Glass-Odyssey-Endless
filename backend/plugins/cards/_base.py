@@ -40,7 +40,8 @@ class CardBase:
     name: str = ""
     stars: int = 1
     effects: dict[str, float] = field(default_factory=dict)
-    about: str = ""
+    full_about: str = "Missing full card description, please report this"
+    summarized_about: str = "Missing summarized card description, please report this"
     preview_triggers: ClassVar[Sequence[RewardPreviewTrigger | dict[str, object]]] = ()
     _subscriptions: "SubscriptionRegistry" = field(
         init=False,
@@ -49,13 +50,6 @@ class CardBase:
 
     def __post_init__(self) -> None:
         self._subscriptions = SubscriptionRegistry()
-        if not self.about and self.effects:
-            parts: list[str] = []
-            for attr, pct in self.effects.items():
-                sign = "+" if pct >= 0 else ""
-                pretty = attr.replace("_", " ")
-                parts.append(f"{sign}{pct * 100:.0f}% {pretty}")
-            self.about = ", ".join(parts)
 
     async def apply(self, party: Party) -> None:
         from autofighter.stats import BUS  # Import here to avoid circular imports
@@ -141,14 +135,23 @@ class CardBase:
         """Remove all tracked subscriptions."""
         self._subscriptions.clear()
 
-    def preview_summary(self) -> str | None:
-        about = getattr(self, "about", "")
-        return about.strip() or None
+    def get_about_str(self, concise: bool = False) -> str:
+        """Return the appropriate about string based on user preference.
+
+        Args:
+            concise: If True, return summarized_about; otherwise return full_about
+
+        Returns:
+            The appropriate description string
+        """
+        if concise:
+            return self.summarized_about
+        return self.full_about
 
     def build_preview(self) -> RewardPreviewPayload:
         return build_preview_from_effects(
             effects=self.effects,
-            summary=self.preview_summary(),
+            summary=self.get_about_str(concise=False),
             triggers=self.preview_triggers,
             stacks=1,
             previous_stacks=0,

@@ -203,7 +203,7 @@ async def resolve_rewards(
             "id": relic.id,
             "name": relic.name,
             "stars": relic.stars,
-            "about": relic.describe(party.relics.count(relic.id) + 1),
+            "about": relic.get_about_str(concise=False),
             "stacks": party.relics.count(relic.id),
         }
         for relic in relic_options

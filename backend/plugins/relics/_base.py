@@ -39,7 +39,8 @@ class RelicBase:
     name: str = ""
     stars: int = 1
     effects: dict[str, float] = field(default_factory=dict)
-    about: str = ""
+    full_about: str = "Missing full relic description, please report this"
+    summarized_about: str = "Missing summarized relic description, please report this"
     preview_triggers: ClassVar[Sequence[RewardPreviewTrigger | dict[str, object]]] = ()
 
     async def apply(self, party: Party) -> None:
@@ -82,12 +83,18 @@ class RelicBase:
             mod.remove()
         self._mods = []
 
-    def describe(self, stacks: int) -> str:
-        return self.about
+    def get_about_str(self, concise: bool = False) -> str:
+        """Return the appropriate about string based on user preference.
 
-    def preview_summary(self) -> str | None:
-        about = getattr(self, "about", "")
-        return about.strip() or None
+        Args:
+            concise: If True, return summarized_about; otherwise return full_about
+
+        Returns:
+            The appropriate description string
+        """
+        if concise:
+            return self.summarized_about
+        return self.full_about
 
     def build_preview(
         self,
@@ -97,7 +104,7 @@ class RelicBase:
     ) -> RewardPreviewPayload:
         return build_preview_from_effects(
             effects=self.effects,
-            summary=self.preview_summary(),
+            summary=self.get_about_str(concise=False),
             triggers=self.preview_triggers,
             stacks=max(stacks, 1),
             previous_stacks=max(previous_stacks, 0),

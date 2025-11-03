@@ -59,19 +59,27 @@ Each task includes:
 
 ### Field Requirements
 
-**Important:** The old `about` field should be removed and replaced with these two new fields.
+**Important:** The old `about` field has been removed from the base classes and replaced with these two new fields. The base classes now provide default "Missing..." messages.
 
 **full_about:**
 - Detailed description of mechanics
 - Explain all triggers, interactions, and edge cases
 - Include stacking behavior (for relics)
 - Use clear, technical language
+- Default: "Missing full card/relic description, please report this"
 
 **summarized_about:**
 - Brief 1-2 sentence description
 - Suitable for in-game UI tooltips
 - Focus on core functionality
 - Use concise, player-friendly language
+- Default: "Missing summarized card/relic description, please report this"
+
+**New Method:**
+- The base classes now provide a `get_about_str(concise: bool = False)` method
+- This method returns the appropriate string based on user settings
+- The old `preview_summary()` and `describe(stacks)` methods have been removed
+- All code now uses `get_about_str()` to retrieve description strings
 
 ## Progress Tracking
 
@@ -86,5 +94,18 @@ Contributors should:
 ## Task Status
 
 All 102 tasks are currently **unassigned** and ready for implementation.
+
+**Base System Update (COMPLETED):**
+- ✅ CardBase updated with `full_about` and `summarized_about` fields
+- ✅ RelicBase updated with `full_about` and `summarized_about` fields
+- ✅ Old `about` field removed from both base classes
+- ✅ Old `preview_summary()` method removed from both base classes
+- ✅ Old `describe(stacks)` method removed from RelicBase
+- ✅ New `get_about_str(concise)` method added to both base classes
+- ✅ All backend routes updated to use new method
+- ✅ Default "Missing..." messages set for all plugins
+
+**Next Steps:**
+Individual card and relic plugins need to be updated to provide actual content for the `full_about` and `summarized_about` fields. Until then, they will display the default "Missing..." messages.
 
 Status markers will be added by contributors as they begin work on each task.

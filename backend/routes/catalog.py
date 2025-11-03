@@ -25,11 +25,8 @@ async def list_cards():
     for cls in reg.values():
         try:
             c = cls()
-            # Use summarized_about if concise is enabled, otherwise use full_about
-            if concise:
-                about_text = getattr(c, "summarized_about", "")
-            else:
-                about_text = getattr(c, "full_about", "")
+            # Use the new get_about_str method that returns the appropriate version
+            about_text = c.get_about_str(concise=concise)
 
             cards.append({
                 "id": c.id,
@@ -60,11 +57,8 @@ async def list_relics():
     for cls in reg.values():
         try:
             r = cls()
-            # Use summarized_about if concise is enabled, otherwise use full_about
-            if concise:
-                about_text = getattr(r, "summarized_about", "")
-            else:
-                about_text = getattr(r, "full_about", "")
+            # Use the new get_about_str method that returns the appropriate version
+            about_text = r.get_about_str(concise=concise)
 
             relics.append({
                 "id": r.id,
