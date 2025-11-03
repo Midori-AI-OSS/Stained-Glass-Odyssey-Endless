@@ -16,9 +16,8 @@ class TimekeepersHourglass(RelicBase):
     name: str = "Timekeeper's Hourglass"
     stars: int = 4
     effects: dict[str, float] = field(default_factory=dict)
-    about: str = (
-        "Each turn, 10% base chance (+1% per extra stack) to grant ready allies a 2-turn speed buff."
-    )
+    full_about: str = "Each turn, 10% base chance (+1% per extra stack) to grant ready allies +20% SPD per stack for 2 turns. Only affects allies who can act (alive with available actions)."
+    summarized_about: str = "Each turn, chance to grant ready allies a brief speed boost"
 
     async def apply(self, party) -> None:
         if getattr(party, "_t_hourglass_applied", False):
