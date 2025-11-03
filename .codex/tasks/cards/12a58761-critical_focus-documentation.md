@@ -64,4 +64,20 @@ class CriticalFocusCard(CardBase):
 - [x] Code follows existing style and conventions
 - [x] Changes are tested (card still loads and functions correctly)
 
-ready for review
+## Audit Review (Auditor)
+
+**Status:** ✅ APPROVED - All criteria met
+
+**Reviewed:** backend/plugins/cards/critical_focus.py
+
+**Findings:**
+- ✅ Old `about` field: Removed
+- ✅ `full_about`: Present with detailed mechanics including '+55% ATK'
+- ✅ `summarized_about`: Present with qualitative description ('Boosts atk; grants Critical Boost to allies each turn')
+- ✅ Format compliance: `full_about` includes specific numbers, `summarized_about` is qualitative
+- ✅ Accuracy: Descriptions match code (grants Critical Boost effect each turn)
+- ✅ Code style: Follows existing conventions
+
+**Verified by Auditor on 2025-11-03**
+
+requesting review from the Task Master

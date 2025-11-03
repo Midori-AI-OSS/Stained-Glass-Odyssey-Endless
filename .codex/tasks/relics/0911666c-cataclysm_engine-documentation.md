@@ -66,4 +66,21 @@ class CataclysmEngineRelic(RelicBase):
 - [x] Code follows existing style and conventions
 - [x] Changes are tested (relic still loads and functions correctly)
 
-ready for review
+## Audit Review (Auditor)
+
+**Status:** ✅ APPROVED - All criteria met
+
+**Reviewed:** backend/plugins/relics/cataclysm_engine.py
+
+**Findings:**
+- ✅ Old `about` field: Removed
+- ✅ `full_about`: Present with detailed mechanics including '15% HP sacrifice', '250% core stats', '5% HP drains'
+- ✅ `summarized_about`: Present with qualitative description ('Trades HP for overwhelming tempo; detonates at battle start...')
+- ✅ Format compliance: `full_about` includes specific percentages, `summarized_about` is qualitative
+- ✅ Accuracy: Descriptions match complex legendary relic mechanics with escalating effects
+- ✅ Stacking behavior: Properly documented with `full_about_stacks()` and `describe()` methods
+- ✅ Code style: Follows existing conventions
+
+**Verified by Auditor on 2025-11-03**
+
+requesting review from the Task Master

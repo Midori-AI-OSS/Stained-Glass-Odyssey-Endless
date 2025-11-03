@@ -64,4 +64,20 @@ class BulwarkTotemCard(CardBase):
 - [x] Code follows existing style and conventions
 - [x] Changes are tested (card still loads and functions correctly)
 
-ready for review
+## Audit Review (Auditor)
+
+**Status:** ✅ APPROVED - All criteria met
+
+**Reviewed:** backend/plugins/cards/bulwark_totem.py
+
+**Findings:**
+- ✅ Old `about` field: Removed
+- ✅ `full_about`: Present with detailed mechanics including "+2% DEF & +2% HP", "25% HP", "5% of the fatal damage"
+- ✅ `summarized_about`: Present with qualitative description ("Boosts def and hp slightly; when an ally would die, a healthy ally donates some hp to prevent death")
+- ✅ Format compliance: `full_about` includes all specific numbers and thresholds, `summarized_about` is qualitative
+- ✅ Accuracy: Descriptions accurately reflect the complex death prevention mechanic with HP donation
+- ✅ Code style: Follows existing conventions
+
+**Verified by Auditor on 2025-11-03**
+
+requesting review from the Task Master

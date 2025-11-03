@@ -64,4 +64,20 @@ class SwiftBandannaCard(CardBase):
 - [x] Code follows existing style and conventions
 - [x] Changes are tested (card still loads and functions correctly)
 
-ready for review
+## Audit Review (Auditor)
+
+**Status:** ✅ APPROVED - All criteria met
+
+**Reviewed:** backend/plugins/cards/swift_bandanna.py
+
+**Findings:**
+- ✅ Old `about` field: Removed
+- ✅ `full_about`: Present with detailed mechanics including '+3% Crit Rate & +3% Dodge Odds', '+1% crit rate'
+- ✅ `summarized_about`: Present with qualitative description ('Boosts crit rate and dodge odds; dodging grants bonus crit rate')
+- ✅ Format compliance: `full_about` includes specific percentages, `summarized_about` is qualitative
+- ✅ Accuracy: Descriptions match code (dodge grants +1% crit rate for next action)
+- ✅ Code style: Follows existing conventions
+
+**Verified by Auditor on 2025-11-03**
+
+requesting review from the Task Master
