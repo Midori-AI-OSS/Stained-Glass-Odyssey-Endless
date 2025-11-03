@@ -18,10 +18,11 @@ class CommandBeacon(RelicBase):
     name: str = "Command Beacon"
     stars: int = 3
     effects: dict[str, float] = field(default_factory=dict)  # No baseline bonus
-    about: str = (
-        "At turn start, the fastest ally takes 3% Max HP damage (per stack). "
-        "All other allies gain +15% SPD for that turn (per stack)."
+    full_about: str = (
+        "At turn start, the fastest ally takes 3% Max HP damage per stack (multiplicative). "
+        "All other allies gain +15% SPD per stack (multiplicative) for that turn."
     )
+    summarized_about: str = "Fastest ally sacrifices hp at turn start to boost other allies' speed"
 
     async def apply(self, party) -> None:
         await super().apply(party)

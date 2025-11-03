@@ -14,7 +14,10 @@ class FarsightScope(CardBase):
     name: str = "Farsight Scope"
     stars: int = 1
     effects: dict[str, float] = field(default_factory=lambda: {"crit_rate": 0.03})
-    about: str = "+3% Crit Rate; Attacks against enemies under 50% HP gain +6% crit rate"
+    full_about: str = (
+        "+3% Crit Rate; when attacking enemies below 50% HP, gain +6% crit rate for that attack."
+    )
+    summarized_about: str = "Boosts crit rate; attacks against low hp enemies gain bonus crit rate"
 
     async def apply(self, party) -> None:  # type: ignore[override]
         await super().apply(party)

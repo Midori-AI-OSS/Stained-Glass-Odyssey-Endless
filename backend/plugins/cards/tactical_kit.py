@@ -13,7 +13,11 @@ class TacticalKit(CardBase):
     name: str = "Tactical Kit"
     stars: int = 1
     effects: dict[str, float] = field(default_factory=lambda: {"atk": 0.02, "max_hp": 0.02})
-    about: str = "+2% ATK & +2% HP; Once per battle, convert 1% HP to +2% ATK for one action"
+    full_about: str = (
+        "+2% ATK & +2% HP; once per battle, when an ally performs an action, they convert 1% HP "
+        "to gain +2% ATK for that action only."
+    )
+    summarized_about: str = "Boosts atk and hp slightly; once per battle, converts some hp to atk boost"
 
     async def apply(self, party) -> None:  # type: ignore[override]
         await super().apply(party)

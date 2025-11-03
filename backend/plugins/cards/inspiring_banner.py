@@ -14,7 +14,10 @@ class InspiringBanner(CardBase):
     name: str = "Inspiring Banner"
     stars: int = 1
     effects: dict[str, float] = field(default_factory=lambda: {"atk": 0.02, "defense": 0.02})
-    about: str = "+2% ATK & +2% DEF; At battle start, grant a random ally +2% ATK for 2 turns"
+    full_about: str = (
+        "+2% ATK & +2% DEF; at the start of battle, grant a random ally +2% ATK for 2 turns."
+    )
+    summarized_about: str = "Boosts atk and def slightly; battle start grants random ally atk bonus"
 
     async def apply(self, party) -> None:  # type: ignore[override]
         await super().apply(party)

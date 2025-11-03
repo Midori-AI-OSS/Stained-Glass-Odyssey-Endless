@@ -15,9 +15,11 @@ class ShinyPebble(RelicBase):
     name: str = "Shiny Pebble"
     stars: int = 1
     effects: dict[str, float] = field(default_factory=lambda: {"defense": 0.03})
-    about: str = (
-        "Boosts DEF and grants extra mitigation the first time an ally is hit."
+    full_about: str = (
+        "+3% DEF per stack (multiplicative). The first time each ally is hit in battle, "
+        "they gain +3% mitigation per stack for one turn."
     )
+    summarized_about: str = "Boosts def; first hit on each ally grants mitigation burst"
 
     async def apply(self, party) -> None:
         await super().apply(party)

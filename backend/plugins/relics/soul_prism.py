@@ -16,7 +16,12 @@ class SoulPrism(RelicBase):
     name: str = "Soul Prism"
     stars: int = 5
     effects: dict[str, float] = field(default_factory=lambda: {"defense": 0.05, "mitigation": 0.05})
-    about: str = "Revives fallen allies at 1% HP with heavy Max HP penalty and small buffs."
+    full_about: str = (
+        "+5% DEF & +5% Mitigation per stack (multiplicative). Revives fallen allies at 1% HP after battles. "
+        "Reduces Max HP by 75% (decreasing by 5% per extra stack) and grants "
+        "+5% DEF and mitigation (increasing by 2% per extra stack) permanently."
+    )
+    summarized_about: str = "Boosts def and mitigation; revives fallen allies with hp penalty and buffs"
 
     async def apply(self, party) -> None:
         """Revive fallen allies after battles with reduced Max HP."""

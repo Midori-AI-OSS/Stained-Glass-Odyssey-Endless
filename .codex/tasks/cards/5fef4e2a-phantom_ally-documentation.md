@@ -63,3 +63,4 @@ class PhantomAllyCard(CardBase):
 - [ ] Both descriptions are accurate to the card's actual mechanics
 - [ ] Code follows existing style and conventions
 - [ ] Changes are tested (card still loads and functions correctly)
+ready for review

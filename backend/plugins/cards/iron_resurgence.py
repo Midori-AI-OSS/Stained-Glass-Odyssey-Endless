@@ -13,9 +13,11 @@ class IronResurgence(CardBase):
     name: str = "Iron Resurgence"
     stars: int = 3
     effects: dict[str, float] = field(default_factory=lambda: {"defense": 2.0, "max_hp": 2.0})
-    about: str = (
-        "+200% DEF & +200% HP; first ally death revives at 10% HP, refreshing every 4 turns."
+    full_about: str = (
+        "+200% DEF & +200% HP; when an ally dies, they are immediately revived at 10% HP. "
+        "This effect has a 4-turn cooldown and triggers on the first death only."
     )
+    summarized_about: str = "Boosts def and hp; revives first fallen ally after cooldown"
 
     async def apply(self, party: Party) -> None:
         await super().apply(party)
