@@ -57,9 +57,11 @@ class CriticalFocusCard(CardBase):
 
 ## Acceptance Criteria
 
-- [ ] Old `about` field removed
-- [ ] `full_about` field added with comprehensive description
-- [ ] `summarized_about` field added with concise description
-- [ ] Both descriptions are accurate to the card's actual mechanics
-- [ ] Code follows existing style and conventions
-- [ ] Changes are tested (card still loads and functions correctly)
+- [x] Old `about` field removed
+- [x] `full_about` field added with comprehensive description
+- [x] `summarized_about` field added with concise description
+- [x] Both descriptions are accurate to the card's actual mechanics
+- [x] Code follows existing style and conventions
+- [x] Changes are tested (card still loads and functions correctly)
+
+ready for review
