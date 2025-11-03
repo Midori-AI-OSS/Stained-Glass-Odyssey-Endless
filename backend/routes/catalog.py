@@ -50,7 +50,8 @@ async def list_relics():
         try:
             r = cls()
             # Use the new get_about_str method that automatically checks user settings
-            about_text = r.get_about_str()
+            # Pass stacks=1 as this is the catalog view showing base descriptions
+            about_text = r.get_about_str(stacks=1)
 
             relics.append({
                 "id": r.id,

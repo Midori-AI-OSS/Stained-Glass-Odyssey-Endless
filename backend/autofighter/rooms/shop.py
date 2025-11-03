@@ -119,7 +119,7 @@ def serialize_shop_payload(
             try:
                 cls = registry_map.get(rid)
                 if cls is not None:
-                    about = cls().get_about_str()
+                    about = cls().get_about_str(stacks=stacks + 1)
             except Exception:
                 about = None
             if about:

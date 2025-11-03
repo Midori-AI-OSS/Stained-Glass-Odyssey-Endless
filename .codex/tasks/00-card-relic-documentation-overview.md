@@ -74,12 +74,30 @@ Each task includes:
 - Focus on core functionality
 - Use concise, player-friendly language
 - Default: "Missing summarized card/relic description, please report this"
+- **For relics**: Never includes stack-specific information (always shows base behavior)
 
 **New Method:**
-- The base classes now provide a `get_about_str(concise: bool = False)` method
-- This method returns the appropriate string based on user settings
-- The old `preview_summary()` and `describe(stacks)` methods have been removed
+- **CardBase**: `get_about_str()` - Returns appropriate string based on user settings
+- **RelicBase**: `get_about_str(stacks: int = 1)` - Returns appropriate string with stack support
+- The method automatically checks the CONCISE_DESCRIPTIONS option
+- When concise mode is enabled, returns `summarized_about` (no stack info)
+- When concise mode is disabled, returns `full_about` (may include stack info if overridden)
+- The old `preview_summary()` and `describe(stacks)` methods have been removed from base classes
 - All code now uses `get_about_str()` to retrieve description strings
+
+**For Relics with Dynamic Stack Descriptions:**
+Relics that need to show different descriptions based on stack count (like showing "gains 50% more gold" for 1 stack vs "gains 75% more gold" for 2 stacks) should:
+1. Keep the old `describe(stacks)` method (for backward compatibility during migration)
+2. Override `get_about_str(stacks)` to call `describe(stacks)` when NOT in concise mode:
+```python
+def get_about_str(self, stacks: int = 1) -> str:
+    from options import OptionKey, get_option
+    concise = get_option(OptionKey.CONCISE_DESCRIPTIONS, "false").lower() == "true"
+    if concise:
+        return self.summarized_about
+    # Use custom describe method for stack-specific formatting
+    return self.describe(stacks)
+```
 
 ## Progress Tracking
 
@@ -100,12 +118,21 @@ All 102 tasks are currently **unassigned** and ready for implementation.
 - ✅ RelicBase updated with `full_about` and `summarized_about` fields
 - ✅ Old `about` field removed from both base classes
 - ✅ Old `preview_summary()` method removed from both base classes
-- ✅ Old `describe(stacks)` method removed from RelicBase
-- ✅ New `get_about_str(concise)` method added to both base classes
-- ✅ All backend routes updated to use new method
+- ✅ Old `describe(stacks)` method removed from RelicBase (but individual relics can still have it)
+- ✅ New `get_about_str()` method added to CardBase
+- ✅ New `get_about_str(stacks)` method added to RelicBase with stack support
+- ✅ All backend routes updated to use new method with stack information
 - ✅ Default "Missing..." messages set for all plugins
+- ✅ Stack information properly passed through all call sites
 
 **Next Steps:**
-Individual card and relic plugins need to be updated to provide actual content for the `full_about` and `summarized_about` fields. Until then, they will display the default "Missing..." messages.
+Individual card and relic plugins need to be updated to provide actual content for the `full_about` and `summarized_about` fields. 
+
+For relics with dynamic stacking (41 relics have custom `describe()` methods), contributors should:
+1. Add `full_about` and `summarized_about` fields
+2. Override `get_about_str(stacks)` to call their existing `describe(stacks)` when NOT in concise mode
+3. Optionally migrate the logic from `describe()` into `get_about_str()` and remove `describe()`
+
+Until plugins are updated, they will display the default "Missing..." messages.
 
 Status markers will be added by contributors as they begin work on each task.

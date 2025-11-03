@@ -83,21 +83,29 @@ class RelicBase:
             mod.remove()
         self._mods = []
 
-    def get_about_str(self) -> str:
+    def get_about_str(self, stacks: int = 1) -> str:
         """Return the appropriate about string based on user settings.
 
         Automatically checks the CONCISE_DESCRIPTIONS option to determine
-        which version to return.
+        which version to return. For relics, can include stack information
+        in the full description.
+
+        Args:
+            stacks: Number of stacks of this relic (for stack-specific descriptions)
 
         Returns:
-            summarized_about if user has concise mode enabled, otherwise full_about
+            summarized_about if user has concise mode enabled (no stack info),
+            otherwise full_about (may include stack info if overridden by subclass)
         """
         from options import OptionKey
         from options import get_option
 
         concise = get_option(OptionKey.CONCISE_DESCRIPTIONS, "false").lower() == "true"
         if concise:
+            # Concise mode: never show stack information
             return self.summarized_about
+        # Full mode: base implementation returns full_about, but subclasses
+        # can override to provide stack-specific formatting
         return self.full_about
 
     def build_preview(
@@ -108,7 +116,7 @@ class RelicBase:
     ) -> RewardPreviewPayload:
         return build_preview_from_effects(
             effects=self.effects,
-            summary=self.get_about_str(),
+            summary=self.get_about_str(stacks=stacks),
             triggers=self.preview_triggers,
             stacks=max(stacks, 1),
             previous_stacks=max(previous_stacks, 0),
