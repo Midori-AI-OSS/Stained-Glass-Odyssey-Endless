@@ -13,7 +13,11 @@ class MindfulTassel(CardBase):
     name: str = "Mindful Tassel"
     stars: int = 1
     effects: dict[str, float] = field(default_factory=lambda: {"effect_hit_rate": 0.03})
-    about: str = "+3% Effect Hit Rate; First debuff applied each battle has +5% potency"
+    full_about: str = (
+        "+3% Effect Hit Rate; the first debuff applied each battle has +5% potency "
+        "(increased damage or duration)."
+    )
+    summarized_about: str = "Boosts effect hit rate; first debuff each battle gains potency"
 
     async def apply(self, party) -> None:  # type: ignore[override]
         await super().apply(party)

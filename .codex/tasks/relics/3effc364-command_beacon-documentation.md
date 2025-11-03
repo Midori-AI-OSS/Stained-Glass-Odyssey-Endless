@@ -65,3 +65,4 @@ class CommandBeaconRelic(RelicBase):
 - [ ] Stacking behavior is mentioned if applicable
 - [ ] Code follows existing style and conventions
 - [ ] Changes are tested (relic still loads and functions correctly)
+ready for review

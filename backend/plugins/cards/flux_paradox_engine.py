@@ -20,11 +20,15 @@ class FluxParadoxEngine(CardBase):
             "effect_resistance": 2.40,
         }
     )
-    about: str = (
+    full_about: str = (
         "+240% Effect Hit Rate & +240% Effect Resistance; alternates Fire and Ice stances "
         "each turn. Fire stance: the first damaging action each ally takes applies "
-        "Blazing Torment to its target. Ice stance: the first damaging action each ally "
-        "takes applies Cold Wound and grants +12% Mitigation for 1 turn."
+        "Blazing Torment (50% of damage over 3 turns) to its target. Ice stance: the first damaging action each ally "
+        "takes applies Cold Wound (40% of damage over 3 turns) and grants the attacker +12% Mitigation for 1 turn."
+    )
+    summarized_about: str = (
+        "Greatly boosts effect hit rate and resistance; alternates fire and ice stances that "
+        "apply DoTs and buffs"
     )
 
     async def apply(self, party) -> None:  # type: ignore[override]

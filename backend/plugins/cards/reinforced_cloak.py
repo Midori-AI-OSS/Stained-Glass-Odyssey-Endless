@@ -13,7 +13,11 @@ class ReinforcedCloak(CardBase):
     name: str = "Reinforced Cloak"
     stars: int = 1
     effects: dict[str, float] = field(default_factory=lambda: {"defense": 0.03, "effect_resistance": 0.03})
-    about: str = "+3% DEF & +3% Effect Res; 30% chance to reduce the starting duration of long debuffs by 1"
+    full_about: str = (
+        "+3% DEF & +3% Effect Res; when a debuff with 3+ turn duration is applied to an ally, "
+        "there is a 30% chance to reduce its duration by 1 turn."
+    )
+    summarized_about: str = "Boosts def and effect resistance; chance to reduce long debuff duration"
 
     async def apply(self, party) -> None:  # type: ignore[override]
         await super().apply(party)

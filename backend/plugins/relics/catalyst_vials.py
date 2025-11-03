@@ -16,7 +16,11 @@ class CatalystVials(RelicBase):
     name: str = "Catalyst Vials"
     stars: int = 2
     effects: dict[str, float] = field(default_factory=dict)
-    about: str = "When an ally's DoT ticks, heal them for 5% of damage per stack and grant +5% Effect Hit Rate for 1 turn"
+    full_about: str = (
+        "When an ally's DoT ticks, heal them for 5% of the damage per stack "
+        "and grant +5% Effect Hit Rate per stack for 1 turn."
+    )
+    summarized_about: str = "Ally DoT ticks heal and boost effect hit rate"
 
     async def apply(self, party) -> None:
         await super().apply(party)

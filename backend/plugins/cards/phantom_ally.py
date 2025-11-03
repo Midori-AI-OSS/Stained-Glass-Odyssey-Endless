@@ -15,9 +15,11 @@ class PhantomAlly(CardBase):
     name: str = "Phantom Ally"
     stars: int = 5
     effects: dict[str, float] = field(default_factory=lambda: {"atk": 15.0})
-    about: str = (
-        "+1500% ATK; on the first turn, summon a permanent copy of a random ally."
+    full_about: str = (
+        "+1500% ATK; on the first turn, summon a permanent full-strength phantom copy of a random ally "
+        "that lasts for the entire battle."
     )
+    summarized_about: str = "Massively boosts atk; summons permanent phantom copy of random ally"
 
     async def apply(self, party):
         await super().apply(party)
