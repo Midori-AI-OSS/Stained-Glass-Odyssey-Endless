@@ -6,6 +6,9 @@ import logging
 from typing import ClassVar
 from typing import Sequence
 
+from options import OptionKey
+from options import get_option
+
 from autofighter.effects import EffectManager
 from autofighter.effects import create_stat_buff
 from autofighter.party import Party
@@ -86,6 +89,24 @@ class RelicBase:
     def describe(self, stacks: int) -> str:
         # Use summarized_about for describe method
         return self.summarized_about
+
+    def get_about(self, concise: bool | None = None) -> str:
+        """Get the about text based on concise setting.
+
+        Args:
+            concise: If True, return summarized_about; if False, return full_about.
+                    If None, check the CONCISE_DESCRIPTIONS setting.
+
+        Returns:
+            The appropriate about text based on the concise parameter or setting.
+        """
+        if concise is None:
+            concise = get_option(OptionKey.CONCISE_DESCRIPTIONS, "false").lower() == "true"
+
+        if concise:
+            return self.summarized_about
+        else:
+            return self.full_about
 
     def preview_summary(self) -> str | None:
         # Use summarized_about for preview summaries

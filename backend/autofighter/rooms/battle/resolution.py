@@ -169,15 +169,20 @@ async def resolve_rewards(
     # Check if user wants concise descriptions
     concise = get_option(OptionKey.CONCISE_DESCRIPTIONS, "false").lower() == "true"
 
-    card_choice_data = [
-        {
+    card_choice_data = []
+    for card in card_options:
+        # Pre-make the about string based on concise setting
+        if concise:
+            about_text = getattr(card, "summarized_about", "about not loaded, report outdated plugin file")
+        else:
+            about_text = getattr(card, "full_about", "about not loaded, report outdated plugin file")
+
+        card_choice_data.append({
             "id": card.id,
             "name": card.name,
             "stars": card.stars,
-            "about": getattr(card, "summarized_about", "") if concise else getattr(card, "full_about", ""),
-        }
-        for card in card_options
-    ]
+            "about": about_text,
+        })
 
     relic_options: list[Any] = []
     if _roll_relic_drop(room, temp_rdr):

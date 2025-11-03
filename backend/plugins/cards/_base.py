@@ -7,6 +7,9 @@ from typing import Any
 from typing import ClassVar
 from typing import Sequence
 
+from options import OptionKey
+from options import get_option
+
 from autofighter.effects import EffectManager
 from autofighter.effects import create_stat_buff
 from autofighter.party import Party
@@ -146,6 +149,24 @@ class CardBase:
         # Use summarized_about for preview summaries
         about = self.summarized_about
         return about.strip() or None
+
+    def get_about(self, concise: bool | None = None) -> str:
+        """Get the about text based on concise setting.
+
+        Args:
+            concise: If True, return summarized_about; if False, return full_about.
+                    If None, check the CONCISE_DESCRIPTIONS setting.
+
+        Returns:
+            The appropriate about text based on the concise parameter or setting.
+        """
+        if concise is None:
+            concise = get_option(OptionKey.CONCISE_DESCRIPTIONS, "false").lower() == "true"
+
+        if concise:
+            return self.summarized_about
+        else:
+            return self.full_about
 
     def build_preview(self) -> RewardPreviewPayload:
         return build_preview_from_effects(
