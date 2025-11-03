@@ -99,3 +99,45 @@ This task is related to the ongoing documentation improvement work tracked in `.
 - The exact wording for the setting can be adjusted during implementation (e.g., "Concise Descriptions" vs "Use Brief Descriptions" vs "Simplified Text")
 - Consider whether this setting should apply only to cards/relics or also to other game elements
 - The implementation may require coordination with the ongoing `about` field migration work
+
+---
+
+## Implementation Status
+
+All core functionality has been implemented and tested:
+
+### Backend Implementation ✓
+- Added `CONCISE_DESCRIPTIONS` option key to `backend/options.py`
+- Created GET `/config/concise_descriptions` endpoint in `backend/routes/config.py`
+- Created POST `/config/concise_descriptions` endpoint in `backend/routes/config.py`
+- Updated `/catalog/cards` to check and respect the concise_descriptions setting
+- Updated `/catalog/relics` to check and respect the concise_descriptions setting
+- Updated `/players` to check and respect the concise_descriptions setting
+- Logic: Prefers `summarized_about` when concise=true, `full_about` when concise=false, falls back to `about` if neither exists
+- Manually tested API endpoints - confirmed working correctly
+
+### Frontend Implementation ✓
+- Added `ui.conciseDescriptions` field to settings storage system (`frontend/src/lib/systems/settingsStorage.js`)
+- Created `uiStore` reactive store for UI settings
+- Added helper functions: `getUISettings()` and `updateUISettings()`
+- Added checkbox control in `UISettings.svelte` with FileText icon from lucide-svelte
+- Control includes descriptive tooltip: "Show concise descriptions instead of full detailed descriptions for cards, relics, and effects."
+- Setting defaults to false (showing full descriptions)
+- Setting persists across sessions via localStorage
+
+### Testing ✓
+- Created `backend/tests/test_config_concise_descriptions.py` with 3 passing tests
+- Created `frontend/tests/concise-descriptions-setting.test.js` with 8 passing tests
+- All linting checks passed
+
+### Notes
+- The backend routes correctly check the setting and serve the appropriate description field
+- The frontend currently receives descriptions from the backend catalog and players API, so the setting is respected automatically when those APIs are called
+- Since most plugins currently only have an `about` field (not yet migrated to `full_about`/`summarized_about`), the fallback logic ensures the existing descriptions are still displayed
+- As plugins are updated to include both `full_about` and `summarized_about` fields in the future, this setting will automatically start using those fields
+
+### Future Considerations
+- UI components that display descriptions will automatically use the correct description format as long as they fetch data from the backend catalog/players APIs
+- When plugins are updated to include both `full_about` and `summarized_about` fields, no code changes will be needed - the system will automatically use the appropriate field based on the user's setting
+
+ready for review
