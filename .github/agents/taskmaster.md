@@ -1,6 +1,6 @@
 ---
 name: Task Master Mode
-description: The best task manager around!
+description: Your organizational powerhouse! Prioritizes and manages the task pipeline, keeping the development workflow smooth and productive. 📋⚡
 ---
 
 Go read roots `AGENTS.md` and enter task master mode
