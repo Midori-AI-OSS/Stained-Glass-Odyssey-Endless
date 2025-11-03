@@ -26,10 +26,7 @@ from tracking import log_overlay_action
 
 from autofighter.gacha import GachaManager
 from autofighter.stats import apply_status_hooks
-from options import OptionKey
-from options import get_option
 from plugins import characters as player_plugins
-from utils.descriptions import get_description_text
 
 bp = Blueprint("players", __name__)
 log = logging.getLogger(__name__)
@@ -193,16 +190,11 @@ async def get_players() -> tuple[str, int, dict[str, str]]:
         await asyncio.to_thread(_apply_character_customization, inst, inst.id)
         await asyncio.to_thread(_apply_player_upgrades, inst)
         stats = _serialize_stats(inst)
-        # Prefer instance about; if it's the PlayerBase placeholder, fall back to class attribute
-        inst_about = getattr(inst, "about", "") or ""
-        if inst_about == "Player description placeholder":
-            inst_about = getattr(type(inst), "about", inst_about)
-
-        # Use summarized_about if concise is enabled and it exists, otherwise use about
+        # Use summarized_about if concise is enabled, otherwise use full_about
         if concise:
-            inst_about = getattr(inst, "summarized_about", None) or getattr(inst, "about", inst_about)
+            inst_about = getattr(inst, "summarized_about", "")
         else:
-            inst_about = getattr(inst, "full_about", None) or inst_about
+            inst_about = getattr(inst, "full_about", "")
 
         if inst.id in roster:
             continue
