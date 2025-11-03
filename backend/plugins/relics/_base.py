@@ -39,7 +39,8 @@ class RelicBase:
     name: str = ""
     stars: int = 1
     effects: dict[str, float] = field(default_factory=dict)
-    about: str = ""
+    full_about: str = ""
+    summarized_about: str = ""
     preview_triggers: ClassVar[Sequence[RewardPreviewTrigger | dict[str, object]]] = ()
 
     async def apply(self, party: Party) -> None:
@@ -83,10 +84,12 @@ class RelicBase:
         self._mods = []
 
     def describe(self, stacks: int) -> str:
-        return self.about
+        # Use summarized_about for describe method
+        return self.summarized_about
 
     def preview_summary(self) -> str | None:
-        about = getattr(self, "about", "")
+        # Use summarized_about for preview summaries
+        about = self.summarized_about
         return about.strip() or None
 
     def build_preview(
