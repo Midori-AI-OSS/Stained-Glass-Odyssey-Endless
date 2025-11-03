@@ -65,4 +65,13 @@ class ShinyPebbleRelic(RelicBase):
 - [ ] Stacking behavior is mentioned if applicable
 - [ ] Code follows existing style and conventions
 - [ ] Changes are tested (relic still loads and functions correctly)
-ready for review
+## Audit Notes (2025-11-03)
+✅ All acceptance criteria met
+✅ Linting passes
+✅ `summarized_about` uses qualitative descriptions (no specific numbers)
+✅ `full_about` includes all specific mechanics (+3% DEF per stack, first hit, +3% mitigation per stack, 1 turn)
+✅ Stacking behavior properly documented (multiplicative DEF, additive mitigation)
+✅ Descriptions accurately match code implementation (lines 17-22, 40, 50)
+✅ `describe()` method provides stack-specific details
+
+requesting review from the Task Master

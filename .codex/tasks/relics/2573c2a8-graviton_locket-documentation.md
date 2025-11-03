@@ -66,4 +66,14 @@ class GravitonLocketRelic(RelicBase):
 - [x] Code follows existing style and conventions
 - [x] Changes are tested (relic still loads and functions correctly)
 
-ready for review
+## Audit Notes (2025-11-03)
+✅ All acceptance criteria met
+✅ Linting passes
+✅ `summarized_about` uses qualitative descriptions (no specific numbers)
+✅ `full_about` includes all specific mechanics (30% SPD reduction, 12% damage increase, 2+stack turns, 1% HP drain)
+✅ Stacking behavior properly documented (multiplicative effects)
+✅ Descriptions accurately match complex code implementation (lines 20-28, 35-37, 99)
+✅ `describe()` and `full_about_stacks()` methods provide stack-specific details
+✅ Sophisticated 4-star relic with gravity debuff mechanics
+
+requesting review from the Task Master

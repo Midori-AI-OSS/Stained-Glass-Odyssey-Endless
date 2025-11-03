@@ -63,4 +63,11 @@ class FarsightScopeCard(CardBase):
 - [ ] Both descriptions are accurate to the card's actual mechanics
 - [ ] Code follows existing style and conventions
 - [ ] Changes are tested (card still loads and functions correctly)
-ready for review
+## Audit Notes (2025-11-03)
+✅ All acceptance criteria met
+✅ Linting passes
+✅ `summarized_about` uses qualitative descriptions (no specific numbers)
+✅ `full_about` includes all specific mechanics (+3% Crit Rate, 50% HP threshold, +6% crit rate, attack-specific)
+✅ Descriptions accurately match code implementation (lines 16-20, 29, 41)
+
+requesting review from the Task Master

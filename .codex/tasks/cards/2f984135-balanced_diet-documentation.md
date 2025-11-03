@@ -65,4 +65,11 @@ class BalancedDietCard(CardBase):
 - [ ] Changes are tested (card still loads and functions correctly)
 
 
-ready for review
+## Audit Notes (2025-11-03)
+✅ All acceptance criteria met
+✅ Linting passes
+✅ `summarized_about` uses qualitative descriptions (no specific numbers)
+✅ `full_about` includes all specific mechanics (+3% HP, +3% DEF, +2% DEF on heal, 1 turn)
+✅ Descriptions accurately match code implementation (lines 14-17, 36)
+
+requesting review from the Task Master

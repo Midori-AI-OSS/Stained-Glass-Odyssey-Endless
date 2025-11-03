@@ -65,4 +65,14 @@ class SoulPrismRelic(RelicBase):
 - [ ] Stacking behavior is mentioned if applicable
 - [ ] Code follows existing style and conventions
 - [ ] Changes are tested (relic still loads and functions correctly)
-ready for review
+## Audit Notes (2025-11-03)
+✅ All acceptance criteria met
+✅ Linting passes
+✅ `summarized_about` uses qualitative descriptions (no specific numbers)
+✅ `full_about` includes all specific mechanics (+5% DEF/Mitigation per stack, 1% HP revive, 75% Max HP penalty reducing by 5% per stack, +5% DEF/Mit increasing by 2% per stack)
+✅ Stacking behavior properly documented (multiplicative base effects, stack-specific revival mechanics)
+✅ Descriptions accurately match complex code implementation (lines 18-24, 31-33, 66-74)
+✅ `describe()` method provides stack-specific details
+✅ Sophisticated 5-star relic with revival mechanics
+
+requesting review from the Task Master
