@@ -21,7 +21,7 @@ class PlagueHarp(RelicBase):
         "and the caster loses 2% of their Max HP per stack."
     )
     summarized_about: str = (
-        "Echoes damage from dots to other foes but drains caster hp"
+        "Echoes damage from DoTs to other foes but drains caster HP"
     )
 
     async def apply(self, party) -> None:
