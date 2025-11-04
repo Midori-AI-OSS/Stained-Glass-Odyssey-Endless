@@ -19,10 +19,14 @@ class GuardianChoirCircuit(CardBase):
     effects: dict[str, float] = field(
         default_factory=lambda: {"defense": 2.0, "regain": 1.5}
     )
-    about: str = (
+    full_about: str = (
         "+200% DEF & +150% Regain; first direct heal each ally turn redirects "
         "15% as a shield to the lowest-HP teammate and grants them +12% "
         "mitigation for 1 turn."
+    )
+    summarized_about: str = (
+        "Boosts def and regain massively; first heal each turn redirects some "
+        "healing as shield and mitigation to lowest-HP ally"
     )
 
     async def apply(self, party) -> None:  # type: ignore[override]

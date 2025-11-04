@@ -18,8 +18,12 @@ class OmegaCore(RelicBase):
     name: str = "Omega Core"
     stars: int = 5
     effects: dict[str, float] = field(default_factory=lambda: {"atk": 6.0, "defense": 6.0})
-    about: str = (
-        "Multiplies all stats for the entire fight before draining ally health."
+    full_about: str = (
+        "+600% ATK & +600% DEF (and all other stats by 6x) for the entire fight. "
+        "After 10 turns, allies begin losing 1% of Max HP each turn, increasing by 1% per turn."
+    )
+    summarized_about: str = (
+        "Massively boosts all stats for entire fight but drains hp after delay"
     )
 
     async def apply(self, party) -> None:
@@ -104,6 +108,10 @@ class OmegaCore(RelicBase):
         self.subscribe(party, "battle_start", _battle_start)
         self.subscribe(party, "turn_start", _turn_start)
         self.subscribe(party, "battle_end", _battle_end)
+
+    def full_about_stacks(self, stacks: int) -> str:
+        """Provide stack-aware description."""
+        return self.describe(stacks)
 
     def describe(self, stacks: int) -> str:
         delay = 10 + 2 * (stacks - 1)

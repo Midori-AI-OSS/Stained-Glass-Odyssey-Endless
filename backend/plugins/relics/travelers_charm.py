@@ -16,7 +16,11 @@ class TravelersCharm(RelicBase):
     name: str = "Traveler's Charm"
     stars: int = 4
     effects: dict[str, float] = field(default_factory=dict)
-    about: str = "When hit, gain +25% DEF and +10% mitigation next turn per stack."
+    full_about: str = (
+        "When hit, gain +25% DEF and +10% mitigation next turn. "
+        "Stacks additively (+25% DEF and +10% mitigation per stack)."
+    )
+    summarized_about: str = "When hit, gain temporary defensive bonuses next turn"
 
     async def apply(self, party) -> None:
         await super().apply(party)
@@ -117,6 +121,10 @@ class TravelersCharm(RelicBase):
         self.subscribe(party, "turn_start", _on_turn_start)
         self.subscribe(party, "turn_end", _on_turn_end)
         self.subscribe(party, "battle_end", _on_battle_end)
+
+    def full_about_stacks(self, stacks: int) -> str:
+        """Provide stack-aware description."""
+        return self.describe(stacks)
 
     def describe(self, stacks: int) -> str:
         d = 25 * stacks

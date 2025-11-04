@@ -14,7 +14,8 @@ class IronGuard(CardBase):
     name: str = "Iron Guard"
     stars: int = 2
     effects: dict[str, float] = field(default_factory=lambda: {"defense": 0.55})
-    about: str = "+55% DEF; damage grants all allies +10% DEF for 1 turn."
+    full_about: str = "+55% DEF; when any ally takes damage, all allies gain +10% DEF for 1 turn."
+    summarized_about: str = "Boosts def; taking damage grants temporary def bonus to all allies"
 
     async def apply(self, party) -> None:  # type: ignore[override]
         await super().apply(party)

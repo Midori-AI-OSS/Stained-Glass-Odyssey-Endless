@@ -16,7 +16,10 @@ class SturdyVest(CardBase):
     name: str = "Sturdy Vest"
     stars: int = 1
     effects: dict[str, float] = field(default_factory=lambda: {"max_hp": 0.03})
-    about: str = "+3% HP; When below 35% HP, gain a small 3% HoT for 2 turns"
+    full_about: str = (
+        "+3% HP; when below 35% HP, gain a 3% Max HP heal-over-time effect for 2 turns."
+    )
+    summarized_about: str = "Boosts hp slightly; grants healing over time when hp is low"
 
     async def apply(self, party) -> None:  # type: ignore[override]
         await super().apply(party)

@@ -13,7 +13,10 @@ class SharpeningStone(CardBase):
     name: str = "Sharpening Stone"
     stars: int = 1
     effects: dict[str, float] = field(default_factory=lambda: {"crit_damage": 0.03})
-    about: str = "+3% Crit Damage; After scoring a crit, gain +2% crit damage for 2 turns"
+    full_about: str = (
+        "+3% Crit Damage; after scoring a critical hit, gain +2% crit damage for 2 turns."
+    )
+    summarized_about: str = "Boosts crit damage; landing crits grants temporary crit damage bonus"
 
     async def apply(self, party) -> None:  # type: ignore[override]
         await super().apply(party)

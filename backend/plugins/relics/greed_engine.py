@@ -14,9 +14,12 @@ class GreedEngine(RelicBase):
     name: str = "Greed Engine"
     stars: int = 3
     effects: dict[str, float] = field(default_factory=dict)
-    about: str = (
-        "Party loses HP on every combat action via the shared turn_start hook "
-        "but gains extra gold and rare drops."
+    full_about: str = (
+        "Party loses 1% HP on every combat action but gains 50% more gold "
+        "and increases rare drop rate by 0.5%. Stacks multiply benefits and costs."
+    )
+    summarized_about: str = (
+        "Lose hp on each action but gain significantly more gold and rare drops"
     )
 
     async def apply(self, party) -> None:
@@ -66,6 +69,10 @@ class GreedEngine(RelicBase):
 
         self.subscribe(party, "gold_earned", _gold)
         self.subscribe(party, "turn_start", _drain)
+
+    def full_about_stacks(self, stacks: int) -> str:
+        """Provide stack-aware description."""
+        return self.describe(stacks)
 
     def describe(self, stacks: int) -> str:
         gold = 50 + 25 * (stacks - 1)
