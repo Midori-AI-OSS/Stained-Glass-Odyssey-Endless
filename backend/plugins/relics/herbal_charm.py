@@ -14,7 +14,8 @@ class HerbalCharm(RelicBase):
     name: str = "Herbal Charm"
     stars: int = 1
     effects: dict[str, float] = field(default_factory=dict)
-    about: str = "Heals all allies for 0.5% Max HP at the start of each turn per stack."
+    full_about: str = "Heals all allies for 0.5% Max HP at the start of each turn. Stacks additively."
+    summarized_about: str = "Heals all allies slightly at the start of each turn"
 
     async def apply(self, party) -> None:
         await super().apply(party)
@@ -52,6 +53,10 @@ class HerbalCharm(RelicBase):
 
         self.subscribe(party, "turn_start", _heal)
         self.subscribe(party, "battle_end", _cleanup)
+
+    def full_about_stacks(self, stacks: int) -> str:
+        """Provide stack-aware description."""
+        return self.describe(stacks)
 
     def describe(self, stacks: int) -> str:
         pct = 0.5 * stacks

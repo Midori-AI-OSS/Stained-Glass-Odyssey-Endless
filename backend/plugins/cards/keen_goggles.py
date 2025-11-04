@@ -13,7 +13,14 @@ class KeenGoggles(CardBase):
     name: str = "Keen Goggles"
     stars: int = 1
     effects: dict[str, float] = field(default_factory=lambda: {"crit_rate": 0.03, "effect_hit_rate": 0.03})
-    about: str = "+3% Crit Rate & +3% Effect Hit Rate; Landing a debuff grants +1% crit rate for next action (stack up to 3)"
+    full_about: str = (
+        "+3% Crit Rate & +3% Effect Hit Rate; landing a debuff grants +1% crit rate "
+        "for next action (stacks up to 3 times, consumed after action)."
+    )
+    summarized_about: str = (
+        "Boosts crit rate and effect hit rate; landing debuffs increases crit rate "
+        "temporarily"
+    )
 
     async def apply(self, party) -> None:  # type: ignore[override]
         await super().apply(party)
