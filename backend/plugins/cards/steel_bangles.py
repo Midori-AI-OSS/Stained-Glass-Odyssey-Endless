@@ -14,7 +14,8 @@ class SteelBangles(CardBase):
     name: str = "Steel Bangles"
     stars: int = 1
     effects: dict[str, float] = field(default_factory=lambda: {"mitigation": 0.03})
-    about: str = "+3% Mitigation; On attack hit, 5% chance to reduce the target's next attack damage by 3%"
+    full_about: str = "+3% Mitigation; On attack hit, 5% chance to reduce the target's next attack damage by 3%"
+    summarized_about: str = "Boosts mitigation; attacks have chance to reduce target's damage"
 
     async def apply(self, party) -> None:  # type: ignore[override]
         await super().apply(party)

@@ -16,7 +16,8 @@ class KillerInstinct(RelicBase):
     name: str = "Killer Instinct"
     stars: int = 2
     effects: dict[str, float] = field(default_factory=dict)
-    about: str = "Ultimates grant +75% ATK for the turn; kills grant +50% SPD for two turns."
+    full_about: str = "Ultimates grant +75% ATK per stack for the turn; kills grant +50% SPD per stack for two turns"
+    summarized_about: str = "Ultimates boost atk; kills boost spd"
 
     async def apply(self, party) -> None:
         await super().apply(party)

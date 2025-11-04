@@ -13,7 +13,8 @@ class PolishedShield(CardBase):
     name: str = "Polished Shield"
     stars: int = 1
     effects: dict[str, float] = field(default_factory=lambda: {"defense": 0.03})
-    about: str = "+3% DEF; When an ally resists a DoT/debuff, grant them +3 DEF for 1 turn"
+    full_about: str = "+3% DEF; When an ally resists a DoT/debuff, grant them +3 DEF for 1 turn"
+    summarized_about: str = "Boosts def; grants def bonus when resisting dots or debuffs"
 
     async def apply(self, party) -> None:  # type: ignore[override]
         await super().apply(party)

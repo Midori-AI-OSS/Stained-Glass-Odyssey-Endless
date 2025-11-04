@@ -16,7 +16,8 @@ class WoodenIdol(RelicBase):
     name: str = "Wooden Idol"
     stars: int = 1
     effects: dict[str, float] = field(default_factory=lambda: {"effect_resistance": 0.03})
-    about: str = "+3% Effect Res; resisting a debuff grants +1% Effect Res next turn."
+    full_about: str = "+3% Effect Res per stack (multiplicative); resisting a debuff grants +1% Effect Res per stack next turn"
+    summarized_about: str = "Boosts effect res; resisting debuffs grants effect res bonus next turn"
 
     async def apply(self, party) -> None:
         await super().apply(party)
