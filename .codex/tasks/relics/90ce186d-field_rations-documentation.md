@@ -58,10 +58,21 @@ class FieldRationsRelic(RelicBase):
 
 ## Acceptance Criteria
 
-- [ ] Old `about` field removed
-- [ ] `full_about` field added with comprehensive description
-- [ ] `summarized_about` field added with concise description
-- [ ] Both descriptions are accurate to the relic's actual mechanics
-- [ ] Stacking behavior is mentioned if applicable
-- [ ] Code follows existing style and conventions
-- [ ] Changes are tested (relic still loads and functions correctly)
+- [x] Old `about` field removed
+- [x] `full_about` field added with comprehensive description
+- [x] `summarized_about` field added with concise description
+- [x] Both descriptions are accurate to the relic's actual mechanics
+- [x] Stacking behavior is mentioned if applicable
+- [x] Code follows existing style and conventions
+- [x] Changes are tested (relic still loads and functions correctly)
+
+## Audit Notes (2025-11-04)
+✅ All acceptance criteria met
+✅ Linting passes
+✅ `summarized_about` uses qualitative descriptions (no specific numbers)
+✅ `full_about` includes all specific mechanics (2% Max HP per stack, +1 ultimate charge per stack)
+✅ Stacking behavior properly documented (linear stacking)
+✅ Descriptions accurately match code implementation
+✅ `describe()` method provides stack-specific details
+
+ready for review
