@@ -5,7 +5,6 @@
   import { getPlayers, getUpgrade, upgradeStat } from '../systems/api.js';
   import { getCharacterImage, getRandomFallback, getElementColor } from '../systems/assetLoader.js';
   import { getDescription } from '../systems/descriptionUtils.js';
-  import { uiStore } from '../systems/settingsStorage.js';
   import { replaceCharacterMetadata } from '../systems/characterMetadata.js';
   import MenuPanel from './MenuPanel.svelte';
   import PartyRoster from './PartyRoster.svelte';

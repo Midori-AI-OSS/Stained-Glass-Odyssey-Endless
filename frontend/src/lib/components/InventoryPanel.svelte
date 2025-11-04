@@ -5,7 +5,6 @@
   import { getCardCatalog, getRelicCatalog, getGacha } from '../systems/api.js';
   import { stackItems, formatName } from '../systems/craftingUtils.js';
   import { getDescription } from '../systems/descriptionUtils.js';
-  import { uiStore } from '../systems/settingsStorage.js';
   import { getMaterialIcon, getMaterialFallbackIcon, onMaterialIconError } from '../systems/assetLoader.js';
   export let cards = [];
   export let relics = [];

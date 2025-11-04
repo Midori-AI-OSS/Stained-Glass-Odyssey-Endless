@@ -8,7 +8,6 @@
   import MenuPanel from './MenuPanel.svelte';
   import { getCatalogData } from '../systems/uiApi.js';
   import { getDescription } from '../systems/descriptionUtils.js';
-  import { uiStore } from '../systems/settingsStorage.js';
   import { getElementColor, getCharacterImage } from '../systems/assetLoader.js';
   import PlayerPreview from './PlayerPreview.svelte';
   import { Circle } from 'lucide-svelte';
