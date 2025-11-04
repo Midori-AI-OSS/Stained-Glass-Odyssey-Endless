@@ -190,12 +190,6 @@ async def get_players() -> tuple[str, int, dict[str, str]]:
         full_about_text = getattr(inst, "full_about", "")
         summarized_about_text = getattr(inst, "summarized_about", "")
 
-        # Fallback to old 'about' field if neither new field exists
-        if not full_about_text and not summarized_about_text:
-            fallback_about = getattr(inst, "about", "")
-            full_about_text = fallback_about
-            summarized_about_text = fallback_about
-
         if inst.id in roster:
             continue
 

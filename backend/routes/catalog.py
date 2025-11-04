@@ -24,12 +24,6 @@ async def list_cards():
             full_about_text = getattr(c, "full_about", "")
             summarized_about_text = getattr(c, "summarized_about", "")
 
-            # Fallback to old 'about' field if neither new field exists
-            if not full_about_text and not summarized_about_text:
-                fallback_about = getattr(c, "about", "")
-                full_about_text = fallback_about
-                summarized_about_text = fallback_about
-
             cards.append({
                 "id": c.id,
                 "name": c.name,
@@ -61,12 +55,6 @@ async def list_relics():
             # For catalog view, we use stacks=1 for the full_about version
             full_about_text = r.full_about_stacks(stacks=1)
             summarized_about_text = getattr(r, "summarized_about", "")
-
-            # Fallback to old 'about' field if neither new field exists
-            if not full_about_text and not summarized_about_text:
-                fallback_about = getattr(r, "about", "")
-                full_about_text = fallback_about
-                summarized_about_text = fallback_about
 
             relics.append({
                 "id": r.id,
