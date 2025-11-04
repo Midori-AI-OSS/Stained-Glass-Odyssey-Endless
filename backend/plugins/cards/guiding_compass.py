@@ -14,7 +14,12 @@ class GuidingCompass(CardBase):
     name: str = "Guiding Compass"
     stars: int = 1
     effects: dict[str, float] = field(default_factory=lambda: {"exp_multiplier": 0.03, "effect_hit_rate": 0.03})
-    about: str = "+3% EXP Gain & +3% Effect Hit Rate; Grants a one-time full level up when acquired"
+    full_about: str = (
+        "+3% EXP Gain & +3% Effect Hit Rate; grants a one-time full level up to all party members when acquired."
+    )
+    summarized_about: str = (
+        "Boosts exp gain and effect hit rate; grants instant level up when acquired"
+    )
 
     async def apply(self, party) -> None:  # type: ignore[override]
         await super().apply(party)
