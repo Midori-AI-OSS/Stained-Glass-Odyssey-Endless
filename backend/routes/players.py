@@ -8,8 +8,6 @@ import math
 from typing import Dict
 from typing import List
 
-from options import OptionKey
-from options import get_option
 from quart import Blueprint
 from quart import jsonify
 from quart import request
@@ -176,9 +174,6 @@ async def get_players() -> tuple[str, int, dict[str, str]]:
         player_plugins, "_PLAYABLE_EXPORTS", tuple(player_plugins.__all__)
     )
 
-    # Check if user wants concise descriptions
-    concise = get_option(OptionKey.CONCISE_DESCRIPTIONS, "false").lower() == "true"
-
     for name in export_names:
         cls = getattr(player_plugins, name, None)
         if cls is None:
@@ -190,11 +185,16 @@ async def get_players() -> tuple[str, int, dict[str, str]]:
         await asyncio.to_thread(_apply_character_customization, inst, inst.id)
         await asyncio.to_thread(_apply_player_upgrades, inst)
         stats = _serialize_stats(inst)
-        # Use summarized_about if concise is enabled, otherwise use full_about
-        if concise:
-            inst_about = getattr(inst, "summarized_about", "")
-        else:
-            inst_about = getattr(inst, "full_about", "")
+
+        # Send both description fields to frontend for client-side switching
+        full_about_text = getattr(inst, "full_about", "")
+        summarized_about_text = getattr(inst, "summarized_about", "")
+
+        # Fallback to old 'about' field if neither new field exists
+        if not full_about_text and not summarized_about_text:
+            fallback_about = getattr(inst, "about", "")
+            full_about_text = fallback_about
+            summarized_about_text = fallback_about
 
         if inst.id in roster:
             continue
@@ -202,7 +202,8 @@ async def get_players() -> tuple[str, int, dict[str, str]]:
         roster[inst.id] = {
             "id": inst.id,
             "name": inst.name,
-            "about": inst_about,
+            "full_about": full_about_text,
+            "summarized_about": summarized_about_text,
             "owned": inst.id in owned,
             "is_player": inst.id == "player",
             "element": inst.element_id,

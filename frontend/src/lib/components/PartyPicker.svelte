@@ -4,6 +4,8 @@
   import { writable } from 'svelte/store';
   import { getPlayers, getUpgrade, upgradeStat } from '../systems/api.js';
   import { getCharacterImage, getRandomFallback, getElementColor } from '../systems/assetLoader.js';
+  import { getDescription } from '../systems/descriptionUtils.js';
+  import { uiStore } from '../systems/settingsStorage.js';
   import { replaceCharacterMetadata } from '../systems/characterMetadata.js';
   import MenuPanel from './MenuPanel.svelte';
   import PartyRoster from './PartyRoster.svelte';
@@ -141,7 +143,7 @@
         .map((p) => ({
           id: p.id,
           name: p.name,
-          about: p.about,
+          about: getDescription(p),
           img: getCharacterImage(p.id, p.is_player) || getRandomFallback(),
           owned: p.owned,
           is_player: p.is_player,

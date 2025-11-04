@@ -3,6 +3,8 @@
   import { CreditCard, Gem, Hammer, Box, RotateCcw } from 'lucide-svelte';
   import { getCardCatalog, getRelicCatalog, getGacha } from '../systems/api.js';
   import { stackItems, formatName } from '../systems/craftingUtils.js';
+  import { getCardDescription, getRelicDescription, getDescription } from '../systems/descriptionUtils.js';
+  import { uiStore } from '../systems/settingsStorage.js';
   import CardView from './inventory/CardView.svelte';
   import RelicView from './inventory/RelicView.svelte';
   import MaterialsPanel from './inventory/MaterialsPanel.svelte';
@@ -72,8 +74,8 @@
   const relicStars = (id) => (relicMeta?.[id]?.stars ?? 1) | 0;
   const cardName = (id) => String(cardMeta?.[id]?.name || id);
   const relicName = (id) => String(relicMeta?.[id]?.name || id);
-  const cardDesc = (id) => String(cardMeta?.[id]?.about || 'No description available.');
-  const relicDesc = (id) => String(relicMeta?.[id]?.about || 'No description available.');
+  const cardDesc = (id) => getCardDescription(id, cardMeta);
+  const relicDesc = (id) => getRelicDescription(id, relicMeta);
 
   // Processed data
   $: cardEntries = count(cards || []);
@@ -92,6 +94,7 @@
   })();
   $: sortedCards = (() => {
     const _dep = cardMeta; // dependency anchor
+    const _uiDep = $uiStore; // reactive to UI settings changes
     return sortedCardEntries.map(([id, qty]) => [
       { id, name: cardName(id), stars: cardStars(id), about: cardDesc(id) },
       qty
@@ -110,6 +113,7 @@
   })();
   $: sortedRelics = (() => {
     const _dep = relicMeta; // dependency anchor
+    const _uiDep = $uiStore; // reactive to UI settings changes
     return sortedRelicEntries.map(([id, qty]) => [
       { id, name: relicName(id), stars: relicStars(id), about: relicDesc(id) },
       qty
