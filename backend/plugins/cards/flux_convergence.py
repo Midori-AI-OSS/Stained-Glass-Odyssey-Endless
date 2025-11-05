@@ -19,9 +19,12 @@ class FluxConvergence(CardBase):
     name: str = "Flux Convergence"
     stars: int = 3
     effects: dict[str, float] = field(default_factory=lambda: {"effect_hit_rate": 2.55})
-    about: str = (
-        "+255% Effect Hit Rate; Each debuff applied increments a Flux counter. "
-        "At 5 stacks, deal 120% ATK dark damage to all foes and grant the debuffing ally +20% Effect Resistance for 1 turn."
+    full_about: str = (
+        "+255% Effect Hit Rate; each debuff applied increments a Flux counter. "
+        "At 5 stacks, deal 120% ATK Dark damage to all foes and grant the debuffing ally +20% Effect Resistance for 1 turn."
+    )
+    summarized_about: str = (
+        "Greatly boosts effect hit rate; repeated debuffs unleash dark blasts that bolster the applier"
     )
 
     async def apply(self, party) -> None:  # type: ignore[override]
