@@ -15,7 +15,8 @@ class SpikedShield(CardBase):
     name: str = "Spiked Shield"
     stars: int = 1
     effects: dict[str, float] = field(default_factory=lambda: {"atk": 0.03, "defense": 0.03})
-    about: str = "+3% ATK & +3% DEF; When mitigation triggers (block threshold), deal small retaliatory damage (3% of attack)"
+    full_about: str = "+3% ATK & +3% DEF; when mitigation triggers (block threshold), deal retaliatory damage equal to 3% of attacker's ATK"
+    summarized_about: str = "Boosts atk and def; blocking damage triggers retaliation"
 
     async def apply(self, party) -> None:  # type: ignore[override]
         await super().apply(party)

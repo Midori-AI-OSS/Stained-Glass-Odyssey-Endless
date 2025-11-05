@@ -11,7 +11,8 @@ class LightweightBoots(CardBase):
     name: str = "Lightweight Boots"
     stars: int = 1
     effects: dict[str, float] = field(default_factory=lambda: {"dodge_odds": 0.03})
-    about: str = "+3% Dodge Odds; On successful dodge, heal 2% HP to the dodging unit"
+    full_about: str = "+3% Dodge Odds; on successful dodge, heal 2% HP to the dodging unit"
+    summarized_about: str = "Boosts dodge odds; dodges trigger healing"
 
     async def apply(self, party) -> None:  # type: ignore[override]
         await super().apply(party)

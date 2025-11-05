@@ -12,7 +12,8 @@ class LuckyCoin(CardBase):
     name: str = "Lucky Coin"
     stars: int = 1
     effects: dict[str, float] = field(default_factory=lambda: {"crit_rate": 0.03})
-    about: str = "+3% Crit Rate; On critical hit, 20% chance to refund a tiny ultimate charge to the attacker"
+    full_about: str = "+3% Crit Rate; on critical hit, 20% chance to refund 1 ultimate charge to the attacker"
+    summarized_about: str = "Boosts crit rate; critical hits have a chance to refund ultimate charge"
 
     async def apply(self, party) -> None:  # type: ignore[override]
         await super().apply(party)

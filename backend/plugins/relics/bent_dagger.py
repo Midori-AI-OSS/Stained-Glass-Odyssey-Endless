@@ -15,7 +15,8 @@ class BentDagger(RelicBase):
     name: str = "Bent Dagger"
     stars: int = 1
     effects: dict[str, float] = field(default_factory=lambda: {"atk": 0.03})
-    about: str = "+3% ATK; killing a foe grants +1% ATK for the rest of combat."
+    full_about: str = "+3% ATK per stack (multiplicative stacking); killing a foe grants the entire party +1% ATK permanently for the rest of combat. This buff stacks with each kill."
+    summarized_about: str = "Boosts atk; killing enemies grants permanent atk boost"
 
     async def apply(self, party) -> None:
         await super().apply(party)
