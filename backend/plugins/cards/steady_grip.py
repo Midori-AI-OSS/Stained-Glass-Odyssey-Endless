@@ -16,9 +16,11 @@ class SteadyGrip(CardBase):
     name: str = "Steady Grip"
     stars: int = 1
     effects: dict[str, float] = field(default_factory=lambda: {"atk": 0.05})
-    about: str = (
-        "+5% ATK; Critical hits can become super crits, dealing 4× total damage"
+    full_about: str = (
+        "+5% ATK; critical hits have a chance to become super crits, dealing 4× total damage instead of 2×. "
+        "Super crit chance equals 20% of the attacker's crit rate (e.g., 50% crit rate gives 10% super crit chance)."
     )
+    summarized_about: str = "Boosts atk; critical hits can become super crits for massive damage"
 
     async def apply(self, party) -> None:  # type: ignore[override]
         await super().apply(party)

@@ -17,9 +17,13 @@ class RustyBuckle(RelicBase):
     name: str = "Rusty Buckle"
     stars: int = 1
     effects: dict[str, float] = field(default_factory=dict)
-    about: str = (
-        "All allies bleed for 5% Max HP per stack at the start of every turn—ally or foe—and unleash Aftertaste as the party suffers."
+    full_about: str = (
+        "All allies bleed for 5% Max HP per relic stack at the start of every turn (ally or foe). "
+        "Each time the party loses 5000% of their combined Max HP (plus 1000% per additional stack), "
+        "unleash 5 Aftertaste hits (plus 3 per additional stack) at random foes. "
+        "Aftertaste damage scales with total HP lost."
     )
+    summarized_about: str = "Bleeds allies each turn; massive party hp loss triggers aftertaste volleys at enemies"
 
     async def apply(self, party) -> None:
         """Bleed all allies and ping foes as party HP drops."""
