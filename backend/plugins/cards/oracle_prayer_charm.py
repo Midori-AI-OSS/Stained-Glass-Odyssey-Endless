@@ -18,7 +18,8 @@ class OraclePrayerCharm(CardBase):
     effects: dict[str, float] = field(
         default_factory=lambda: {"effect_resistance": 0.03, "vitality": 0.03}
     )
-    about: str = "+3% Effect Res & +3% Vitality; First time each ally drops below 45% HP in battle, grant 2-turn Radiant Regeneration HoT"
+    full_about: str = "+3% Effect Res & +3% Vitality; First time each ally drops below 45% HP in battle, grant 2-turn Radiant Regeneration HoT"
+    summarized_about: str = "Boosts effect res and vitality; grants regeneration when allies drop low on hp"
 
     async def apply(self, party) -> None:  # type: ignore[override]
         await super().apply(party)
