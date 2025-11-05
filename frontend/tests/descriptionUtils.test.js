@@ -52,12 +52,12 @@ describe('descriptionUtils', () => {
       expect(getDescription(item)).toBe('Short description');
     });
 
-    it('should fallback to legacy about field if both new fields are missing', () => {
+    it('should return empty string if both new fields are missing', () => {
       getUISettings.mockReturnValue({ conciseDescriptions: false });
       const item = {
         about: 'Legacy description'
       };
-      expect(getDescription(item)).toBe('Legacy description');
+      expect(getDescription(item)).toBe('');
     });
 
     it('should handle missing UI settings', () => {

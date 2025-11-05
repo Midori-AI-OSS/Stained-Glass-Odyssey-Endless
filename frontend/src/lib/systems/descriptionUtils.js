@@ -6,7 +6,6 @@ import { getUISettings } from './settingsStorage.js';
  * @param {Object} item - The item object (card, relic, or player)
  * @param {string} item.full_about - The full description text
  * @param {string} item.summarized_about - The summarized description text
- * @param {string} [item.about] - Legacy description field (fallback)
  * @returns {string} The appropriate description text
  */
 export function getDescription(item) {
@@ -17,11 +16,11 @@ export function getDescription(item) {
   
   // If concise mode is enabled, prefer summarized_about
   if (useConcise) {
-    return item.summarized_about || item.full_about || item.about || '';
+    return item.summarized_about || item.full_about || '';
   }
   
   // Otherwise, prefer full_about
-  return item.full_about || item.summarized_about || item.about || '';
+  return item.full_about || item.summarized_about || '';
 }
 
 /**
