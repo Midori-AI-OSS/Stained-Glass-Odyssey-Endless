@@ -18,7 +18,8 @@ class FeatherweightAnklet(RelicBase):
     name: str = "Featherweight Anklet"
     stars: int = 1
     effects: dict[str, float] = field(default_factory=lambda: {"spd": 0.02})
-    about: str = "+2% SPD per stack; First action each battle grants +6% SPD per stack for 1 turn"
+    full_about: str = "+2% SPD per relic stack (multiplicative stacking); each ally's first action per battle grants them +6% SPD per stack for 1 turn"
+    summarized_about: str = "Boosts spd; first action each battle grants temporary spd burst"
 
     async def apply(self, party) -> None:
         await super().apply(party)

@@ -18,10 +18,11 @@ class SiegeBanner(RelicBase):
     name: str = "Siege Banner"
     stars: int = 3
     effects: dict[str, float] = field(default_factory=dict)  # No baseline bonus
-    about: str = (
-        "At battle start, all enemies lose 15% DEF for 2 turns. "
-        "Each enemy killed grants the party +4% ATK and +4% DEF permanently."
+    full_about: str = (
+        "At battle start, all enemies lose 15% DEF per relic stack for 2 turns. "
+        "Each enemy killed grants the entire party +4% ATK and +4% DEF permanently for the rest of combat. Kill buffs stack with each kill."
     )
+    summarized_about: str = "Debuffs enemy def at battle start; killing enemies grants permanent atk and def boosts"
 
     async def apply(self, party) -> None:
         await super().apply(party)

@@ -14,9 +14,10 @@ class SwiftFootwork(CardBase):
     name: str = "Swift Footwork"
     stars: int = 2
     effects: dict[str, float] = field(default_factory=lambda: {"spd": 0.2})
-    about: str = (
-        "Permanent +20% SPD; on battle start gain +30% SPD for two turns."
+    full_about: str = (
+        "Permanent +20% SPD to all allies; at battle start, all allies gain an additional +30% SPD for 2 turns."
     )
+    summarized_about: str = "Boosts spd permanently; grants additional spd burst at battle start"
 
     async def apply(self, party) -> None:  # type: ignore[override]
         await super().apply(party)

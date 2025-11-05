@@ -13,7 +13,8 @@ class ThreadbareCloak(RelicBase):
     name: str = "Threadbare Cloak"
     stars: int = 1
     effects: dict[str, float] = field(default_factory=dict)
-    about: str = "Start battle with a small shield equal to 3% Max HP per stack."
+    full_about: str = "At battle start, all allies gain a shield equal to 3% Max HP per relic stack. Shields stack additively with multiple copies."
+    summarized_about: str = "Grants shield at battle start based on max hp"
 
     async def apply(self, party) -> None:
         await super().apply(party)
