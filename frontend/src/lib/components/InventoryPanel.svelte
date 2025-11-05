@@ -4,6 +4,8 @@
   import { onMount } from 'svelte';
   import { getCardCatalog, getRelicCatalog, getGacha } from '../systems/api.js';
   import { stackItems, formatName } from '../systems/craftingUtils.js';
+  import { getDescription } from '../systems/descriptionUtils.js';
+  import { uiStore } from '../systems/settingsStorage.js';
   import { getMaterialIcon, getMaterialFallbackIcon, onMaterialIconError } from '../systems/assetLoader.js';
   export let cards = [];
   export let relics = [];
@@ -97,7 +99,9 @@
     <div class="cards-grid">
       {#each sortedCardIds as id}
         {#key id}
-          <CardArt entry={{ id, name: cardName(id), stars: cardStars(id), about: (cardMeta[id]?.about || '') }} type="card" />
+          {@const _uiDep = $uiStore}
+          {@const cardAbout = getDescription(cardMeta[id])}
+          <CardArt entry={{ id, name: cardName(id), stars: cardStars(id), about: cardAbout }} type="card" />
         {/key}
       {/each}
     </div>
@@ -107,8 +111,10 @@
     <div class="relics-grid">
       {#each sortedRelicEntries as [id, qty]}
         {#key id}
+          {@const _uiDep = $uiStore}
+          {@const relicAbout = getDescription(relicMeta[id])}
           <div class="relic-cell">
-            <CurioChoice entry={{ id, name: relicName(id), stars: relicStars(id), about: (relicMeta[id]?.about || '') }} />
+            <CurioChoice entry={{ id, name: relicName(id), stars: relicStars(id), about: relicAbout }} />
             <span class="qty">x{qty}</span>
           </div>
         {/key}

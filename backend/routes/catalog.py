@@ -20,14 +20,16 @@ async def list_cards():
     for cls in reg.values():
         try:
             c = cls()
-            # Use the new get_about_str method that automatically checks user settings
-            about_text = c.get_about_str()
+            # Send both description fields to frontend for client-side switching
+            full_about_text = getattr(c, "full_about", "")
+            summarized_about_text = getattr(c, "summarized_about", "")
 
             cards.append({
                 "id": c.id,
                 "name": c.name,
                 "stars": c.stars,
-                "about": about_text,
+                "full_about": full_about_text,
+                "summarized_about": summarized_about_text,
             })
         except Exception:
             # Skip malformed plugins rather than erroring the whole list
@@ -49,16 +51,17 @@ async def list_relics():
     for cls in reg.values():
         try:
             r = cls()
-            # Use the new get_about_str method that automatically checks user settings
-            # Pass stacks=1 as this is the catalog view showing base descriptions
-            about_text = r.get_about_str(stacks=1)
+            # Send both description fields to frontend for client-side switching
+            # For catalog view, we use stacks=1 for the full_about version
+            full_about_text = r.full_about_stacks(stacks=1)
+            summarized_about_text = getattr(r, "summarized_about", "")
 
             relics.append({
                 "id": r.id,
                 "name": r.name,
                 "stars": r.stars,
-                # Base about text; inventory display does not vary by stacks
-                "about": about_text,
+                "full_about": full_about_text,
+                "summarized_about": summarized_about_text,
             })
         except Exception:
             continue
