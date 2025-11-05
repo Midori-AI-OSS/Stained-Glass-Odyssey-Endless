@@ -5,6 +5,7 @@
   import { getPlayers, getUpgrade, upgradeStat } from '../systems/api.js';
   import { getCharacterImage, getRandomFallback, getElementColor } from '../systems/assetLoader.js';
   import { getDescription } from '../systems/descriptionUtils.js';
+  import { uiStore } from '../systems/settingsStorage.js';
   import { replaceCharacterMetadata } from '../systems/characterMetadata.js';
   import MenuPanel from './MenuPanel.svelte';
   import PartyRoster from './PartyRoster.svelte';
@@ -14,6 +15,7 @@
   import { mergeUpgradePayload, shouldRefreshRoster } from './upgradeCacheUtils.js';
   import { formatMaterialQuantity } from '../utils/upgradeFormatting.js';
 
+  let rawPlayers = [];
   let roster = [];
   let userBuffPercent = 0;
 
@@ -43,6 +45,45 @@
     crit_rate: 'Crit Rate',
     crit_damage: 'Crit DMG'
   };
+
+  // Helper functions for roster building
+  function resolveElement(p) {
+    let e = p?.element;
+    if (e && typeof e !== 'string') e = e.id || e.name;
+    return e && !/generic/i.test(String(e)) ? e : 'Generic';
+  }
+
+  function isNonPlayable(entry) {
+    const meta = entry?.ui && typeof entry.ui === 'object' ? entry.ui : {};
+    if (meta.non_selectable === true) {
+      return true;
+    }
+    const gr = Number(entry?.stats?.gacha_rarity);
+    if (!Number.isNaN(gr)) {
+      return gr === 0 && meta.allow_select !== true;
+    }
+    return false;
+  }
+
+  // Reactive roster that recomputes when rawPlayers or uiStore changes
+  $: roster = (() => {
+    const _uiDep = $uiStore; // dependency on UI settings
+    return rawPlayers
+      .map((p) => ({
+        id: p.id,
+        name: p.name,
+        about: getDescription(p),
+        img: getCharacterImage(p.id, p.is_player) || getRandomFallback(),
+        owned: p.owned,
+        is_player: p.is_player,
+        element: resolveElement(p),
+        stats: p.stats ?? { hp: 0, atk: 0, defense: 0, level: 1 },
+        ui: p.ui || {}
+      }))
+      .filter((p) => (p.owned || p.is_player) && !isNonPlayable(p))
+      .sort((a, b) => (a.is_player ? -1 : b.is_player ? 1 : 0));
+  })();
+
   // Clear override when preview is not the player
   $: {
     const cur = roster.find(r => r.id === previewId);
@@ -120,39 +161,9 @@
     try {
       const data = await getPlayers();
       userBuffPercent = data.user?.level ?? 0;
-      function resolveElement(p) {
-        let e = p?.element;
-        if (e && typeof e !== 'string') e = e.id || e.name;
-        return e && !/generic/i.test(String(e)) ? e : 'Generic';
-      }
-      function isNonPlayable(entry) {
-        const meta = entry?.ui && typeof entry.ui === 'object' ? entry.ui : {};
-        if (meta.non_selectable === true) {
-          return true;
-        }
-        const gr = Number(entry?.stats?.gacha_rarity);
-        if (!Number.isNaN(gr)) {
-          return gr === 0 && meta.allow_select !== true;
-        }
-        return false;
-      }
-
+      
       replaceCharacterMetadata(data.players || []);
-      roster = data.players
-        .map((p) => ({
-          id: p.id,
-          name: p.name,
-          about: getDescription(p),
-          img: getCharacterImage(p.id, p.is_player) || getRandomFallback(),
-          owned: p.owned,
-          is_player: p.is_player,
-          element: resolveElement(p),
-          stats: p.stats ?? { hp: 0, atk: 0, defense: 0, level: 1 },
-          ui: p.ui || {}
-        }))
-        // Only show characters the user can actually use
-        .filter((p) => (p.owned || p.is_player) && !isNonPlayable(p))
-        .sort((a, b) => (a.is_player ? -1 : b.is_player ? 1 : 0));
+      rawPlayers = data.players || [];
 
       const player = roster.find((p) => p.is_player);
 

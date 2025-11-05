@@ -8,6 +8,7 @@
   import MenuPanel from './MenuPanel.svelte';
   import { getCatalogData } from '../systems/uiApi.js';
   import { getDescription } from '../systems/descriptionUtils.js';
+  import { uiStore } from '../systems/settingsStorage.js';
   import { getElementColor, getCharacterImage } from '../systems/assetLoader.js';
   import PlayerPreview from './PlayerPreview.svelte';
   import { Circle } from 'lucide-svelte';
@@ -62,6 +63,12 @@
   $: if (!selectedCharacterId && allCharacters.length > 0) {
     selectedCharacterId = allCharacters[0].id;
   }
+
+  // Reactive status effects that recompute when uiStore, selectedCharacter, activeTab, or catalogData changes
+  $: currentStatusEffects = (() => {
+    const _uiDep = $uiStore; // dependency on UI settings
+    return getStatusEffects(selectedCharacter, activeTab);
+  })();
 
   // Status effect tabs
   const tabs = [
@@ -477,7 +484,7 @@
 
         <div class="tab-content">
           {#if selectedCharacter}
-            {#each getStatusEffects(selectedCharacter, activeTab) as effect}
+            {#each currentStatusEffects as effect}
               <div class="effect-item">
                 <div class="effect-header">
                   <div class="effect-name">
