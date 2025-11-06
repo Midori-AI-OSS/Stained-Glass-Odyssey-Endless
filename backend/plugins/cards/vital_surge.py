@@ -13,7 +13,8 @@ class VitalSurge(CardBase):
     name: str = "Vital Surge"
     stars: int = 2
     effects: dict[str, float] = field(default_factory=lambda: {"max_hp": 0.55})
-    about: str = "+55% Max HP; while an ally is below 50% HP, they gain +55% ATK."
+    full_about: str = "+55% Max HP; while an ally is below 50% HP, they gain +55% ATK."
+    summarized_about: str = "Boosts max hp; wounded allies gain atk"
 
     async def apply(self, party) -> None:  # type: ignore[override]
         await super().apply(party)

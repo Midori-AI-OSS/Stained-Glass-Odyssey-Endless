@@ -18,10 +18,13 @@ class EclipseReactor(RelicBase):
     name: str = "Eclipse Reactor"
     stars: int = 5
     effects: dict[str, float] = field(default_factory=dict)
-    about: str = (
+    full_about: str = (
         "Drains 18% Max HP per stack from each ally at battle start to ignite a 3-turn surge "
         "(+180% ATK, +180% SPD, +60% crit damage per stack). After the surge ends, allies "
         "bleed 2% Max HP per stack every turn until the battle finishes."
+    )
+    summarized_about: str = (
+        "Drains hp at battle start for massive temporary boost; then continuous drain"
     )
 
     async def apply(self, party) -> None:  # type: ignore[override]
@@ -72,7 +75,6 @@ class EclipseReactor(RelicBase):
             surge_atk_mult = 1 + 1.8 * current_stacks
             surge_spd_mult = 1 + 1.8 * current_stacks
             surge_cd_mult = 1 + 0.6 * current_stacks
-            drain_pct = 0.02 * current_stacks
             initial_drain_pct = 0.18 * current_stacks
 
             for member in party.members:
@@ -237,3 +239,7 @@ class EclipseReactor(RelicBase):
             f"(+{surge_atk:.0f}% ATK, +{surge_spd:.0f}% SPD, +{surge_cd:.0f}% crit damage). "
             f"Afterward, allies bleed {bleed:.0f}% Max HP each turn until combat ends."
         )
+
+    def full_about_stacks(self, stacks: int) -> str:
+        """Return stack-specific description."""
+        return self.describe(stacks)
