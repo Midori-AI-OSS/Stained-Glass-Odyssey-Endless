@@ -23,11 +23,15 @@ class EquilibriumPrism(CardBase):
     effects: dict[str, float] = field(
         default_factory=lambda: {"atk": 15.0, "defense": 15.0}
     )
-    about: str = (
+    full_about: str = (
         "+1500% ATK & +1500% DEF; at turn start, heal allies toward the party's HP "
         "average without harming them. Each healed ally grants a Balance token; at "
         "5 tokens, grant allies +50% Crit Rate & +50% Mitigation for 1 turn and deal "
         "200% Light damage to the highest-HP foe."
+    )
+    summarized_about: str = (
+        "Boosts atk and def; balances party HP each turn, builds tokens to trigger "
+        "burst buffs and damage"
     )
 
     async def apply(self, party) -> None:  # type: ignore[override]

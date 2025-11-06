@@ -20,7 +20,11 @@ class EchoBell(RelicBase):
     name: str = "Echo Bell"
     stars: int = 2
     effects: dict[str, float] = field(default_factory=dict)
-    about: str = "First action each battle gains +15% Aftertaste chance per stack; every 100% becomes a guaranteed extra hit."
+    full_about: str = (
+        "First action each battle gains +15% Aftertaste chance per stack; every 100% "
+        "becomes a guaranteed extra hit."
+    )
+    summarized_about: str = "First action each battle has a chance to trigger extra hits"
 
     async def apply(self, party) -> None:
         await super().apply(party)
@@ -125,4 +129,9 @@ class EchoBell(RelicBase):
         self.subscribe(party, "battle_end", _cleanup)
 
     def describe(self, stacks: int) -> str:
-        return self.about
+        return self.about if hasattr(self, 'about') else self.full_about
+
+    def full_about_stacks(self, stacks: int) -> str:
+        """Return stack-specific description."""
+        # Echo bell's description doesn't change with stacks, just the chance
+        return self.full_about
