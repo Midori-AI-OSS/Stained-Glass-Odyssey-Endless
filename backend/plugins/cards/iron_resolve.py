@@ -15,9 +15,12 @@ class IronResolve(CardBase):
     effects: dict[str, float] = field(
         default_factory=lambda: {"defense": 5, "max_hp": 5}
     )
-    about: str = (
+    full_about: str = (
         "+500% DEF & +500% HP; the first time an ally dies, revive them at "
         "30% HP. This effect refreshes every 3 turns."
+    )
+    summarized_about: str = (
+        "Boosts def and hp; revives fallen allies with a cooldown"
     )
 
     async def apply(self, party) -> None:  # type: ignore[override]

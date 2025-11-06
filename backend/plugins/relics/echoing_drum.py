@@ -21,7 +21,11 @@ class EchoingDrum(RelicBase):
     name: str = "Echoing Drum"
     stars: int = 3
     effects: dict[str, float] = field(default_factory=dict)
-    about: str = "First attack each battle gains +25% Aftertaste chance per stack; every full 100% guarantees another hit."
+    full_about: str = (
+        "First attack each battle gains +25% Aftertaste chance per stack; every full 100% "
+        "guarantees another hit. Also grants ATK buff when triggered."
+    )
+    summarized_about: str = "First attack each battle has a chance to trigger extra hits and boost atk"
 
     async def apply(self, party) -> None:
         await super().apply(party)
@@ -181,3 +185,7 @@ class EchoingDrum(RelicBase):
         )
 
         return f"{intro_sentence} {chance_sentence} {buff_sentence}"
+
+    def full_about_stacks(self, stacks: int) -> str:
+        """Return stack-specific description."""
+        return self.describe(stacks)

@@ -16,9 +16,10 @@ class TemporalShield(CardBase):
     effects: dict[str, float] = field(
         default_factory=lambda: {"defense": 30.0, "max_hp": 30.0}
     )
-    about: str = (
+    full_about: str = (
         "+3000% DEF & HP; each turn has a 50% chance to grant 99% damage reduction for that turn."
     )
+    summarized_about: str = "Boosts def and hp massively; chance to grant near immunity each turn"
 
     async def apply(self, party):
         await super().apply(party)

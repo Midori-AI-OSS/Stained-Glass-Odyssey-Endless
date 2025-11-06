@@ -58,10 +58,13 @@ class OldCoinRelic(RelicBase):
 
 ## Acceptance Criteria
 
-- [ ] Old `about` field removed
-- [ ] `full_about` field added with comprehensive description
-- [ ] `summarized_about` field added with concise description
-- [ ] Both descriptions are accurate to the relic's actual mechanics
-- [ ] Stacking behavior is mentioned if applicable
-- [ ] Code follows existing style and conventions
-- [ ] Changes are tested (relic still loads and functions correctly)
+- [x] Old `about` field removed
+- [x] `full_about` field added with comprehensive description
+- [x] `summarized_about` field added with concise description
+- [x] Both descriptions are accurate to the relic's actual mechanics
+- [x] Stacking behavior is mentioned if applicable
+- [x] Code follows existing style and conventions
+- [x] Changes are tested (relic still loads and functions correctly)
+- [x] Added `full_about_stacks()` method to provide stack-specific descriptions
+
+ready for review
