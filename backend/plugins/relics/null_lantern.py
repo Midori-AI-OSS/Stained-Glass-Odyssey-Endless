@@ -15,7 +15,16 @@ class NullLantern(RelicBase):
     name: str = "Null Lantern"
     stars: int = 4
     effects: dict[str, float] = field(default_factory=dict)
-    about: str = "Shops and rest rooms vanish; each fight grants extra pulls."
+    full_about: str = (
+        "Removes all shop and rest rooms from the map. Each battle cleared grants 1 pull token plus "
+        "1 additional token per stack. However, enemies grow significantly stronger with each fight: "
+        "their ATK, DEF, and Max HP multiply by (1 + 1.5 × battles_cleared × stacks). "
+        "This creates an escalating challenge where early battles become easier to clear for pulls, "
+        "but later battles become exponentially harder."
+    )
+    summarized_about: str = (
+        "Removes shops and rests; battles grant pull tokens but enemies grow stronger with each fight"
+    )
 
     async def apply(self, party) -> None:
         """Disable shops/rests, buff foes, and award pull tokens."""
@@ -168,6 +177,10 @@ class NullLantern(RelicBase):
         self.subscribe(party, "entity_defeat", _battle_end)
         self.subscribe(party, "battle_end", _battle_end)
         self.subscribe(party, "battle_end", _cleanup)
+
+    def full_about_stacks(self, stacks: int) -> str:
+        """Provide stack-aware description by reusing existing describe logic."""
+        return self.describe(stacks)
 
     def describe(self, stacks: int) -> str:
         pulls = 1 + stacks

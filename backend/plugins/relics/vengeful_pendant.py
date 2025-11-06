@@ -14,7 +14,15 @@ class VengefulPendant(RelicBase):
     name: str = "Vengeful Pendant"
     stars: int = 2
     effects: dict[str, float] = field(default_factory=dict)
-    about: str = "Reflects 15% of damage taken back to the attacker."
+    full_about: str = (
+        "Whenever a party member takes damage, 15% of that damage per stack is reflected back "
+        "to the attacker. The reflected damage is applied immediately after the original damage "
+        "and is guaranteed to deal at least 1 damage. Multiple stacks multiply the reflection "
+        "(e.g., 2 stacks = 30%, 3 stacks = 45%)."
+    )
+    summarized_about: str = (
+        "Reflects a portion of damage taken back to attackers"
+    )
 
     async def apply(self, party) -> None:
         await super().apply(party)
@@ -61,6 +69,10 @@ class VengefulPendant(RelicBase):
 
         self.subscribe(party, "damage_taken", _reflect)
         self.subscribe(party, "battle_end", _cleanup)
+
+    def full_about_stacks(self, stacks: int) -> str:
+        """Provide stack-aware description by reusing existing describe logic."""
+        return self.describe(stacks)
 
     def describe(self, stacks: int) -> str:
         pct = 15 * stacks

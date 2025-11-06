@@ -15,7 +15,15 @@ class StellarCompass(RelicBase):
     name: str = "Stellar Compass"
     stars: int = 3
     effects: dict[str, float] = field(default_factory=dict)
-    about: str = "Critical hits grant permanent +1.5% ATK and gold rate."
+    full_about: str = (
+        "Each critical hit by a party member permanently increases that member's ATK by 1.5% per stack "
+        "and increases the party's gold gain rate by 1.5% per stack. These bonuses accumulate with every "
+        "critical hit landed throughout the entire run, creating a snowball effect. The gold rate bonus "
+        "applies to all gold earned from battles, shops, and events."
+    )
+    summarized_about: str = (
+        "Critical hits grant permanent atk and gold rate increases"
+    )
 
     async def apply(self, party) -> None:
         await super().apply(party)
@@ -92,6 +100,10 @@ class StellarCompass(RelicBase):
 
         self.subscribe(party, "critical_hit", _crit)
         self.subscribe(party, "gold_earned", _gold)
+
+    def full_about_stacks(self, stacks: int) -> str:
+        """Provide stack-aware description by reusing existing describe logic."""
+        return self.describe(stacks)
 
     def describe(self, stacks: int) -> str:
         bonus = 1.5 * stacks

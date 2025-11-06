@@ -19,9 +19,15 @@ class EntropyMirror(RelicBase):
     name: str = "Entropy Mirror"
     stars: int = 4
     effects: dict[str, float] = field(default_factory=dict)
-    about: str = (
-        "At battle start, all foes gain +30% ATK per stack. "
-        "When foes deal damage, they suffer recoil equal to a percentage of damage dealt."
+    full_about: str = (
+        "A high-risk, high-reward 4-star relic. At battle start, all enemies gain +30% ATK per stack, "
+        "making them significantly more dangerous. However, whenever enemies deal damage to party members, "
+        "they suffer recoil damage equal to 10% of the damage dealt per stack, applied as cost damage "
+        "(bypasses mitigation and shields). Multiple stacks amplify both the ATK buff and recoil "
+        "(e.g., 2 stacks = +60% ATK and 20% recoil)."
+    )
+    summarized_about: str = (
+        "Enemies gain atk but suffer recoil when dealing damage"
     )
 
     async def apply(self, party) -> None:
@@ -165,6 +171,10 @@ class EntropyMirror(RelicBase):
         self.subscribe(party, "battle_start", _battle_start)
         self.subscribe(party, "damage_dealt", _on_damage_dealt)
         self.subscribe(party, "battle_end", _cleanup)
+
+    def full_about_stacks(self, stacks: int) -> str:
+        """Provide stack-aware description by reusing existing describe logic."""
+        return self.describe(stacks)
 
     def describe(self, stacks: int) -> str:
         atk_buff = 30 * stacks

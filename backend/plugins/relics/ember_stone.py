@@ -14,7 +14,15 @@ class EmberStone(RelicBase):
     name: str = "Ember Stone"
     stars: int = 2
     effects: dict[str, float] = field(default_factory=dict)
-    about: str = "Below 25% HP, burn the attacker for 50% ATK per stack."
+    full_about: str = (
+        "When a party member at or below 25% Max HP takes damage, the attacker is burned for "
+        "damage equal to 50% of the victim's ATK per stack. This counter-attack triggers immediately "
+        "and does not prevent the original damage. Multiple stacks multiply the burn damage "
+        "(e.g., 2 stacks = 100% ATK, 3 stacks = 150% ATK)."
+    )
+    summarized_about: str = (
+        "Burns attackers when they hit low-HP allies"
+    )
 
     async def apply(self, party) -> None:
         await super().apply(party)
@@ -56,6 +64,10 @@ class EmberStone(RelicBase):
 
         self.subscribe(party, "damage_taken", _burn)
         self.subscribe(party, "battle_end", _cleanup)
+
+    def full_about_stacks(self, stacks: int) -> str:
+        """Provide stack-aware description by reusing existing describe logic."""
+        return self.describe(stacks)
 
     def describe(self, stacks: int) -> str:
         pct = 50 * stacks

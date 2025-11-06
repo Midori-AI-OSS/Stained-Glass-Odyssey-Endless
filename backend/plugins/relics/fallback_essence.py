@@ -20,10 +20,18 @@ class FallbackEssence(RelicBase):
         "effect_hit_rate": 0.01,
         "effect_resistance": 0.01
     })
-    about: str = (
+    full_about: str = (
         "A mystical essence that forms when one's determination transcends the need for material cards. "
-        "+1% to core combat stats."
+        "Granted when the card pool is exhausted. Provides +1% ATK, DEF, Max HP, Crit Rate, Crit Damage, "
+        "Effect Hit Rate, and Effect Resistance per stack (multiplicative stacking)."
     )
+    summarized_about: str = (
+        "Fallback relic granted when card pool exhausted; boosts all core combat stats"
+    )
+
+    def full_about_stacks(self, stacks: int) -> str:
+        """Provide stack-aware description by reusing existing describe logic."""
+        return self.describe(stacks)
 
     def describe(self, stacks: int) -> str:
         if stacks == 1:

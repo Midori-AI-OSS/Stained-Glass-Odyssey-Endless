@@ -14,7 +14,15 @@ class GuardianCharm(RelicBase):
     name: str = "Guardian Charm"
     stars: int = 2
     effects: dict[str, float] = field(default_factory=dict)
-    about: str = "At battle start, grants +20% DEF to the lowest-HP ally per stack."
+    full_about: str = (
+        "At the start of each battle, identifies the party member with the lowest current HP "
+        "and grants them +20% DEF per stack for the entire battle (9999 turns). The buff is "
+        "permanent for that battle and stacks multiply the effect (e.g., 2 stacks = +40% DEF, "
+        "3 stacks = +60% DEF). Great for protecting vulnerable low-HP characters."
+    )
+    summarized_about: str = (
+        "Grants def bonus to lowest-HP ally at battle start"
+    )
 
     async def apply(self, party) -> None:
         from autofighter.stats import BUS  # Import here to avoid circular imports
@@ -54,6 +62,10 @@ class GuardianCharm(RelicBase):
             turns=9999,
         )
         await mgr.add_modifier(mod)
+
+    def full_about_stacks(self, stacks: int) -> str:
+        """Provide stack-aware description by reusing existing describe logic."""
+        return self.describe(stacks)
 
     def describe(self, stacks: int) -> str:
         pct = 20 * stacks
