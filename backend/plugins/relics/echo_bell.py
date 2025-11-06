@@ -129,7 +129,7 @@ class EchoBell(RelicBase):
         self.subscribe(party, "battle_end", _cleanup)
 
     def describe(self, stacks: int) -> str:
-        return self.about if hasattr(self, 'about') else self.full_about
+        return self.full_about
 
     def full_about_stacks(self, stacks: int) -> str:
         """Return stack-specific description."""
