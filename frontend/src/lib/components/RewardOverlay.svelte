@@ -13,6 +13,7 @@
   } from '../systems/overlayState.js';
   import { warn as logWarn } from '../systems/logger.js';
   import { emitRewardTelemetry } from '../systems/rewardTelemetry.js';
+  import { uiStore } from '../systems/settingsStorage.js';
 
   export let cards = [];
   export let relics = [];
@@ -699,25 +700,63 @@
     }
   }
 
-  function normalizeRewardEntries(list) {
+  function resolveDescription(entry, concise) {
+    if (!entry || typeof entry !== 'object') return '';
+    if (concise) {
+      return entry.summarized_about || entry.full_about || entry.about || '';
+    }
+    return entry.full_about || entry.summarized_about || entry.about || '';
+  }
+
+  function decorateRewardEntry(entry, concise) {
+    if (!entry || typeof entry !== 'object') {
+      return entry;
+    }
+    const about = resolveDescription(entry, concise);
+    if (about === entry.about || (!about && !entry.about)) {
+      return entry;
+    }
+    return { ...entry, about };
+  }
+
+  function normalizeRewardEntries(list, concise) {
     if (!Array.isArray(list)) return [];
     return list
       .filter((entry) => entry != null)
-      .map((entry) => (entry && typeof entry === 'object' ? { ...entry } : { id: entry }));
+      .map((entry) => {
+        if (!entry || typeof entry !== 'object') {
+          return { id: entry };
+        }
+        return decorateRewardEntry({ ...entry }, concise);
+      });
   }
 
-  $: cardChoices = Array.isArray(cards) ? cards : [];
+  $: conciseDescriptionsEnabled = Boolean($uiStore?.conciseDescriptions);
+
+  $: cardChoices = Array.isArray(cards)
+    ? cards.map((card) =>
+        card && typeof card === 'object'
+          ? decorateRewardEntry(card, conciseDescriptionsEnabled)
+          : card
+      )
+    : [];
   $: cardChoiceEntries = cardChoices.map((card, index) => ({
     entry: card,
     key: rewardEntryKey(card, index, 'card')
   }));
-  $: relicChoices = Array.isArray(relics) ? relics : [];
+  $: relicChoices = Array.isArray(relics)
+    ? relics.map((relic) =>
+        relic && typeof relic === 'object'
+          ? decorateRewardEntry(relic, conciseDescriptionsEnabled)
+          : relic
+      )
+    : [];
   $: relicChoiceEntries = relicChoices.map((relic, index) => ({
     entry: relic,
     key: rewardEntryKey(relic, index, 'relic')
   }));
-  $: stagedCardEntries = normalizeRewardEntries(stagedCards);
-  $: stagedRelicEntries = normalizeRewardEntries(stagedRelics);
+  $: stagedCardEntries = normalizeRewardEntries(stagedCards, conciseDescriptionsEnabled);
+  $: stagedRelicEntries = normalizeRewardEntries(stagedRelics, conciseDescriptionsEnabled);
   $: stagedCardEntryMap = new Map(
     stagedCardEntries.map((entry, index) => [rewardEntryKey(entry, index, 'staged-card'), entry])
   );

@@ -172,6 +172,20 @@
       };
     }
   };
+  // React to UI setting changes so the detail panel mirrors the toggle immediately.
+  $: if ($uiStore && selectedItem) {
+    if (selectedItem.type === 'card') {
+      const next = cardDesc(selectedItem.id);
+      if (next !== selectedItem.description) {
+        selectedItem = { ...selectedItem, description: next };
+      }
+    } else if (selectedItem.type === 'relic') {
+      const next = relicDesc(selectedItem.id);
+      if (next !== selectedItem.description) {
+        selectedItem = { ...selectedItem, description: next };
+      }
+    }
+  }
   // Utility: remove visual star glyphs from strings for text-only fields
   const stripStars = (s) => String(s || '').replace(/★+/g, '').replace(/\s{2,}/g, ' ').trim();
 

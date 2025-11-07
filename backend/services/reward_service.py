@@ -90,14 +90,23 @@ async def select_card(run_id: str, card_id: str) -> dict[str, Any]:
         room = rooms[current_index] if 0 <= current_index < len(rooms) else None
         room_identifier = str(getattr(room, "room_id", getattr(room, "index", current_index)))
 
+        try:
+            about = card.get_about_str()  # type: ignore[attr-defined]
+        except AttributeError:
+            about = getattr(card, "about", "")
+        full_about = getattr(card, "full_about", "")
+        summarized_about = getattr(card, "summarized_about", "")
+
         staged_card: dict[str, Any] = {
             "id": card.id,
             "name": card.name,
             "stars": card.stars,
+            "about": about,
         }
-        about = getattr(card, "about", None)
-        if about:
-            staged_card["about"] = about
+        if full_about:
+            staged_card["full_about"] = full_about
+        if summarized_about:
+            staged_card["summarized_about"] = summarized_about
 
         base_preview: dict[str, Any] | None = None
         builder = getattr(card, "build_preview", None)
@@ -195,21 +204,27 @@ async def select_relic(run_id: str, relic_id: str) -> dict[str, Any]:
         room_identifier = str(getattr(room, "room_id", getattr(room, "index", current_index)))
 
         existing_stacks = party.relics.count(relic.id)
+        next_stack_count = existing_stacks + 1
+        full_about = relic.full_about_stacks(stacks=next_stack_count)
+        summarized_about = getattr(relic, "summarized_about", "")
+        about = relic.get_about_str(stacks=next_stack_count)
         staged_relic: dict[str, Any] = {
             "id": relic.id,
             "name": relic.name,
             "stars": relic.stars,
-            "stacks": existing_stacks + 1,
+            "stacks": next_stack_count,
+            "about": about,
         }
-        about = relic.get_about_str(stacks=existing_stacks + 1)
-        if about:
-            staged_relic["about"] = about
+        if full_about:
+            staged_relic["full_about"] = full_about
+        if summarized_about:
+            staged_relic["summarized_about"] = summarized_about
 
         base_preview: dict[str, Any] | None = None
         builder = getattr(relic, "build_preview", None)
         if callable(builder):
             raw_preview = builder(
-                stacks=existing_stacks + 1,
+                stacks=next_stack_count,
                 previous_stacks=existing_stacks,
             )
             if isinstance(raw_preview, dict):
@@ -219,7 +234,7 @@ async def select_relic(run_id: str, relic_id: str) -> dict[str, Any]:
             base_preview,
             fallback_effects=getattr(relic, "effects", {}),
             summary=about,
-            stacks=existing_stacks + 1,
+            stacks=next_stack_count,
             previous_stacks=existing_stacks,
             target="party",
         )

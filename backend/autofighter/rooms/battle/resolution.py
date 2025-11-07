@@ -162,15 +162,18 @@ async def resolve_rewards(
     )
     if not card_options:
         log.warning("No card reward options available")
-    card_choice_data = [
-        {
-            "id": card.id,
-            "name": card.name,
-            "stars": card.stars,
-            "about": card.get_about_str(),
-        }
-        for card in card_options
-    ]
+    card_choice_data = []
+    for card in card_options:
+        card_choice_data.append(
+            {
+                "id": card.id,
+                "name": card.name,
+                "stars": card.stars,
+                "about": card.get_about_str(),
+                "full_about": getattr(card, "full_about", ""),
+                "summarized_about": getattr(card, "summarized_about", ""),
+            }
+        )
 
     relic_options: list[Any] = []
     if _roll_relic_drop(room, temp_rdr):
@@ -198,16 +201,21 @@ async def resolve_rewards(
         else:
             relic_options.append(fallback_relic)
 
-    relic_choice_data = [
-        {
-            "id": relic.id,
-            "name": relic.name,
-            "stars": relic.stars,
-            "about": relic.get_about_str(stacks=party.relics.count(relic.id) + 1),
-            "stacks": party.relics.count(relic.id),
-        }
-        for relic in relic_options
-    ]
+    relic_choice_data = []
+    for relic in relic_options:
+        current_stacks = party.relics.count(relic.id)
+        next_stack = current_stacks + 1
+        relic_choice_data.append(
+            {
+                "id": relic.id,
+                "name": relic.name,
+                "stars": relic.stars,
+                "about": relic.get_about_str(stacks=next_stack),
+                "full_about": relic.full_about_stacks(stacks=next_stack),
+                "summarized_about": getattr(relic, "summarized_about", ""),
+                "stacks": current_stacks,
+            }
+        )
 
     gold_reward = _calc_gold(room, temp_rdr)
     party.gold += gold_reward
