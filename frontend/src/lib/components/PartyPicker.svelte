@@ -1,5 +1,5 @@
 <script>
-  import { onMount } from 'svelte';
+  import { onMount, tick } from 'svelte';
   import { createEventDispatcher } from 'svelte';
   import { writable } from 'svelte/store';
   import { getPlayers, getUpgrade, upgradeStat } from '../systems/api.js';
@@ -164,6 +164,7 @@
       
       replaceCharacterMetadata(data.players || []);
       rawPlayers = data.players || [];
+      await tick(); // wait for roster to recompute before deriving selection
 
       const player = roster.find((p) => p.is_player);
 
