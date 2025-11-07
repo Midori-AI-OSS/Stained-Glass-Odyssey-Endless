@@ -164,14 +164,21 @@ async def resolve_rewards(
         log.warning("No card reward options available")
     card_choice_data = []
     for card in card_options:
+        try:
+            base_about = card.get_about_str()
+        except AttributeError:
+            base_about = getattr(card, "about", "")
+        full_about = getattr(card, "full_about", "") or base_about or ""
+        summarized_about = (
+            getattr(card, "summarized_about", "") or full_about or base_about or ""
+        )
         card_choice_data.append(
             {
                 "id": card.id,
                 "name": card.name,
                 "stars": card.stars,
-                "about": card.get_about_str(),
-                "full_about": getattr(card, "full_about", ""),
-                "summarized_about": getattr(card, "summarized_about", ""),
+                "full_about": full_about,
+                "summarized_about": summarized_about,
             }
         )
 
@@ -205,14 +212,18 @@ async def resolve_rewards(
     for relic in relic_options:
         current_stacks = party.relics.count(relic.id)
         next_stack = current_stacks + 1
+        base_about = relic.get_about_str(stacks=next_stack)
+        full_about = relic.full_about_stacks(stacks=next_stack) or base_about or ""
+        summarized_about = (
+            getattr(relic, "summarized_about", "") or full_about or base_about or ""
+        )
         relic_choice_data.append(
             {
                 "id": relic.id,
                 "name": relic.name,
                 "stars": relic.stars,
-                "about": relic.get_about_str(stacks=next_stack),
-                "full_about": relic.full_about_stacks(stacks=next_stack),
-                "summarized_about": getattr(relic, "summarized_about", ""),
+                "full_about": full_about,
+                "summarized_about": summarized_about,
                 "stacks": current_stacks,
             }
         )

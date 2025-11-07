@@ -116,7 +116,8 @@ async def test_confirm_card_commits_and_unlocks_next_step() -> None:
                 "id": "arc_lightning",
                 "name": "Arc Lightning",
                 "stars": 3,
-                "about": "+255% ATK; every attack chains 50% of dealt damage to a random foe.",
+                "full_about": "+255% ATK; every attack chains 50% of dealt damage to a random foe.",
+                "summarized_about": "+255% ATK; every attack chains 50% of dealt damage to a random foe.",
             }
         ],
         "relic_choices": [],
@@ -141,13 +142,18 @@ async def test_confirm_card_commits_and_unlocks_next_step() -> None:
     assert staged_card["id"] == "arc_lightning"
     assert staged_card["name"] == "Arc Lightning"
     assert staged_card["stars"] == 3
+    assert "about" not in staged_card
     assert (
-        staged_card["about"]
+        staged_card["full_about"]
+        == "+255% ATK; every attack chains 50% of dealt damage to a random foe."
+    )
+    assert (
+        staged_card["summarized_about"]
         == "+255% ATK; every attack chains 50% of dealt damage to a random foe."
     )
     preview = staged_card.get("preview")
     assert isinstance(preview, dict)
-    assert preview.get("summary") == staged_card["about"]
+    assert preview.get("summary") == staged_card["summarized_about"]
     stats = preview.get("stats")
     assert isinstance(stats, list) and stats
     atk_stat = stats[0]
@@ -381,7 +387,8 @@ async def test_cancel_card_reopens_progression_step() -> None:
                 "id": "arc_lightning",
                 "name": "Arc Lightning",
                 "stars": 3,
-                "about": "+255% ATK; every attack chains 50% of dealt damage to a random foe.",
+                "full_about": "+255% ATK; every attack chains 50% of dealt damage to a random foe.",
+                "summarized_about": "+255% ATK; every attack chains 50% of dealt damage to a random foe.",
             }
         ],
         "relic_choices": [],
@@ -460,7 +467,8 @@ async def test_confirm_multiple_steps_advances_sequence() -> None:
                 "id": "old_coin",
                 "name": "Old Coin",
                 "stars": 2,
-                "about": "Gain 20% more gold from all sources.",
+                "full_about": "Gain 20% more gold from all sources.",
+                "summarized_about": "Gain 20% more gold from all sources.",
                 "stacks": 1,
             }
         ],
