@@ -165,10 +165,10 @@
       replaceCharacterMetadata(data.players || []);
       rawPlayers = data.players || [];
 
-      const player = roster.find((p) => p.is_player);
+      const player = rawPlayers.find((p) => p.is_player);
 
       const currentSelection = Array.isArray(selected) ? [...selected] : [];
-      const filteredSelection = currentSelection.filter((id) => roster.some((c) => c.id === id));
+      const filteredSelection = currentSelection.filter((id) => rawPlayers.some((c) => c.id === id));
 
       let ensuredSelection = filteredSelection;
       if (player && !ensuredSelection.includes(player.id)) {
@@ -187,8 +187,8 @@
         selected = [...currentSelection];
       }
 
-      const defaultPreview = player ? player.id : (roster[0]?.id || null);
-      const rosterHasPreview = roster.some((r) => r.id === previewId);
+      const defaultPreview = player ? player.id : (rawPlayers[0]?.id || null);
+      const rosterHasPreview = rawPlayers.some((r) => r.id === previewId);
       const nextPreview = rosterHasPreview ? previewId : (selected[0] ?? defaultPreview ?? null);
       previewId = nextPreview;
 
