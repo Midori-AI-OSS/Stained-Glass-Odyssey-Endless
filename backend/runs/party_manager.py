@@ -219,7 +219,7 @@ def _assign_damage_type(player: PlayerBase) -> None:
             player.damage_type = load_damage_type(row[0])
         else:
             conn.execute(
-                "INSERT INTO damage_types (id, type) VALUES (?, ?)",
+                "INSERT OR IGNORE INTO damage_types (id, type) VALUES (?, ?)",
                 (player.id, player.element_id),
             )
 
