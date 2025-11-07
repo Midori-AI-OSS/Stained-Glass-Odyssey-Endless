@@ -66,5 +66,14 @@ class GuardianCharmRelic(RelicBase):
 - [x] Code follows existing style and conventions
 - [x] Changes are tested (relic still loads and functions correctly)
 
+## Audit Notes (2025-11-07)
+✅ All acceptance criteria met
+✅ Linting passes
+✅ `summarized_about` uses qualitative descriptions (no specific numbers)
+✅ `full_about` includes all specific mechanics (lowest-HP targeting, +20% DEF per stack, 9999 turns/permanent, multiplicative stacking)
+✅ Stacking behavior properly documented (multiplicative DEF scaling)
+✅ Descriptions accurately match code implementation (lines 33-35, 61)
+✅ `full_about_stacks()` method implemented (lines 66-68)
+✅ `describe()` method provides stack-specific details (lines 70-72)
 
 ready for review

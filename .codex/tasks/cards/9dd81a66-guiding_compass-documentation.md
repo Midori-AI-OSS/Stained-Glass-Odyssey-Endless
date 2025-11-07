@@ -64,5 +64,12 @@ class GuidingCompassCard(CardBase):
 - [x] Code follows existing style and conventions
 - [x] Changes are tested (card still loads and functions correctly)
 
+## Audit Notes (2025-11-07)
+✅ All acceptance criteria met
+✅ Linting passes
+✅ `summarized_about` uses qualitative descriptions (no specific numbers)
+✅ `full_about` includes all specific mechanics (+3% EXP, +3% Effect Hit Rate, one-time level up)
+✅ Descriptions accurately match code implementation (lines 16-22, 35)
+✅ One-time flag properly implemented to prevent duplicate level ups
 
 ready for review

@@ -66,5 +66,14 @@ class SafeguardPrismRelic(RelicBase):
 - [x] Code follows existing style and conventions
 - [x] Changes are tested (relic still loads and functions correctly)
 
+## Audit Notes (2025-11-07)
+✅ All acceptance criteria met
+✅ Linting passes
+✅ `summarized_about` uses qualitative descriptions (no specific numbers)
+✅ `full_about` includes all specific mechanics (60% HP threshold, 15% shield per stack, +12% mitigation per stack, 1 turn, 5-turn cooldown with stack scaling)
+✅ Stacking behavior properly documented (additive shield/mitigation, extended cooldown)
+✅ Descriptions accurately match code implementation (lines 84, 103, 119-120, 166)
+✅ `full_about_stacks()` method implemented (lines 159-161)
+✅ `describe()` method provides stack-specific details (lines 163-172)
 
 ready for review

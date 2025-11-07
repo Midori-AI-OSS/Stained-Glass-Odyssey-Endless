@@ -66,4 +66,14 @@ class EclipseReactorRelic(RelicBase):
 - [x] Code follows existing style and conventions
 - [x] Changes are tested (relic still loads and functions correctly)
 
+## Audit Notes (2025-11-07)
+✅ All acceptance criteria met
+✅ Linting passes
+✅ `summarized_about` uses qualitative descriptions (no specific numbers)
+✅ `full_about` includes all specific mechanics (18% drain, +180% ATK/SPD, +60% crit dmg, 3 turns, 2% bleed)
+✅ Stacking behavior properly documented (per stack scaling)
+✅ Descriptions accurately match code implementation (lines 78, 94, 120-126, 192)
+✅ `full_about_stacks()` method implemented (lines 243-245)
+✅ `describe()` method provides stack-specific details (lines 231-241)
+
 ready for review
