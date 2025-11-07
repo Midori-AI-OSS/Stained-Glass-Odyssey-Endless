@@ -23,7 +23,7 @@ async def test_battle_offers_relic_choices(monkeypatch):
 
 
 @pytest.mark.asyncio
-async def test_relic_choice_includes_about_and_stacks(monkeypatch):
+async def test_relic_choice_includes_about_fields_and_stacks(monkeypatch):
     node = MapNode(room_id=1, room_type="battle-normal", floor=1, index=1, loop=1, pressure=0)
     room = rooms_module.BattleRoom(node)
     member = Stats()
@@ -36,7 +36,10 @@ async def test_relic_choice_includes_about_and_stacks(monkeypatch):
     result = await room.resolve(party, {})
     relic = result["relic_choices"][0]
     assert relic["stacks"] == 1
-    assert "6%" in relic["about"]
+    assert "about" not in relic
+    assert relic["full_about"]
+    assert "6%" in relic["full_about"]
+    assert relic["summarized_about"]
 
 
 @pytest.mark.parametrize(

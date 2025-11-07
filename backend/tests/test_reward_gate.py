@@ -66,7 +66,8 @@ async def test_advance_room_requires_reward_selection(app_with_db):
                     "id": "micro_blade",
                     "name": "Micro Blade",
                     "stars": 1,
-                    "about": "Deal 110% ATK to the front foe.",
+                    "full_about": "Deal 110% ATK to the front foe.",
+                    "summarized_about": "Deal 110% ATK to the front foe.",
                 }
             ],
             "relic_choice_options": [
@@ -74,7 +75,8 @@ async def test_advance_room_requires_reward_selection(app_with_db):
                     "id": "threadbare_cloak",
                     "name": "Threadbare Cloak",
                     "stars": 2,
-                    "about": "Gain 20% damage reduction for 1 turn after a bonus action.",
+                    "full_about": "Gain 20% damage reduction for 1 turn after a bonus action.",
+                    "summarized_about": "Gain 20% damage reduction for 1 turn after a bonus action.",
                 }
             ],
         }
@@ -286,7 +288,8 @@ async def test_card_selection_unlocks_advancement(app_with_db):
                     "id": "micro_blade",
                     "name": "Micro Blade",
                     "stars": 1,
-                    "about": "Deal 110% ATK to the front foe.",
+                    "full_about": "Deal 110% ATK to the front foe.",
+                    "summarized_about": "Deal 110% ATK to the front foe.",
                 }
             ],
         }
