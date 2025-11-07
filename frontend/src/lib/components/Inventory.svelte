@@ -3,7 +3,12 @@
   import { CreditCard, Gem, Hammer, Box, RotateCcw } from 'lucide-svelte';
   import { getCardCatalog, getRelicCatalog, getGacha } from '../systems/api.js';
   import { stackItems, formatName } from '../systems/craftingUtils.js';
-  import { getCardDescription, getRelicDescription, getDescription } from '../systems/descriptionUtils.js';
+  import {
+    getCardDescription,
+    getRelicDescription,
+    getDescription,
+    getDescriptionPair
+  } from '../systems/descriptionUtils.js';
   import { uiStore } from '../systems/settingsStorage.js';
   import CardView from './inventory/CardView.svelte';
   import RelicView from './inventory/RelicView.svelte';
@@ -81,6 +86,7 @@
   $: cardEntries = count(cards || []);
   $: relicEntries = count(relics || []);
   $: materialEntries = Object.entries(materials || {}); // [key, qty]
+  $: conciseDescriptionsEnabled = Boolean($uiStore?.conciseDescriptions);
 
   // Recompute when cardMeta changes so descriptions populate once catalog loads
   $: sortedCardEntries = (() => {
@@ -96,7 +102,19 @@
     const _dep = cardMeta; // dependency anchor
     const _uiDep = $uiStore; // reactive to UI settings changes
     return sortedCardEntries.map(([id, qty]) => [
-      { id, name: cardName(id), stars: cardStars(id), about: cardDesc(id) },
+      (() => {
+        const meta = cardMeta?.[id] || {};
+        const { about: _legacyAbout, ...metaWithoutAbout } = meta;
+        const { fullDescription, conciseDescription } = getDescriptionPair(meta);
+        return {
+          ...metaWithoutAbout,
+          id,
+          name: cardName(id),
+          stars: cardStars(id),
+          full_about: meta.full_about ?? fullDescription,
+          summarized_about: meta.summarized_about ?? conciseDescription
+        };
+      })(),
       qty
     ]);
   })();
@@ -115,7 +133,19 @@
     const _dep = relicMeta; // dependency anchor
     const _uiDep = $uiStore; // reactive to UI settings changes
     return sortedRelicEntries.map(([id, qty]) => [
-      { id, name: relicName(id), stars: relicStars(id), about: relicDesc(id) },
+      (() => {
+        const meta = relicMeta?.[id] || {};
+        const { about: _legacyAbout, ...metaWithoutAbout } = meta;
+        const { fullDescription, conciseDescription } = getDescriptionPair(meta);
+        return {
+          ...metaWithoutAbout,
+          id,
+          name: relicName(id),
+          stars: relicStars(id),
+          full_about: meta.full_about ?? fullDescription,
+          summarized_about: meta.summarized_about ?? conciseDescription
+        };
+      })(),
       qty
     ]);
   })();
@@ -140,6 +170,8 @@
   // Item selection
   const selectItem = (id, type, qty = 1) => {
     if (type === 'card') {
+      const meta = cardMeta[id] || {};
+      const { fullDescription, conciseDescription } = getDescriptionPair(meta);
       selectedItem = {
         id,
         type: 'card',
@@ -147,9 +179,13 @@
         stars: cardStars(id),
         description: cardDesc(id),
         quantity: qty,
-        meta: cardMeta[id]
+        meta,
+        fullDescription,
+        conciseDescription
       };
     } else if (type === 'relic') {
+      const meta = relicMeta[id] || {};
+      const { fullDescription, conciseDescription } = getDescriptionPair(meta);
       selectedItem = {
         id,
         type: 'relic',
@@ -157,7 +193,9 @@
         stars: relicStars(id),
         description: relicDesc(id),
         quantity: qty,
-        meta: relicMeta[id]
+        meta,
+        fullDescription,
+        conciseDescription
       };
     } else {
       // material
@@ -175,14 +213,36 @@
   // React to UI setting changes so the detail panel mirrors the toggle immediately.
   $: if ($uiStore && selectedItem) {
     if (selectedItem.type === 'card') {
+      const meta = cardMeta[selectedItem.id] || {};
+      const { fullDescription, conciseDescription } = getDescriptionPair(meta);
       const next = cardDesc(selectedItem.id);
-      if (next !== selectedItem.description) {
-        selectedItem = { ...selectedItem, description: next };
+      if (
+        next !== selectedItem.description ||
+        fullDescription !== selectedItem.fullDescription ||
+        conciseDescription !== selectedItem.conciseDescription
+      ) {
+        selectedItem = {
+          ...selectedItem,
+          description: next,
+          fullDescription,
+          conciseDescription
+        };
       }
     } else if (selectedItem.type === 'relic') {
+      const meta = relicMeta[selectedItem.id] || {};
+      const { fullDescription, conciseDescription } = getDescriptionPair(meta);
       const next = relicDesc(selectedItem.id);
-      if (next !== selectedItem.description) {
-        selectedItem = { ...selectedItem, description: next };
+      if (
+        next !== selectedItem.description ||
+        fullDescription !== selectedItem.fullDescription ||
+        conciseDescription !== selectedItem.conciseDescription
+      ) {
+        selectedItem = {
+          ...selectedItem,
+          description: next,
+          fullDescription,
+          conciseDescription
+        };
       }
     }
   }
@@ -268,12 +328,14 @@
           cards={sortedCards}
           select={selectItem}
           selectedId={selectedItem?.type === 'card' ? selectedItem.id : null}
+          useConciseDescriptions={conciseDescriptionsEnabled}
         />
       {:else if activeTab === 'relics'}
         <RelicView
           relics={sortedRelics}
           select={selectItem}
           selectedId={selectedItem?.type === 'relic' ? selectedItem.id : null}
+          useConciseDescriptions={conciseDescriptionsEnabled}
         />
       {:else}
         <MaterialsPanel
@@ -299,19 +361,46 @@
         
         <div class="detail-preview">
           {#if selectedItem.type === 'card'}
-            <CardArt entry={{ 
-              id: selectedItem.id, 
-              name: stripStars(selectedItem.name), 
-              stars: selectedItem.stars, 
-              about: stripStars(selectedItem.description) 
-            }} type="card" showTitle={false} showAbout={false} imageOnly={true} fluid={true} quiet={true} />
+            <CardArt
+              entry={{
+                ...(selectedItem.meta || {}),
+                id: selectedItem.id,
+                name: stripStars(selectedItem.name),
+                stars: selectedItem.stars,
+                full_about: selectedItem.meta?.full_about ?? selectedItem.fullDescription ?? '',
+                summarized_about: selectedItem.meta?.summarized_about ?? selectedItem.conciseDescription ?? ''
+              }}
+              type="card"
+              showTitle={false}
+              showAbout={false}
+              imageOnly={true}
+              fluid={true}
+              quiet={true}
+              description={stripStars(selectedItem.description)}
+              fullDescription={selectedItem.fullDescription}
+              conciseDescription={selectedItem.conciseDescription}
+            />
           {:else if selectedItem.type === 'relic'}
-            <CardArt entry={{ 
-              id: selectedItem.id, 
-              name: stripStars(selectedItem.name), 
-              stars: selectedItem.stars, 
-              about: stripStars(selectedItem.description) 
-            }} type="relic" roundIcon={false} showTitle={false} showAbout={false} imageOnly={true} fluid={true} quiet={true} />
+            <CardArt
+              entry={{
+                ...(selectedItem.meta || {}),
+                id: selectedItem.id,
+                name: stripStars(selectedItem.name),
+                stars: selectedItem.stars,
+                full_about: selectedItem.meta?.full_about ?? selectedItem.fullDescription ?? '',
+                summarized_about: selectedItem.meta?.summarized_about ?? selectedItem.conciseDescription ?? ''
+              }}
+              type="relic"
+              roundIcon={false}
+              showTitle={false}
+              showAbout={false}
+              imageOnly={true}
+              fluid={true}
+              quiet={true}
+              description={stripStars(selectedItem.description)}
+              fullDescription={selectedItem.fullDescription}
+              conciseDescription={selectedItem.conciseDescription}
+            />
           {:else}
             <div style="display:flex; align-items:center; justify-content:center; width:100%; height:100%;">
               <img src={getMaterialIcon(selectedItem.id)} alt={selectedItem.id} on:error={onMaterialIconError} style="max-width:100%; max-height:100%; object-fit:contain;" />

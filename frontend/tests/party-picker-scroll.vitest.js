@@ -9,7 +9,8 @@ const hoisted = vi.hoisted(() => ({
   rosterEntries: Array.from({ length: 14 }, (_, index) => ({
     id: index + 1,
     name: `Hero ${index + 1}`,
-    about: 'Test hero',
+    full_about: 'Test hero full description',
+    summarized_about: 'Test hero',
     owned: true,
     is_player: index === 0,
     element: 'Aurora',

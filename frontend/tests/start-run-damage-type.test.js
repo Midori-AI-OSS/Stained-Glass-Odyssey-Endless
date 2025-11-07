@@ -89,7 +89,8 @@ function createTestContext() {
           {
             id: 'sample_player',
             name: 'Hero',
-            about: '',
+            full_about: '',
+            summarized_about: '',
             owned: true,
             is_player: true,
             element: 'Fire',

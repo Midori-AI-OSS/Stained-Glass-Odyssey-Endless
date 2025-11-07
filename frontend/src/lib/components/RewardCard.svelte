@@ -11,6 +11,12 @@
   export let selectionKey = '';
   export let selected = false;
   export let reducedMotion = false;
+  export let fullDescription = '';
+  export let conciseDescription = '';
+  export let description = '';
+  export let tooltip = '';
+  export let useConciseDescriptions = false;
+  export let descriptionModeLabel = '';
   const dispatch = createEventDispatcher();
   // enable usage as a normal button too
   export let disabled = false;
@@ -20,6 +26,27 @@
   $: tabIndex = disabled ? -1 : 0;
   $: role = 'button';
   $: ariaDisabled = disabled ? 'true' : 'false';
+  $: descriptionMode = descriptionModeLabel || (useConciseDescriptions ? 'Concise descriptions' : 'Full descriptions');
+  $: resolvedDescription = (() => {
+    if (description && String(description).trim()) {
+      return String(description).trim();
+    }
+    if (useConciseDescriptions) {
+      return (conciseDescription && String(conciseDescription).trim()) || (fullDescription && String(fullDescription).trim()) || '';
+    }
+    return (fullDescription && String(fullDescription).trim()) || (conciseDescription && String(conciseDescription).trim()) || '';
+  })();
+  $: tooltipText = (() => {
+    const explicit = tooltip || entry?.tooltip;
+    if (explicit) {
+      return explicit;
+    }
+    if (!resolvedDescription) {
+      return '';
+    }
+    return descriptionMode ? `${resolvedDescription} — ${descriptionMode}` : resolvedDescription;
+  })();
+  $: descriptionModeToken = useConciseDescriptions ? 'concise' : 'full';
   const selectionAnimationVars = selectionAnimationCssVariables();
   const selectionAnimationStyle = Object.entries(selectionAnimationVars)
     .map(([key, value]) => `${key}: ${value}`)
@@ -46,12 +73,13 @@
 
 </script>
 
-{#if entry.tooltip || entry.about}
-  <Tooltip text={entry.tooltip || entry.about}>
+{#if tooltipText}
+  <Tooltip text={tooltipText}>
     <div
       class="card-shell"
       class:selected={selected}
       data-reduced-motion={reducedMotion ? 'true' : 'false'}
+      data-description-mode={descriptionModeToken}
       style={selectionAnimationStyle}
     >
       <button
@@ -65,7 +93,17 @@
         on:click={handleClick}
         on:keydown={onKey}
       >
-        <CardArt {entry} {type} {size} hideFallback={true} {quiet} {fluid} />
+        <CardArt
+          {entry}
+          {type}
+          {size}
+          hideFallback={true}
+          {quiet}
+          {fluid}
+          description={resolvedDescription}
+          fullDescription={fullDescription}
+          conciseDescription={conciseDescription}
+        />
       </button>
     </div>
   </Tooltip>
@@ -74,6 +112,7 @@
     class="card-shell"
     class:selected={selected}
     data-reduced-motion={reducedMotion ? 'true' : 'false'}
+    data-description-mode={descriptionModeToken}
     style={selectionAnimationStyle}
   >
     <button
@@ -87,7 +126,17 @@
       on:click={handleClick}
       on:keydown={onKey}
     >
-      <CardArt {entry} {type} {size} hideFallback={true} {quiet} {fluid} />
+      <CardArt
+        {entry}
+        {type}
+        {size}
+        hideFallback={true}
+        {quiet}
+        {fluid}
+        description={resolvedDescription}
+        fullDescription={fullDescription}
+        conciseDescription={conciseDescription}
+      />
     </button>
   </div>
 {/if}

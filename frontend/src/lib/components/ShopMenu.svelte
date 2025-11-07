@@ -18,6 +18,7 @@
 
   const dispatch = createEventDispatcher();
   $: conciseDescriptions = Boolean($uiStore?.conciseDescriptions);
+  $: descriptionModeLabel = conciseDescriptions ? 'Concise descriptions' : 'Full descriptions';
   const shopDiagnosticsEnabled =
     typeof import.meta !== 'undefined' && import.meta.env?.VITE_DEBUG_SHOP === 'true';
   const emitShopDiagnostic = (message, extra = {}) => {
@@ -348,6 +349,7 @@
         name: entry.name || m.name || entry.id,
         stars: entry.stars || m.stars || 1,
         about,
+        displayDescription: about,
         tooltip: tooltipSource || about,
         full_about: full,
         summarized_about: concise,
@@ -378,6 +380,7 @@
         stars: entry.stars || m.stars || 1,
         baseAbout,
         about,
+        displayDescription: about,
         tooltip: tooltip || about,
         full_about: full,
         summarized_about: concise,
@@ -615,13 +618,39 @@
       <div class="strip">
           {#each visibleItems as { item, pos } (item.key)}
             {@const isCard = item.type === 'card'}
+            {@const itemDescription = item.displayDescription ?? item.about ?? pickAbout(
+              item.full_about,
+              item.summarized_about,
+              item.tooltip || ''
+            )}
             <div class={`slot pos${pos} ${soldIds.has(item.ident) ? 'sold' : ''} ${selectedIds.has(item.ident) ? 'selected' : ''}`}
                  title={`${item.name} (${item.stars}★ ${isCard ? 'card' : 'relic'})`}
                  on:dblclick|stopPropagation={() => handleItemDoubleClick(item)}>
             {#if isCard}
-              <RewardCard entry={item} type="card" fluid={true} disabled={soldIds.has(item.ident)} />
+              <RewardCard
+                entry={item}
+                type="card"
+                fluid={true}
+                disabled={soldIds.has(item.ident)}
+                fullDescription={item.full_about}
+                conciseDescription={item.summarized_about}
+                description={itemDescription}
+                useConciseDescriptions={conciseDescriptions}
+                descriptionModeLabel={descriptionModeLabel}
+                tooltip={item.tooltip}
+              />
             {:else}
-              <CurioChoice entry={item} fluid={true} disabled={soldIds.has(item.ident)} />
+              <CurioChoice
+                entry={item}
+                fluid={true}
+                disabled={soldIds.has(item.ident)}
+                fullDescription={item.full_about}
+                conciseDescription={item.summarized_about}
+                description={itemDescription}
+                useConciseDescriptions={conciseDescriptions}
+                descriptionModeLabel={descriptionModeLabel}
+                tooltip={item.tooltip}
+              />
             {/if}
             <div class="slot-price">
               <Coins size={12} class="coin-icon" /> {pricingOf(item).taxed}

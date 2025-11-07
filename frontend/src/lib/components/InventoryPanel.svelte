@@ -4,7 +4,7 @@
   import { onMount } from 'svelte';
   import { getCardCatalog, getRelicCatalog, getGacha } from '../systems/api.js';
   import { stackItems, formatName } from '../systems/craftingUtils.js';
-  import { getDescription } from '../systems/descriptionUtils.js';
+  import { getDescription, getDescriptionPair } from '../systems/descriptionUtils.js';
   import { uiStore } from '../systems/settingsStorage.js';
   import { getMaterialIcon, getMaterialFallbackIcon, onMaterialIconError } from '../systems/assetLoader.js';
   export let cards = [];
@@ -100,8 +100,23 @@
       {#each sortedCardIds as id}
         {#key id}
           {@const _uiDep = $uiStore}
-          {@const cardAbout = getDescription(cardMeta[id])}
-          <CardArt entry={{ id, name: cardName(id), stars: cardStars(id), about: cardAbout }} type="card" />
+          {@const cardMetaEntry = cardMeta[id] || {}}
+          {@const cardPair = getDescriptionPair(cardMetaEntry)}
+          {@const cardDescription = getDescription(cardMetaEntry)}
+          <CardArt
+            entry={{
+              ...cardMetaEntry,
+              id,
+              name: cardName(id),
+              stars: cardStars(id),
+              full_about: cardMetaEntry.full_about ?? cardPair.fullDescription ?? '',
+              summarized_about: cardMetaEntry.summarized_about ?? cardPair.conciseDescription ?? ''
+            }}
+            type="card"
+            description={cardDescription}
+            fullDescription={cardPair.fullDescription}
+            conciseDescription={cardPair.conciseDescription}
+          />
         {/key}
       {/each}
     </div>
@@ -112,9 +127,24 @@
       {#each sortedRelicEntries as [id, qty]}
         {#key id}
           {@const _uiDep = $uiStore}
-          {@const relicAbout = getDescription(relicMeta[id])}
+          {@const relicMetaEntry = relicMeta[id] || {}}
+          {@const relicPair = getDescriptionPair(relicMetaEntry)}
+          {@const relicDescription = getDescription(relicMetaEntry)}
           <div class="relic-cell">
-            <CurioChoice entry={{ id, name: relicName(id), stars: relicStars(id), about: relicAbout }} />
+            <CurioChoice
+              entry={{
+                ...relicMetaEntry,
+                id,
+                name: relicName(id),
+                stars: relicStars(id),
+                full_about: relicMetaEntry.full_about ?? relicPair.fullDescription ?? '',
+                summarized_about: relicMetaEntry.summarized_about ?? relicPair.conciseDescription ?? ''
+              }}
+              description={relicDescription}
+              fullDescription={relicPair.fullDescription}
+              conciseDescription={relicPair.conciseDescription}
+              useConciseDescriptions={Boolean($uiStore?.conciseDescriptions)}
+            />
             <span class="qty">x{qty}</span>
           </div>
         {/key}

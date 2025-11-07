@@ -120,7 +120,8 @@ describe('RewardOverlay selection regression', () => {
           id: 'radiant-beam',
           name: 'Radiant Beam',
           stars: 4,
-          about: 'Deal extra damage to all foes.',
+          full_about: 'Deal extra damage to all foes.',
+          summarized_about: 'Extra damage to all foes.',
           preview: {
             summary: 'Deal extra damage to all foes.',
             stats: [
