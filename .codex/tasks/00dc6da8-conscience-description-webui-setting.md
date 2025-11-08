@@ -140,4 +140,63 @@ All core functionality has been implemented and tested:
 - UI components that display descriptions will automatically use the correct description format as long as they fetch data from the backend catalog/players APIs
 - When plugins are updated to include both `full_about` and `summarized_about` fields, no code changes will be needed - the system will automatically use the appropriate field based on the user's setting
 
-ready for review
+---
+
+## Audit Findings (2025-11-08)
+
+**Status: FAILED - Implementation mismatch with tests**
+
+### Issues Found
+
+1. **Backend Implementation Mismatch (CRITICAL)**
+   - The catalog and players routes send BOTH `full_about` and `summarized_about` fields to the frontend
+   - The frontend tests expect the backend to check `get_option(OptionKey.CONCISE_DESCRIPTIONS` and send only the appropriate field
+   - Current implementation: Frontend-side selection (client decides)
+   - Expected implementation: Backend-side selection (server decides based on setting)
+   - **Test failures:** 2/8 frontend tests failing (`Backend: Catalog routes check concise_descriptions setting`, `Backend: Players route checks concise_descriptions setting`)
+
+2. **Inconsistent Documentation**
+   - Task description line 116: "Logic: Prefers `summarized_about` when concise=true" - implies backend selection
+   - Implementation notes line 140: "UI components that display descriptions will automatically use the correct description format" - implies frontend selection
+   - These are contradictory architectural approaches
+
+### What Works
+
+- ✓ Backend option key added correctly (`CONCISE_DESCRIPTIONS`)
+- ✓ Backend routes for GET/POST `/config/concise_descriptions` work correctly (3/3 tests pass)
+- ✓ Frontend UI setting checkbox added correctly in `UISettings.svelte`
+- ✓ Frontend storage and uiStore implementation works (4/6 frontend infrastructure tests pass)
+- ✓ Frontend components properly use the setting (`InventoryPanel.svelte`, `RewardOverlay.svelte`, etc.)
+
+### Required Fixes
+
+The implementer must choose one architectural approach:
+
+**Option A: Backend Selection (matches tests)**
+- Modify `backend/routes/catalog.py` and `backend/routes/players.py` to:
+  - Check `get_option(OptionKey.CONCISE_DESCRIPTIONS, "false")`
+  - Send only `about` field with either `full_about` or `summarized_about` content based on setting
+  - Remove sending both fields separately
+- This matches the test expectations and original task description
+
+**Option B: Frontend Selection (current implementation)**
+- Update the frontend tests to match the current implementation
+- Remove the expectations for backend checking the setting
+- Acknowledge that both fields are sent and frontend chooses
+- This is what's currently implemented
+
+**Recommendation:** Choose Option A (Backend Selection) because:
+1. The tests were written to expect this approach
+2. The task description explicitly states "Updated `/catalog/cards` to check and respect the concise_descriptions setting"
+3. It's more efficient (less data sent over the wire)
+4. It centralizes the decision logic in one place
+
+### Verification Needed
+
+After fixes are applied:
+- [ ] Run `cd backend && uv run pytest tests/test_config_concise_descriptions.py -v` (should pass 3/3)
+- [ ] Run `cd frontend && bun test tests/concise-descriptions-setting.test.js` (should pass 8/8)
+- [ ] Manually test the UI toggle actually changes descriptions displayed
+- [ ] Run full linting: `uv tool run ruff check backend --fix`
+
+more work needed - Backend routes must check concise_descriptions setting instead of sending both fields
