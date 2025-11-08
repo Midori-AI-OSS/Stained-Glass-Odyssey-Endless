@@ -23,16 +23,18 @@ describe('Concise Descriptions Setting', () => {
     expect(content).toContain('async def update_concise_descriptions()');
   });
 
-  test('Backend: Catalog routes check concise_descriptions setting', () => {
+  test('Backend: Catalog routes send both description fields for client-side selection', () => {
     const content = readFileSync(catalogFile, 'utf8');
-    expect(content).toContain('concise = get_option(OptionKey.CONCISE_DESCRIPTIONS');
+    // Backend sends both fields to frontend for client-side switching
+    expect(content).toContain('Send both description fields to frontend for client-side switching');
     expect(content).toContain('summarized_about');
     expect(content).toContain('full_about');
   });
 
-  test('Backend: Players route checks concise_descriptions setting', () => {
+  test('Backend: Players route sends both description fields for client-side selection', () => {
     const content = readFileSync(playersFile, 'utf8');
-    expect(content).toContain('concise = get_option(OptionKey.CONCISE_DESCRIPTIONS');
+    // Backend sends both fields to frontend for client-side switching
+    expect(content).toContain('Send both description fields to frontend for client-side switching');
     expect(content).toContain('summarized_about');
     expect(content).toContain('full_about');
   });

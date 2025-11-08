@@ -144,3 +144,30 @@ See full audit report for complete analysis, testing checklist, and lessons lear
 ---
 
 _Audit completed by Auditor on 2025-11-02. Revised based on user feedback. Ready for coder assignment._
+
+---
+
+## Implementation Status (2025-11-08)
+
+**Status:** ✅ FIXED
+
+**Changes Made:**
+1. Updated `/home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/frontend/src/lib/components/BattleView.svelte`:
+   - Line 2431-2433: Changed `foe.passives` to `foe.active_effects` (2 locations)
+   - Line 2635-2636: Changed `summon.passives` to `summon.active_effects` (2 locations)
+   - Line 2701-2703: Changed `member.passives` to `member.active_effects` (2 locations)
+   - Updated comments to reflect "Active Effects (buffs/debuffs)" instead of "Passives"
+
+**Root Cause Confirmed:**
+- Backend sends `active_effects` array in serialization (confirmed in `backend/autofighter/rooms/utils.py`)
+- Frontend was incorrectly trying to read from `passives` property which doesn't exist in the serialized data
+- This caused buffs/debuffs from cards, relics, and other sources to not display in battle
+
+**Testing Needed:**
+- [ ] Start a battle and verify buff/debuff icons appear correctly
+- [ ] Test with various buff sources (cards, relics, character abilities)
+- [ ] Test with debuffs on enemies
+- [ ] Test with summoned units that have buffs
+- [ ] Verify tooltips show effect descriptions correctly
+
+ready for review
