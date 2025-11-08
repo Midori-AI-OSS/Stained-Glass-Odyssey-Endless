@@ -554,15 +554,15 @@
       case 'drops':
         return true;
       case 'cards':
-        if (!Array.isArray(cardChoices)) return false;
+        if (!Array.isArray(cardChoiceEntries)) return false;
         if (awaitingCard) return false;
-        if (Array.isArray(cardChoices) && cardChoices.length > 0) return false;
+        if (Array.isArray(cardChoiceEntries) && cardChoiceEntries.length > 0) return false;
         if (Array.isArray(stagedCardEntries) && stagedCardEntries.length > 0) return false;
         return true;
       case 'relics':
-        if (!Array.isArray(relicChoices)) return false;
+        if (!Array.isArray(relicChoiceEntries)) return false;
         if (awaitingRelic) return false;
-        if (Array.isArray(relicChoices) && relicChoices.length > 0) return false;
+        if (Array.isArray(relicChoiceEntries) && relicChoiceEntries.length > 0) return false;
         if (Array.isArray(stagedRelicEntries) && stagedRelicEntries.length > 0) return false;
         return true;
       default:
