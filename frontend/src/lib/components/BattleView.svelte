@@ -2428,9 +2428,9 @@
         >
           <!-- Buffs at the very top -->
           <div class="foe-buffs">
-            {#if foe.passives?.length || foe.dots?.length || foe.hots?.length}
-              <!-- Buff bar shows HoTs, DoTs, and Passives -->
-              <StatusIcons layout="bar" hots={(foe.hots || []).slice(0, 6)} dots={(foe.dots || []).slice(0, 6)} active_effects={(foe.passives || []).slice(0, 6)} />
+            {#if foe.active_effects?.length || foe.dots?.length || foe.hots?.length}
+              <!-- Buff bar shows HoTs, DoTs, and Active Effects (buffs/debuffs) -->
+              <StatusIcons layout="bar" hots={(foe.hots || []).slice(0, 6)} dots={(foe.dots || []).slice(0, 6)} active_effects={(foe.active_effects || []).slice(0, 6)} />
             {/if}
           </div>
           
@@ -2632,8 +2632,8 @@
 
                   <!-- Summon buffs under HP bar -->
                   <div class="summon-buffs">
-                    {#if summon.passives?.length || summon.dots?.length || summon.hots?.length}
-                      <StatusIcons layout="bar" hots={(summon.hots || []).slice(0, 6)} dots={(summon.dots || []).slice(0, 6)} active_effects={(summon.passives || []).slice(0, 6)} />
+                    {#if summon.active_effects?.length || summon.dots?.length || summon.hots?.length}
+                      <StatusIcons layout="bar" hots={(summon.hots || []).slice(0, 6)} dots={(summon.dots || []).slice(0, 6)} active_effects={(summon.active_effects || []).slice(0, 6)} />
                     {/if}
                   </div>
                 </div>
@@ -2698,9 +2698,9 @@
         
         <!-- Buffs under HP bar -->
         <div class="party-buffs">
-          {#if member.passives?.length || member.dots?.length || member.hots?.length}
-            <!-- Buff bar shows HoTs, DoTs, and Passives -->
-            <StatusIcons layout="bar" hots={(member.hots || []).slice(0, 6)} dots={(member.dots || []).slice(0, 6)} active_effects={(member.passives || []).slice(0, 6)} />
+          {#if member.active_effects?.length || member.dots?.length || member.hots?.length}
+            <!-- Buff bar shows HoTs, DoTs, and Active Effects (buffs/debuffs) -->
+            <StatusIcons layout="bar" hots={(member.hots || []).slice(0, 6)} dots={(member.dots || []).slice(0, 6)} active_effects={(member.active_effects || []).slice(0, 6)} />
           {/if}
         </div>
 
