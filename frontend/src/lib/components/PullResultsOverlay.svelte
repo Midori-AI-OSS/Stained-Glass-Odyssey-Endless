@@ -97,25 +97,45 @@
     }
   }
 
+  import { uiStore } from '../systems/settingsStorage.js';
+
   function close() {
     dispatch('close');
   }
+
+  $: conciseDescriptionsEnabled = Boolean($uiStore?.conciseDescriptions);
 </script>
 
 <div class="layout">
   {#if isBatch}
     <div class="stack" aria-hidden={stack.length === 0}>
       {#each stack as r (r._key)}
+        {@const description = r.displayDescription ?? r.about ?? r.summarized_about ?? r.full_about ?? ''}
         <div class="card" style={`--pos: ${r._stackIndex}`} out:send={{ key: r._key }}>
-          <CurioChoice entry={r} disabled={true} />
+          <CurioChoice
+            entry={r}
+            disabled={true}
+            fullDescription={r.full_about}
+            conciseDescription={r.summarized_about}
+            description={description}
+            useConciseDescriptions={conciseDescriptionsEnabled}
+          />
         </div>
       {/each}
     </div>
   {/if}
   <div class="choices">
     {#each visible as r (r._key)}
+      {@const description = r.displayDescription ?? r.about ?? r.summarized_about ?? r.full_about ?? ''}
       <div class="card" in:receive={{ key: r._key }}>
-        <CurioChoice entry={r} disabled={true} />
+        <CurioChoice
+          entry={r}
+          disabled={true}
+          fullDescription={r.full_about}
+          conciseDescription={r.summarized_about}
+          description={description}
+          useConciseDescriptions={conciseDescriptionsEnabled}
+        />
       </div>
     {/each}
   </div>

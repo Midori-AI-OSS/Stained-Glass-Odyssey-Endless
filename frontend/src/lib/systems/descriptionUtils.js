@@ -1,5 +1,26 @@
 import { getUISettings } from './settingsStorage.js';
 
+function coerceDescription(value) {
+  if (value == null) return '';
+  const normalized = String(value);
+  return normalized.trim();
+}
+
+export function getDescriptionPair(item) {
+  if (!item || typeof item !== 'object') {
+    return { fullDescription: '', conciseDescription: '' };
+  }
+
+  const fallback = coerceDescription(item.full_about ?? item.about ?? '');
+  const fullDescription = coerceDescription(item.full_about ?? fallback);
+  const conciseDescription = coerceDescription(item.summarized_about ?? '');
+
+  return {
+    fullDescription,
+    conciseDescription
+  };
+}
+
 /**
  * Get the appropriate description text based on user's concise description setting.
  * 
@@ -9,18 +30,15 @@ import { getUISettings } from './settingsStorage.js';
  * @returns {string} The appropriate description text
  */
 export function getDescription(item) {
-  if (!item) return '';
-  
+  const { fullDescription, conciseDescription } = getDescriptionPair(item);
   const uiSettings = getUISettings();
   const useConcise = uiSettings?.conciseDescriptions ?? false;
-  
-  // If concise mode is enabled, prefer summarized_about
+
   if (useConcise) {
-    return item.summarized_about || item.full_about || '';
+    return conciseDescription || fullDescription || '';
   }
-  
-  // Otherwise, prefer full_about
-  return item.full_about || item.summarized_about || '';
+
+  return fullDescription || conciseDescription || '';
 }
 
 /**

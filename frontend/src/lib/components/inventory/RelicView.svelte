@@ -4,6 +4,14 @@
   export let relics = [];
   export let select = () => {};
   export let selectedId = null;
+  export let useConciseDescriptions = false;
+
+  function resolveDescription(entry) {
+    if (!entry || typeof entry !== 'object') return '';
+    const full = typeof entry.full_about === 'string' ? entry.full_about : '';
+    const concise = typeof entry.summarized_about === 'string' ? entry.summarized_about : '';
+    return useConciseDescriptions ? (concise || full) : (full || concise);
+  }
 </script>
 
 <div class="relics-grid">
@@ -16,7 +24,13 @@
       aria-label={entry.name}
     >
       <div class="relic-wrap">
-        <CurioChoice entry={entry} />
+        <CurioChoice
+          entry={entry}
+          description={resolveDescription(entry)}
+          fullDescription={entry.full_about}
+          conciseDescription={entry.summarized_about}
+          useConciseDescriptions={useConciseDescriptions}
+        />
         {#if Number(qty) > 1}
           <span class="qty-badge">×{qty}</span>
         {/if}

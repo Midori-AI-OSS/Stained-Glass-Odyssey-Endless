@@ -1,5 +1,11 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { getDescription, getCardDescription, getRelicDescription, getPlayerDescription } from '../src/lib/systems/descriptionUtils.js';
+import {
+  getDescription,
+  getCardDescription,
+  getRelicDescription,
+  getPlayerDescription,
+  getDescriptionPair
+} from '../src/lib/systems/descriptionUtils.js';
 
 // Mock the settingsStorage module
 vi.mock('../src/lib/systems/settingsStorage.js', () => ({
@@ -11,6 +17,28 @@ import { getUISettings } from '../src/lib/systems/settingsStorage.js';
 describe('descriptionUtils', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  describe('getDescriptionPair', () => {
+    it('returns trimmed full and concise descriptions', () => {
+      const item = { full_about: ' Full text ', summarized_about: ' Short text ' };
+      expect(getDescriptionPair(item)).toEqual({
+        fullDescription: 'Full text',
+        conciseDescription: 'Short text'
+      });
+    });
+
+    it('falls back to about when full_about is missing', () => {
+      const item = { about: 'Legacy description' };
+      expect(getDescriptionPair(item)).toEqual({
+        fullDescription: 'Legacy description',
+        conciseDescription: ''
+      });
+    });
+
+    it('returns empty strings for null input', () => {
+      expect(getDescriptionPair(null)).toEqual({ fullDescription: '', conciseDescription: '' });
+    });
   });
 
   describe('getDescription', () => {

@@ -12,11 +12,15 @@ let fireEvent;
 let RewardOverlay;
 let updateRewardProgression;
 let resetRewardProgression;
+let settingsStorageModule;
+let uiStore;
 
 beforeAll(async () => {
   ({ cleanup, render, fireEvent } = await import('@testing-library/svelte'));
   RewardOverlay = (await import('../src/lib/components/RewardOverlay.svelte')).default;
   ({ updateRewardProgression, resetRewardProgression } = await import('../src/lib/systems/overlayState.js'));
+  settingsStorageModule = await import('../src/lib/systems/settingsStorage.js');
+  uiStore = settingsStorageModule.uiStore;
 });
 
 beforeEach(() => {
@@ -25,6 +29,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  uiStore?.set(null);
 });
 
 describe('RewardOverlay card phase interactions', () => {
@@ -72,6 +77,59 @@ describe('RewardOverlay card phase interactions', () => {
     expect(
       highlighted?.querySelector('button[aria-label="Select card First Card"]')
     ).not.toBeNull();
+  });
+
+  test('description toggle switches between full and concise text', async () => {
+    updateRewardProgression(afterDropsProgression());
+    uiStore.set({ conciseDescriptions: false });
+    if (typeof localStorage !== 'undefined') {
+      localStorage.clear();
+    }
+    const updateSpy = vi.spyOn(settingsStorageModule, 'updateUISettings');
+
+    const { container } = render(RewardOverlay, {
+      props: {
+        cards: [
+          {
+            id: 'full-card',
+            name: 'Full Card',
+            stars: 3,
+            full_about: 'Applies a powerful shield to allies.',
+            summarized_about: 'Grants a shield.'
+          }
+        ],
+        relics: [],
+        items: [],
+        gold: 0,
+        awaitingLoot: false,
+        awaitingCard: false,
+        awaitingRelic: false,
+        awaitingNext: false,
+        reducedMotion: true
+      }
+    });
+
+    await tick();
+    let aboutBox = container.querySelector('.about-box');
+    expect(aboutBox?.textContent).toContain('Applies a powerful shield to allies.');
+
+    const toggle = container.querySelector('.description-mode-toggle input[type="checkbox"]');
+    expect(toggle).not.toBeNull();
+    if (!toggle) {
+      updateSpy.mockRestore();
+      return;
+    }
+
+    await fireEvent.click(toggle);
+    await tick();
+
+    expect(updateSpy).toHaveBeenCalledWith({ conciseDescriptions: true });
+
+    await tick();
+    aboutBox = container.querySelector('.about-box');
+    expect(aboutBox?.textContent).toContain('Grants a shield.');
+
+    updateSpy.mockRestore();
   });
 
   test('keeps staged card in the main grid while awaiting confirmation', async () => {
