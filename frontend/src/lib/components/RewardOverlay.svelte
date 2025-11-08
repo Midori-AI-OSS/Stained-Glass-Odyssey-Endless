@@ -1419,7 +1419,8 @@
   }
 
   .phase-panel,
-  .advance-panel {
+  .advance-panel,
+  .description-mode-panel {
     background: var(--overlay-panel-bg);
     border-radius: 0;
     padding: clamp(0.75rem, 1.6vw, 1.3rem);
@@ -1593,8 +1594,12 @@
     box-shadow: none;
   }
 
+  .description-mode-panel {
+    margin-top: 0;
+    gap: 0.75rem;
+  }
+
   .description-mode-toggle {
-    margin-top: 1rem;
     display: flex;
     flex-direction: column;
     gap: 0.35rem;
@@ -1643,11 +1648,6 @@
 
   .description-mode-toggle .toggle-text {
     font-weight: 600;
-  }
-
-  .description-mode-toggle .toggle-note {
-    font-size: 0.75rem;
-    color: var(--overlay-text-muted);
   }
 
   @media (max-width: 1100px) {
@@ -2079,22 +2079,21 @@
         >
           Advance
         </button>
-        <div class="description-mode-toggle" data-mode={descriptionModeToken}>
-          <label class="toggle-shell" title={descriptionToggleTitle}>
-            <input
-              type="checkbox"
-              role="switch"
-              aria-label={descriptionToggleAriaLabel}
-              checked={conciseDescriptionsEnabled}
-              on:change={handleDescriptionToggleChange}
-            />
-            <span class="toggle-text">{descriptionModeLabel}</span>
-          </label>
-          <span class="toggle-note">
-            {conciseDescriptionsEnabled ? 'Summaries shown' : 'Full descriptions shown'}
-          </span>
-        </div>
       </div>
     {/if}
+    <div class="description-mode-panel" data-mode={descriptionModeToken}>
+      <div class="description-mode-toggle">
+        <label class="toggle-shell" title={descriptionToggleTitle}>
+          <input
+            type="checkbox"
+            role="switch"
+            aria-label={descriptionToggleAriaLabel}
+            checked={conciseDescriptionsEnabled}
+            on:change={handleDescriptionToggleChange}
+          />
+          <span class="toggle-text">{descriptionModeLabel}</span>
+        </label>
+      </div>
+    </div>
   </aside>
 </div>
