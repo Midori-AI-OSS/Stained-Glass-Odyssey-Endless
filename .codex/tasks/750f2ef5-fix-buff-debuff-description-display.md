@@ -170,4 +170,24 @@ _Audit completed by Auditor on 2025-11-02. Revised based on user feedback. Ready
 - [ ] Test with summoned units that have buffs
 - [ ] Verify tooltips show effect descriptions correctly
 
-ready for review
+## Auditor Notes (2025-11-08)
+
+**Code Review:** ✅ PASSED
+- All three prop mapping changes are present and correct (lines 2433, 2636, 2703)
+- Frontend now correctly reads `active_effects` from backend serialization
+- Changes follow existing code patterns and style
+
+**Testing Status:** ⚠️ INCOMPLETE
+- Manual testing checklist is not completed
+- Need to verify the fix works in actual gameplay
+- Should test with various buff/debuff sources as outlined
+
+**Recommendation:** Testing required before Task Master approval. The code changes are correct but need validation that they solve the reported bug.
+
+**Next Steps:**
+1. Run the game and complete the testing checklist
+2. Once all tests pass, mark tests as complete
+3. Update this note with test results
+4. Then mark for Task Master review
+
+more work needed - testing required (code changes are complete and correct)
