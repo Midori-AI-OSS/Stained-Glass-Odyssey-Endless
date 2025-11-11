@@ -71,14 +71,44 @@ class EventHorizon(RelicBase):
 
 ## Acceptance Criteria
 
-- [ ] Old `about` field removed
-- [ ] `full_about` field added with comprehensive description including:
+- [x] Old `about` field removed
+- [x] `full_about` field added with comprehensive description including:
   - 6% of current HP damage per stack (minimum 1)
   - 3% of Max HP self-drain per stack
   - Trigger: start of every ally turn
   - Target: every living foe
-- [ ] `summarized_about` field added with concise description (no numbers)
-- [ ] Both descriptions are accurate to the relic's actual mechanics
-- [ ] Stacking behavior is mentioned if applicable
-- [ ] Code follows existing style and conventions
-- [ ] Changes are tested (relic still loads and functions correctly)
+- [x] `summarized_about` field added with concise description (no numbers)
+- [x] Both descriptions are accurate to the relic's actual mechanics
+- [x] Stacking behavior is mentioned if applicable
+- [x] Code follows existing style and conventions
+- [x] Changes are tested (relic still loads and functions correctly)
+
+---
+
+## Implementation Summary
+
+**Implemented by:** Coder Mode Agent  
+**Date:** 2025-11-11
+
+### Changes Made
+- Updated `backend/plugins/relics/event_horizon.py` (lines 19-26)
+  - Removed old `about` field
+  - Added `full_about` field with complete mechanics description (preserves original content)
+  - Added `summarized_about` field: "Damages foes and drains acting ally each ally turn"
+
+### Verification Results
+- ✅ Linting: `ruff check` passes with no issues
+- ✅ All 9 existing tests pass:
+  - `test_event_horizon_basic_pulse`
+  - `test_event_horizon_multiple_stacks`
+  - `test_event_horizon_minimum_damage`
+  - `test_event_horizon_no_living_foes`
+  - `test_event_horizon_foe_turns_ignored`
+  - `test_event_horizon_extra_turns`
+  - `test_event_horizon_battle_end_cleanup`
+  - `test_event_horizon_ally_no_hp`
+  - `test_event_horizon_describe`
+- ✅ Relic loads and instantiates correctly
+- ✅ New fields properly formatted according to standards
+
+ready for review
