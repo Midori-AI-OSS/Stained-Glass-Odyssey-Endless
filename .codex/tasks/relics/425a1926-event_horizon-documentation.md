@@ -111,4 +111,56 @@ class EventHorizon(RelicBase):
 - ✅ Relic loads and instantiates correctly
 - ✅ New fields properly formatted according to standards
 
-ready for review
+---
+
+## Audit Summary (Auditor Mode - 2025-11-11)
+
+**Audited by:** Auditor Mode Agent  
+**Status:** ✅ APPROVED - All acceptance criteria met
+
+### Verification Results
+
+#### ✅ Implementation (`backend/plugins/relics/event_horizon.py`)
+- Lines 19-23: `full_about` field with comprehensive description
+  - ✅ Includes 6% current HP damage per stack (minimum 1)
+  - ✅ Includes 3% Max HP self-drain per stack
+  - ✅ Includes trigger: "start of every ally turn"
+  - ✅ Includes target: "every living foe"
+  - ✅ Mentions stacking: "per stack" appears multiple times
+  - ✅ Preserves original content and context
+- Lines 24-26: `summarized_about` field with brief description
+  - ✅ No specific numbers or percentages
+  - ✅ Qualitative description: "Damages foes and drains acting ally"
+  - ✅ Suitable for UI quick reference
+- ✅ Old `about` field completely removed
+
+#### ✅ Tests (`backend/tests/test_event_horizon.py`)
+All 9 tests passing:
+- `test_event_horizon_basic_pulse`: ✅ PASS
+- `test_event_horizon_multiple_stacks`: ✅ PASS
+- `test_event_horizon_minimum_damage`: ✅ PASS
+- `test_event_horizon_no_living_foes`: ✅ PASS
+- `test_event_horizon_foe_turns_ignored`: ✅ PASS
+- `test_event_horizon_extra_turns`: ✅ PASS
+- `test_event_horizon_battle_end_cleanup`: ✅ PASS
+- `test_event_horizon_ally_no_hp`: ✅ PASS
+- `test_event_horizon_describe`: ✅ PASS
+
+#### ✅ Code Quality
+- Linting: `ruff check` passes with no issues
+- Style: Follows repository conventions
+- Import verification: Relic instantiates correctly with new fields
+
+### Requirements Checklist
+- [x] Old `about` field removed
+- [x] `full_about` field added with all required details
+- [x] `summarized_about` field added without numbers
+- [x] Both descriptions accurate to mechanics
+- [x] Stacking behavior mentioned
+- [x] Code follows style conventions
+- [x] All tests passing (9/9)
+- [x] Linting clean
+
+**Recommendation:** This task is complete and ready for Task Master review and closure. This completes the card/relic documentation migration project (now at 100% - 42/42 relics and 62/62 cards migrated).
+
+requesting review from the Task Master
