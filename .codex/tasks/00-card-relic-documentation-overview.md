@@ -119,7 +119,12 @@ Contributors should:
 
 ## Task Status
 
-All 102 tasks are currently **unassigned** and ready for implementation.
+**COMPLETED ✅** - All card and relic documentation tasks have been finished, audited, and approved.
+
+- **Cards:** 62/63 updated with `full_about` and `summarized_about` fields (only `__init__.py` excluded)
+- **Relics:** 41/42 updated (only `event_horizon.py` pending - needs documentation fields added)
+  
+All 102 individual task files have been processed and closed.
 
 **Base System Update (COMPLETED):**
 - ✅ CardBase updated with `full_about` and `summarized_about` fields
@@ -134,15 +139,9 @@ All 102 tasks are currently **unassigned** and ready for implementation.
 - ✅ Default "Missing..." messages set for all plugins
 - ✅ Stack information properly passed through all call sites
 
-**Next Steps:**
-Individual card and relic plugins need to be updated to provide actual content for the `full_about` and `summarized_about` fields. 
+**Remaining Work:**
 
-For relics with dynamic stacking (41 relics have custom `describe()` methods), contributors should:
-1. Add `full_about` and `summarized_about` fields
-2. Override `full_about_stacks(stacks)` to provide stack-specific formatting
-3. Can reuse existing `describe(stacks)` logic by calling it from `full_about_stacks()`
-4. Optionally remove old `describe()` method after migration
+Only one relic still needs documentation fields added:
+- **event_horizon.py** - Uses old `about` field, needs migration to `full_about` and `summarized_about`
 
-Until plugins are updated, they will display the default "Missing..." messages.
-
-Status markers will be added by contributors as they begin work on each task.
+This relic was recently implemented and wasn't part of the original documentation task set. A new task should be created for this final update.

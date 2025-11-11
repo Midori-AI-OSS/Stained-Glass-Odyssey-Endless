@@ -1,8 +1,8 @@
-# Add Documentation Fields to Safeguard Prism Relic
+# Add Documentation Fields to Event Horizon Relic
 
 ## Objective
 
-Add `full_about` and `summarized_about` fields to the Safeguard Prism relic plugin to support enhanced documentation and future AI integration.
+Add `full_about` and `summarized_about` fields to the Event Horizon relic plugin to support enhanced documentation and future AI integration.
 
 ## Background
 
@@ -11,9 +11,11 @@ The game is adding structured documentation fields to all cards and relics to en
 - Future LLM-based features that need to understand relic mechanics
 - Consistent documentation patterns across all plugins
 
+The Event Horizon relic was recently implemented but still uses the old `about` field instead of the new standardized fields.
+
 ## Task Details
 
-**File to modify:** `backend/plugins/relics/safeguard_prism.py`
+**File to modify:** `backend/plugins/relics/event_horizon.py`
 
 **Changes required:**
 1. Remove the existing `about` field
@@ -24,9 +26,10 @@ The game is adding structured documentation fields to all cards and relics to en
 - The `full_about` should explain all mechanics, triggers, stacking behavior, and interactions in detail
 - The `summarized_about` should be suitable for quick reference in game UI
 - Keep descriptions clear, accurate, and consistent with the content from the old `about` field
-- Reference the current `about` field content and `describe()` method for accuracy
+- Reference the current `about` field content for accuracy
 - Note that relics can stack, so mention stacking behavior when relevant
 - Follow the style and tone of other relic descriptions in the game
+
 **Description Format Standards:**
 
 - **`summarized_about`**: Use qualitative descriptions WITHOUT specific numbers or percentages
@@ -43,13 +46,23 @@ The game is adding structured documentation fields to all cards and relics to en
   - Example: "+4% HP; if lethal damage would reduce you below 1 HP, reduce that damage by 10%"
   - Example: "After an Ultimate, grant a shield equal to 20% Max HP per stack"
 
+## Current About Field Content
+
+```python
+about: str = (
+    "Detonates a gravity pulse at the start of every ally turn. Each pulse rips "
+    "6% of current HP (minimum 1) from every living foe per stack, while draining "
+    "the acting ally for 3% of their Max HP per stack. An all-or-nothing tempo engine."
+)
+```
+
 ## Example Structure
 
 ```python
 @dataclass
-class SafeguardPrismRelic(RelicBase):
-    id: str = "safeguard_prism"
-    name: str = "Safeguard Prism"
+class EventHorizon(RelicBase):
+    id: str = "event_horizon"
+    name: str = "Event Horizon"
     # ... existing fields ...
     # about field removed - replaced with full_about and summarized_about
     full_about: str = "Detailed description explaining all mechanics, stacking..."
@@ -58,13 +71,14 @@ class SafeguardPrismRelic(RelicBase):
 
 ## Acceptance Criteria
 
-- [x] Old `about` field removed
-- [x] `full_about` field added with comprehensive description
-- [x] `summarized_about` field added with concise description
-- [x] Both descriptions are accurate to the relic's actual mechanics
-- [x] Stacking behavior is mentioned if applicable
-- [x] Code follows existing style and conventions
-- [x] Changes are tested (relic still loads and functions correctly)
-
-
-ready for review
+- [ ] Old `about` field removed
+- [ ] `full_about` field added with comprehensive description including:
+  - 6% of current HP damage per stack (minimum 1)
+  - 3% of Max HP self-drain per stack
+  - Trigger: start of every ally turn
+  - Target: every living foe
+- [ ] `summarized_about` field added with concise description (no numbers)
+- [ ] Both descriptions are accurate to the relic's actual mechanics
+- [ ] Stacking behavior is mentioned if applicable
+- [ ] Code follows existing style and conventions
+- [ ] Changes are tested (relic still loads and functions correctly)
