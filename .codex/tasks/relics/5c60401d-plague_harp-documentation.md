@@ -66,5 +66,37 @@ class PlagueHarpRelic(RelicBase):
 - [x] Code follows existing style and conventions
 - [x] Changes are tested (relic still loads and functions correctly)
 
+---
 
-ready for review
+## Audit Results (2025-11-11)
+
+**Auditor:** AI Agent (Auditor Mode)  
+**Status:** ✅ APPROVED
+
+### Verification Performed:
+
+1. ✅ **Code Review**: All acceptance criteria verified
+   - No `about` field present (correctly removed)
+   - `full_about` present: "When allies' DoTs tick, echo 40% of the damage to another foe per stack, and the caster loses 2% of their Max HP per stack."
+   - `summarized_about` present: "Echoes damage from DoTs to other foes but drains caster HP"
+   
+2. ✅ **Accuracy Check**: Verified descriptions match implementation
+   - Echo damage: 40% of DoT damage per stack (line 102: `amount * 0.4 * current_stacks`) ✓
+   - HP cost: 2% Max HP per stack (line 125: `max_hp * 0.02 * current_stacks`) ✓
+   - Trigger: When allies' DoTs tick via dot_tick event (line 151) ✓
+   - Target selection: Random alternative foe if available (lines 96-100) ✓
+   - Stacking: Both echo damage and HP cost scale per stack ✓
+   
+3. ✅ **Format Compliance**: Verified description format standards
+   - `summarized_about` has NO numbers/percentages (qualitative only) ✓
+   - `full_about` includes specific values (40% echo, 2% HP) ✓
+   - `full_about_stacks()` method provides stack-specific formatting via describe() ✓
+   
+4. ✅ **Code Style**: Ran `uv tool run ruff check` - All checks passed
+   
+5. ✅ **Functionality**: Relic loads successfully with proper DoT echo and HP cost mechanics
+
+### Recommendation:
+Implementation is complete and accurate. All acceptance criteria met.
+
+requesting review from the Task Master

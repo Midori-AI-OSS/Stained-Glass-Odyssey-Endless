@@ -66,4 +66,37 @@ class RustyBuckleRelic(RelicBase):
 - [x] Code follows existing style and conventions
 - [x] Changes are tested (relic still loads and functions correctly)
 
-ready for review
+---
+
+## Audit Results (2025-11-11)
+
+**Auditor:** AI Agent (Auditor Mode)  
+**Status:** ✅ APPROVED
+
+### Verification Performed:
+
+1. ✅ **Code Review**: All acceptance criteria verified
+   - No `about` field present (correctly removed)
+   - `full_about` present: "All allies bleed for 5% Max HP per relic stack at the start of every turn (ally or foe). Each time the party loses 5000% of their combined Max HP (plus 1000% per additional stack), unleash 5 Aftertaste hits (plus 3 per additional stack) at random foes. Aftertaste damage scales with total HP lost."
+   - `summarized_about` present: "Bleeds allies each turn; massive party hp loss triggers aftertaste volleys at enemies"
+   
+2. ✅ **Accuracy Check**: Verified descriptions match implementation
+   - Bleed: 5% Max HP per stack (line 116: `0.05 * current_stacks`) ✓
+   - Trigger frequency: Every turn (ally or foe) via turn_start (line 204) ✓
+   - Threshold: 5000% party Max HP (50x) + 1000% (10x) per additional stack (lines 210-218) ✓
+   - Aftertaste hits: 5 base + 3 per additional stack (line 165) ✓
+   - Damage scaling: Based on total HP lost (line 164: `party_max_hp * lost_pct * 0.005`) ✓
+   - Stacking: Bleed, hits, and threshold all scale correctly ✓
+   
+3. ✅ **Format Compliance**: Verified description format standards
+   - `summarized_about` has NO numbers/percentages (qualitative only) ✓
+   - `full_about` includes specific values (5% bleed, 5000%, 1000%, 5 hits, 3 hits) ✓
+   
+4. ✅ **Code Style**: Ran `uv tool run ruff check` - All checks passed
+   
+5. ✅ **Functionality**: Relic loads successfully with complex HP tracking and Aftertaste volley mechanics
+
+### Recommendation:
+Implementation is complete and accurate. All acceptance criteria met with sophisticated HP loss tracking.
+
+requesting review from the Task Master
