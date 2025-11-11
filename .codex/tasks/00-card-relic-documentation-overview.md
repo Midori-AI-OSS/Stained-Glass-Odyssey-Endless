@@ -122,9 +122,13 @@ Contributors should:
 **COMPLETED ✅** - All card and relic documentation tasks have been finished, audited, and approved.
 
 - **Cards:** 62/63 updated with `full_about` and `summarized_about` fields (only `__init__.py` excluded)
-- **Relics:** 41/42 updated (only `event_horizon.py` pending - needs documentation fields added)
+- **Relics:** 42/42 updated (100% complete)
   
-All 102 individual task files have been processed and closed.
+All 104 individual task files have been processed and closed.
+
+**Final Completions (2025-11-11):**
+- ✅ Eclipse Reactor - Implementation complete with tests (3/3 passing)
+- ✅ Event Horizon - Documentation fields migrated (9/9 tests passing)
 
 **Base System Update (COMPLETED):**
 - ✅ CardBase updated with `full_about` and `summarized_about` fields
@@ -139,9 +143,12 @@ All 102 individual task files have been processed and closed.
 - ✅ Default "Missing..." messages set for all plugins
 - ✅ Stack information properly passed through all call sites
 
-**Remaining Work:**
+**Final Status:**
 
-Only one relic still needs documentation fields added:
-- **event_horizon.py** - Uses old `about` field, needs migration to `full_about` and `summarized_about`
+✅ **100% Complete** - All cards and relics have been migrated to the new documentation system.
+- 62 cards with `full_about` and `summarized_about` fields
+- 42 relics with `full_about` and `summarized_about` fields
+- All implementations tested and verified
+- All task files closed
 
-This relic was recently implemented and wasn't part of the original documentation task set. A new task should be created for this final update.
+The card and relic documentation migration project is now complete.
