@@ -64,4 +64,36 @@ class IronResolveCard(CardBase):
 - [x] Code follows existing style and conventions
 - [x] Changes are tested (card still loads and functions correctly)
 
-ready for review
+## Audit Results (2025-11-11)
+
+**Auditor:** GitHub Copilot Coding Agent  
+**Status:** ✅ APPROVED
+
+### Verification Performed:
+1. ✅ **Code Review**: Verified all acceptance criteria met
+   - No `about` field present (correctly removed)
+   - `full_about` present: "+500% DEF & +500% HP; the first time an ally dies, revive them at 30% HP. This effect refreshes every 3 turns."
+   - `summarized_about` present: "Boosts def and hp; revives fallen allies with a cooldown"
+   
+2. ✅ **Accuracy Check**: Verified descriptions match implementation
+   - Stat boosts: `effects: dict[str, float] = field(default_factory=lambda: {"defense": 5, "max_hp": 5})` = 500% DEF & HP ✓
+   - Revive HP: `revive_hp = int(target.max_hp * 0.30)` = 30% max HP ✓
+   - Cooldown: `cooldowns[pid] = 3` = 3 turns ✓
+   - Cooldown decrement on `turn_end` verified ✓
+   
+3. ✅ **Format Compliance**: Verified description format standards
+   - `summarized_about` has NO numbers/percentages (qualitative only) ✓
+   - `full_about` includes specific values (+500%, 30% HP, 3 turns) ✓
+   
+4. ✅ **Code Style**: Ran `uv tool run ruff check` - All checks passed
+   
+5. ✅ **Functionality**: Card loads successfully and instantiates correctly
+
+### Notes:
+- Powerful revival mechanic well-implemented with per-member cooldown tracking
+- Clean event-driven logic with proper death detection (hp <= 0 check after damage)
+- No dedicated test file (acceptable for documentation-only task)
+- Excellent use of dictionary to track individual cooldowns per party member
+
+### Recommendation:
+Task is complete and meets all acceptance criteria. Requesting review from the Task Master.
