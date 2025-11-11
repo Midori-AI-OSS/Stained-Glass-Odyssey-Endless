@@ -16,10 +16,13 @@ class EventHorizon(RelicBase):
     name: str = "Event Horizon"
     stars: int = 5
     effects: dict[str, float] = field(default_factory=dict)
-    about: str = (
+    full_about: str = (
         "Detonates a gravity pulse at the start of every ally turn. Each pulse rips "
         "6% of current HP (minimum 1) from every living foe per stack, while draining "
         "the acting ally for 3% of their Max HP per stack. An all-or-nothing tempo engine."
+    )
+    summarized_about: str = (
+        "Damages foes and drains acting ally each ally turn"
     )
 
     async def apply(self, party) -> None:

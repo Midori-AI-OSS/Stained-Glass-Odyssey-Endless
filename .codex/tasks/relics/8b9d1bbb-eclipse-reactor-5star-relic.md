@@ -14,4 +14,55 @@ Our 5★ set covers high-risk ally sacrifice (Paradox Hourglass), attrition-focu
 - Include a thorough `about` string in the plugin summarising surge values, drain pacing, and stacking rules so the roster stays self-documented.
 - Record a placeholder art prompt for Eclipse Reactor in `luna_items_prompts.txt` under **Missing Relics Art**, noting the relic slug so the Lead Developer can hand-create the icon later without blocking this task.【F:luna_items_prompts.txt†L11-L27】
 - Capture balancing notes (HP drain math, buff multipliers) in `.codex/docs/relics/` for future tuning discussions.
-ready for review
+
+---
+
+## Audit Summary (Auditor Mode - 2025-11-11)
+
+**Audited by:** Auditor Mode Agent  
+**Status:** ✅ APPROVED - All acceptance criteria met
+
+### Verification Results
+
+#### ✅ Implementation (`backend/plugins/relics/eclipse_reactor.py`)
+- Lines 13-246: Complete implementation with proper state tracking
+- Lines 34-54: State management with `_eclipse_reactor_state` tracking surge turns, drain status
+- Lines 56-146: `battle_start` handler with non-lethal HP drain (clamped at 1 HP), stat buff application
+- Lines 147-209: `turn_start` handler managing surge countdown and post-surge drain
+- Lines 210-226: `battle_end` cleanup removing modifiers
+- Lines 231-241: `describe(stacks)` method documenting both phases
+- Lines 21-28: Modern `full_about` and `summarized_about` fields (updated from old `about` standard)
+
+#### ✅ Tests (`backend/tests/test_relic_effects_advanced.py`)
+All 3 Eclipse Reactor tests passing:
+- `test_eclipse_reactor_initial_drain_clamps_to_one_hp`: ✅ PASS - Verifies non-lethal drain
+- `test_eclipse_reactor_surge_duration_and_post_drain`: ✅ PASS - Verifies buff application, duration, and post-surge drain
+- `test_eclipse_reactor_cleans_up_on_battle_end`: ✅ PASS - Verifies cleanup on battle end
+
+#### ✅ Art Prompt (`luna_items_prompts.txt`)
+Placeholder art prompt recorded with relic slug `eclipse_reactor` and detailed visual description
+
+#### ✅ Balancing Documentation (`.codex/docs/relics/eclipse-reactor-surge-balancing.md`)
+Comprehensive balancing notes covering:
+- Key numbers (18% opening sacrifice, 3-turn surge, 2% aftermath bleed)
+- Stacking behavior (scales multipliers but not duration)
+- Telemetry hooks for battle log tracking
+
+#### ✅ Code Quality
+- Linting: `ruff check` passes with no issues
+- Style: Follows repository conventions with proper imports, dataclass structure, async/await patterns
+- Documentation: Inline docstrings and clear variable names
+
+### Requirements Checklist
+- [x] Implementation file created with state tracking
+- [x] `describe(stacks)` method documenting both phases
+- [x] Comprehensive tests (3 tests covering all scenarios)
+- [x] Modern documentation fields (`full_about`, `summarized_about`)
+- [x] Art prompt recorded in `luna_items_prompts.txt`
+- [x] Balancing notes captured in `.codex/docs/relics/`
+- [x] All tests passing
+- [x] Linting clean
+
+**Recommendation:** This task is complete and ready for Task Master review and closure.
+
+requesting review from the Task Master

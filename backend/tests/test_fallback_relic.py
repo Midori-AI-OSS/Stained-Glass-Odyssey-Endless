@@ -29,7 +29,7 @@ def test_fallback_essence_relic_properties():
     }
 
     assert relic.effects == expected_effects
-    assert "mystical essence" in relic.about.lower()
+    assert "mystical essence" in relic.full_about.lower()
 
 
 def test_fallback_relic_applies_correctly():

@@ -71,14 +71,96 @@ class EventHorizon(RelicBase):
 
 ## Acceptance Criteria
 
-- [ ] Old `about` field removed
-- [ ] `full_about` field added with comprehensive description including:
+- [x] Old `about` field removed
+- [x] `full_about` field added with comprehensive description including:
   - 6% of current HP damage per stack (minimum 1)
   - 3% of Max HP self-drain per stack
   - Trigger: start of every ally turn
   - Target: every living foe
-- [ ] `summarized_about` field added with concise description (no numbers)
-- [ ] Both descriptions are accurate to the relic's actual mechanics
-- [ ] Stacking behavior is mentioned if applicable
-- [ ] Code follows existing style and conventions
-- [ ] Changes are tested (relic still loads and functions correctly)
+- [x] `summarized_about` field added with concise description (no numbers)
+- [x] Both descriptions are accurate to the relic's actual mechanics
+- [x] Stacking behavior is mentioned if applicable
+- [x] Code follows existing style and conventions
+- [x] Changes are tested (relic still loads and functions correctly)
+
+---
+
+## Implementation Summary
+
+**Implemented by:** Coder Mode Agent  
+**Date:** 2025-11-11
+
+### Changes Made
+- Updated `backend/plugins/relics/event_horizon.py` (lines 19-26)
+  - Removed old `about` field
+  - Added `full_about` field with complete mechanics description (preserves original content)
+  - Added `summarized_about` field: "Damages foes and drains acting ally each ally turn"
+
+### Verification Results
+- ✅ Linting: `ruff check` passes with no issues
+- ✅ All 9 existing tests pass:
+  - `test_event_horizon_basic_pulse`
+  - `test_event_horizon_multiple_stacks`
+  - `test_event_horizon_minimum_damage`
+  - `test_event_horizon_no_living_foes`
+  - `test_event_horizon_foe_turns_ignored`
+  - `test_event_horizon_extra_turns`
+  - `test_event_horizon_battle_end_cleanup`
+  - `test_event_horizon_ally_no_hp`
+  - `test_event_horizon_describe`
+- ✅ Relic loads and instantiates correctly
+- ✅ New fields properly formatted according to standards
+
+---
+
+## Audit Summary (Auditor Mode - 2025-11-11)
+
+**Audited by:** Auditor Mode Agent  
+**Status:** ✅ APPROVED - All acceptance criteria met
+
+### Verification Results
+
+#### ✅ Implementation (`backend/plugins/relics/event_horizon.py`)
+- Lines 19-23: `full_about` field with comprehensive description
+  - ✅ Includes 6% current HP damage per stack (minimum 1)
+  - ✅ Includes 3% Max HP self-drain per stack
+  - ✅ Includes trigger: "start of every ally turn"
+  - ✅ Includes target: "every living foe"
+  - ✅ Mentions stacking: "per stack" appears multiple times
+  - ✅ Preserves original content and context
+- Lines 24-26: `summarized_about` field with brief description
+  - ✅ No specific numbers or percentages
+  - ✅ Qualitative description: "Damages foes and drains acting ally"
+  - ✅ Suitable for UI quick reference
+- ✅ Old `about` field completely removed
+
+#### ✅ Tests (`backend/tests/test_event_horizon.py`)
+All 9 tests passing:
+- `test_event_horizon_basic_pulse`: ✅ PASS
+- `test_event_horizon_multiple_stacks`: ✅ PASS
+- `test_event_horizon_minimum_damage`: ✅ PASS
+- `test_event_horizon_no_living_foes`: ✅ PASS
+- `test_event_horizon_foe_turns_ignored`: ✅ PASS
+- `test_event_horizon_extra_turns`: ✅ PASS
+- `test_event_horizon_battle_end_cleanup`: ✅ PASS
+- `test_event_horizon_ally_no_hp`: ✅ PASS
+- `test_event_horizon_describe`: ✅ PASS
+
+#### ✅ Code Quality
+- Linting: `ruff check` passes with no issues
+- Style: Follows repository conventions
+- Import verification: Relic instantiates correctly with new fields
+
+### Requirements Checklist
+- [x] Old `about` field removed
+- [x] `full_about` field added with all required details
+- [x] `summarized_about` field added without numbers
+- [x] Both descriptions accurate to mechanics
+- [x] Stacking behavior mentioned
+- [x] Code follows style conventions
+- [x] All tests passing (9/9)
+- [x] Linting clean
+
+**Recommendation:** This task is complete and ready for Task Master review and closure. This completes the card/relic documentation migration project (now at 100% - 42/42 relics and 62/62 cards migrated).
+
+requesting review from the Task Master
