@@ -43,6 +43,16 @@ class RelicBase:
     summarized_about: str = "Missing summarized relic description, please report this"
     preview_triggers: ClassVar[Sequence[RewardPreviewTrigger | dict[str, object]]] = ()
 
+    @property
+    def about(self) -> str:
+        """Backward compatibility property that forwards to full_about.
+
+        Deprecated: Use full_about or summarized_about directly instead.
+        This property exists to maintain compatibility with existing code
+        that accesses the old 'about' attribute.
+        """
+        return self.full_about
+
     async def apply(self, party: Party) -> None:
         from autofighter.stats import BUS  # Import here to avoid circular imports
 
