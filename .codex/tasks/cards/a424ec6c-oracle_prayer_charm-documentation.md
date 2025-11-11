@@ -71,4 +71,10 @@ class OraclePrayerCharmCard(CardBase):
 ✅ `full_about` includes all specific mechanics (+3% Effect Res, +3% Vitality, 45% HP threshold, 2-turn HoT)
 ✅ Descriptions accurately match code implementation
 
-ready for review
+## Re-Audit (2025-11-11)
+**Auditor:** AI Agent (Auditor Mode)  
+**Status:** ✅ APPROVED
+
+Previous audit confirmed complete. All criteria remain met.
+
+requesting review from the Task Master
