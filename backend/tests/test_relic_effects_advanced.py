@@ -410,7 +410,7 @@ def test_greed_engine_text_updates():
     relic = GreedEngine()
 
     assert (
-        relic.about
+        relic.full_about
         == "Party loses 1% HP on every combat action but gains 50% more gold "
         "and increases rare drop rate by 0.5%. Stacks multiply benefits and costs."
     )
