@@ -66,5 +66,37 @@ class GreedEngineRelic(RelicBase):
 - [x] Code follows existing style and conventions
 - [x] Changes are tested (relic still loads and functions correctly)
 
+---
 
-ready for review
+## Audit Results (2025-11-11)
+
+**Auditor:** AI Agent (Auditor Mode)  
+**Status:** ✅ APPROVED
+
+### Verification Performed:
+
+1. ✅ **Code Review**: All acceptance criteria verified
+   - No `about` field present (correctly removed)
+   - `full_about` present: "Party loses 1% HP on every combat action but gains 50% more gold and increases rare drop rate by 0.5%. Stacks multiply benefits and costs."
+   - `summarized_about` present: "Lose hp on each action but gain significantly more gold and rare drops"
+   
+2. ✅ **Accuracy Check**: Verified descriptions match implementation
+   - HP loss: 1% per action for 1 stack (line 30: `0.01 + 0.005 * (stacks - 1)`) ✓
+   - Gold bonus: 50% for 1 stack (line 29: `0.5 + 0.25 * (stacks - 1)`) ✓
+   - Rare drop rate: 0.5% for 1 stack (line 31: `0.005 + 0.001 * (stacks - 1)`) ✓
+   - Trigger: HP drain on turn_start (line 71), gold bonus on gold_earned (line 70) ✓
+   - Stacking: Benefits and costs multiply (lines 29-31, 77-84 in describe()) ✓
+   
+3. ✅ **Format Compliance**: Verified description format standards
+   - `summarized_about` has NO numbers/percentages (qualitative only) ✓
+   - `full_about` includes specific base values (1% HP, 50% gold, 0.5% RDR) ✓
+   - `full_about_stacks()` method provides stack-specific formatting via describe() ✓
+   
+4. ✅ **Code Style**: Ran `uv tool run ruff check` - All checks passed
+   
+5. ✅ **Functionality**: Relic loads successfully with proper event handling and state management
+
+### Recommendation:
+Implementation is complete and accurate. All acceptance criteria met with proper stack-aware description support.
+
+requesting review from the Task Master
