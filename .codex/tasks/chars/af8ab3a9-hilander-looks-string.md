@@ -1,5 +1,7 @@
 # Add Looks String to Hilander Character
 
+⚠️ **DO NOT WORK ON THIS TASK** - Awaiting character description from user.
+
 ## Description
 Add a `looks` field to the Hilander character class (`backend/plugins/characters/hilander.py`) following the format used in Luna, Ryne, Lady Light, and Lady Darkness.
 

@@ -15,6 +15,7 @@ See these files for the expected format:
 
 ## Appearance Description
 **Character Details:**
+- **Gender:** Male
 - **Race:** Human
 - **Apparent Age:** Mid-20s (approximately 25)
 - **Hair:** Red
