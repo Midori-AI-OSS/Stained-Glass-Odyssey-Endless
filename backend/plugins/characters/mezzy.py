@@ -13,7 +13,8 @@ from plugins.damage_types._base import DamageTypeBase
 class Mezzy(PlayerBase):
     id = "mezzy"
     name = "Mezzy"
-    about = "A voracious defender whose gluttonous bulwark represents the ultimate expression of 'what doesn't kill you makes you stronger.' Mezzy literally devours enemy attacks, her unique physiology converting incoming damage into raw power that fuels her own abilities. The more her opponents throw at her, the stronger she becomes—creating a terrifying feedback loop where every assault just makes her hungrier for more. Her combat style revolves around tanking massive amounts of damage while growing exponentially more dangerous, turning what should be weakening blows into a feast that only strengthens her resolve and fighting capability."
+    full_about = "A voracious defender whose gluttonous bulwark represents the ultimate expression of 'what doesn't kill you makes you stronger.' Mezzy literally devours enemy attacks, her unique physiology converting incoming damage into raw power that fuels her own abilities. The more her opponents throw at her, the stronger she becomes—creating a terrifying feedback loop where every assault just makes her hungrier for more. Her combat style revolves around tanking massive amounts of damage while growing exponentially more dangerous, turning what should be weakening blows into a feast that only strengthens her resolve and fighting capability."
+    summarized_about = "A voracious defender who devours enemy attacks and converts them into power, growing stronger with every blow."
     char_type: CharacterType = CharacterType.B
     gacha_rarity = 5
     damage_type: DamageTypeBase = field(

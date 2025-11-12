@@ -12,7 +12,7 @@ from plugins.damage_types._base import DamageTypeBase
 class LadyStorm(PlayerBase):
     id = "lady_storm"
     name = "LadyStorm"
-    about = (
+    full_about = (
         "Lady Storm is a 6★ aasimar tempest caller whose light green-and-yellow hair flickers"
         " like bottled lightning. She keeps a cluttered war room and laughs through the chaos,"
         " riding manic focus to bend slipstreams into battering rams. Villages still whisper"
@@ -20,6 +20,7 @@ class LadyStorm(PlayerBase):
         " chain lightning—one moment she is a gentle tailwind, the next a cataclysmic derecho"
         " that scours the map clean."
     )
+    summarized_about = "An aasimar tempest caller who bends storms into weapons, capable of gentle tailwinds or catastrophic derechos."
     char_type: CharacterType = CharacterType.B
     gacha_rarity = 6
     damage_type: DamageTypeBase = field(

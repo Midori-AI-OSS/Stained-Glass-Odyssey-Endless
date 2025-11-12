@@ -11,7 +11,7 @@ from plugins.damage_types.lightning import Lightning
 class LadyLightning(PlayerBase):
     id = "lady_lightning"
     name = "LadyLightning"
-    about = (
+    full_about = (
         "An aasimar who answers to Electra—the storm-tossed twin of Lady Wind. "
         "Though she looks about thirty, her sunburst hair is permanently "
         "overcharged and her bright yellow eyes never stop darting. Electra broke "
@@ -24,6 +24,7 @@ class LadyLightning(PlayerBase):
         "people who believe her, channeling lightning like a prophet who cannot "
         "tell divine guidance from delusion."
     )
+    summarized_about = "Lady Wind's storm-tossed twin who escaped a lab and now channels lightning with manic intensity, unable to distinguish guidance from delusion."
     char_type: CharacterType = CharacterType.B
     gacha_rarity = 5
     damage_type: DamageTypeBase = field(default_factory=Lightning)

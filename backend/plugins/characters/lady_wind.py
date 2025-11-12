@@ -11,7 +11,7 @@ from plugins.damage_types.wind import Wind
 class LadyWind(PlayerBase):
     id = "lady_wind"
     name = "LadyWind"
-    about = (
+    full_about = (
         "Persona Wind - Lady Wind is the twin sister of Lady Lightning, a"
         " female Aasimar whose ageless features hover somewhere between twenty"
         " and thirty-two. She lives in a perpetually messy aeromancy studio"
@@ -30,6 +30,7 @@ class LadyWind(PlayerBase):
         " wind wards, calming Lady Lightning's tempests, and whispering flight"
         " equations to anyone brave enough to listen."
     )
+    summarized_about = "Lady Lightning's twin sister, an Aasimar aeromancer cloaked in bleeding winds who guards allies with precision despite her chaotic experiments."
     char_type: CharacterType = CharacterType.B
     gacha_rarity = 5
     damage_type: DamageTypeBase = field(default_factory=Wind)
