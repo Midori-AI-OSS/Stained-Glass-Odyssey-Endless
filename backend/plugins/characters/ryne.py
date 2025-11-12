@@ -11,7 +11,7 @@ from plugins.damage_types._base import DamageTypeBase
 class Ryne(PlayerBase):
     id = "ryne"
     name = "Ryne"
-    about = (
+    full_about = (
         "Ryne Waters is a 6★ Oracle of Light who chose her own name and future after escaping"
         " Eulmore. She now leads restoration missions across the Empty with calm resolve,"
         " balancing empathy with a scout's edge learned alongside her mentor Thancred."
@@ -20,6 +20,7 @@ class Ryne(PlayerBase):
         " protect. In battle she channels light through twin blades or a borrowed gunblade,"
         " moving with agile precision to cleanse aetheric storms and shield her friends."
     )
+    summarized_about = "An Oracle of Light who leads restoration missions with calm resolve, channeling light through twin blades with agile precision."
     looks = """
     Ryne (Oracle of Light)
     SUBJECT — FACE & HEAD

@@ -11,7 +11,7 @@ from plugins.damage_types.ice import Ice
 class PersonaIce(PlayerBase):
     id = "persona_ice"
     name = "PersonaIce"
-    about = (
+    full_about = (
         "A disciplined cryokinetic tank who keeps his real name hidden behind the Persona"
         "Ice moniker. He is most comfortable blanketing a battlefield in calming frost, "
         "projecting the chill aura that never leaves his ice-blue hair. PersonaIce fights "
@@ -20,6 +20,7 @@ class PersonaIce(PlayerBase):
         "his twentieth winter, the human wanderer has mastered a meditative cycle of ice "
         "that hardens against enemy blows and then thaws into healing for the party."
     )
+    summarized_about = "A disciplined cryokinetic tank who shields his sisters with protective frost that hardens against blows and heals allies."
     char_type: CharacterType = CharacterType.A
     gacha_rarity = 5
     damage_type: DamageTypeBase = field(default_factory=Ice)
