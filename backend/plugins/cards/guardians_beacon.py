@@ -16,7 +16,13 @@ class GuardiansBeacon(CardBase):
     name: str = "Guardian's Beacon"
     stars: int = 2
     effects: dict[str, float] = field(default_factory=lambda: {"defense": 0.55})
-    about: str = "+55% DEF; at turn end, heal lowest-HP ally for 8% Max HP (+ 10% mitigation for 1 turn if Light)"
+    full_about: str = (
+        "+55% DEF; at turn end, heal lowest-HP ally for 8% Max HP. "
+        "If the healed ally is Light type, also grant them +10% mitigation for 1 turn."
+    )
+    summarized_about: str = (
+        "Boosts def; heals lowest-HP ally at turn end with bonus mitigation for Light allies"
+    )
 
     async def apply(self, party) -> None:  # type: ignore[override]
         await super().apply(party)

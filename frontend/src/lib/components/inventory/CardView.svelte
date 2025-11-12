@@ -4,6 +4,14 @@
   export let cards = [];
   export let select = () => {};
   export let selectedId = null;
+  export let useConciseDescriptions = false;
+
+  function resolveDescription(entry) {
+    if (!entry || typeof entry !== 'object') return '';
+    const full = typeof entry.full_about === 'string' ? entry.full_about : '';
+    const concise = typeof entry.summarized_about === 'string' ? entry.summarized_about : '';
+    return useConciseDescriptions ? (concise || full) : (full || concise);
+  }
 </script>
 
 <div class="cards-grid">
@@ -15,7 +23,13 @@
       on:click={() => select(entry.id, 'card', 1)}
       aria-label={entry.name}
     >
-      <CardArt {entry} type="card" />
+      <CardArt
+        {entry}
+        type="card"
+        description={resolveDescription(entry)}
+        fullDescription={entry.full_about}
+        conciseDescription={entry.summarized_about}
+      />
     </button>
   {/each}
 </div>

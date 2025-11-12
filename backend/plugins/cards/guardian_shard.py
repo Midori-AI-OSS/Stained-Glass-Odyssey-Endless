@@ -12,7 +12,12 @@ class GuardianShard(CardBase):
     name: str = "Guardian Shard"
     stars: int = 1
     effects: dict[str, float] = field(default_factory=lambda: {"defense": 0.02, "mitigation": 0.02})
-    about: str = "+2% DEF & +2% Mitigation; At battle end, if no allies died, grant +1 small mitigation for the next battle"
+    full_about: str = (
+        "+2% DEF & +2% Mitigation; at battle end, if no allies died, grant +1 mitigation for the next battle"
+    )
+    summarized_about: str = (
+        "Boosts defense and mitigation; flawless victories add mitigation in the next fight"
+    )
 
     async def apply(self, party) -> None:  # type: ignore[override]
         await super().apply(party)

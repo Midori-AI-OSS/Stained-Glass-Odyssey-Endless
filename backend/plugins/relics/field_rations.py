@@ -16,7 +16,8 @@ class FieldRations(RelicBase):
     name: str = "Field Rations"
     stars: int = 1
     effects: dict[str, float] = field(default_factory=dict)
-    about: str = "After each battle, heal 2% Max HP per stack and grant +1 ultimate charge per stack to all allies"
+    full_about: str = "After each battle, heal 2% Max HP per stack and grant +1 ultimate charge per stack to all allies"
+    summarized_about: str = "Heals and grants ultimate charge to all allies after each battle"
 
     async def apply(self, party) -> None:
         await super().apply(party)

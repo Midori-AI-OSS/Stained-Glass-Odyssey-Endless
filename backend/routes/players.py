@@ -173,6 +173,7 @@ async def get_players() -> tuple[str, int, dict[str, str]]:
     export_names = getattr(
         player_plugins, "_PLAYABLE_EXPORTS", tuple(player_plugins.__all__)
     )
+
     for name in export_names:
         cls = getattr(player_plugins, name, None)
         if cls is None:
@@ -184,10 +185,10 @@ async def get_players() -> tuple[str, int, dict[str, str]]:
         await asyncio.to_thread(_apply_character_customization, inst, inst.id)
         await asyncio.to_thread(_apply_player_upgrades, inst)
         stats = _serialize_stats(inst)
-        # Prefer instance about; if it's the PlayerBase placeholder, fall back to class attribute
-        inst_about = getattr(inst, "about", "") or ""
-        if inst_about == "Player description placeholder":
-            inst_about = getattr(type(inst), "about", inst_about)
+
+        # Send both description fields to frontend for client-side switching
+        full_about_text = getattr(inst, "full_about", "")
+        summarized_about_text = getattr(inst, "summarized_about", "")
 
         if inst.id in roster:
             continue
@@ -195,7 +196,8 @@ async def get_players() -> tuple[str, int, dict[str, str]]:
         roster[inst.id] = {
             "id": inst.id,
             "name": inst.name,
-            "about": inst_about,
+            "full_about": full_about_text,
+            "summarized_about": summarized_about_text,
             "owned": inst.id in owned,
             "is_player": inst.id == "player",
             "element": inst.element_id,

@@ -38,9 +38,14 @@ class CataclysmEngine(RelicBase):
     name: str = "Cataclysm Engine"
     stars: int = 5
     effects: dict[str, float] = field(default_factory=dict)
-    about: str = (
-        "Detonates at battle start, supercharging allies while shredding the arena. "
-        "Each turn bleeds party HP to fuel escalating mitigation pulses."
+    full_about: str = (
+        "Detonates at battle start, sacrificing 15% of all combatants' HP while "
+        "boosting ally core stats by 250% and ramping 5% HP drains each turn "
+        "with escalating mitigation pulses."
+    )
+    summarized_about: str = (
+        "Trades HP for overwhelming tempo; detonates at battle start to supercharge allies "
+        "while bleeding HP each turn for escalating mitigation"
     )
 
     async def apply(self, party) -> None:
@@ -255,6 +260,10 @@ class CataclysmEngine(RelicBase):
         self.subscribe(party, "battle_start", _battle_start)
         self.subscribe(party, "turn_start", _turn_start)
         self.subscribe(party, "battle_end", _battle_end)
+
+    def full_about_stacks(self, stacks: int) -> str:
+        """Provide stack-aware description by reusing existing describe logic."""
+        return self.describe(stacks)
 
     def describe(self, stacks: int) -> str:
         blast = 15 + 5 * (stacks - 1)

@@ -17,11 +17,12 @@ class BloodDebtTithe(RelicBase):
     name: str = "Blood Debt Tithe"
     stars: int = 4
     effects: dict[str, float] = field(default_factory=dict)
-    about: str = (
+    full_about: str = (
         "Every defeated foe increases the party's rare drop rate for the rest of the run. "
         "Future encounters begin with foes empowered proportionally to the number of "
         "sacrifices already collected (+3% ATK and +2% SPD per stored defeat per stack)."
     )
+    summarized_about: str = "Defeated foes grant rare drop rate; future foes are empowered based on defeats"
 
     async def apply(self, party) -> None:
         """Set up defeat tracking and foe buffing."""
@@ -193,6 +194,10 @@ class BloodDebtTithe(RelicBase):
         self.subscribe(party, "battle_start", _on_battle_start)
         self.subscribe(party, "battle_end", _on_battle_end)
         self.subscribe(party, "battle_end", _cleanup)
+
+    def full_about_stacks(self, stacks: int) -> str:
+        """Provide stack-aware description."""
+        return self.describe(stacks)
 
     def describe(self, stacks: int) -> str:
         """Return a stack-aware description."""

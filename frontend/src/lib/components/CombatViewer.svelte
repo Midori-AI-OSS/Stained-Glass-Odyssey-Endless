@@ -7,6 +7,8 @@
   import { createEventDispatcher, onMount } from 'svelte';
   import MenuPanel from './MenuPanel.svelte';
   import { getCatalogData } from '../systems/uiApi.js';
+  import { getDescription } from '../systems/descriptionUtils.js';
+  import { uiStore } from '../systems/settingsStorage.js';
   import { getElementColor, getCharacterImage } from '../systems/assetLoader.js';
   import PlayerPreview from './PlayerPreview.svelte';
   import { Circle } from 'lucide-svelte';
@@ -62,6 +64,12 @@
     selectedCharacterId = allCharacters[0].id;
   }
 
+  // Reactive status effects that recompute when uiStore, selectedCharacter, activeTab, or catalogData changes
+  $: currentStatusEffects = (() => {
+    const _uiDep = $uiStore; // dependency on UI settings
+    return getStatusEffects(selectedCharacter, activeTab);
+  })();
+
   // Status effect tabs
   const tabs = [
     { id: 'dots', label: 'DoTs' },
@@ -87,7 +95,7 @@
           const catalogItem = getCatalogItem('dots', dot.id);
           return {
             ...dot,
-            about: catalogItem?.about || `Deals ${dot.damage} damage per turn for ${dot.turns} turns`,
+            about: catalogItem ? getDescription(catalogItem) : `Deals ${dot.damage} damage per turn for ${dot.turns} turns`,
             source: 'dot'
           };
         });
@@ -96,7 +104,7 @@
           const catalogItem = getCatalogItem('hots', hot.id);
           return {
             ...hot,
-            about: catalogItem?.about || `Heals ${hot.healing} HP per turn for ${hot.turns} turns`,
+            about: catalogItem ? getDescription(catalogItem) : `Heals ${hot.healing} HP per turn for ${hot.turns} turns`,
             source: 'hot'
           };
         });
@@ -167,7 +175,7 @@
               name: catalogItem?.name || relicId,
               id: relicId,
               duration: 'Permanent',
-              about: catalogItem?.about || 'Relic effect active',
+              about: catalogItem ? getDescription(catalogItem) : 'Relic effect active',
               source: 'relic',
               stars: catalogItem?.stars || 1
             };
@@ -183,7 +191,7 @@
               name: catalogItem?.name || cardId,
               id: cardId,
               duration: 'Permanent',
-              about: catalogItem?.about || 'Card effect active',
+              about: catalogItem ? getDescription(catalogItem) : 'Card effect active',
               source: 'card',
               stars: catalogItem?.stars || 1
             };
@@ -476,7 +484,7 @@
 
         <div class="tab-content">
           {#if selectedCharacter}
-            {#each getStatusEffects(selectedCharacter, activeTab) as effect}
+            {#each currentStatusEffects as effect}
               <div class="effect-item">
                 <div class="effect-header">
                   <div class="effect-name">

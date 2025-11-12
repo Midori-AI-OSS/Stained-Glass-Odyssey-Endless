@@ -13,6 +13,12 @@
   export let selected = false;
   export let reducedMotion = false;
   export let disabled = false;
+  export let fullDescription = '';
+  export let conciseDescription = '';
+  export let description = '';
+  export let tooltip = '';
+  export let useConciseDescriptions = false;
+  export let descriptionModeLabel = '';
 
   const dispatch = createEventDispatcher();
 
@@ -31,6 +37,27 @@
 
   $: tabIndex = disabled ? -1 : 0;
   $: ariaDisabled = disabled ? 'true' : 'false';
+  $: descriptionMode = descriptionModeLabel || (useConciseDescriptions ? 'Concise descriptions' : 'Full descriptions');
+  $: resolvedDescription = (() => {
+    if (description && String(description).trim()) {
+      return String(description).trim();
+    }
+    if (useConciseDescriptions) {
+      return (conciseDescription && String(conciseDescription).trim()) || (fullDescription && String(fullDescription).trim()) || '';
+    }
+    return (fullDescription && String(fullDescription).trim()) || (conciseDescription && String(conciseDescription).trim()) || '';
+  })();
+  $: tooltipText = (() => {
+    const explicit = tooltip || entry?.tooltip;
+    if (explicit) {
+      return explicit;
+    }
+    if (!resolvedDescription) {
+      return '';
+    }
+    return descriptionMode ? `${resolvedDescription} — ${descriptionMode}` : resolvedDescription;
+  })();
+  $: descriptionModeToken = useConciseDescriptions ? 'concise' : 'full';
   $: onKey = (e) => {
     if (disabled) return;
     if (e.key === 'Enter' || e.key === ' ') {
@@ -40,12 +67,13 @@
   };
 </script>
 
-{#if !compact && (entry.tooltip || entry.about)}
-  <Tooltip text={entry.tooltip || entry.about}>
+{#if !compact && tooltipText}
+  <Tooltip text={tooltipText}>
     <div
       class="curio-shell"
       class:selected={selected}
       data-reduced-motion={reducedMotion ? 'true' : 'false'}
+      data-description-mode={descriptionModeToken}
       style={selectionAnimationStyle}
     >
       <button
@@ -66,6 +94,9 @@
           {quiet}
           {compact}
           {fluid}
+          description={resolvedDescription}
+          fullDescription={fullDescription}
+          conciseDescription={conciseDescription}
         />
       </button>
     </div>
@@ -75,6 +106,7 @@
     class="curio-shell"
     class:selected={selected}
     data-reduced-motion={reducedMotion ? 'true' : 'false'}
+    data-description-mode={descriptionModeToken}
     style={selectionAnimationStyle}
   >
     <button
@@ -87,7 +119,18 @@
       on:click={handleClick}
       on:keydown={onKey}
     >
-      <CardArt {entry} type="relic" roundIcon={true} {size} {quiet} {compact} {fluid} />
+      <CardArt
+        {entry}
+        type="relic"
+        roundIcon={true}
+        {size}
+        {quiet}
+        {compact}
+        {fluid}
+        description={resolvedDescription}
+        fullDescription={fullDescription}
+        conciseDescription={conciseDescription}
+      />
     </button>
   </div>
 {/if}

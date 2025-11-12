@@ -15,7 +15,14 @@ class PocketManual(RelicBase):
     name: str = "Pocket Manual"
     stars: int = 1
     effects: dict[str, float] = field(default_factory=lambda: {"atk": 0.03})
-    about: str = "+3% damage; every 10th hit triggers an additional Aftertaste hit dealing +3% of the original damage."
+    full_about: str = (
+        "+3% ATK per stack (multiplicative stacking); every 10th hit landed by party members "
+        "triggers additional Aftertaste hits, each dealing +3% of the original damage per stack. "
+        "Multiple stacks trigger multiple Aftertaste hits on the 10th hit."
+    )
+    summarized_about: str = (
+        "Boosts atk; every 10th hit triggers bonus Aftertaste damage"
+    )
 
     async def apply(self, party) -> None:
         await super().apply(party)
@@ -44,6 +51,10 @@ class PocketManual(RelicBase):
                     safe_async_task(effect.apply(attacker, target))
 
         self.subscribe(party, "hit_landed", _hit)
+
+    def full_about_stacks(self, stacks: int) -> str:
+        """Provide stack-aware description by reusing existing describe logic."""
+        return self.describe(stacks)
 
     def describe(self, stacks: int) -> str:
         if stacks == 1:

@@ -15,7 +15,8 @@ class HonedPoint(CardBase):
     name: str = "Honed Point"
     stars: int = 1
     effects: dict[str, float] = field(default_factory=lambda: {"atk": 0.04})
-    about: str = "+4% ATK; First attack vs an unmarked enemy deals +10% bonus damage"
+    full_about: str = "+4% ATK; First attack vs an unmarked enemy deals +10% bonus damage"
+    summarized_about: str = "Boosts atk; first hit on each enemy deals bonus damage"
 
     async def apply(self, party) -> None:  # type: ignore[override]
         await super().apply(party)

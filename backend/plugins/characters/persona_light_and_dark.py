@@ -12,12 +12,13 @@ from plugins.damage_types._base import DamageTypeBase
 class PersonaLightAndDark(PlayerBase):
     id = "persona_light_and_dark"
     name = "PersonaLightAndDark"
-    about = (
+    full_about = (
         "A 6★ guardian and brother to Lady Light and Lady Darkness, Persona Light and Dark fights to keep "
         "his sisters safe. He speaks only the radiant glyphs of the Light tongue, letting sweeping gestures "
         "and twin halos translate his intent. By trading between the family's luminous ward and shadow bastion, "
         "he drags enemy focus onto himself while sheltering the people he protects."
     )
+    summarized_about = "A guardian brother who trades between light and shadow, drawing enemy focus to protect his sisters and allies."
     char_type: CharacterType = CharacterType.A
     gacha_rarity = 6
     damage_type: DamageTypeBase = field(

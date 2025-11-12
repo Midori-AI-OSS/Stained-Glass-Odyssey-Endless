@@ -16,14 +16,20 @@ bp = Blueprint("catalog", __name__, url_prefix="/catalog")
 async def list_cards():
     reg = card_registry()
     cards = []
+
     for cls in reg.values():
         try:
             c = cls()
+            # Send both description fields to frontend for client-side switching
+            full_about_text = getattr(c, "full_about", "")
+            summarized_about_text = getattr(c, "summarized_about", "")
+
             cards.append({
                 "id": c.id,
                 "name": c.name,
                 "stars": c.stars,
-                "about": getattr(c, "about", ""),
+                "full_about": full_about_text,
+                "summarized_about": summarized_about_text,
             })
         except Exception:
             # Skip malformed plugins rather than erroring the whole list
@@ -41,15 +47,21 @@ async def list_cards():
 async def list_relics():
     reg = relic_registry()
     relics = []
+
     for cls in reg.values():
         try:
             r = cls()
+            # Send both description fields to frontend for client-side switching
+            # For catalog view, we use stacks=1 for the full_about version
+            full_about_text = r.full_about_stacks(stacks=1)
+            summarized_about_text = getattr(r, "summarized_about", "")
+
             relics.append({
                 "id": r.id,
                 "name": r.name,
                 "stars": r.stars,
-                # Base about text; inventory display does not vary by stacks
-                "about": getattr(r, "about", ""),
+                "full_about": full_about_text,
+                "summarized_about": summarized_about_text,
             })
         except Exception:
             continue

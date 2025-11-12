@@ -6,6 +6,7 @@
   import CurioChoice from './CurioChoice.svelte';
   import { getCardCatalog, getRelicCatalog } from '../systems/api.js';
   import { EFFECT_DESCRIPTIONS, ITEM_EFFECT_MAP } from '../systems/effectsInfo.js';
+  import { uiStore } from '../systems/settingsStorage.js';
 
   export let items = [];
   export let gold = 0;
@@ -16,6 +17,8 @@
   export let processing = false;
 
   const dispatch = createEventDispatcher();
+  $: conciseDescriptions = Boolean($uiStore?.conciseDescriptions);
+  $: descriptionModeLabel = conciseDescriptions ? 'Concise descriptions' : 'Full descriptions';
   const shopDiagnosticsEnabled =
     typeof import.meta !== 'undefined' && import.meta.env?.VITE_DEBUG_SHOP === 'true';
   const emitShopDiagnostic = (message, extra = {}) => {
@@ -317,6 +320,19 @@
     } catch {}
   });
 
+  function resolveDescriptionPair(entry = {}, meta = {}) {
+    const fallback = entry?.about ?? meta?.about ?? '';
+    const full = entry?.full_about ?? meta?.full_about ?? fallback;
+    const concise = entry?.summarized_about ?? meta?.summarized_about ?? '';
+    return { full, concise, fallback };
+  }
+
+  function pickAbout(full, concise, fallback = '') {
+    const normalizedFull = full || fallback;
+    const normalizedConcise = concise || '';
+    return conciseDescriptions ? (normalizedConcise || normalizedFull) : (normalizedFull || normalizedConcise);
+  }
+
   // Enrich incoming stock entries with catalog data and presentable about text.
   // For relics, we compute a stable baseAbout to avoid duplicating stack notes
   // during reactive re-enrichment (metadata loads can re-run this).
@@ -324,22 +340,51 @@
     if (!entry) return entry;
     if (entry.type === 'card') {
       const m = cardMeta[entry.id] || {};
-      const baseAbout = entry.about || m.about || '';
+      const { full, concise, fallback } = resolveDescriptionPair(entry, m);
       const effectId = ITEM_EFFECT_MAP[entry.id];
-      const tooltip = effectId && EFFECT_DESCRIPTIONS[effectId] ? EFFECT_DESCRIPTIONS[effectId] : baseAbout;
-      // Ensure visible description by falling back to tooltip when about is empty
-      const about = baseAbout || tooltip || '';
-      return { ...entry, name: entry.name || m.name || entry.id, stars: entry.stars || m.stars || 1, about, tooltip };
+      const tooltipSource = effectId && EFFECT_DESCRIPTIONS[effectId] ? EFFECT_DESCRIPTIONS[effectId] : '';
+      const about = pickAbout(full, concise, fallback) || tooltipSource || '';
+      return {
+        ...entry,
+        name: entry.name || m.name || entry.id,
+        stars: entry.stars || m.stars || 1,
+        about,
+        displayDescription: about,
+        tooltip: tooltipSource || about,
+        full_about: full,
+        summarized_about: concise,
+      };
     } else if (entry.type === 'relic') {
       const m = relicMeta[entry.id] || {};
-      // Keep a stable baseAbout so reactive re-enrichment doesn't duplicate the suffix
-      const baseAbout = entry.baseAbout ?? entry.about ?? m.about ?? '';
+      const { full, concise, fallback } = resolveDescriptionPair(
+        { ...entry, full_about: entry.baseAbout ?? entry.full_about, summarized_about: entry.summarized_about },
+        m
+      );
       const stacks = typeof entry.stacks === 'number' ? entry.stacks : 0;
-      let about = stacks > 0 ? `${baseAbout} (Current stacks: ${stacks})` : baseAbout;
+      let baseAbout = pickAbout(full, concise, fallback);
       const effectId = ITEM_EFFECT_MAP[entry.id];
-      const tooltip = effectId && EFFECT_DESCRIPTIONS[effectId] ? EFFECT_DESCRIPTIONS[effectId] : baseAbout;
-      if (!about) about = tooltip || '';
-      return { ...entry, name: entry.name || m.name || entry.id, stars: entry.stars || m.stars || 1, baseAbout, about, tooltip };
+      const tooltip = effectId && EFFECT_DESCRIPTIONS[effectId] ? EFFECT_DESCRIPTIONS[effectId] : '';
+      if (!baseAbout) {
+        baseAbout = tooltip || fallback || '';
+      }
+      let about = baseAbout;
+      if (stacks > 0) {
+        about = baseAbout ? `${baseAbout} (Current stacks: ${stacks})` : `Current stacks: ${stacks}`;
+      }
+      if (!about) {
+        about = tooltip || '';
+      }
+      return {
+        ...entry,
+        name: entry.name || m.name || entry.id,
+        stars: entry.stars || m.stars || 1,
+        baseAbout,
+        about,
+        displayDescription: about,
+        tooltip: tooltip || about,
+        full_about: full,
+        summarized_about: concise,
+      };
     }
     return entry;
   }
@@ -382,9 +427,14 @@
       }
     }
   }
-  // Keep metadata enrichment reactive. Also depend on catalog readiness so
+  // Keep metadata enrichment reactive. Also depend on catalog readiness and UI settings so
   // names/descriptions appear as soon as metadata loads, not only after reroll/leave.
-  $: enrichedBaseList = (void cardMeta, void relicMeta, baseList.map((e) => ({ ...enrich(e), key: e.key, ident: e.ident })));
+  $: enrichedBaseList = (
+    void cardMeta,
+    void relicMeta,
+    void conciseDescriptions,
+    baseList.map((e) => ({ ...enrich(e), key: e.key, ident: e.ident }))
+  );
   // Partition for layout
   $: displayCards = enrichedBaseList.filter(e => e?.type === 'card');
   $: displayRelics = enrichedBaseList.filter(e => e?.type === 'relic');
@@ -568,13 +618,39 @@
       <div class="strip">
           {#each visibleItems as { item, pos } (item.key)}
             {@const isCard = item.type === 'card'}
+            {@const itemDescription = item.displayDescription ?? item.about ?? pickAbout(
+              item.full_about,
+              item.summarized_about,
+              item.tooltip || ''
+            )}
             <div class={`slot pos${pos} ${soldIds.has(item.ident) ? 'sold' : ''} ${selectedIds.has(item.ident) ? 'selected' : ''}`}
                  title={`${item.name} (${item.stars}★ ${isCard ? 'card' : 'relic'})`}
                  on:dblclick|stopPropagation={() => handleItemDoubleClick(item)}>
             {#if isCard}
-              <RewardCard entry={item} type="card" fluid={true} disabled={soldIds.has(item.ident)} />
+              <RewardCard
+                entry={item}
+                type="card"
+                fluid={true}
+                disabled={soldIds.has(item.ident)}
+                fullDescription={item.full_about}
+                conciseDescription={item.summarized_about}
+                description={itemDescription}
+                useConciseDescriptions={conciseDescriptions}
+                descriptionModeLabel={descriptionModeLabel}
+                tooltip={item.tooltip}
+              />
             {:else}
-              <CurioChoice entry={item} fluid={true} disabled={soldIds.has(item.ident)} />
+              <CurioChoice
+                entry={item}
+                fluid={true}
+                disabled={soldIds.has(item.ident)}
+                fullDescription={item.full_about}
+                conciseDescription={item.summarized_about}
+                description={itemDescription}
+                useConciseDescriptions={conciseDescriptions}
+                descriptionModeLabel={descriptionModeLabel}
+                tooltip={item.tooltip}
+              />
             {/if}
             <div class="slot-price">
               <Coins size={12} class="coin-icon" /> {pricingOf(item).taxed}

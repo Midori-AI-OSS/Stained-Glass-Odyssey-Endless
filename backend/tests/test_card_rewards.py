@@ -94,9 +94,12 @@ async def test_battle_offers_choices_and_applies_effect(app_with_db, monkeypatch
     assert data["party"][0]["atk"] == 100
     if not data["card_choices"]:
         pytest.skip("no card choices returned")
-    chosen = data["card_choices"][0]["id"]
-    assert data["card_choices"][0]["stars"] == 1
-    assert "about" in data["card_choices"][0]
+    first_choice = data["card_choices"][0]
+    chosen = first_choice["id"]
+    assert first_choice["stars"] == 1
+    assert "about" not in first_choice
+    assert isinstance(first_choice.get("full_about"), str)
+    assert isinstance(first_choice.get("summarized_about"), str)
 
     await client.post(f"/cards/{run_id}", json={"card": chosen})
     await client.post(f"/run/{run_id}/next")

@@ -14,7 +14,8 @@ class ArcaneFlask(RelicBase):
     name: str = "Arcane Flask"
     stars: int = 2
     effects: dict[str, float] = field(default_factory=dict)
-    about: str = "After an Ultimate, grant a shield equal to 20% Max HP."
+    full_about: str = "After an Ultimate, grant a shield equal to 20% Max HP. Stacks additively (20% per stack)."
+    summarized_about: str = "Grants shield based on max hp after using ultimate"
 
     async def apply(self, party) -> None:
         await super().apply(party)
@@ -56,6 +57,10 @@ class ArcaneFlask(RelicBase):
 
         self.subscribe(party, "ultimate_used", _ultimate)
         self.subscribe(party, "battle_end", _cleanup)
+
+    def full_about_stacks(self, stacks: int) -> str:
+        """Provide stack-aware description."""
+        return self.describe(stacks)
 
     def describe(self, stacks: int) -> str:
         pct = 20 * stacks

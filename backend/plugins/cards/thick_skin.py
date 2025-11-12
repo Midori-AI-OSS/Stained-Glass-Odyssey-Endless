@@ -13,7 +13,12 @@ class ThickSkin(CardBase):
     name: str = "Thick Skin"
     stars: int = 1
     effects: dict[str, float] = field(default_factory=lambda: {"bleed_resist": 0.03})
-    about: str = "+3% Bleed Resist; When afflicted by Bleed, 50% chance to reduce its duration by 1"
+    full_about: str = (
+        "+3% Bleed Resist; when afflicted by Bleed, 50% chance to reduce the Bleed duration by 1"
+    )
+    summarized_about: str = (
+        "Boosts bleed resistance; bleeding can fade faster when it takes hold"
+    )
 
     async def apply(self, party) -> None:  # type: ignore[override]
         await super().apply(party)

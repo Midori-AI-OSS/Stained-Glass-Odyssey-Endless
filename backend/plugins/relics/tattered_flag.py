@@ -15,7 +15,8 @@ class TatteredFlag(RelicBase):
     name: str = "Tattered Flag"
     stars: int = 1
     effects: dict[str, float] = field(default_factory=lambda: {"max_hp": 0.03})
-    about: str = "+3% party Max HP; ally deaths grant survivors +3% ATK."
+    full_about: str = "+3% party Max HP per relic stack (multiplicative stacking); when an ally dies, all surviving allies gain +3% ATK permanently for the rest of combat. The ATK buff stacks with each fallen ally."
+    summarized_about: str = "Boosts max hp; ally deaths grant permanent atk boost to survivors"
 
     async def apply(self, party) -> None:
         await super().apply(party)

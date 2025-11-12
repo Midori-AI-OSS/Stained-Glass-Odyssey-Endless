@@ -15,6 +15,9 @@
   export let showAbout = true;
   // When true, render only the artwork area filling the container (no title/about)
   export let imageOnly = false;
+  export let description = '';
+  export let fullDescription = '';
+  export let conciseDescription = '';
   import { getHourlyBackground, getGlyphArt } from '../systems/assetLoader.js';
   const starColors = {
     1: '#808080',  // gray
@@ -87,6 +90,23 @@
     }));
   }
   let twinkles = [];
+  $: resolvedAbout = (() => {
+    const values = [description, fullDescription, conciseDescription];
+    for (const value of values) {
+      if (typeof value === 'string' && value.trim()) {
+        return value.trim();
+      }
+    }
+    if (entry && typeof entry === 'object') {
+      const candidates = [entry.full_about, entry.summarized_about, entry.about];
+      for (const candidate of candidates) {
+        if (typeof candidate === 'string' && candidate.trim()) {
+          return candidate.trim();
+        }
+      }
+    }
+    return '';
+  })();
   $: starRank = Math.max(1, Math.min(Number(entry?.stars || 1), 5));
   $: baseTwinkles = size === 'small' ? 16 : 28;
   // Slightly increase baseline twinkle intensity for 1-star
@@ -123,8 +143,8 @@
         <div class="stars-overlay">{'★'.repeat(entry.stars || 0)}</div>
       </div>
     </div>
-    {#if showAbout && entry.about}
-      <div class="about-box">{entry.about}</div>
+    {#if showAbout && resolvedAbout}
+      <div class="about-box">{resolvedAbout}</div>
     {/if}
     <div class="twinkles" aria-hidden="true">
       {#each twinkles as t}

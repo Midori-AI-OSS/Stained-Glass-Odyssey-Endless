@@ -14,10 +14,11 @@ class CriticalOverdrive(CardBase):
     name: str = "Critical Overdrive"
     stars: int = 3
     effects: dict[str, float] = field(default_factory=lambda: {"atk": 2.55})
-    about: str = (
+    full_about: str = (
         "+255% ATK; while any ally has Critical Boost active, all allies gain +10% Crit Rate and "
         "convert excess Crit Rate to +2% Crit Damage."
     )
+    summarized_about: str = "Greatly boosts atk; while Critical Boost is active, allies gain crit rate and convert excess to crit damage"
 
     async def apply(self, party: Party) -> None:
         await super().apply(party)

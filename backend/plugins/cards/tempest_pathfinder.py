@@ -18,7 +18,11 @@ class TempestPathfinder(CardBase):
     name: str = "Tempest Pathfinder"
     stars: int = 2
     effects: dict[str, float] = field(default_factory=lambda: {"dodge_odds": 0.55})
-    about: str = "+55% Dodge Odds; When an ally crits, grant all allies +12% Dodge for 1 turn (once per team turn)"
+    full_about: str = (
+        "+55% Dodge Odds; When an ally crits, grant all allies +12% Dodge for 1 turn "
+        "(once per team turn)"
+    )
+    summarized_about: str = "Boosts dodge odds; allies gain dodge buff when someone crits"
 
     async def apply(self, party) -> None:  # type: ignore[override]
         await super().apply(party)

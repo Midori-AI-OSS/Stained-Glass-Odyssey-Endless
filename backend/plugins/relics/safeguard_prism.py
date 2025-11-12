@@ -16,10 +16,15 @@ class SafeguardPrism(RelicBase):
     name: str = "Safeguard Prism"
     stars: int = 2
     effects: dict[str, float] = field(default_factory=dict)
-    about: str = (
-        "When an ally drops below 60% Max HP, grant a 15% Max HP shield and +12% mitigation "
-        "for 1 turn per stack, then wait 5 turns (+1 per five stacks) before that ally can "
-        "trigger it again."
+    full_about: str = (
+        "When a party member drops below 60% Max HP, they immediately receive a shield worth 15% Max HP "
+        "per stack and gain +12% mitigation per stack for 1 turn. The shield is applied as overheal on top "
+        "of their current HP. After triggering, each ally has a 5-turn cooldown (+1 turn per 5 stacks) before "
+        "they can trigger the effect again. Multiple stacks increase shield/mitigation and slightly extend "
+        "the cooldown (e.g., 2 stacks = 30% shield, +24% mitigation, 5-turn cooldown)."
+    )
+    summarized_about: str = (
+        "Grants emergency shield and mitigation when allies drop below a health threshold"
     )
 
     async def apply(self, party) -> None:
@@ -150,6 +155,10 @@ class SafeguardPrism(RelicBase):
         self.subscribe(party, "damage_taken", _on_damage_taken)
         self.subscribe(party, "turn_start", _turn_advanced)
         self.subscribe(party, "battle_end", _cleanup)
+
+    def full_about_stacks(self, stacks: int) -> str:
+        """Provide stack-aware description by reusing existing describe logic."""
+        return self.describe(stacks)
 
     def describe(self, stacks: int) -> str:
         shield_pct = 15 * stacks

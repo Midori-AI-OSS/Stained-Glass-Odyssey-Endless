@@ -12,7 +12,8 @@ from plugins.damage_types._base import DamageTypeBase
 class LadyFireAndIce(PlayerBase):
     id = "lady_fire_and_ice"
     name = "LadyFireAndIce"
-    about = "A legendary 6★ elemental master appearing to be 18-20 years old, whose reddish-blue hair reflects her dual nature. Living with Dissociative Schizophrenia, she experiences herself as two distinct elemental personas that work in perfect, devastating harmony. Her fire alignment runs so hot that she sleeps unclothed to manage the constant heat radiating from her body. In combat, her duality engine allows her to wield both fire and ice through seamless persona switches—one moment erupting with volcanic fury, the next freezing enemies with arctic precision. The opposing forces create devastating thermal shocks that few opponents can withstand."
+    full_about = "A legendary 6★ elemental master appearing to be 18-20 years old, whose reddish-blue hair reflects her dual nature. Living with Dissociative Schizophrenia, she experiences herself as two distinct elemental personas that work in perfect, devastating harmony. Her fire alignment runs so hot that she sleeps unclothed to manage the constant heat radiating from her body. In combat, her duality engine allows her to wield both fire and ice through seamless persona switches—one moment erupting with volcanic fury, the next freezing enemies with arctic precision. The opposing forces create devastating thermal shocks that few opponents can withstand."
+    summarized_about = "A dual-natured elemental master who switches between volcanic fury and arctic precision, creating devastating thermal shocks."
     char_type: CharacterType = CharacterType.B
     gacha_rarity = 6
     damage_type: DamageTypeBase = field(

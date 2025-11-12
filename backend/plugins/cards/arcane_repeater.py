@@ -15,9 +15,8 @@ class ArcaneRepeater(CardBase):
     name: str = "Arcane Repeater"
     stars: int = 4
     effects: dict[str, float] = field(default_factory=lambda: {"atk": 5})
-    about: str = (
-        "+500% ATK; each attack has a 30% chance to immediately repeat at 50% power."
-    )
+    full_about: str = "+500% ATK; each attack has a 30% chance to immediately repeat at 50% power. The repeat attack applies full damage to the same target."
+    summarized_about: str = "Greatly boosts atk; attacks have a chance to repeat at reduced power"
 
     async def apply(self, party) -> None:  # type: ignore[override]
         await super().apply(party)

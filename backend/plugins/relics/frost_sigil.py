@@ -15,7 +15,11 @@ class FrostSigil(RelicBase):
     name: str = "Frost Sigil"
     stars: int = 2
     effects: dict[str, float] = field(default_factory=dict)
-    about: str = "Hits apply chill dealing 5% ATK as Aftertaste; each stack adds a hit."
+    full_about: str = (
+        "When allies land hits, apply chill dealing 5% of attacker's ATK as Aftertaste damage. "
+        "Number of Aftertaste hits equals number of stacks."
+    )
+    summarized_about: str = "Hits apply chill dealing aftertaste damage based on atk"
 
     async def apply(self, party) -> None:
         await super().apply(party)

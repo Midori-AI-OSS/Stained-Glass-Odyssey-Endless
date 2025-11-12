@@ -116,7 +116,8 @@ async def test_select_card_stages_without_modifying_party() -> None:
                 "id": "arc_lightning",
                 "name": "Arc Lightning",
                 "stars": 3,
-                "about": "+255% ATK; every attack chains 50% of dealt damage to a random foe.",
+                "full_about": "+255% ATK; every attack chains 50% of dealt damage to a random foe.",
+                "summarized_about": "+255% ATK; every attack chains 50% of dealt damage to a random foe.",
             }
         ],
         "relic_choices": [],
@@ -137,6 +138,12 @@ async def test_select_card_stages_without_modifying_party() -> None:
     staged_cards = result["reward_staging"]["cards"]
     assert len(staged_cards) == 1
     assert staged_cards[0]["id"] == "arc_lightning"
+    assert "about" not in result["card"]
+    assert result["card"]["full_about"]
+    assert result["card"]["summarized_about"]
+    assert "about" not in staged_cards[0]
+    assert staged_cards[0]["full_about"]
+    assert staged_cards[0]["summarized_about"]
 
     assert party_manager is not None
     party = await asyncio.to_thread(party_manager.load_party, run_id)
@@ -150,6 +157,9 @@ async def test_select_card_stages_without_modifying_party() -> None:
     assert isinstance(progression_state, dict)
     assert progression_state.get("current_step") == "cards"
     assert state["reward_staging"]["cards"][0]["id"] == "arc_lightning"
+    assert "about" not in state["reward_staging"]["cards"][0]
+    assert state["reward_staging"]["cards"][0]["full_about"]
+    assert state["reward_staging"]["cards"][0]["summarized_about"]
     snapshot = lifecycle.battle_snapshots[run_id]
     assert snapshot["card_choices"] == []
     assert snapshot["awaiting_card"] is True
@@ -201,7 +211,8 @@ async def test_select_relic_stages_without_duplicate_application() -> None:
                 "id": "old_coin",
                 "name": "Old Coin",
                 "stars": 2,
-                "about": "Gain 20% more gold from all sources.",
+                "full_about": "Gain 20% more gold from all sources.",
+                "summarized_about": "Gain 20% more gold from all sources.",
                 "stacks": 1,
             }
         ],
@@ -224,6 +235,12 @@ async def test_select_relic_stages_without_duplicate_application() -> None:
     assert len(staged_relics) == 1
     assert staged_relics[0]["id"] == "old_coin"
     assert staged_relics[0]["stacks"] == 2
+    assert "about" not in result["relic"]
+    assert result["relic"]["full_about"]
+    assert result["relic"]["summarized_about"]
+    assert "about" not in staged_relics[0]
+    assert staged_relics[0]["full_about"]
+    assert staged_relics[0]["summarized_about"]
 
     assert party_manager is not None
     party = await asyncio.to_thread(party_manager.load_party, run_id)
@@ -239,6 +256,9 @@ async def test_select_relic_stages_without_duplicate_application() -> None:
     staged_state = state["reward_staging"]["relics"][0]
     assert staged_state["id"] == "old_coin"
     assert staged_state["stacks"] == 2
+    assert "about" not in staged_state
+    assert staged_state["full_about"]
+    assert staged_state["summarized_about"]
     snapshot = lifecycle.battle_snapshots[run_id]
     assert snapshot["relic_choices"] == []
     assert snapshot["awaiting_relic"] is True
@@ -248,4 +268,7 @@ async def test_select_relic_stages_without_duplicate_application() -> None:
     assert progression_snapshot.get("current_step") == "relics"
     staged_snapshot = snapshot["reward_staging"]["relics"][0]
     assert staged_snapshot["id"] == "old_coin"
+    assert "about" not in staged_snapshot
+    assert staged_snapshot["full_about"]
+    assert staged_snapshot["summarized_about"]
     assert staged_snapshot["stacks"] == 2

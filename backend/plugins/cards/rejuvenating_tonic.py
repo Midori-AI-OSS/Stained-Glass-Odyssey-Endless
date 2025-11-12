@@ -11,7 +11,8 @@ class RejuvenatingTonic(CardBase):
     name: str = "Rejuvenating Tonic"
     stars: int = 1
     effects: dict[str, float] = field(default_factory=lambda: {"regain": 0.04})
-    about: str = "+4% Regain; When using a heal, heal an additional +1% HP"
+    full_about: str = "+4% Regain; when using a heal, heal an additional +1% HP"
+    summarized_about: str = "Boosts regain; adds bonus healing when heal is used"
 
     async def apply(self, party) -> None:  # type: ignore[override]
         await super().apply(party)

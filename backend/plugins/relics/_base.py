@@ -39,7 +39,8 @@ class RelicBase:
     name: str = ""
     stars: int = 1
     effects: dict[str, float] = field(default_factory=dict)
-    about: str = ""
+    full_about: str = "Missing full relic description, please report this"
+    summarized_about: str = "Missing summarized relic description, please report this"
     preview_triggers: ClassVar[Sequence[RewardPreviewTrigger | dict[str, object]]] = ()
 
     async def apply(self, party: Party) -> None:
@@ -82,12 +83,46 @@ class RelicBase:
             mod.remove()
         self._mods = []
 
-    def describe(self, stacks: int) -> str:
-        return self.about
+    def full_about_stacks(self, stacks: int) -> str:
+        """Return stack-specific full description.
 
-    def preview_summary(self) -> str | None:
-        about = getattr(self, "about", "")
-        return about.strip() or None
+        Override this method in subclasses to provide dynamic descriptions
+        based on stack count (e.g., "gains 50% gold" for 1 stack, "gains 75%
+        gold" for 2 stacks).
+
+        Args:
+            stacks: Number of stacks of this relic
+
+        Returns:
+            Stack-specific description string (base implementation returns full_about)
+        """
+        return self.full_about
+
+    def get_about_str(self, stacks: int = 1) -> str:
+        """Return the appropriate about string based on user settings.
+
+        Automatically checks the CONCISE_DESCRIPTIONS option to determine
+        which version to return. For relics, full mode calls full_about_stacks()
+        to allow stack-specific formatting.
+
+        Args:
+            stacks: Number of stacks of this relic (for stack-specific descriptions)
+
+        Returns:
+            summarized_about if user has concise mode enabled (no stack info),
+            otherwise result from full_about_stacks(stacks) which may include
+            stack-specific formatting
+        """
+        from options import OptionKey
+        from options import get_option
+
+        concise = get_option(OptionKey.CONCISE_DESCRIPTIONS, "false").lower() == "true"
+        if concise:
+            # Concise mode: never show stack information
+            return self.summarized_about
+        # Full mode: call full_about_stacks() which subclasses can override
+        # for stack-specific formatting
+        return self.full_about_stacks(stacks)
 
     def build_preview(
         self,
@@ -97,7 +132,7 @@ class RelicBase:
     ) -> RewardPreviewPayload:
         return build_preview_from_effects(
             effects=self.effects,
-            summary=self.preview_summary(),
+            summary=self.get_about_str(stacks=stacks),
             triggers=self.preview_triggers,
             stacks=max(stacks, 1),
             previous_stacks=max(previous_stacks, 0),

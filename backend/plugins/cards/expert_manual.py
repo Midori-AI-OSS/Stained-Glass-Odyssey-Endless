@@ -12,7 +12,10 @@ class ExpertManual(CardBase):
     name: str = "Expert Manual"
     stars: int = 1
     effects: dict[str, float] = field(default_factory=lambda: {"exp_multiplier": 0.03})
-    about: str = "+3% EXP Gain; 5% chance to give a small extra XP on a kill once per battle"
+    full_about: str = (
+        "+3% EXP Gain; 5% chance to give 5 extra XP on a kill, once per battle per character."
+    )
+    summarized_about: str = "Boosts exp gain; chance to grant bonus exp on kill once per battle"
 
     async def apply(self, party) -> None:  # type: ignore[override]
         await super().apply(party)

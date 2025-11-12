@@ -12,7 +12,8 @@ class BattleMeditation(CardBase):
     name: str = "Battle Meditation"
     stars: int = 1
     effects: dict[str, float] = field(default_factory=lambda: {"exp_multiplier": 0.03, "vitality": 0.03})
-    about: str = "+3% EXP Gain & +3% Vitality; If all allies start at full HP, grant +2% ultimate charge for the first turn"
+    full_about: str = "+3% EXP Gain & +3% Vitality; If all allies start at full HP, grant +2% ultimate charge for the first turn"
+    summarized_about: str = "Boosts exp gain and vitality; grants ultimate charge if all allies start at full hp"
     _battle_boost_applied: bool = field(default=False, init=False, repr=False)
 
     def __post_init__(self) -> None:

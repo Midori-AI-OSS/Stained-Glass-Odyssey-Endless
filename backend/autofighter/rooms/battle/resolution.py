@@ -162,15 +162,25 @@ async def resolve_rewards(
     )
     if not card_options:
         log.warning("No card reward options available")
-    card_choice_data = [
-        {
-            "id": card.id,
-            "name": card.name,
-            "stars": card.stars,
-            "about": card.about,
-        }
-        for card in card_options
-    ]
+    card_choice_data = []
+    for card in card_options:
+        try:
+            base_about = card.get_about_str()
+        except AttributeError:
+            base_about = getattr(card, "about", "")
+        full_about = getattr(card, "full_about", "") or base_about or ""
+        summarized_about = (
+            getattr(card, "summarized_about", "") or full_about or base_about or ""
+        )
+        card_choice_data.append(
+            {
+                "id": card.id,
+                "name": card.name,
+                "stars": card.stars,
+                "full_about": full_about,
+                "summarized_about": summarized_about,
+            }
+        )
 
     relic_options: list[Any] = []
     if _roll_relic_drop(room, temp_rdr):
@@ -198,16 +208,25 @@ async def resolve_rewards(
         else:
             relic_options.append(fallback_relic)
 
-    relic_choice_data = [
-        {
-            "id": relic.id,
-            "name": relic.name,
-            "stars": relic.stars,
-            "about": relic.describe(party.relics.count(relic.id) + 1),
-            "stacks": party.relics.count(relic.id),
-        }
-        for relic in relic_options
-    ]
+    relic_choice_data = []
+    for relic in relic_options:
+        current_stacks = party.relics.count(relic.id)
+        next_stack = current_stacks + 1
+        base_about = relic.get_about_str(stacks=next_stack)
+        full_about = relic.full_about_stacks(stacks=next_stack) or base_about or ""
+        summarized_about = (
+            getattr(relic, "summarized_about", "") or full_about or base_about or ""
+        )
+        relic_choice_data.append(
+            {
+                "id": relic.id,
+                "name": relic.name,
+                "stars": relic.stars,
+                "full_about": full_about,
+                "summarized_about": summarized_about,
+                "stacks": current_stacks,
+            }
+        )
 
     gold_reward = _calc_gold(room, temp_rdr)
     party.gold += gold_reward

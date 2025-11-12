@@ -11,7 +11,8 @@ class EnergizingTea(CardBase):
     name: str = "Energizing Tea"
     stars: int = 1
     effects: dict[str, float] = field(default_factory=lambda: {"regain": 0.03})
-    about: str = "+3% Regain; At battle start, gain +1 ultimate charge on the first turn"
+    full_about: str = "+3% Regain; At battle start, gain +1 ultimate charge on the first turn"
+    summarized_about: str = "Boosts regain; grants ultimate charge at battle start"
 
     async def apply(self, party) -> None:  # type: ignore[override]
         await super().apply(party)

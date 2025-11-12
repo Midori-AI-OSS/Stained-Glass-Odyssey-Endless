@@ -1,6 +1,6 @@
 ---
 name: Worker Drone
-description: A lovely worker to help out!
+description: Your adaptable all-rounder! Intelligently switches between reviewing, auditing, and coding based on what the project needs most. 🤖💪
 ---
 
 # Worker

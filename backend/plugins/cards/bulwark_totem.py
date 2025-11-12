@@ -14,7 +14,8 @@ class BulwarkTotem(CardBase):
     name: str = "Bulwark Totem"
     stars: int = 1
     effects: dict[str, float] = field(default_factory=lambda: {"defense": 0.02, "max_hp": 0.02})
-    about: str = "+2% DEF & +2% HP; When an ally would die, redirect a small percentage of the fatal damage to this unit (tiny soak)"
+    full_about: str = "+2% DEF & +2% HP; When an ally would die from fatal damage, the healthiest ally above 25% HP donates HP to prevent death, redirecting 5% of the fatal damage to keep the victim alive. The donor's HP cannot go below 1."
+    summarized_about: str = "Boosts def and hp slightly; when an ally would die, a healthy ally donates some hp to prevent death"
     damage_share: float = 0.05
     ally_min_health_ratio: float = 0.25
 

@@ -11,7 +11,8 @@ from plugins.damage_types.fire import Fire
 class LadyOfFire(PlayerBase):
     id = "lady_of_fire"
     name = "LadyOfFire"
-    about = "A fierce pyromancer appearing to be 18-20 years old, whose dark red hair flows like liquid flame and whose very presence exudes overwhelming warmth. Living with Dissociative Schizophrenia, she channels her condition into her fire magic, allowing different aspects of her psyche to fuel increasingly intense infernal momentum. Each enemy defeated feeds her inner flame, building heat waves that grow stronger with every victory. Her red eyes burn with hot intensity, and her fire magic seems to pulse with the rhythm of her fractured consciousness, creating unpredictable but devastatingly effective pyroclastic attacks."
+    full_about = "A fierce pyromancer appearing to be 18-20 years old, whose dark red hair flows like liquid flame and whose very presence exudes overwhelming warmth. Living with Dissociative Schizophrenia, she channels her condition into her fire magic, allowing different aspects of her psyche to fuel increasingly intense infernal momentum. Each enemy defeated feeds her inner flame, building heat waves that grow stronger with every victory. Her red eyes burn with hot intensity, and her fire magic seems to pulse with the rhythm of her fractured consciousness, creating unpredictable but devastatingly effective pyroclastic attacks."
+    summarized_about = "A fierce pyromancer who channels her fractured consciousness into devastating fire magic, building infernal momentum with each victory."
     gacha_rarity = 5
     char_type: CharacterType = CharacterType.B
     damage_type: DamageTypeBase = field(default_factory=Fire)

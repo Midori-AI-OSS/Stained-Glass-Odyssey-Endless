@@ -13,6 +13,8 @@
   } from '../systems/overlayState.js';
   import { warn as logWarn } from '../systems/logger.js';
   import { emitRewardTelemetry } from '../systems/rewardTelemetry.js';
+  import { getDescriptionPair } from '../systems/descriptionUtils.js';
+  import { uiStore, updateUISettings } from '../systems/settingsStorage.js';
 
   export let cards = [];
   export let relics = [];
@@ -552,15 +554,15 @@
       case 'drops':
         return true;
       case 'cards':
-        if (!Array.isArray(cardChoices)) return false;
+        if (!Array.isArray(cardChoiceEntries)) return false;
         if (awaitingCard) return false;
-        if (Array.isArray(cardChoices) && cardChoices.length > 0) return false;
+        if (Array.isArray(cardChoiceEntries) && cardChoiceEntries.length > 0) return false;
         if (Array.isArray(stagedCardEntries) && stagedCardEntries.length > 0) return false;
         return true;
       case 'relics':
-        if (!Array.isArray(relicChoices)) return false;
+        if (!Array.isArray(relicChoiceEntries)) return false;
         if (awaitingRelic) return false;
-        if (Array.isArray(relicChoices) && relicChoices.length > 0) return false;
+        if (Array.isArray(relicChoiceEntries) && relicChoiceEntries.length > 0) return false;
         if (Array.isArray(stagedRelicEntries) && stagedRelicEntries.length > 0) return false;
         return true;
       default:
@@ -699,25 +701,63 @@
     }
   }
 
+  function prepareRewardEntry(raw) {
+    const base = raw && typeof raw === 'object' ? { ...raw } : { id: raw };
+    const { fullDescription, conciseDescription } = getDescriptionPair(base);
+    if (!base.full_about && fullDescription) {
+      base.full_about = fullDescription;
+    }
+    if (!base.summarized_about && conciseDescription) {
+      base.summarized_about = conciseDescription;
+    }
+    return { entry: base, fullDescription, conciseDescription };
+  }
+
   function normalizeRewardEntries(list) {
     if (!Array.isArray(list)) return [];
     return list
       .filter((entry) => entry != null)
-      .map((entry) => (entry && typeof entry === 'object' ? { ...entry } : { id: entry }));
+      .map((entry) => prepareRewardEntry(entry).entry);
   }
 
-  $: cardChoices = Array.isArray(cards) ? cards : [];
-  $: cardChoiceEntries = cardChoices.map((card, index) => ({
-    entry: card,
-    key: rewardEntryKey(card, index, 'card')
-  }));
-  $: relicChoices = Array.isArray(relics) ? relics : [];
-  $: relicChoiceEntries = relicChoices.map((relic, index) => ({
-    entry: relic,
-    key: rewardEntryKey(relic, index, 'relic')
-  }));
+  function createChoiceList(list, type) {
+    if (!Array.isArray(list)) return [];
+    const choices = [];
+    list.forEach((item, index) => {
+      if (item == null) return;
+      const prepared = prepareRewardEntry(item);
+      choices.push({
+        ...prepared,
+        key: rewardEntryKey(prepared.entry, index, type)
+      });
+    });
+    return choices;
+  }
+
+  function descriptionForMode(full, concise, useConcise) {
+    const normalizedFull = typeof full === 'string' ? full.trim() : '';
+    const normalizedConcise = typeof concise === 'string' ? concise.trim() : '';
+    return useConcise ? normalizedConcise || normalizedFull : normalizedFull || normalizedConcise;
+  }
+
+  $: conciseDescriptionsEnabled = Boolean($uiStore?.conciseDescriptions);
+  $: descriptionModeLabel = conciseDescriptionsEnabled ? 'Concise descriptions' : 'Full descriptions';
+  $: descriptionModeToken = conciseDescriptionsEnabled ? 'concise' : 'full';
+  $: cardChoiceEntries = createChoiceList(cards, 'card');
+  $: relicChoiceEntries = createChoiceList(relics, 'relic');
   $: stagedCardEntries = normalizeRewardEntries(stagedCards);
   $: stagedRelicEntries = normalizeRewardEntries(stagedRelics);
+  $: descriptionToggleTitle = conciseDescriptionsEnabled
+    ? 'Showing summarized reward descriptions. Toggle to view full text.'
+    : 'Showing full reward descriptions. Toggle to view concise summaries.';
+  $: descriptionToggleAriaLabel = conciseDescriptionsEnabled
+    ? 'Disable concise reward descriptions'
+    : 'Enable concise reward descriptions';
+
+  function handleDescriptionToggleChange(event) {
+    const next = event?.currentTarget?.checked ?? !conciseDescriptionsEnabled;
+    updateUISettings({ conciseDescriptions: Boolean(next) });
+  }
   $: stagedCardEntryMap = new Map(
     stagedCardEntries.map((entry, index) => [rewardEntryKey(entry, index, 'staged-card'), entry])
   );
@@ -1379,7 +1419,8 @@
   }
 
   .phase-panel,
-  .advance-panel {
+  .advance-panel,
+  .description-mode-panel {
     background: var(--overlay-panel-bg);
     border-radius: 0;
     padding: clamp(0.75rem, 1.6vw, 1.3rem);
@@ -1551,6 +1592,62 @@
     cursor: not-allowed;
     transform: none;
     box-shadow: none;
+  }
+
+  .description-mode-panel {
+    margin-top: 0;
+    gap: 0.75rem;
+  }
+
+  .description-mode-toggle {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+  }
+
+  .description-mode-toggle .toggle-shell {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+    color: var(--overlay-text-primary);
+    cursor: pointer;
+  }
+
+  .description-mode-toggle input[type='checkbox'] {
+    appearance: none;
+    width: 2.4rem;
+    height: 1.2rem;
+    border-radius: 1.2rem;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    position: relative;
+    transition: background 160ms ease, border-color 160ms ease;
+  }
+
+  .description-mode-toggle input[type='checkbox']::after {
+    content: '';
+    position: absolute;
+    top: 1px;
+    left: 1px;
+    width: 1rem;
+    height: 1rem;
+    border-radius: 50%;
+    background: #fff;
+    transition: transform 160ms ease;
+  }
+
+  .description-mode-toggle input[type='checkbox']:checked {
+    background: color-mix(in srgb, var(--accent, #7ec8ff) 65%, rgba(20, 28, 42, 0.95) 35%);
+    border-color: color-mix(in srgb, var(--accent, #7ec8ff) 70%, rgba(255, 255, 255, 0.2) 30%);
+  }
+
+  .description-mode-toggle input[type='checkbox']:checked::after {
+    transform: translateX(1.2rem);
+  }
+
+  .description-mode-toggle .toggle-text {
+    font-weight: 600;
   }
 
   @media (max-width: 1100px) {
@@ -1882,6 +1979,16 @@
                 selectionKey={choice.key}
                 selected={highlightedCardKey === choice.key}
                 reducedMotion={reducedMotion}
+                fullDescription={choice.fullDescription}
+                conciseDescription={choice.conciseDescription}
+                description={descriptionForMode(
+                  choice.fullDescription,
+                  choice.conciseDescription,
+                  conciseDescriptionsEnabled
+                )}
+                useConciseDescriptions={conciseDescriptionsEnabled}
+                descriptionModeLabel={descriptionModeLabel}
+                tooltip={choice.entry?.tooltip}
                 on:select={handleSelect}
               />
             </div>
@@ -1900,6 +2007,16 @@
                 selectionKey={relicChoice.key}
                 selected={highlightedRelicKey === relicChoice.key}
                 reducedMotion={reducedMotion}
+                fullDescription={relicChoice.fullDescription}
+                conciseDescription={relicChoice.conciseDescription}
+                description={descriptionForMode(
+                  relicChoice.fullDescription,
+                  relicChoice.conciseDescription,
+                  conciseDescriptionsEnabled
+                )}
+                useConciseDescriptions={conciseDescriptionsEnabled}
+                descriptionModeLabel={descriptionModeLabel}
+                tooltip={relicChoice.entry?.tooltip}
                 on:select={handleSelect}
               />
             </div>
@@ -1964,5 +2081,19 @@
         </button>
       </div>
     {/if}
+    <div class="description-mode-panel" data-mode={descriptionModeToken}>
+      <div class="description-mode-toggle">
+        <label class="toggle-shell" title={descriptionToggleTitle}>
+          <input
+            type="checkbox"
+            role="switch"
+            aria-label={descriptionToggleAriaLabel}
+            checked={conciseDescriptionsEnabled}
+            on:change={handleDescriptionToggleChange}
+          />
+          <span class="toggle-text">{descriptionModeLabel}</span>
+        </label>
+      </div>
+    </div>
   </aside>
 </div>

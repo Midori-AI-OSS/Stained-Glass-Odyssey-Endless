@@ -16,9 +16,12 @@ class RealitySplit(CardBase):
     name: str = "Reality Split"
     stars: int = 5
     effects: dict[str, float] = field(default_factory=lambda: {"atk": 15.0})
-    about: str = (
+    full_about: str = (
         "+1500% ATK; at the start of each turn, a random ally gains +50% Crit Rate "
         "and their attacks leave an Afterimage that echoes 25% of the damage to all foes."
+    )
+    summarized_about: str = (
+        "Boosts atk; random ally gains crit rate and damage echo to all foes"
     )
 
     async def apply(self, party):

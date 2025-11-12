@@ -21,11 +21,15 @@ class SupercellConductor(CardBase):
     effects: dict[str, float] = field(
         default_factory=lambda: {"atk": 2.4, "effect_hit_rate": 2.4}
     )
-    about: str = (
+    full_about: str = (
         "+240% ATK & +240% Effect Hit Rate; at battle start and every third round, "
         "the fastest Wind or Lightning ally gains Tailwind: immediately queue a "
         "bonus action at 50% damage with +30% Effect Hit Rate, then shred -10% "
         "Mitigation from foes they strike for 1 turn."
+    )
+    summarized_about: str = (
+        "Greatly boosts atk and effect hit rate; periodically grants fastest wind/lightning ally "
+        "bonus action with mitigation shred"
     )
 
     async def apply(self, party) -> None:  # type: ignore[override]

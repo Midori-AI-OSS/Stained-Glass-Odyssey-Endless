@@ -11,7 +11,8 @@ class FortifiedPlating(CardBase):
     name: str = "Fortified Plating"
     stars: int = 1
     effects: dict[str, float] = field(default_factory=lambda: {"defense": 0.04})
-    about: str = "+4% DEF; Reduce damage from the first hit each turn by 6%"
+    full_about: str = "+4% DEF; reduce damage from the first hit each turn by 6%."
+    summarized_about: str = "Boosts def slightly; reduces damage from first hit each turn"
 
     async def apply(self, party) -> None:  # type: ignore[override]
         await super().apply(party)

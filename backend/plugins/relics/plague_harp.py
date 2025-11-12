@@ -16,9 +16,12 @@ class PlagueHarp(RelicBase):
     name: str = "Plague Harp"
     stars: int = 3
     effects: dict[str, float] = field(default_factory=dict)
-    about: str = (
-        "When party DoTs tick, echo 40% of the damage per stack to another foe "
-        "and the caster loses 2% Max HP per stack."
+    full_about: str = (
+        "When allies' DoTs tick, echo 40% of the damage to another foe per stack, "
+        "and the caster loses 2% of their Max HP per stack."
+    )
+    summarized_about: str = (
+        "Echoes damage from DoTs to other foes but drains caster HP"
     )
 
     async def apply(self, party) -> None:
@@ -147,6 +150,10 @@ class PlagueHarp(RelicBase):
         self.subscribe(party, "turn_start", _on_turn_start)
         self.subscribe(party, "dot_tick", _on_dot_tick)
         self.subscribe(party, "battle_end", _cleanup)
+
+    def full_about_stacks(self, stacks: int) -> str:
+        """Provide stack-aware description."""
+        return self.describe(stacks)
 
     def describe(self, stacks: int) -> str:
         echo_pct = 40 * stacks

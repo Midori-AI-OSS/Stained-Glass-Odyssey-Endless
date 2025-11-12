@@ -13,7 +13,8 @@ class OldCoin(RelicBase):
     name: str = "Old Coin"
     stars: int = 1
     effects: dict[str, float] = field(default_factory=dict)
-    about: str = "+3% gold earned; first shop purchase refunded 3% of cost."
+    full_about: str = "+3% gold earned per stack; first shop purchase refunded 3% of cost per stack."
+    summarized_about: str = "Increases gold earned; refunds part of first shop purchase"
 
     async def apply(self, party) -> None:
         await super().apply(party)
@@ -77,3 +78,7 @@ class OldCoin(RelicBase):
     def describe(self, stacks: int) -> str:
         rate = 3 * stacks
         return f"+{rate}% gold earned; first shop purchase refunded {rate}% of cost."
+
+    def full_about_stacks(self, stacks: int) -> str:
+        """Return stack-specific description."""
+        return self.describe(stacks)

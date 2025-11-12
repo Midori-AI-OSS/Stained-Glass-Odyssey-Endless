@@ -13,7 +13,11 @@ class PrecisionSights(CardBase):
     name: str = "Precision Sights"
     stars: int = 1
     effects: dict[str, float] = field(default_factory=lambda: {"crit_damage": 0.04})
-    about: str = "+4% Crit Damage; After scoring a crit, gain +2% crit damage for 2 turns (small stacking)"
+    full_about: str = (
+        "+4% Crit Damage; after scoring a critical hit, gain +2% crit damage for 2 turns. "
+        "This buff stacks with itself, allowing multiple critical hits to compound the bonus."
+    )
+    summarized_about: str = "Boosts crit damage; critical hits grant stacking crit damage bonus"
 
     async def apply(self, party) -> None:  # type: ignore[override]
         await super().apply(party)

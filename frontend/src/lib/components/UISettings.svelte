@@ -1,13 +1,16 @@
 <script>
-  import { Palette, Eye, Move } from 'lucide-svelte';
+  import { Palette, Eye, Move, FileText } from 'lucide-svelte';
   import {
     THEMES,
     getThemeSettings,
     getMotionSettings,
+    getUISettings,
     updateThemeSettings,
     updateMotionSettings,
+    updateUISettings,
     motionStore,
-    themeStore
+    themeStore,
+    uiStore
   } from '../systems/settingsStorage.js';
 
   export let scheduleSave;
@@ -15,8 +18,10 @@
 
   let themeSettings = getThemeSettings();
   let motionSettings = getMotionSettings();
+  let uiSettings = getUISettings();
   $: themeSettings = $themeStore || themeSettings;
   $: motionSettings = $motionStore || getMotionSettings();
+  $: uiSettings = $uiStore || getUISettings();
 
   function updateTheme(updates) {
     themeSettings = { ...themeSettings, ...updates };
@@ -28,6 +33,11 @@
     updateMotionSettings(updates);
     reducedMotion = (motionSettings?.globalReducedMotion ?? false) || (updates.globalReducedMotion ?? false);
     scheduleSave({ reducedMotion, ...updates });
+  }
+
+  function updateUI(updates) {
+    updateUISettings(updates);
+    scheduleSave({ ...updates });
   }
 </script>
 
@@ -188,6 +198,19 @@
         type="checkbox"
         bind:checked={motionSettings.enableBattleFx}
         on:change={(e) => updateMotion({ enableBattleFx: e.target.checked })}
+      />
+    </div>
+  </div>
+
+  <div class="control" title="Show concise descriptions instead of full detailed descriptions for cards, relics, and effects.">
+    <div class="control-left">
+      <span class="label"><FileText /> Concise Descriptions</span>
+    </div>
+    <div class="control-right">
+      <input
+        type="checkbox"
+        bind:checked={uiSettings.conciseDescriptions}
+        on:change={(e) => updateUI({ conciseDescriptions: e.target.checked })}
       />
     </div>
   </div>

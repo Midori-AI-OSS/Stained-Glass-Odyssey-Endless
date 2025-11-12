@@ -25,6 +25,7 @@
 
   let rosterListEl = null;
   let fadeObserver = null;
+  let fadeFrame = null;
   let showTopFade = false;
   let showBottomFade = false;
   const FADE_EPSILON = 1;
@@ -41,8 +42,36 @@
     showBottomFade = scrollTop + clientHeight < scrollHeight - FADE_EPSILON;
   }
 
+  function cancelFadeUpdate() {
+    if (fadeFrame == null) return;
+
+    if (typeof cancelAnimationFrame === 'function') {
+      cancelAnimationFrame(fadeFrame);
+    } else {
+      clearTimeout(fadeFrame);
+    }
+
+    fadeFrame = null;
+  }
+
+  function queueFadeUpdate() {
+    cancelFadeUpdate();
+
+    if (typeof requestAnimationFrame === 'function') {
+      fadeFrame = requestAnimationFrame(() => {
+        fadeFrame = null;
+        updateFades();
+      });
+    } else {
+      fadeFrame = setTimeout(() => {
+        fadeFrame = null;
+        updateFades();
+      }, 0);
+    }
+  }
+
   function handleScroll() {
-    updateFades();
+    queueFadeUpdate();
   }
 
   function observeList() {
@@ -53,7 +82,7 @@
     }
 
     fadeObserver?.disconnect();
-    fadeObserver = new ResizeObserver(() => updateFades());
+    fadeObserver = new ResizeObserver(() => queueFadeUpdate());
     fadeObserver.observe(rosterListEl);
   }
 
@@ -202,6 +231,7 @@
     clearStaged();
     fadeObserver?.disconnect();
     fadeObserver = null;
+    cancelFadeUpdate();
   });
 
   // Deterministic pseudo-random from an id string
