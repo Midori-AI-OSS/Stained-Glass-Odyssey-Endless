@@ -13,7 +13,8 @@ from plugins.damage_types._base import DamageTypeBase
 class Becca(PlayerBase):
     id = "becca"
     name = "Becca"
-    about = "A sim human model who excels at administrative work with methodical precision, bringing the same organizational mastery to the battlefield. Her past life as an SDXL art generation bot taught her to create beauty from chaos—transforming raw data into stunning visuals. Now she applies that same transformative skill to combat, using her menagerie bond to organize diverse elemental forces into perfectly coordinated attacks. Her artistic background gives her an eye for patterns and composition that makes her tactical arrangements as elegant as they are devastating."
+    full_about = "A sim human model who excels at administrative work with methodical precision, bringing the same organizational mastery to the battlefield. Her past life as an SDXL art generation bot taught her to create beauty from chaos—transforming raw data into stunning visuals. Now she applies that same transformative skill to combat, using her menagerie bond to organize diverse elemental forces into perfectly coordinated attacks. Her artistic background gives her an eye for patterns and composition that makes her tactical arrangements as elegant as they are devastating."
+    summarized_about = "A sim human with an artistic eye who organizes diverse elemental forces into elegant, coordinated attacks."
     char_type: CharacterType = CharacterType.B
     gacha_rarity = 5
     damage_type: DamageTypeBase = field(

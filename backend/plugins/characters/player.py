@@ -17,7 +17,8 @@ class Player(PlayerBase):
     char_type: CharacterType = CharacterType.C
     damage_type: DamageTypeBase = field(default_factory=Fire)
     prompt: str = "Player prompt placeholder"
-    about: str = "The customizable main character who grows stronger through experience. Their level-up bonus grants increasing power with each battle won."
+    full_about: str = "The customizable main character who grows stronger through experience. Their level-up bonus grants increasing power with each battle won."
+    summarized_about: str = "The customizable main character who grows stronger with each battle through experience and level-up bonuses."
     passives: list[str] = field(default_factory=lambda: ["player_level_up_bonus"])
 
     def __post_init__(self) -> None:
