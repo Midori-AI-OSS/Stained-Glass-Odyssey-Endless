@@ -13,15 +13,14 @@ See these files for the expected format:
 - `backend/plugins/characters/lady_light.py` (lines 16-24)
 - `backend/plugins/characters/lady_darkness.py` (lines 16-25)
 
-## Placeholder - Appearance Description Needed
-**User must provide:** Detailed visual description of Lady Fire and Ice's appearance, including:
-- Physical build and proportions
-- Facial features and coloring
-- Hair style, color, and length
-- Clothing and outfit details
-- Signature gear or accessories
-- Posture and mannerisms
-- Visual effects or magical elements
+## Appearance Description
+**Character Details:**
+- **Alternate Name:** Persona Fire and Ice - Hannah
+- **Gender:** Female
+- **Race:** Human
+- **Apparent Age:** 18 or 20
+- **Hair:** Reddish-blue
+- **Medical Condition:** Dissociative Schizophrenia (character portrayal consideration)
 
 ## Acceptance Criteria
 - [ ] `looks` field added to the Lady Fire and Ice dataclass

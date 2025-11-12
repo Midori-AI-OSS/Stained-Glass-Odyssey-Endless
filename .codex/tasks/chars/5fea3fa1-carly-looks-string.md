@@ -13,15 +13,22 @@ See these files for the expected format:
 - `backend/plugins/characters/lady_light.py` (lines 16-24)
 - `backend/plugins/characters/lady_darkness.py` (lines 16-25)
 
-## Placeholder - Appearance Description Needed
-**User must provide:** Detailed visual description of Carly's appearance, including:
-- Physical build and proportions
-- Facial features and coloring
-- Hair style, color, and length
-- Clothing and outfit details
-- Signature gear or accessories
-- Posture and mannerisms
-- Visual effects or magical elements
+## Appearance Description
+**Character Details:**
+- **Gender:** Female
+- **Apparent Age:** Mid-20s
+- **Hair:** Blonde, long and wavy, shoulder length
+- **Eyes:** Green
+- **Build:** Slender
+- **Skin:** Fair and smooth with freckles on nose and cheeks
+- **Makeup:** Minimal
+- **Outfit:** White strapless sundress
+
+**Reference Image:**
+https://tea-cup.midori-ai.xyz/download/img_24e509b1-14c9-4512-8f47-f5cc0e00c2cc.png
+
+**SDXL Prompt Reference:**
+`(blonde haired), (green eyes), (female), (mid 20s), (long and wavy hair)++, (shoulder length), (slender build), (fair and smooth skin), (freckles on nose and cheeks), (minimal makeup), (white strapless sundress)`
 
 ## Acceptance Criteria
 - [ ] `looks` field added to the Carly dataclass

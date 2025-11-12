@@ -13,15 +13,13 @@ See these files for the expected format:
 - `backend/plugins/characters/lady_light.py` (lines 16-24)
 - `backend/plugins/characters/lady_darkness.py` (lines 16-25)
 
-## Placeholder - Appearance Description Needed
-**User must provide:** Detailed visual description of Persona Light and Dark's appearance, including:
-- Physical build and proportions
-- Facial features and coloring
-- Hair style, color, and length
-- Clothing and outfit details
-- Signature gear or accessories
-- Posture and mannerisms
-- Visual effects or magical elements
+## Appearance Description
+**Character Details:**
+- **Gender:** Male (referred to as "his")
+- **Relationship:** Brother to Lady Light and Lady Darkness
+- **Hair:** Black and white (salt and pepper) with black and white sparkles throughout
+- **Apparent Age:** Appears ageless, but looks around the same age as Lady Light and Lady Darkness (approximately 23)
+- **Special Feature:** Hair has the same salt-and-pepper sparkle effect as his sisters
 
 ## Acceptance Criteria
 - [ ] `looks` field added to the Persona Light and Dark dataclass

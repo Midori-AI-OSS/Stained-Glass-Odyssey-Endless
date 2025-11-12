@@ -13,15 +13,19 @@ See these files for the expected format:
 - `backend/plugins/characters/lady_light.py` (lines 16-24)
 - `backend/plugins/characters/lady_darkness.py` (lines 16-25)
 
-## Placeholder - Appearance Description Needed
-**User must provide:** Detailed visual description of Lady Lightning's appearance, including:
-- Physical build and proportions
-- Facial features and coloring
-- Hair style, color, and length
-- Clothing and outfit details
-- Signature gear or accessories
-- Posture and mannerisms
-- Visual effects or magical elements
+## Appearance Description
+**Character Details:**
+- **Gender:** Woman
+- **Hair:** Dark yellow-colored with bangs
+- **Eyes:** Yellow
+- **Outfit:** Yellow off-shoulder strapless dress
+- **Expression:** Closed mouth, slightly crazed expression
+- **Visual Effects:** Breathtaking with shimmering effect
+- **Posture:** Walking
+- **Lighting:** Dramatic lighting
+
+**SDXL Prompt Reference:**
+`(yellow off shoulder strapless+ dress), woman, (dark yellow- colored hair), bangs, closed mouth, (yellow- eyes)+, breathtaking--, shimmering-- effect, walking, dramatic lighting, slightly crazed expression`
 
 ## Acceptance Criteria
 - [ ] `looks` field added to the Lady Lightning dataclass

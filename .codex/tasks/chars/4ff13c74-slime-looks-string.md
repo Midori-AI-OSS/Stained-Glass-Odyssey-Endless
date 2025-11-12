@@ -13,15 +13,12 @@ See these files for the expected format:
 - `backend/plugins/characters/lady_light.py` (lines 16-24)
 - `backend/plugins/characters/lady_darkness.py` (lines 16-25)
 
-## Placeholder - Appearance Description Needed
-**User must provide:** Detailed visual description of Slime's appearance, including:
-- Physical build and proportions
-- Facial features and coloring
-- Hair style, color, and length
-- Clothing and outfit details
-- Signature gear or accessories
-- Posture and mannerisms
-- Visual effects or magical elements
+## Appearance Description
+**Character Details:**
+- **Form:** Slime creature
+- **Coloring:** Matches damage type color (e.g., dark damage type appears blackish-blue)
+- **Special Variant:** Can sometimes be rainbow-colored
+- **Note:** Visual appearance is dynamic and changes based on the slime's damage type
 
 ## Acceptance Criteria
 - [ ] `looks` field added to the Slime dataclass

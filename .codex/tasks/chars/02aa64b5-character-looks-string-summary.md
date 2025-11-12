@@ -20,36 +20,37 @@ The repository is standardizing character descriptions by adding a `looks` field
 
 ## Characters Already Complete (6)
 
-These characters already have `looks` strings and require no action:
+These characters already have `looks` strings:
 1. ✅ Luna
 2. ✅ Ryne
 3. ✅ Lady Light
 4. ✅ Lady Darkness
-5. ✅ Lady Storm
-6. ✅ Lady Wind
+5. ⚠️ Lady Storm - **Needs review:** Check race/hair details
+6. ⚠️ Lady Wind - **Needs review:** Check race/hair/blood details (bleeding should be red then changes to green crystals slowly in air)
 
-## Task Files Created (18)
+## Task Files Created (17)
 
-| # | Character | File Path | Hash Prefix |
-|---|-----------|-----------|-------------|
-| 1 | Ally | `.codex/tasks/chars/1436e59d-ally-looks-string.md` | 1436e59d |
-| 2 | Becca | `.codex/tasks/chars/7964d0fa-becca-looks-string.md` | 7964d0fa |
-| 3 | Bubbles | `.codex/tasks/chars/6ef351bd-bubbles-looks-string.md` | 6ef351bd |
-| 4 | Carly | `.codex/tasks/chars/5fea3fa1-carly-looks-string.md` | 5fea3fa1 |
-| 5 | Casno | `.codex/tasks/chars/09532005-casno-looks-string.md` | 09532005 |
-| 6 | GrayGray | `.codex/tasks/chars/e49e0043-graygray-looks-string.md` | e49e0043 |
-| 7 | Hilander | `.codex/tasks/chars/af8ab3a9-hilander-looks-string.md` | af8ab3a9 |
-| 8 | Ixia | `.codex/tasks/chars/e9e535da-ixia-looks-string.md` | e9e535da |
-| 9 | Kboshi | `.codex/tasks/chars/a1566ae2-kboshi-looks-string.md` | a1566ae2 |
-| 10 | Lady Echo | `.codex/tasks/chars/66f5f544-lady-echo-looks-string.md` | 66f5f544 |
-| 11 | Lady Fire and Ice | `.codex/tasks/chars/79c9b46a-lady-fire-and-ice-looks-string.md` | 79c9b46a |
-| 12 | Lady Lightning | `.codex/tasks/chars/6e92d712-lady-lightning-looks-string.md` | 6e92d712 |
-| 13 | Lady of Fire | `.codex/tasks/chars/f82421d0-lady-of-fire-looks-string.md` | f82421d0 |
-| 14 | Mezzy | `.codex/tasks/chars/295660bd-mezzy-looks-string.md` | 295660bd |
-| 15 | Mimic | `.codex/tasks/chars/e882b62f-mimic-looks-string.md` | e882b62f |
-| 16 | Persona Ice | `.codex/tasks/chars/575bd801-persona-ice-looks-string.md` | 575bd801 |
-| 17 | Persona Light and Dark | `.codex/tasks/chars/19301a97-persona-light-and-dark-looks-string.md` | 19301a97 |
-| 18 | Slime | `.codex/tasks/chars/4ff13c74-slime-looks-string.md` | 4ff13c74 |
+| # | Character | File Path | Hash Prefix | Status |
+|---|-----------|-----------|-------------|--------|
+| 1 | Ally | `.codex/tasks/chars/1436e59d-ally-looks-string.md` | 1436e59d | ✅ Description provided |
+| 2 | Becca | `.codex/tasks/chars/7964d0fa-becca-looks-string.md` | 7964d0fa | ✅ Description provided |
+| 3 | Bubbles | `.codex/tasks/chars/6ef351bd-bubbles-looks-string.md` | 6ef351bd | ✅ Description provided |
+| 4 | Carly | `.codex/tasks/chars/5fea3fa1-carly-looks-string.md` | 5fea3fa1 | ✅ Description provided |
+| 5 | Casno | `.codex/tasks/chars/09532005-casno-looks-string.md` | 09532005 | ✅ Description provided |
+| 6 | GrayGray | `.codex/tasks/chars/e49e0043-graygray-looks-string.md` | e49e0043 | ⏳ Awaiting description |
+| 7 | Hilander | `.codex/tasks/chars/af8ab3a9-hilander-looks-string.md` | af8ab3a9 | ⏳ Awaiting description |
+| 8 | Ixia | `.codex/tasks/chars/e9e535da-ixia-looks-string.md` | e9e535da | ⏳ Awaiting description |
+| 9 | Kboshi | `.codex/tasks/chars/a1566ae2-kboshi-looks-string.md` | a1566ae2 | ✅ Description provided |
+| 10 | Lady Echo | `.codex/tasks/chars/66f5f544-lady-echo-looks-string.md` | 66f5f544 | ✅ Description provided |
+| 11 | Lady Fire and Ice | `.codex/tasks/chars/79c9b46a-lady-fire-and-ice-looks-string.md` | 79c9b46a | ✅ Description provided |
+| 12 | Lady Lightning | `.codex/tasks/chars/6e92d712-lady-lightning-looks-string.md` | 6e92d712 | ✅ Description provided |
+| 13 | Lady of Fire | `.codex/tasks/chars/f82421d0-lady-of-fire-looks-string.md` | f82421d0 | ✅ Description provided |
+| 14 | Mezzy | `.codex/tasks/chars/295660bd-mezzy-looks-string.md` | 295660bd | ✅ Description provided |
+| 15 | Persona Ice | `.codex/tasks/chars/575bd801-persona-ice-looks-string.md` | 575bd801 | ✅ Description provided |
+| 16 | Persona Light and Dark | `.codex/tasks/chars/19301a97-persona-light-and-dark-looks-string.md` | 19301a97 | ✅ Description provided |
+| 17 | Slime | `.codex/tasks/chars/4ff13c74-slime-looks-string.md` | 4ff13c74 | ✅ Description provided |
+
+**Note:** Mimic task removed per user request.
 
 ## Task File Structure
 
@@ -145,17 +146,20 @@ class CharacterName(PlayerBase):
 
 ## Metrics
 
-- **Total Characters Reviewed:** 24
-- **Characters with Looks String:** 6 (25%)
-- **Characters Needing Looks String:** 18 (75%)
-- **Task Files Created:** 18
+- **Total Characters Reviewed:** 23
+- **Characters with Looks String (Complete):** 4 (17%)
+- **Characters with Looks String (Need Review):** 2 (9%)
+- **Characters Needing Looks String:** 17 (74%)
+- **Task Files Created:** 17 (Mimic removed)
+- **Task Files with Descriptions:** 14
+- **Task Files Pending Descriptions:** 3 (GrayGray, Hilander, Ixia)
 - **Estimated Implementation Time:** ~15 minutes per character
-- **Total Estimated Effort:** ~4.5 hours for all 18 characters
+- **Total Estimated Effort:** ~4.25 hours for remaining 17 characters
 
 ## Status
 
 - **Task Creation:** ✅ Complete (2025-11-12)
-- **User Review:** ⏳ Pending
+- **User Descriptions:** 🔄 In Progress (14/17 complete)
 - **Implementation:** ⏳ Pending
 - **Review/Audit:** ⏳ Pending
 - **Task Master Review:** ⏳ Pending
@@ -171,4 +175,4 @@ class CharacterName(PlayerBase):
 
 **Document ID:** 02aa64b5-character-looks-string-summary  
 **Last Updated:** 2025-11-12  
-**Status:** Active - Awaiting user input on character descriptions
+**Status:** Active - 14/17 character descriptions received, 3 pending (GrayGray, Hilander, Ixia)

@@ -13,15 +13,13 @@ See these files for the expected format:
 - `backend/plugins/characters/lady_light.py` (lines 16-24)
 - `backend/plugins/characters/lady_darkness.py` (lines 16-25)
 
-## Placeholder - Appearance Description Needed
-**User must provide:** Detailed visual description of Casno's appearance, including:
-- Physical build and proportions
-- Facial features and coloring
-- Hair style, color, and length
-- Clothing and outfit details
-- Signature gear or accessories
-- Posture and mannerisms
-- Visual effects or magical elements
+## Appearance Description
+**Character Details:**
+- **Race:** Human
+- **Apparent Age:** Mid-20s (approximately 25)
+- **Hair:** Red
+- **Build:** Fit, powerful-looking
+- **Overall Impression:** Strong, commanding presence
 
 ## Acceptance Criteria
 - [ ] `looks` field added to the Casno dataclass

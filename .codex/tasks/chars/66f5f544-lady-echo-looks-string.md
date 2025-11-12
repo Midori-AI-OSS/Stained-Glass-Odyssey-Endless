@@ -13,15 +13,22 @@ See these files for the expected format:
 - `backend/plugins/characters/lady_light.py` (lines 16-24)
 - `backend/plugins/characters/lady_darkness.py` (lines 16-25)
 
-## Placeholder - Appearance Description Needed
-**User must provide:** Detailed visual description of Lady Echo's appearance, including:
-- Physical build and proportions
-- Facial features and coloring
-- Hair style, color, and length
-- Clothing and outfit details
-- Signature gear or accessories
-- Posture and mannerisms
-- Visual effects or magical elements
+## Appearance Description
+**Character Details:**
+- **Gender:** Woman
+- **Hair:** Dark yellow-colored with bangs
+- **Eyes:** Yellow
+- **Apparent Age:** Normally appears 20ish, but can appear 18-30 due to de-aging ability
+- **Expression:** Closed mouth, happy, breathtaking with shimmering effect
+- **Wardrobe:** Rotates between three outfits:
+  - Lab coat (scientist/researcher look)
+  - Black off-shoulder strapless dress (formal/elegant)
+  - Bohemian-style maxi dress with floral print and wide-brimmed hat (casual/relaxed)
+- **Posture:** Walking, active stance
+- **Special Note:** Character should be coded as Asperger's/autistic for future ENG (English dialogue) implementation
+
+**SDXL Prompt Reference:**
+`{(lab coat)|(black off shoulder strapless+ dress)|(bohemian-style maxi dress with a floral print, wide-brimmed hat)}, woman, (dark yellow- colored hair), bangs, closed mouth, (yellow- eyes)+, breathtaking--, shimmering-- effect, happy, walking`
 
 ## Acceptance Criteria
 - [ ] `looks` field added to the Lady Echo dataclass

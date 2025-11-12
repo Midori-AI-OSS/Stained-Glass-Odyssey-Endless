@@ -13,15 +13,21 @@ See these files for the expected format:
 - `backend/plugins/characters/lady_light.py` (lines 16-24)
 - `backend/plugins/characters/lady_darkness.py` (lines 16-25)
 
-## Placeholder - Appearance Description Needed
-**User must provide:** Detailed visual description of Lady of Fire's appearance, including:
-- Physical build and proportions
-- Facial features and coloring
-- Hair style, color, and length
-- Clothing and outfit details
-- Signature gear or accessories
-- Posture and mannerisms
-- Visual effects or magical elements
+## Appearance Description
+**Character Details:**
+- **Alternate Names:** Persona Fire, Fire, Lady Fire
+- **Gender:** Female
+- **Race:** Human
+- **Apparent Age:** 18 or 20
+- **Hair:** Long, flowing dark red hair
+- **Eyes:** Hot red
+- **Outfit:** Red strapless dress with white cloak
+- **Expression:** Closed mouth
+- **Visual Effects:** Breathtaking with shimmering effect, exudes warmth
+- **Medical Condition:** Dissociative Schizophrenia (character portrayal consideration)
+
+**SDXL Prompt Reference:**
+`(red strapless dress with a white cloak), teenage woman, (long flowing dark red hair), bangs, closed mouth, (hot red eyes)+, breathtaking, shimmering effect.`
 
 ## Acceptance Criteria
 - [ ] `looks` field added to the Lady of Fire dataclass
