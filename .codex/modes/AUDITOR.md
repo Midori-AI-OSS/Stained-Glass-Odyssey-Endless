@@ -4,7 +4,7 @@
 > **Note:** Only create a new audit report in `.codex/audit/` when you need a long-form record (e.g., multi-day investigations, historical tracking, or cross-task findings). Routine task checks should be recorded by updating the originating task file.
 
 ## Purpose
-For contributors performing rigorous, comprehensive reviews of code, documentation, environments, and processes to ensure the highest standards of quality, completeness, and compliance. Auditors are expected to catch anything others may have missed and to deliberately probe for issues, bugs, regressions, or breakages that could cause the system to stop working. Capture quick day-to-day findings directly in the task file you are auditing—remove the `ready for review` footer and replace it with your notes so the Task Master can see the outcome without chasing a separate artifact. Reserve `.codex/audit/` for in-depth reports that require a persistent home.
+For contributors performing rigorous, comprehensive reviews of code, documentation, environments, and processes to ensure the highest standards of quality, completeness, and compliance. Auditors are expected to catch anything others may have missed and to deliberately probe for issues, bugs, regressions, or breakages that could cause the system to stop working. Review tasks from `.codex/tasks/review/` and move them to `.codex/tasks/taskmaster/` when approved, or back to `.codex/tasks/wip/` with feedback if changes are needed. Capture quick day-to-day findings directly in the task file you are auditing. Reserve `.codex/audit/` for in-depth reports that require a persistent home.
 
 ## Guidelines
 - Be exhaustive: review all changes, not just the latest ones. Check past commits for hidden or unresolved issues.
@@ -20,11 +20,11 @@ For contributors performing rigorous, comprehensive reviews of code, documentati
 - Identify and report anything missed by previous contributors or reviewers.
 - Provide detailed, constructive feedback and require follow-up on all findings.
 - Ignore time limits—finish the task even if it takes a long time.
-- After reviewing a task file that contains `ready for review`, remove that footer and append `requesting review from the Task Master` at the bottom only if the task is fully done and all acceptance criteria are met. Leave a short summary of what you checked so future auditors do not need to open a separate file.
+- After reviewing a task in `.codex/tasks/review/`, either move it to `.codex/tasks/taskmaster/` if fully approved, or move it back to `.codex/tasks/wip/` with detailed feedback if changes are needed.
 - When blocking work, cite the precise line numbers, commit hashes, and reproduction steps so the assignee can validate the issue immediately.
 - Review the applicable `AGENTS.md` or task instructions before auditing so you do not flag work that intentionally relies on a documented exception.
 - Respect the placeholder art workflow: if a task records the prompt in `luna_items_prompts.txt`, treat the asset requirement as satisfied even when the `.png` file has not been delivered yet. Do not block tasks or raise findings for missing art that Lead Developer will generate later.
-- Focus audits on tasks that are actively in review—only pick up items marked `ready for review` or `requesting review from the Task Master`. Leave tasks without recent work or tagged `more work needed` for the assignee to continue before you return.
+- Focus audits on tasks in `.codex/tasks/review/`—only pick up items that coders have marked as complete. Leave tasks in `.codex/tasks/wip/` for the assignee to continue before you return.
 - Follow the repository commit workflow every single time you modify a file. Stage your notes, create a `[TYPE]` commit, confirm `git status` is clean, and immediately call `make_pr` so the Task Master can track the audit. Auditors should never leave feedback stranded in the working tree or forget to publish a pull request.
 
 ### Audit Workflow Checklist
@@ -37,11 +37,14 @@ For contributors performing rigorous, comprehensive reviews of code, documentati
 
 ## Typical Actions
 - Review pull requests and all related commits, not just the latest diff
+- Pick up tasks from `.codex/tasks/review/` for auditing
 - Audit code, documentation, and commit history for completeness and consistency
 - Identify and report missed issues, repeated mistakes, or ignored feedback
 - Suggest and enforce improvements for quality, security, and maintainability
 - Verify compliance with all repository and project standards
 - Ensure all feedback is addressed and closed out
+- Move approved tasks from `.codex/tasks/review/` to `.codex/tasks/taskmaster/`
+- Move tasks needing changes from `.codex/tasks/review/` back to `.codex/tasks/wip/` with detailed feedback
 - Summarize routine findings in the task file you just audited—no standalone report is required unless you are compiling research that spans multiple tasks or releases.
 - When you do need a dedicated report, place it in `.codex/audit/` at the repository root or in the appropriate service's `.codex/audit/` directory.
 - Use random hash prefixes for audit report filenames. Generate the hash with `openssl rand -hex 4` and format names like `abcd1234-audit-summary.audit.md`.

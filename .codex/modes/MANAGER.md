@@ -10,6 +10,7 @@ Managers maintain the operational backbone for contributors. They ensure every s
 ## Guidelines
 - Review the Lead Developer's requests and evaluate feasibility, risks, and cross-role impact before approving changes.
 - Keep repository and service-level `AGENTS.md` documents accurate, consistent, and scoped correctly.
+- Ensure task organization follows the folder-based structure (wip, review, taskmaster) as documented in `.codex/tasks/AGENTS.md`.
 - Document rationale for significant instruction updates in `.codex/instructions/` so future managers can trace decision history.
 - Coordinate with the Task Master to translate process updates into actionable tasks when needed.
 - Keep the Manager cheat sheet (`.codex/notes/manager-mode-cheat-sheet.md`) current with quick reminders and key workflows.

@@ -1,48 +1,41 @@
-# Task Status Update Protocol
+# Task Organization System
 
-To keep work-in-progress visibility consistent, every task file, planning
-thread, or pull request description must end with a clear status indicator.
-Coders, reviewers, and managers should verify these markers whenever a task is
-touched.
+Tasks are organized by status into three main folders:
 
-## Task Creation vs. In-Progress Updates
+## Status Folders
 
-- **Task Master drafts:** Leave the status marker off entirely when creating a
-  new task file. This signals to contributors that the work has not yet been
-  started. The first coder or reviewer to touch the task should add the
-  appropriate marker once they begin work.
-- **Active or reviewed tasks:** After someone begins implementing, reviewing,
-  or handing back a task, add exactly one marker from the list below on its own
-  line at the bottom of the document. Do not append additional commentary after
-  the marker.
+### wip/ - Work In Progress
+Tasks that are actively being developed by coders. When a task is complete and ready for review, move it to the corresponding subfolder in `review/`.
 
-### Allowed Status Markers
-- `ready for review` — the implementation is complete and waiting for
-  feedback.
-- `requesting review from the Task Master` — reviewers append this when
-  they hand a fully-audited task back to the Task Master. Treat it as an
-  extension of the `ready for review` state rather than a missing marker.
-- `more work needed` — the contributor is still iterating. Follow the tag
-  with a short summary (and optionally a percentage complete) so the next
-  person understands what remains.
+### review/ - Ready for Review
+Tasks that are complete and awaiting auditor review. After review:
+- If approved, move to the corresponding subfolder in `taskmaster/`
+- If changes are needed, move back to the corresponding subfolder in `wip/` with feedback
 
-## Review Checklist
-Managers and reviewers should confirm that:
-1. Newly authored Task Master files intentionally omit a status marker until a
-   contributor starts work.
-2. A marker is present at the bottom of every active task file after work
-   begins.
-3. The marker reflects the current state of the work before leaving feedback or
-   handing the task off.
-4. Any time the status changes, the contributor updates the marker
-   immediately.
-5. Auditors only engage once a task is marked `ready for review` or
-   `requesting review from the Task Master`; tasks without those markers should
-   continue to incubate with the assignee.
+### taskmaster/ - Task Master Review
+Tasks that have been fully audited and are awaiting final Task Master sign-off. The Task Master can either:
+- Close the task as complete (delete the task file)
+- Request additional changes (move back to the corresponding subfolder in `wip/` with clarifications)
 
-If a marker is missing, request an update before proceeding so downstream
-contributors have accurate visibility into task readiness.
+## Category Organization
 
-# Task Priority Guidance
+Each status folder contains category-specific subfolders:
 
-Tasks placed directly in this folder are **high priority** and should be addressed before tasks in subfolders.
+- **cards/** - Card implementation tasks
+- **chars/** - Character implementation tasks
+- **docs/** - Documentation tasks
+- **items/** - Item implementation tasks
+- **passives/** - Passive ability tasks (organized by tier: boss, glitched, normal, prime)
+- **relics/** - Relic implementation tasks
+- **tests/** - Test-related tasks
+
+## Workflow
+
+1. **Task Creation**: Task Master creates new tasks in the appropriate category subfolder within `wip/`
+2. **Development**: Coders work on tasks in `wip/` and move them to `review/` when complete
+3. **Auditing**: Auditors review tasks in `review/` and move them to `taskmaster/` if approved, or back to `wip/` if changes are needed
+4. **Completion**: Task Master reviews tasks in `taskmaster/` and closes them when satisfied
+
+## Legacy Files
+
+Tasks placed directly in this folder (not in wip, review, or taskmaster subfolders) are legacy files from the old tag-based system. These should be moved into the appropriate status and category folders.
