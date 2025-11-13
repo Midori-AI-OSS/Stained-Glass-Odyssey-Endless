@@ -63,4 +63,3 @@ Description integrates SDXL prompt details and character's artistic/organization
 
 File location: `backend/plugins/characters/becca.py` (lines 18-25)
 
-ready for review

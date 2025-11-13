@@ -83,4 +83,3 @@ These remaining failures require deeper knowledge of Svelte 5 event system and t
 - Checking if component prop definitions need `export` declarations for callbacks
 - Verifying if testing library needs Svelte 5-specific configuration
 
-more work needed - 3 tests failing (improved from 4), event system investigation required

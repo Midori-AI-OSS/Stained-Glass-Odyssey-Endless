@@ -1,7 +1,7 @@
-# Add Looks String to Ally Character
+# Add Looks String to Bubbles Character
 
 ## Description
-Add a `looks` field to the Ally character class (`backend/plugins/characters/ally.py`) following the format used in Luna, Ryne, Lady Light, and Lady Darkness.
+Add a `looks` field to the Bubbles character class (`backend/plugins/characters/bubbles.py`) following the format used in Luna, Ryne, Lady Light, and Lady Darkness.
 
 ## Background
 The repository is standardizing character descriptions by adding a `looks` string that provides detailed visual descriptions for each character. This supports future AI-powered features and provides rich context for character appearance.
@@ -15,14 +15,11 @@ See these files for the expected format:
 
 ## Appearance Description
 **Character Details:**
-- **Gender:** Female
-- **Race:** Human
-- **Apparent Age:** Mid-20s
-- **Hair:** Blonde
-- **Eyes:** Brown
+- **Form:** A bubble
+- **Note:** This is a literal bubble creature with no humanoid characteristics
 
 ## Acceptance Criteria
-- [x] `looks` field added to the Ally dataclass
+- [x] `looks` field added to the Bubbles dataclass
 - [x] Content follows multi-paragraph format used in reference examples
 - [x] Triple-quoted string format used for multiline text
 - [x] Positioned after `summarized_about` and before `char_type`
@@ -43,17 +40,15 @@ Low - Quality of life improvement
 **Completed:** 2025-11-13  
 **Implemented by:** Coder Mode Agent
 
-Added 7-paragraph visual description covering:
-- Athletic build and tactical posture (5'7", mid-20s, efficient movement)
-- Facial features with blonde hair and brown eyes
-- Eye characteristics emphasizing analytical nature
-- Tactical wardrobe (charcoal combat jacket, teal undershirt, cargo pants)
-- Specialized gear (elemental focuses, interface bracer, datapad)
-- Visual effects during ability activation (elemental circuitry, cascade overloads)
-- Behavioral patterns (tactical callouts, micro-adjustments, combat analytics)
+Added 6-paragraph visual description covering:
+- Spherical bubble form (4' diameter) with opalescent translucent membrane
+- Internal micro-bubbles as emotional/state indicators (drift patterns, formations)
+- Fluid movement mechanics (floating, bouncing, spinning, pressure dynamics)
+- Surface detail variations (swirling patterns, condensation, temporary dimple expressions)
+- Bubble burst combat visuals (glowing micro-bubbles, satellite bubble ejection, chain reactions)
+- Enthusiastic behavioral patterns (bouncing excitement, spinning joy, celebratory explosions)
 
-Description integrates character's tactical support role and overload abilities into visual presentation while maintaining literary quality matching Luna/Lady Light examples.
+Description creatively handles non-humanoid bubble creature while maintaining literary quality and capturing playful yet devastating combat nature.
 
-File location: `backend/plugins/characters/ally.py` (lines 18-26)
+File location: `backend/plugins/characters/bubbles.py` (lines 18-24)
 
-ready for review
