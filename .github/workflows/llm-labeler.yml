@@ -24,10 +24,3 @@ jobs:
       uses: actions/labeler@v6.0.1
       with:
         repo-token: "${{ secrets.GITHUB_TOKEN }}"
-    
-    - name: Check for audit markers in task files
-      uses: actions/github-script@v7
-      with:
-        script: |
-          const checkReadyForAudit = require('./.github/scripts/check-ready-for-audit.js');
-          await checkReadyForAudit({ github, context, core });

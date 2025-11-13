@@ -5,9 +5,25 @@ enhancement:
 documentation:
 - changed-files:
   - any-glob-to-any-file:
-    - .codex/**
     - docs/**
+    - .codex/**
     - guides/**
+
+auditable:
+- changed-files:
+  - any-glob-to-any-file:
+    - .codex/tasks/review/**
+    - .codex/tasks/taskmaster/**
+
+tasks:
+- changed-files:
+  - any-glob-to-any-file:
+    - .codex/tasks/wip/**
+
+frontend:
+- all:
+  - changed-files:
+    - any-glob-to-any-file: 'frontend/**'
 
 backend:
 - all:
@@ -33,11 +49,6 @@ relic:
 - all:
   - changed-files:
     - any-glob-to-any-file: 'backend/plugins/relics/**'
-
-frontend:
-- all:
-  - changed-files:
-    - any-glob-to-any-file: 'frontend/**'
 
 # Add 'feature' label to any PR where the head branch name starts with `feature` or has a `feature` section in the name
 feature:
