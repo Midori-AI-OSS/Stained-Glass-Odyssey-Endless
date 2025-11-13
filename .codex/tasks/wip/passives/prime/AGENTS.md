@@ -1,5 +1,4 @@
 # Prime Tier Passive Tasks - Work In Progress
-Ready for Review
 
 Prime-tier passive modifiers represent elite versions of normal passives with enhanced effects.
 

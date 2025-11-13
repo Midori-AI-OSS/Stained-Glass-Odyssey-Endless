@@ -1,5 +1,4 @@
 # Normal Tier Passive Tasks - Work In Progress
-Ready for Review
 
 Normal-tier passives represent the baseline implementations for character passive abilities. These are found in `backend/plugins/passives/normal/` and serve as the foundation for all passive behaviour. Normal passives should be clean, standalone implementations without hard-coded branches for boss, glitched, or prime modifiers—those tier-specific behaviours belong in their respective folders.
 

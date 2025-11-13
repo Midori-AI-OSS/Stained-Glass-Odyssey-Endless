@@ -1,5 +1,4 @@
 # Glitched Tier Passive Tasks - Work In Progress
-Ready for Review
 
 Glitched-tier passive modifiers represent unusual or unexpected versions of normal passives with unique mechanics.
 

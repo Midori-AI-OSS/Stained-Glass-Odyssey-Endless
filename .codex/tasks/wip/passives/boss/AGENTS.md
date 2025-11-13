@@ -1,5 +1,4 @@
 # Boss Tier Passive Tasks - Work In Progress
-Ready for Review
 
 Boss-tier passive modifiers represent enhanced versions of normal passives applied during boss encounters.
 
