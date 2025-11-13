@@ -3,13 +3,13 @@ from runs.party_manager import load_party
 from services.run_configuration import build_run_modifier_context
 from services.run_configuration import validate_run_configuration
 from services.user_level_service import get_user_level
-from test_app import app_with_db  # noqa: F401
+from test_app import app_with_db  # noqa: F401, F811
 
 from plugins.characters import player as player_module
 
 
 @pytest.mark.asyncio
-async def test_party_save_and_validation(app_with_db):
+async def test_party_save_and_validation(app_with_db):  # noqa: F811
     app, _ = app_with_db
     client = app.test_client()
     start_resp = await client.post('/run/start', json={'party': ['player']})
@@ -29,7 +29,7 @@ async def test_party_save_and_validation(app_with_db):
 
 
 @pytest.mark.asyncio
-async def test_load_party_applies_run_modifier_context(app_with_db):
+async def test_load_party_applies_run_modifier_context(app_with_db):  # noqa: F811
     app, _ = app_with_db
     client = app.test_client()
 
