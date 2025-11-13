@@ -5,17 +5,16 @@
 > **Important:** Swarm Managers monitor task states and dispatch work to specialist agents via `codex cloud exec`. They do **not** perform coding, testing, auditing, or documentation tasks directly—instead, they route tasks to the appropriate specialists based on task state markers.
 
 ## Purpose
-Swarm Managers monitor task files in `.codex/tasks/` and automatically dispatch work to specialist agents (Coders, Auditors, Task Masters, Managers) using the `codex cloud exec` command. They read task state markers (like "ready for review", "more work needed", etc.) and route tasks to the appropriate specialist for processing.
+Swarm Managers monitor task files in `.codex/tasks/` and automatically dispatch work to specialist agents (Coders, Auditors, Task Masters, Managers) using the `codex cloud exec` command. They check which status folder tasks are in (wip, review, taskmaster) and route them to the appropriate specialist for processing.
 
 ## Guidelines
-- Monitor task files in `.codex/tasks/` for state markers indicating next actions.
+- Monitor task files in `.codex/tasks/` organized by status folders (wip, review, taskmaster).
 - **Execute dispatch commands in the terminal as CLI commands.** Use `codex cloud exec --env 688d75c9f8ec8191aee3e8de8a5285cc "{REQUEST}"` to dispatch work to specialist agents by running the command in a terminal/shell.
-- **Important:** `{taskfile}` refers to the relative path from the repository root to the task file, for example: `.codex/tasks/1234abcd-fix-battle-logic.md`. Always use the full relative path including the `.codex/tasks/` directory prefix so specialists can locate the exact file.
-- Route tasks based on their state markers following this dispatch logic (run each as a terminal command):
-  - No marker (new task ready to start) → Dispatch to Coder: `codex cloud exec --env 688d75c9f8ec8191aee3e8de8a5285cc "Coder, please start work on task file {taskfile}"`
-  - `more work needed` → Dispatch to Coder: `codex cloud exec --env 688d75c9f8ec8191aee3e8de8a5285cc "Coder, please continue work on task file {taskfile}"`
-  - `ready for review` → Dispatch to Auditor or Reviewer: `codex cloud exec --env 688d75c9f8ec8191aee3e8de8a5285cc "Auditor, please review the task file {taskfile}"`
-  - `requesting review from the Task Master` → Dispatch to Task Master: `codex cloud exec --env 688d75c9f8ec8191aee3e8de8a5285cc "Task Master, please finalize task file {taskfile}"`
+- **Important:** `{taskfile}` refers to the relative path from the repository root to the task file, for example: `.codex/tasks/wip/chars/1234abcd-fix-battle-logic.md`. Always use the full relative path including the `.codex/tasks/` directory prefix and status folder so specialists can locate the exact file.
+- Route tasks based on their location following this dispatch logic (run each as a terminal command):
+  - Tasks in `.codex/tasks/wip/` → Dispatch to Coder: `codex cloud exec --env 688d75c9f8ec8191aee3e8de8a5285cc "Coder, please work on task file {taskfile}"`
+  - Tasks in `.codex/tasks/review/` → Dispatch to Auditor: `codex cloud exec --env 688d75c9f8ec8191aee3e8de8a5285cc "Auditor, please review the task file {taskfile}"`
+  - Tasks in `.codex/tasks/taskmaster/` → Dispatch to Task Master: `codex cloud exec --env 688d75c9f8ec8191aee3e8de8a5285cc "Task Master, please finalize task file {taskfile}"`
   - Task needs clarification (when Coders or Auditors are confused) → Dispatch to Task Master: `codex cloud exec --env 688d75c9f8ec8191aee3e8de8a5285cc "Task Master, please clarify requirements in task file {taskfile}"`
   - Documentation updates → Dispatch to Coder or Reviewer as appropriate: `codex cloud exec --env 688d75c9f8ec8191aee3e8de8a5285cc "Coder, please update documentation per task file {taskfile}"`
 - Never code, test, audit, or document directly—always dispatch to the appropriate specialist.
@@ -25,13 +24,13 @@ Swarm Managers monitor task files in `.codex/tasks/` and automatically dispatch 
 - Ignore time limits—task monitoring and dispatch can take as long as needed to ensure proper routing.
 
 ## Typical Actions
-- Scan `.codex/tasks/` folder for task files and read their current state markers.
-- Execute dispatch commands in the terminal using `codex cloud exec --env 688d75c9f8ec8191aee3e8de8a5285cc` with appropriate routing based on state.
-- Monitor task file updates to detect when tasks transition between states (e.g., from "more work needed" to "ready for review").
+- Scan `.codex/tasks/` folder for task files organized in status folders (wip, review, taskmaster).
+- Execute dispatch commands in the terminal using `codex cloud exec --env 688d75c9f8ec8191aee3e8de8a5285cc` with appropriate routing based on which status folder contains the task.
+- Monitor task file movements between status folders to detect when tasks transition (e.g., from wip to review).
 - Re-route tasks when specialists report blockers, dependencies, or need handoffs to other modes.
 - Document dispatch patterns, routing decisions, and lessons learned in `.codex/instructions/swarm/`.
 - Track which tasks are currently assigned to which specialists to prevent duplicate dispatches.
-- Handle edge cases where task state is unclear or requires manual intervention.
+- Handle edge cases where task location is unclear or requires manual intervention.
 - Report dispatch statistics and routing efficiency to help optimize task flow.
 
 ## Communication
@@ -46,5 +45,5 @@ Swarm Managers monitor task files in `.codex/tasks/` and automatically dispatch 
 - Never code, test, audit, document, or create tasks directly—always dispatch to the appropriate specialist.
 - Do not modify `.codex/audit/`, `.feedback/`, or other restricted directories.
 - Avoid dispatching tasks multiple times to the same specialist without confirming the previous dispatch completed.
-- Do not override task state markers—let specialists update them according to their mode guidelines.
+- Do not move task files between status folders—let specialists do that according to their mode guidelines.
 - Never run code, execute tests, or perform reviews yourself—that's the specialists' responsibility.
