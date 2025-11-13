@@ -83,3 +83,31 @@ These remaining failures require deeper knowledge of Svelte 5 event system and t
 - Checking if component prop definitions need `export` declarations for callbacks
 - Verifying if testing library needs Svelte 5-specific configuration
 
+## Progress Update (2025-11-13, Coder Mode)
+### Summary
+Completed Svelte 5 API migration - all `component.$set()` calls replaced with `rendered.rerender()`. Infrastructure issues resolved.
+
+### Changes Applied
+1. ✅ Replaced 4 instances of deprecated `component.$set()` with `rendered.rerender()`
+   - Card phase test (lines 164, 174)
+   - Relic phase test (lines 249, 258)
+2. ✅ Migrated drops phase test from DOM `addEventListener('advance')` to `onadvance` callback prop
+3. ✅ Removed unnecessary `component` variable declarations
+
+### Current Test Results
+- ✅ PASSING: "battle review gating > battle review overlay only opens when skipBattleReview is disabled"
+- ✅ PASSING: "skipBattleReview auto-advances without mounting the review overlay"
+- ❌ FAILING: "drops phase renders loot-only view and auto-advances after countdown" (line 131) - advance callback not triggered by auto-timer
+- ❌ FAILING: "card phase highlights on first click and confirms via keyboard fallback" (line 202) - status shows "Advance locked" instead of "Highlighted card ready"
+- ❌ FAILING: "relic phase clears highlights when staging resets" (line 278) - `.selected` class not found
+
+### Status
+**Infrastructure migration complete** ✅ - No more Svelte 5 API errors
+
+**Remaining work**: The 3 failing tests are component behavior issues, not infrastructure:
+- Auto-advance timer not triggering callback (possible timer mocking issue)
+- Component state (`confirmFallbackMode`, `phaseAdvanceAvailable`) not matching test expectations
+- May require investigation of reward phase controller state management or test expectation updates
+
+Tests run cleanly without Svelte 5 errors. Further work requires deeper component behavior analysis.
+
