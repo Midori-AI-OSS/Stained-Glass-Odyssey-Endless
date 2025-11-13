@@ -145,7 +145,6 @@ describe('four-phase reward overlay behaviour', () => {
     ];
 
     const selectEvents = [];
-    let component;
     
     const rendered = render(RewardOverlay, {
       props: {
@@ -161,7 +160,7 @@ describe('four-phase reward overlay behaviour', () => {
                 detail?.entry?.name ?? cards[0].name,
                 detail?.entry ?? cards[0]
               );
-              component.$set({
+              rendered.rerender({
                 ...baseOverlayProps,
                 cards,
                 stagedCards: [staged],
@@ -171,7 +170,7 @@ describe('four-phase reward overlay behaviour', () => {
             });
           } else if (detail?.intent === 'confirm' && detail?.type === 'card') {
             queueMicrotask(() => {
-              component.$set({
+              rendered.rerender({
                 ...baseOverlayProps,
                 relics: [{ id: 'guardian-talisman', name: 'Guardian Talisman' }],
                 awaitingRelic: false
@@ -183,7 +182,6 @@ describe('four-phase reward overlay behaviour', () => {
       }
     });
     
-    component = rendered.component;
     const container = rendered.container;
 
     await flushOverlayTicks(2);
@@ -231,8 +229,6 @@ describe('four-phase reward overlay behaviour', () => {
       { id: 'tidal-charm', name: 'Tidal Charm' }
     ];
 
-    let component;
-    
     const rendered = render(RewardOverlay, {
       props: {
         ...baseOverlayProps,
@@ -246,7 +242,7 @@ describe('four-phase reward overlay behaviour', () => {
                 detail?.entry?.name ?? relics[0].name,
                 detail?.entry ?? relics[0]
               );
-              component.$set({
+              rendered.rerender({
                 ...baseOverlayProps,
                 relics,
                 stagedRelics: [staged],
@@ -255,7 +251,7 @@ describe('four-phase reward overlay behaviour', () => {
             });
           } else if (detail?.intent === 'confirm' && detail?.type === 'relic') {
             queueMicrotask(() => {
-              component.$set({
+              rendered.rerender({
                 ...baseOverlayProps,
                 relics,
                 stagedRelics: [],
@@ -269,7 +265,6 @@ describe('four-phase reward overlay behaviour', () => {
       }
     });
     
-    component = rendered.component;
     const container = rendered.container;
 
     await flushOverlayTicks(2);
