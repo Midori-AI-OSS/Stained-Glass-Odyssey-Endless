@@ -106,16 +106,12 @@ describe('four-phase reward overlay behaviour', () => {
         ...baseOverlayProps,
         items: [{ id: 'ancient-coin', ui: { label: 'Ancient Coin' }, amount: 1 }],
         gold: 25,
-        awaitingLoot: true
+        awaitingLoot: true,
+        onadvance: (detail) => {
+          advances.push(detail);
+        }
       }
     });
-    
-    const rootElement = container.querySelector('.layout');
-    if (rootElement) {
-      rootElement.addEventListener('advance', (event) => {
-        advances.push(event.detail);
-      });
-    }
 
     await flushOverlayTicks(6);
 
