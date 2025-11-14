@@ -20,8 +20,7 @@ LadyFireAndIce's core moveset and lore live in `backend/plugins/characters/lady_
 - Tier guidance: `.codex/tasks/passives/boss/AGENTS.md`
 - Existing passives directory for tone/language examples.
 
-## Acceptance Criteria
-- Document lists at least three well-explained concepts that match the character fantasy and the boss tier brief.
-- Ideas stay within the tag's power band and leave room for other tiers to escalate separately.
-- Notes clearly separate must-have behaviour from optional stretch goals.
-- No code changes are performed as part of this task—output is a written brainstorming brief ready for review.
+## Acceptance Criteria [...]
+
+##Boss: Elemental Convergence - **P1:** Alt states. **P2(66%):** Rapid switch. **P3(33%):** Both simultaneous. **P4(<15%):** Fusion nova (thermal overload)
+##Glitched: Temperature Chaos - Inverted elements, corrupted dual-states, thermal sensors fail, unstable fusion (random explosions)

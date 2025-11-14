@@ -20,8 +20,6 @@ LadyLight's core moveset and lore live in `backend/plugins/characters/lady_light
 - Tier guidance: `.codex/tasks/passives/boss/AGENTS.md`
 - Existing passives directory for tone/language examples.
 
-## Acceptance Criteria
-- Document lists at least three well-explained concepts that match the character fantasy and the boss tier brief.
-- Ideas stay within the tag's power band and leave room for other tiers to escalate separately.
-- Notes clearly separate must-have behaviour from optional stretch goals.
-- No code changes are performed as part of this task—output is a written brainstorming brief ready for review.
+## Acceptance Criteria [...]
+
+##Boss/Glitched: **Boss: Luminous Apotheosis** - **P1:** Glow. **P2(66%):** Brilliance. **P3(33%):** Radiance(zone fills). **P4(<15%):** Transcendence(blinding light) | **Glitched: Light Corruption** - Barriers blind allies, healing damages targets, light inverts to darkness randomly

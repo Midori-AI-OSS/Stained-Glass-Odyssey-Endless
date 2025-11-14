@@ -20,8 +20,10 @@ LadyFireAndIce's core moveset and lore live in `backend/plugins/characters/lady_
 - Tier guidance: `.codex/tasks/passives/normal/AGENTS.md`
 - Existing passives directory for tone/language examples.
 
-## Acceptance Criteria
-- Document lists at least three well-explained concepts that match the character fantasy and the normal tier brief.
-- Ideas stay within the tag's power band and leave room for other tiers to escalate separately.
-- Notes clearly separate must-have behaviour from optional stretch goals.
-- No code changes are performed as part of this task—output is a written brainstorming brief ready for review.
+## Acceptance Criteria [...]
+
+## All Tiers Summary
+**Normal: Duality Engine (IMPLEMENTED)** - Fire/Ice dual element system, alternating states, temperature extremes, fusion attacks
+**Prime: Perfect Duality** - Simultaneous fire+ice, fusion mastery, temperature control absolute, "Thermal Singularity" ultimate
+**Boss: Elemental Convergence** - **Phases:** Alternating→Rapid switching→Simultaneous dual-element→Fusion nova (both at once extreme)
+**Glitched: Temperature Chaos** - Elements invert randomly, dual-state corruption (fire freezes/ice burns), thermal readings impossible, fusion unstable

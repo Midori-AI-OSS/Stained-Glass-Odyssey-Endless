@@ -20,8 +20,6 @@ LadyLight's core moveset and lore live in `backend/plugins/characters/lady_light
 - Tier guidance: `.codex/tasks/passives/normal/AGENTS.md`
 - Existing passives directory for tone/language examples.
 
-## Acceptance Criteria
-- Document lists at least three well-explained concepts that match the character fantasy and the normal tier brief.
-- Ideas stay within the tag's power band and leave room for other tiers to escalate separately.
-- Notes clearly separate must-have behaviour from optional stretch goals.
-- No code changes are performed as part of this task—output is a written brainstorming brief ready for review.
+## Acceptance Criteria [...]
+
+##All Tiers: **Normal: Radiant Aegis (IMPLEMENTED)** - Light barriers, healing auras, purification, holy damage | **Prime: Divine Radiance** - 3× barrier strength, resurrection ability, light zone control | **Boss: Luminous Apotheosis** - **Phases:** Glow→Brilliance→Radiance→Blinding transcendence | **Glitched: Light Corruption** - Barriers blind allies, healing damages, light becomes darkness randomly
