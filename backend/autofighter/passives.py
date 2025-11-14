@@ -41,6 +41,65 @@ def discover() -> dict[str, type]:
     return PASSIVE_REGISTRY
 
 
+def resolve_passive_for_rank(base_passive_id: str, rank: str) -> str:
+    """Resolve passive ID based on foe rank.
+
+    Maps base passive IDs to tier-specific variants based on the foe's rank.
+    For example: luna_lunar_reservoir + rank "glitched" -> luna_lunar_reservoir_glitched
+
+    Args:
+        base_passive_id: The base passive ID (e.g., "luna_lunar_reservoir")
+        rank: The foe's rank (e.g., "normal", "boss", "glitched", "prime", "glitched boss")
+
+    Returns:
+        The resolved passive ID appropriate for the rank, or the base ID if no tier-specific variant exists.
+    """
+    registry = discover()
+    rank_lower = rank.lower() if rank else ""
+
+    # Determine tier suffixes in priority order
+    # Check for combined tiers first (e.g., "glitched prime boss")
+    tier_suffixes = []
+    if "glitched" in rank_lower:
+        tier_suffixes.append("glitched")
+    if "prime" in rank_lower:
+        tier_suffixes.append("prime")
+    if "boss" in rank_lower:
+        tier_suffixes.append("boss")
+
+    # Try each tier suffix in order
+    for suffix in tier_suffixes:
+        tier_id = f"{base_passive_id}_{suffix}"
+        if tier_id in registry:
+            return tier_id
+
+    # Fall back to base passive if no tier-specific variant exists
+    return base_passive_id
+
+
+def apply_rank_passives(foe: Any) -> None:
+    """Apply rank-specific passive transformations to a foe.
+
+    Replaces base passive IDs with tier-specific variants based on the foe's rank.
+    Modifies the foe's passives list in place.
+
+    Args:
+        foe: The foe instance with rank and passives attributes
+    """
+    if not hasattr(foe, "passives") or not hasattr(foe, "rank"):
+        return
+
+    rank = getattr(foe, "rank", "normal")
+    passives = getattr(foe, "passives", [])
+
+    if not passives:
+        return
+
+    # Resolve each passive to its tier-specific variant
+    resolved_passives = [resolve_passive_for_rank(pid, rank) for pid in passives]
+    foe.passives = resolved_passives
+
+
 class PassiveRegistry:
     def __init__(self) -> None:
         self._registry = discover()
