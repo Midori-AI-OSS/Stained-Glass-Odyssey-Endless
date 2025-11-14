@@ -21,7 +21,9 @@ LadyEcho's core moveset and lore live in `backend/plugins/characters/lady_echo.p
 - Existing passives directory for tone/language examples.
 
 ## Acceptance Criteria
-- Document lists at least three well-explained concepts that match the character fantasy and the normal tier brief.
-- Ideas stay within the tag's power band and leave room for other tiers to escalate separately.
-- Notes clearly separate must-have behaviour from optional stretch goals.
-- No code changes are performed as part of this task—output is a written brainstorming brief ready for review.
+[...]
+
+## Normal: Resonant Static (IMPLEMENTED) - Sound/lightning resonance effects, echo multiplication, sonic disruption
+## Prime: Harmonic Cascade - 3× echo strength, chain resonance (multi-target), soundwave zone control
+## Boss: Resonance Singularity - **Phases:** Normal→Echo chamber (infinite reverb)→Sonic overload (deafening)→Reality vibration (space cracks)
+## Glitched: Feedback Loop - Echoes create echoes (infinite recursion), sound inverts (silence=damage), resonance targets wrong frequencies

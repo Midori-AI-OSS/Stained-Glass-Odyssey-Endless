@@ -21,7 +21,18 @@ LadyDarkness's core moveset and lore live in `backend/plugins/characters/lady_da
 - Existing passives directory for tone/language examples.
 
 ## Acceptance Criteria
-- Document lists at least three well-explained concepts that match the character fantasy and the prime tier brief.
-- Ideas stay within the tag's power band and leave room for other tiers to escalate separately.
-- Notes clearly separate must-have behaviour from optional stretch goals.
-- No code changes are performed as part of this task—output is a written brainstorming brief ready for review.
+[...]
+
+---
+
+## Prime: Eternal Night (Recommended)
+- Veil potency doubled (2× stealth/debuff strength), Shadow Banishment ability (remove enemy from combat for 2 turns), Eclipse duration extended (4 turns vs 2), Shadow clones gain full AI and 50% of original stats, Darkness spreads passively (enemy vision reduced globally)
+
+## Boss: Void Empress
+**Phase 1:** Enhanced veil + shadow clones
+**Phase 2 (66%):** Darkness Spreads - arena lighting reduced, shadows autonomous
+**Phase 3 (33%):** Eclipse Totality - all light fails, only shadows visible, constant debuffs
+**Phase 4 (<15%):** Void Singularity - threatens existence erasure (DPS check or wipe)
+
+## Glitched: Shadow Corruption
+- Shadows become hostile entities (attack everyone), Veil inverts (highlights instead of conceals), Darkness damages allies randomly, Eclipse timing corrupted (instant/permanent/never), Shadow clones betray Lady Darkness
