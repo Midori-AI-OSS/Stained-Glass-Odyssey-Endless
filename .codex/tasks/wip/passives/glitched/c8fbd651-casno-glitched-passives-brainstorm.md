@@ -21,7 +21,24 @@ Casno's core moveset and lore live in `backend/plugins/characters/casno.py`. We 
 - Existing passives directory for tone/language examples.
 
 ## Acceptance Criteria
-- Document lists at least three well-explained concepts that match the character fantasy and the glitched tier brief.
-- Ideas stay within the tag's power band and leave room for other tiers to escalate separately.
-- Notes clearly separate must-have behaviour from optional stretch goals.
-- No code changes are performed as part of this task—output is a written brainstorming brief ready for review.
+[...]
+
+---
+
+## Glitched: Unstable Combustion (Recommended)
+- Healing randomized each tick: 0%-300% of normal (average 150%)
+- Momentum system corrupted:
+  - Can go negative (below 0 = anti-healing damage pulses)
+  - Builds on attacking instead of relaxing (inverted)
+  - Random momentum jumps ±10 per turn
+- Flames flicker: 50% chance flames extinguish completely each turn (must rebuild)
+- Resurrection glitch: 25% chance to resurrect as enemy (friendly fire mode for 2 turns)
+- Display shows corrupted momentum: "RELAX: ░#█" or negative values
+
+## Glitched: Phoenix Paradox
+- Death and resurrection happen simultaneously (quantum state)
+- Exists as alive AND dead (50% damage taken, 50% healing received)
+- Flames both heal and burn (damages self while healing allies)
+- Respite pulse timing becomes non-linear (can trigger before/after turn randomly)
+
+**Recommendations:** Unstable Combustion for manageable chaos with risk/reward.

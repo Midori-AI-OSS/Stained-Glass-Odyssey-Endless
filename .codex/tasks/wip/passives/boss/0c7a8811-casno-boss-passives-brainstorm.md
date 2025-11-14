@@ -21,7 +21,20 @@ Casno's core moveset and lore live in `backend/plugins/characters/casno.py`. We 
 - Existing passives directory for tone/language examples.
 
 ## Acceptance Criteria
-- Document lists at least three well-explained concepts that match the character fantasy and the boss tier brief.
-- Ideas stay within the tag's power band and leave room for other tiers to escalate separately.
-- Notes clearly separate must-have behaviour from optional stretch goals.
-- No code changes are performed as part of this task—output is a written brainstorming brief ready for review.
+[...]
+
+---
+
+## Boss: Eternal Flame (Recommended)
+**Phase 1 (100-60%):** Normal respite + passive momentum gain
+**Phase 2 (60-30%):** Self-Resurrection - First death triggers revival at 50% HP with fire nova
+**Phase 3 (30-0%):** Immolation - Permanent fire aura (constant party healing + enemy burn), momentum locked at max
+**Death Trigger:** Phoenix Rebirth - Resurrects all defeated allies at 25% HP, then final death
+
+## Boss: Flame Cycle
+- Dies and resurrects automatically every 25% HP loss
+- Each resurrection: Stronger (+ 25% all stats), faster momentum, larger aura
+- Must kill 4 times total (100→75→50→25→0)
+- Final phase: Desperate Inferno (screen-wide fire damage)
+
+**Recommendations:** Eternal Flame for epic multi-phase phoenix fantasy.

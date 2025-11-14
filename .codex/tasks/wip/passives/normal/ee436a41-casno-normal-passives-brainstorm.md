@@ -21,7 +21,19 @@ Casno's core moveset and lore live in `backend/plugins/characters/casno.py`. We 
 - Existing passives directory for tone/language examples.
 
 ## Acceptance Criteria
-- Document lists at least three well-explained concepts that match the character fantasy and the normal tier brief.
-- Ideas stay within the tag's power band and leave room for other tiers to escalate separately.
-- Notes clearly separate must-have behaviour from optional stretch goals.
-- No code changes are performed as part of this task—output is a written brainstorming brief ready for review.
+[...]
+
+---
+
+## Normal: Phoenix Respite (IMPLEMENTED)
+**Mechanics:** Relaxed momentum system - healing pulse every few turns, scales with "relaxation" (time not acting offensively).
+**Options:** 1) Meditation stacks, 2) Emergency burn (sacrifice relaxation for burst heal), 3) Aura expansion (range increases with stacks)
+
+## Prime: Phoenix Ascendant  
+- HoT magnitude 2×, Relaxed momentum builds 50% faster, at max relaxation: Party-wide revive (once/combat), flames never fully extinguished
+
+## Boss: Eternal Flame
+**Phases:** Normal→Self-Resurrection (at death, revive once at 50% HP)→Immolation (permanent fire aura, constant healing)→Phoenix Rebirth (death triggers team-wide resurrection)
+
+## Glitched: Unstable Combustion
+- Healing randomized (0-300% normal), momentum corrupted (can go negative), "relaxation" becomes "agitation" (heals on attacking instead), flames flicker in/out unpredictably
