@@ -20,8 +20,6 @@ LadyStorm's core moveset and lore live in `backend/plugins/characters/lady_storm
 - Tier guidance: `.codex/tasks/passives/glitched/AGENTS.md`
 - Existing passives directory for tone/language examples.
 
-## Acceptance Criteria
-- Document lists at least three well-explained concepts that match the character fantasy and the glitched tier brief.
-- Ideas stay within the tag's power band and leave room for other tiers to escalate separately.
-- Notes clearly separate must-have behaviour from optional stretch goals.
-- No code changes are performed as part of this task—output is a written brainstorming brief ready for review.
+## Acceptance Criteria [...]
+
+##Glitched: Weather Malfunction - Storms target wrong zones, weather inverts (rain=fire), pressure corrupted (vacuum/crush zones random), tornado paths unpredictable, atmospheric data impossible
