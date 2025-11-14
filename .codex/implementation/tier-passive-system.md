@@ -27,51 +27,73 @@ The tier-specific passive system allows foes to have different passive variants 
 
 ### Key Functions
 
-#### `resolve_passive_for_rank(base_passive_id: str, rank: str) -> str`
+#### `resolve_passives_for_rank(base_passive_id: str, rank: str) -> list[str]`
 
-Maps a base passive ID to its tier-specific variant based on rank.
+Maps a base passive ID to tier-specific variants based on rank, **stacking all applicable tiers**.
 
-**Priority Order** (for mixed rank tags):
+**Stacking Behavior** (for mixed rank tags):
+When a foe has multiple rank tags (e.g., "glitched prime boss"), the function returns **ALL matching tier variants** that exist. This allows tier effects to stack and combine:
+
+- `"glitched prime boss"` → `["..._glitched", "..._prime", "..._boss"]` (all three stack)
+- `"prime boss"` → `["..._prime", "..._boss"]` (both stack)
+- `"glitched"` → `["..._glitched"]` (single tier)
+- `"boss"` → `["..._boss"]` (single tier)
+- `""` or `"normal"` or no matching tags → `["base_passive"]` (base only)
+
+**Tier Check Order**:
 1. Check for glitched variant (`{base_id}_glitched`)
 2. Check for prime variant (`{base_id}_prime`)
 3. Check for boss variant (`{base_id}_boss`)
-4. Fall back to base passive
-
-**Behavior with Mixed Rank Tags**:
-When a foe has multiple rank tags (e.g., "glitched prime boss"), the function returns the **first matching tier variant** based on priority order. This ensures consistent behavior:
-- `"glitched prime boss"` → uses glitched variant
-- `"prime boss"` → uses prime variant
-- `"boss"` → uses boss variant
-- `""` or `"normal"` or no matching tags → uses base variant
+4. If no tier variants exist, return base passive
 
 The system is case-insensitive and handles edge cases gracefully:
 - Empty rank strings fall back to base passive
 - Unknown rank tags fall back to base passive
-- Missing tier variants fall back to base passive
+- Missing tier variants are skipped (partial stacking works)
+- If NO tier variants exist, falls back to base passive
 
 **Examples**:
 ```python
-resolve_passive_for_rank("luna_lunar_reservoir", "glitched")
-# → "luna_lunar_reservoir_glitched"
+resolve_passives_for_rank("luna_lunar_reservoir", "glitched")
+# → ["luna_lunar_reservoir_glitched"]
 
-resolve_passive_for_rank("luna_lunar_reservoir", "glitched prime boss")
-# → "luna_lunar_reservoir_glitched" (highest priority)
+resolve_passives_for_rank("luna_lunar_reservoir", "glitched prime boss")
+# → ["luna_lunar_reservoir_glitched", "luna_lunar_reservoir_prime", "luna_lunar_reservoir_boss"]
+# All three tier effects stack!
 
-resolve_passive_for_rank("attack_up", "boss")
-# → "attack_up_boss"
+resolve_passives_for_rank("luna_lunar_reservoir", "prime boss")
+# → ["luna_lunar_reservoir_prime", "luna_lunar_reservoir_boss"]
+# Both prime and boss effects stack
 
-resolve_passive_for_rank("some_passive", "glitched")
-# → "some_passive" (if glitched variant doesn't exist)
+resolve_passives_for_rank("attack_up", "boss")
+# → ["attack_up_boss"]
 
-resolve_passive_for_rank("luna_lunar_reservoir", "")
-# → "luna_lunar_reservoir" (empty rank)
+resolve_passives_for_rank("some_passive", "glitched")
+# → ["some_passive"] (if glitched variant doesn't exist, returns base)
+
+resolve_passives_for_rank("luna_lunar_reservoir", "")
+# → ["luna_lunar_reservoir"] (empty rank)
 ```
 
 #### `apply_rank_passives(foe: Any) -> None`
 
-Transforms a foe's passive list in-place, resolving each passive ID to its tier-specific variant.
+Transforms a foe's passive list in-place, resolving each base passive ID to its tier-specific variants.
+**All matching tier variants are added (stacking behavior)**, so a foe with multiple tier tags will have multiple passive variants active simultaneously.
 
 Called in `FoeFactory.build_encounter()` after rank is set but before the foe is returned.
+
+**Example**:
+```python
+foe.passives = ["luna_lunar_reservoir"]
+foe.rank = "glitched prime boss"
+apply_rank_passives(foe)
+# foe.passives = [
+#     "luna_lunar_reservoir_glitched",  # 2x charge gains
+#     "luna_lunar_reservoir_prime",     # 5x charge gains + healing
+#     "luna_lunar_reservoir_boss"       # enhanced soft cap
+# ]
+# All three effects stack multiplicatively!
+```
 
 ## Tier Implementation Patterns
 
@@ -210,37 +232,44 @@ Passives with `ClassVar` state dictionaries (like `_charge_points`, `_vitality_b
 
 The test suite in `tests/test_tier_passives.py` validates:
 
-### Resolution Function Tests (12 tests)
+### Resolution Function Tests (13 tests)
 1. ✅ Normal rank resolution
 2. ✅ Individual tier resolution (glitched, boss, prime)
-3. ✅ Mixed tier combinations (glitched boss, prime boss)
-4. ✅ All tiers combined (glitched prime boss) - prioritizes glitched
+3. ✅ Two-tier stacking (glitched boss, prime boss, glitched prime)
+4. ✅ All tiers combined (glitched prime boss) - **stacks all three variants**
 5. ✅ Empty rank string handling
 6. ✅ Unknown rank tag handling
 7. ✅ Case-insensitive rank matching
 8. ✅ Fallback when tier variant doesn't exist
 
-### Transformation Function Tests (10 tests)
+### Transformation Function Tests (11 tests)
 9. ✅ Apply passives for each tier (normal, glitched, boss, prime)
 10. ✅ Multiple passives with mixed tier availability
-11. ✅ All tier tags combined (glitched prime boss)
-12. ✅ Missing rank attribute handling
-13. ✅ Empty passives list handling
-14. ✅ Missing passives attribute handling
-15. ✅ Passive registry contains all tier variants
+11. ✅ All tier tags combined (glitched prime boss) - **stacks all variants**
+12. ✅ Two-tier stacking (prime boss) - **stacks both variants**
+13. ✅ Missing rank attribute handling
+14. ✅ Empty passives list handling
+15. ✅ Missing passives attribute handling
+16. ✅ Passive registry contains all tier variants
 
-**Total: 22 tests, all passing**
+**Total: 24 tests, all passing**
+
+**Stacking Behavior Validated**:
+- Single tier tags apply single tier passive
+- Two-tier tags (e.g., "prime boss") apply BOTH tier passives (stacking)
+- Three-tier tags (e.g., "glitched prime boss") apply ALL THREE tier passives (full stacking)
 
 Add additional tests for:
 - Character-specific tier passive behaviors
 - State tracking across battle phases
 - Tier-specific multipliers produce expected results
+- Multiplicative stacking effects
 
 ## Future Enhancements
 
 Potential improvements to the system:
 
-1. **Combined Tiers**: Handle "glitched prime boss" by stacking tier effects
+1. ~~**Combined Tiers**: Handle "glitched prime boss" by stacking tier effects~~ ✅ **IMPLEMENTED**
 2. **Tier Traits**: Share common tier behaviors (e.g., all glitched passives have instability)
 3. **Dynamic Scaling**: Scale tier multipliers based on progression depth
 4. **Tier-Specific Events**: New event triggers for tier-specific mechanics
