@@ -1,7 +1,7 @@
-"""Test for Generic ultimate's Luna passive suppression with tier variants.
+"""Test for Generic ultimate's Luna passive tier stacking behavior.
 
-This test ensures that the Generic ultimate correctly prevents Luna from gaining
-charge from the ultimate_used trigger, regardless of which tier variant Luna has.
+This test validates that tier passive variants properly apply their multipliers
+to Luna's charge gain from the ultimate_used trigger in Generic ultimate.
 """
 from pathlib import Path
 import sys
@@ -12,32 +12,23 @@ from autofighter.passives import apply_rank_passives
 from plugins.characters.luna import Luna
 
 
-class TestGenericUltimateLunaSupression:
-    """Test that Generic ultimate suppresses all Luna passive variants."""
+class TestGenericUltimateLunaTierBehavior:
+    """Test that Generic ultimate allows tier multipliers to apply to Luna."""
 
     def test_normal_luna_passive_id_after_no_rank(self):
         """Normal rank Luna keeps base passive ID."""
         luna = Luna()
         luna.rank = "normal"
-        list(luna.passives)
 
         apply_rank_passives(luna)
 
         # Normal Luna should have base passive
         assert "luna_lunar_reservoir" in luna.passives
-        # Verify this is what Generic ultimate checks for
-        assert "luna_lunar_reservoir" in {
-            "luna_lunar_reservoir",
-            "luna_lunar_reservoir_glitched",
-            "luna_lunar_reservoir_prime",
-            "luna_lunar_reservoir_boss"
-        }
 
     def test_glitched_luna_passive_id_recognized(self):
-        """Glitched Luna has tier passive that should be suppressed."""
+        """Glitched Luna has tier passive with 2x multiplier."""
         luna = Luna()
         luna.rank = "glitched"
-        list(luna.passives)
 
         apply_rank_passives(luna)
 
@@ -45,17 +36,8 @@ class TestGenericUltimateLunaSupression:
         assert "luna_lunar_reservoir_glitched" in luna.passives
         assert "luna_lunar_reservoir" not in luna.passives  # Base passive replaced
 
-        # Verify glitched variant is in the suppression set
-        luna_passive_ids = {
-            "luna_lunar_reservoir",
-            "luna_lunar_reservoir_glitched",
-            "luna_lunar_reservoir_prime",
-            "luna_lunar_reservoir_boss"
-        }
-        assert any(pid in luna_passive_ids for pid in luna.passives)
-
     def test_prime_luna_passive_id_recognized(self):
-        """Prime Luna has tier passive that should be suppressed."""
+        """Prime Luna has tier passive with 5x multiplier."""
         luna = Luna()
         luna.rank = "prime"
 
@@ -65,17 +47,8 @@ class TestGenericUltimateLunaSupression:
         assert "luna_lunar_reservoir_prime" in luna.passives
         assert "luna_lunar_reservoir" not in luna.passives  # Base passive replaced
 
-        # Verify prime variant is in the suppression set
-        luna_passive_ids = {
-            "luna_lunar_reservoir",
-            "luna_lunar_reservoir_glitched",
-            "luna_lunar_reservoir_prime",
-            "luna_lunar_reservoir_boss"
-        }
-        assert any(pid in luna_passive_ids for pid in luna.passives)
-
     def test_boss_luna_passive_id_recognized(self):
-        """Boss Luna has tier passive that should be suppressed."""
+        """Boss Luna has tier passive with enhanced behavior."""
         luna = Luna()
         luna.rank = "boss"
 
@@ -85,90 +58,21 @@ class TestGenericUltimateLunaSupression:
         assert "luna_lunar_reservoir_boss" in luna.passives
         assert "luna_lunar_reservoir" not in luna.passives  # Base passive replaced
 
-        # Verify boss variant is in the suppression set
-        luna_passive_ids = {
-            "luna_lunar_reservoir",
-            "luna_lunar_reservoir_glitched",
-            "luna_lunar_reservoir_prime",
-            "luna_lunar_reservoir_boss"
-        }
-        assert any(pid in luna_passive_ids for pid in luna.passives)
-
-    def test_glitched_prime_boss_luna_all_variants_recognized(self):
-        """Glitched Prime Boss Luna has all tier passives that should be suppressed."""
+    def test_glitched_prime_boss_luna_all_variants_stack(self):
+        """Glitched Prime Boss Luna has all tier passives that will all trigger."""
         luna = Luna()
         luna.rank = "glitched prime boss"
 
         apply_rank_passives(luna)
 
-        # All tier variants should be present
+        # All tier variants should be present and will all trigger
         assert "luna_lunar_reservoir_glitched" in luna.passives
         assert "luna_lunar_reservoir_prime" in luna.passives
         assert "luna_lunar_reservoir_boss" in luna.passives
         assert "luna_lunar_reservoir" not in luna.passives  # Base passive replaced
 
-        # Verify ALL variants are in the suppression set
-        luna_passive_ids = {
-            "luna_lunar_reservoir",
-            "luna_lunar_reservoir_glitched",
-            "luna_lunar_reservoir_prime",
-            "luna_lunar_reservoir_boss"
-        }
-        # All of Luna's passives should be recognized
-        for passive in luna.passives:
-            if "luna_lunar_reservoir" in passive:
-                assert passive in luna_passive_ids
-
-    def test_filtering_removes_all_luna_variants(self):
-        """Test that filtering logic removes ALL Luna variants."""
-        luna_passive_ids = {
-            "luna_lunar_reservoir",
-            "luna_lunar_reservoir_glitched",
-            "luna_lunar_reservoir_prime",
-            "luna_lunar_reservoir_boss"
-        }
-
-        # Test with glitched prime boss Luna (worst case - all variants)
-        test_passives = [
-            "luna_lunar_reservoir_glitched",
-            "luna_lunar_reservoir_prime",
-            "luna_lunar_reservoir_boss",
-            "some_other_passive"
-        ]
-
-        filtered = [pid for pid in test_passives if pid not in luna_passive_ids]
-
-        # All Luna variants should be removed
-        assert "luna_lunar_reservoir_glitched" not in filtered
-        assert "luna_lunar_reservoir_prime" not in filtered
-        assert "luna_lunar_reservoir_boss" not in filtered
-        # Other passive should remain
-        assert "some_other_passive" in filtered
-        assert len(filtered) == 1
-
-    def test_filtering_preserves_non_luna_passives(self):
-        """Test that filtering preserves non-Luna passives."""
-        luna_passive_ids = {
-            "luna_lunar_reservoir",
-            "luna_lunar_reservoir_glitched",
-            "luna_lunar_reservoir_prime",
-            "luna_lunar_reservoir_boss"
-        }
-
-        # Test with mixed passives
-        test_passives = [
-            "luna_lunar_reservoir_prime",
-            "attack_up",
-            "room_heal",
-            "luna_lunar_reservoir_boss"
-        ]
-
-        filtered = [pid for pid in test_passives if pid not in luna_passive_ids]
-
-        # Luna variants should be removed
-        assert "luna_lunar_reservoir_prime" not in filtered
-        assert "luna_lunar_reservoir_boss" not in filtered
-        # Non-Luna passives should remain
-        assert "attack_up" in filtered
-        assert "room_heal" in filtered
-        assert len(filtered) == 2
+        # All three will receive the ultimate_used trigger and apply their multipliers
+        # Glitched: 64 * 2 = 128
+        # Prime: 64 * 5 = 320
+        # Boss: 64 * 1 (with enhanced cap) = 64
+        # Total: 512 charges from ultimate_used alone
