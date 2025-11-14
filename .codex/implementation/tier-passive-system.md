@@ -31,22 +31,40 @@ The tier-specific passive system allows foes to have different passive variants 
 
 Maps a base passive ID to its tier-specific variant based on rank.
 
-**Priority Order**:
+**Priority Order** (for mixed rank tags):
 1. Check for glitched variant (`{base_id}_glitched`)
 2. Check for prime variant (`{base_id}_prime`)
 3. Check for boss variant (`{base_id}_boss`)
 4. Fall back to base passive
+
+**Behavior with Mixed Rank Tags**:
+When a foe has multiple rank tags (e.g., "glitched prime boss"), the function returns the **first matching tier variant** based on priority order. This ensures consistent behavior:
+- `"glitched prime boss"` → uses glitched variant
+- `"prime boss"` → uses prime variant
+- `"boss"` → uses boss variant
+- `""` or `"normal"` or no matching tags → uses base variant
+
+The system is case-insensitive and handles edge cases gracefully:
+- Empty rank strings fall back to base passive
+- Unknown rank tags fall back to base passive
+- Missing tier variants fall back to base passive
 
 **Examples**:
 ```python
 resolve_passive_for_rank("luna_lunar_reservoir", "glitched")
 # → "luna_lunar_reservoir_glitched"
 
+resolve_passive_for_rank("luna_lunar_reservoir", "glitched prime boss")
+# → "luna_lunar_reservoir_glitched" (highest priority)
+
 resolve_passive_for_rank("attack_up", "boss")
 # → "attack_up_boss"
 
 resolve_passive_for_rank("some_passive", "glitched")
 # → "some_passive" (if glitched variant doesn't exist)
+
+resolve_passive_for_rank("luna_lunar_reservoir", "")
+# → "luna_lunar_reservoir" (empty rank)
 ```
 
 #### `apply_rank_passives(foe: Any) -> None`
@@ -192,10 +210,26 @@ Passives with `ClassVar` state dictionaries (like `_charge_points`, `_vitality_b
 
 The test suite in `tests/test_tier_passives.py` validates:
 
-1. ✅ Passive ID resolution for each tier
-2. ✅ Fallback to base passive when tier variant missing
-3. ✅ `apply_rank_passives()` correctly transforms passive lists
-4. ✅ Tier passives register in the passive registry
+### Resolution Function Tests (12 tests)
+1. ✅ Normal rank resolution
+2. ✅ Individual tier resolution (glitched, boss, prime)
+3. ✅ Mixed tier combinations (glitched boss, prime boss)
+4. ✅ All tiers combined (glitched prime boss) - prioritizes glitched
+5. ✅ Empty rank string handling
+6. ✅ Unknown rank tag handling
+7. ✅ Case-insensitive rank matching
+8. ✅ Fallback when tier variant doesn't exist
+
+### Transformation Function Tests (10 tests)
+9. ✅ Apply passives for each tier (normal, glitched, boss, prime)
+10. ✅ Multiple passives with mixed tier availability
+11. ✅ All tier tags combined (glitched prime boss)
+12. ✅ Missing rank attribute handling
+13. ✅ Empty passives list handling
+14. ✅ Missing passives attribute handling
+15. ✅ Passive registry contains all tier variants
+
+**Total: 22 tests, all passing**
 
 Add additional tests for:
 - Character-specific tier passive behaviors

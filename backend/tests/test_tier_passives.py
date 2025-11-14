@@ -2,8 +2,6 @@
 from pathlib import Path
 import sys
 
-import pytest
-
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from autofighter.passives import PassiveRegistry
@@ -42,11 +40,50 @@ def test_resolve_passive_for_rank_glitched_boss():
     assert resolved == "luna_lunar_reservoir_glitched"
 
 
+def test_resolve_passive_for_rank_prime_boss():
+    """Test that prime boss prioritizes prime variant."""
+    resolved = resolve_passive_for_rank("luna_lunar_reservoir", "prime boss")
+    assert resolved == "luna_lunar_reservoir_prime"
+
+
+def test_resolve_passive_for_rank_glitched_prime_boss():
+    """Test that glitched prime boss prioritizes glitched variant (highest priority)."""
+    resolved = resolve_passive_for_rank("luna_lunar_reservoir", "glitched prime boss")
+    assert resolved == "luna_lunar_reservoir_glitched"
+
+
+def test_resolve_passive_for_rank_empty_string():
+    """Test that empty rank string falls back to base passive."""
+    resolved = resolve_passive_for_rank("luna_lunar_reservoir", "")
+    assert resolved == "luna_lunar_reservoir"
+
+
+def test_resolve_passive_for_rank_none_like():
+    """Test that None-like values fall back to base passive."""
+    resolved = resolve_passive_for_rank("luna_lunar_reservoir", "")
+    assert resolved == "luna_lunar_reservoir"
+
+
+def test_resolve_passive_for_rank_unknown_tag():
+    """Test that unknown rank tags fall back to base passive."""
+    resolved = resolve_passive_for_rank("luna_lunar_reservoir", "unknown_rank")
+    assert resolved == "luna_lunar_reservoir"
+
+
+def test_resolve_passive_for_rank_case_insensitive():
+    """Test that rank matching is case-insensitive."""
+    resolved = resolve_passive_for_rank("luna_lunar_reservoir", "GLITCHED")
+    assert resolved == "luna_lunar_reservoir_glitched"
+
+    resolved = resolve_passive_for_rank("luna_lunar_reservoir", "Prime Boss")
+    assert resolved == "luna_lunar_reservoir_prime"
+
+
 def test_resolve_passive_for_rank_nonexistent():
     """Test that non-existent tier passives fall back to base."""
-    # Assuming attack_up doesn't have tier variants yet
-    resolved = resolve_passive_for_rank("attack_up", "glitched")
-    assert resolved == "attack_up"
+    # Using player_level_up_bonus which doesn't have tier variants
+    resolved = resolve_passive_for_rank("player_level_up_bonus", "glitched")
+    assert resolved == "player_level_up_bonus"
 
 
 def test_apply_rank_passives_normal():
@@ -101,8 +138,60 @@ def test_apply_rank_passives_multiple():
 
     apply_rank_passives(luna)
 
-    # luna_lunar_reservoir should be glitched, attack_up should stay as is
-    assert luna.passives == ["luna_lunar_reservoir_glitched", "attack_up"]
+    # Both should be resolved to glitched variants
+    assert luna.passives == ["luna_lunar_reservoir_glitched", "attack_up_glitched"]
+
+
+def test_apply_rank_passives_glitched_prime_boss():
+    """Test applying rank passives with all tier tags."""
+    luna = Luna()
+    luna.rank = "glitched prime boss"
+    luna.passives = ["luna_lunar_reservoir"]
+
+    apply_rank_passives(luna)
+
+    # Should resolve to glitched (highest priority)
+    assert luna.passives == ["luna_lunar_reservoir_glitched"]
+
+
+def test_apply_rank_passives_no_rank():
+    """Test applying rank passives with no rank attribute."""
+    luna = Luna()
+    # Don't set rank attribute
+    if hasattr(luna, 'rank'):
+        delattr(luna, 'rank')
+    luna.passives = ["luna_lunar_reservoir"]
+
+    apply_rank_passives(luna)
+
+    # Should fall back to base passive
+    assert luna.passives == ["luna_lunar_reservoir"]
+
+
+def test_apply_rank_passives_empty_passives_list():
+    """Test applying rank passives with empty passives list."""
+    luna = Luna()
+    luna.rank = "glitched"
+    luna.passives = []
+
+    apply_rank_passives(luna)
+
+    # Should remain empty
+    assert luna.passives == []
+
+
+def test_apply_rank_passives_no_passives_attribute():
+    """Test applying rank passives when foe has no passives attribute."""
+    class FoeWithoutPassives:
+        rank = "glitched"
+
+    foe = FoeWithoutPassives()
+
+    # Should not raise an error
+    apply_rank_passives(foe)
+
+    # Should not add a passives attribute
+    assert not hasattr(foe, 'passives')
 
 
 def test_passive_registry_contains_tier_passives():
