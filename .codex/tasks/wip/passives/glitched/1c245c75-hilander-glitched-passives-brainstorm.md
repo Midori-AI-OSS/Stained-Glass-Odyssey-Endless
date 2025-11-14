@@ -21,7 +21,37 @@ Hilander's core moveset and lore live in `backend/plugins/characters/hilander.py
 - Existing passives directory for tone/language examples.
 
 ## Acceptance Criteria
-- Document lists at least three well-explained concepts that match the character fantasy and the glitched tier brief.
-- Ideas stay within the tag's power band and leave room for other tiers to escalate separately.
-- Notes clearly separate must-have behaviour from optional stretch goals.
-- No code changes are performed as part of this task—output is a written brainstorming brief ready for review.
+[...]
+
+---
+
+## Glitched Concepts
+
+### Option 1: Quantum Fermentation (Recommended)
+- Stack count displays as corrupted: "?##?" or random values
+- Actual stacks exist in superposition until "observed" (on crit)
+- Crit damage based on random stack count between 0-50 (not actual stacks)
+- 25% chance crit doesn't consume stacks (stays in quantum state)
+- Random crits occur unpredictably (5-15% chance/hit regardless of stats)
+
+**Glitch-Worthy:** Deterministic system becomes probabilistic chaos.
+
+### Option 2: Inverted Fermentation
+- Stacks build in reverse: Start at 20, lose 1 per hit
+- At 0 stacks: Auto-crit and reset to 20
+- Crit damage inversely proportional to stacks (fewer stacks = bigger crit)
+- Random +5-10 stack jumps disrupt countdown
+- Can go negative (glitch state): Negative stacks heal enemies on crit
+
+**Glitch-Worthy:** Inverted logic, countdown vs buildup.
+
+### Option 3: Unstable Release
+- Normal stacking, but crit timing becomes unreliable
+- 40% chance crit releases normally
+- 30% chance partial release (50% stacks consumed, 50% damage)
+- 20% chance over-release (150% stacks worth of damage, lose extra stacks)
+- 10% chance misfire (consume stacks, no crit)
+
+**Glitch-Worthy:** Release mechanism corrupted, output unpredictable.
+
+**Recommendations:** Quantum Fermentation for pure chaos, Inverted for learnable pattern.

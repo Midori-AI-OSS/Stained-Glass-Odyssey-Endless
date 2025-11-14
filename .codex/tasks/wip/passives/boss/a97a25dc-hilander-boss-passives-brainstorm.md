@@ -21,7 +21,31 @@ Hilander's core moveset and lore live in `backend/plugins/characters/hilander.py
 - Existing passives directory for tone/language examples.
 
 ## Acceptance Criteria
-- Document lists at least three well-explained concepts that match the character fantasy and the boss tier brief.
-- Ideas stay within the tag's power band and leave room for other tiers to escalate separately.
-- Notes clearly separate must-have behaviour from optional stretch goals.
-- No code changes are performed as part of this task—output is a written brainstorming brief ready for review.
+[...]
+
+---
+
+## Boss Concepts
+
+### Option 1: Critical Mass (Recommended)
+**Four-Phase Escalation:**
+- **Phase 1 (100-75%):** Normal fermentation, 15-stack release threshold
+- **Phase 2 (75-50%):** "Unstable" - Auto-crit every 5 stacks, chain to 2 enemies
+- **Phase 3 (50-25%):** "Volatile" - Stacks build on ALL actions (not just hits), forced crits every turn
+- **Phase 4 (<25%):** "Detonation" - Permanent crit state, each hit applies ferment stacks to enemies (damage amplification)
+
+**Boss-Worthy:** Clear phases, escalating threat, dramatic finale.
+
+### Option 2: Crit Cascade Network
+- All allied enemies gain shared ferment pool
+- When any ally crits, all allies gain half the crit bonus
+- Boss gains stacks when allies deal damage
+- At 30 combined stacks: Mass critical strike from all enemies simultaneously
+
+### Option 3: Enrage Timer
+- Passive stack gain over time (1/turn baseline)
+- At 50 stacks: "Critical Overload" - arena-wide crit explosion, reset
+- Overload damage increases each cycle
+- Soft enrage: 5-minute timer forces overload regardless of stacks
+
+**Recommendations:** Critical Mass for structured encounter, Enrage Timer for DPS check.

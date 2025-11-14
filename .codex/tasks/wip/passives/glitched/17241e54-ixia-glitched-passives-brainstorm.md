@@ -21,7 +21,33 @@ Ixia's core moveset and lore live in `backend/plugins/characters/ixia.py`. We st
 - Existing passives directory for tone/language examples.
 
 ## Acceptance Criteria
-- Document lists at least three well-explained concepts that match the character fantasy and the glitched tier brief.
-- Ideas stay within the tag's power band and leave room for other tiers to escalate separately.
-- Notes clearly separate must-have behaviour from optional stretch goals.
-- No code changes are performed as part of this task—output is a written brainstorming brief ready for review.
+[...]
+
+---
+
+## Glitched Concepts
+
+### Size Corruption (Recommended)
+- Size fluctuates unpredictably each turn:
+  - 40%: Microscopic (1% normal size) - high evasion, no damage
+  - 40%: Normal size - standard mechanics
+  - 20%: Colossal (500% size) - huge hitbox, massive damage
+- VIT conversions glitch:
+  - Random multipliers: 100%-2000% for ATK conversion
+  - HP conversion can invert (lose HP per VIT)
+- Collision detection errors cause random teleportation
+- At 200 VIT: Size becomes "undefined" (invisible + invulnerable for 1 turn)
+
+### Quantum Titan
+- Exists in multiple size states simultaneously
+- Damage calculations use random size value
+- Hit chance vs Ixia: 33% (might phase out)
+- Attacks hit random number of times (1-5) based on size uncertainty
+
+### Stat Overflow
+- VIT counter can overflow at 255 (wraps to 0)
+- Negative VIT possible (becomes giant weakness)
+- Conversions use absolute value (negative VIT still grants ATK)
+- Display shows corrupted values: "VIT: ��#"
+
+**Recommendations:** Size Corruption for visual chaos and learnable patterns.
