@@ -21,7 +21,14 @@ Mimic's core moveset and lore live in `backend/plugins/characters/mimic.py`. We 
 - Existing passives directory for tone/language examples.
 
 ## Acceptance Criteria
-- Document lists at least three well-explained concepts that match the character fantasy and the prime tier brief.
-- Ideas stay within the tag's power band and leave room for other tiers to escalate separately.
-- Notes clearly separate must-have behaviour from optional stretch goals.
-- No code changes are performed as part of this task—output is a written brainstorming brief ready for review.
+[...]
+
+---
+
+## Prime: Master Mimic (Recommended)
+- Copy 2-3 targets simultaneously (multiple forms), Mimicked abilities enhanced +50% effectiveness, Can copy ultimate/signature abilities, "Perfect Imitation": Transform into exact clone (appearance + voice + stats), Copy duration extended (persists 2× longer), Adaptive mimicry (automatically switches to counter current threat)
+
+## Prime: Echo Chamber
+- Copies create echoes (lingering afterimages that repeat last action), Multi-layer copying (copy of a copy), Fusion mode (combine copied abilities into hybrid skills)
+
+**Recommendations:** Master Mimic for versatile adaptation fantasy.

@@ -21,7 +21,17 @@ Ryne's core moveset and lore live in `backend/plugins/characters/ryne.py`. We st
 - Existing passives directory for tone/language examples.
 
 ## Acceptance Criteria
-- Document lists at least three well-explained concepts that match the character fantasy and the boss tier brief.
-- Ideas stay within the tag's power band and leave room for other tiers to escalate separately.
-- Notes clearly separate must-have behaviour from optional stretch goals.
-- No code changes are performed as part of this task—output is a written brainstorming brief ready for review.
+[...]
+
+---
+
+## Boss: Scales of Fate (Recommended)
+**Phase 1 (100-75%):** Passive balance monitoring + gentle HP nudges toward equilibrium
+**Phase 2 (75-50%):** Forced Equilibrium - automatic HP redistribution every turn, pulls both sides toward 50%
+**Phase 3 (50-25%):** Universal Balance - all units' HP locked to percentage ranges (can't exceed/fall below), constant rebalancing
+**Phase 4 (<25%):** Judgment Day - "The Scales Demand Payment" - side with lower total HP receives execute damage, must maintain exact balance or wipe
+
+## Boss: Inevitable Equilibrium
+- Passive balance aura (all units slowly trend toward 50% HP), Healing reduced by 75% (prevents escape from balance), Damage capped at 10% per hit (prevents burst), At 5 minutes: "Perfect Balance" forces all units to exactly 50% HP permanently
+
+**Recommendations:** Scales of Fate for dramatic multi-phase balance puzzle.

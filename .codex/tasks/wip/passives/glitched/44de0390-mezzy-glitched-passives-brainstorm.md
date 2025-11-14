@@ -21,7 +21,14 @@ Mezzy's core moveset and lore live in `backend/plugins/characters/mezzy.py`. We 
 - Existing passives directory for tone/language examples.
 
 ## Acceptance Criteria
-- Document lists at least three well-explained concepts that match the character fantasy and the glitched tier brief.
-- Ideas stay within the tag's power band and leave room for other tiers to escalate separately.
-- Notes clearly separate must-have behaviour from optional stretch goals.
-- No code changes are performed as part of this task—output is a written brainstorming brief ready for review.
+[...]
+
+---
+
+## Glitched: Corrupted Consumption (Recommended)
+- Absorption direction inverts randomly (50% chance: loses stats instead of gaining), Siphoned stats distributed randomly (40% to self, 30% to random ally, 30% to random enemy), Can accidentally "eat" allies (drains friendly units), Hunger meter corrupted (displays backwards, negative values, or "OVERFLOW"), Temporary buffs become permanent debuffs unpredictably, Size fluctuates wildly (microscopic to gigantic randomly)
+
+## Glitched: Metabolic Collapse  
+- Absorption causes "indigestion" (damage over time), Stats gained are unstable (decay rapidly or spike randomly), "Anti-hunger" state possible (must actively avoid absorbing or take damage), Siphon targeting broken (hits self or wrong units)
+
+**Recommendations:** Corrupted Consumption for chaotic risk/reward gameplay.

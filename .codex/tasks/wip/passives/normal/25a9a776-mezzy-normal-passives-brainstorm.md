@@ -21,7 +21,19 @@ Mezzy's core moveset and lore live in `backend/plugins/characters/mezzy.py`. We 
 - Existing passives directory for tone/language examples.
 
 ## Acceptance Criteria
-- Document lists at least three well-explained concepts that match the character fantasy and the normal tier brief.
-- Ideas stay within the tag's power band and leave room for other tiers to escalate separately.
-- Notes clearly separate must-have behaviour from optional stretch goals.
-- No code changes are performed as part of this task—output is a written brainstorming brief ready for review.
+[...]
+
+---
+
+## Normal: Gluttonous Bulwark (IMPLEMENTED)
+**Mechanics:** Damage reduction, stat siphoning from enemies, absorbs portion of damage as temp HP/stats.
+**Options:** 1) Feast mode (consume debuffs for power), 2) Overflow hunger (bonus at high absorption), 3) Shared feast (team benefits)
+
+## Prime: Insatiable Appetite
+- Absorption rate 2×, Siphon permanent stat boosts (not temporary), At 100 absorbed stats: "Glut Mode" (invulnerable + reflect for 2 turns), Can absorb ally buffs willingly for emergency power
+
+## Boss: The Devourer
+**Phases:** Normal absorption→Mass Siphon (drains all enemies each turn)→"True Hunger" (starts eating terrain, growing larger)→Singularity (becomes black hole, pulls enemies in)
+
+## Glitched: Corrupted Consumption
+- Absorption inverts randomly (loses stats instead), Siphoned stats go to random units, Can accidentally eat allies, Hunger meter displays backwards or corrupted, Temporary stat buffs become permanent debuffs

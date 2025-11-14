@@ -21,7 +21,19 @@ Mimic's core moveset and lore live in `backend/plugins/characters/mimic.py`. We 
 - Existing passives directory for tone/language examples.
 
 ## Acceptance Criteria
-- Document lists at least three well-explained concepts that match the character fantasy and the normal tier brief.
-- Ideas stay within the tag's power band and leave room for other tiers to escalate separately.
-- Notes clearly separate must-have behaviour from optional stretch goals.
-- No code changes are performed as part of this task—output is a written brainstorming brief ready for review.
+[...]
+
+---
+
+## Normal: Player Copy (IMPLEMENTED)
+**Mechanics:** Copies/mimics opponent abilities, adaptive playstyle, mirrors stats/skills.
+**Options:** 1) Perfect copy (100% accuracy), 2) Improved copy (enhanced version), 3) Fusion copy (combines multiple targets)
+
+## Prime: Master Mimic
+- Copy 2-3 targets simultaneously, Mimicked abilities improved (+50% effectiveness), Can copy ultimate abilities, "Perfect Imitation" mode: Become exact clone including appearance
+
+## Boss: Identity Crisis
+**Phases:** Mimic random player→Mimic strongest enemy→Mimic entire party (multi-form)→"True Form" (amalgamation of all copied abilities)
+
+## Glitched: Copy Error
+- Copies wrong targets (allies, self, objects), Abilities glitch (wrong effects, inverted, combined randomly), Can't stop copying (stuck mimicking), Identity corruption (stats from multiple sources conflict)
