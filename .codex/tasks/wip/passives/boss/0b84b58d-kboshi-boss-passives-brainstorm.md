@@ -21,7 +21,20 @@ Kboshi's core moveset and lore live in `backend/plugins/characters/kboshi.py`. W
 - Existing passives directory for tone/language examples.
 
 ## Acceptance Criteria
-- Document lists at least three well-explained concepts that match the character fantasy and the boss tier brief.
-- Ideas stay within the tag's power band and leave room for other tiers to escalate separately.
-- Notes clearly separate must-have behaviour from optional stretch goals.
-- No code changes are performed as part of this task—output is a written brainstorming brief ready for review.
+[...]
+
+---
+
+## Boss: Chaotic Maelstrom (Recommended)
+**Phase 1 (100-75%):** Normal flux, 1 element/turn, HoT stacks
+**Phase 2 (75-50%):** Accelerated - 2 random elements/turn, faster stacking
+**Phase 3 (50-25%):** Unstable - Elements change mid-turn unpredictably, AoE per switch
+**Phase 4 (<25%):** Elemental Singularity - All 6 elements active permanently, massive AoE flux pulses, arena-wide damage
+
+## Boss: Elemental Overload
+- Passive element gain over time (new element every 3 turns)
+- At 3 elements: Dual attunement
+- At 6 elements: "Flux Overload" explosion, reset cycle
+- Enrage at 5 minutes: Permanent all-element state
+
+**Recommendations:** Chaotic Maelstrom for structured escalation.

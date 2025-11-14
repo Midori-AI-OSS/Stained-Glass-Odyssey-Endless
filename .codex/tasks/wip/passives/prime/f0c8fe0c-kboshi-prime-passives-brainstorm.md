@@ -21,7 +21,30 @@ Kboshi's core moveset and lore live in `backend/plugins/characters/kboshi.py`. W
 - Existing passives directory for tone/language examples.
 
 ## Acceptance Criteria
-- Document lists at least three well-explained concepts that match the character fantasy and the prime tier brief.
-- Ideas stay within the tag's power band and leave room for other tiers to escalate separately.
-- Notes clearly separate must-have behaviour from optional stretch goals.
-- No code changes are performed as part of this task—output is a written brainstorming brief ready for review.
+[...]
+
+---
+
+## Prime Concepts
+
+### Harmonic Convergence (Recommended)
+- Dual element attunement (cycle 2 elements/turn)
+- Damage applies both element types simultaneously
+- HoT stacks build 50% faster
+- Perfect Flux bonus: Cycle through all 6 unique elements→unlock "Prismatic Overload"
+  - All elements active simultaneously for 2 turns
+  - +200% damage, rainbow visual effect
+  - HoT becomes supercharged regen
+
+### Element Mastery
+- Choose element each turn (remove randomness)
+- Repeated element gains stacking bonus (+15% dmg/turn, max +75%)
+- Switching breaks streak but grants burst damage
+- Ultimate control vs random chaos
+
+### Resonant Amplification
+- Matching ally elements grants team buff
+- Opposing enemy elements grant resistance
+- At 10 element matches: Team-wide elemental infusion
+
+**Recommendations:** Harmonic Convergence for prismatic power fantasy.

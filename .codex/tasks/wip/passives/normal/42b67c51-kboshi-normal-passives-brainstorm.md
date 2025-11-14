@@ -21,7 +21,20 @@ Kboshi's core moveset and lore live in `backend/plugins/characters/kboshi.py`. W
 - Existing passives directory for tone/language examples.
 
 ## Acceptance Criteria
-- Document lists at least three well-explained concepts that match the character fantasy and the normal tier brief.
-- Ideas stay within the tag's power band and leave room for other tiers to escalate separately.
-- Notes clearly separate must-have behaviour from optional stretch goals.
-- No code changes are performed as part of this task—output is a written brainstorming brief ready for review.
+[...]
+
+---
+
+## Normal: Flux Cycle (IMPLEMENTED)
+**Mechanics:** Random element rotation each turn, stacking HoT, damage bonuses per element switch.
+**Fantasy:** Elemental chaos master cycling through damage types.
+**Options:** 1) Elemental memory (bonus for repeated types), 2) Flux resonance (matching ally elements), 3) Overload release (burst at max stacks)
+
+## Prime: Harmonic Convergence
+- Attune to 2 elements simultaneously (dual damage), faster cycling, perfect flux state at 5 unique elements cycled grants "Prismatic Overload" (all elements at once for 2 turns)
+
+## Boss: Chaotic Maelstrom
+**Phases:** Normal→Accelerated (2 elements/turn)→Unstable (random switching mid-turn)→Elemental Singularity (all elements always, massive AoE)
+
+## Glitched: Element Corruption
+- Random "null" element (no damage type), inverted elements (fire heals instead of burns), impossible elements ("quantum", "void"), element can change mid-attack
