@@ -86,6 +86,21 @@ class Generic(DamageTypeBase):
                 party=allies,
                 foes=enemies,
             )
+
+        # Add back 64 charge to Luna if she has any Luna passive variant
+        # This compensates for suppressing the ultimate_used trigger
+        if has_luna_reservoir:
+            # Get any Luna passive class from the registry to call add_charge
+            for luna_id in luna_passive_ids:
+                luna_cls = registry._registry.get(luna_id)
+                if luna_cls and hasattr(luna_cls, 'add_charge'):
+                    try:
+                        # Add 64 charge to compensate for suppressed ultimate_used trigger
+                        luna_cls.add_charge(actor, amount=64)
+                        break  # Only need to call once since all Luna classes share state
+                    except Exception:
+                        pass
+
         return True
 
     @classmethod
