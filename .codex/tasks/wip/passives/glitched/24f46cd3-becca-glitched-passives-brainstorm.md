@@ -21,14 +21,7 @@ Becca's core moveset and lore live in `backend/plugins/characters/becca.py`. We 
 - Existing passives directory for tone/language examples.
 
 ## Acceptance Criteria
-[...]
-
----
-
-## Glitched: Pet Instability (Recommended)
-- Pets spawn/despawn randomly each turn (50% chance either way), Wrong pet types summon (cats, dogs, dragons instead of jellyfish), Pets target randomly (40% correct enemy, 30% wrong enemy, 30% ally), Bond values display corrupted and fluctuate wildly (-50% to +200%), Pets can merge unexpectedly into chimera abominations
-
-## Glitched: Quantum Pets
-- Pets exist in superposition (visible but intangible 50% of time), Pet actions occur in random order (before or after Becca's turn), Pet count displays as "NULL" or negative numbers, Pets can phase through walls/boundaries, Bond triggers on non-pet-related events
-
-**Recommendations:** Pet Instability for manageable chaos with visual comedy.
+- Document lists at least three well-explained concepts that match the character fantasy and the glitched tier brief.
+- Ideas stay within the tag's power band and leave room for other tiers to escalate separately.
+- Notes clearly separate must-have behaviour from optional stretch goals.
+- No code changes are performed as part of this task—output is a written brainstorming brief ready for review.

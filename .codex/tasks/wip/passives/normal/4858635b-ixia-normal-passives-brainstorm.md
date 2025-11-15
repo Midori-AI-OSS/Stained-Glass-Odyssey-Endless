@@ -21,46 +21,7 @@ Ixia's core moveset and lore live in `backend/plugins/characters/ixia.py`. We st
 - Existing passives directory for tone/language examples.
 
 ## Acceptance Criteria
-[...]
-
----
-
-## Brainstormed Concepts
-
-### Current Implementation: Tiny Titan (IMPLEMENTED)
-**Mechanics:** 4× VIT→HP conversion, 500% VIT→ATK conversion, gains VIT on damage taken.
-**Fantasy:** Small but mighty - grows stronger from adversity.
-
-### Option 1: David vs Goliath
-- Bonus damage vs larger enemies (+50% per size tier difference)
-- Gain VIT faster when fighting stronger foes
-- At 100 VIT: "Giant Slayer" mode - guaranteed crits vs bosses
-
-### Option 2: Compact Power
-- Higher VIT = smaller hitbox (evasion bonus)
-- Stacking VIT reduces cooldowns (compression effect)
-- Overload at 200 VIT: Temporary size increase + AoE attacks
-
-### Option 3: Resilient Growth
-- Damage taken converts to permanent VIT (10% of damage)
-- Each death/revival grants +25 VIT permanently
-- HP regen scales with VIT (1% max HP/10 VIT)
-
-**Recommendations:** Current implementation strong. David vs Goliath adds fantasy flavor.
-
----
-
-## Prime: Titan Ascendant
-- VIT→ATK conversion improved to 750%
-- Gain VIT from all damage (dealt and taken)
-- At 150 VIT: Unlock "True Titan" - immune to knockback, +100% size, intimidation aura
-
-## Boss: Colossus Awakening
-- **Phase 1:** Normal + passive VIT gain
-- **Phase 2 (50% HP):** Size doubles, VIT→ATK = 1000%, AoE all attacks
-- **Phase 3 (25% HP):** "Kaiju Mode" - screen-filling size, environmental damage
-
-## Glitched: Size Glitch
-- Size fluctuates randomly (tiny→huge each turn)
-- VIT conversions invert randomly (ATK→VIT sometimes)
-- Collision detection errors cause teleportation
+- Document lists at least three well-explained concepts that match the character fantasy and the normal tier brief.
+- Ideas stay within the tag's power band and leave room for other tiers to escalate separately.
+- Notes clearly separate must-have behaviour from optional stretch goals.
+- No code changes are performed as part of this task—output is a written brainstorming brief ready for review.

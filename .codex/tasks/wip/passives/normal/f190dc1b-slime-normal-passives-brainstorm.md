@@ -20,6 +20,8 @@ Slime's core moveset and lore live in `backend/plugins/characters/slime.py`. We 
 - Tier guidance: `.codex/tasks/passives/normal/AGENTS.md`
 - Existing passives directory for tone/language examples.
 
-## Acceptance Criteria [...]
-
-##All Tiers: **Normal: Basic Training Dummy** - Minimal mechanics, basic stat scaling, practice target | **Prime: Enhanced Dummy** - Adaptive difficulty, feedback systems, training modes | **Boss: Ultimate Training Challenge** - **P:** Basic→Intermediate→Advanced→Master difficulty | **Glitched: Dummy Malfunction** - Stats random, behavior unpredictable, training corrupted
+## Acceptance Criteria
+- Document lists at least three well-explained concepts that match the character fantasy and the normal tier brief.
+- Ideas stay within the tag's power band and leave room for other tiers to escalate separately.
+- Notes clearly separate must-have behaviour from optional stretch goals.
+- No code changes are performed as part of this task—output is a written brainstorming brief ready for review.

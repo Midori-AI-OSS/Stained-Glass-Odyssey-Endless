@@ -21,13 +21,7 @@ LadyDarkness's core moveset and lore live in `backend/plugins/characters/lady_da
 - Existing passives directory for tone/language examples.
 
 ## Acceptance Criteria
-[...]
-
-## Boss: Void Empress (Recommended)
-**Phase 1 (100-66%):** Enhanced veil, shadow manipulation, clone spawning
-**Phase 2 (66-33%):** Darkness Spreads - arena goes dark globally, shadows animate autonomously  
-**Phase 3 (33-15%):** Eclipse Totality - all light sources fail, constant vision/stat debuffs
-**Phase 4 (<15%):** Void Singularity - existence erasure countdown (30s DPS check or party wipe)
-
-## Glitched: Shadow Corruption
-- Shadows hostile to all (attack friends/foes), Veil inverts (reveals/highlights), Eclipse corrupted (instant/never/permanent), Clones betray, Darkness self-damages
+- Document lists at least three well-explained concepts that match the character fantasy and the boss tier brief.
+- Ideas stay within the tag's power band and leave room for other tiers to escalate separately.
+- Notes clearly separate must-have behaviour from optional stretch goals.
+- No code changes are performed as part of this task—output is a written brainstorming brief ready for review.

@@ -21,17 +21,7 @@ Mimic's core moveset and lore live in `backend/plugins/characters/mimic.py`. We 
 - Existing passives directory for tone/language examples.
 
 ## Acceptance Criteria
-[...]
-
----
-
-## Boss: Identity Crisis (Recommended)
-**Phase 1 (100-75%):** Mimic random player each turn (unpredictable abilities)
-**Phase 2 (75-50%):** Lock onto strongest enemy, perfect copy with enhancements
-**Phase 3 (50-25%):** Multi-Form - simultaneously embodies entire enemy party (4+ forms, split actions)
-**Phase 4 (<25%):** "True Form Revealed" - amalgamation of ALL copied abilities, uses everything at once, identity unstable (flickers between forms)
-
-## Boss: The Doppelganger
-- Creates permanent copies of defeated enemies (they fight for Mimic), At 5 copies: "Legion Mode" (all copies merge into super-form), Each copy death powers up Mimic (+20% stats), Must destroy all copies before Mimic vulnerable
-
-**Recommendations:** Identity Crisis for dramatic transformation sequence.
+- Document lists at least three well-explained concepts that match the character fantasy and the boss tier brief.
+- Ideas stay within the tag's power band and leave room for other tiers to escalate separately.
+- Notes clearly separate must-have behaviour from optional stretch goals.
+- No code changes are performed as part of this task—output is a written brainstorming brief ready for review.

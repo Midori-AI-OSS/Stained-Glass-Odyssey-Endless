@@ -20,6 +20,8 @@ Player's core moveset and lore live in `backend/plugins/characters/player.py`. W
 - Tier guidance: `.codex/tasks/passives/boss/AGENTS.md`
 - Existing passives directory for tone/language examples.
 
-## Acceptance Criteria [...]
-
-##Boss/Glitched: **Boss: Limitless Growth** - **P1:** Normal XP. **P2(66%):** Fast growth. **P3(33%):** Exponential. **P4(<15%):** Transcendent levels | **Glitched: XP Corruption** - Levels random, XP can go negative, stat gains inverted
+## Acceptance Criteria
+- Document lists at least three well-explained concepts that match the character fantasy and the boss tier brief.
+- Ideas stay within the tag's power band and leave room for other tiers to escalate separately.
+- Notes clearly separate must-have behaviour from optional stretch goals.
+- No code changes are performed as part of this task—output is a written brainstorming brief ready for review.

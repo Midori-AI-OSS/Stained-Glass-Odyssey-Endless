@@ -20,6 +20,8 @@ LadyWind's core moveset and lore live in `backend/plugins/characters/lady_wind.p
 - Tier guidance: `.codex/tasks/passives/normal/AGENTS.md`
 - Existing passives directory for tone/language examples.
 
-## Acceptance Criteria [...]
-
-##All Tiers: **Normal: Tempest Guard (IMPLEMENTED)** - Wind shields, mobility buffs, air currents control | **Prime: Zephyr Sovereign** - Multi-layer wind shields, flight control, "Eye of Storm" invulnerability | **Boss: Endless Gale** - **P:** Breeze→Windstorm→Cyclone→Atmospheric erasure | **Glitched: Wind Chaos** - Shields push allies away, currents unpredictable, wind inverts (pulls instead pushes)
+## Acceptance Criteria
+- Document lists at least three well-explained concepts that match the character fantasy and the normal tier brief.
+- Ideas stay within the tag's power band and leave room for other tiers to escalate separately.
+- Notes clearly separate must-have behaviour from optional stretch goals.
+- No code changes are performed as part of this task—output is a written brainstorming brief ready for review.

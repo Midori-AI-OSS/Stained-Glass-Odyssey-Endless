@@ -21,37 +21,7 @@ Ixia's core moveset and lore live in `backend/plugins/characters/ixia.py`. We st
 - Existing passives directory for tone/language examples.
 
 ## Acceptance Criteria
-[...]
-
----
-
-## Boss Concepts
-
-### Colossus Awakening (Recommended)
-**Multi-Phase Encounter:**
-- **Phase 1 (100-66%):** Normal Tiny Titan + 2 VIT/turn passive gain
-- **Phase 2 (66-33%):** "Growth Spurt"
-  - Size doubles visually
-  - VIT→ATK = 1000%
-  - All attacks become AoE cleaves
-  - Stomp attacks apply tremor (movement slow)
-- **Phase 3 (33-0%):** "Kaiju Mode"
-  - Screen-filling presence
-  - VIT→ATK = 1500%
-  - Environmental damage (arena hazards)
-  - Ground pounds create shockwaves
-  - At 250 VIT: Arena-wide "Titan's Fall" (wipe threat)
-
-### Unstoppable Force
-- Cannot be stunned, slowed, or displaced
-- Gains VIT equal to all CC attempts (immunity converts to power)
-- Each failed CC: +10% movement speed (stacking)
-- Enrage at 5 min: Double VIT gain, permanent berserker state
-
-### Titanic Endurance
-- HP cannot drop below 30% until VIT threshold reached
-- Players must reduce VIT to enable damage (dispels, drains)
-- Regenerates VIT over time (10/turn)
-- Phase transition at VIT breakpoints rather than HP
-
-**Recommendations:** Colossus Awakening for cinematic multi-phase experience.
+- Document lists at least three well-explained concepts that match the character fantasy and the boss tier brief.
+- Ideas stay within the tag's power band and leave room for other tiers to escalate separately.
+- Notes clearly separate must-have behaviour from optional stretch goals.
+- No code changes are performed as part of this task—output is a written brainstorming brief ready for review.

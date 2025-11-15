@@ -20,6 +20,8 @@ LadyLightning's core moveset and lore live in `backend/plugins/characters/lady_l
 - Tier guidance: `.codex/tasks/passives/normal/AGENTS.md`
 - Existing passives directory for tone/language examples.
 
-## Acceptance Criteria [...]
-
-##All Tiers: **Normal: Stormsurge (IMPLEMENTED)** - Lightning chains, storm buildup, shocking attacks | **Prime: Tempest Sovereign** - Multi-chain lightning, storm zones, "Thunder God" mode | **Boss: Storm Eternal** - **Phases:** Clouds→Thunder→Lightning→Apocalyptic storm | **Glitched: Voltage Chaos** - Chains hit allies, storms unstable, electricity inverts (absorbs instead damages)
+## Acceptance Criteria
+- Document lists at least three well-explained concepts that match the character fantasy and the normal tier brief.
+- Ideas stay within the tag's power band and leave room for other tiers to escalate separately.
+- Notes clearly separate must-have behaviour from optional stretch goals.
+- No code changes are performed as part of this task—output is a written brainstorming brief ready for review.

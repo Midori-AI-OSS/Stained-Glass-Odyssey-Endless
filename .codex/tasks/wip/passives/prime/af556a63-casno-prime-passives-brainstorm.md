@@ -21,22 +21,7 @@ Casno's core moveset and lore live in `backend/plugins/characters/casno.py`. We 
 - Existing passives directory for tone/language examples.
 
 ## Acceptance Criteria
-[...]
-
----
-
-## Prime: Phoenix Ascendant (Recommended)
-- Healing magnitude doubled (2× HoT ticks)
-- Relaxed momentum builds 50% faster
-- At max relaxation: Unlock "Eternal Flame" ability
-  - Party-wide revive (once per combat)
-  - All allies gain phoenix blessing (survive lethal hit with 1 HP, once)
-  - Flames become self-sustaining (no momentum loss when attacking)
-- Resurrection applies full HP restoration (not partial)
-
-## Prime: Undying Will
-- Cannot die while relaxed momentum active (minimum 1 HP)
-- Taking lethal damage consumes all momentum for full heal
-- Flames grow stronger with each near-death (stacking burn aura)
-
-**Recommendations:** Phoenix Ascendant for dramatic team-save moments.
+- Document lists at least three well-explained concepts that match the character fantasy and the prime tier brief.
+- Ideas stay within the tag's power band and leave room for other tiers to escalate separately.
+- Notes clearly separate must-have behaviour from optional stretch goals.
+- No code changes are performed as part of this task—output is a written brainstorming brief ready for review.

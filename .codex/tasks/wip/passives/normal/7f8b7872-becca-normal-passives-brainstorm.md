@@ -21,19 +21,7 @@ Becca's core moveset and lore live in `backend/plugins/characters/becca.py`. We 
 - Existing passives directory for tone/language examples.
 
 ## Acceptance Criteria
-[...]
-
----
-
-## Normal: Menagerie Bond (IMPLEMENTED)
-**Mechanics:** Summons jellyfish pets, spirit bond system, pets grant stat bonuses, AoE when pets present.
-**Options:** 1) Multiple pet types, 2) Pet sacrifice for burst, 3) Bond strengthens over time
-
-## Prime: Spirit Sanctuary
-- Summon 2-3 pets simultaneously, pets revive once when killed, bond bonuses doubled, "Jellyfish Storm" ultimate (swarm of temporary pets)
-
-## Boss: Aquatic Legion
-**Phases:** 1-2 pets→4 pets→Unlimited pet spawning→Merge into mega-jellyfish (Becca inside, piloting)
-
-## Glitched: Pet Instability
-- Pets spawn/despawn randomly, wrong pet types summon (non-jellyfish creatures), pets attack randomly (ally or enemy), bond values fluctuate wildly
+- Document lists at least three well-explained concepts that match the character fantasy and the normal tier brief.
+- Ideas stay within the tag's power band and leave room for other tiers to escalate separately.
+- Notes clearly separate must-have behaviour from optional stretch goals.
+- No code changes are performed as part of this task—output is a written brainstorming brief ready for review.

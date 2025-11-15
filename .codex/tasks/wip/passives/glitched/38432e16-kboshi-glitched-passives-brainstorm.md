@@ -21,22 +21,7 @@ Kboshi's core moveset and lore live in `backend/plugins/characters/kboshi.py`. W
 - Existing passives directory for tone/language examples.
 
 ## Acceptance Criteria
-[...]
-
----
-
-## Glitched: Element Corruption (Recommended)
-- Random "NULL" element (no type, bypasses resistances but deals reduced damage)
-- Inverted elements: Fire→freeze, Ice→burn, Light→blind allies, Dark→illuminate
-- Impossible elements: "Quantum" (hits past/future state), "Void" (erases buffs), "Chaos" (random effect)
-- Element can corrupt mid-attack (start fire, end ice)
-- HoT becomes "HoX" (Healing-or-Toxic, 50/50 chance each tick)
-- Display shows glitched element names: "F##E", "░░░", "ERROR"
-
-## Glitched: Flux Instability
-- Element cycle becomes non-linear (can skip, repeat, reverse)
-- Stack gains randomized (-5 to +15/turn)
-- Element locks randomly (stuck on one for 1-5 turns)
-- Sudden element purges (all stacks vanish, instant re-roll)
-
-**Recommendations:** Element Corruption for thematic glitch chaos.
+- Document lists at least three well-explained concepts that match the character fantasy and the glitched tier brief.
+- Ideas stay within the tag's power band and leave room for other tiers to escalate separately.
+- Notes clearly separate must-have behaviour from optional stretch goals.
+- No code changes are performed as part of this task—output is a written brainstorming brief ready for review.

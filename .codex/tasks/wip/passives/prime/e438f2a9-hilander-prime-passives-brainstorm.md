@@ -21,30 +21,7 @@ Hilander's core moveset and lore live in `backend/plugins/characters/hilander.py
 - Existing passives directory for tone/language examples.
 
 ## Acceptance Criteria
-[...]
-
----
-
-## Prime Concepts
-
-### Option 1: Perfect Fermentation (Recommended)
-- Crit stacks build 50% faster (7.5% rate, 15% damage/stack)
-- At 10+ stacks: Crits chain to nearest enemy (50% damage)
-- At 20+ stacks: Crit creates persistent "Ferment Cloud" AoE zone
-- Cloud applies half-strength crit buffs to allies in range
-- No diminishing returns until 30 stacks
-
-**Prime-Worthy:** Multi-target crits, zone creation, team utility.
-
-### Option 2: Guaranteed Crits
-- At 15 stacks: Next 3 hits guaranteed crit
-- Consuming stacks grants "Perfectionist" buff: +100% crit damage for 2 turns
-- Can bank multiple guaranteed crit windows
-
-### Option 3: Overflow Mastery  
-- Stack cap removed entirely
-- Past 25 stacks: Gain "Overflow" state (permanent until crit)
-- Overflow: Every hit has 25% chance to trigger bonus crit (doesn't consume stacks)
-- Main crit consumes all stacks for massive damage
-
-**Recommendations:** Perfect Fermentation for AoE, Guaranteed Crits for consistency.
+- Document lists at least three well-explained concepts that match the character fantasy and the prime tier brief.
+- Ideas stay within the tag's power band and leave room for other tiers to escalate separately.
+- Notes clearly separate must-have behaviour from optional stretch goals.
+- No code changes are performed as part of this task—output is a written brainstorming brief ready for review.

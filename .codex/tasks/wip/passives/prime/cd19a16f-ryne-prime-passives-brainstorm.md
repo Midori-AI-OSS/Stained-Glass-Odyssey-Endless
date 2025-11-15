@@ -21,14 +21,7 @@ Ryne's core moveset and lore live in `backend/plugins/characters/ryne.py`. We st
 - Existing passives directory for tone/language examples.
 
 ## Acceptance Criteria
-[...]
-
----
-
-## Prime: Cosmic Equilibrium (Recommended)
-- Balance window widened (40-60% vs 45-55%), Equilibrium buffs apply team-wide (+30% all stats when balanced), "Redistribute" ability: Force HP balance across all allies (cooldown), Perfect Balance (exactly 50/50): "Time Dilation" (team gains bonus turn), Penalty for imbalance reduced (−10% vs −20%)
-
-## Prime: Fate Weaver
-- Can set custom balance threshold (choose target %), Imbalance powers offensive abilities (scales with difference), "Tip the Scales" ultimate: Instantly swap party/enemy HP totals (once per combat)
-
-**Recommendations:** Cosmic Equilibrium for team utility and perfect balance fantasy.
+- Document lists at least three well-explained concepts that match the character fantasy and the prime tier brief.
+- Ideas stay within the tag's power band and leave room for other tiers to escalate separately.
+- Notes clearly separate must-have behaviour from optional stretch goals.
+- No code changes are performed as part of this task—output is a written brainstorming brief ready for review.

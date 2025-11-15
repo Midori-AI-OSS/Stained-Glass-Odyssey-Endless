@@ -20,6 +20,8 @@ LadyWind's core moveset and lore live in `backend/plugins/characters/lady_wind.p
 - Tier guidance: `.codex/tasks/passives/prime/AGENTS.md`
 - Existing passives directory for tone/language examples.
 
-## Acceptance Criteria [...]
-
-##Prime/Boss/Glitched: **Prime: Zephyr Sovereign** - Multi-shields, flight, Eye invulnerability | **Boss: Endless Gale** - **P:** Breeze→Windstorm→Cyclone→Erasure | **Glitched: Wind Chaos** - Shields displace allies, currents random, wind inverts
+## Acceptance Criteria
+- Document lists at least three well-explained concepts that match the character fantasy and the prime tier brief.
+- Ideas stay within the tag's power band and leave room for other tiers to escalate separately.
+- Notes clearly separate must-have behaviour from optional stretch goals.
+- No code changes are performed as part of this task—output is a written brainstorming brief ready for review.

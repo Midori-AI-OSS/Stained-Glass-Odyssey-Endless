@@ -21,14 +21,7 @@ Becca's core moveset and lore live in `backend/plugins/characters/becca.py`. We 
 - Existing passives directory for tone/language examples.
 
 ## Acceptance Criteria
-[...]
-
----
-
-## Prime: Spirit Sanctuary (Recommended)
-- Summon 2-3 jellyfish simultaneously (up from 1), Pets revive once automatically when killed, Bond bonuses doubled (+50% stats from pets instead of +25%), "Jellyfish Storm" unlocked (summon swarm of 5 temporary weak pets for AoE coverage)
-
-## Prime: Eternal Companions
-- Pets become permanent (don't despawn), Gain new pet type every 3 turns (variety), Bond stacks infinitely, At 10 total pets: "Aquarium Mode" (battlefield becomes underwater zone, all allies gain swim buffs)
-
-**Recommendations:** Spirit Sanctuary for manageable pet scaling.
+- Document lists at least three well-explained concepts that match the character fantasy and the prime tier brief.
+- Ideas stay within the tag's power band and leave room for other tiers to escalate separately.
+- Notes clearly separate must-have behaviour from optional stretch goals.
+- No code changes are performed as part of this task—output is a written brainstorming brief ready for review.

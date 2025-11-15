@@ -21,17 +21,7 @@ Becca's core moveset and lore live in `backend/plugins/characters/becca.py`. We 
 - Existing passives directory for tone/language examples.
 
 ## Acceptance Criteria
-[...]
-
----
-
-## Boss: Aquatic Legion (Recommended)
-**Phase 1:** 1-2 pets baseline
-**Phase 2 (75%):** 4 active pets, pets respawn every 2 turns
-**Phase 3 (50%):** Unlimited pet spawning (1 per turn), pets stronger
-**Phase 4 (25%):** Pets merge into "Mega-Jellyfish" (Becca pilots from inside), shared HP pool, massive AoE attacks, tentacle swarm
-
-## Boss: Tidal Swarm
-- Passive pet generation (1 every 2 turns automatically), Pets explode on death (AoE damage), At 15 pets killed: "Swarm Frenzy" enrage (all pet stats doubled), Becca becomes invulnerable while pets alive
-
-**Recommendations:** Aquatic Legion for cinematic transformation finale.
+- Document lists at least three well-explained concepts that match the character fantasy and the boss tier brief.
+- Ideas stay within the tag's power band and leave room for other tiers to escalate separately.
+- Notes clearly separate must-have behaviour from optional stretch goals.
+- No code changes are performed as part of this task—output is a written brainstorming brief ready for review.

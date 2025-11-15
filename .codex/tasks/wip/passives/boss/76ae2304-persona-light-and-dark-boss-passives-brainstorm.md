@@ -20,6 +20,8 @@ PersonaLightAndDark's core moveset and lore live in `backend/plugins/characters/
 - Tier guidance: `.codex/tasks/passives/boss/AGENTS.md`
 - Existing passives directory for tone/language examples.
 
-## Acceptance Criteria [...]
-
-##Boss/Glitched: **Boss: Eternal Duality** - **P1:** Balance. **P2(66%):** Imbalance. **P3(33%):** Chaos. **P4(<15%):** Singularity | **Glitched: Form Corruption** - Forms corrupt, balance impossible, uncontrolled shifting
+## Acceptance Criteria
+- Document lists at least three well-explained concepts that match the character fantasy and the boss tier brief.
+- Ideas stay within the tag's power band and leave room for other tiers to escalate separately.
+- Notes clearly separate must-have behaviour from optional stretch goals.
+- No code changes are performed as part of this task—output is a written brainstorming brief ready for review.

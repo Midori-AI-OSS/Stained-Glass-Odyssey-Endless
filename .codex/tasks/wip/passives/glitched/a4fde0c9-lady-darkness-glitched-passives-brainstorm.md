@@ -21,7 +21,7 @@ LadyDarkness's core moveset and lore live in `backend/plugins/characters/lady_da
 - Existing passives directory for tone/language examples.
 
 ## Acceptance Criteria
-[...]
-
-## Glitched: Shadow Corruption (Recommended)
-- Shadows hostile (attack all units randomly), Veil inverts (reveals/exposes instead of conceals), Eclipse timing corrupted (instant trigger, never triggers, or permanent darkness), Shadow clones betray (attack Lady Darkness), Darkness self-damages (DoT to caster), Display shows inverted light levels
+- Document lists at least three well-explained concepts that match the character fantasy and the glitched tier brief.
+- Ideas stay within the tag's power band and leave room for other tiers to escalate separately.
+- Notes clearly separate must-have behaviour from optional stretch goals.
+- No code changes are performed as part of this task—output is a written brainstorming brief ready for review.

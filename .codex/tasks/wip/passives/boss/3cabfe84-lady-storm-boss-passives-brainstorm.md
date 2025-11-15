@@ -20,6 +20,8 @@ LadyStorm's core moveset and lore live in `backend/plugins/characters/lady_storm
 - Tier guidance: `.codex/tasks/passives/boss/AGENTS.md`
 - Existing passives directory for tone/language examples.
 
-## Acceptance Criteria [...]
-
-##Boss/Glitched: **Boss: Atmospheric Collapse** - **P1:** Breeze. **P2(66%):** Gale. **P3(33%):** Hurricane. **P4(<15%):** Planetary storm | **Glitched: Weather Malfunction** - Storms target allies, weather inverts (rain burns), pressure impossible values
+## Acceptance Criteria
+- Document lists at least three well-explained concepts that match the character fantasy and the boss tier brief.
+- Ideas stay within the tag's power band and leave room for other tiers to escalate separately.
+- Notes clearly separate must-have behaviour from optional stretch goals.
+- No code changes are performed as part of this task—output is a written brainstorming brief ready for review.

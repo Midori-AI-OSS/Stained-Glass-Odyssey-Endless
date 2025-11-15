@@ -20,6 +20,8 @@ Ally's core moveset and lore live in `backend/plugins/characters/ally.py`. We st
 - Tier guidance: `.codex/tasks/passives/glitched/AGENTS.md`
 - Existing passives directory for tone/language examples.
 
-## Acceptance Criteria [...]
-
-##Glitched: Power Instability - Surges occur randomly/uncontrolled, overload damages self and allies, power levels display corrupted values, burnout cycles broken, surge mode uncontrollable
+## Acceptance Criteria
+- Document lists at least three well-explained concepts that match the character fantasy and the glitched tier brief.
+- Ideas stay within the tag's power band and leave room for other tiers to escalate separately.
+- Notes clearly separate must-have behaviour from optional stretch goals.
+- No code changes are performed as part of this task—output is a written brainstorming brief ready for review.

@@ -21,8 +21,7 @@ LadyEcho's core moveset and lore live in `backend/plugins/characters/lady_echo.p
 - Existing passives directory for tone/language examples.
 
 ## Acceptance Criteria
-[...]
-
-## Boss: Resonance Singularity - **Phase 1:** Enhanced echoes. **Phase 2 (66%):** Echo chamber (room fills with overlapping sound). **Phase 3 (33%):** Sonic overload (constant stun/damage). **Phase 4 (<15%):** Reality vibration (space cracks, existence threatened)
-
-## Glitched: Feedback Loop - Echoes create more echoes (infinite recursion), sound effects invert (silence deals damage), resonance targets corrupted (hits wrong frequencies/units), static replaces all audio
+- Document lists at least three well-explained concepts that match the character fantasy and the boss tier brief.
+- Ideas stay within the tag's power band and leave room for other tiers to escalate separately.
+- Notes clearly separate must-have behaviour from optional stretch goals.
+- No code changes are performed as part of this task—output is a written brainstorming brief ready for review.

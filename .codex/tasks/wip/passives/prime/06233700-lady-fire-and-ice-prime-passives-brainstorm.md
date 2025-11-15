@@ -20,8 +20,8 @@ LadyFireAndIce's core moveset and lore live in `backend/plugins/characters/lady_
 - Tier guidance: `.codex/tasks/passives/prime/AGENTS.md`
 - Existing passives directory for tone/language examples.
 
-## Acceptance Criteria [...]
-
-##Prime: Perfect Duality - Dual-element simultaneous, fusion control mastery, temperature absolute, "Thermal Singularity" (both extremes at once)
-##Boss: Elemental Convergence - **Phases:** Alt→Fast switch→Simultaneous→Fusion nova
-##Glitched: Temperature Chaos - Elements invert, dual-corruption (fire freezes), thermal impossible, fusion unstable
+## Acceptance Criteria
+- Document lists at least three well-explained concepts that match the character fantasy and the prime tier brief.
+- Ideas stay within the tag's power band and leave room for other tiers to escalate separately.
+- Notes clearly separate must-have behaviour from optional stretch goals.
+- No code changes are performed as part of this task—output is a written brainstorming brief ready for review.

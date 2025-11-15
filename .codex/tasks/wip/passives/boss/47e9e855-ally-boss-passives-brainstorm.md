@@ -20,6 +20,8 @@ Ally's core moveset and lore live in `backend/plugins/characters/ally.py`. We st
 - Tier guidance: `.codex/tasks/passives/boss/AGENTS.md`
 - Existing passives directory for tone/language examples.
 
-## Acceptance Criteria [...]
-
-##Boss/Glitched: **Boss: Infinite Surge** - **P1:** Normal. **P2(66%):** High power. **P3(33%):** Critical. **P4(<15%):** Meltdown threat | **Glitched: Power Instability** - Random surges, self-damage, power corrupted
+## Acceptance Criteria
+- Document lists at least three well-explained concepts that match the character fantasy and the boss tier brief.
+- Ideas stay within the tag's power band and leave room for other tiers to escalate separately.
+- Notes clearly separate must-have behaviour from optional stretch goals.
+- No code changes are performed as part of this task—output is a written brainstorming brief ready for review.

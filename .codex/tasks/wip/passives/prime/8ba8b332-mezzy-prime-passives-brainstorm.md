@@ -21,14 +21,7 @@ Mezzy's core moveset and lore live in `backend/plugins/characters/mezzy.py`. We 
 - Existing passives directory for tone/language examples.
 
 ## Acceptance Criteria
-[...]
-
----
-
-## Prime: Insatiable Appetite (Recommended)
-- Absorption rate doubled (2× damage reduction, 2× stat siphon), Siphoned stats become permanent (don't decay), At 100 total absorbed stats: Unlock "Glut Mode" (3 turns: invulnerable + 100% damage reflection + size increase), Can willingly absorb ally buffs for emergency power spike, Enemy debuffs also absorbed and converted to buffs
-
-## Prime: Adaptive Metabolism
-- Absorption adapts to damage type (resist what's absorbed), Converts absorbed damage to healing (50% conversion), Siphon rate increases with missing HP (desperate hunger), Ultimate: "Devour" ability (instant-kill enemies below 15% HP, gain all their stats)
-
-**Recommendations:** Insatiable Appetite for power fantasy scaling.
+- Document lists at least three well-explained concepts that match the character fantasy and the prime tier brief.
+- Ideas stay within the tag's power band and leave room for other tiers to escalate separately.
+- Notes clearly separate must-have behaviour from optional stretch goals.
+- No code changes are performed as part of this task—output is a written brainstorming brief ready for review.

@@ -21,32 +21,7 @@ Ixia's core moveset and lore live in `backend/plugins/characters/ixia.py`. We st
 - Existing passives directory for tone/language examples.
 
 ## Acceptance Criteria
-[...]
-
----
-
-## Prime Concepts
-
-### Titan Ascendant (Recommended)
-- VIT→ATK conversion: 750% (up from 500%)
-- VIT→HP conversion: 6× (up from 4×)
-- Gain 0.5 VIT per damage dealt (not just taken)
-- At 150 VIT: "True Titan" state
-  - Size increase 200%
-  - Immune to knockback/CC
-  - Intimidation aura (-20% enemy ATK in range)
-  - All attacks become AoE cleaves
-
-### Adaptive Titan
-- VIT bonuses adapt to combat situation:
-  - High damage taken: Bonus DEF per VIT
-  - High damage dealt: Bonus SPD per VIT
-  - Low HP: Emergency VIT burst (+50 instant)
-
-### Titan's Wrath
-- Every 50 VIT: Unlock powerful ability
-  - 50: Ground Slam (AoE stun)
-  - 100: Seismic Roar (team buff)
-  - 150: Titan's Judgment (execute below 20% HP enemies)
-
-**Recommendations:** Titan Ascendant for power fantasy fulfillment.
+- Document lists at least three well-explained concepts that match the character fantasy and the prime tier brief.
+- Ideas stay within the tag's power band and leave room for other tiers to escalate separately.
+- Notes clearly separate must-have behaviour from optional stretch goals.
+- No code changes are performed as part of this task—output is a written brainstorming brief ready for review.

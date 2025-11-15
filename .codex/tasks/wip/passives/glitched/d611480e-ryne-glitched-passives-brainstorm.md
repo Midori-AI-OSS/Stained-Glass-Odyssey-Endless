@@ -21,14 +21,7 @@ Ryne's core moveset and lore live in `backend/plugins/characters/ryne.py`. We st
 - Existing passives directory for tone/language examples.
 
 ## Acceptance Criteria
-[...]
-
----
-
-## Glitched: Chaotic Scales (Recommended)
-- Balance calculations use wrong stats (MP instead of HP, ATK vs DEF, random), Equilibrium effects inverted (penalties when balanced, bonuses when imbalanced), HP redistribution targets wrong units (can kill allies accidentally), Display shows impossible values ("150%/−50%", "NaN", "∞"), "Negative balance" possible (HP goes below 0 but units don't die), Time dilation triggers randomly regardless of balance state
-
-## Glitched: Quantum Superposition
-- All units exist at multiple HP values simultaneously (schrodinger's health bar), Balance state flickers between extremes each turn, Healing and damage apply to random HP state, "Observation" collapses waveform (locks to one HP value for 1 turn)
-
-**Recommendations:** Chaotic Scales for unpredictable but learn-able patterns.
+- Document lists at least three well-explained concepts that match the character fantasy and the glitched tier brief.
+- Ideas stay within the tag's power band and leave room for other tiers to escalate separately.
+- Notes clearly separate must-have behaviour from optional stretch goals.
+- No code changes are performed as part of this task—output is a written brainstorming brief ready for review.

@@ -21,17 +21,7 @@ Mezzy's core moveset and lore live in `backend/plugins/characters/mezzy.py`. We 
 - Existing passives directory for tone/language examples.
 
 ## Acceptance Criteria
-[...]
-
----
-
-## Boss: The Devourer (Recommended)
-**Phase 1 (100-66%):** Enhanced absorption (3× rate), passive stat siphon each turn from all enemies
-**Phase 2 (66-33%):** Mass Siphon - automatic drain aura, all enemies lose stats constantly, Mezzy grows visibly larger
-**Phase 3 (33-0%):** True Hunger - starts consuming terrain/environment (creates hazard zones), size massive, "Consumption Field" pulls enemies toward center  
-**Finale:** At death, attempts to devour entire arena (party must escape or finish quickly)
-
-## Boss: Endless Feast
-- Never stops growing (stat cap removed), Each enemy death feeds Mezzy (absorbs all stats), At 500 total stats: "Singularity Form" (becomes black hole, constant pull + crush damage), Must be defeated before full transformation
-
-**Recommendations:** The Devourer for environmental storytelling.
+- Document lists at least three well-explained concepts that match the character fantasy and the boss tier brief.
+- Ideas stay within the tag's power band and leave room for other tiers to escalate separately.
+- Notes clearly separate must-have behaviour from optional stretch goals.
+- No code changes are performed as part of this task—output is a written brainstorming brief ready for review.

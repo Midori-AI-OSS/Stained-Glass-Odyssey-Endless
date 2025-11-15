@@ -21,19 +21,7 @@ Ryne's core moveset and lore live in `backend/plugins/characters/ryne.py`. We st
 - Existing passives directory for tone/language examples.
 
 ## Acceptance Criteria
-[...]
-
----
-
-## Normal: Oracle of Balance (IMPLEMENTED)
-**Mechanics:** Balance system - tracks party/enemy HP ratios, grants bonuses when balanced, penalties when imbalanced, equilibrium state.
-**Options:** 1) Forced balance (damage redistribution), 2) Perfect harmony (bonus at 50/50), 3) Chaos from imbalance
-
-## Prime: Cosmic Equilibrium
-- Balance window wider (40-60% instead of 45-55%), Equilibrium grants team-wide buffs (not just Ryne), Can force balance (redistribute HP between allies), "Perfect Balance" state at exact 50/50: Time dilation (extra turn for team)
-
-## Boss: Scales of Fate
-**Phases:** Gentle nudges→Forced equilibrium (constant HP redistribution)→"Universal Balance" (all units locked to 50% HP)→Judgment (executes imbalanced side)
-
-## Glitched: Chaotic Scales
-- Balance calculations corrupted (uses random stats instead of HP), Equilibrium inverts effects (bonuses become penalties), Balance can force negative HP (instant death), Display shows impossible ratios ("150%/−50%")
+- Document lists at least three well-explained concepts that match the character fantasy and the normal tier brief.
+- Ideas stay within the tag's power band and leave room for other tiers to escalate separately.
+- Notes clearly separate must-have behaviour from optional stretch goals.
+- No code changes are performed as part of this task—output is a written brainstorming brief ready for review.

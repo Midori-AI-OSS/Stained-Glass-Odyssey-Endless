@@ -20,6 +20,8 @@ LadyOfFire's core moveset and lore live in `backend/plugins/characters/lady_of_f
 - Tier guidance: `.codex/tasks/passives/glitched/AGENTS.md`
 - Existing passives directory for tone/language examples.
 
-## Acceptance Criteria [...]
-
-##Glitched: Fire Chaos - Burns random targets (allies/self/objects), momentum corrupted (negative values, overflow), flames behavior unpredictable (instant extinguish or explosive chain)
+## Acceptance Criteria
+- Document lists at least three well-explained concepts that match the character fantasy and the glitched tier brief.
+- Ideas stay within the tag's power band and leave room for other tiers to escalate separately.
+- Notes clearly separate must-have behaviour from optional stretch goals.
+- No code changes are performed as part of this task—output is a written brainstorming brief ready for review.
