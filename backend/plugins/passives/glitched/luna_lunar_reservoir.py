@@ -32,7 +32,7 @@ class LunaLunarReservoirGlitched(LunaLunarReservoir):
         """Glitched variant has doubled sword charge."""
         if owner is None:
             return 0
-        return 8  # Base 4 * 2 for glitched
+        return 2  # Base 1 * 2 for glitched
 
     @classmethod
     def get_description(cls) -> str:
@@ -41,6 +41,6 @@ class LunaLunarReservoirGlitched(LunaLunarReservoir):
             "Every 25 charge doubles actions per turn (capped after 2000 doublings). "
             "Stacks above 2000 grant +55% of Luna's base ATK, +1% of her base SPD, "
             "and +1% additional actions from the doubled cadence per 100 excess charge with no automatic drain. "
-            "Sword hits grant 8 charge (doubled)."
+            "Sword hits grant 2 charge (doubled)."
         )
 

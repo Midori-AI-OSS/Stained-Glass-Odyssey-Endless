@@ -33,7 +33,7 @@ class LunaLunarReservoirPrime(LunaLunarReservoir):
         """Prime variant has 5x sword charge."""
         if owner is None:
             return 0
-        return 20  # Base 4 * 5 for prime
+        return 5  # Base 1 * 5 for prime
 
     @classmethod
     async def _apply_prime_healing(cls, owner: "Stats", damage: int | None) -> bool:
@@ -97,6 +97,6 @@ class LunaLunarReservoirPrime(LunaLunarReservoir):
             "Every 25 charge doubles actions per turn (capped after 2000 doublings). "
             "Stacks above 2000 grant +55% of Luna's base ATK, +1% of her base SPD, "
             "and +1% additional actions from the doubled cadence per 100 excess charge with no automatic drain. "
-            "Sword hits grant 20 charge (5x) and heal Luna for a small amount based on damage dealt."
+            "Sword hits grant 5 charge (5x) and heal Luna for a small amount based on damage dealt."
         )
 

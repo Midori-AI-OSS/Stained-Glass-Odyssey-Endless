@@ -121,7 +121,12 @@ class _LunaSwordCoordinator:
         identifier: str | None = None,
         *_: object,
     ) -> None:
-        """Re-broadcast sword hits so Luna's passives can respond."""
+        """Re-broadcast sword hits so Luna's passives can respond.
+
+        Emits luna_sword_hit event for tier-specific passive handlers to process.
+        The passive system handles charge calculation and tier-specific effects
+        (like prime healing) based on the resolved passive variant.
+        """
 
         if attacker is None or id(attacker) not in self._sword_refs:
             return
@@ -135,20 +140,11 @@ class _LunaSwordCoordinator:
             "sword_identifier": getattr(attacker, "id", None),
             "source_identifier": identifier,
         }
-        passive = _get_luna_passive()
-        per_hit = passive._sword_charge_amount(owner)  # type: ignore[attr-defined]
+        # Register sword for tracking (does not affect charge calculation)
         _register_luna_sword(owner, attacker, label or "")
-        passive.add_charge(owner, amount=per_hit)  # type: ignore[attr-defined]
-        healed = await passive._apply_prime_healing(owner, amount or 0)  # type: ignore[attr-defined]
-        metadata["prime_heal_handled"] = True
-        metadata["prime_heal_success"] = healed
-        try:
-            helper = getattr(owner, "_luna_sword_helper", None)
-            if helper is not None and hasattr(helper, "sync_actions_per_turn"):
-                helper.sync_actions_per_turn()
-        except Exception:
-            pass
-        metadata["charge_handled"] = True
+
+        # Emit event for passive handlers to process charge and effects
+        # Do NOT set charge_handled or prime_heal_handled - let passives handle it
         await BUS.emit_async(
             self.EVENT_NAME,
             owner,
