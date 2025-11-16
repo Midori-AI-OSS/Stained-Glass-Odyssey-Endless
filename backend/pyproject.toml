@@ -97,3 +97,6 @@ llm-amd = [
     "sentence-transformers",
     "accelerate",
 ]
+
+[tool.uv.extra-build-dependencies]
+pkuseg = ["numpy>=2.3.4"]
