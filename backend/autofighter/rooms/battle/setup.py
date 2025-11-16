@@ -17,6 +17,7 @@ from autofighter.effects import StatModifier
 from autofighter.mapgen import MapNode
 from autofighter.party import Party
 from autofighter.passives import PassiveRegistry
+from autofighter.passives import apply_rank_passives
 from autofighter.relics import apply_relics
 from autofighter.stats import GAUGE_START
 from autofighter.stats import Stats
@@ -85,6 +86,9 @@ async def setup_battle(
         foes = foe if isinstance(foe, list) else [foe]
 
     for stats in foes:
+        # Apply rank-specific passive transformations
+        apply_rank_passives(stats)
+
         rank = getattr(stats, "rank", "")
         if isinstance(rank, str) and "boss" in rank.lower():
             boss_scaling = getattr(stats, "apply_boss_scaling", None)

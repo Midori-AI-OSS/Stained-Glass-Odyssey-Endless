@@ -108,9 +108,40 @@ class LunaLunarReservoir:
         if actual_owner is None:
             return
         cls._ensure_charge_slot(actual_owner)
-        per_hit = cls._sword_charge_amount(actual_owner)
+
+        # Calculate combined multiplier from all active tier variants
+        # When multiple variants are present (e.g., glitched + prime), their
+        # multipliers stack multiplicatively (2x * 5x = 10x total)
+        total_multiplier = 1
+        prime_variant = None
+        if hasattr(actual_owner, "passives"):
+            from autofighter.passives import discover
+            registry = discover()
+
+            for passive_id in actual_owner.passives:
+                if "luna_lunar_reservoir" in passive_id:
+                    variant_class = registry.get(passive_id)
+                    if variant_class is not None:
+                        multiplier = variant_class._charge_multiplier(actual_owner)
+                        total_multiplier *= multiplier
+
+                        # Track prime variant for healing
+                        if "prime" in passive_id:
+                            prime_variant = variant_class
+
+        # Calculate charge with combined multiplier
+        base_charge = 4  # Base sword charge
+        per_hit = base_charge * total_multiplier
+
         if not handled:
             cls.add_charge(actual_owner, per_hit)
+
+        # Apply prime healing if prime variant is active
+        if prime_variant is not None and not bool(metadata_dict.get("prime_heal_handled")):
+            await prime_variant._apply_prime_healing(actual_owner, amount)
+            if isinstance(metadata, dict):
+                metadata["prime_heal_handled"] = True
+
         helper = getattr(actual_owner, "_luna_sword_helper", None)
         try:
             if helper is not None and hasattr(helper, "sync_actions_per_turn"):
