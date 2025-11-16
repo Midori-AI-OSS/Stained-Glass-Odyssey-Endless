@@ -130,7 +130,7 @@ class LunaLunarReservoir:
                             prime_variant = variant_class
 
         # Calculate charge with combined multiplier
-        base_charge = 4  # Base sword charge
+        base_charge = 1  # Base sword charge
         per_hit = base_charge * total_multiplier
 
         if not handled:
