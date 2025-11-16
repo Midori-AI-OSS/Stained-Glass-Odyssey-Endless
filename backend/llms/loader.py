@@ -140,7 +140,7 @@ def _load_local_huggingface_model(model_name: str) -> SupportsStream:
         Wrapped model ready for inference
     """
     min_ram, _ = model_memory_requirements(model_name)
-    ensure_ram(min_ram)
+    # ensure_ram(min_ram)
     device = pick_device()
 
     # Configure generation parameters with high reasoning for LRM
