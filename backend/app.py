@@ -139,6 +139,41 @@ async def prune_runs_before_serving() -> None:
 
 
 @app.before_serving
+async def validate_lrm_on_startup() -> None:
+    """Validate the configured LRM on startup to ensure it's ready and capable of reasoning."""
+    try:
+        # Check if remote OpenAI is configured
+        openai_url = os.getenv("OPENAI_API_URL", "unset")
+
+        if openai_url != "unset":
+            log.info("Remote LRM configured (OPENAI_API_URL=%s). Testing connection...", openai_url)
+
+            # Import here to avoid circular dependencies
+            from llms.loader import ModelName
+            from llms.loader import load_llm
+            from llms.loader import validate_lrm
+            from options import OptionKey
+            from options import get_option
+
+            # Get configured model or use default
+            model = get_option(OptionKey.LRM_MODEL, ModelName.OPENAI_20B.value)
+
+            # Load and validate the LRM
+            llm = await asyncio.to_thread(load_llm, model, validate=False)
+            is_valid = await validate_lrm(llm)
+
+            if is_valid:
+                log.info("✓ LRM validation passed - model is ready for reasoning tasks")
+            else:
+                log.warning("✗ LRM validation failed - model may not support reasoning properly")
+        else:
+            log.info("No remote LRM configured (OPENAI_API_URL not set). Skipping startup validation.")
+    except Exception as e:
+        log.warning("LRM validation failed with error: %s", e)
+        log.info("Server will continue starting. LRM may not be available.")
+
+
+@app.before_serving
 async def start_background_tasks() -> None:
     asyncio.create_task(_cleanup_loop())
 

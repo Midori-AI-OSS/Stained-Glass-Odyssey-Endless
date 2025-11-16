@@ -23,7 +23,7 @@ _TURN_PACING_DEFAULT = 0.5
 
 @bp.get("/lrm")
 async def get_lrm_config() -> tuple[str, int, dict[str, object]]:
-    current = get_option(OptionKey.LRM_MODEL, ModelName.DEEPSEEK.value)
+    current = get_option(OptionKey.LRM_MODEL, ModelName.OPENAI_20B.value)
     models = [m.value for m in ModelName]
     payload = {"current_model": current, "available_models": models}
     try:
@@ -40,7 +40,7 @@ async def set_lrm_model() -> tuple[str, int, dict[str, str]]:
     model = data.get("model", "")
     if model not in [m.value for m in ModelName]:
         return jsonify({"error": "invalid model"}), 400
-    old_value = get_option(OptionKey.LRM_MODEL, ModelName.DEEPSEEK.value)
+    old_value = get_option(OptionKey.LRM_MODEL, ModelName.OPENAI_20B.value)
     set_option(OptionKey.LRM_MODEL, model)
     try:
         await log_settings_change("lrm_model", old_value, model)
