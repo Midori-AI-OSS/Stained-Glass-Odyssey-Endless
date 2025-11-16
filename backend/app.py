@@ -142,16 +142,15 @@ async def prune_runs_before_serving() -> None:
 async def validate_lrm_on_startup() -> None:
     """Validate the configured LRM on startup to ensure it's ready and capable of reasoning."""
     try:
-        # Check if torch is available for local models
+        # Always check torch availability first. If torch is not available,
+        # skip LRM startup validation entirely (do not attempt remote checks).
         torch_available = is_torch_available()
-
-        # Check if remote OpenAI is configured
-        openai_url = os.getenv("OPENAI_API_URL", "unset")
-
-        # Skip validation if neither remote nor local LRM is available
-        if openai_url == "unset" and not torch_available:
-            log.info("No LRM available - neither remote (OPENAI_API_URL) nor local (torch). Skipping startup validation.")
+        if not torch_available:
+            log.info("Torch not available - skipping LRM startup validation.")
             return
+
+        # At this point torch is available; check if remote OpenAI is configured
+        openai_url = os.getenv("OPENAI_API_URL", "unset")
 
         # Import here to avoid circular dependencies
         from llms.loader import ModelName
@@ -163,10 +162,11 @@ async def validate_lrm_on_startup() -> None:
         # Get configured model or use default
         model = get_option(OptionKey.LRM_MODEL, ModelName.OPENAI_20B.value)
 
-        # Log which type of LRM we're testing
+        # Log which type of LRM we're testing. We already know torch is available
+        # here; prefer the remote LRM only if OPENAI_API_URL is explicitly set.
         if openai_url != "unset":
             log.info("Remote LRM configured (OPENAI_API_URL=%s). Testing connection...", openai_url)
-        elif torch_available:
+        else:
             log.info("Local LRM configured (torch available). Testing model: %s...", model)
 
         # Load and validate the LRM
