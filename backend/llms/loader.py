@@ -19,6 +19,14 @@ else:
     HuggingFacePipeline = None
     pipeline = None
 
+# Import OpenAI independently of torch
+try:
+    from openai import AsyncOpenAI
+    _OPENAI_AVAILABLE = True
+except ImportError:
+    AsyncOpenAI = None
+    _OPENAI_AVAILABLE = False
+
 from .safety import ensure_ram
 from .safety import gguf_strategy
 from .safety import model_memory_requirements
@@ -34,6 +42,7 @@ class ModelName(str, Enum):
     DEEPSEEK = "deepseek-ai/DeepSeek-R1-Distill-Qwen-7B"
     GEMMA = "google/gemma-3-4b-it"
     GGUF = "gguf"
+    REMOTE_OPENAI = "remote-openai"
 
 
 class _LangChainWrapper:
@@ -45,7 +54,57 @@ class _LangChainWrapper:
         yield result
 
 
+class _OpenAIRemoteWrapper:
+    """Wrapper for remote OpenAI-compatible API with reasoning support."""
+
+    def __init__(self, client: "AsyncOpenAI", model: str = "gpt-oss:20b") -> None:
+        self._client = client
+        self._model = model
+
+    async def generate_stream(self, text: str) -> AsyncIterator[str]:
+        """Stream response from remote OpenAI API with reasoning effort."""
+        # Use high reasoning effort as specified in requirements
+        try:
+            stream = await self._client.chat.completions.create(
+                model=self._model,
+                messages=[{"role": "user", "content": text}],
+                stream=True,
+                reasoning_effort="high",
+                temperature=0.7,
+            )
+            async for chunk in stream:
+                if chunk.choices and chunk.choices[0].delta.content:
+                    yield chunk.choices[0].delta.content
+        except TypeError:
+            # Fallback if reasoning_effort is not supported by this API
+            stream = await self._client.chat.completions.create(
+                model=self._model,
+                messages=[{"role": "user", "content": text}],
+                stream=True,
+                temperature=0.7,
+            )
+            async for chunk in stream:
+                if chunk.choices and chunk.choices[0].delta.content:
+                    yield chunk.choices[0].delta.content
+
+
 def load_llm(model: str | None = None, *, gguf_path: str | None = None) -> SupportsStream:
+    # Check for remote OpenAI configuration first
+    openai_url = os.getenv("OPENAI_API_URL", "unset")
+    openai_key = os.getenv("OPENAI_API_KEY", "unset")
+
+    # If remote OpenAI is configured, use it
+    if openai_url != "unset" and openai_key != "unset":
+        if not _OPENAI_AVAILABLE:
+            msg = "OpenAI library is not available. Install with: uv pip install openai"
+            raise ImportError(msg)
+
+        # Use the specified model or default to gpt-oss:20b
+        remote_model = model or os.getenv("AF_LLM_MODEL", "gpt-oss:20b")
+        client = AsyncOpenAI(base_url=openai_url, api_key=openai_key)
+        return _OpenAIRemoteWrapper(client, remote_model)
+
+    # Fall back to local models (requires torch)
     require_torch()
     name = model or os.getenv("AF_LLM_MODEL", ModelName.DEEPSEEK.value)
     if name == ModelName.DEEPSEEK.value:
