@@ -3,7 +3,17 @@
 **Status:** WIP  
 **Priority:** High  
 **Category:** Implementation  
-**Goal File:** `.codex/tasks/wip/GOAL-action-plugin-system.md`
+**Goal File:** `.codex/tasks/wip/GOAL-action-plugin-system.md`  
+**Execution Order:** **#3 - DO THIS THIRD**
+
+## Recommended Task Execution Order
+
+This is the **third task** in the action plugin system project:
+
+1. Battle Logic Research & Documentation (fd656d56) - **Complete this first**
+2. Architecture Design (9a56e7d1) - **Complete this second**
+3. **✓ THIS TASK** - Plugin Loader Implementation (4afe1e97)
+4. Normal Attack Extraction (b60f5a58)
 
 ## Objective
 

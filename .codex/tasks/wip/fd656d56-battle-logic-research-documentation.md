@@ -3,7 +3,17 @@
 **Status:** WIP  
 **Priority:** High  
 **Category:** Research/Documentation  
-**Goal File:** `.codex/tasks/wip/GOAL-action-plugin-system.md`
+**Goal File:** `.codex/tasks/wip/GOAL-action-plugin-system.md`  
+**Execution Order:** **#1 - DO THIS FIRST**
+
+## Recommended Task Execution Order
+
+This is the **first task** in the action plugin system project. Complete this before starting other tasks:
+
+1. **✓ THIS TASK** - Battle Logic Research & Documentation (fd656d56)
+2. Architecture Design (9a56e7d1)
+3. Plugin Loader Implementation (4afe1e97)
+4. Normal Attack Extraction (b60f5a58)
 
 ## Objective
 
