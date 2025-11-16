@@ -43,10 +43,14 @@ metadata["prime_heal_handled"] = True  # Line 143 - REMOVE (passive handles this
 metadata["prime_heal_success"] = healed  # Line 144 - REMOVE
 ```
 
+**⚠️ CRITICAL: Also remove this line:**
+```python
+metadata["charge_handled"] = True  # Line 151 - REMOVE (prevents passive from adding charge!)
+```
+
 **Keep these:**
 ```python
 _register_luna_sword(owner, attacker, label or "")  # Sword tracking still needed
-metadata["charge_handled"] = True  # If still needed for preventing double-processing
 await BUS.emit_async(
     self.EVENT_NAME,  # "luna_sword_hit"
     owner,
@@ -61,11 +65,14 @@ await BUS.emit_async(
 **The Correct Pattern:**
 The passive's `_on_sword_hit()` already:
 - Calls `_sword_charge_amount()` with the correct tier-specific multiplier
-- Calls `add_charge()` with the calculated amount
+- Calls `add_charge()` with the calculated amount (unless `metadata["charge_handled"]` is True)
 - In prime variants, applies healing via `_apply_prime_healing()`
-- Updates metadata flags to prevent duplicate processing
+- Updates metadata flags internally to prevent duplicate processing
 
-By removing the manual calls, the event system will route to the correct tier variant automatically.
+**Why `charge_handled` Must Be Removed:**
+The passive checks `metadata.get("charge_handled")` and **skips adding charge if True** (line 103 in normal passive). If the character file sets this flag without actually adding charge, the passive won't add it either, resulting in zero charge being awarded. This flag was meant for the OLD pattern where the character file added charge manually. In the NEW pattern, the passive adds charge, so this flag must not be set by the character file.
+
+By removing ALL manual charge/healing logic AND their metadata flags, the event system will route to the correct tier variant automatically.
 
 ### 2. Verify `_get_luna_passive()` Usage
 Check all other usages of `_get_luna_passive()` in the file:
@@ -87,6 +94,7 @@ Update any relevant comments in `luna.py` that reference the old direct-call pat
 
 ## Acceptance Criteria
 - [ ] `_handle_hit()` no longer calls `passive._sword_charge_amount()`, `passive.add_charge()`, or `passive._apply_prime_healing()`
+- [ ] `_handle_hit()` no longer sets `metadata["charge_handled"]` or `metadata["prime_heal_handled"]` (these flags prevent passive event handlers from processing the hit)
 - [ ] All logic for charge calculation and healing is handled by tier-specific passive event handlers
 - [ ] All 9 tests in `test_luna_swords.py` pass, including:
   - `test_glitched_luna_sword_hits_double_charge` (expects 8 charge from 2x multiplier)
@@ -97,11 +105,29 @@ Update any relevant comments in `luna.py` that reference the old direct-call pat
 
 ## Technical Notes
 
+**⚠️ CRITICAL: Metadata Flag Behavior**
+
+The passive's `_on_sword_hit()` checks `metadata.get("charge_handled")` and **skips adding charge if True**:
+
+```python
+# In LunaLunarReservoir._on_sword_hit() line 103:
+handled = bool(metadata_dict.get("charge_handled"))
+# ...
+if not handled:  # Line 112
+    cls.add_charge(actual_owner, per_hit)
+```
+
+**This means:**
+- If character file sets `metadata["charge_handled"] = True` → passive skips charge → 0 charge awarded ❌
+- If character file doesn't set flag → passive adds charge → correct tier-specific amount awarded ✅
+
+The `charge_handled` flag was designed for the OLD pattern where the character file added charge manually and wanted to prevent the passive from double-adding it. In the NEW pattern, only the passive adds charge, so the character file must NOT set this flag.
+
 **Event Flow (Correct Pattern):**
 1. Luna's sword hits an enemy
 2. `_LunaSwordCoordinator._handle_hit()` receives the hit event
 3. Coordinator registers the sword (if needed) and enriches metadata
-4. Coordinator emits `luna_sword_hit` event via BUS
+4. Coordinator emits `luna_sword_hit` event via BUS (WITHOUT setting charge_handled)
 5. **Passive's `_on_sword_hit()` handler receives event**
 6. Tier-specific passive calculates charge and applies effects
 7. Passive updates owner's actions per turn
@@ -111,7 +137,8 @@ Update any relevant comments in `luna.py` that reference the old direct-call pat
 2. `_LunaSwordCoordinator._handle_hit()` receives the hit event
 3. Coordinator calculates charge using **base class only** (wrong tier)
 4. Coordinator tries to call `_apply_prime_healing()` on base class ❌ AttributeError
-5. Coordinator emits event, but passive ignores it (charge already handled)
+5. Coordinator sets `metadata["charge_handled"] = True` to prevent double-processing
+6. Coordinator emits event, but passive sees flag and ignores it (charge already "handled")
 
 **Why the Current Code Exists:**
 This appears to be legacy code from before the tier system was fully implemented. The character file was written to work with a single passive variant and never updated when the tier system was introduced.
