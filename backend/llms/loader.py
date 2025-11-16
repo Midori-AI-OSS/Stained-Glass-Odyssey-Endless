@@ -19,12 +19,18 @@ else:
     HuggingFacePipeline = None
     pipeline = None
 
-# Import OpenAI independently of torch
+# Import OpenAI and agents independently of torch
 try:
+    from agents import ModelSettings
+    from agents import OpenAIChatCompletionsModel
     from openai import AsyncOpenAI
+    from openai.types.shared import Reasoning
     _OPENAI_AVAILABLE = True
 except ImportError:
     AsyncOpenAI = None
+    Reasoning = None
+    ModelSettings = None
+    OpenAIChatCompletionsModel = None
     _OPENAI_AVAILABLE = False
 
 from .safety import ensure_ram
@@ -39,8 +45,8 @@ class SupportsStream(Protocol):
 
 
 class ModelName(str, Enum):
-    DEEPSEEK = "deepseek-ai/DeepSeek-R1-Distill-Qwen-7B"
-    GEMMA = "google/gemma-3-4b-it"
+    OPENAI_20B = "openai/gpt-oss-20b"
+    OPENAI_120B = "openai/gpt-oss-120b"
     GGUF = "gguf"
     REMOTE_OPENAI = "remote-openai"
 
@@ -54,38 +60,38 @@ class _LangChainWrapper:
         yield result
 
 
-class _OpenAIRemoteWrapper:
-    """Wrapper for remote OpenAI-compatible API with reasoning support."""
+class _OpenAIAgentsWrapper:
+    """Wrapper for remote OpenAI-compatible API using agents library with reasoning support."""
 
     def __init__(self, client: "AsyncOpenAI", model: str = "gpt-oss:20b") -> None:
         self._client = client
         self._model = model
+        # Set up reasoning with high effort as specified
+        self._reasoning = Reasoning(effort="high", generate_summary="detailed", summary="detailed")
+        self._model_settings = ModelSettings(
+            reasoning=self._reasoning,
+            parallel_tool_calls=False,
+            temperature=0.7,
+        )
+        # Create the OpenAI chat completions model
+        self._openai_model = OpenAIChatCompletionsModel(
+            model=self._model,
+            openai_client=self._client,
+        )
 
     async def generate_stream(self, text: str) -> AsyncIterator[str]:
-        """Stream response from remote OpenAI API with reasoning effort."""
-        # Use high reasoning effort as specified in requirements
-        try:
-            stream = await self._client.chat.completions.create(
-                model=self._model,
-                messages=[{"role": "user", "content": text}],
-                stream=True,
-                reasoning_effort="high",
-                temperature=0.7,
-            )
-            async for chunk in stream:
-                if chunk.choices and chunk.choices[0].delta.content:
-                    yield chunk.choices[0].delta.content
-        except TypeError:
-            # Fallback if reasoning_effort is not supported by this API
-            stream = await self._client.chat.completions.create(
-                model=self._model,
-                messages=[{"role": "user", "content": text}],
-                stream=True,
-                temperature=0.7,
-            )
-            async for chunk in stream:
-                if chunk.choices and chunk.choices[0].delta.content:
-                    yield chunk.choices[0].delta.content
+        """Stream response from remote OpenAI API with high reasoning effort."""
+        # Use the agents library's built-in streaming
+        response = await self._openai_model.create_completion(
+            messages=[{"role": "user", "content": text}],
+            **self._model_settings.model_dump(exclude_none=True),
+        )
+
+        # Stream the response
+        if hasattr(response, 'choices') and response.choices:
+            content = response.choices[0].message.content
+            if content:
+                yield content
 
 
 def load_llm(model: str | None = None, *, gguf_path: str | None = None) -> SupportsStream:
@@ -93,68 +99,73 @@ def load_llm(model: str | None = None, *, gguf_path: str | None = None) -> Suppo
     openai_url = os.getenv("OPENAI_API_URL", "unset")
     openai_key = os.getenv("OPENAI_API_KEY", "unset")
 
-    # If remote OpenAI is configured, use it
-    if openai_url != "unset" and openai_key != "unset":
+    # If remote OpenAI is configured (URL is set), use it
+    # API key is optional for systems like Ollama
+    if openai_url != "unset":
         if not _OPENAI_AVAILABLE:
-            msg = "OpenAI library is not available. Install with: uv pip install openai"
+            msg = "OpenAI and agents libraries are not available. Install with: uv sync --extra llm-cpu"
             raise ImportError(msg)
 
         # Use the specified model or default to gpt-oss:20b
         remote_model = model or os.getenv("AF_LLM_MODEL", "gpt-oss:20b")
-        client = AsyncOpenAI(base_url=openai_url, api_key=openai_key)
-        return _OpenAIRemoteWrapper(client, remote_model)
+        # Use provided API key or default to empty string for systems that don't need it
+        api_key = openai_key if openai_key != "unset" else ""
+        client = AsyncOpenAI(base_url=openai_url, api_key=api_key)
+        return _OpenAIAgentsWrapper(client, remote_model)
 
     # Fall back to local models (requires torch)
     require_torch()
-    name = model or os.getenv("AF_LLM_MODEL", ModelName.DEEPSEEK.value)
-    if name == ModelName.DEEPSEEK.value:
+    name = model or os.getenv("AF_LLM_MODEL", ModelName.OPENAI_20B.value)
+    if name == ModelName.OPENAI_20B.value:
         min_ram, _ = model_memory_requirements(name)
         ensure_ram(min_ram)
         device = pick_device()
-        # Configure generation parameters to avoid warnings
+        # Configure generation parameters with high reasoning for LRM
         model_kwargs = {
             "max_new_tokens": 512,
             "do_sample": True,
             "temperature": 0.7,
-            "pad_token_id": 50256,  # Common pad token ID
+            "reasoning_effort": "high",  # Ensure LRM, not LLM
+            "pad_token_id": 50256,
         }
         if device == 0:
             pipe = pipeline(
                 "text-generation",
-                model=ModelName.DEEPSEEK.value,
+                model=ModelName.OPENAI_20B.value,
                 device_map="auto",
                 model_kwargs=model_kwargs,
             )
         else:
             pipe = pipeline(
                 "text-generation",
-                model=ModelName.DEEPSEEK.value,
+                model=ModelName.OPENAI_20B.value,
                 device=device,
                 model_kwargs=model_kwargs,
             )
         return _LangChainWrapper(HuggingFacePipeline(pipeline=pipe))
-    if name == ModelName.GEMMA.value:
+    if name == ModelName.OPENAI_120B.value:
         min_ram, _ = model_memory_requirements(name)
         ensure_ram(min_ram)
         device = pick_device()
-        # Configure generation parameters to avoid warnings
+        # Configure generation parameters with high reasoning for LRM
         model_kwargs = {
             "max_new_tokens": 512,
             "do_sample": True,
             "temperature": 0.7,
-            "pad_token_id": 50256,  # Common pad token ID
+            "reasoning_effort": "high",  # Ensure LRM, not LLM
+            "pad_token_id": 50256,
         }
         if device == 0:
             pipe = pipeline(
                 "text-generation",
-                model=ModelName.GEMMA.value,
+                model=ModelName.OPENAI_120B.value,
                 device_map="auto",
                 model_kwargs=model_kwargs,
             )
         else:
             pipe = pipeline(
                 "text-generation",
-                model=ModelName.GEMMA.value,
+                model=ModelName.OPENAI_120B.value,
                 device=device,
                 model_kwargs=model_kwargs,
             )
@@ -165,6 +176,8 @@ def load_llm(model: str | None = None, *, gguf_path: str | None = None) -> Suppo
             msg = "GGUF model path must be provided via argument or AF_GGUF_PATH"
             raise ValueError(msg)
         kwargs = gguf_strategy(path)
+        # Add reasoning_effort to GGUF kwargs to validate it's an LRM
+        kwargs["reasoning_effort"] = "high"
         return _LangChainWrapper(LlamaCpp(model_path=path, **kwargs))
     msg = f"Unsupported model: {name}"
     raise ValueError(msg)
