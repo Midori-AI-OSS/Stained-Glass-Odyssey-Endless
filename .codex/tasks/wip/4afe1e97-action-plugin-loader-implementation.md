@@ -30,31 +30,59 @@ The game already has a plugin system (`backend/plugins/plugin_loader.py`) that d
 
 ## Requirements
 
-### 1. Extend PluginLoader for Actions
+### 1. Understand the PluginLoader System
 
-**File:** `backend/plugins/plugin_loader.py`
+**Important:** The `PluginLoader` class in `backend/plugins/plugin_loader.py` does **not** use a static `PLUGIN_DIRS` dictionary. Instead, it dynamically discovers and registers plugins when you call the `discover()` method.
 
-Add action plugin support to the existing plugin loader:
+**How it works:**
+- Create a `PluginLoader` instance (optionally with `required` categories)
+- Call `loader.discover(path)` with the directory path to scan
+- The loader recursively finds all `.py` files in that directory
+- For each module, it calls `_register_module()` which:
+  - Looks for classes with a `plugin_type` attribute
+  - Registers them in `_registry[plugin_type][id]`
+  - Injects the event bus if provided
 
+**Example from `autofighter/passives.py`:**
 ```python
-# Add to PLUGIN_DIRS or equivalent
-PLUGIN_DIRS = {
-    "characters": "backend/plugins/characters",
-    "passives": "backend/plugins/passives",
-    "cards": "backend/plugins/cards",
-    "relics": "backend/plugins/relics",
-    "actions": "backend/plugins/actions",  # NEW
-    # ... other categories
-}
+from plugins import PluginLoader
+
+PASSIVE_LOADER = PluginLoader(required=["passive"])
+PASSIVE_LOADER.discover(str(plugin_dir))
+PASSIVE_REGISTRY = PASSIVE_LOADER.get_plugins("passive")
 ```
 
-Ensure that:
-- Action plugins are discovered recursively in `backend/plugins/actions/`
-- Classes with `plugin_type = "action"` are registered
-- Event bus is injected into action plugins
-- Base classes are included but can be filtered out
+**For actions, you would do:**
+```python
+from pathlib import Path
+from plugins import PluginLoader
 
-### 2. Create ActionRegistry
+action_plugin_dir = Path(__file__).resolve().parents[1] / "plugins" / "actions"
+action_loader = PluginLoader(required=["action"])
+action_loader.discover(str(action_plugin_dir))
+action_classes = action_loader.get_plugins("action")
+```
+
+The `PluginLoader` will automatically find all classes in the `actions/` directory tree that have `plugin_type = "action"` and register them.
+
+### 2. Create Action Plugin Directory Structure
+
+Create the directory structure for action plugins:
+
+```bash
+backend/plugins/actions/
+├── __init__.py
+├── _base.py              # ActionBase class
+├── registry.py           # ActionRegistry class
+├── context.py            # BattleContext class
+├── result.py             # ActionResult class
+└── normal/               # Normal attacks
+    └── basic_attack.py
+```
+
+**No changes needed to `plugin_loader.py`** - it already supports any plugin type through the `plugin_type` attribute.
+
+### 3. Create ActionRegistry
 
 **File:** `backend/plugins/actions/registry.py`
 
@@ -196,7 +224,7 @@ def register_action(action: ActionBase) -> None:
     get_action_registry().register_action(action)
 ```
 
-### 3. Create Action Plugin Initialization
+### 4. Create Action Plugin Initialization
 
 **File:** `backend/plugins/actions/__init__.py`
 
@@ -265,7 +293,7 @@ __all__ = [
 ]
 ```
 
-### 4. Integrate with Application Startup
+### 5. Integrate with Application Startup
 
 **File:** `backend/app.py` or equivalent startup file
 
@@ -286,7 +314,7 @@ except Exception as e:
     # Decide if this should be fatal or not
 ```
 
-### 5. Create Helper Functions
+### 6. Create Helper Functions
 
 **File:** `backend/plugins/actions/utils.py`
 
@@ -361,33 +389,37 @@ def list_available_actions(actor: Stats) -> list[ActionBase]:
 
 ## Implementation Steps
 
-1. **Extend plugin loader**:
-   - [ ] Add "actions" to plugin categories
-   - [ ] Verify discovery works for action plugins
-   - [ ] Test with a dummy action plugin
+1. **Understand the existing plugin system**:
+   - [ ] Review `backend/plugins/plugin_loader.py` to understand the `discover()` and `_register_module()` methods
+   - [ ] Review examples in `autofighter/passives.py`, `autofighter/cards.py`, `autofighter/relics.py`
+   - [ ] No changes needed to `plugin_loader.py` itself
 
-2. **Implement ActionRegistry**:
+2. **Create action plugin directory structure**:
+   - [ ] Create `backend/plugins/actions/` directory
+   - [ ] Create base class files (_base.py, result.py, context.py)
+
+3. **Implement ActionRegistry**:
    - [ ] Create registry.py with all methods
    - [ ] Add comprehensive docstrings
    - [ ] Include error handling
 
-3. **Create initialization code**:
+4. **Create initialization code**:
    - [ ] Implement `__init__.py` for actions package
-   - [ ] Add discovery function
-   - [ ] Add initialization function
+   - [ ] Add `discover_actions()` function using `PluginLoader`
+   - [ ] Add `initialize_action_registry()` function
 
-4. **Integrate with app startup**:
+5. **Integrate with app startup**:
    - [ ] Find correct initialization point
    - [ ] Add action registry initialization
    - [ ] Handle initialization errors gracefully
 
-5. **Create utility functions**:
+6. **Create utility functions**:
    - [ ] Implement utils.py
    - [ ] Add helper functions for common operations
    - [ ] Document usage patterns
 
-6. **Add tests**:
-   - [ ] Test action discovery
+7. **Add tests**:
+   - [ ] Test action discovery with `PluginLoader`
    - [ ] Test registration
    - [ ] Test retrieval by ID, type, character
    - [ ] Test error cases
