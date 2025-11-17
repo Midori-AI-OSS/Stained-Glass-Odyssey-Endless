@@ -36,7 +36,6 @@ except ImportError:
     OpenAIChatCompletionsModel = None
     _OPENAI_AVAILABLE = False
 
-from .safety import ensure_ram  # noqa: E402
 from .safety import gguf_strategy  # noqa: E402
 from .safety import model_memory_requirements  # noqa: E402
 from .safety import pick_device  # noqa: E402
@@ -85,16 +84,21 @@ class _OpenAIAgentsWrapper:
     async def generate_stream(self, text: str) -> AsyncIterator[str]:
         """Stream response from remote OpenAI API with high reasoning effort."""
         # Use the agents library's built-in streaming
-        response = await self._openai_model.create_completion(
+        # create_completion returns an async iterator, not an awaitable
+        async for event in self._openai_model.create_completion(
             messages=[{"role": "user", "content": text}],
             **self._model_settings.model_dump(exclude_none=True),
-        )
-
-        # Stream the response
-        if hasattr(response, 'choices') and response.choices:
-            content = response.choices[0].message.content
-            if content:
-                yield content
+        ):
+            # Stream the delta content from each event
+            if hasattr(event, 'delta') and hasattr(event.delta, 'content'):
+                content = event.delta.content
+                if content:
+                    yield content
+            # Also handle non-streaming responses if they occur
+            elif hasattr(event, 'choices') and event.choices:
+                content = event.choices[0].message.content
+                if content:
+                    yield content
 
 
 async def _validate_lrm(llm: SupportsStream) -> bool:
