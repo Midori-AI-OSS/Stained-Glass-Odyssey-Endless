@@ -1,9 +1,8 @@
-import pytest
-
 import llms.loader
-import llms.safety
 from llms.loader import ModelName
 from llms.loader import load_llm
+import llms.safety
+import pytest
 
 
 class FakePipeline:
