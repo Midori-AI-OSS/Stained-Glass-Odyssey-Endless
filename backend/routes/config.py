@@ -23,7 +23,7 @@ _TURN_PACING_DEFAULT = 0.5
 
 @bp.get("/lrm")
 async def get_lrm_config() -> tuple[str, int, dict[str, object]]:
-    current = get_option(OptionKey.LRM_MODEL, ModelName.DEEPSEEK.value)
+    current = get_option(OptionKey.LRM_MODEL, ModelName.OPENAI_20B.value)
     models = [m.value for m in ModelName]
     payload = {"current_model": current, "available_models": models}
     try:
@@ -40,7 +40,7 @@ async def set_lrm_model() -> tuple[str, int, dict[str, str]]:
     model = data.get("model", "")
     if model not in [m.value for m in ModelName]:
         return jsonify({"error": "invalid model"}), 400
-    old_value = get_option(OptionKey.LRM_MODEL, ModelName.DEEPSEEK.value)
+    old_value = get_option(OptionKey.LRM_MODEL, ModelName.OPENAI_20B.value)
     set_option(OptionKey.LRM_MODEL, model)
     try:
         await log_settings_change("lrm_model", old_value, model)
@@ -55,13 +55,23 @@ async def test_lrm_model() -> tuple[str, int, dict[str, str]]:
     import asyncio
 
     from llms.loader import load_llm
+    from llms.loader import validate_lrm
 
     data = await request.get_json()
     prompt = data.get("prompt", "")
-    model = get_option(OptionKey.LRM_MODEL, ModelName.DEEPSEEK.value)
+    model = get_option(OptionKey.LRM_MODEL, ModelName.OPENAI_20B.value)
 
     # Load LLM in thread pool to avoid blocking the event loop
-    llm = await asyncio.to_thread(load_llm, model)
+    llm = await asyncio.to_thread(load_llm, model, validate=False)
+
+    # Validate it's an LRM if no custom prompt provided
+    if not prompt:
+        is_valid = await validate_lrm(llm)
+        if not is_valid:
+            return jsonify({"error": "Model validation failed - may not be an LRM"}), 400
+        return jsonify({"response": "Model validation passed", "is_lrm": True})
+
+    # Otherwise, generate response to custom prompt
     reply = ""
     async for chunk in llm.generate_stream(prompt):
         reply += chunk

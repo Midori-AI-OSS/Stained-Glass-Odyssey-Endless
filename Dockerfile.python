@@ -8,6 +8,10 @@ ENV PYTHONUNBUFFERED=1
 ENV UV_LINK_MODE=copy
 ENV UV_COMPILE_BYTECODE=1
 
+# Remote OpenAI configuration
+ENV OPENAI_API_URL="unset"
+ENV OPENAI_API_KEY="unset"
+
 # Update OS release info for clarity
 RUN sudo sed -i 's/Quartz/Backend-uv-server/g' /etc/os-release
 

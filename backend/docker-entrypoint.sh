@@ -7,6 +7,8 @@ cd /app
 # Default DB lives under /app/save.db; override via AF_DB_PATH if needed
 export PYTHONPATH="/app:${PYTHONPATH:-}"
 
+rm uv.lock
+
 # Optional extras via UV_EXTRA
 if [[ -n "${UV_EXTRA:-}" ]]; then
   echo installing with extras
