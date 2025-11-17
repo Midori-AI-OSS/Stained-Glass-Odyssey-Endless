@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 from typing import Any
 
 if TYPE_CHECKING:  # pragma: no cover - type checking only
-    from autofighter.stats import Stats
+    pass
 
 
 @dataclass(slots=True)

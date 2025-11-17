@@ -38,9 +38,9 @@ def mock_target() -> Stats:
 @pytest.fixture
 def battle_context(mock_actor: Stats, mock_target: Stats) -> BattleContext:
     """Create a minimal battle context for testing."""
-    from autofighter.passives import PassiveRegistry
     from autofighter import stats as stats_module
-    
+    from autofighter.passives import PassiveRegistry
+
     # Set battle as active
     stats_module._BATTLE_ACTIVE = True
 
@@ -55,9 +55,9 @@ def battle_context(mock_actor: Stats, mock_target: Stats) -> BattleContext:
         passive_registry=PassiveRegistry(),
         effect_managers={},
     )
-    
+
     yield context
-    
+
     # Clean up - set battle as inactive
     stats_module._BATTLE_ACTIVE = False
 

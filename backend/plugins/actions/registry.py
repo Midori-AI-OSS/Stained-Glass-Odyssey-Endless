@@ -29,20 +29,20 @@ class ActionRegistry:
 
         if getattr(action_class, "plugin_type", None) != "action":
             raise ValueError(f"{action_class} is not an action plugin")
-        
+
         # Instantiate to get the actual ID value from the dataclass
         try:
             instance = action_class()
             action_id = instance.id
         except Exception as e:
             raise ValueError(f"Failed to instantiate {action_class} to read id: {e}") from e
-        
+
         if not action_id:
             raise ValueError("Action plugins must declare a stable id")
         if action_id in self._actions:
             raise ValueError(f"Duplicate action id detected: {action_id}")
         self._actions[action_id] = action_class
-        
+
         # Get action type from instance
         action_type = str(instance.action_type)
         self._actions_by_type.setdefault(action_type, []).append(action_id)
