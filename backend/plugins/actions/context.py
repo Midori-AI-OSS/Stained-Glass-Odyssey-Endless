@@ -67,12 +67,25 @@ class BattleContext:
     ) -> int:
         """Apply damage via the standard battle pipeline.
 
-        This placeholder defers to the existing helpers in
-        :mod:`autofighter.rooms.battle.resolution`. A follow-up task will wire
-        those helpers into this method.
+        Delegates to the existing :meth:`Stats.apply_damage` method while
+        optionally staging metadata for tracking purposes. The damage type
+        parameter is currently unused but reserved for future elemental
+        infusion mechanics.
         """
 
-        raise NotImplementedError("Damage resolution will be wired up in task 4afe1e97")
+        # Stage attack metadata if provided so Stats.apply_damage can consume it
+        if metadata:
+            setattr(attacker, "_pending_attack_metadata", metadata)
+
+        # Call the existing damage application logic
+        damage_dealt = await target.apply_damage(
+            amount,
+            attacker=attacker,
+            trigger_on_hit=True,
+            action_name=metadata.get("action_name") if metadata else None,
+        )
+
+        return damage_dealt
 
     async def apply_healing(
         self,
@@ -82,9 +95,22 @@ class BattleContext:
         *,
         overheal_allowed: bool = False,
     ) -> int:
-        """Apply healing through the shared battle helpers."""
+        """Apply healing through the shared battle helpers.
 
-        raise NotImplementedError("Healing resolution will be wired up in task 4afe1e97")
+        Increases the target's HP up to their max_hp unless overheal is allowed.
+        Returns the actual amount healed.
+        """
+
+        if not overheal_allowed:
+            max_hp = getattr(target, "max_hp", getattr(target, "hp", 0))
+            current_hp = getattr(target, "hp", 0)
+            healing_applied = min(int(amount), max(0, max_hp - current_hp))
+            target.hp = min(current_hp + healing_applied, max_hp)
+        else:
+            healing_applied = int(amount)
+            target.hp = getattr(target, "hp", 0) + healing_applied
+
+        return healing_applied
 
     def spend_resource(self, actor: "Stats", resource: str, amount: int) -> None:
         """Deduct a resource from *actor*.

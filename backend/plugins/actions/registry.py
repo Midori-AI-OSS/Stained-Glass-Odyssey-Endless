@@ -29,13 +29,22 @@ class ActionRegistry:
 
         if getattr(action_class, "plugin_type", None) != "action":
             raise ValueError(f"{action_class} is not an action plugin")
-        action_id = getattr(action_class, "id", None)
+        
+        # Instantiate to get the actual ID value from the dataclass
+        try:
+            instance = action_class()
+            action_id = instance.id
+        except Exception as e:
+            raise ValueError(f"Failed to instantiate {action_class} to read id: {e}") from e
+        
         if not action_id:
             raise ValueError("Action plugins must declare a stable id")
         if action_id in self._actions:
             raise ValueError(f"Duplicate action id detected: {action_id}")
         self._actions[action_id] = action_class
-        action_type = str(getattr(action_class, "action_type", "unknown"))
+        
+        # Get action type from instance
+        action_type = str(instance.action_type)
         self._actions_by_type.setdefault(action_type, []).append(action_id)
 
     def register_character_actions(
@@ -91,9 +100,15 @@ class ActionRegistry:
         target_ids: set[str] = {action.id}
         if tags:
             for candidate_id, candidate_class in self._actions.items():
-                candidate_tags = set(getattr(candidate_class, "tags", ()))
-                if tags & candidate_tags:
-                    target_ids.add(candidate_id)
+                # Instantiate to get tags from the dataclass
+                try:
+                    candidate_instance = candidate_class()
+                    candidate_tags = set(getattr(candidate_instance, "tags", ()))
+                    if tags & candidate_tags:
+                        target_ids.add(candidate_id)
+                except Exception:
+                    # Skip actions that can't be instantiated
+                    continue
         actor_cooldowns = self._cooldowns.setdefault(actor_id, {})
         for target in target_ids:
             actor_cooldowns[target] = max(turns, actor_cooldowns.get(target, 0))

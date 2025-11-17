@@ -26,14 +26,14 @@ class ActionResult:
     """Structured payload returned by :class:`plugins.actions.ActionBase`."""
 
     success: bool
-    damage_dealt: dict["Stats", int] = field(default_factory=dict)
-    healing_done: dict["Stats", int] = field(default_factory=dict)
-    shields_added: dict["Stats", int] = field(default_factory=dict)
-    effects_applied: list[tuple["Stats", str]] = field(default_factory=list)
-    effects_removed: list[tuple["Stats", str]] = field(default_factory=list)
+    damage_dealt: dict[str, int] = field(default_factory=dict)
+    healing_done: dict[str, int] = field(default_factory=dict)
+    shields_added: dict[str, int] = field(default_factory=dict)
+    effects_applied: list[tuple[str, str]] = field(default_factory=list)
+    effects_removed: list[tuple[str, str]] = field(default_factory=list)
     resources_consumed: dict[str, int] = field(default_factory=dict)
     messages: list[str] = field(default_factory=list)
     animations: list[AnimationTrigger] = field(default_factory=list)
-    extra_turns_granted: list["Stats"] = field(default_factory=list)
+    extra_turns_granted: list[str] = field(default_factory=list)
     summons_created: list[str] = field(default_factory=list)
     metadata: dict[str, Any] = field(default_factory=dict)
