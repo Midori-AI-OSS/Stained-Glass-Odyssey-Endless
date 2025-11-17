@@ -128,6 +128,7 @@ class TargetingRules:
                 actor,
                 context.allies_of(actor),
                 context.enemies_of(actor),
+                limit=False,
             )
         }
         if not allowed:
@@ -143,6 +144,8 @@ class TargetingRules:
         actor: "Stats",
         allies: Sequence["Stats"],
         enemies: Sequence["Stats"],
+        *,
+        limit: bool = True,
     ) -> list["Stats"]:
         """Return the default candidate list for this policy."""
 
@@ -162,6 +165,8 @@ class TargetingRules:
         if not self.allow_self:
             pool = [target for target in pool if target is not actor]
         if self.scope is TargetScope.ALL:
+            return pool
+        if not limit:
             return pool
         if self.scope is TargetScope.SINGLE and pool:
             return [pool[0]]
