@@ -5,18 +5,21 @@ description = "Quart backend for Midori AI AutoFighter"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+    "numpy>=2.3.4",
     "pillow>=11.3.0",
     "rich>=13.0.0",
-    "sqlcipher3-binary>=0.5.4; sys_platform != 'win32'",
     "quart>=0.19.6",
     "pytest>=8.0.0",
     "pytest-asyncio>=0.23.0",
     "cryptography>=41.0.0",
-    "numpy>=2.3.4",
+    "sqlcipher3-binary>=0.5.4; sys_platform != 'win32'",
 ]
 [build-system]
 requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
+
+[tool.uv]
+compile-bytecode = true
 
 [tool.setuptools.packages.find]
 where = ["."]
@@ -97,6 +100,3 @@ llm-amd = [
     "sentence-transformers",
     "accelerate",
 ]
-
-[tool.uv.extra-build-dependencies]
-pkuseg = ["numpy>=2.3.4"]
