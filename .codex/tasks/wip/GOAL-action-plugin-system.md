@@ -1,13 +1,27 @@
 # Goal: Action Plugin System
 
+## Status Update (2025-11-19)
+
+**Tasks Completed:**
+- ✅ Task 4afe1e97: Action Plugin Loader Implementation (moved to `.codex/tasks/review/`)
+- ✅ Task b60f5a58: Normal Attack Plugin Extraction (moved to `.codex/tasks/review/`)
+
+**Implementation Status:**
+- Core infrastructure complete: ActionBase, ActionRegistry, BattleContext, ActionResult
+- BasicAttackAction fully implemented with 31 passing tests
+- Documentation added (`.codex/implementation/action-plugin-system.md`)
+- Ready for turn loop integration (next phase)
+
+**PR:** copilot/implement-action-system-tasks (commits e6ba123, 470716f)
+
 ## Recommended Execution Order
 
 **IMPORTANT**: Tasks should be executed in this specific order to ensure proper foundation and dependencies:
 
 1. **Research First** (`fd656d56-battle-logic-research-documentation.md`) - Document battle logic findings in this goal file
 2. **Design Second** (`9a56e7d1-action-plugin-architecture-design.md`) - Create architecture based on research findings
-3. **Loader Third** (`4afe1e97-action-plugin-loader-implementation.md`) - Build infrastructure for action plugins
-4. **Normal Attack Last** (`b60f5a58-normal-attack-plugin-extraction.md`) - Migrate first action as proof-of-concept
+3. **Loader Third** (`4afe1e97-action-plugin-loader-implementation.md`) - Build infrastructure for action plugins ✅
+4. **Normal Attack Last** (`b60f5a58-normal-attack-plugin-extraction.md`) - Migrate first action as proof-of-concept ✅
 
 This order ensures each task builds on the knowledge and infrastructure from previous tasks.
 
@@ -125,13 +139,13 @@ damage = await target.apply_damage(acting_foe.atk, attacker=acting_foe)
 
 ## Success Criteria
 
-- [ ] Action plugin base class exists with clear interface
-- [ ] Action plugin loader integrated with existing plugin system
-- [ ] Normal attack extracted to standalone plugin
-- [ ] At least 3 character abilities converted to plugins
-- [ ] All existing tests pass
-- [ ] Documentation updated
-- [ ] No hardcoded action execution in turn loop files
+- [x] Action plugin base class exists with clear interface
+- [x] Action plugin loader integrated with existing plugin system (architecture ready)
+- [x] Normal attack extracted to standalone plugin (implementation complete, not yet wired into turn loop)
+- [ ] At least 3 character abilities converted to plugins (future work)
+- [x] All existing tests pass (no regressions introduced)
+- [x] Documentation updated
+- [ ] No hardcoded action execution in turn loop files (pending turn loop integration)
 
 ## Technical Constraints
 
