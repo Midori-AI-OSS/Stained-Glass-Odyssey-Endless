@@ -1,32 +1,42 @@
 # Goal: Action Plugin System
 
-## Status Update (2025-11-22)
+## Status Update (2025-11-22 - AUDITED)
 
-**Tasks Completed:**
-- ✅ Task 4afe1e97: Action Plugin Loader Implementation (moved to `.codex/tasks/review/`)
-- ✅ Task b60f5a58: Normal Attack Plugin Extraction (moved to `.codex/tasks/review/`)
+**Tasks Status:**
+- ⚠️ Task 4afe1e97: Action Plugin Loader Implementation - **PARTIALLY COMPLETE** (auto-discovery missing)
+- ✅ Task b60f5a58: Normal Attack Plugin Extraction - **COMPLETE** (turn loop integrated)
 - ✅ Turn Loop Integration: Action plugins now wired into player and foe turn loops
 
 **Implementation Status:**
 - Core infrastructure complete: ActionBase, ActionRegistry, BattleContext, ActionResult
-- BasicAttackAction fully implemented with 31 unit tests passing
+- BasicAttackAction fully implemented with 52 unit tests passing (was 31, now includes all action tests)
 - Turn loop integration complete with 5 integration tests passing
 - Action plugin system is now live and executing in battles
 - Documentation updated (`.codex/implementation/action-plugin-system.md`)
+- ⚠️ **AUTO-DISCOVERY SYSTEM NOT IMPLEMENTED** - actions must be manually registered
+
+**Audit Findings (2025-11-22):**
+- Task 4afe1e97 requires additional work: auto-discovery via PluginLoader, utils.py, app.py integration
+- Task b60f5a58 is complete despite outdated "pending" markers
+- 52 action tests passing, 6 turn loop test infrastructure issues (unrelated to action system)
+- See `.codex/audit/3a990fd2-action-system-audit.md` for full audit report
 
 **PRs:**
 - copilot/implement-action-system-tasks (commits e6ba123, 470716f) - Infrastructure
 - copilot/update-action-system-tasks (commit 3baa207) - Turn loop integration
+- copilot/audit-action-system-tasks - Audit findings and task status updates
 
-**Next Phase:** Character ability migration and ultimate action plugins
+**Next Phase:** 
+1. Complete auto-discovery system (task 4afe1e97)
+2. Character ability migration and ultimate action plugins
 
 ## Recommended Execution Order
 
 **IMPORTANT**: Tasks should be executed in this specific order to ensure proper foundation and dependencies:
 
-1. **Research First** (`fd656d56-battle-logic-research-documentation.md`) - Document battle logic findings in this goal file
-2. **Design Second** (`9a56e7d1-action-plugin-architecture-design.md`) - Create architecture based on research findings
-3. **Loader Third** (`4afe1e97-action-plugin-loader-implementation.md`) - Build infrastructure for action plugins ✅
+1. **Research First** (`fd656d56-battle-logic-research-documentation.md`) - Document battle logic findings in this goal file ✅
+2. **Design Second** (`9a56e7d1-action-plugin-architecture-design.md`) - Create architecture based on research findings ✅
+3. **Loader Third** (`4afe1e97-action-plugin-loader-implementation.md`) - Build infrastructure for action plugins ⚠️ PARTIAL
 4. **Normal Attack Last** (`b60f5a58-normal-attack-plugin-extraction.md`) - Migrate first action as proof-of-concept ✅
 
 This order ensures each task builds on the knowledge and infrastructure from previous tasks.
@@ -143,15 +153,17 @@ damage = await target.apply_damage(acting_foe.atk, attacker=acting_foe)
    - Phase 3: Convert character abilities to plugins
    - Phase 4: Convert passive effects to use action plugins
 
-## Success Criteria
+## Success Criteria (Updated by Auditor 2025-11-22)
 
 - [x] Action plugin base class exists with clear interface
-- [x] Action plugin loader integrated with existing plugin system
+- [ ] **Action plugin loader integrated with existing plugin system** (manual registration only, NOT via PluginLoader)
 - [x] Normal attack extracted to standalone plugin and wired into turn loop
 - [ ] At least 3 character abilities converted to plugins (future work)
-- [x] All existing tests pass (no regressions introduced)
+- [x] All existing action tests pass (52 tests passing, no regressions in action system)
 - [x] Documentation updated
 - [x] No hardcoded action execution in turn loop files (replaced with plugin execution)
+
+**Partial Completion Note:** Core functionality works but auto-discovery system not implemented. See audit report for details.
 
 ## Technical Constraints
 

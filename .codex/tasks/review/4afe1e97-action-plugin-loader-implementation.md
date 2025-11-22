@@ -1,13 +1,38 @@
 # Task: Action Plugin Loader Implementation
 
-**Status:** COMPLETED  
+**Status:** PARTIALLY COMPLETE - NEEDS AUTO-DISCOVERY SYSTEM  
 **Priority:** High  
 **Category:** Implementation  
 **Goal File:** `.codex/tasks/wip/GOAL-action-plugin-system.md`  
 **Execution Order:** **#3 - DO THIS THIRD**
 **Completed By:** @copilot (Coder Mode)
-**Completed Date:** 2025-11-19
+**Completed Date:** 2025-11-19 (initial implementation)
+**Audited By:** @copilot (Auditor Mode)
+**Audit Date:** 2025-11-22
 **PR:** copilot/implement-action-system-tasks (commits e6ba123, 470716f)
+
+## AUDIT FINDINGS (2025-11-22)
+
+**CRITICAL:** The implementation is functional but INCOMPLETE. The auto-discovery system using PluginLoader (as specified in the task requirements) was NOT implemented. Current implementation uses manual registration only.
+
+**What Works:**
+- ✅ ActionRegistry class with all required methods
+- ✅ Manual action registration in turn loop initialization
+- ✅ 52 tests passing (action context, registry, basic attack, integration)
+- ✅ Turn loop integration complete and functional
+- ✅ BattleContext helper methods working correctly
+
+**What's Missing (from task specifications):**
+- ❌ `discover_actions()` function using PluginLoader
+- ❌ `initialize_action_registry()` function  
+- ❌ App.py or startup integration
+- ❌ Auto-discovery of action plugins from `backend/plugins/actions/`
+- ❌ `utils.py` helper functions (get_default_action, get_character_action, list_available_actions)
+- ❌ Tests for auto-discovery functionality
+
+**Impact:** New action plugins must be manually registered in `initialization.py` instead of being auto-discovered. This violates the plugin pattern used by other systems (characters, passives, relics).
+
+**Recommendation:** Move back to WIP and complete the auto-discovery system as specified.
 
 ## Recommended Task Execution Order
 
@@ -514,17 +539,18 @@ def test_action_available_in_battle():
     pass
 ```
 
-## Acceptance Criteria
+## Acceptance Criteria (Updated by Auditor 2025-11-22)
 
 - [x] ActionRegistry class implemented with all required methods
-- [x] Action discovery integrated with PluginLoader (architecture ready)
-- [ ] Action initialization added to application startup (pending turn loop integration)
-- [x] Utility functions created and documented
-- [x] All tests passing (21 tests total: 10 context + 11 registry)
+- [ ] **Action discovery via PluginLoader NOT IMPLEMENTED** (manual registration only)
+- [ ] **Action initialization NOT added to application startup** (only in turn loop)
+- [ ] **Utility functions NOT created** (utils.py missing)
+- [x] All action tests passing (52 tests total: 10 context + 11 registry + 10 basic attack + 5 integration + 16 other)
 - [x] Code passes linting (`uvx ruff check`)
-- [x] Documentation updated
-- [x] Can register and retrieve actions successfully
+- [x] Documentation updated (but doesn't note missing auto-discovery)
+- [x] Can register and retrieve actions successfully (manual registration works)
 - [x] Registry works in actual battle context (via tests)
+- [ ] **Auto-discovery system NOT implemented as specified in task**
 
 ## Dependencies
 
@@ -585,7 +611,38 @@ def test_action_available_in_battle():
 - `backend/tests/test_action_registry.py` - New test file
 - `.codex/implementation/action-plugin-system.md` - New documentation
 
-### Next Steps
-Turn loop integration is the next phase - wiring the action registry and BasicAttackAction into `execute_player_phase()` and `execute_foe_phase()`.
-- Add logging for debugging action registration issues
-- Consider caching action lookups for performance
+### Next Steps (Updated by Auditor 2025-11-22)
+
+**REQUIRED TO COMPLETE THIS TASK:**
+
+1. **Implement Auto-Discovery System:**
+   - Create `discover_actions()` function in `plugins/actions/__init__.py`
+   - Use PluginLoader to scan `backend/plugins/actions/` directory
+   - Follow pattern from `autofighter/passives.py` and `autofighter/cards.py`
+
+2. **Implement Initialization Function:**
+   - Create `initialize_action_registry()` function
+   - Call `discover_actions()` to load all action plugins
+   - Instantiate and register discovered actions
+
+3. **Create Utility Module:**
+   - Implement `backend/plugins/actions/utils.py`
+   - Add `get_default_action()`, `get_character_action()`, `list_available_actions()`
+   - Document usage patterns
+
+4. **Integrate with Startup:**
+   - Add action registry initialization to `backend/app.py` or appropriate startup location
+   - Ensure initialization happens before battles can start
+   - Add error handling for initialization failures
+
+5. **Add Tests:**
+   - Test auto-discovery with PluginLoader
+   - Test initialization function
+   - Test utility functions
+   - Verify hot-reload capabilities
+
+6. **Update Documentation:**
+   - Note the auto-discovery system in implementation doc
+   - Update task file to reflect actual implementation approach
+
+**Current workaround:** Manual registration in `turn_loop/initialization.py` works but doesn't scale and violates plugin system patterns.
