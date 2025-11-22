@@ -1,11 +1,26 @@
 // Handle test environment where $app/environment is not available
-let browser;
-try {
-  const appEnv = await import('$app/environment');
-  browser = appEnv.browser;
-} catch {
-  // In test environment, assume we're not in a browser
-  browser = false;
+let browserPromise = null;
+let browserValue = null;
+
+async function getBrowser() {
+  if (browserValue !== null) {
+    return browserValue;
+  }
+  
+  if (!browserPromise) {
+    browserPromise = (async () => {
+      try {
+        const appEnv = await import('$app/environment');
+        browserValue = appEnv.browser;
+      } catch {
+        // In test environment, assume we're not in a browser
+        browserValue = false;
+      }
+      return browserValue;
+    })();
+  }
+  
+  return browserPromise;
 }
 
 let cached = null;
@@ -21,6 +36,7 @@ export async function getApiBase() {
     return cached;
   }
 
+  const browser = await getBrowser();
   if (browser) {
     // Keep checking until the dev server exposes /api-base
     const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
