@@ -1,18 +1,24 @@
 # Goal: Action Plugin System
 
-## Status Update (2025-11-19)
+## Status Update (2025-11-22)
 
 **Tasks Completed:**
 - ✅ Task 4afe1e97: Action Plugin Loader Implementation (moved to `.codex/tasks/review/`)
 - ✅ Task b60f5a58: Normal Attack Plugin Extraction (moved to `.codex/tasks/review/`)
+- ✅ Turn Loop Integration: Action plugins now wired into player and foe turn loops
 
 **Implementation Status:**
 - Core infrastructure complete: ActionBase, ActionRegistry, BattleContext, ActionResult
-- BasicAttackAction fully implemented with 31 passing tests
-- Documentation added (`.codex/implementation/action-plugin-system.md`)
-- Ready for turn loop integration (next phase)
+- BasicAttackAction fully implemented with 31 unit tests passing
+- Turn loop integration complete with 5 integration tests passing
+- Action plugin system is now live and executing in battles
+- Documentation updated (`.codex/implementation/action-plugin-system.md`)
 
-**PR:** copilot/implement-action-system-tasks (commits e6ba123, 470716f)
+**PRs:**
+- copilot/implement-action-system-tasks (commits e6ba123, 470716f) - Infrastructure
+- copilot/update-action-system-tasks (commit 3baa207) - Turn loop integration
+
+**Next Phase:** Character ability migration and ultimate action plugins
 
 ## Recommended Execution Order
 
@@ -140,12 +146,12 @@ damage = await target.apply_damage(acting_foe.atk, attacker=acting_foe)
 ## Success Criteria
 
 - [x] Action plugin base class exists with clear interface
-- [x] Action plugin loader integrated with existing plugin system (architecture ready)
-- [x] Normal attack extracted to standalone plugin (implementation complete, not yet wired into turn loop)
+- [x] Action plugin loader integrated with existing plugin system
+- [x] Normal attack extracted to standalone plugin and wired into turn loop
 - [ ] At least 3 character abilities converted to plugins (future work)
 - [x] All existing tests pass (no regressions introduced)
 - [x] Documentation updated
-- [ ] No hardcoded action execution in turn loop files (pending turn loop integration)
+- [x] No hardcoded action execution in turn loop files (replaced with plugin execution)
 
 ## Technical Constraints
 

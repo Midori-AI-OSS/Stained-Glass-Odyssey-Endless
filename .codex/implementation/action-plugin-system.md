@@ -199,15 +199,52 @@ Comprehensive test coverage includes:
 - ✅ BattleContext helper methods
 - ✅ BasicAttackAction implementation
 - ✅ ActionRegistry with cooldown management
-- ✅ Comprehensive test suite
+- ✅ Comprehensive test suite (31 unit tests)
+- ✅ Turn loop integration (wired into execute_player_phase/execute_foe_phase)
+- ✅ Action registry initialization in battle setup
+- ✅ Integration tests (5 tests verifying turn loop execution)
 
 ### Pending
-- ⏳ Turn loop integration (wiring into execute_player_phase/execute_foe_phase)
-- ⏳ Action registry initialization in app startup
 - ⏳ Full multi-hit/spread support
 - ⏳ Migration of character-specific abilities
 - ⏳ Ultimate actions
 - ⏳ Passive action plugins
+
+## Turn Loop Integration
+
+The action plugin system is now fully integrated into the battle turn loop:
+
+### Files Modified
+1. **`backend/autofighter/rooms/battle/turn_loop/initialization.py`**
+   - Added `ActionRegistry` initialization in `initialize_turn_loop()`
+   - Added `action_registry` field to `TurnLoopContext`
+   - Created `create_battle_context()` helper to build `BattleContext` from `TurnLoopContext`
+   - Registers `BasicAttackAction` on battle start
+
+2. **`backend/autofighter/rooms/battle/turn_loop/player_turn.py`**
+   - Replaced hardcoded `apply_damage()` call with action plugin execution
+   - Uses `BasicAttackAction` via `ActionRegistry.instantiate()`
+   - Maintains fallback to hardcoded logic if plugin fails
+   - Preserves all event emissions, logging, and metadata
+
+3. **`backend/autofighter/rooms/battle/turn_loop/foe_turn.py`**
+   - Replaced hardcoded `apply_damage()` call with action plugin execution
+   - Uses `BasicAttackAction` for foe attacks
+   - Maintains fallback logic for safety
+   - Preserves all events and logging
+
+### Integration Tests
+
+New test file: `backend/tests/test_action_turn_loop_integration.py`
+
+Tests verify:
+- ActionRegistry creation and population during battle initialization
+- BattleContext creation from TurnLoopContext
+- Action plugin execution in player turn context
+- Action plugin execution in foe turn context  
+- Action cost deduction (action points)
+
+All 5 integration tests pass, confirming the plugin system works correctly in the battle loop.
 
 ## Design Decisions
 
