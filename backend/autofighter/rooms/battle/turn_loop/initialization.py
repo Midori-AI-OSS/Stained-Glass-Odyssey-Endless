@@ -8,6 +8,7 @@ from typing import Callable
 
 from autofighter.action_queue import TURN_COUNTER_ID
 from autofighter.stats import BUS
+from plugins.actions.context import BattleContext
 from plugins.actions.normal.basic_attack import BasicAttackAction
 from plugins.actions.registry import ActionRegistry
 
@@ -219,10 +220,8 @@ def create_battle_context(
     allies: list[Any],
     enemies: list[Any],
     effect_managers: dict[str, Any] | None = None,
-) -> Any:
+) -> BattleContext:
     """Build a BattleContext from TurnLoopContext for action plugin execution."""
-
-    from plugins.actions.context import BattleContext
 
     # Build effect manager dict from foe_effects list
     if effect_managers is None:

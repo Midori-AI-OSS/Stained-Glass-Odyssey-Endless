@@ -31,6 +31,7 @@ from ..turns import push_progress_update
 from ..turns import register_snapshot_entities
 from ..turns import update_enrage_state
 from .initialization import TurnLoopContext
+from .initialization import create_battle_context
 from .timeouts import TURN_TIMEOUT_SECONDS
 from .timeouts import TurnTimeoutError
 from .timeouts import identify_actor
@@ -385,8 +386,6 @@ async def _run_player_turn_iteration(
 
     # Execute action using action plugin system
     if context.action_registry is not None:
-        from .initialization import create_battle_context
-
         # Build BattleContext for the action
         battle_context = create_battle_context(
             context,
