@@ -3,7 +3,6 @@
   import { openOverlay, homeOverlay } from '$lib';
 
   // SvelteKit provides `error` and `status` to +error.svelte
-  // Use $props() for Svelte 5 compatibility
   let { error, status } = $props();
 
   let message = $derived(error?.message || error?.toString?.() || 'Unexpected error');
