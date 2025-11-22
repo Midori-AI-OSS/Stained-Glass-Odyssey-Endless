@@ -28,6 +28,7 @@ log = logging.getLogger(__name__)
 
 ACTION_LOADER: PluginLoader | None = None
 ACTION_REGISTRY: dict[str, type[ActionBase]] | None = None
+INITIALIZED_ACTION_REGISTRY: ActionRegistry | None = None
 
 
 def discover() -> dict[str, type[ActionBase]]:
@@ -72,6 +73,8 @@ def initialize_action_registry(registry: ActionRegistry | None = None) -> Action
     Returns:
         The initialized ActionRegistry instance
     """
+    global INITIALIZED_ACTION_REGISTRY
+
     if registry is None:
         registry = ActionRegistry()
 
@@ -86,7 +89,20 @@ def initialize_action_registry(registry: ActionRegistry | None = None) -> Action
             continue
 
     log.info(f"Action registry initialized with {len(action_classes)} actions")
+
+    # Store the initialized registry globally
+    INITIALIZED_ACTION_REGISTRY = registry
+
     return registry
+
+
+def get_action_registry() -> ActionRegistry | None:
+    """Get the globally initialized action registry.
+
+    Returns:
+        The initialized ActionRegistry instance, or None if not yet initialized
+    """
+    return INITIALIZED_ACTION_REGISTRY
 
 
 __all__ = [
@@ -101,5 +117,6 @@ __all__ = [
     "TargetSide",
     "TargetingRules",
     "discover",
+    "get_action_registry",
     "initialize_action_registry",
 ]

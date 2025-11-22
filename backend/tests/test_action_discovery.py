@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from plugins.actions import ActionRegistry
 from plugins.actions import discover
+from plugins.actions import get_action_registry
 from plugins.actions import initialize_action_registry
 from plugins.actions.utils import get_character_action
 from plugins.actions.utils import get_default_action
@@ -193,3 +194,30 @@ def test_action_plugin_execute_method():
         # Should have an execute method
         assert hasattr(action, "execute")
         assert callable(action.execute)
+
+
+def test_get_action_registry():
+    """Test getting the globally initialized action registry."""
+    # Initialize a registry
+    registry = initialize_action_registry()
+
+    # Should be able to retrieve it
+    retrieved_registry = get_action_registry()
+
+    assert retrieved_registry is not None
+    assert retrieved_registry is registry
+
+
+def test_get_action_registry_persistence():
+    """Test that the global registry persists across multiple calls."""
+    # Initialize once
+    registry1 = initialize_action_registry()
+
+    # Get it multiple times
+    retrieved1 = get_action_registry()
+    retrieved2 = get_action_registry()
+
+    # All should be the same instance
+    assert retrieved1 is registry1
+    assert retrieved2 is registry1
+    assert retrieved1 is retrieved2

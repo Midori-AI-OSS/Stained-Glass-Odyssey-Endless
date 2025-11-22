@@ -8,6 +8,7 @@ from typing import Callable
 
 from autofighter.action_queue import TURN_COUNTER_ID
 from autofighter.stats import BUS
+from plugins.actions import get_action_registry
 from plugins.actions.context import BattleContext
 from plugins.actions.normal.basic_attack import BasicAttackAction
 from plugins.actions.registry import ActionRegistry
@@ -83,9 +84,13 @@ async def initialize_turn_loop(
 ) -> TurnLoopContext:
     """Prepare the turn loop context and emit the initial progress update."""
 
-    # Initialize action registry for battle
-    action_registry = ActionRegistry()
-    action_registry.register_action(BasicAttackAction)
+    # Get the global action registry or create a new one as fallback
+    action_registry = get_action_registry()
+    if action_registry is None:
+        # Fallback: create a new registry with just the basic attack
+        # This happens if auto-discovery failed or hasn't run yet
+        action_registry = ActionRegistry()
+        action_registry.register_action(BasicAttackAction)
 
     context = TurnLoopContext(
         room=room,
