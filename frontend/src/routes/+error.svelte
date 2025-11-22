@@ -1,21 +1,23 @@
 <script>
-  import { onMount } from 'svelte';
   import OverlayHost from '$lib/components/OverlayHost.svelte';
   import { openOverlay, homeOverlay } from '$lib';
 
   // SvelteKit provides `error` and `status` to +error.svelte
-  export let error;
-  export let status;
+  // Use $props() for Svelte 5 compatibility
+  let { error, status } = $props();
 
-  let message = '';
-  let traceback = '';
+  let message = $derived(error?.message || error?.toString?.() || 'Unexpected error');
+  let traceback = $derived(error?.stack || '');
 
-  $: message = (error?.message || error?.toString?.() || 'Unexpected error');
-  $: traceback = (error?.stack || '');
-
-  onMount(() => {
+  // Use $effect to trigger overlay after component initialization
+  // This runs once after component mounts
+  $effect(() => {
     // Route the framework error through our standard popup overlay
-    openOverlay('error', { message: `[${status || 'Error'}] ${message}`.trim(), traceback, context: error?.context ?? null });
+    openOverlay('error', { 
+      message: `[${status || 'Error'}] ${message}`.trim(), 
+      traceback, 
+      context: error?.context ?? null 
+    });
   });
 
   function backHome() {
