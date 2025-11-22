@@ -94,23 +94,32 @@ class BattleContext:
         amount: float,
         *,
         overheal_allowed: bool = False,
+        source_type: str = "Generic",
+        source_name: str = "system",
     ) -> int:
         """Apply healing through the shared battle helpers.
 
-        Increases the target's HP up to their max_hp unless overheal is allowed.
-        Returns the actual amount healed.
+        Delegates to :meth:`Stats.apply_healing` so vitality scaling, enrage
+        penalties, and BUS/passive hooks remain consistent with direct calls.
+        Temporarily enables overheal/shield conversion when requested.
         """
 
-        if not overheal_allowed:
-            max_hp = getattr(target, "max_hp", getattr(target, "hp", 0))
-            current_hp = getattr(target, "hp", 0)
-            healing_applied = min(int(amount), max(0, max_hp - current_hp))
-            target.hp = min(current_hp + healing_applied, max_hp)
-        else:
-            healing_applied = int(amount)
-            target.hp = getattr(target, "hp", 0) + healing_applied
+        previous_overheal = getattr(target, "overheal_enabled", False)
+        should_enable_overheal = overheal_allowed and not previous_overheal
 
-        return healing_applied
+        if should_enable_overheal:
+            target.overheal_enabled = True
+
+        try:
+            return await target.apply_healing(
+                amount,
+                healer=healer,
+                source_type=source_type or "Generic",
+                source_name=source_name or "system",
+            )
+        finally:
+            if should_enable_overheal:
+                target.overheal_enabled = previous_overheal
 
     def spend_resource(self, actor: "Stats", resource: str, amount: int) -> None:
         """Deduct a resource from *actor*.
