@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from dataclasses import field
+from types import MethodType
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Sequence
@@ -106,9 +107,21 @@ class BattleContext:
 
         previous_overheal = getattr(target, "overheal_enabled", False)
         should_enable_overheal = overheal_allowed and not previous_overheal
+        overheal_changed_by_listeners = False
 
         if should_enable_overheal:
             target.overheal_enabled = True
+
+            original_setattr = target.__setattr__
+
+            def _tracking_setattr(self, name, value):
+                nonlocal overheal_changed_by_listeners
+
+                if name == "overheal_enabled":
+                    overheal_changed_by_listeners = True
+                return original_setattr(name, value)
+
+            target.__setattr__ = MethodType(_tracking_setattr, target)
 
         try:
             return await target.apply_healing(
@@ -119,7 +132,9 @@ class BattleContext:
             )
         finally:
             if should_enable_overheal:
-                target.overheal_enabled = previous_overheal
+                target.__setattr__ = original_setattr
+                if not overheal_changed_by_listeners:
+                    target.overheal_enabled = previous_overheal
 
     def spend_resource(self, actor: "Stats", resource: str, amount: int) -> None:
         """Deduct a resource from *actor*.
