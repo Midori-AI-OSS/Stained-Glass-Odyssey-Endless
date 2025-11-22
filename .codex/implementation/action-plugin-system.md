@@ -4,6 +4,58 @@
 
 The action plugin system provides a modular, plugin-based architecture for all combat actions in the Midori AI AutoFighter battle system. This document describes the implemented components and how to use them.
 
+## Auto-Discovery System
+
+The action plugin system includes an auto-discovery mechanism that automatically loads action plugins at application startup.
+
+### Discovery Process
+
+1. **Plugin Loading** (`plugins/actions/__init__.py:discover()`):
+   - Uses `PluginLoader` to scan the `backend/plugins/actions/` directory
+   - Discovers all Python classes with `plugin_type = "action"`
+   - Instantiates each plugin to resolve actual ID values (handles dataclass field descriptors)
+   - Returns a dictionary mapping action IDs to action classes
+   - Results are cached for efficiency
+
+2. **Registry Initialization** (`plugins/actions/__init__.py:initialize_action_registry()`):
+   - Creates or reuses an `ActionRegistry` instance
+   - Calls `discover()` to load all action plugins
+   - Registers each discovered action in the registry
+   - Handles registration errors gracefully (logs but continues)
+   - Returns the initialized registry
+
+3. **Application Startup** (`backend/app.py`):
+   - Registers `@app.before_serving` hook to initialize action plugins
+   - Runs before the first request is processed
+   - Logs successful initialization or errors
+   - Does not fail startup if action plugin initialization fails (allows fallback to manual registration)
+
+### Usage
+
+Action plugins are automatically discovered if they:
+- Are located in `backend/plugins/actions/` or subdirectories
+- Define `plugin_type = "action"` as a class variable
+- Inherit from `ActionBase`
+- Can be instantiated without arguments (use dataclass defaults)
+
+Example:
+```python
+@dataclass(kw_only=True, slots=True)
+class MyCustomAction(ActionBase):
+    plugin_type = "action"  # Required for auto-discovery
+    id: str = "custom.my_action"  # Must be unique
+    name: str = "My Custom Action"
+    description: str = "Does something cool"
+    # ... other fields with defaults
+```
+
+### Utility Functions (`plugins/actions/utils.py`)
+
+Helper functions for working with actions:
+- `get_default_action(registry)`: Returns the basic attack action
+- `get_character_action(registry, character_id, action_id)`: Gets a specific character action
+- `list_available_actions(registry, actor)`: Lists all actions available to an actor
+
 ## Architecture
 
 ### Core Components

@@ -25,6 +25,7 @@ if TYPE_CHECKING:  # pragma: no cover - type checking only
 class BasicAttackAction(ActionBase):
     """Stub for the existing hardcoded basic attack."""
 
+    # Override fields with class attributes for PluginLoader compatibility
     id: str = "normal.basic_attack"
     name: str = "Basic Attack"
     description: str = "Strike the foe with your equipped weapon."

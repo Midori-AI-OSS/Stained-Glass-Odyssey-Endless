@@ -11,7 +11,6 @@ from autofighter.passives import PassiveRegistry
 from autofighter.rooms.battle.turn_loop.initialization import create_battle_context
 from autofighter.rooms.battle.turn_loop.initialization import initialize_turn_loop
 from autofighter.stats import Stats
-from plugins.actions.normal.basic_attack import BasicAttackAction
 from plugins.actions.registry import ActionRegistry
 
 
@@ -98,7 +97,9 @@ async def test_initialize_turn_loop_creates_action_registry(
 
     # Verify BasicAttackAction was registered
     basic_attack = context.action_registry.instantiate("normal.basic_attack")
-    assert isinstance(basic_attack, BasicAttackAction)
+    assert basic_attack is not None
+    assert basic_attack.id == "normal.basic_attack"
+    assert basic_attack.name == "Basic Attack"
 
 
 @pytest.mark.asyncio

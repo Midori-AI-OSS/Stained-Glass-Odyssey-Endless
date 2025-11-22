@@ -185,6 +185,21 @@ async def validate_lrm_on_startup() -> None:
 
 
 @app.before_serving
+async def initialize_action_plugins() -> None:
+    """Initialize the action plugin system on application startup."""
+    try:
+        from plugins.actions import initialize_action_registry
+
+        registry = initialize_action_registry()
+        log.info("✓ Action plugin system initialized with %d actions",
+                 len(registry.get_actions_by_type("normal")))
+    except Exception as e:
+        log.error("Failed to initialize action plugins: %s", e)
+        # Don't fail startup - action system can fall back to manual registration
+        log.info("Server will continue starting. Action plugins may use manual registration.")
+
+
+@app.before_serving
 async def start_background_tasks() -> None:
     asyncio.create_task(_cleanup_loop())
 
