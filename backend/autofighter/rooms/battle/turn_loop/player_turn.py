@@ -31,6 +31,7 @@ from ..turns import push_progress_update
 from ..turns import register_snapshot_entities
 from ..turns import update_enrage_state
 from .initialization import TurnLoopContext
+from .initialization import create_battle_context
 from .timeouts import TURN_TIMEOUT_SECONDS
 from .timeouts import TurnTimeoutError
 from .timeouts import identify_actor
@@ -383,49 +384,120 @@ async def _run_player_turn_iteration(
             battle_over=not context.foes,
         )
 
-    prepare_action_attack_metadata(member)
-    damage = await target_foe.apply_damage(
-        member.atk,
-        attacker=member,
-        action_name="Normal Attack",
-    )
-    if damage <= 0:
-        queue_log(
-            "%s's attack was dodged by %s",
-            getattr(member, "id", member),
-            getattr(target_foe, "id", target_foe),
-        )
-    else:
-        queue_log(
-            "%s hits %s for %s",
-            getattr(member, "id", member),
-            getattr(target_foe, "id", target_foe),
-            damage,
-        )
-        damage_type_id = (
-            getattr(member.damage_type, "id", "generic")
-            if hasattr(member, "damage_type")
-            else "generic"
-        )
-        await BUS.emit_async(
-            "hit_landed",
-            member,
-            target_foe,
-            damage,
-            "attack",
-            f"{damage_type_id}_attack",
-        )
-        await context.registry.trigger_hit_landed(
-            member,
-            target_foe,
-            damage,
-            "attack",
-            damage_type=damage_type_id,
-            party=context.combat_party.members,
-            foes=context.foes,
+    # Execute action using action plugin system
+    if context.action_registry is not None:
+        # Build BattleContext for the action
+        battle_context = create_battle_context(
+            context,
+            phase="player",
+            actor=member,
+            allies=list(context.combat_party.members),
+            enemies=list(context.foes),
         )
 
-    await target_manager.maybe_inflict_dot(member, damage)
+        # Get and execute basic attack action
+        try:
+            action = context.action_registry.instantiate("normal.basic_attack")
+            result = await action.run(member, [target_foe], battle_context)
+
+            # Log messages from the action
+            for message in result.messages:
+                queue_log(message)
+
+            # Get damage from result
+            target_id = str(getattr(target_foe, "id", id(target_foe)))
+            damage = result.damage_dealt.get(target_id, 0)
+        except Exception as e:
+            # Fallback to hardcoded behavior if action plugin fails
+            log.warning(f"Action plugin execution failed, using fallback: {e}")
+            prepare_action_attack_metadata(member)
+            damage = await target_foe.apply_damage(
+                member.atk,
+                attacker=member,
+                action_name="Normal Attack",
+            )
+            if damage <= 0:
+                queue_log(
+                    "%s's attack was dodged by %s",
+                    getattr(member, "id", member),
+                    getattr(target_foe, "id", target_foe),
+                )
+            else:
+                queue_log(
+                    "%s hits %s for %s",
+                    getattr(member, "id", member),
+                    getattr(target_foe, "id", target_foe),
+                    damage,
+                )
+                damage_type_id = (
+                    getattr(member.damage_type, "id", "generic")
+                    if hasattr(member, "damage_type")
+                    else "generic"
+                )
+                await BUS.emit_async(
+                    "hit_landed",
+                    member,
+                    target_foe,
+                    damage,
+                    "attack",
+                    f"{damage_type_id}_attack",
+                )
+                await context.registry.trigger_hit_landed(
+                    member,
+                    target_foe,
+                    damage,
+                    "attack",
+                    damage_type=damage_type_id,
+                    party=context.combat_party.members,
+                    foes=context.foes,
+                )
+
+            await target_manager.maybe_inflict_dot(member, damage)
+    else:
+        # Fallback to hardcoded behavior if action registry not available
+        prepare_action_attack_metadata(member)
+        damage = await target_foe.apply_damage(
+            member.atk,
+            attacker=member,
+            action_name="Normal Attack",
+        )
+        if damage <= 0:
+            queue_log(
+                "%s's attack was dodged by %s",
+                getattr(member, "id", member),
+                getattr(target_foe, "id", target_foe),
+            )
+        else:
+            queue_log(
+                "%s hits %s for %s",
+                getattr(member, "id", member),
+                getattr(target_foe, "id", target_foe),
+                damage,
+            )
+            damage_type_id = (
+                getattr(member.damage_type, "id", "generic")
+                if hasattr(member, "damage_type")
+                else "generic"
+            )
+            await BUS.emit_async(
+                "hit_landed",
+                member,
+                target_foe,
+                damage,
+                "attack",
+                f"{damage_type_id}_attack",
+            )
+            await context.registry.trigger_hit_landed(
+                member,
+                target_foe,
+                damage,
+                "attack",
+                damage_type=damage_type_id,
+                party=context.combat_party.members,
+                foes=context.foes,
+            )
+
+        await target_manager.maybe_inflict_dot(member, damage)
     targets_hit = 1
     animation_targets_hit = targets_hit
     spread_targets: list[tuple[Any, Any]] | None = None
@@ -574,7 +646,10 @@ async def _run_player_turn_iteration(
     )
     await context.registry.trigger_turn_end(member)
 
-    member.action_points = max(0, member.action_points - 1)
+    # Only manually decrement action points if action registry is not being used
+    # (the action plugin system handles cost deduction in ActionCostBreakdown.apply)
+    if context.action_registry is None:
+        member.action_points = max(0, member.action_points - 1)
     if (
         _EXTRA_TURNS.get(id(member), 0) > 0
         and member.hp > 0
