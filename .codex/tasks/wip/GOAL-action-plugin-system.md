@@ -224,6 +224,64 @@ damage = await target.apply_damage(acting_foe.atk, attacker=acting_foe)
 - Integration tests should exercise the new normal-attack plugin in both player and foe loops: confirm `prepare_action_attack_metadata` is still honored (metadata visible in `test_luna_damage_metadata`), confirm spread hooks still call `WindTurnSpread`, and verify `hit_landed`/`action_used`/`animation_start` events fire in the same order (re-run `test_damage_by_action_tracking` and `test_animation_timers`).  
 - Command guidance: rely on `uv run pytest backend/tests/test_turn_loop_initialization.py` for fast iteration, expand to targeted suites (e.g., `uv run pytest backend/tests/test_luna_swords.py backend/tests/test_wind_multi_target.py`) before the full repo run. Document executed commands in the task file so reviewers know coverage scope.
 
+#### Component: Effect System Integration
+**Investigated by:** GitHub Copilot (Coder Mode)  
+**Date:** 2025-11-22  
+**Findings:**
+- The effect system consists of three main components: `EffectManager` (`autofighter/effects.py`), `StatEffect` dataclass (`autofighter/stat_effect.py`), and plugin-based DoT/HoT implementations in `backend/plugins/dots/` and `backend/plugins/hots/`.
+- `EffectManager` owns all temporary stat modifications and status applications for a single `Stats` object. It provides `apply_effect()` to add new effects, `remove_effect()` to clear them, `tick_effects()` to process duration counters, and `on_action()` to gate actions when stun/freeze is active.
+- `StatEffect` is a simple dataclass with `name`, `stat_modifiers` dict, `duration` counter (-1 for permanent, >0 for temporary), and `source` identifier. Effects apply their modifiers directly to `Stats.mods` dict during `apply_effect()` and remove them during cleanup.
+- DoT/HoT plugins (`backend/plugins/dots/*.py`, `backend/plugins/hots/*.py`) follow the standard plugin pattern with `plugin_type = "dot"` or `"hot"`. Each defines damage/healing formulas, duration, application conditions, and visual effects. Examples include `bleed.py`, `blazing_torment.py`, `frozen_wound.py` for DoTs and healing equivalents for HoTs.
+- The `EffectManager.maybe_inflict_dot()` helper applies DoT effects based on `effect_hit_rate` vs `effect_resistance` rolls. It creates the DoT plugin instance, applies it via `Stats.mods`, and emits BUS events (`dot_applied`, `hot_applied`) for UI/logging.
+- Diminishing returns are calculated in `effects.py:calculate_diminishing_returns()` using stat-specific thresholds and scaling factors. This prevents buff stacking from becoming exponentially overpowered. Current thresholds: HP at 500, ATK/DEF/SPD at 100, mitigation/vitality at 0.01, etc.
+- **Action Plugin Integration**: Plugins must call `context.effect_manager_for(target).apply_effect()` to add status effects, never mutate `Stats.mods` directly. DoT application should flow through `maybe_inflict_dot()` or equivalent helpers so resistance checks and event emissions remain consistent. Action results must populate `ActionResult.effects_applied` with tuples of `(target, effect_name)` for combat log accuracy.
+- **Key Workflow**: Action executes → calls `context.effect_manager_for(target).apply_effect(StatEffect(...))` → EffectManager updates `target.mods` → turn loop calls `effect_manager.tick_effects()` at turn end → expired effects are removed and `effects_removed` events emitted.
+
+#### Component: Event Bus Mapping
+**Investigated by:** GitHub Copilot (Coder Mode)  
+**Date:** 2025-11-22  
+**Findings:**
+- The event bus (`backend/plugins/event_bus.py`) provides both synchronous (`BUS.send()`) and asynchronous (`BUS.emit_async()`, `BUS.emit_batched_async()`) event emission with performance monitoring, error isolation, and cooperative yielding to prevent frame drops.
+- Core battle events currently emitted by turn loop and Stats include:
+  - **Turn lifecycle**: `turn_start`, `turn_end`, `action_used`, `target_acquired`, `extra_turn`
+  - **Damage/healing**: `before_attack`, `hit_landed`, `damage_dealt`, `damage_taken`, `dodge`, `heal_received`, `overkill`
+  - **Status effects**: `dot_applied`, `hot_applied`, `effect_expired`, `stun`, `freeze`
+  - **Summons**: `summon_created`, `entity_defeat`, `luna_sword_hit` (character-specific)
+  - **Animation markers**: `animation_start`, `animation_end`
+  - **Battle flow**: `battle_start`, `battle_end`, `ultimate_start`, `ultimate_end`
+- High-frequency events (`damage_dealt`, `damage_taken`, `hit_landed`, `heal_received`) are automatically batched when emission rate exceeds the pacing threshold (`_SOFT_YIELD_THRESHOLD = 0.004s`). Batched emissions collect events for one frame (~16ms at 60fps) before notifying subscribers, reducing overhead in multi-hit attacks.
+- Event subscribers use `BUS.accept(event_name, obj, callback)` to register handlers and `BUS.ignore(event_name, obj)` to unregister. The bus uses weak references for object subscribers to prevent memory leaks when entities despawn.
+- Cooperative yielding is enforced via `_cooperative_pause()` which yields control after `_HARD_YIELD_THRESHOLD` (20ms) or when cumulative time since last yield exceeds the soft threshold. This prevents turn loop stalls during heavy event processing (e.g., Luna sword chains triggering 20+ passives).
+- Event metrics are tracked via `EventMetrics` class: counts per event, timing distributions, slow event detection (>16ms), and error counts. Stats can be retrieved via `BUS._metrics.get_stats()` for performance debugging.
+- **Action Plugin Integration**: Plugins must emit at minimum `action_used`, `hit_landed`, and `damage_dealt`/`heal_received` events so existing passive subscribers, combat logs, and UI overlays continue to function. Use `context.emit_action_event()` wrapper which handles async semantics and batching automatically. For multi-target actions, emit one `hit_landed` per target with the same `attack_sequence` metadata so analytics can correlate spread damage correctly.
+
+#### Component: Animation and Timing System
+**Investigated by:** GitHub Copilot (Coder Mode)  
+**Date:** 2025-11-22  
+**Findings:**
+- Battle pacing is controlled by `backend/autofighter/rooms/battle/pacing.py` which defines global timing constants: `TURN_PACING` (default 0.5s), `YIELD_DELAY` (TURN_PACING/500), and derived multipliers for cooperative yielding.
+- `TURN_PACING` can be dynamically adjusted via options table (`OptionKey.TURN_PACING`) and applied using `set_turn_pacing(value)` which recalculates dependent constants. Minimum pacing is `_MIN_TURN_PACING = 0.05s` to prevent zero-delay battles that starve the event loop.
+- Animation durations are calculated by `calc_animation_time(entity)` which reads `entity.animation_duration` or falls back to `DEFAULT_ANIMATION_PER_TARGET = 0.2s`. Multi-hit animations use `compute_multi_hit_timing()` (referenced but not fully shown in pacing.py) to stagger impact pauses across targets.
+- The `_EXTRA_TURNS` dictionary tracks per-entity extra turn counters granted by skills/passives. `_grant_extra_turn(entity)` increments the counter and notifies the visual queue (`_VISUAL_QUEUE: ActionQueue`) for UI updates. Turn loop checks this dict before advancing to the next combatant.
+- Visual queue integration: The `_VISUAL_QUEUE` object (optional, set from turn loop) receives `grant_extra_turn()` and `clear_extra_turns_for()` notifications to animate action bar shifts. When an entity despawns, `clear_extra_turns_for()` removes its pacing entries to prevent stale references.
+- Turn loop timing flow: `pace_sleep(duration)` wraps `asyncio.sleep(TURN_PACING * duration)` and is called after every significant action (target selection, damage application, effect ticks) to maintain consistent battle rhythm. `_pace(entity, action_type)` (not shown in snippet) handles variable timing based on entity speed and action complexity.
+- **Animation Events**: The turn loop emits `animation_start`/`animation_end` BUS events with `actor`, `action_name`, and `duration` metadata so frontend can trigger visual effects. Events are fired before and after `pace_sleep()` calls to bookend each action's animation window.
+- **Action Plugin Integration**: Plugins populate `ActionResult.animations` with `AnimationTrigger` dicts containing `name`, `duration`, and optional `per_target` overrides. Turn loop consumes this list after action execution to schedule `animation_start`/`end` events and compute pacing delays via `pace_sleep(sum(anim.duration for anim in result.animations))`. For multi-target actions, the `per_target` field specifies individual timing (e.g., Wind spread uses 0.1s per extra target).
+
+#### Component: Edge Cases and Special Mechanics
+**Investigated by:** GitHub Copilot (Coder Mode)  
+**Date:** 2025-11-22  
+**Findings:**
+- **Summon attacks**: Summons (e.g., Luna swords) are tracked in `Stats` objects within the party list. They attack using the same turn loop flow as regular characters but rely on custom passives (e.g., `_LunaSwordCoordinator` in `luna.py`) to synchronize behavior with the summoner. Action plugins must support summons as valid `actor` entities.
+- **Reflect/Counter mechanics**: Currently implemented via passive triggers on `damage_taken` events. Passives like `counter_attack` or `reflect_damage` subscribe to `damage_taken`, calculate retaliation damage, and call `attacker.apply_damage()` directly. This bypasses the action system entirely. Future work should migrate reflects/counters to instantiate action plugins (e.g., `special.counter_strike`) for consistency.
+- **Status prevention**: Stun, freeze, and other disabling effects are gated in `EffectManager.on_action()` which returns `False` when a disabling effect is active. Turn loop checks this before allowing an entity to act. Action plugins must respect `context.effect_manager_for(actor).on_action()` as a precondition in `can_execute()`.
+- **Zero-damage actions**: Heal-only actions, buffs, and debuffs may deal no damage. `ActionResult.damage_dealt` should remain empty while `healing_done` and `effects_applied` are populated. Turn loop must not assume every action emits `damage_dealt` events; check `result.success` and result contents before triggering downstream logic.
+- **Overkill handling**: When target HP drops below 0, `Stats.apply_damage()` emits `overkill` event with excess damage amount. This triggers credit assignment (`credit_if_dead()` in turn loop) and potentially passives that react to killing blows. Action plugins using `context.apply_damage()` automatically get overkill tracking; custom damage paths must emit the event manually.
+- **Multi-phase actions**: Some abilities (e.g., Luna ultimate) execute multiple attacks in sequence with retargeting. Current implementation hardcodes the multi-attack loop within character methods or damage type hooks (Wind spread). Action plugins should support retargeting by calling `self.get_valid_targets()` mid-execution and validating new targets before each hit.
+- **Cost-free actions**: Passives and reactive abilities have zero action point cost but still flow through the action system. `ActionCostBreakdown` defaults to `action_points=1`; zero-cost actions must explicitly set `action_points=0`. Turn loop must not decrement actor's action points when cost is zero.
+- **Ultimate gating**: The turn loop currently checks `stats.ultimate_ready` flag before allowing ultimate execution. This flag is set when `ultimate_charge >= 100`. Action plugins with `action_type=ActionType.ULTIMATE` must integrate with this system: `ActionCostBreakdown.resources["ultimate_charge"]` should be set to 100, and `can_execute()` should verify the `ultimate_ready` flag.
+- **Save compatibility**: Action IDs (e.g., `"normal.basic_attack"`) must remain stable across versions since they may be serialized in save files (character loadouts, cooldown state). Renaming an action ID requires migration logic to remap old IDs to new ones during save load.
+
 ## Related Documentation
 
 - `.codex/implementation/plugin-system.md` - Current plugin architecture
