@@ -1045,7 +1045,7 @@ class Stats:
         )
         return amount
 
-    async def apply_healing(self, amount: int, healer: Optional["Stats"] = None, source_type: str = "heal", source_name: Optional[str] = None) -> int:
+    async def apply_healing(self, amount: int, healer: Optional["Stats"] = None, source_type: str = "Generic", source_name: Optional[str] = None) -> int:
         def _ensure(obj: "Stats") -> DamageTypeBase:
             dt = getattr(obj, "damage_type", Generic())
             if isinstance(dt, str):

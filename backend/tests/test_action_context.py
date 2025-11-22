@@ -4,8 +4,15 @@ from __future__ import annotations
 
 import pytest
 
-from autofighter.effects import EffectManager
+import asyncio
+import contextlib
+
+from autofighter.stats import BUS
 from autofighter.stats import Stats
+from autofighter.stats import get_enrage_percent
+from autofighter.stats import set_enrage_percent
+from plugins.event_bus import bus
+from autofighter.effects import EffectManager
 from plugins.actions.context import BattleContext
 from plugins.actions.registry import ActionRegistry
 
@@ -108,68 +115,130 @@ async def test_battle_context_apply_damage_with_metadata(
 
 
 @pytest.mark.asyncio
-async def test_battle_context_apply_healing(
+async def test_battle_context_apply_healing_matches_stats_pipeline(
     battle_context: BattleContext,
     mock_actor: Stats,
     mock_target: Stats,
 ) -> None:
-    """Test that BattleContext.apply_healing works correctly."""
-    # Damage the target first
-    mock_target.hp = 50
+    """Healing through the context should mirror direct Stats.apply_healing."""
 
-    healing_amount = 20.0
-    healed = await battle_context.apply_healing(
-        mock_actor,
-        mock_target,
-        healing_amount,
+    previous_enrage = get_enrage_percent()
+    events: list[tuple[str, tuple]] = []
+
+    def _heal_received(*args) -> None:  # noqa: ANN002
+        events.append(("heal_received", args))
+
+    def _heal(*args) -> None:  # noqa: ANN002
+        events.append(("heal", args))
+
+    baseline_target = Stats()
+    baseline_target.hp = 40
+    baseline_target.max_hp = 100
+    baseline_target.vitality = 1.5
+    baseline_target.id = "baseline_target"
+
+    baseline_healer = Stats()
+    baseline_healer.vitality = 1.2
+    baseline_healer.id = "baseline_healer"
+
+    mock_target.hp = 40
+    mock_target.max_hp = 100
+    mock_target.vitality = 1.5
+    mock_actor.vitality = 1.2
+
+    set_enrage_percent(0.25)
+
+    expected = await baseline_target.apply_healing(
+        20,
+        healer=baseline_healer,
+        source_type="skill",
+        source_name="Test Skill",
     )
+    expected_hp = baseline_target.hp
 
-    assert healed == 20
-    assert mock_target.hp == 70
+    if bus._batch_timer is not None:  # noqa: SLF001
+        with contextlib.suppress(asyncio.CancelledError):
+            await bus._batch_timer
+    if bus._batched_events:  # noqa: SLF001
+        await bus._process_batches_internal()  # noqa: SLF001
+
+    try:
+        BUS.subscribe("heal_received", _heal_received)
+        BUS.subscribe("heal", _heal)
+
+        healed = await battle_context.apply_healing(
+            mock_actor,
+            mock_target,
+            20,
+            source_type="skill",
+            source_name="Test Skill",
+        )
+
+        if bus._batch_timer is not None:  # noqa: SLF001
+            with contextlib.suppress(asyncio.CancelledError):
+                await bus._batch_timer
+        if bus._batched_events:  # noqa: SLF001
+            await bus._process_batches_internal()  # noqa: SLF001
+        await asyncio.sleep(0)
+    finally:
+        set_enrage_percent(previous_enrage)
+        BUS.unsubscribe("heal_received", _heal_received)
+        BUS.unsubscribe("heal", _heal)
+
+    assert healed == expected
+    assert mock_target.hp == expected_hp
+    assert len(events) == 2
+    event_types = {event[0] for event in events}
+    assert {"heal_received", "heal"} == event_types
+
+    received_event = next(event for event in events if event[0] == "heal_received")
+    heal_event = next(event for event in events if event[0] == "heal")
+
+    assert received_event[1][0] is mock_target
+    assert heal_event[1][0] is mock_actor
+    assert received_event[1][2] == expected
+    assert heal_event[1][2] == expected
 
 
 @pytest.mark.asyncio
-async def test_battle_context_apply_healing_capped_at_max(
+async def test_battle_context_apply_healing_overheal_matches_shields(
     battle_context: BattleContext,
     mock_actor: Stats,
     mock_target: Stats,
 ) -> None:
-    """Test that healing is capped at max HP by default."""
-    mock_target.hp = 75
-    mock_target.max_hp = 80
+    """Overheal flag should mirror shield conversion from Stats.apply_healing."""
 
-    healing_amount = 20.0
-    healed = await battle_context.apply_healing(
-        mock_actor,
-        mock_target,
-        healing_amount,
+    mock_target.hp = 95
+    mock_target.max_hp = 100
+    mock_target.overheal_enabled = False
+    mock_target.shields = 0
+
+    baseline_target = Stats()
+    baseline_target.hp = 95
+    baseline_target.max_hp = 100
+    baseline_target.shields = 0
+    baseline_target.enable_overheal()
+
+    expected = await baseline_target.apply_healing(
+        20,
+        healer=mock_actor,
+        source_type="test",
+        source_name="overheal-check",
     )
 
-    # Should only heal 5 to reach max_hp
-    assert healed == 5
-    assert mock_target.hp == 80
-
-
-@pytest.mark.asyncio
-async def test_battle_context_apply_healing_overheal(
-    battle_context: BattleContext,
-    mock_actor: Stats,
-    mock_target: Stats,
-) -> None:
-    """Test that overheal works when allowed."""
-    mock_target.hp = 75
-    mock_target.max_hp = 80
-
-    healing_amount = 20.0
     healed = await battle_context.apply_healing(
         mock_actor,
         mock_target,
-        healing_amount,
+        20,
         overheal_allowed=True,
+        source_type="test",
+        source_name="overheal-check",
     )
 
-    assert healed == 20
-    assert mock_target.hp == 95
+    assert healed == expected
+    assert mock_target.hp == baseline_target.hp
+    assert mock_target.shields == baseline_target.shields
+    assert mock_target.overheal_enabled is False
 
 
 def test_battle_context_spend_resource_ultimate_charge(
