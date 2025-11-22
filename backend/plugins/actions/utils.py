@@ -79,8 +79,10 @@ def list_available_actions(
                 actions.append(action_class())
             except Exception:
                 continue
-        return actions
+        # If character has actions registered, return them
+        if actions:
+            return actions
 
-    # Fallback: return only normal attack
+    # Fallback: return only normal attack (for actors with no id or no registered actions)
     default_action = get_default_action(registry)
     return [default_action] if default_action else []

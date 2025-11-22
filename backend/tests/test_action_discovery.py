@@ -135,6 +135,23 @@ def test_list_available_actions_no_character_id():
     assert len(actions) >= 1
 
 
+def test_list_available_actions_with_id_but_no_loadout():
+    """Test that actors with id but no registered loadout get default action."""
+    from unittest.mock import MagicMock
+
+    registry = initialize_action_registry()
+
+    # Create a mock actor with character ID but no registered actions
+    actor = MagicMock()
+    actor.id = "unknown_character_with_id"
+
+    actions = list_available_actions(registry, actor)
+
+    # Should return at least the default action (fallback)
+    assert len(actions) >= 1
+    assert any(a.id == "normal.basic_attack" for a in actions)
+
+
 def test_discover_caches_results():
     """Test that discover() caches results for efficiency."""
     # First call
