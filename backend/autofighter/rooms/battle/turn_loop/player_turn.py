@@ -646,7 +646,10 @@ async def _run_player_turn_iteration(
     )
     await context.registry.trigger_turn_end(member)
 
-    member.action_points = max(0, member.action_points - 1)
+    # Only manually decrement action points if action registry is not being used
+    # (the action plugin system handles cost deduction in ActionCostBreakdown.apply)
+    if context.action_registry is None:
+        member.action_points = max(0, member.action_points - 1)
     if (
         _EXTRA_TURNS.get(id(member), 0) > 0
         and member.hp > 0

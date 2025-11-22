@@ -416,7 +416,10 @@ async def _run_foe_turn_iteration(
     )
     await context.registry.trigger_turn_end(acting_foe)
 
-    acting_foe.action_points = max(0, acting_foe.action_points - 1)
+    # Only manually decrement action points if action registry is not being used
+    # (the action plugin system handles cost deduction in ActionCostBreakdown.apply)
+    if context.action_registry is None:
+        acting_foe.action_points = max(0, acting_foe.action_points - 1)
     if (
         _EXTRA_TURNS.get(id(acting_foe), 0) > 0
         and acting_foe.hp > 0
