@@ -74,9 +74,10 @@ Grounded warmth and quiet competence. The teacher students remember fondly years
 **Mechanic Overview:**
 - Applies a debuff to enemy targets that significantly reduces their speed/action economy
 - Tier scaling makes the effect increasingly punishing at higher difficulties
-- **Trigger Mechanism:** Chance-based on Jennifer's Effect Hit stat
-  - **Normal attacks:** 5% of Effect Hit rate (e.g., 400% Effect Hit = 20% chance to apply debuff)
-  - **Ultimate ability:** 150% of Effect Hit rate (e.g., 400% Effect Hit = 600% = guaranteed application with overflow)
+- **Trigger Mechanism:** Chance-based on Jennifer's Effect Hit Rate stat (with target resistance)
+  - **Normal attacks:** 5% of attacker's Effect Hit Rate (e.g., 4.0 effect_hit_rate × 5% = 0.20 = 20% chance before resistance)
+  - **Ultimate ability:** 150% of attacker's Effect Hit Rate (e.g., 4.0 × 150% = 6.0, capped at 1.0 = 100% after resistance)
+  - Target's effect_resistance is subtracted from raw chance (minimum 1% chance always applies)
 - Single target application per attack
 
 **Tier Scaling:**
@@ -93,9 +94,11 @@ Grounded warmth and quiet competence. The teacher students remember fondly years
 - Consider visual feedback for affected enemies (UI flag or icon)
 - **Trigger Logic:**
   - Hook into `on_attack` or `hit_landed` event
-  - Calculate application chance: `target.effect_hit * 0.05` for normal attacks
-  - For ultimate: `target.effect_hit * 1.50` for guaranteed application
-  - Roll random chance and apply debuff if successful
+  - Use `attacker.effect_hit_rate` (NOT `target.effect_hit` - that doesn't exist)
+  - Calculate: `raw_chance = attacker.effect_hit_rate * multiplier` (0.05 for normal, 1.50 for ultimate)
+  - Subtract resistance: `effective_chance = raw_chance - target.effect_resistance`
+  - Ensure minimum: `chance = max(0.01, min(effective_chance, 1.0))`
+  - Roll in 0-1 range: `if random.random() < chance:` (NOT `random.random() * 100`)
   - Debuff affects target's speed/actions_per_turn stat
 
 ## Implementation Checklist
@@ -142,10 +145,12 @@ class JenniferFeltmann(PlayerBase):
 
 **Requirements:**
 - Apply 75% speed reduction to enemies when debuff is successfully applied
-- **Trigger:** On attack with 5% of Effect Hit rate chance
-  - Example: 400% Effect Hit = 20% chance per normal attack
-- **Trigger on Ultimate:** 150% of Effect Hit rate (near-guaranteed)
-  - Example: 400% Effect Hit = 600% chance (100% guaranteed with overflow)
+- **Trigger:** On attack with 5% of Effect Hit rate chance (after resistance)
+  - Example: 400% Effect Hit rate (4.0) × 5% = 0.20 chance (20%) before resistance
+  - Final chance = max(0.01, (attacker.effect_hit_rate * 0.05) - target.effect_resistance)
+- **Trigger on Ultimate:** 150% of Effect Hit rate (near-guaranteed after resistance)
+  - Example: 400% Effect Hit rate (4.0) × 150% = 6.0 chance (600%) before resistance
+  - Capped at 1.0 (100%) after resistance calculation
 - Duration: [DECISION NEEDED - suggest 2-3 turns or until combat ends]
 - Single target per attack
 - Use `StatEffect` with negative speed/actions_per_turn modifier
@@ -173,24 +178,39 @@ class FeltmannBadStudent:
         # Check if this is an ultimate (could use kwargs or check attack type)
         is_ultimate = kwargs.get("is_ultimate", False)
         
-        # Calculate application chance
-        effect_hit = attacker.effect_hit
+        # Calculate application chance using attacker's effect_hit_rate
+        # effect_hit_rate is a float where 1.0 = 100%, 4.0 = 400%, etc.
         if is_ultimate:
-            chance = effect_hit * 1.50  # 150% for ultimate
+            # Ultimate: 150% of effect hit rate
+            raw_chance = attacker.effect_hit_rate * 1.50
         else:
-            chance = effect_hit * 0.05  # 5% for normal attack
+            # Normal attack: 5% of effect hit rate
+            raw_chance = attacker.effect_hit_rate * 0.05
         
-        # Roll for application
-        if random.random() * 100 < chance:
-            # Apply 75% speed reduction
+        # Subtract target's resistance (following engine pattern from maybe_inflict_dot)
+        effective_chance = raw_chance - target.effect_resistance
+        
+        # Ensure minimum 1% chance even against high resistance
+        chance = max(0.01, min(effective_chance, 1.0))
+        
+        # Roll for application (random.random() returns 0.0-1.0)
+        if random.random() < chance:
+            # Apply 75% speed reduction (normal tier)
             debuff = StatEffect(
                 name=f"{self.id}_debuff",
-                stat_modifiers={"actions_per_turn": -0.75},  # or speed stat
+                stat_modifiers={"actions_per_turn": -0.75},  # or speed stat if available
                 duration=3,  # 3 turns
                 source=self.id,
             )
             target.add_effect(debuff)
 ```
+
+**Key Points:**
+- `attacker.effect_hit_rate` is the correct stat (not `effect_hit`)
+- Values are in decimal form: 1.0 = 100%, 4.0 = 400%
+- Always subtract `target.effect_resistance` to get effective chance
+- Use `random.random() < chance` for 0.0-1.0 range comparison
+- Provide minimum 1% chance even against high resistance
 
 ### 3. Prime Tier Passive
 **File:** `backend/plugins/passives/prime/feltmann_bad_student.py`
