@@ -40,6 +40,7 @@ def mock_target() -> Stats:
     target.max_hp = 80
     target.atk = 8
     target.defense = 4
+    target.dodge_odds = 0.0  # Disable dodge for deterministic tests
     return target
 
 
