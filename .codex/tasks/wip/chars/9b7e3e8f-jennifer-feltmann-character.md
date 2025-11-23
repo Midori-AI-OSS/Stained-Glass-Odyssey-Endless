@@ -67,18 +67,19 @@ Grounded warmth and quiet competence. The teacher students remember fondly years
 
 ## Signature Passive: "Bad Student" Debuff
 
-**Passive ID:** `feltmann_bad_student` (or similar thematic name like `jennifer_disciplinary_action`)
+**Passive ID:** `bad_student`
 
-**Theme:** As a high school teacher, Jennifer can apply disciplinary effects that dramatically slow down troublesome opponents (represented as "bad students").
+**Theme:** As a high school teacher, Jennifer can apply disciplinary effects that dramatically slow down troublesome opponents (represented as "bad students"). The passive is designed to be standalone and reusable by other characters.
 
 **Mechanic Overview:**
 - Applies a debuff to enemy targets that significantly reduces their speed/action economy
 - Tier scaling makes the effect increasingly punishing at higher difficulties
-- **Trigger Mechanism:** Chance-based on Jennifer's Effect Hit Rate stat (with target resistance)
+- **Trigger Mechanism:** Chance-based on attacker's Effect Hit Rate stat (with target resistance)
   - **Normal attacks:** 5% of attacker's Effect Hit Rate (e.g., 4.0 effect_hit_rate × 5% = 0.20 = 20% chance before resistance)
   - **Ultimate ability:** 150% of attacker's Effect Hit Rate (e.g., 4.0 × 150% = 6.0, capped at 1.0 = 100% after resistance)
   - Target's effect_resistance is subtracted from raw chance (minimum 1% chance always applies)
 - Single target application per attack
+- **Stacking:** Debuff stacks - each successful application creates a separate effect instance
 
 **Tier Scaling:**
 - **Normal:** 75% speed reduction
@@ -87,9 +88,9 @@ Grounded warmth and quiet competence. The teacher students remember fondly years
 
 **Implementation Notes:**
 - Create passive in appropriate tier folders:
-  - `backend/plugins/passives/normal/feltmann_bad_student.py`
-  - `backend/plugins/passives/prime/feltmann_bad_student.py`
-  - `backend/plugins/passives/glitched/feltmann_bad_student.py`
+  - `backend/plugins/passives/normal/bad_student.py`
+  - `backend/plugins/passives/prime/bad_student.py`
+  - `backend/plugins/passives/glitched/bad_student.py`
 - Debuff should apply a negative speed/action modifier via `StatEffect`
 - Consider visual feedback for affected enemies (UI flag or icon)
 - **Trigger Logic:**
@@ -125,7 +126,7 @@ class JenniferFeltmann(PlayerBase):
     char_type: CharacterType = CharacterType.B
     gacha_rarity = 5
     damage_type: DamageTypeBase = field(default_factory=Dark)
-    passives: list[str] = field(default_factory=lambda: ["feltmann_bad_student"])
+    passives: list[str] = field(default_factory=lambda: ["bad_student"])
     
     def __post_init__(self) -> None:
         super().__post_init__()
@@ -141,7 +142,7 @@ class JenniferFeltmann(PlayerBase):
 - Stats: Use defaults initially (can be customized later if needed)
 
 ### 2. Normal Tier Passive
-**File:** `backend/plugins/passives/normal/feltmann_bad_student.py`
+**File:** `backend/plugins/passives/normal/bad_student.py`
 
 **Requirements:**
 - Apply 75% speed reduction to enemies when debuff is successfully applied
@@ -153,6 +154,7 @@ class JenniferFeltmann(PlayerBase):
   - Capped at 1.0 (100%) after resistance calculation
 - Duration: [DECISION NEEDED - suggest 2-3 turns or until combat ends]
 - Single target per attack
+- **Stacking Behavior:** Debuff can stack - each successful application adds another instance of the speed reduction
 - Use `StatEffect` with negative speed/actions_per_turn modifier
 
 **Implementation Pattern:**
@@ -167,9 +169,9 @@ if TYPE_CHECKING:
     from autofighter.stats import Stats
 
 @dataclass
-class FeltmannBadStudent:
+class BadStudent:
     plugin_type = "passive"
-    id = "feltmann_bad_student"
+    id = "bad_student"
     name = "Bad Student"
     trigger = "on_attack"  # or "hit_landed"
     
@@ -196,6 +198,7 @@ class FeltmannBadStudent:
         # Roll for application (random.random() returns 0.0-1.0)
         if random.random() < chance:
             # Apply 75% speed reduction (normal tier)
+            # Each application stacks independently
             debuff = StatEffect(
                 name=f"{self.id}_debuff",
                 stat_modifiers={"actions_per_turn": -0.75},  # or speed stat if available
@@ -211,9 +214,10 @@ class FeltmannBadStudent:
 - Always subtract `target.effect_resistance` to get effective chance
 - Use `random.random() < chance` for 0.0-1.0 range comparison
 - Provide minimum 1% chance even against high resistance
+- Debuff stacks - multiple successful applications create separate `StatEffect` instances
 
 ### 3. Prime Tier Passive
-**File:** `backend/plugins/passives/prime/feltmann_bad_student.py`
+**File:** `backend/plugins/passives/prime/bad_student.py`
 
 **Requirements:**
 - Extend normal tier with 150% speed reduction
@@ -221,7 +225,7 @@ class FeltmannBadStudent:
 - Consider if this should prevent enemy turns completely
 
 ### 4. Glitched Tier Passive
-**File:** `backend/plugins/passives/glitched/feltmann_bad_student.py`
+**File:** `backend/plugins/passives/glitched/bad_student.py`
 
 **Requirements:**
 - Extreme 500% speed reduction
@@ -233,12 +237,12 @@ class FeltmannBadStudent:
 
 Add Jennifer Feltmann to the character roster table with:
 - Character name, rank (B), rarity (5★), element (Dark)
-- Signature trait description (`feltmann_bad_student` with tier scaling)
+- Signature trait description (`bad_student` with tier scaling)
 - Availability (Standard gacha recruit)
 
 **Example Entry:**
 ```markdown
-| Jennifer Feltmann | B | 5★ | Dark | `feltmann_bad_student` applies disciplinary debuffs that slow enemies: 75% (normal), 150% (prime), 500% (glitched) speed reduction. | Standard gacha recruit. |
+| Jennifer Feltmann | B | 5★ | Dark | `bad_student` applies disciplinary debuffs that slow enemies: 75% (normal), 150% (prime), 500% (glitched) speed reduction. Stacks on repeated application. | Standard gacha recruit. |
 ```
 
 ### 6. Visual Assets
