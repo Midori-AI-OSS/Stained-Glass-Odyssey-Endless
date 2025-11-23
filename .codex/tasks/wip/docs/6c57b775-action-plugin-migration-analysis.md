@@ -52,6 +52,7 @@ The action plugin system was recently implemented with BasicAttackAction as the 
 These are active choices made during combat:
 - Ultimate actions
 - Character special abilities
+- **Summon creation actions** (e.g., Luna's sword summoning, Becca's menagerie)
 - Multi-target attack variants
 - Skill-based healing actions
 - Buff/debuff application skills
@@ -69,6 +70,14 @@ These may NOT be good candidates for action plugins:
 - Passive triggers (already have passive system)
 - Automatic room effects
 - Status effect proc effects
+
+### 4. Buffs and Debuffs (SEPARATE SYSTEM)
+**NOTE:** Buffs and debuffs should NOT be action plugins. They are the EFFECTS that actions apply.
+- Currently using `StatEffect` class for stat modifications
+- Should be moved to plugin system in `backend/plugins/effects/` (separate task 7782ecea)
+- Examples: attack up, defense down, speed buffs, etc.
+- Similar to DoT/HoT plugin structure but for stat modifiers
+- This analysis should identify which actions APPLY buffs/debuffs, not treat buffs as actions
 
 ## Deliverables
 
