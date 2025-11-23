@@ -13,9 +13,11 @@ Jennifer Feltmann is a new playable character joining the AutoFighter roster. Sh
 - **Gacha Rarity:** 5★ (standard gacha recruit)
 
 **Character Details:**
-- **Portrait/Visual Assets:** Reference photos provided below
-  - **Classroom Photo:** https://github.com/user-attachments/assets/2e38dacd-269e-4dde-9972-c72da053eb20
-  - **Outdoor Photo (with dog):** https://github.com/user-attachments/assets/9b0d1eb7-e529-4b4e-bd9f-2b0cb77dd6f0
+- **Portrait/Visual Assets:** Reference photos described below
+  - **Photo 1 (Classroom/Indoor):** Shows Jennifer in a high school robotics lab/classroom setting with purple walls and equipment visible in the background. She's wearing a solid blue V-neck top, seated and facing the camera. Her long silver-gray hair flows loose over one shoulder, reaching well past her shoulders with natural waves. She has a soft, gentle smile with kind, slightly crinkled eyes. The setting shows her in her professional teaching environment with classroom furniture and robotics equipment visible behind her. Natural freckles are visible across her nose and cheeks. The photo captures her warm, approachable demeanor in her work setting—she looks comfortable and at ease, embodying the "trusted teacher" presence with a relaxed posture and genuine expression.
+  
+  - **Photo 2 (Outdoor with Dog):** Shows Jennifer outdoors on a natural hiking trail with rock formations and trees in the background. She's wearing a casual blue jacket/top and is positioned close to a large, dark-furred dog (appears to be an Irish Wolfhound or similar breed). Her hair is styled in two thick braids with colorful yarn ties—yellow/gold ties near the top of the braids and additional decorative ties further down. She's leaning slightly toward the camera and the dog with a bright, genuine smile showing teeth and lifted cheeks—the expression is joyful and open. Outdoor natural lighting gives her a more relaxed, adventurous appearance. The photo captures her playful, whimsical side with the braided hair style and colorful accents, showing her comfort in casual outdoor settings.
+  
 - **Pronouns:** She/Her
 - **Voice Gender:** Female mid-ranged
 - **Profession:** High school programming/robotics teacher with 20+ years of teaching experience
@@ -221,21 +223,31 @@ Add Jennifer Feltmann to the character roster table with:
 
 ### 6. Visual Assets
 
-**Reference Photos:**
-- **Classroom Photo:** https://github.com/user-attachments/assets/2e38dacd-269e-4dde-9972-c72da053eb20
-  - Shows Jennifer in her professional teaching environment
-  - Blue V-neck top, long silver-gray hair loose over one shoulder
-  - Indoor lighting, structured setting
-  
-- **Outdoor Photo (with dog):** https://github.com/user-attachments/assets/9b0d1eb7-e529-4b4e-bd9f-2b0cb77dd6f0
-  - Shows Jennifer outdoors on a hiking trail with her dog
-  - Hair in two braids with colorful yarn ties (yellow and purple)
-  - Casual outdoor attire, bright smile
-  - Natural lighting
+**Reference Photo Descriptions:**
+
+**Photo 1 (Classroom/Indoor Setting):**
+- **Location:** High school robotics lab/classroom
+- **Background:** Purple painted walls, robotics equipment, workbenches, classroom furniture
+- **Clothing:** Solid blue V-neck top (professional, semi-formal)
+- **Hair:** Long silver-gray hair worn loose, flowing over one shoulder in natural waves
+- **Expression:** Soft, gentle smile; kind eyes with slight crinkles at corners
+- **Posture:** Seated, relaxed, facing camera directly
+- **Freckles:** Natural freckles visible across nose and upper cheeks
+- **Overall Vibe:** Professional educator in her element; warm, approachable, comfortable in teaching environment
+
+**Photo 2 (Outdoor/Hiking Setting):**
+- **Location:** Natural hiking trail with rock formations and forest
+- **Companion:** Large dark-furred dog (Irish Wolfhound-type breed)
+- **Clothing:** Casual blue jacket/outdoor wear
+- **Hair:** Two thick braids tied with colorful yarn (yellow/gold near ears, additional decorative ties along length)
+- **Expression:** Bright, open smile showing teeth; lifted cheeks; joyful, genuine
+- **Posture:** Leaning slightly toward camera and dog; engaged, affectionate
+- **Overall Vibe:** Playful, whimsical, adventurous; comfortable in casual outdoor settings
 
 **Assets to Create:**
-- Character portrait/avatar for gacha and party selection (use reference photos as basis)
+- Character portrait/avatar for gacha and party selection (use reference photo descriptions as basis)
 - Battle sprite or character model
+- Two hair style variants: loose flowing (professional) and braided with colorful yarn ties (casual/adventurous)
 - Any special effect visuals for "bad student" debuff (suggestion: chalk dust, ruler, or detention slip icon)
 - UI icon for debuff status effect
 
