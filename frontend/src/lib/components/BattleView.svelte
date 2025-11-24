@@ -10,6 +10,7 @@
     getDamageTypePalette,
     normalizeDamageTypeId
   } from '../systems/assetLoader.js';
+  import { dedupeTieredPassives } from '../systems/passiveUtils.js';
   import BattleFighterCard from '../battle/BattleFighterCard.svelte';
   import EnrageIndicator from '../battle/EnrageIndicator.svelte';
   import BattleLog from '../battle/BattleLog.svelte';
@@ -789,6 +790,14 @@
   $: tickIndicatorDuration = Math.max(750, pollDelay * 1.35);
   $: statusChipLifetime = effectiveReducedMotion ? Math.max(900, pollDelay * 6) : Math.max(1600, pollDelay * 10);
   let bg = getRandomBackground();
+
+  function getNormalizedPassives(unit) {
+    if (!unit || typeof unit !== 'object') {
+      return [];
+    }
+    const statusPassives = (unit.status && Array.isArray(unit.status.passives)) ? unit.status.passives : null;
+    return dedupeTieredPassives(statusPassives || unit.passives || []);
+  }
 
   // Combine passives, dots, and hots into a single list (cap will be applied in template)
   function combineStatuses(unit) {
@@ -2097,7 +2106,8 @@
           }
           const resolved = typeof elem === 'string' ? elem : (elem?.id || elem?.name || 'Generic');
           const summons = (partySummons.get(m.id) || []).map(s => ({ ...s }));
-          return { ...m, element: resolved, summons, hpKey };
+          const passives = getNormalizedPassives(m);
+          return { ...m, element: resolved, summons, hpKey, passives };
         });
         if (differs(enriched, party)) party = enriched;
       }
@@ -2123,7 +2133,8 @@
             resolved = prev?.element || prev?.damage_type || '';
           }
           const summons = (foeSummons.get(f.id) || []).map(s => ({ ...s }));
-          return { ...f, element: resolved, summons, hpKey };
+          const passives = getNormalizedPassives(f);
+          return { ...f, element: resolved, summons, hpKey, passives };
         });
         if (differs(enrichedFoes, foes)) foes = enrichedFoes;
       }
