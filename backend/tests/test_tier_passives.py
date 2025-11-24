@@ -148,12 +148,12 @@ def test_apply_rank_passives_multiple():
     """Test applying rank passives with multiple passives."""
     luna = Luna()
     luna.rank = "glitched"
-    luna.passives = ["luna_lunar_reservoir", "attack_up"]
+    luna.passives = ["luna_lunar_reservoir", "ixia_tiny_titan"]
 
     apply_rank_passives(luna)
 
     # Both should be resolved to glitched variants
-    assert luna.passives == ["luna_lunar_reservoir_glitched", "attack_up_glitched"]
+    assert luna.passives == ["luna_lunar_reservoir_glitched", "ixia_tiny_titan_glitched"]
 
 
 def test_apply_rank_passives_glitched_prime_boss():
