@@ -13,7 +13,7 @@ from plugins.damage_types import ALL_DAMAGE_TYPES
 
 from .save_manager import SaveManager
 
-_EXCLUDED_CHARACTER_IDS = {"player", "luna", "mimic"}
+_EXCLUDED_CHARACTER_IDS = {"player", "luna"}
 
 
 def _iter_playable_character_classes() -> list[type[PlayerBase]]:

@@ -64,14 +64,13 @@ first spawn and reuse it for future sessions unless customized.
 | LadyWind | B | 5★ | Wind | `lady_wind_tempest_guard` sustains a permanent slipstream of dodge and mitigation, feeding on critical hits. | Standard gacha recruit. |
 | Luna | B | Story | Generic | `luna_lunar_reservoir` charges astral swords, doubling actions up to 32 per turn before adding +1 per extra 25 charge; boss-ranked variants pre-summon blades that mirror her actions, while glitched non-boss ranks cache twin Lightstream swords before combat. | Story antagonist only; cannot be unlocked or recruited. |
 | Mezzy | B | 5★ | Any (randomized) | `mezzy_gluttonous_bulwark` devours incoming attacks, siphoning stats and reducing damage taken. | Standard gacha recruit. |
-| Mimic | C | 0★ | Any (randomized) | `mimic_player_copy` mirrors allied passives and stat gains. | Mirrors an active party member during scripted mirror fights; non-selectable. |
 | PersonaIce | A | 5★ | Ice | `persona_ice_cryo_cycle` layers mitigation and thaws stored frost into end-of-turn healing barriers. | Standard gacha recruit. |
 | PersonaLightAndDark | A | 6★ | Light / Dark (alternating) | `persona_light_and_dark_duality` flips elements every action, pulsing Light-form heals before Dark-form crit bursts that strip defenses. | 6★ gacha headliner. |
 | Ryne | B | 6★ | Light | `ryne_oracle_of_balance` banks balance points off actions, sword hits, and ultimates; every surge layers Oracle-of-Light wards on herself, pulses mitigation and healing to Luna and allies, and keeps their bond refreshed through the battle. Balance stacks build past 120 at half speed for marathon fights, and she prefers parties that field Luna to maximize link bonuses. | 6★ gacha headliner. |
 | Player | C | Story | Chosen (player-selected) | `player_level_up_bonus` scales with run progress, representing the customizable avatar. | Always available starter. |
 | Slime | C | 0★ | Any (randomized) | Baseline stat template that tags in as a helper for foe lineups, including boss slots. | Non-selectable foe support unit that appears when encounters need a fallback combatant. |
 
-Characters flagged as non-selectable (Mimic, Slime) surface in mirrored or fallback encounters—Mimic copies an active party member, while Slime reinforces enemy teams as needed—but neither can join the active party. Story characters like Luna and the Player bypass the gacha pool; the Player is available from the start, whereas Luna remains an encounter-only boss.
+Characters flagged as non-selectable (Slime) surface in fallback encounters to reinforce enemy teams as needed, but cannot join the active party. Story characters like Luna and the Player bypass the gacha pool; the Player is available from the start, whereas Luna remains an encounter-only boss.
 
 ## Hostile Variants
 

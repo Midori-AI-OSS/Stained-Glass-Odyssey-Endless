@@ -114,8 +114,6 @@ async def _validate_party_members(members: list[str]) -> None:
 
     owned = await asyncio.to_thread(get_owned_players)
     for mid in members:
-        if mid == "mimic":
-            raise ValueError("invalid party")
         if mid != "player" and mid not in owned:
             raise ValueError("unowned character")
 

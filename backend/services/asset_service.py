@@ -20,15 +20,6 @@ _UI_ASSET_MANIFEST: dict[str, Any] = {
             "folder": "characters/echo",
             "aliases": ["lady_echo"],
         },
-        {
-            "id": "mimic",
-            "folder": None,
-            "aliases": [],
-            "mimic": {
-                "mode": "player_mirror",
-                "target": "player",
-            },
-        },
     ],
     "summons": [
         {
