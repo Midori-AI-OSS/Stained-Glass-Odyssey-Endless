@@ -38,5 +38,23 @@ Goal: Reproduce and isolate why some characters (seen on Luna and Chibi) render 
 - Added `frontend/src/lib/systems/passiveUtils.js` with `dedupeTieredPassives`, which groups passives by their base ID (stripping `_glitched`, `_prime`, `_boss` suffixes) and keeps whichever variant has the highest tier according to the documented order. The helper returns a new array so metadata such as `stacks`, `display`, and `max_stacks` stay attached to the chosen variant.
 - Hooked both normalization helpers (`+page.svelte` and `pollingOrchestrator.js`) to call `dedupeTieredPassives(status.passives || f.passives || [])` when rebuilding each combatant, ensuring every UI consumer now sees only one passive indicator per base ability while the backend continues to store and trigger the stacked variants for actual effects.
 
+### Architectural Considerations
+- `passiveUtils.dedupeTieredPassives` is the current frontend fix; it operates just before rendering and enforces the documented tier priority (glitched > prime > boss > normal) while keeping display metadata intact. This keeps the UI clean without touching gameplay data.
+- The user question raises a valid point: the backend still emits every stacked tier variant for gameplay reasons (effects, damage tables, status tracking), and we now dedupe on the frontend for display.
+- If we ever move this normalization server-side, we need to ensure we still deliver the full stacked list for battle resolution because the backend applies buff/debuff counters based on those individual IDs.
+
+### Display vs Gameplay Data
+- Passives represent both gameplay effects (stacked modifiers that can coexist and influence battle math) and display metadata (icon, name, localized text, stack counts for UI chips). The backend must keep the stacked effect list alive to avoid regressing battle logic.
+- The frontend-only deduplication leaves the raw payload unchanged for any consumer that might need the full list (logs, debugging, telemetry) while the UI derives the desired visual subset. This separation avoids forcing other clients to mirror dedup logic.
+- A potential future refactor is to have the backend expose two concepts: `passive_effects` (full stacked list) and `passive_display` (pre-deduped metadata that the frontends can pipe into `fighter.passives`). That would relieve WebUI from re-implementing tier logic but would require an agreed-upon contract so other consumers know which list to trust.
+
+### Recommendation
+- **Current frontend approach pros:** no backend API change, quick iteration, keeps display logic near rendering, and works immediately for dynamic scenarios like Luna’s sword stacks changing mid-battle (the helper runs every status refresh and picks the highest tier in real time).
+- **Current frontend approach cons:** duplicates tier logic across clients, increases maintenance surface, and requires every new UI consumer to remember to dedupe the timeline before showing passives.
+- **Backend normalization pros:** centralizes tier priority rules, guarantees consistent display data for any client, and avoids duplicate UI helpers; it also opens a place to document `display_passives` vs `effects`. 
+- **Backend normalization cons:** would need explicit separation between gameplay effects and visual metadata; the backend would either have to compute a display view or teach clients which list to surface, and we risk dropping data needed for battle tracking if we over-normalize.
+- **Display vs effects refactor:** start by keeping the dedupe helper but add instrumentation (logs, snapshot comparisons) to know when `passive_display` would diverge from `passive_effects`. If the backend can emit a dedicated display array without losing stacked IDs, we should document that transition as part of a future payload contract change.
+- **Dynamic display impact:** Luna’s swords and similar stacks change as counters are consumed, so any display normalization must respond to backend updates. The current frontend dedup helper reruns on every status refresh, so it naturally shows the highest active tier while letting rare transitions (e.g., losing a prime buff) immediately show the next variant.
+
 ### Next Steps
 - No automated tests were run (UI-only change).
