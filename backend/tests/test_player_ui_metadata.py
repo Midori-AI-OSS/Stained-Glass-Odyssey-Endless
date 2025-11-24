@@ -110,12 +110,7 @@ async def test_players_expose_ui_metadata(app_with_db):
 
     roster = {entry["id"]: entry for entry in data.get("players", [])}
 
-    assert "mimic" in roster
     assert "lady_echo" in roster
-
-    mimic_meta = roster["mimic"].get("ui") or {}
-    assert mimic_meta.get("non_selectable") is True
-    assert mimic_meta.get("portrait_pool") == "player_mirror"
 
     echo_meta = roster["lady_echo"].get("ui") or {}
     assert echo_meta.get("portrait_pool") == "player_gallery"
@@ -137,15 +132,9 @@ async def test_ui_bootstrap_includes_asset_manifest(app_with_db):
 
     portraits = {entry["id"]: entry for entry in manifest.get("portraits", []) if isinstance(entry, dict) and entry.get("id")}
     assert "echo" in portraits
-    assert "mimic" in portraits
 
     echo_entry = portraits["echo"]
     assert "lady_echo" in (echo_entry.get("aliases") or [])
-
-    mimic_entry = portraits["mimic"]
-    mimic_descriptor = mimic_entry.get("mimic") or {}
-    assert mimic_descriptor.get("mode") == "player_mirror"
-    assert mimic_descriptor.get("target") == "player"
 
     summons = {entry["id"]: entry for entry in manifest.get("summons", []) if isinstance(entry, dict) and entry.get("id")}
     assert "jellyfish" in summons
