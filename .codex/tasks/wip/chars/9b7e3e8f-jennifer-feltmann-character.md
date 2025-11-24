@@ -91,7 +91,9 @@ Grounded warmth and quiet competence. The teacher students remember fondly years
   - `backend/plugins/passives/normal/bad_student.py`
   - `backend/plugins/passives/prime/bad_student.py`
   - `backend/plugins/passives/glitched/bad_student.py`
-- Debuff should apply a negative speed/action modifier via `StatEffect`
+- **CRITICAL:** Directly modify `target.actions_per_turn` (NOT via StatEffect - `actions_per_turn` is a plain field, not calculated from effects)
+- Track debuff instances manually with ClassVar dictionaries for duration and stacking
+- Use unique effect names (with counter/timestamp) for visual markers to enable stacking in UI
 - Consider visual feedback for affected enemies (UI flag or icon)
 - **Trigger Logic:**
   - Hook into `on_attack` or `hit_landed` event
@@ -100,7 +102,8 @@ Grounded warmth and quiet competence. The teacher students remember fondly years
   - Subtract resistance: `effective_chance = raw_chance - target.effect_resistance`
   - Ensure minimum: `chance = max(0.01, min(effective_chance, 1.0))`
   - Roll in 0-1 range: `if random.random() < chance:` (NOT `random.random() * 100`)
-  - Debuff affects target's speed/actions_per_turn stat
+  - Directly modify `target.actions_per_turn` by the debuff magnitude
+  - Restore `actions_per_turn` when debuffs expire (track in `on_turn_end`)
 
 ## Implementation Checklist
 
@@ -152,16 +155,17 @@ class JenniferFeltmann(PlayerBase):
 - **Trigger on Ultimate:** 150% of Effect Hit rate (near-guaranteed after resistance)
   - Example: 400% Effect Hit rate (4.0) × 150% = 6.0 chance (600%) before resistance
   - Capped at 1.0 (100%) after resistance calculation
-- Duration: [DECISION NEEDED - suggest 2-3 turns or until combat ends]
+- Duration: 3 turns per debuff instance
 - Single target per attack
-- **Stacking Behavior:** Debuff can stack - each successful application adds another instance of the speed reduction
-- Use `StatEffect` with negative speed/actions_per_turn modifier
+- **Stacking Behavior:** Debuff stacks - each successful application reduces actions_per_turn by 0.75, so multiple stacks compound
+- **Implementation:** Directly modifies `target.actions_per_turn` (NOT via StatEffect, as actions_per_turn is not calculated from effects)
 
 **Implementation Pattern:**
 ```python
 import random
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
+from typing import ClassVar
 
 from autofighter.stat_effect import StatEffect
 
@@ -174,6 +178,10 @@ class BadStudent:
     id = "bad_student"
     name = "Bad Student"
     trigger = "on_attack"  # or "hit_landed"
+    
+    # Track debuff instances per target (entity_id -> list of (remaining_turns, magnitude))
+    _debuffs: ClassVar[dict[int, list[tuple[int, float]]]] = {}
+    _stack_counter: ClassVar[dict[int, int]] = {}  # For unique effect names
     
     async def on_attack(self, attacker: "Stats", target: "Stats", damage: int, **kwargs) -> None:
         """Apply bad student debuff based on effect hit chance."""
@@ -197,24 +205,64 @@ class BadStudent:
         
         # Roll for application (random.random() returns 0.0-1.0)
         if random.random() < chance:
-            # Apply 75% speed reduction (normal tier)
-            # Each application stacks independently
-            debuff = StatEffect(
-                name=f"{self.id}_debuff",
-                stat_modifiers={"actions_per_turn": -0.75},  # or speed stat if available
-                duration=3,  # 3 turns
+            entity_id = id(target)
+            
+            # Initialize tracking
+            if entity_id not in self._debuffs:
+                self._debuffs[entity_id] = []
+            if entity_id not in self._stack_counter:
+                self._stack_counter[entity_id] = 0
+            
+            # Add new debuff instance (3 turns, 0.75 magnitude for normal tier)
+            self._debuffs[entity_id].append((3, 0.75))
+            
+            # Apply speed reduction by directly modifying actions_per_turn
+            # Note: actions_per_turn is a plain field, not calculated from effects
+            target.actions_per_turn = max(0.1, target.actions_per_turn - 0.75)
+            
+            # Create a visual indicator effect with unique name for UI feedback
+            # This doesn't modify stats but provides visual/log feedback
+            self._stack_counter[entity_id] += 1
+            debuff_marker = StatEffect(
+                name=f"{self.id}_marker_{entity_id}_{self._stack_counter[entity_id]}",
+                stat_modifiers={},  # No stat changes, just a marker
+                duration=3,
                 source=self.id,
             )
-            target.add_effect(debuff)
+            target.add_effect(debuff_marker)
+    
+    async def on_turn_end(self, target: "Stats", **kwargs) -> None:
+        """Decay debuff stacks at end of turn."""
+        entity_id = id(target)
+        if entity_id not in self._debuffs:
+            return
+        
+        # Decrement duration on all stacks
+        remaining = []
+        expired_magnitude = 0.0
+        
+        for turns, magnitude in self._debuffs[entity_id]:
+            turns -= 1
+            if turns > 0:
+                remaining.append((turns, magnitude))
+            else:
+                expired_magnitude += magnitude
+        
+        self._debuffs[entity_id] = remaining
+        
+        # Restore actions_per_turn for expired stacks
+        if expired_magnitude > 0:
+            target.actions_per_turn += expired_magnitude
 ```
 
 **Key Points:**
-- `attacker.effect_hit_rate` is the correct stat (not `effect_hit`)
-- Values are in decimal form: 1.0 = 100%, 4.0 = 400%
-- Always subtract `target.effect_resistance` to get effective chance
-- Use `random.random() < chance` for 0.0-1.0 range comparison
-- Provide minimum 1% chance even against high resistance
-- Debuff stacks - multiple successful applications create separate `StatEffect` instances
+- **CRITICAL:** Directly modifies `target.actions_per_turn` because it's a plain dataclass field, not calculated from effects
+- Each successful application reduces `actions_per_turn` by 0.75 for 3 turns
+- Multiple stacks compound: 2 stacks = -1.5 actions_per_turn
+- Uses unique effect names with counter (`marker_{entity_id}_{counter}`) to enable stacking in UI
+- Tracks debuff instances manually for proper duration handling
+- Restores `actions_per_turn` when debuffs expire
+- Minimum 0.1 actions_per_turn to prevent complete immobilization
 
 ### 3. Prime Tier Passive
 **File:** `backend/plugins/passives/prime/bad_student.py`
