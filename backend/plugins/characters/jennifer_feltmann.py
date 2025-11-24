@@ -9,6 +9,9 @@ from plugins.damage_types.dark import Dark
 
 @dataclass
 class JenniferFeltmann(PlayerBase):
+    # Pronouns: She/Her
+    # Display Name: Jennifer Feltmann (same as name)
+    # Voice: Female mid-ranged
     id = "jennifer_feltmann"
     name = "Jennifer Feltmann"
     full_about = (
@@ -47,12 +50,6 @@ class JenniferFeltmann(PlayerBase):
 
     def __post_init__(self) -> None:
         super().__post_init__()
-        self.set_base_stat("effect_hit_rate", 2.2)
-        self.set_base_stat("effect_resistance", 1.2)
-        self.set_base_stat("defense", 160)
-        self.set_base_stat("max_hp", 1350)
-        self.set_base_stat("atk", 110)
-        self.base_aggro = 1.1
         self.hp = self.max_hp
 
 
