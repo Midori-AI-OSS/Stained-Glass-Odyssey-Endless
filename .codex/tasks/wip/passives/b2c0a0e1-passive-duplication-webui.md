@@ -28,3 +28,15 @@ Goal: Reproduce and isolate why some characters (seen on Luna and Chibi) render 
 ### Deliverable
 - Root cause write-up: where duplication enters the pipeline (backend payload vs frontend normalization vs rendering).
 - Recommendation: whether to dedupe, change backend payload, or keep stacking (if intentional) and adjust UI copy.
+
+### Investigation Summary
+- Backend tier stacking intentionally replaces each base passive with every applicable tier variant (`apply_rank_passives` → `resolve_passives_for_rank`) so stats, effects, and passives lists still contain `_glitched`, `_prime`, and `_boss` entries even when a single visual indicator is desired.
+- The UI already normalizes snapshots via `mapStatuses` in both `+page.svelte` and `pollingOrchestrator.js`, making that helper the best single place to alter the payload without touching gameplay logic.
+- Tier priority is documented in `.codex/implementation/tier-passive-system.md` (glitched > prime > boss > normal), so the dedup logic can rely on that ordering to pick the “highest-rank” variant in each group while leaving backend stacking alone.
+
+### Solution & Implementation
+- Added `frontend/src/lib/systems/passiveUtils.js` with `dedupeTieredPassives`, which groups passives by their base ID (stripping `_glitched`, `_prime`, `_boss` suffixes) and keeps whichever variant has the highest tier according to the documented order. The helper returns a new array so metadata such as `stacks`, `display`, and `max_stacks` stay attached to the chosen variant.
+- Hooked both normalization helpers (`+page.svelte` and `pollingOrchestrator.js`) to call `dedupeTieredPassives(status.passives || f.passives || [])` when rebuilding each combatant, ensuring every UI consumer now sees only one passive indicator per base ability while the backend continues to store and trigger the stacked variants for actual effects.
+
+### Next Steps
+- No automated tests were run (UI-only change).
