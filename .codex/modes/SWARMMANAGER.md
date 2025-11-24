@@ -12,7 +12,7 @@ Swarm Managers monitor task files in `.codex/tasks/` and automatically dispatch 
 The Swarm Manager uses **three levels** of task dispatch based on execution speed and reasoning depth. Each level maps to specific Codex MCP tool parameters.
 
 **Standard Settings (All Levels):**
-- `sandbox: workspace-write` — Always allows writing to workspace files but restricts broader system access.
+- `sandbox: workspace-write` — Standard sandbox mode that allows writing to workspace files but restricts broader system access. May be changed to `danger-full-access` if the task requires unrestricted system access (use with caution).
 - `approval-policy: never` — Always runs autonomously without human approval.
 - `include-plan-tool: true` — Always includes planning tool for structured task execution.
 
@@ -48,6 +48,7 @@ The Swarm Manager uses **three levels** of task dispatch based on execution spee
 
 ### Level: `normal` (Balanced Execution)
 **Use for:** Feature implementations, multi-file refactors, test writing, moderate-impact changes.
+**Cost reminder:** `normal` uses a larger `gpt-5.1-codex` model and therefore costs more than `low`. Only elevate to this level when the task cannot be satisfied by the cheaper `low` execution.
 **Speed:** Medium — balanced speed and reasoning depth for standard development tasks.
 
 **Codex MCP Tool Parameters:**
@@ -74,6 +75,7 @@ The Swarm Manager uses **three levels** of task dispatch based on execution spee
 
 ### Level: `high` (Deep Reasoning)
 **Use for:** Architecture changes, security fixes, database migrations, critical bug fixes, production deployments.
+**Cost reminder:** `high` level is the most expensive option because it runs on `gpt-5.1-codex-max`. Reserve it only for truly complex tasks that require deep reasoning and careful analysis.
 **Speed:** Slow — prioritizes deep reasoning and careful analysis over speed.
 
 **Codex MCP Tool Parameters:**
@@ -101,14 +103,15 @@ The Swarm Manager uses **three levels** of task dispatch based on execution spee
 ## Guidelines
 - **Use the Codex MCP tool** (`mcp_codexmcp_codex`) to dispatch tasks to specialist agents, not terminal commands.
 - **Standard configuration across all levels:**
-  - `sandbox: workspace-write` — Always use workspace-write for consistent file access.
+  - `sandbox: workspace-write` — Use workspace-write for standard file access. May be escalated to `danger-full-access` if the task requires unrestricted system operations (e.g., package installation, system configuration).
   - `approval-policy: never` — Always run autonomously without approval prompts.
   - `include-plan-tool: true` — Always enable planning tool for structured execution.
 - Monitor task files in `.codex/tasks/` organized by status folders (wip, review, taskmaster).
 - **Select the appropriate swarm level** based on required execution speed:
-  - `low` — Fast execution for simple tasks (docs, small fixes) → uses `gpt-5.1-codex-mini`
-  - `normal` — Balanced execution for standard features and refactors → uses `gpt-5.1-codex`
-  - `high` — Slow, deep reasoning for critical/complex changes → uses `gpt-5.1-codex-max`
+  - `low` — Fast execution for simple tasks (docs, small fixes) → uses `gpt-5.1-codex-mini`. **Prefer `low` by default** to minimize costs and keep dispatch payloads lean.
+  - `normal` — Balanced execution for standard features and refactors → uses `gpt-5.1-codex`. Costs more than `low`, so only choose it when additional model capacity or reasoning depth is needed.
+  - `high` — Slow, deep reasoning for critical/complex changes → uses `gpt-5.1-codex-max`. This is the most expensive level; use it only when the task truly demands extreme reasoning depth.
+- **Prefer low level by default** for general workload dispatches; escalate only when the cheaper level proves insufficient for the task's requirements.
 - **Important:** `{taskfile}` refers to the relative path from the repository root to the task file, for example: `.codex/tasks/wip/chars/1234abcd-fix-battle-logic.md`. Always use the full relative path including the `.codex/tasks/` directory prefix and status folder so specialists can locate the exact file.
 - Route tasks based on their location following this dispatch logic (use Codex MCP tool with appropriate level):
   - Tasks in `.codex/tasks/wip/` → Dispatch to Coder (select level based on task risk)
