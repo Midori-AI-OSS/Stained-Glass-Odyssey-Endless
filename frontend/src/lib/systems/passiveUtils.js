@@ -1,7 +1,7 @@
 const TIER_SUFFIXES = [
+  { tier: 'boss', suffix: '_boss' },
   { tier: 'glitched', suffix: '_glitched' },
-  { tier: 'prime', suffix: '_prime' },
-  { tier: 'boss', suffix: '_boss' }
+  { tier: 'prime', suffix: '_prime' }
 ];
 
 const TIER_PRIORITY = TIER_SUFFIXES.reduce((acc, entry, index) => {
