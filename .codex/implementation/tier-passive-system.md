@@ -157,39 +157,38 @@ class LunaLunarReservoirGlitched(LunaLunarReservoir):
 
 ## Implementation Status
 
-### Completed (9/27 characters)
-- ✅ Luna Midori (complex charge system)
-- ✅ Ixia (complex vitality system)
+### Completed Glitched Variants (22 characters)
+- ✅ Ally Overload – doubled charge gain and cap
+- ✅ Becca Menagerie Bond – doubled spirit bonuses per stack
+- ✅ Bubbles Bubble Burst – doubled attack bonuses even past soft caps
+- ✅ Carly Guardian's Aegis – doubled healing (20% of defense)
+- ✅ Graygray Counter Maestro – doubled counter damage potential
+- ✅ Hilander Critical Ferment – doubled crit chance/damage boosts
+- ✅ Kboshi Flux Cycle – doubled damage bonus, HoT, and mitigation debuff
+- ✅ Lady Darkness Eclipsing Veil – doubled DoT siphoning to 2%
+- ✅ Lady Echo Resonant Static – doubled streak bonuses on repeated hits
+- ✅ Lady Fire and Ice Duality Engine – doubled flux stack benefits
+- ✅ Lady Light Radiant Aegis – doubled HoT shields and mitigation
+- ✅ Lady Lightning Stormsurge – doubled tempo bonuses (+6 SPD, +10% hit)
+- ✅ Lady of Fire Infernal Momentum – doubled missing HP offensive scaling
+- ✅ Lady Storm Supercell – doubled Wind/Lightning phase bonuses
+- ✅ Lady Wind Tempest Guard – doubled gust stack protection
+- ✅ Luna Midori – doubled Lunar Reservoir charge mechanics
+- ✅ Mezzy Gluttonous Bulwark – doubled siphon rate per turn
+- ✅ Persona Ice Cryo Cycle – doubled freeze/chill mechanics per stance
+- ✅ Persona Light and Dark Duality – doubled stance-specific bonuses
+- ✅ Advanced Combat Synergy – doubled party-wide scaling bonuses
+- ✅ Player Level Up Bonus – doubled stat gains on level up
+- ✅ Ixia Tiny Titan – doubled vitality gain per stack
 
-### Remaining (17/27 characters)
-- [ ] Ally Overload
-- [ ] Becca Menagerie Bond
-- [ ] Bubbles Bubble Burst
-- [ ] Carly Guardian's Aegis
-- [ ] Casno Phoenix Respite
-- [ ] Graygray Counter Maestro
-- [ ] Hilander Critical Ferment
-- [ ] Kboshi Flux Cycle
-- [ ] Lady Darkness Eclipsing Veil
-- [ ] Lady Echo Resonant Static
-- [ ] Lady Fire and Ice Duality Engine
-- [ ] Lady Light Radiant Aegis
-- [ ] Lady Lightning Stormsurge
-- [ ] Lady of Fire Infernal Momentum
-- [ ] Lady Storm Supercell
-- [ ] Lady Wind Tempest Guard
-- [ ] Mezzy Gluttonous Bulwark
-- [ ] Mimic Player Copy
-- [ ] Persona Ice Cryo Cycle
-- [ ] Persona Light and Dark Duality
-- [ ] Player Level Up Bonus
-- [ ] Ryne Oracle of Balance
-- [ ] Advanced Combat Synergy
+### Remaining Work
+- [ ] Casno Phoenix Respite – still needs glitched variant
+- [ ] Ryne Oracle of Balance – still needs glitched variant
 
-### Special Cases
-- **Mimic Player Copy**: May need special handling for copying tier passives
-- **Player Level Up Bonus**: Player-specific, may not need tier variants
-- **Advanced Combat Synergy**: Generic synergy passive
+### Retired / Special Notes
+- ❌ Mimic Player Copy – character removed; no glitched variant will be created
+- ℹ️ Player Level Up Bonus – already implemented but only attaches to player-based encounters
+- ℹ️ Advanced Combat Synergy – implemented, remains the generic synergy modifier
 
 ## Implementation Guidelines
 
@@ -253,6 +252,9 @@ The test suite in `tests/test_tier_passives.py` validates:
 - Single tier tags apply single tier passive
 - Two-tier tags (e.g., "prime boss") apply BOTH tier passives (stacking)
 - Three-tier tags (e.g., "glitched prime boss") apply ALL THREE tier passives (full stacking)
+
+### Glitched Passive Registry Coverage
+- `backend/tests/test_glitched_passive_registry.py` dynamically imports every module under `backend/plugins/passives/glitched/`, asserts each class registers with `PassiveRegistry`, instantiates the plugin, and verifies the retired `mimic_player_copy_glitched` ID remains absent. Update this test when adding or removing glitched variants so registry regressions are caught immediately.
 
 Add additional tests for:
 - Character-specific tier passive behaviors

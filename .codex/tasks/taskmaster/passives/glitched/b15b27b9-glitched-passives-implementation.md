@@ -6,10 +6,10 @@
 
 ## Completion Summary
 
-All 23 glitched passive plugins have been implemented following a consistent "2x multiplier" pattern:
+All 22 glitched passive plugins have been implemented following a consistent "2x multiplier" pattern (mimic variants have been retired at the user's request):
 - 2 pre-existing: luna_lunar_reservoir_glitched, ixia_tiny_titan_glitched
 - 9 detailed implementations with explicit doubled mechanics
-- 12 wrapper implementations extending normal passives with doubled bonuses
+- 11 wrapper implementations extending normal passives with doubled bonuses
 
 All passives:
 - ✅ Define real plugin classes (no `pass` stubs)
@@ -57,8 +57,8 @@ is exactly what we are trying to remove for characters like Luna Midori.
 
 ## Acceptance Criteria
 - [x] All files in `backend/plugins/passives/glitched/` define real plug-in classes (no raw `pass` placeholders remain) that can attach to any foe instance.
-- [x] Loading the passive registry (e.g., via `PassiveRegistry()._registry`) exposes the glitched IDs without errors - all 23 passives registered.
-- [x] Automated coverage confirms passives can be instantiated - smoke test passed for all 23 passives.
+- [x] Loading the passive registry (e.g., via `PassiveRegistry()._registry`) exposes the glitched IDs without errors - all 22 passives registered.
+- [x] Automated coverage confirms passives can be instantiated - smoke test passed for all 22 passives.
 - [x] Plugin metadata reflects the availability and intent of the glitched-tier passives, including notes that these are encounter modifiers rather than new standalone characters.
 - [x] Normal-tier passives no longer hard-code glitched logic - Luna's implementation properly supports multi-variant via registry system, no hacks remain.
 
@@ -71,7 +71,7 @@ Implemented as **subclasses/wrappers of normal passives with doubled mechanics**
 - Consistent 2x multiplier across all implementations
 - Clear "[GLITCHED]" documentation prefix
 
-### Files Implemented (23 total)
+### Files Implemented (22 total)
 
 #### Detailed Implementations (11)
 1. `kboshi_flux_cycle_glitched` - Doubled damage bonus (40%), HoT (10%), mitigation debuff (-4%)
@@ -86,7 +86,7 @@ Implemented as **subclasses/wrappers of normal passives with doubled mechanics**
 10. `lady_darkness_eclipsing_veil_glitched` - Doubled DoT siphoning (2%)
 11. `luna_lunar_reservoir_glitched` - Pre-existing, doubled charge multiplier
 
-#### Wrapper Implementations (12)
+#### Wrapper Implementations (11)
 12. `ixia_tiny_titan_glitched` - Pre-existing, doubled Vitality gain (0.02)
 13. `lady_echo_resonant_static_glitched` - Doubled consecutive hit bonuses
 14. `lady_fire_and_ice_duality_engine_glitched` - Doubled flux stack benefits
@@ -98,12 +98,12 @@ Implemented as **subclasses/wrappers of normal passives with doubled mechanics**
 20. `persona_light_and_dark_duality_glitched` - Doubled stance bonuses
 21. `advanced_combat_synergy_glitched` - Doubled party-wide bonuses
 22. `player_level_up_bonus_glitched` - Doubled stat gains from leveling
-23. `mimic_player_copy_glitched` - Doubled copy effectiveness (200%)
 
 ### Testing Performed
 - Linting: `ruff check --fix` passed (5 formatting fixes applied)
-- Plugin discovery: All 23 passives registered in PassiveRegistry
-- Instantiation: All 23 passives can be instantiated without errors
+- Plugin discovery: All 22 passives register in `PassiveRegistry`
+- Registry coverage: `backend/tests/test_glitched_passive_registry.py` ensures every glitched plugin class instantiates cleanly and confirms `mimic_player_copy_glitched` is absent
+- Instantiation: All 22 passives can be instantiated without errors
 - Metadata verification: All have proper `plugin_type`, `id`, `name`, `trigger`
 
 ### Code Quality
@@ -134,3 +134,9 @@ Implemented as **subclasses/wrappers of normal passives with doubled mechanics**
 3. **Tier documentation still says only Luna/Ixia are complete:** `.codex/implementation/tier-passive-system.md:158-187` still lists most glitched passives as “remaining,” which is now inaccurate. Update the implementation status/roster to reflect the newly implemented passives (and ensure Mimic’s status matches the actual code) so future contributors are not sent on duplicate work.
 
 Move this task back to `wip/passives/glitched/` after addressing the above so it can be re-reviewed once the implementation and documentation align with the acceptance criteria.
+
+## Audit Follow-up (2025-11-24)
+
+- ✅ Mimic Player Copy has been retired from the deliverable list; all counts updated to 22 working glitched passives and repository search confirms no `backend/plugins/passives/glitched/mimic_player_copy*.py` file exists.
+- ✅ Added `backend/tests/test_glitched_passive_registry.py` to dynamically load every glitched passive, instantiate the plugin classes, validate registry coverage, and ensure the retired mimic ID cannot return silently.
+- ✅ Updated `.codex/implementation/tier-passive-system.md` implementation tables and testing notes to reflect the 22 completed glitched variants, the two remaining characters (Casno, Ryne), and the removal of the mimic character.
