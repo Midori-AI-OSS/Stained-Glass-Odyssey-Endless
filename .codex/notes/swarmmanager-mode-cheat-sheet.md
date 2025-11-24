@@ -70,6 +70,9 @@
 - [ ] Task status updated (if applicable)
 - [ ] Follow-up actions identified
 
+## Testing Notes
+- **Testing Limitation:** Tests cannot be run directly in Codex sandbox environments due to network restrictions during dependency installation (`uv sync`, `pip install`). Tests must be validated in the Docker environment. When specialists write tests, accept the code if it follows correct patterns, then note that validation will happen in Docker/CI.
+
 ## Blocker Log Format
 ```
 Blocker: [Brief description]
