@@ -13,6 +13,31 @@
 - If something needs documentation → dispatch Task Master on low.
 - Swarm Manager only reads task files, scans directories, and plans next dispatches.
 
+## Task Master Planning (CRITICAL FIRST STEP)
+
+⚠️ **NEVER dispatch Auditors/Coders directly for complex work without Task Master planning first!**
+
+**Correct Workflow:**
+1. **Task Master Plans** - Dispatch Task Master on low to read task file and create execution plan
+   - Task Master breaks work into small chunks (1-3 actions each)
+   - Identifies specialists needed for each chunk
+   - Notes dependencies and sequencing
+   - Creates step-by-step dispatch plan
+
+2. **Swarm Manager Dispatches** - Follow Task Master's plan to dispatch specialists
+   - One small chunk at a time
+   - Sequential when dependencies exist
+   - Parallel only when truly independent
+
+3. **Task Master Finalizes** - After all work complete, Task Master archives and documents
+
+**When to Skip Task Master Planning:**
+- Simple single-file audits (reading/verifying only)
+- Obvious small fixes with clear scope
+- Documentation-only updates
+
+**Rule of Thumb:** If you're unsure how to break down the work, dispatch Task Master first!
+
 ## Small-Chunk Principle
 - Limit each dispatch to **1–3 focused actions** (plan, collect context, assign specialist, or validate output).
 - If the task naturally demands **6+ actions**, split into sequential dispatches so each specialist stays within the small-chunk guardrails.
