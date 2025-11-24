@@ -65,9 +65,6 @@ resolve_passives_for_rank("luna_lunar_reservoir", "prime boss")
 # → ["luna_lunar_reservoir_prime", "luna_lunar_reservoir_boss"]
 # Both prime and boss effects stack
 
-resolve_passives_for_rank("attack_up", "boss")
-# → ["attack_up_boss"]
-
 resolve_passives_for_rank("some_passive", "glitched")
 # → ["some_passive"] (if glitched variant doesn't exist, returns base)
 

@@ -12,7 +12,7 @@ Describes how plugins are discovered, categorized, and connected to the event bu
 The following categories are bundled:
 
 - **Characters** – controllable and hostile combatants such as `Player` or `SlimeFoe`【F:backend/plugins/characters/player.py†L1-L24】【F:backend/plugins/characters/__init__.py†L66-L101】
-- **Passives** – always-on effects like `AttackUp`【F:backend/plugins/passives/attack_up.py†L1-L16】
+- **Passives** – always-on effects like `PlayerLevelUpBonus`【F:backend/plugins/passives/normal/player_level_up_bonus.py†L1-L49】
 - **DoTs** – damage-over-time effects such as `Bleed`【F:plugins/dots/bleed.py†L4-L15】
 - **HoTs** – healing-over-time effects such as `Regeneration`【F:plugins/hots/regeneration.py†L4-L9】
 - **Weapons** – attack implementations such as `SampleWeapon`【F:plugins/weapons/sample_weapon.py†L4-L8】
