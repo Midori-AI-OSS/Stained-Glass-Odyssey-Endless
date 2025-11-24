@@ -277,19 +277,19 @@ class TestMultiplePassivesStacking:
     async def test_multiple_passives_all_stack(self):
         """When a character has multiple passives, each resolves independently.
 
-        If a foe has both luna_lunar_reservoir and attack_up with rank
+        If a foe has both luna_lunar_reservoir and ixia_tiny_titan with rank
         "glitched", both should resolve to their glitched variants.
         """
         luna = Luna()
         luna.rank = "glitched"
-        luna.passives = ["luna_lunar_reservoir", "attack_up"]
+        luna.passives = ["luna_lunar_reservoir", "ixia_tiny_titan"]
 
         apply_rank_passives(luna)
 
         # Both passives should resolve to glitched variants
         assert set(luna.passives) == {
             "luna_lunar_reservoir_glitched",
-            "attack_up_glitched"
+            "ixia_tiny_titan_glitched"
         }
 
     @pytest.mark.asyncio
@@ -299,13 +299,13 @@ class TestMultiplePassivesStacking:
         With "prime boss" rank and two base passives, we should get:
         - luna_lunar_reservoir_prime
         - luna_lunar_reservoir_boss
-        - attack_up_prime
-        - attack_up_boss
+        - ixia_tiny_titan_prime
+        - ixia_tiny_titan_boss
         Total: 4 passives (2 base × 2 tiers)
         """
         luna = Luna()
         luna.rank = "prime boss"
-        luna.passives = ["luna_lunar_reservoir", "attack_up"]
+        luna.passives = ["luna_lunar_reservoir", "ixia_tiny_titan"]
 
         apply_rank_passives(luna)
 
@@ -313,8 +313,8 @@ class TestMultiplePassivesStacking:
         expected_passives = {
             "luna_lunar_reservoir_prime",
             "luna_lunar_reservoir_boss",
-            "attack_up_prime",
-            "attack_up_boss"
+            "ixia_tiny_titan_prime",
+            "ixia_tiny_titan_boss"
         }
         assert set(luna.passives) == expected_passives
         assert len(luna.passives) == 4

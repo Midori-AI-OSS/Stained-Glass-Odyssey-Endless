@@ -85,12 +85,11 @@ class TestPassiveDemos:
         """Test a character with multiple passives."""
         registry = PassiveRegistry()
         multi_char = Stats(hp=1000, damage_type=Generic())
-        multi_char.passives = ["attack_up", "luna_lunar_reservoir", "hilander_critical_ferment"]
+        multi_char.passives = ["luna_lunar_reservoir", "hilander_critical_ferment"]
 
         initial_effects = len(multi_char._active_effects)
 
         # Trigger various events
-        await registry.trigger("battle_start", multi_char)  # attack_up
         await registry.trigger("action_taken", multi_char)  # luna
         await registry.trigger("hit_landed", multi_char)    # hilander
 
@@ -188,7 +187,7 @@ async def demo_multiple_passives():
 
     registry = PassiveRegistry()
     multi_char = Stats(hp=1000, damage_type=Generic())
-    multi_char.passives = ["attack_up", "luna_lunar_reservoir", "hilander_critical_ferment"]
+    multi_char.passives = ["luna_lunar_reservoir", "hilander_critical_ferment"]
 
     print(f"Character has passives: {multi_char.passives}")
     print(f"Initial effects: {len(multi_char._active_effects)}")
@@ -196,7 +195,6 @@ async def demo_multiple_passives():
     print(f"Initial attacks per turn: {multi_char.actions_per_turn}")
 
     # Trigger various events
-    await registry.trigger("battle_start", multi_char)  # attack_up
     await registry.trigger("action_taken", multi_char)  # luna
     await registry.trigger("hit_landed", multi_char)    # hilander
 

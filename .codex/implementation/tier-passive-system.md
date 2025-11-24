@@ -99,25 +99,25 @@ apply_rank_passives(foe)
 
 ### Simple Stat Modifiers
 
-For passives that modify stats directly (attack_up, room_heal, etc.):
+For passives that modify stats directly:
 
-- **Normal**: Base value (e.g., +5 attack)
-- **Glitched**: 2x base (e.g., +10 attack)
-- **Boss**: 3x base (e.g., +15 attack)
-- **Prime**: 5x base (e.g., +25 attack)
+- **Normal**: Base value (e.g., +0.1 vitality)
+- **Glitched**: 2x base (e.g., +0.2 vitality)
+- **Boss**: 3x base (e.g., +0.3 vitality)
+- **Prime**: 5x base (e.g., +0.5 vitality)
 
 **Implementation**:
 ```python
 @dataclass
-class AttackUpGlitched(AttackUp):
+class IxiaTinyTitanGlitched(IxiaTinyTitan):
     plugin_type = "passive"
-    id = "attack_up_glitched"
-    name = "Glitched Attack Up"
-    amount = 10  # 2x base 5
+    id = "ixia_tiny_titan_glitched"
+    name = "Glitched Tiny Titan"
+    vitality_per_stack = 0.2  # 2x base 0.1
     
     @classmethod
     def get_description(cls) -> str:
-        return f"[GLITCHED] Grants +{cls.amount} attack (doubled)."
+        return f"[GLITCHED] Grants +{cls.vitality_per_stack} vitality per stack (doubled)."
 ```
 
 ### Complex State-Tracking Passives
@@ -160,11 +160,9 @@ class LunaLunarReservoirGlitched(LunaLunarReservoir):
 
 ## Implementation Status
 
-### Completed (10/27 characters)
+### Completed (9/27 characters)
 - ✅ Luna Midori (complex charge system)
 - ✅ Ixia (complex vitality system)
-- ✅ Attack Up (generic stat modifier)
-- ✅ Room Heal (generic healing modifier)
 
 ### Remaining (17/27 characters)
 - [ ] Ally Overload
