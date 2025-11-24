@@ -32,10 +32,30 @@ The action plugin system was recently implemented with BasicAttackAction as the 
 - `backend/autofighter/rooms/battle/engine.py` - Battle orchestration
 - `backend/autofighter/stats.py` - Core stat/damage/healing methods
 
+### Damage Type System (CRITICAL - Contains Ultimate Actions!)
+- `backend/plugins/damage_types/_base.py` - Base damage type with `ultimate()` and `on_action()` methods
+- `backend/plugins/damage_types/light.py` - Light ultimate (heal allies, cleanse DoTs, debuff enemies)
+- `backend/plugins/damage_types/dark.py` - Dark ultimate (drain allies for 6x strikes) and drain action
+- `backend/plugins/damage_types/wind.py` - Wind ultimate (AoE multi-hit) and AoE normal attack
+- `backend/plugins/damage_types/fire.py` - Fire ultimate (AoE with burn DoT)
+- `backend/plugins/damage_types/ice.py` - Ice ultimate and freeze mechanics
+- `backend/plugins/damage_types/lightning.py` - Lightning ultimate and chain mechanics
+- `backend/plugins/damage_types/generic.py` - Generic damage type (neutral element, no strengths/weaknesses)
+
+**KEY INSIGHT:** Each damage type has:
+- `ultimate()` method - Character ultimates are damage-type-based!
+- `on_action()` method - Special behaviors during normal attacks (Wind AoE, Light healing, Dark drain)
+- `on_damage()` / `on_damage_taken()` - Damage modification hooks
+
 ### Character System
 - `backend/plugins/characters/*.py` - All character plugin files
 - Look for character-specific ability implementations
-- Identify ultimate action patterns
+- `prepare_for_battle()` methods (Luna's sword summoning)
+
+### Summons System
+- `backend/autofighter/summons/base.py` - Summon entity base class
+- `backend/autofighter/summons/manager.py` - SummonManager.create_summon()
+- Luna's `_LunaSwordCoordinator` in `backend/plugins/characters/luna.py`
 
 ### Card System
 - `backend/autofighter/cards.py` - Card mechanics
@@ -50,12 +70,22 @@ The action plugin system was recently implemented with BasicAttackAction as the 
 
 ### 1. Combat Actions (HIGH PRIORITY)
 These are active choices made during combat:
-- Ultimate actions
-- Character special abilities
-- **Summon creation actions** (e.g., Luna's sword summoning, Becca's menagerie)
+- **Ultimate actions** (Found in damage type files! Each damage type has `ultimate()` method)
+  - Light ultimate: Heal allies, cleanse DoTs, debuff enemies
+  - Dark ultimate: Drain allies for powered 6x strikes
+  - Wind ultimate: AoE multi-hit attack
+  - Fire ultimate: AoE with burn DoT application
+  - Ice ultimate: 6 waves of ramping AoE damage
+  - Lightning ultimate: AoE with random DoTs and Aftertaste
+  - Generic ultimate: 64 rapid strikes on single target
+- **Damage type special actions** (Found in `on_action()` methods)
+  - Wind AoE normal attack (spreads to multiple targets via `get_turn_spread()`)
+  - Light healing action (heals low HP allies during normal action)
+  - Dark drain action (drains allies for damage bonus)
+- **Summon creation actions** (e.g., Luna's sword summoning via `prepare_for_battle()`, Becca's menagerie)
+- **Summon attacks** (Luna's swords attack, should use normal attack action)
 - Multi-target attack variants
 - Skill-based healing actions
-- Buff/debuff application skills
 
 ### 2. Card-Based Actions (MEDIUM PRIORITY)
 Actions triggered by card usage:
@@ -78,6 +108,13 @@ These may NOT be good candidates for action plugins:
 - Examples: attack up, defense down, speed buffs, etc.
 - Similar to DoT/HoT plugin structure but for stat modifiers
 - This analysis should identify which actions APPLY buffs/debuffs, not treat buffs as actions
+- **Passives like Ally's overload and Becca's menagerie should APPLY buffs/debuffs, not be actions**
+
+### 5. Passive Effects that Apply Buffs (NOT ACTIONS)
+**IMPORTANT:** Some passives trigger buff/debuff application but should NOT become actions:
+- Ally's `ally_overload` passive - Should apply buff/debuff effects when triggered
+- Becca's `becca_menagerie_bond` passive - Should apply coordinated buff effects
+- These remain as passive plugins but should use the new buff/debuff plugin system
 
 ## Deliverables
 

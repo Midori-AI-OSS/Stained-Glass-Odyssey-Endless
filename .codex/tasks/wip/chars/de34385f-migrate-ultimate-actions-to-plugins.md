@@ -10,10 +10,23 @@ High
 WIP
 
 ## Description
-Convert character ultimate abilities from hardcoded execution to action plugins. Ultimates are high-impact abilities that charge up during battle and can be triggered at key moments. This migration will make ultimate abilities consistent with the new action plugin system and enable easier creation of new ultimate abilities.
+Convert damage-type-based ultimate abilities from the current `damage_type.ultimate()` methods to action plugins. Ultimate abilities are currently implemented in damage type files (`backend/plugins/damage_types/*.py`), where each damage type defines its own `ultimate()` method. This migration will make ultimate abilities consistent with the new action plugin system while preserving the damage-type-specific implementations.
 
 ## Context
-Currently, ultimate handling is partially implemented in the turn loop with `_handle_ultimate()` but the actual ultimate effects are embedded in character classes or handled through ad-hoc mechanisms. With the action plugin system in place (ActionBase, ActionRegistry, BattleContext), ultimates should become standardized action plugins.
+Currently, ultimate handling is split across two systems:
+1. **Charge System** in `backend/autofighter/stats.py`: Tracks `ultimate_charge`, `ultimate_ready`, and capacity
+2. **Ultimate Implementation** in damage type files: Each damage type has its own `ultimate()` method
+
+Examples:
+- **Light** (`light.py`): Heals allies to full, cleanses DoTs, debuffs enemies
+- **Dark** (`dark.py`): Drains allies for DoT-scaled 6x strikes
+- **Wind** (`wind.py`): AoE multi-hit attack distributed across all enemies
+- **Fire** (`fire.py`): AoE with burn DoT application
+- **Ice** (`ice.py`): 6 waves of ramping AoE (30% damage increase per target)
+- **Lightning** (`lightning.py`): AoE with 10 random DoTs and Aftertaste stack buildup
+- **Generic** (`generic.py`): 64 rapid strikes on single target (neutral element)
+
+The turn loop calls `damage_type.ultimate(actor, allies, enemies)` when ultimate is ready.
 
 ## Current Implementation
 
@@ -24,20 +37,32 @@ Currently, ultimate handling is partially implemented in the turn loop with `_ha
    - `ultimate_charge_capacity` - Maximum charge needed (default 15)
    - `add_ultimate_charge()` - Method to increment charge
 
-2. **Turn Loop Handling** (`backend/autofighter/rooms/battle/turn_loop/player_turn.py`):
-   - `_handle_ultimate()` function processes ultimate activation
-   - Currently placeholder or basic implementation
+2. **Ultimate Implementations** (in damage type files):
+   - `backend/plugins/damage_types/_base.py` - Base `ultimate()` and `consume_ultimate()` methods
+   - `backend/plugins/damage_types/light.py` - Light ultimate: Heal + cleanse DoTs + debuff enemies
+   - `backend/plugins/damage_types/dark.py` - Dark ultimate: 6x strikes scaled by ally DoT stacks
+   - `backend/plugins/damage_types/wind.py` - Wind ultimate: Multi-hit AoE distributed damage
+   - `backend/plugins/damage_types/fire.py` - Fire ultimate: AoE with burn DoT infliction
+   - `backend/plugins/damage_types/ice.py` - Ice ultimate: 6 waves of ramping AoE damage (30% increase per target)
+   - `backend/plugins/damage_types/lightning.py` - Lightning ultimate: AoE with 10 random DoTs + Aftertaste stacks
+   - `backend/plugins/damage_types/generic.py` - Generic ultimate: 64 rapid strikes on single target
 
-3. **Character Definitions**:
-   - Each character may have ultimate ability defined in their class
-   - Implementation varies by character
+3. **Turn Loop Handling** (`backend/autofighter/rooms/battle/turn_loop/player_turn.py`):
+   - `_handle_ultimate()` function calls `damage_type.ultimate(actor, allies, enemies)`
+   - Checks `ultimate_ready` flag before executing
+
+4. **Damage Type Base**:
+   - `async def ultimate(actor, allies, enemies)` - Override per damage type
+   - `async def consume_ultimate(actor)` - Calls `actor.use_ultimate()` to consume charge
 
 ## Objectives
 1. Create UltimateActionBase extending ActionBase with ultimate-specific behavior
-2. Migrate each character's ultimate to a separate action plugin
-3. Integrate ultimate action plugins with turn loop ultimate handling
-4. Ensure ultimate charge consumption and cooldown work correctly
-5. Maintain existing ultimate charge mechanics
+2. Migrate each damage type's ultimate to a separate action plugin
+3. Maintain damage-type-specific ultimate logic (Light heals, Dark drains, Wind AoE, etc.)
+4. Integrate ultimate action plugins with turn loop ultimate handling
+5. Ensure ultimate charge consumption and cooldown work correctly
+6. Preserve existing ultimate charge mechanics
+7. Keep damage type association (characters get ultimates based on their damage type)
 
 ## Implementation Steps
 
@@ -75,47 +100,88 @@ mkdir -p backend/plugins/actions/ultimate
 touch backend/plugins/actions/ultimate/__init__.py
 ```
 
-### Step 3: Migrate Character Ultimates
-For each character with an ultimate:
-1. Create `backend/plugins/actions/ultimate/{character_id}_ultimate.py`
-2. Define ultimate as action plugin extending UltimateActionBase
-3. Implement execute() method with character's unique ultimate effect
-4. Add proper targeting rules and animation data
+### Step 3: Migrate Damage Type Ultimates
+For each damage type with an ultimate:
 
-Example structure:
+1. Create `backend/plugins/actions/ultimate/{damage_type}_ultimate.py`
+2. Copy the logic from `damage_type.ultimate()` method
+3. Implement as action plugin extending UltimateActionBase
+4. Preserve all behavior (healing, DoTs, multi-hit, etc.)
+
+Example: Light Ultimate (`backend/plugins/actions/ultimate/light_ultimate.py`):
 ```python
 @dataclass(kw_only=True, slots=True)
-class LunaUltimate(UltimateActionBase):
+class LightUltimate(UltimateActionBase):
     plugin_type = "action"
-    id: str = "ultimate.luna"
-    name: str = "Lunar Eclipse"
-    description: str = "Luna's powerful ultimate attack"
-    # ... implementation
+    id: str = "ultimate.light"
+    name: str = "Radiant Salvation"
+    description: str = "Heals allies to full, cleanses DoTs, debuffs enemies"
+    damage_type_id: str = "Light"  # Which damage type this ultimate belongs to
+    
+    async def execute(self, actor, targets, context):
+        # Implementation from light.py ultimate() method
+        result = ActionResult(success=True)
+        
+        # Heal allies to full
+        for ally in context.allies_of(actor):
+            if ally.hp <= 0:
+                continue
+            missing = ally.max_hp - ally.hp
+            if missing > 0:
+                healing = await context.apply_healing(ally, missing, healer=actor)
+                result.healing_done[ally.id] = healing
+        
+        # Debuff enemies
+        for enemy in context.enemies_of(actor):
+            if enemy.hp <= 0:
+                continue
+            # Apply defense down debuff...
+            result.effects_applied.append(...)
+        
+        return result
 ```
+
+Priority order:
+- Light (heal/cleanse/debuff - supportive)
+- Dark (drain/multi-strike - complex with DoT scaling)
+- Wind (AoE multi-hit - distributed damage)
+- Fire (AoE with DoT - straightforward)
+- Ice (ramping AoE - 6 waves with 30% escalation)
+- Lightning (AoE + random DoTs + Aftertaste - most complex)
+- Generic (64 rapid strikes - high hit count, single target)
 
 ### Step 4: Update Turn Loop Integration
 Modify `backend/autofighter/rooms/battle/turn_loop/player_turn.py`:
-- Update `_handle_ultimate()` to use ultimate action plugins
-- Look up ultimate action from ActionRegistry
-- Execute via action plugin system instead of hardcoded logic
+- Update `_handle_ultimate()` to:
+  1. Get actor's damage type
+  2. Look up ultimate action from ActionRegistry by damage type
+  3. Execute via action plugin system instead of calling `damage_type.ultimate()`
+- Map damage types to ultimate action IDs (e.g., "Light" → "ultimate.light")
 
-### Step 5: Update Character Classes
-Remove or deprecate hardcoded ultimate methods from character classes, keeping only:
-- Ultimate charge capacity (can remain as character attribute)
-- Ultimate animation preferences (if any)
-- Reference to ultimate action plugin ID
+### Step 5: Update Damage Type Classes
+For each damage type file:
+- Keep the `ultimate()` method for backward compatibility initially
+- Add deprecation comment
+- Eventually remove once action plugins are proven stable
+- OR keep as fallback if action plugin not found
 
 ## Files to Modify
 
 ### New Files
 - `backend/plugins/actions/ultimate/__init__.py`
 - `backend/plugins/actions/ultimate/_base.py`
-- `backend/plugins/actions/ultimate/{character}_ultimate.py` (one per character)
+- `backend/plugins/actions/ultimate/light_ultimate.py`
+- `backend/plugins/actions/ultimate/dark_ultimate.py`
+- `backend/plugins/actions/ultimate/wind_ultimate.py`
+- `backend/plugins/actions/ultimate/fire_ultimate.py`
+- `backend/plugins/actions/ultimate/ice_ultimate.py`
+- `backend/plugins/actions/ultimate/lightning_ultimate.py`
+- `backend/plugins/actions/ultimate/generic_ultimate.py`
 
 ### Modified Files
 - `backend/autofighter/rooms/battle/turn_loop/player_turn.py` - Update _handle_ultimate()
 - `backend/plugins/actions/registry.py` - May need ultimate-specific registration
-- Character plugin files - Remove hardcoded ultimate methods
+- `backend/plugins/damage_types/*.py` - Add deprecation notes to ultimate() methods
 
 ### Test Files
 - `backend/tests/test_ultimate_actions.py` - New test file for ultimate plugins
@@ -124,9 +190,10 @@ Remove or deprecate hardcoded ultimate methods from character classes, keeping o
 ## Acceptance Criteria
 - [ ] UltimateActionBase class created with charge consumption logic
 - [ ] Directory structure created for ultimate action plugins
-- [ ] At least 3 character ultimates migrated to action plugins
+- [ ] All 7 damage type ultimates migrated to action plugins (Light, Dark, Wind, Fire, Ice, Lightning, Generic)
 - [ ] Turn loop integration updated to use ultimate action plugins
 - [ ] Ultimate charge and readiness still work correctly
+- [ ] Damage type association preserved (characters get ultimates based on damage type)
 - [ ] Tests created for ultimate action plugins
 - [ ] All existing tests still pass
 - [ ] Linting passes (run `uv tool run ruff check backend --fix`)
@@ -155,11 +222,19 @@ Remove or deprecate hardcoded ultimate methods from character classes, keeping o
 - `backend/plugins/actions/_base.py` - Base action class
 - `backend/autofighter/stats.py` - Ultimate charge system (lines 184-720)
 - `backend/autofighter/rooms/battle/turn_loop/player_turn.py` - Current ultimate handling
+- `backend/plugins/damage_types/_base.py` - Base damage type with ultimate() method
+- `backend/plugins/damage_types/light.py` - Light ultimate implementation
+- `backend/plugins/damage_types/dark.py` - Dark ultimate implementation
+- `backend/plugins/damage_types/wind.py` - Wind ultimate implementation
+- `backend/plugins/damage_types/fire.py` - Fire ultimate implementation
 
 ## Notes for Coder
-- Start with 1-2 simple ultimates before tackling complex ones
+- Start with 1-2 simple ultimates (Light, Fire) before tackling complex ones (Dark, Wind)
 - Preserve existing ultimate charge mechanics exactly
 - Each ultimate should be in its own file for maintainability
+- Ultimates are damage-type-based, not character-based
+- Characters inherit ultimates from their assigned damage type
 - Consider creating tests that verify charge consumption and cooldown
 - Ultimate actions should emit proper events for logging/analytics
-- If a character doesn't have a clear ultimate defined yet, skip it for now
+- Keep the damage type mapping clear (damage_type.id → ultimate action ID)
+- May want to create a registry method like `get_ultimate_for_damage_type(damage_type_id)`
