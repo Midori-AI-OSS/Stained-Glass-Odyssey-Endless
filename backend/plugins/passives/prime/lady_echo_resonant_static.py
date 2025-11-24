@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
@@ -21,8 +23,8 @@ class LadyEchoResonantStaticPrime(LadyEchoResonantStatic):
 
     async def apply(
         self,
-        target: "Stats",
-        hit_target: "Stats" | None = None,
+        target: Stats,
+        hit_target: Stats | None = None,
         **kwargs,
     ) -> None:
         entity_id = id(target)
@@ -59,8 +61,8 @@ class LadyEchoResonantStaticPrime(LadyEchoResonantStatic):
 
     async def on_hit_landed(
         self,
-        attacker: "Stats",
-        target_hit: "Stats",
+        attacker: Stats,
+        target_hit: Stats,
         damage: int = 0,
         action_type: str = "attack",
         **_: object,
