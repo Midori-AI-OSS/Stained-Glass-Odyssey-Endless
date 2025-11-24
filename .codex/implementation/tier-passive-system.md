@@ -99,7 +99,7 @@ apply_rank_passives(foe)
 
 ### Simple Stat Modifiers
 
-For passives that modify stats directly (attack_up, room_heal, etc.):
+For passives that modify stats directly (attack_up, etc.):
 
 - **Normal**: Base value (e.g., +5 attack)
 - **Glitched**: 2x base (e.g., +10 attack)
@@ -160,11 +160,10 @@ class LunaLunarReservoirGlitched(LunaLunarReservoir):
 
 ## Implementation Status
 
-### Completed (10/27 characters)
+### Completed (9/27 characters)
 - ✅ Luna Midori (complex charge system)
 - ✅ Ixia (complex vitality system)
 - ✅ Attack Up (generic stat modifier)
-- ✅ Room Heal (generic healing modifier)
 
 ### Remaining (17/27 characters)
 - [ ] Ally Overload
