@@ -45,14 +45,15 @@ first spawn and reuse it for future sessions unless customized.
 
 | Character | Rank | Rarity | Element(s) | Signature traits | Availability |
 | --- | --- | --- | --- | --- | --- |
-| Ally | B | 5★ | Any (randomized) | `ally_overload` grants adaptive support bonuses, manipulating elements to dismantle enemy defenses. | Standard gacha recruit. |
-| Becca | B | 5★ | Any (randomized) | `becca_menagerie_bond` reorganizes elemental pairings, pushing her attack growth at the cost of lowered defenses. | Standard gacha recruit. |
+| Ally | B | 5★ | Any (randomized) | `ally_overload` grants adaptive support bonuses, manipulating elements to dismantle enemy defenses, and the `Overload Cascade` special action chains lightning strikes across two foes. | Standard gacha recruit. |
+| Becca | B | 5★ | Any (randomized) | `becca_menagerie_bond` reorganizes elemental pairings, pushing her attack growth at the cost of lowered defenses, while `Menagerie Convergence` temporarily condenses those summons into a self-buffing stance. | Standard gacha recruit. |
 | Bubbles | A | 5★ | Any (randomized) | `bubbles_bubble_burst` rotates elements each turn, building chain reactions that detonate after repeated hits. | Standard gacha recruit. |
-| Carly | B | 5★ | Light | `carly_guardians_aegis` heals the most injured ally, converts attack gains into defense, stacks mitigation, and shares shields on her ultimate. | Standard gacha recruit. |
+| Carly | B | 5★ | Light | `carly_guardians_aegis` heals the most injured ally, converts attack gains into defense, stacks mitigation, and shares shields on her ultimate; `Guardian Barrier` extends that protection as an on-demand special. | Standard gacha recruit. |
 | Casno | A | 5★ | Fire | `casno_phoenix_respite` accrues Relaxed stacks every five attacks, then skips a swing once he tops 50 stacks to convert five of them into a self-heal and 15%-per-stack permanent stat buffs. | Standard gacha recruit. |
-| Graygray | B | 5★ | Any (randomized) | `graygray_counter_maestro` retaliates when struck and periodically releases max-HP bursts after stacking counters. | Standard gacha recruit. |
+| Graygray | B | 5★ | Any (randomized) | `graygray_counter_maestro` retaliates when struck and periodically releases max-HP bursts after stacking counters, and `Counter Opus` lets her pre-load defense for the next riposte. | Standard gacha recruit. |
 | Hilander | A | 5★ | Any (randomized) | `hilander_critical_ferment` builds crit rate and crit damage with diminishing odds after 20 stacks, unleashing Aftertaste on crits. | Standard gacha recruit. |
-| Ixia | A | 5★ | Lightning | `ixia_tiny_titan` quadruples Vitality scaling, turning the small-statured brawler into a lightning bruiser. | Standard gacha recruit. |
+| Ixia | A | 5★ | Lightning | `ixia_tiny_titan` quadruples Vitality scaling, turning the small-statured brawler into a lightning bruiser, with `Lightning Burst` adding a single-target nuke plus defense shred. | Standard gacha recruit. |
+| Jennifer Feltmann | B | 5★ | Dark | `bad_student` applies disciplinary stacks that steal 75% of a foe's actions for 3 turns (150% on prime ranks, 500% on glitched), stacking per proc and nearly freezing targets on ultimates. | Standard gacha recruit. |
 | Kboshi | A | 5★ | Dark | `kboshi_flux_cycle` channels dark energy, banking power in flux stacks and expending them to debuff foes. | Standard gacha recruit. |
 | LadyDarkness | B | 5★ | Dark | `lady_darkness_eclipsing_veil` wraps the field in despair-laced shadows that sap enemy resolve. | Standard gacha recruit. |
 | LadyEcho | B | 5★ | Lightning | `lady_echo_resonant_static` weaponizes echoed lightning at the cost of de-aging, driving her inventive combat style. | Standard gacha recruit. |

@@ -3,8 +3,6 @@ from typing import Any
 from typing import ClassVar
 
 from autofighter.effects import DamageOverTime
-from autofighter.effects import EffectManager
-from autofighter.effects import create_stat_buff
 from autofighter.stats import BUS
 from plugins import damage_effects
 from plugins.damage_types._base import DamageTypeBase
@@ -84,98 +82,16 @@ class Wind(DamageTypeBase):
         return _WIND_TURN_SPREAD
 
     async def ultimate(self, actor, allies, enemies):
-        """Distribute attack across rapid hits on all foes."""
-        from autofighter.rooms.battle.pacing import pace_per_target
-        from autofighter.rooms.battle.targeting import select_aggro_target
+        """Distribute attack across rapid hits on all foes.
 
-        # Consume ultimate; bail if not ready
-        if not await self.consume_ultimate(actor):
-            return False
+        Deprecated wrapper that now routes through the Wind ultimate action.
+        """
 
-        actor_type = getattr(actor, "plugin_type", None)
-        if actor_type == "player" and actor not in Wind._players:
-            Wind._players.append(actor)
-        elif actor_type == "foe" and actor not in Wind._foes:
-            Wind._foes.append(actor)
+        from plugins.actions.ultimate.utils import run_ultimate_action
+        from plugins.actions.ultimate.wind_ultimate import WindUltimate
 
-        # Ensure the actor has an EffectManager so temporary buffs apply cleanly
-        a_mgr = getattr(actor, "effect_manager", None)
-        if a_mgr is None:
-            a_mgr = EffectManager(actor)
-            actor.effect_manager = a_mgr
-
-        # Apply a short-lived boost to effect hit rate to increase Wind DoT odds
-        eh_mod = create_stat_buff(
-            actor,
-            name="wind_ultimate_effect_hit",
-            turns=1,
-            effect_hit_rate_mult=1.5,
-        )
-        await a_mgr.add_modifier(eh_mod)
-
-        # Determine dynamic hit count (allow cards/relics to override via attributes)
-        hits = int(getattr(actor, "wind_ultimate_hits", getattr(actor, "ultimate_hits", 25)) or 25)
-        hits = max(1, hits)
-
-        # Strike each living enemy with a total budget equal to actor.atk distributed
-        # across all hits and all targets. This keeps Wind ultimate AoE damage in line
-        # with single-target ults while preserving multi-hit feel.
-        base = int(getattr(actor, "atk", 0))
-        base = max(1, base)
-
-        living = [foe for foe in enemies if getattr(foe, "hp", 0) > 0]
-        if not living:
-            return True
-        total_chunks = hits * len(living)
-        if total_chunks <= 0:
-            return True
-        per = base // total_chunks
-        rem = base - per * total_chunks
-
-        effect_managers: dict = {}
-        for foe in living:
-            f_mgr = getattr(foe, "effect_manager", None)
-            if f_mgr is None:
-                f_mgr = EffectManager(foe)
-                foe.effect_manager = f_mgr
-            effect_managers[foe] = f_mgr
-
-        for _ in range(total_chunks):
-            try:
-                _, foe = select_aggro_target(enemies)
-            except ValueError:
-                break
-            if getattr(foe, "hp", 0) <= 0:
-                continue
-            add_one = 1 if rem > 0 else 0
-            per_hit = per + add_one
-            if rem > 0:
-                rem -= 1
-            per_hit = max(1, int(per_hit))
-            dmg = await foe.apply_damage(per_hit, attacker=actor, action_name="Wind Ultimate")
-            await pace_per_target(actor)
-            try:
-                await BUS.emit_async("hit_landed", actor, foe, dmg, "attack", "wind_ultimate")
-            except Exception:
-                pass
-            try:
-                f_mgr = effect_managers.get(foe)
-                if f_mgr is None:
-                    f_mgr = getattr(foe, "effect_manager", None)
-                    if f_mgr is None:
-                        f_mgr = EffectManager(foe)
-                        foe.effect_manager = f_mgr
-                    effect_managers[foe] = f_mgr
-                await f_mgr.maybe_inflict_dot(actor, dmg)
-            except Exception:
-                pass
-
-        # Clean up the temporary buff immediately after the sequence
-        try:
-            eh_mod.remove()
-        except Exception:
-            pass
-        return True
+        result = await run_ultimate_action(WindUltimate, actor, allies, enemies)
+        return bool(getattr(result, "success", False))
 
     @classmethod
     def get_ultimate_description(cls) -> str:

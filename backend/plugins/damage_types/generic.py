@@ -1,6 +1,5 @@
 from dataclasses import dataclass
 
-from autofighter.passives import PassiveRegistry
 from plugins.damage_types._base import DamageTypeBase
 
 
@@ -16,52 +15,16 @@ class Generic(DamageTypeBase):
     color: tuple[int, int, int] = (255, 255, 255)
 
     async def ultimate(self, actor, allies, enemies):
-        """Split the user's attack into 64 rapid strikes on one target."""
-        from autofighter.rooms.battle.pacing import pace_per_target
-        from autofighter.rooms.battle.targeting import select_aggro_target
+        """Split the user's attack into 64 rapid strikes on one target.
 
-        if not await self.consume_ultimate(actor):
-            return False
+        Deprecated wrapper routed through the Generic ultimate action.
+        """
 
-        from autofighter.stats import BUS  # Import here to avoid circular imports
+        from plugins.actions.ultimate.generic_ultimate import GenericUltimate
+        from plugins.actions.ultimate.utils import run_ultimate_action
 
-        registry = PassiveRegistry()
-
-        # Trigger ultimate_used for all passives (including tier Luna variants)
-        # Tier multipliers will apply naturally (glitched: 128, prime: 320, etc.)
-        await registry.trigger("ultimate_used", actor, party=allies, foes=enemies)
-
-        base = actor.atk // 64
-        remainder = actor.atk % 64
-        for i in range(64):
-            try:
-                _, target = select_aggro_target(enemies)
-            except ValueError:
-                break
-            dmg = base + (1 if i < remainder else 0)
-            await target.apply_damage(dmg, attacker=actor, action_name="Generic Ultimate")
-            await pace_per_target(actor)
-            await BUS.emit_async(
-                "hit_landed", actor, target, dmg, "attack", "generic_ultimate"
-            )
-            await registry.trigger_hit_landed(
-                actor,
-                target,
-                dmg,
-                "generic_ultimate",
-                party=allies,
-                foes=enemies,
-            )
-            await registry.trigger(
-                "action_taken",
-                actor,
-                target=target,
-                damage=dmg,
-                party=allies,
-                foes=enemies,
-            )
-
-        return True
+        result = await run_ultimate_action(GenericUltimate, actor, allies, enemies)
+        return bool(getattr(result, "success", False))
 
     @classmethod
     def get_ultimate_description(cls) -> str:

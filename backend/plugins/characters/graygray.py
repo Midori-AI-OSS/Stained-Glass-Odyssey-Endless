@@ -21,3 +21,6 @@ class Graygray(PlayerBase):
         default_factory=lambda: load_damage_type(choice(ALL_DAMAGE_TYPES))
     )
     passives: list[str] = field(default_factory=lambda: ["graygray_counter_maestro"])
+    special_abilities: list[str] = field(
+        default_factory=lambda: ["special.graygray.counter_opus"]
+    )

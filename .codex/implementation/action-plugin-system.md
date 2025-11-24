@@ -111,6 +111,54 @@ Central registry for action plugin management:
 - **Cooldowns**: `is_available()`, `start_cooldown()`, `advance_cooldowns()`
 - **Per-actor state**: Cooldown tracking, character loadouts
 
+### Ultimate Actions
+
+Ultimate abilities now execute entirely through the action plugin pipeline.
+
+- `UltimateActionBase` (`backend/plugins/actions/ultimate/_base.py`) extends
+  `ActionBase` with `ActionType.ULTIMATE`, a zero-cost default, and charge
+  consumption that calls `actor.use_ultimate()` before running the plugin.
+- Individual damage type ultimates live in
+  `backend/plugins/actions/ultimate/*.py`. Each module mirrors the logic that
+  used to live in `plugins/damage_types/*.py` (Light, Dark, Fire, Ice,
+  Lightning, Wind, Generic).
+- The turn loop now looks up these actions via
+  `ActionRegistry.instantiate_ultimate(damage_type_id)` so combatants trigger
+  ultimates by damage type instead of hardcoded methods.
+- Legacy `damage_type.ultimate()` methods now delegate to
+  `plugins.actions.ultimate.utils.run_ultimate_action`, preserving compatibility
+  for guidebook exports and targeted unit tests.
+- `run_ultimate_action` constructs a temporary `BattleContext`, executes the
+  plugin, and returns an `ActionResult`, making it ideal for tests that call
+  ultimates without spinning up the full turn loop.
+
+### Special Abilities
+
+- Character-specific actives inherit from `SpecialAbilityBase`
+  (`backend/plugins/actions/special/_base.py`). The base enforces
+  `ActionType.SPECIAL`, wires the standard cost/cooldown helpers, and rejects
+  execution when the actor's `id` does not match the ability's configured
+  `character_id`.
+- Plugins live under `backend/plugins/actions/special/`. The initial migration
+  introduces:
+  - `AllyOverloadCascade` (`special.ally.overload_cascade`) – multi-target
+    damage chain for Ally.
+  - `BeccaMenagerieConvergence` – temporary attack/defense surge plus self-heal.
+  - `CarlyGuardianBarrier` – heals the lowest-HP ally and adds mitigation.
+  - `GraygrayCounterOpus` – defensive stance that buffs her counters.
+  - `IxiaLightningBurst` – heavy single-target burst plus defense shred.
+- `PlayerBase` (and the foe wrapper) now expose `special_abilities`, a list of
+  ability IDs that `initialize_turn_loop` registers via
+  `ActionRegistry.register_character_actions`. This keeps combatant loadouts
+  declarative alongside passives.
+- `player_turn.py` logs the available abilities each time a member acts, checks
+  `ActionRegistry.is_available` to respect cooldowns, and attempts to execute
+  the first ability whose `can_execute` passes before falling back to the basic
+  attack plugin.
+- Ability execution uses the shared `BattleContext`, so plugins can call
+  `apply_damage`, `apply_healing`, or emit BUS events just like the normal and
+  ultimate actions.
+
 ## Implemented Actions
 
 ### BasicAttackAction (`plugins/actions/normal/basic_attack.py`)

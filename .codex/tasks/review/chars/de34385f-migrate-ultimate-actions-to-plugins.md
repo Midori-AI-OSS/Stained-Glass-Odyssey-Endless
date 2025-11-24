@@ -7,7 +7,7 @@
 High
 
 ## Status
-WIP
+REVIEW
 
 ## Description
 Convert damage-type-based ultimate abilities from the current `damage_type.ultimate()` methods to action plugins. Ultimate abilities are currently implemented in damage type files (`backend/plugins/damage_types/*.py`), where each damage type defines its own `ultimate()` method. This migration will make ultimate abilities consistent with the new action plugin system while preserving the damage-type-specific implementations.

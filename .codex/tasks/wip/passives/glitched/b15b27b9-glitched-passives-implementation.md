@@ -126,3 +126,11 @@ Implemented as **subclasses/wrappers of normal passives with doubled mechanics**
 - Automated coverage confirms at least one glitched passive executes its custom logic when a foe spawned via `FoeFactory.build_encounter()` is forced to be glitched.
 - Plugin metadata reflects the availability and intent of the glitched-tier passives, including notes that these are encounter modifiers rather than new standalone characters.
 - Normal-tier passives (e.g., `backend/plugins/passives/normal/luna_lunar_reservoir.py`) no longer hard-code glitched logic once their dedicated variant exists.
+
+## Auditor Notes (2025-02-14) – Changes Required
+
+1. **Missing mimic implementation:** This task advertises 23 passives including `mimic_player_copy_glitched` (.codex/tasks/review/passives/glitched/b15b27b9-glitched-passives-implementation.md:74-101), but there is no matching module anywhere under `backend/plugins/passives/` (a repo-wide search for `mimic_player_copy` returns no results). Please add the glitched mimic passive or adjust the roster/documentation to match reality, then re-run registry discovery to confirm all IDs load.
+2. **No registry or encounter tests for the new passives:** Acceptance calls for a smoke test that forces glitched rolls through `FoeFactory.build_encounter()` (lines 52-63 above). The current suite (`backend/tests/test_tier_passive_stacking.py:1-205` and `backend/tests/test_tier_passives.py:1-205`) only exercises Luna and Ixia, so the other 21 passives have zero automated coverage and we have no regression test that loads all 23 IDs. Please add loader/encounter tests that instantiate every glitched passive (ideally via FoeFactory) so failures surface quickly.
+3. **Tier documentation still says only Luna/Ixia are complete:** `.codex/implementation/tier-passive-system.md:158-187` still lists most glitched passives as “remaining,” which is now inaccurate. Update the implementation status/roster to reflect the newly implemented passives (and ensure Mimic’s status matches the actual code) so future contributors are not sent on duplicate work.
+
+Move this task back to `wip/passives/glitched/` after addressing the above so it can be re-reviewed once the implementation and documentation align with the acceptance criteria.

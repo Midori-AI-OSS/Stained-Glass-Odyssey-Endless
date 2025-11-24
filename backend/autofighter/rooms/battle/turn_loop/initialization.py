@@ -114,6 +114,11 @@ async def initialize_turn_loop(
         action_turn=0,
     )
 
+    _register_special_abilities(
+        action_registry,
+        list(context.combat_party.members) + list(context.foes),
+    )
+
     prepare_snapshot_overlay(
         context.run_id,
         [
@@ -215,6 +220,22 @@ async def _send_initial_progress(context: TurnLoopContext) -> None:
         pacing = 1e-6
 
     await pace_sleep(hold_seconds / pacing)
+
+
+def _register_special_abilities(
+    registry: ActionRegistry,
+    combatants: list[Any],
+) -> None:
+    """Register character-specific special ability loadouts with the registry."""
+
+    if not combatants:
+        return
+    for entity in combatants:
+        ability_ids = getattr(entity, "special_abilities", None)
+        entity_id = str(getattr(entity, "id", ""))
+        if not entity_id or not ability_ids:
+            continue
+        registry.register_character_actions(entity_id, list(ability_ids))
 
 
 def create_battle_context(

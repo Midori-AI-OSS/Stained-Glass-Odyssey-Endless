@@ -91,35 +91,16 @@ class Dark(DamageTypeBase):
         allies: list[Stats],
         enemies: list[Stats],
     ) -> bool:
-        """Strike a foe six times, scaling with allied DoT stacks."""
+        """Strike a foe six times, scaling with allied DoT stacks.
 
-        from autofighter.rooms.battle.pacing import pace_per_target
-        from autofighter.rooms.battle.targeting import select_aggro_target
+        Deprecated wrapper that now routes through the Dark ultimate action.
+        """
 
-        if not await self.consume_ultimate(actor):
-            return False
-        if not enemies:
-            return False
+        from plugins.actions.ultimate.dark_ultimate import DarkUltimate
+        from plugins.actions.ultimate.utils import run_ultimate_action
 
-        stacks = 0
-        for member in allies:
-            mgr = getattr(member, "effect_manager", None)
-            if mgr is not None:
-                stacks += len(getattr(mgr, "dots", []))
-            else:
-                stacks += len(getattr(member, "dots", []))
-
-        multiplier = self.ULT_PER_STACK ** stacks
-        dmg = int(actor.atk * multiplier)
-        for _ in range(6):
-            try:
-                _, target = select_aggro_target(enemies)
-            except ValueError:
-                break
-            dealt = await target.apply_damage(dmg, attacker=actor, action_name="Dark Ultimate")
-            await pace_per_target(actor)
-            await BUS.emit_async("damage", actor, target, dealt)
-        return True
+        result = await run_ultimate_action(DarkUltimate, actor, allies, enemies)
+        return bool(getattr(result, "success", False))
 
     def create_dot(self, damage: float, source) -> DamageOverTime | None:
         return damage_effects.create_dot(self.id, damage, source)

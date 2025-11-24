@@ -30,3 +30,6 @@ class Becca(PlayerBase):
         default_factory=lambda: load_damage_type(choice(ALL_DAMAGE_TYPES))
     )
     passives: list[str] = field(default_factory=lambda: ["becca_menagerie_bond"])
+    special_abilities: list[str] = field(
+        default_factory=lambda: ["special.becca.menagerie_convergence"]
+    )

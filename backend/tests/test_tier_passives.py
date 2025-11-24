@@ -1,4 +1,5 @@
 """Tests for tier-specific passive resolution system."""
+import importlib
 from pathlib import Path
 import sys
 
@@ -237,3 +238,23 @@ def test_passive_registry_contains_tier_passives():
     assert "luna_lunar_reservoir_glitched" in registry._registry
     assert "luna_lunar_reservoir_boss" in registry._registry
     assert "luna_lunar_reservoir_prime" in registry._registry
+
+
+def test_all_boss_passives_register():
+    """Ensure every boss passive module exposes a concrete passive class."""
+
+    plugins_root = Path(__file__).resolve().parents[1] / "plugins" / "passives" / "boss"
+    for module_path in plugins_root.glob("*.py"):
+        if module_path.name.startswith("__"):
+            continue
+        importlib.import_module(f"plugins.passives.boss.{module_path.stem}")
+
+    registry = PassiveRegistry()
+    for module_path in plugins_root.glob("*.py"):
+        if module_path.name.startswith("__"):
+            continue
+        passive_id = f"{module_path.stem}_boss"
+        cls = registry._registry.get(passive_id)
+        assert cls is not None, f"Missing boss passive {passive_id}"
+        instance = cls()
+        assert getattr(instance, "plugin_type", None) == "passive"

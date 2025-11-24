@@ -17,12 +17,14 @@ from ._base import ActionAnimationPlan
 from ._base import ActionBase
 from ._base import ActionCostBreakdown
 from ._base import ActionType
-from ._base import TargetingRules
 from ._base import TargetScope
 from ._base import TargetSide
+from ._base import TargetingRules
 from .context import BattleContext
 from .registry import ActionRegistry
 from .result import ActionResult
+from .special import SpecialAbilityBase
+from .ultimate import UltimateActionBase
 
 log = logging.getLogger(__name__)
 
@@ -112,7 +114,9 @@ __all__ = [
     "ActionRegistry",
     "ActionResult",
     "ActionType",
+    "SpecialAbilityBase",
     "BattleContext",
+    "UltimateActionBase",
     "TargetScope",
     "TargetSide",
     "TargetingRules",

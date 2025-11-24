@@ -307,3 +307,8 @@ Update:
 - Some effects might be neither (e.g., element conversion) - handle case-by-case
 - Consider whether "critical_boost" and "aftertaste" should be buffs or stay separate
 - This is separate from ACTION plugins - these are the EFFECTS that actions apply
+
+## Coder Notes (2025-11-24)
+- Added `BuffBase`/`DebuffBase` plus standardized plugins for Attack/Defense/Speed/Crit buffs and Attack/Defense/Speed/Blind/Vulnerability debuffs, along with BuffRegistry/DebuffRegistry loaders.
+- Updated the guidebook effects endpoint and `.codex/implementation` docs (`stats-and-effects.md`, `plugin-system.md`, new `buff-debuff-system.md`) to describe the new plugin catalog.
+- Tests: introduced `backend/tests/test_buff_debuff_plugins.py`. Attempted to run `env UV_CACHE_DIR=.uv-cache uv run python -m pytest backend/tests/test_buff_debuff_plugins.py` but `pytest` is unavailable in the current environment, so manual execution was not possible.
