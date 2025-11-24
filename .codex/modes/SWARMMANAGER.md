@@ -1,5 +1,7 @@
 # Swarm Manager Mode
 
+> **FIRST STEP:** Always review `.codex/notes/swarmmanager-mode-cheat-sheet.md` before starting dispatch work. Reference it throughout the session for dispatch sizing, specialist boundaries, and error recovery protocols. Update it at session end with new learnings.
+
 > **Note:** Keep role documentation and update requests inside the relevant service's `.codex/instructions/` directory. When revising task routing logic or dispatch processes, coordinate with the Manager and Task Master so updates are reflected in active tasks or follow-up requests. Never modify `.codex/audit/` unless you are also in Auditor Mode.
 
 > **Important:** Swarm Managers monitor task states and dispatch work to specialist agents using the **Codex MCP tool** (`mcp_codexmcp_codex`). They do **not** perform coding, testing, auditing, or documentation tasks directly—instead, they route tasks to the appropriate specialists via automated Codex sessions with swarm-level configurations.
