@@ -4,7 +4,15 @@ from autofighter.buffs import BuffRegistry
 from autofighter.debuffs import DebuffRegistry
 from autofighter.stats import Stats
 from plugins.effects.buffs.attack_up import AttackUp
+from plugins.effects.buffs.crit_damage_up import CritDamageUp
+from plugins.effects.buffs.crit_rate_up import CritRateUp
+from plugins.effects.buffs.defense_up import DefenseUp
+from plugins.effects.buffs.speed_up import SpeedUp
+from plugins.effects.debuffs.attack_down import AttackDown
 from plugins.effects.debuffs.blind import Blind
+from plugins.effects.debuffs.defense_down import DefenseDown
+from plugins.effects.debuffs.speed_down import SpeedDown
+from plugins.effects.debuffs.vulnerability import Vulnerability
 
 
 @pytest.mark.asyncio
@@ -35,6 +43,106 @@ async def test_blind_debuff_reduces_hit_rate():
     blind = Blind()
     await blind.apply(stats)
     assert stats.effect_hit_rate == pytest.approx(base_hit_rate + blind.stat_modifiers["effect_hit_rate"])
+
+
+@pytest.mark.asyncio
+async def test_defense_up_buff_increases_defense():
+    stats = Stats()
+    base_defense = stats.defense
+    buff = DefenseUp(amount=25.0, duration=2)
+    effect = await buff.apply(stats)
+    assert stats.defense == pytest.approx(base_defense + 25.0)
+    assert effect.duration == 2
+    assert effect.stat_modifiers["defense"] == pytest.approx(25.0)
+    effect_names = [active.name for active in stats.get_active_effects()]
+    assert "defense_up" in effect_names
+
+
+@pytest.mark.asyncio
+async def test_speed_up_buff_boosts_speed():
+    stats = Stats()
+    base_speed = stats.spd
+    buff = SpeedUp(amount=6.0, duration=1)
+    effect = await buff.apply(stats)
+    assert stats.spd == pytest.approx(base_speed + 6.0)
+    assert effect.duration == 1
+    assert effect.stat_modifiers["spd"] == pytest.approx(6.0)
+    effect_names = [active.name for active in stats.get_active_effects()]
+    assert "speed_up" in effect_names
+
+
+@pytest.mark.asyncio
+async def test_crit_rate_up_buff_increases_crit_rate():
+    stats = Stats()
+    base_rate = stats.crit_rate
+    buff = CritRateUp(amount=0.1, duration=3)
+    effect = await buff.apply(stats)
+    assert stats.crit_rate == pytest.approx(base_rate + 0.1)
+    assert effect.duration == 3
+    assert effect.stat_modifiers["crit_rate"] == pytest.approx(0.1)
+    effect_names = [active.name for active in stats.get_active_effects()]
+    assert "crit_rate_up" in effect_names
+
+
+@pytest.mark.asyncio
+async def test_crit_damage_up_buff_increases_crit_damage():
+    stats = Stats()
+    base_damage = stats.crit_damage
+    buff = CritDamageUp(amount=0.15, duration=2)
+    effect = await buff.apply(stats)
+    assert stats.crit_damage == pytest.approx(base_damage + 0.15)
+    assert effect.duration == 2
+    assert effect.stat_modifiers["crit_damage"] == pytest.approx(0.15)
+    effect_names = [active.name for active in stats.get_active_effects()]
+    assert "crit_damage_up" in effect_names
+
+
+@pytest.mark.asyncio
+async def test_attack_down_debuff_reduces_attack():
+    stats = Stats()
+    base_attack = stats.atk
+    debuff = AttackDown(duration=1)
+    effect = await debuff.apply(stats)
+    assert stats.atk == pytest.approx(base_attack + effect.stat_modifiers["atk"])
+    assert effect.duration == 1
+    effect_names = [active.name for active in stats.get_active_effects()]
+    assert "attack_down" in effect_names
+
+
+@pytest.mark.asyncio
+async def test_defense_down_debuff_reduces_defense():
+    stats = Stats()
+    base_defense = stats.defense
+    debuff = DefenseDown(duration=1)
+    effect = await debuff.apply(stats)
+    assert stats.defense == pytest.approx(base_defense + effect.stat_modifiers["defense"])
+    assert effect.duration == 1
+    effect_names = [active.name for active in stats.get_active_effects()]
+    assert "defense_down" in effect_names
+
+
+@pytest.mark.asyncio
+async def test_speed_down_debuff_slows_speed():
+    stats = Stats()
+    base_speed = stats.spd
+    debuff = SpeedDown(duration=1)
+    effect = await debuff.apply(stats)
+    assert stats.spd == pytest.approx(base_speed + effect.stat_modifiers["spd"])
+    assert effect.duration == 1
+    effect_names = [active.name for active in stats.get_active_effects()]
+    assert "speed_down" in effect_names
+
+
+@pytest.mark.asyncio
+async def test_vulnerability_debuff_reduces_mitigation():
+    stats = Stats()
+    base_mitigation = stats.mitigation
+    debuff = Vulnerability(duration=2)
+    effect = await debuff.apply(stats)
+    assert stats.mitigation == pytest.approx(base_mitigation + effect.stat_modifiers["mitigation"])
+    assert effect.duration == 2
+    effect_names = [active.name for active in stats.get_active_effects()]
+    assert "vulnerability" in effect_names
 
 
 @pytest.mark.asyncio
