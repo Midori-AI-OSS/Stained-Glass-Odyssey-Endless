@@ -308,6 +308,11 @@ Update:
 - Consider whether "critical_boost" and "aftertaste" should be buffs or stay separate
 - This is separate from ACTION plugins - these are the EFFECTS that actions apply
 
+## Task Master Sign-off
+- Date: 2025-11-25
+- Acceptance: Reviewed and confirmed ready for final closure.
+Task Master: ready for final closure
+
 ## Coder Notes (2025-11-24)
 - Added `BuffBase`/`DebuffBase` plus standardized plugins for Attack/Defense/Speed/Crit buffs and Attack/Defense/Speed/Blind/Vulnerability debuffs, along with BuffRegistry/DebuffRegistry loaders.
 - Updated the guidebook effects endpoint and `.codex/implementation` docs (`stats-and-effects.md`, `plugin-system.md`, new `buff-debuff-system.md`) to describe the new plugin catalog.

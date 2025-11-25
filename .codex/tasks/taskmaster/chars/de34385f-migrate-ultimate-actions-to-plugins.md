@@ -238,3 +238,8 @@ For each damage type file:
 - Ultimate actions should emit proper events for logging/analytics
 - Keep the damage type mapping clear (damage_type.id → ultimate action ID)
 - May want to create a registry method like `get_ultimate_for_damage_type(damage_type_id)`
+
+## Task Master Sign-off
+- Date: 2025-11-25
+- Acceptance: Reviewed and confirmed ready for final closure.
+Task Master: ready for final closure

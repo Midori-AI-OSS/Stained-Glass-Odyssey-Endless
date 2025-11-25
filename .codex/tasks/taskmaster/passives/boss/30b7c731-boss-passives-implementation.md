@@ -31,3 +31,8 @@ passive, exactly the tight coupling we are trying to eliminate.
 - Battle simulations (unit or integration tests) verify representative boss passives execute their intended effects.
 - Plugin metadata documents the presence and purpose of the boss-specific passives.
 - Normal-tier passives no longer contain boss-only escape hatches once their boss variant exists.
+
+## Task Master Sign-off
+- Date: 2025-11-25
+- Acceptance: Reviewed and confirmed ready for final closure.
+Task Master: ready for final closure
