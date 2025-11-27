@@ -239,7 +239,8 @@ def load_llm(model: str | None = None, *, gguf_path: str | None = None, validate
 
     # Validate local LRM if requested
     if validate:
-        log.info(f"Validating local LRM: {name}")
+        sanitized_name = name.replace('\r\n', '').replace('\n', '').replace('\r', '')
+        log.info(f"Validating local LRM: {sanitized_name}")
         # Note: validation is async, log intent for now
         log.info("Local LRM loaded. Validation will occur on first use.")
 
