@@ -3,6 +3,7 @@ import { haltSync, overlayBlocking } from './overlayState.js';
 import { normalizePartyIds, runStateStore, saveRunState } from './runState.js';
 import { getUIState, getMap, roomAction } from './uiApi.js';
 import { shouldHandleRunEndError } from './runErrorGuard.js';
+import { dedupeTieredPassives } from './passiveUtils.js';
 
 const DEFAULT_SUCCESS_DELAY_MS = 1000;
 const DEFAULT_RETRY_BASE_MS = 2000;
@@ -70,16 +71,16 @@ function createPollGate({ haltStore, overlayStore, resolveOverlayView }) {
 function mapStatuses(snapshot) {
   if (!snapshot) return snapshot;
   function map(list = []) {
-    return list.map((f) => {
-      const status = f.status || {};
-      return {
-        ...f,
-        passives: status.passives || f.passives || [],
-        dots: status.dots || f.dots || [],
-        hots: status.hots || f.hots || []
-      };
-    });
-  }
+      return list.map((f) => {
+        const status = f.status || {};
+        return {
+          ...f,
+          passives: dedupeTieredPassives(status.passives || f.passives || []),
+          dots: status.dots || f.dots || [],
+          hots: status.hots || f.hots || []
+        };
+      });
+    }
   if (snapshot && !Array.isArray(snapshot.party) && snapshot.party && typeof snapshot.party === 'object') {
     snapshot.party = Object.values(snapshot.party);
   }

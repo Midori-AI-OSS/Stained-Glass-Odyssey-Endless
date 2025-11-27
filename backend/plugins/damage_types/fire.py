@@ -3,7 +3,6 @@ from dataclasses import dataclass
 import math
 
 from autofighter.effects import DamageOverTime
-from autofighter.effects import EffectManager
 from autofighter.stats import BUS
 from autofighter.stats import Stats
 from plugins import damage_effects
@@ -42,31 +41,16 @@ class Fire(DamageTypeBase):
         return dmg
 
     async def ultimate(self, actor: Stats, allies: list[Stats], enemies: list[Stats]) -> bool:
-        """Blast all foes for the caster's attack and try to ignite them."""
-        from autofighter.rooms.battle.pacing import pace_per_target
-        from autofighter.rooms.battle.targeting import select_aggro_target
+        """Blast all foes for the caster's attack and try to ignite them.
 
-        await super().ultimate(actor, allies, enemies)
-        base = getattr(actor, "atk", 0)
-        if base <= 0:
-            return True
-        hit_count = sum(1 for foe in enemies if getattr(foe, "hp", 0) > 0)
-        for _ in range(hit_count):
-            try:
-                _, foe = select_aggro_target(enemies)
-            except ValueError:
-                break
-            dealt = await foe.apply_damage(base, attacker=actor, action_name="Fire Ultimate")
-            await pace_per_target(actor)
-            mgr = getattr(foe, "effect_manager", None)
-            if mgr is None:
-                mgr = EffectManager(foe)
-                foe.effect_manager = mgr
-            try:
-                await mgr.maybe_inflict_dot(actor, dealt)
-            except Exception:
-                pass
-        return True
+        Deprecated wrapper routed through the Fire ultimate action plugin.
+        """
+
+        from plugins.actions.ultimate.fire_ultimate import FireUltimate
+        from plugins.actions.ultimate.utils import run_ultimate_action
+
+        result = await run_ultimate_action(FireUltimate, actor, allies, enemies)
+        return bool(getattr(result, "success", False))
 
     def _on_ultimate_used(self, user: Stats) -> None:
         if getattr(user, "damage_type", None) is not self:

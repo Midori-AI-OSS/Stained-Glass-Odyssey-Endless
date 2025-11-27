@@ -22,38 +22,16 @@ class Ice(DamageTypeBase):
         allies: list[Stats],
         enemies: list[Stats],
     ) -> bool:
-        """Strike all foes six times, ramping damage by 30% per target."""
-        from autofighter.rooms.battle.pacing import pace_per_target
-        from autofighter.rooms.battle.targeting import select_aggro_target
+        """Strike all foes six times, ramping damage by 30% per target.
 
-        if not await self.consume_ultimate(actor):
-            return False
+        Deprecated wrapper that now routes through the Ice ultimate action.
+        """
 
-        base = actor.atk
-        for _ in range(6):
-            hits_remaining = sum(1 for foe in enemies if getattr(foe, "hp", 0) > 0)
-            if hits_remaining <= 0:
-                break
-            bonus = 1.0
-            wave_hits = 0
-            for _ in range(hits_remaining):
-                try:
-                    _, enemy = select_aggro_target(enemies)
-                except ValueError:
-                    hits_remaining = 0
-                    break
-                dmg = int(base * bonus)
-                await enemy.apply_damage(
-                    dmg,
-                    attacker=actor,
-                    action_name="Ice Ultimate",
-                )
-                await pace_per_target(actor)
-                wave_hits += 1
-                bonus += 0.3
-            if wave_hits > 0:
-                await pace_per_target(actor)
-        return True
+        from plugins.actions.ultimate.ice_ultimate import IceUltimate
+        from plugins.actions.ultimate.utils import run_ultimate_action
+
+        result = await run_ultimate_action(IceUltimate, actor, allies, enemies)
+        return bool(getattr(result, "success", False))
 
     @classmethod
     def get_ultimate_description(cls) -> str:

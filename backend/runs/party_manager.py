@@ -218,8 +218,9 @@ def _assign_damage_type(player: PlayerBase) -> None:
         if row:
             player.damage_type = load_damage_type(row[0])
         else:
+            # Use INSERT OR IGNORE to avoid UNIQUE constraint errors if row was created by concurrent request
             conn.execute(
-                "INSERT INTO damage_types (id, type) VALUES (?, ?)",
+                "INSERT OR IGNORE INTO damage_types (id, type) VALUES (?, ?)",
                 (player.id, player.element_id),
             )
 

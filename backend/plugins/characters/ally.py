@@ -30,3 +30,6 @@ class Ally(PlayerBase):
         default_factory=lambda: load_damage_type(choice(ALL_DAMAGE_TYPES))
     )
     passives: list[str] = field(default_factory=lambda: ["ally_overload"])
+    special_abilities: list[str] = field(
+        default_factory=lambda: ["special.ally.overload_cascade"]
+    )

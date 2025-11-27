@@ -193,19 +193,24 @@ class TestAdvancedPassiveBehaviors:
         # Create a simple passive without enhanced context support
         simple_member = Stats()
         simple_member.id = "simple_member"
-        simple_member.passives = ["attack_up"]  # Existing simple passive
+        simple_member.passives = ["luna_lunar_reservoir"]  # Existing simple passive
 
         # Should not raise error when called with enhanced context
         await registry.trigger(
-            "battle_start",
+            "action_taken",
             simple_member,
             party=[simple_member],
-            foes=[]
+            foes=[],
+            action_name="slash"
         )
 
-        # Should have applied the simple effect
-        effects = simple_member.get_active_effects()
-        assert len(effects) > 0
+        # Luna passive uses internal state tracking, so check that it was triggered
+        from plugins.passives.normal.luna_lunar_reservoir import LunaLunarReservoir
+        entity_id = id(simple_member)
+        charge = LunaLunarReservoir._charge_points.get(entity_id, 0)
+        assert charge > 0, "Luna passive should have accumulated charge"
+        # Clean up
+        LunaLunarReservoir._charge_points.clear()
 
 
 if __name__ == "__main__":

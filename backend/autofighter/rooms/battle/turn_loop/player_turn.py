@@ -9,6 +9,7 @@ from typing import Any
 from autofighter.effects import EffectManager
 from autofighter.stats import BUS
 from autofighter.summons.manager import SummonManager
+from plugins.actions import TargetScope
 
 from ..logging import queue_log
 from ..pacing import _EXTRA_TURNS
@@ -31,6 +32,7 @@ from ..turns import push_progress_update
 from ..turns import register_snapshot_entities
 from ..turns import update_enrage_state
 from .initialization import TurnLoopContext
+from .initialization import create_battle_context
 from .timeouts import TURN_TIMEOUT_SECONDS
 from .timeouts import TurnTimeoutError
 from .timeouts import identify_actor
@@ -383,56 +385,143 @@ async def _run_player_turn_iteration(
             battle_over=not context.foes,
         )
 
-    prepare_action_attack_metadata(member)
-    damage = await target_foe.apply_damage(
-        member.atk,
-        attacker=member,
-        action_name="Normal Attack",
-    )
-    if damage <= 0:
-        queue_log(
-            "%s's attack was dodged by %s",
-            getattr(member, "id", member),
-            getattr(target_foe, "id", target_foe),
-        )
-    else:
-        queue_log(
-            "%s hits %s for %s",
-            getattr(member, "id", member),
-            getattr(target_foe, "id", target_foe),
-            damage,
-        )
-        damage_type_id = (
-            getattr(member.damage_type, "id", "generic")
-            if hasattr(member, "damage_type")
-            else "generic"
-        )
-        await BUS.emit_async(
-            "hit_landed",
-            member,
-            target_foe,
-            damage,
-            "attack",
-            f"{damage_type_id}_attack",
-        )
-        await context.registry.trigger_hit_landed(
-            member,
-            target_foe,
-            damage,
-            "attack",
-            damage_type=damage_type_id,
-            party=context.combat_party.members,
-            foes=context.foes,
-        )
-
-    await target_manager.maybe_inflict_dot(member, damage)
+    ability_used = False
+    damage = 0
     targets_hit = 1
     animation_targets_hit = targets_hit
     spread_targets: list[tuple[Any, Any]] | None = None
     damage_type = getattr(member, "damage_type", None)
     damage_type_id = getattr(damage_type, "id", "").lower()
     spread_behavior: Any | None = None
-    if damage_type is not None:
+    battle_context = None
+    prioritized_enemies: list[Any] | None = None
+
+    if context.action_registry is not None:
+        prioritized_enemies = _prioritize_primary_target(
+            list(context.foes),
+            target_index,
+        )
+        battle_context = create_battle_context(
+            context,
+            phase="player",
+            actor=member,
+            allies=list(context.combat_party.members),
+            enemies=prioritized_enemies,
+        )
+        _log_special_abilities(member, context.action_registry)
+        ability_used = await _try_special_ability(
+            member,
+            context.action_registry,
+            battle_context,
+        )
+
+    if not ability_used:
+        if context.action_registry is not None:
+            if battle_context is None:
+                battle_context = create_battle_context(
+                    context,
+                    phase="player",
+                    actor=member,
+                    allies=list(context.combat_party.members),
+                    enemies=list(context.foes),
+                )
+            try:
+                action = context.action_registry.instantiate("normal.basic_attack")
+                result = await action.run(member, [target_foe], battle_context)
+
+                for message in result.messages:
+                    queue_log(message)
+
+                target_id = str(getattr(target_foe, "id", id(target_foe)))
+                damage = result.damage_dealt.get(target_id, 0)
+            except Exception as e:
+                log.warning(f"Action plugin execution failed, using fallback: {e}")
+                prepare_action_attack_metadata(member)
+                damage = await target_foe.apply_damage(
+                    member.atk,
+                    attacker=member,
+                    action_name="Normal Attack",
+                )
+                if damage <= 0:
+                    queue_log(
+                        "%s's attack was dodged by %s",
+                        getattr(member, "id", member),
+                        getattr(target_foe, "id", target_foe),
+                    )
+                else:
+                    queue_log(
+                        "%s hits %s for %s",
+                        getattr(member, "id", member),
+                        getattr(target_foe, "id", target_foe),
+                        damage,
+                    )
+                    damage_type_id = (
+                        getattr(member.damage_type, "id", "generic")
+                        if hasattr(member, "damage_type")
+                        else "generic"
+                    )
+                    await BUS.emit_async(
+                        "hit_landed",
+                        member,
+                        target_foe,
+                        damage,
+                        "attack",
+                        f"{damage_type_id}_attack",
+                    )
+                    await context.registry.trigger_hit_landed(
+                        member,
+                        target_foe,
+                        damage,
+                        "attack",
+                        damage_type=damage_type_id,
+                        party=context.combat_party.members,
+                        foes=context.foes,
+                    )
+                await target_manager.maybe_inflict_dot(member, damage)
+        else:
+            prepare_action_attack_metadata(member)
+            damage = await target_foe.apply_damage(
+                member.atk,
+                attacker=member,
+                action_name="Normal Attack",
+            )
+            if damage <= 0:
+                queue_log(
+                    "%s's attack was dodged by %s",
+                    getattr(member, "id", member),
+                    getattr(target_foe, "id", target_foe),
+                )
+            else:
+                queue_log(
+                    "%s hits %s for %s",
+                    getattr(member, "id", member),
+                    getattr(target_foe, "id", target_foe),
+                    damage,
+                )
+                damage_type_id = (
+                    getattr(member.damage_type, "id", "generic")
+                    if hasattr(member, "damage_type")
+                    else "generic"
+                )
+                await BUS.emit_async(
+                    "hit_landed",
+                    member,
+                    target_foe,
+                    damage,
+                    "attack",
+                    f"{damage_type_id}_attack",
+                )
+                await context.registry.trigger_hit_landed(
+                    member,
+                    target_foe,
+                    damage,
+                    "attack",
+                    damage_type=damage_type_id,
+                    party=context.combat_party.members,
+                    foes=context.foes,
+                )
+            await target_manager.maybe_inflict_dot(member, damage)
+    if not ability_used and damage_type is not None:
         get_turn_spread = getattr(damage_type, "get_turn_spread", None)
         if callable(get_turn_spread):
             try:
@@ -574,7 +663,10 @@ async def _run_player_turn_iteration(
     )
     await context.registry.trigger_turn_end(member)
 
-    member.action_points = max(0, member.action_points - 1)
+    # Only manually decrement action points if action registry is not being used
+    # (the action plugin system handles cost deduction in ActionCostBreakdown.apply)
+    if context.action_registry is None:
+        member.action_points = max(0, member.action_points - 1)
     if (
         _EXTRA_TURNS.get(id(member), 0) > 0
         and member.hp > 0
@@ -617,13 +709,18 @@ async def _handle_ultimate(
     member: Any,
     damage_type: Any,
 ) -> None:
-    if not (
-        getattr(member, "ultimate_ready", False)
-        and hasattr(damage_type, "ultimate")
-    ):
+    if not getattr(member, "ultimate_ready", False):
         return
 
     ultimate_type = getattr(getattr(member, "damage_type", None), "id", "generic")
+    registry = context.action_registry
+    action = None
+    if registry is not None:
+        try:
+            action = registry.instantiate_ultimate(ultimate_type)
+        except Exception:
+            action = None
+
     try:
         await BUS.emit_async(
             "ultimate_used",
@@ -633,11 +730,28 @@ async def _handle_ultimate(
             "ultimate",
             {"ultimate_type": ultimate_type},
         )
-        await damage_type.ultimate(
-            member,
-            context.combat_party.members,
-            context.foes,
-        )
+        if action is not None:
+            battle_context = create_battle_context(
+                context,
+                phase="player",
+                actor=member,
+                allies=list(context.combat_party.members),
+                enemies=list(context.foes),
+            )
+            targets = action.get_valid_targets(
+                member,
+                battle_context.allies,
+                battle_context.enemies,
+            )
+            await action.run(member, targets, battle_context)
+        elif hasattr(damage_type, "ultimate"):
+            await damage_type.ultimate(
+                member,
+                context.combat_party.members,
+                context.foes,
+            )
+        else:
+            log.debug("No ultimate action available for %s", ultimate_type)
         await BUS.emit_async(
             "ultimate_completed",
             member,
@@ -655,6 +769,101 @@ async def _handle_ultimate(
             "ultimate",
             {"ultimate_type": ultimate_type, "error": str(exc)},
         )
+
+
+def _log_special_abilities(member: Any, registry: Any) -> None:
+    """Emit a combat log entry listing available special abilities."""
+
+    character_id = str(getattr(member, "id", ""))
+    if not character_id:
+        return
+    try:
+        actions = registry.get_character_actions(character_id)
+    except Exception:
+        return
+    labels: list[str] = []
+    for action_class in actions:
+        try:
+            ability = action_class()
+        except Exception:
+            continue
+        try:
+            ready = registry.is_available(member, ability)
+        except Exception:
+            ready = False
+        status = "ready" if ready else "cooldown"
+        labels.append(f"{ability.name} ({status})")
+    if labels:
+        queue_log(
+            "%s abilities: %s",
+            getattr(member, "id", "actor"),
+            ", ".join(labels),
+        )
+
+
+async def _try_special_ability(
+    member: Any,
+    registry: Any,
+    battle_context,
+) -> bool:
+    """Attempt to execute the first available special ability."""
+
+    character_id = str(getattr(member, "id", ""))
+    if not character_id:
+        return False
+    try:
+        actions = registry.get_character_actions(character_id)
+    except Exception:
+        return False
+    if not actions:
+        return False
+
+    for action_class in actions:
+        try:
+            ability = action_class()
+        except Exception as exc:
+            log.warning("Failed to instantiate special ability %s: %s", action_class, exc)
+            continue
+        try:
+            targets = ability.get_valid_targets(
+                member,
+                battle_context.allies,
+                battle_context.enemies,
+            )
+            if not targets and getattr(ability.targeting, "scope", None) is TargetScope.SELF:
+                targets = [member]
+            if not targets:
+                continue
+            if not await ability.can_execute(member, targets, battle_context):
+                continue
+            queue_log(
+                "%s uses %s",
+                getattr(member, "id", "actor"),
+                ability.name,
+            )
+            result = await ability.run(member, targets, battle_context)
+            for message in result.messages:
+                queue_log(message)
+            return True
+        except Exception as exc:
+            log.warning("Special ability %s failed: %s", getattr(ability, "id", ability), exc)
+            continue
+    return False
+
+
+def _prioritize_primary_target(
+    enemies: list[Any],
+    index: int,
+) -> list[Any]:
+    """Place the selected aggro target at the front of the enemy list."""
+
+    if not enemies:
+        return enemies
+    if index <= 0 or index >= len(enemies):
+        return enemies
+    primary = enemies[index]
+    remaining = enemies[:index] + enemies[index + 1 :]
+    return [primary, *remaining]
 
 
 def _collect_wind_spread_targets(

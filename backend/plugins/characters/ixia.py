@@ -19,3 +19,6 @@ class Ixia(PlayerBase):
         default_factory=lambda: load_damage_type("Lightning")
     )
     passives: list[str] = field(default_factory=lambda: ["ixia_tiny_titan"])
+    special_abilities: list[str] = field(
+        default_factory=lambda: ["special.ixia.lightning_burst"]
+    )

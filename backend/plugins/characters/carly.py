@@ -33,6 +33,9 @@ class Carly(PlayerBase):
     passives: list[str] = field(default_factory=lambda: ["carly_guardians_aegis"])
     # UI hint: show numeric actions indicator
     actions_display: str = "number"
+    special_abilities: list[str] = field(
+        default_factory=lambda: ["special.carly.guardian_barrier"]
+    )
 
     def __post_init__(self) -> None:
         super().__post_init__()

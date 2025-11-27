@@ -21,7 +21,7 @@ async def test_serialize_effect_details():
     await call_maybe_async(mgr.add_dot, DamageOverTime("burn", 5, 1, "burn", source))
     await call_maybe_async(mgr.add_hot, HealingOverTime("regen", 3, 1, "regen", source))
 
-    target.passives = ["attack_up", "luna_lunar_reservoir", "luna_lunar_reservoir"]
+    target.passives = ["luna_lunar_reservoir", "luna_lunar_reservoir"]
 
     data = _serialize(target)
 
@@ -47,10 +47,6 @@ async def test_serialize_effect_details():
             "stacks": 1,
         }
     ]
-    assert any(
-        p["id"] == "attack_up" and p["stacks"] == 1 and p["max_stacks"] is None
-        for p in data["passives"]
-    )
     assert any(
         p["id"] == "luna_lunar_reservoir" and p["stacks"] == 0 and p["max_stacks"] == 2000
         for p in data["passives"]

@@ -1,3 +1,84 @@
-# Reserved for future boss passive.
+from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
-pass
+from plugins.passives.normal.hilander_critical_ferment import HilanderCriticalFerment
+
+if TYPE_CHECKING:
+    from autofighter.stats import Stats
+
+
+@dataclass
+class HilanderCriticalFermentBoss(HilanderCriticalFerment):
+    """Boss Critical Ferment with 1.5× crit rate/damage stacks."""
+
+    plugin_type = "passive"
+    id = "hilander_critical_ferment_boss"
+    name = "Critical Ferment (Boss)"
+    trigger = "hit_landed"
+    stack_display = "pips"
+
+    async def apply(
+        self,
+        attacker: "Stats",
+        hit_target=None,
+        damage=None,
+        action_type=None,
+        event=None,
+        stack_index=None,
+        **_kwargs,
+    ) -> None:
+        """Build stacks that grant +7.5% crit rate and +15% crit damage."""
+
+        import random
+        from weakref import ref
+
+        from autofighter.stat_effect import StatEffect
+        from autofighter.stats import BUS
+
+        ferment_stacks = sum(
+            1
+            for effect in attacker._active_effects
+            if effect.name.startswith(f"{self.id}_crit_stack") and effect.name.endswith("_rate")
+        )
+
+        if ferment_stacks >= 20:
+            chance = max(0.01, 1 - 0.05 * (ferment_stacks - 19))
+            if random.random() >= chance:
+                return
+
+        stack_id = ferment_stacks + 1
+        crit_rate_bonus = StatEffect(
+            name=f"{self.id}_crit_stack_{stack_id}_rate",
+            stat_modifiers={"crit_rate": 0.075},
+            duration=-1,
+            source=self.id,
+        )
+        attacker.add_effect(crit_rate_bonus)
+
+        crit_damage_bonus = StatEffect(
+            name=f"{self.id}_crit_stack_{stack_id}_damage",
+            stat_modifiers={"crit_damage": 0.15},
+            duration=-1,
+            source=self.id,
+        )
+        attacker.add_effect(crit_damage_bonus)
+
+        if getattr(attacker, "_hilander_crit_cb", None) is None:
+            attacker_ref = ref(attacker)
+
+            def _crit(crit_attacker, crit_target, crit_damage, *_args, **_kwargs) -> None:
+                tgt = attacker_ref()
+                if tgt is None:
+                    BUS.unsubscribe("critical_hit", _crit)
+                    return
+                if crit_attacker is tgt:
+                    self.on_critical_hit(tgt, crit_target, crit_damage)
+
+            BUS.subscribe("critical_hit", _crit)
+            attacker._hilander_crit_cb = _crit
+
+    @classmethod
+    def get_description(cls) -> str:
+        return (
+            "[BOSS] Each hit adds +7.5% crit rate and +15% crit damage (max 20 stacks before decay odds). Critical hits still trigger Aftertaste and consume a stack."
+        )

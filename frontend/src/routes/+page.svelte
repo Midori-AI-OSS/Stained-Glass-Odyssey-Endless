@@ -54,6 +54,7 @@
   import { computeAutomationAction } from '$lib/utils/rewardAutomation.js';
   import { RewardAutomationScheduler, actionsEqual as automationActionEquals } from '$lib/utils/rewardAutomationScheduler.js';
   import { motionStore } from '$lib/systems/settingsStorage.js';
+  import { dedupeTieredPassives } from '$lib/systems/passiveUtils.js';
 
   const runState = runStateStore;
 
@@ -217,7 +218,7 @@
         const status = f.status || {};
         return {
           ...f,
-          passives: status.passives || f.passives || [],
+          passives: dedupeTieredPassives(status.passives || f.passives || []),
           dots: status.dots || f.dots || [],
           hots: status.hots || f.hots || []
         };

@@ -1,8 +1,6 @@
 from dataclasses import dataclass
 
 from autofighter.effects import DamageOverTime
-from autofighter.effects import EffectManager
-from autofighter.effects import create_stat_buff
 from autofighter.stats import BUS
 from plugins import damage_effects
 from plugins.damage_types._base import DamageTypeBase
@@ -47,65 +45,17 @@ class Light(DamageTypeBase):
         return True
 
     async def ultimate(self, actor, allies, enemies):
-        """Fully heal allies, cleanse their DoTs, and weaken enemies."""
-        from autofighter.rooms.battle.pacing import pace_per_target
+        """Fully heal allies, cleanse their DoTs, and weaken enemies.
 
-        if not await self.consume_ultimate(actor):
-            return False
-        for ally in allies:
-            if getattr(ally, "hp", 0) <= 0:
-                continue
-            mgr = getattr(ally, "effect_manager", None)
-            if mgr is None:
-                mgr = EffectManager(ally)
-                ally.effect_manager = mgr
+        Deprecated: routed through the Light ultimate action plugin.
+        """
 
-            # Remove all DoTs from the ally and their effect manager
-            removed_dots = []
-            for dot in list(mgr.dots):
-                try:
-                    mgr.dots.remove(dot)
-                    ally.dots.remove(dot.id)
-                    removed_dots.append(dot)
-                except ValueError:
-                    pass
+        from plugins.actions.ultimate.light_ultimate import LightUltimate
+        from plugins.actions.ultimate.utils import run_ultimate_action
 
-            for dot in removed_dots:
-                BUS.emit_batched(
-                    "dot_cleansed",
-                    actor,
-                    ally,
-                    getattr(dot, "id", None),
-                    {
-                        "dot_name": getattr(dot, "name", None),
-                        "remaining_turns": getattr(dot, "turns", None),
-                        "dot_damage": getattr(dot, "damage", None),
-                    },
-                )
-
-            missing = ally.max_hp - ally.hp
-            if missing > 0:
-                await ally.apply_healing(missing, healer=actor, source_type="ultimate", source_name="Light Ultimate")
-            await pace_per_target(actor)
-
-        for enemy in enemies:
-            if getattr(enemy, "hp", 0) <= 0:
-                continue
-            mgr = getattr(enemy, "effect_manager", None)
-            if mgr is None:
-                mgr = EffectManager(enemy)
-                enemy.effect_manager = mgr
-            mod = create_stat_buff(
-                enemy,
-                name="light_ultimate_def_down",
-                turns=10,
-                defense_mult=0.75,
-            )
-            await mgr.add_modifier(mod)
-            await pace_per_target(actor)
-
+        result = await run_ultimate_action(LightUltimate, actor, allies, enemies)
         await BUS.emit_async("light_ultimate", actor)
-        return True
+        return bool(getattr(result, "success", False))
 
     @classmethod
     def get_ultimate_description(cls) -> str:

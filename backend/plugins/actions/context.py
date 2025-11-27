@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from dataclasses import field
+from types import MethodType
 from typing import TYPE_CHECKING
 from typing import Any
 from typing import Sequence
@@ -67,12 +68,25 @@ class BattleContext:
     ) -> int:
         """Apply damage via the standard battle pipeline.
 
-        This placeholder defers to the existing helpers in
-        :mod:`autofighter.rooms.battle.resolution`. A follow-up task will wire
-        those helpers into this method.
+        Delegates to the existing :meth:`Stats.apply_damage` method while
+        optionally staging metadata for tracking purposes. The damage type
+        parameter is currently unused but reserved for future elemental
+        infusion mechanics.
         """
 
-        raise NotImplementedError("Damage resolution will be wired up in task 4afe1e97")
+        # Stage attack metadata if provided so Stats.apply_damage can consume it
+        if metadata:
+            setattr(attacker, "_pending_attack_metadata", metadata)
+
+        # Call the existing damage application logic
+        damage_dealt = await target.apply_damage(
+            amount,
+            attacker=attacker,
+            trigger_on_hit=True,
+            action_name=metadata.get("action_name") if metadata else None,
+        )
+
+        return damage_dealt
 
     async def apply_healing(
         self,
@@ -81,10 +95,46 @@ class BattleContext:
         amount: float,
         *,
         overheal_allowed: bool = False,
+        source_type: str = "Generic",
+        source_name: str = "system",
     ) -> int:
-        """Apply healing through the shared battle helpers."""
+        """Apply healing through the shared battle helpers.
 
-        raise NotImplementedError("Healing resolution will be wired up in task 4afe1e97")
+        Delegates to :meth:`Stats.apply_healing` so vitality scaling, enrage
+        penalties, and BUS/passive hooks remain consistent with direct calls.
+        Temporarily enables overheal/shield conversion when requested.
+        """
+
+        previous_overheal = getattr(target, "overheal_enabled", False)
+        should_enable_overheal = overheal_allowed and not previous_overheal
+        overheal_changed_by_listeners = False
+
+        if should_enable_overheal:
+            target.overheal_enabled = True
+
+            original_setattr = target.__setattr__
+
+            def _tracking_setattr(self, name, value):
+                nonlocal overheal_changed_by_listeners
+
+                if name == "overheal_enabled":
+                    overheal_changed_by_listeners = True
+                return original_setattr(name, value)
+
+            target.__setattr__ = MethodType(_tracking_setattr, target)
+
+        try:
+            return await target.apply_healing(
+                amount,
+                healer=healer,
+                source_type=source_type or "Generic",
+                source_name=source_name or "system",
+            )
+        finally:
+            if should_enable_overheal:
+                target.__setattr__ = original_setattr
+                if not overheal_changed_by_listeners:
+                    target.overheal_enabled = previous_overheal
 
     def spend_resource(self, actor: "Stats", resource: str, amount: int) -> None:
         """Deduct a resource from *actor*.

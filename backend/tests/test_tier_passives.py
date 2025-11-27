@@ -1,4 +1,5 @@
 """Tests for tier-specific passive resolution system."""
+import importlib
 from pathlib import Path
 import sys
 
@@ -148,12 +149,12 @@ def test_apply_rank_passives_multiple():
     """Test applying rank passives with multiple passives."""
     luna = Luna()
     luna.rank = "glitched"
-    luna.passives = ["luna_lunar_reservoir", "attack_up"]
+    luna.passives = ["luna_lunar_reservoir", "ixia_tiny_titan"]
 
     apply_rank_passives(luna)
 
     # Both should be resolved to glitched variants
-    assert luna.passives == ["luna_lunar_reservoir_glitched", "attack_up_glitched"]
+    assert luna.passives == ["luna_lunar_reservoir_glitched", "ixia_tiny_titan_glitched"]
 
 
 def test_apply_rank_passives_glitched_prime_boss():
@@ -237,3 +238,23 @@ def test_passive_registry_contains_tier_passives():
     assert "luna_lunar_reservoir_glitched" in registry._registry
     assert "luna_lunar_reservoir_boss" in registry._registry
     assert "luna_lunar_reservoir_prime" in registry._registry
+
+
+def test_all_boss_passives_register():
+    """Ensure every boss passive module exposes a concrete passive class."""
+
+    plugins_root = Path(__file__).resolve().parents[1] / "plugins" / "passives" / "boss"
+    for module_path in plugins_root.glob("*.py"):
+        if module_path.name.startswith("__"):
+            continue
+        importlib.import_module(f"plugins.passives.boss.{module_path.stem}")
+
+    registry = PassiveRegistry()
+    for module_path in plugins_root.glob("*.py"):
+        if module_path.name.startswith("__"):
+            continue
+        passive_id = f"{module_path.stem}_boss"
+        cls = registry._registry.get(passive_id)
+        assert cls is not None, f"Missing boss passive {passive_id}"
+        instance = cls()
+        assert getattr(instance, "plugin_type", None) == "passive"
