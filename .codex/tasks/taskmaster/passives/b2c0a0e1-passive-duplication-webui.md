@@ -58,3 +58,10 @@ Goal: Reproduce and isolate why some characters (seen on Luna and Chibi) render 
 
 ### Next Steps
 - No automated tests were run (UI-only change).
+
+---
+Task Status: Approved (fix live in frontend)
+Auditor Notes: Confirmed `dedupeTieredPassives` utility is wired in `frontend/src/lib/systems/passiveUtils.js` and called from `+page.svelte`, `pollingOrchestrator.js`, and `BattleView.svelte`, removing duplicate passive icons for tiered passives. UI tests not run here; appears ready for Task Master closure.
+Reviewed by: Codex (Auditor Mode)
+Date: 2025-11-29
+---

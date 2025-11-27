@@ -148,3 +148,10 @@ This appears to be legacy code from before the tier system was fully implemented
 - `.codex/tasks/taskmaster/passives/glitched/4499b34b-luna-glitched-passive.md` - Approved conditionally on this fix
 - `.codex/tasks/taskmaster/passives/prime/91661353-luna-prime-passive.md` - Approved conditionally on this fix
 - `.codex/tasks/taskmaster/passives/boss/2cd60c9a-luna-boss-passive.md` - Approved (boss works but other tiers don't)
+
+---
+Task Status: Approved (fix present in code)
+Auditor Notes: `_LunaSwordCoordinator._handle_hit()` now only registers the sword and emits `luna_sword_hit`; manual charge/heal calls and `charge_handled` flags are removed in `backend/plugins/characters/luna.py`. Tier passives handle charge/heal via the event bus. Tests not re-run in this pass.
+Reviewed by: Codex (Auditor Mode)
+Date: 2025-11-29
+---
