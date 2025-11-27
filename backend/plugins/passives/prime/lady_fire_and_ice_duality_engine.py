@@ -4,7 +4,9 @@ from typing import Iterable
 
 from autofighter.effects import HealingOverTime
 from autofighter.stat_effect import StatEffect
-from plugins.passives.normal.lady_fire_and_ice_duality_engine import LadyFireAndIceDualityEngine
+from plugins.passives.normal.lady_fire_and_ice_duality_engine import (
+    LadyFireAndIceDualityEngine,
+)
 
 if TYPE_CHECKING:
     from autofighter.stats import Stats

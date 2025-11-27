@@ -5,7 +5,9 @@ from typing import Optional
 from autofighter.effects import DamageOverTime
 from autofighter.effects import HealingOverTime
 from autofighter.stat_effect import StatEffect
-from plugins.passives.normal.lady_of_fire_infernal_momentum import LadyOfFireInfernalMomentum
+from plugins.passives.normal.lady_of_fire_infernal_momentum import (
+    LadyOfFireInfernalMomentum,
+)
 
 if TYPE_CHECKING:
     from autofighter.stats import Stats
