@@ -9,6 +9,17 @@ High
 ## Status
 WIP
 
+## Related Tasks
+**IMPORTANT**: This task may overlap with the Action Plugin System tasks. Review:
+- `.codex/tasks/wip/GOAL-action-plugin-system.md` - Main action system goal
+- `.codex/tasks/wip/chars/fac8f16b-migrate-character-special-abilities.md` - Ability migration
+- The action plugin system is designed to handle ALL actions - including AOE attacks
+
+Consider whether this task should be:
+1. Part of the action plugin migration (attacks become action plugins with batched pacing)
+2. A separate pacing layer that works with action plugins
+3. Deferred until action plugins are fully implemented
+
 ## Description
 Turns can last a while due to pacing in AOE attacks. Currently, AOE abilities (like Wind's multi-target spread) apply damage to each target sequentially with a pause between each hit. This creates a "machine gun" effect where hits land one-by-one. Instead, AOE attacks should send a pulse that hits all foes at the same time, then pause once before moving to the next action.
 

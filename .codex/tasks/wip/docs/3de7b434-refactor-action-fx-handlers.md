@@ -1,4 +1,4 @@
-# Refactor Action/Effect Handlers Like Aftertaste
+# Refactor On-Hit Effects System (Aftertaste Pattern)
 
 ## Task ID
 `3de7b434-refactor-action-fx-handlers`
@@ -10,265 +10,132 @@ Medium
 WIP
 
 ## Description
-There must be better ways to handle some actions/effects like Aftertaste. Currently, effects like Aftertaste (Lightning's stacking effect) are implemented in a scattered manner across multiple files with duplicated logic. This task aims to analyze the current implementation and propose a cleaner, more maintainable pattern for action/effect handlers.
+There must be better ways to handle some actions/effects like Aftertaste. Aftertaste is an **on-hit effect** (a bonus hit that triggers after an attack) that currently works but displays incorrectly in the WebUI - it shows as its own separate attack instead of as an added hit. This task focuses on:
+1. Understanding the on-hit effect pattern used by Aftertaste
+2. Fixing the WebUI display for on-hit effects
+3. Creating a proper framework for on-hit effects
 
 ## Context
-Aftertaste is a Lightning-specific effect that:
-1. Stacks with each hit
-2. Triggers bonus damage or effects at certain thresholds
-3. Resets or modifies behavior based on action type
+**What Aftertaste Actually Is:**
+- An on-hit bonus action that adds extra hits after an attack lands
+- Uses a RANDOM damage type (weighted toward attacker's type)
+- Triggered by relics (echoing_drum, echo_bell, rusty_buckle, plague_harp, pocket_manual)
+- NOT Lightning-specific - can use Fire, Ice, Wind, Lightning, Light, or Dark
+- Deals 10-150% of base potency (25) per hit
 
-The current implementation involves:
-- Effect tracking in `backend/plugins/effects/aftertaste.py`
-- Stack management scattered across damage type handlers
-- Threshold logic in ultimate implementations
-- Event-based triggers in multiple locations
+**Current Implementation** (`backend/plugins/effects/aftertaste.py`):
+- Standalone effect class with `apply(attacker, target)` method
+- Picks random damage type per hit (weighted 25% toward attacker's type)
+- Creates temp attacker with random damage type
+- Respects TURN_PACING between echo hits
+- Emits `relic_effect` event with `effect_label: "aftertaste"`
 
-This pattern repeats for other complex effects, leading to:
-- Code duplication
-- Difficult debugging
-- Inconsistent behavior across similar effects
-- Hard-to-follow control flow
+**The Bug:**
+- WebUI shows Aftertaste as its own attack entry
+- Should show as an added hit/echo on the original attack
+- No WebUI support for "on-hit FX" visualization yet
 
-## Current Implementation Analysis
+## Current Implementation
 
 ### Aftertaste Effect (`backend/plugins/effects/aftertaste.py`)
 ```python
-# Likely contains:
-- Stack tracking per-entity
-- Effect application logic
-- Description/UI metadata
+@dataclass
+class Aftertaste:
+    plugin_type = "effect"
+    id = "aftertaste"
+    hits: int = 1
+    base_pot: int = 25
+    _damage_types = [Fire, Ice, Wind, Lightning, Light, Dark]  # Random selection
+    
+    async def apply(self, attacker: Stats, target: Stats) -> list[int]:
+        for amount in self.rolls():
+            random_damage_type = self._get_random_damage_type(attacker)
+            # ... apply damage with random type
 ```
 
-### Lightning Ultimate (`backend/plugins/actions/ultimate/lightning_ultimate.py`)
-```python
-# Likely contains:
-- Aftertaste stack buildup during ultimate
-- Threshold checking for bonus effects
-- Stack consumption/reset logic
-```
-
-### Lightning Damage Type (`backend/plugins/damage_types/lightning.py`)
-```python
-# Likely contains:
-- on_hit handlers for aftertaste
-- Chain damage mechanics
-- DOT interactions
-```
+### Triggering Relics (examples)
+- `echoing_drum.py` - Triggers Aftertaste on hit
+- `echo_bell.py` - Triggers Aftertaste on hit
+- `rusty_buckle.py` - Triggers Aftertaste on hit
 
 ## Problem Analysis
-1. **Scattered Logic**: Effect behavior is spread across 3+ files
-2. **Duplication**: Stack management code appears in multiple places
-3. **Testing Difficulty**: Hard to unit test individual components
-4. **Maintainability**: Changes require updates in multiple files
-5. **Discoverability**: New developers can't easily find all effect logic
+1. **WebUI Display Bug**: Aftertaste appears as separate attack instead of added hit
+2. **No On-Hit FX Framework**: No standardized way to show on-hit effects in WebUI
+3. **Action Log Confusion**: Aftertaste creates its own action log entry
 
 ## Objectives
-1. Identify all action/effect handlers with similar patterns to Aftertaste
-2. Design a unified "complex effect handler" interface
-3. Consolidate Aftertaste logic as a proof-of-concept
-4. Document the new pattern for future effects
-5. Consider a registry-based approach for effect lifecycle management
-
-## Proposed Solution: Effect Handler Pattern
-
-### New Base Class: `ComplexEffectHandler`
-```python
-# backend/plugins/effects/_handlers.py
-
-@dataclass
-class EffectHandlerBase:
-    """Base class for complex effects with lifecycle management."""
-    
-    plugin_type = "effect_handler"
-    id: str = ""
-    name: str = ""
-    
-    # Lifecycle hooks
-    async def on_apply(self, target: Stats, source: Stats, **kwargs) -> None:
-        """Called when effect is first applied."""
-        pass
-    
-    async def on_stack(self, target: Stats, source: Stats, count: int, **kwargs) -> None:
-        """Called when effect stacks."""
-        pass
-    
-    async def on_threshold(self, target: Stats, source: Stats, threshold: int, **kwargs) -> None:
-        """Called when stack count reaches a threshold."""
-        pass
-    
-    async def on_trigger(self, target: Stats, source: Stats, event: str, **kwargs) -> None:
-        """Called when effect triggers (e.g., on hit, on turn end)."""
-        pass
-    
-    async def on_expire(self, target: Stats, **kwargs) -> None:
-        """Called when effect expires or is consumed."""
-        pass
-    
-    async def on_remove(self, target: Stats, **kwargs) -> None:
-        """Called when effect is forcibly removed."""
-        pass
-    
-    def get_stack_count(self, target: Stats) -> int:
-        """Return current stack count for target."""
-        return getattr(target, f"_{self.id}_stacks", 0)
-    
-    def set_stack_count(self, target: Stats, count: int) -> None:
-        """Set stack count for target."""
-        setattr(target, f"_{self.id}_stacks", count)
-```
-
-### Refactored Aftertaste
-```python
-# backend/plugins/effects/aftertaste.py
-
-@dataclass
-class AftertasteHandler(EffectHandlerBase):
-    """Aftertaste: Lightning's stacking effect that builds to bonus damage."""
-    
-    plugin_type = "effect_handler"
-    id: str = "aftertaste"
-    name: str = "Aftertaste"
-    
-    # Thresholds for bonus effects
-    BONUS_THRESHOLD: ClassVar[int] = 10
-    MAX_STACKS: ClassVar[int] = 99
-    
-    async def on_stack(self, target: Stats, source: Stats, count: int, **kwargs) -> None:
-        """Called when Aftertaste stacks increase."""
-        current = self.get_stack_count(target)
-        new_count = min(current + count, self.MAX_STACKS)
-        self.set_stack_count(target, new_count)
-        
-        # Check thresholds
-        if new_count >= self.BONUS_THRESHOLD and current < self.BONUS_THRESHOLD:
-            await self.on_threshold(target, source, self.BONUS_THRESHOLD)
-    
-    async def on_threshold(self, target: Stats, source: Stats, threshold: int, **kwargs) -> None:
-        """Trigger bonus damage or effect at threshold."""
-        if threshold == self.BONUS_THRESHOLD:
-            await self._apply_bonus_damage(target, source)
-    
-    async def _apply_bonus_damage(self, target: Stats, source: Stats) -> None:
-        """Apply Aftertaste's bonus damage."""
-        stacks = self.get_stack_count(target)
-        bonus = stacks * 0.1  # 10% per stack
-        # Apply bonus to next attack or immediate damage
-        ...
-    
-    async def on_trigger(self, target: Stats, source: Stats, event: str, **kwargs) -> None:
-        """Handle various trigger events."""
-        if event == "hit_landed":
-            await self.on_stack(target, source, 1)
-        elif event == "ultimate_used":
-            # Maybe consume stacks or apply special effect
-            pass
-```
-
-### Effect Handler Registry
-```python
-# backend/autofighter/effect_handlers.py
-
-class EffectHandlerRegistry:
-    """Central registry for complex effect handlers."""
-    
-    _handlers: dict[str, EffectHandlerBase] = {}
-    
-    @classmethod
-    def register(cls, handler: EffectHandlerBase) -> None:
-        cls._handlers[handler.id] = handler
-    
-    @classmethod
-    def get(cls, effect_id: str) -> EffectHandlerBase | None:
-        return cls._handlers.get(effect_id)
-    
-    @classmethod
-    async def trigger_all(cls, event: str, target: Stats, source: Stats, **kwargs) -> None:
-        """Trigger all relevant handlers for an event."""
-        for handler in cls._handlers.values():
-            await handler.on_trigger(target, source, event, **kwargs)
-```
+1. Fix WebUI to display on-hit effects as added hits, not separate attacks
+2. Create a standard pattern for on-hit effects visualization
+3. Document how relics and effects can add on-hit bonuses
+4. Ensure Aftertaste works correctly with the action plugin system
 
 ## Implementation Steps
 
-### Step 1: Analyze Existing Effects
-Review these effects for similar patterns:
-- Aftertaste (Lightning)
-- Critical Boost (`backend/plugins/effects/critical_boost.py`)
-- Burn stacks (Fire)
-- Freeze mechanics (Ice)
-- Any other stacking/threshold effects
+### Step 1: Analyze WebUI Display Issue
+Investigate how attacks are displayed:
+- `frontend/src/lib/components/BattleEventFloaters.svelte`
+- `frontend/src/lib/battle/ActionQueue.svelte`
+- How `hit_landed` vs `action_used` events are rendered
 
-### Step 2: Create Handler Base Class
-Create `backend/plugins/effects/_handlers.py` with:
-- `EffectHandlerBase` class
-- Common lifecycle hooks
-- Stack management utilities
-- Threshold tracking
+### Step 2: Add On-Hit FX Metadata
+Update Aftertaste to include metadata that marks it as an on-hit effect:
+```python
+await BUS.emit_async(
+    "hit_landed",  # or appropriate event
+    attacker,
+    target,
+    amount,
+    {
+        "effect_type": "on_hit",
+        "parent_action": original_action_name,
+        "effect_label": "aftertaste",
+        "is_echo": True,  # Mark as echo/addon hit
+    }
+)
+```
 
-### Step 3: Create Handler Registry
-Create `backend/autofighter/effect_handlers.py` with:
-- `EffectHandlerRegistry` class
-- Auto-discovery via plugin loader
-- Event trigger distribution
+### Step 3: Update WebUI to Handle On-Hit Effects
+Modify frontend to group on-hit effects with their parent attack:
+```javascript
+// When rendering action queue/battle log
+if (hit.metadata?.is_echo) {
+    // Display as sub-hit under parent attack
+} else {
+    // Display as main attack
+}
+```
 
-### Step 4: Refactor Aftertaste
-Migrate Aftertaste to use the new pattern:
-1. Create `AftertasteHandler` class
-2. Move stack logic from scattered locations
-3. Register with handler registry
-4. Update callers to use registry
+### Step 4: Document On-Hit Effect Pattern
+Create documentation for:
+- How relics can trigger on-hit effects
+- Event structure for on-hit effects
+- WebUI display requirements
 
-### Step 5: Update Callers
-Modify places that interact with Aftertaste:
-- `lightning.py` - Use handler.on_trigger()
-- `lightning_ultimate.py` - Use handler for stack management
-- Any other files referencing Aftertaste
-
-### Step 6: Document Pattern
-Update documentation:
-- `.codex/implementation/effect-handler-system.md` (new)
-- Update plugin-system.md
-- Add examples for future effects
-
-## Files to Create
-- `backend/plugins/effects/_handlers.py` - Base handler class
-- `backend/autofighter/effect_handlers.py` - Registry
-- `.codex/implementation/effect-handler-system.md` - Documentation
+## Files to Review
+- `backend/plugins/effects/aftertaste.py` - Current implementation (working)
+- `backend/plugins/relics/echoing_drum.py` - Example triggering relic
+- `frontend/src/lib/components/BattleEventFloaters.svelte` - Battle display
+- `frontend/src/lib/battle/ActionQueue.svelte` - Action display
 
 ## Files to Modify
-- `backend/plugins/effects/aftertaste.py` - Refactor to handler
-- `backend/plugins/damage_types/lightning.py` - Use handler
-- `backend/plugins/actions/ultimate/lightning_ultimate.py` - Use handler
-- `backend/plugins/plugin_loader.py` - Add effect_handler discovery
+- `backend/plugins/effects/aftertaste.py` - Add on-hit metadata to events
+- `frontend/src/lib/*` - Update to handle on-hit effect display
+- `.codex/implementation/on-hit-effects.md` - New documentation
 
 ## Acceptance Criteria
-- [ ] EffectHandlerBase class created with lifecycle hooks
-- [ ] EffectHandlerRegistry created with auto-discovery
-- [ ] Aftertaste refactored to use new pattern
-- [ ] All Lightning-related tests pass
-- [ ] No scattered Aftertaste logic remains in damage types
-- [ ] Documentation created for new pattern
+- [ ] Aftertaste displays as added hit in WebUI, not separate attack
+- [ ] On-hit effects have proper metadata (`is_echo`, `parent_action`)
+- [ ] WebUI correctly renders on-hit effects under parent attack
+- [ ] Documentation created for on-hit effect pattern
+- [ ] All existing tests pass
 - [ ] Linting passes (`uv tool run ruff check backend --fix`)
 
-## Testing Requirements
-
-### Unit Tests
-- Test EffectHandlerBase lifecycle hooks
-- Test stack management utilities
-- Test threshold detection
-- Test AftertasteHandler specifically
-
-### Integration Tests
-- Test Aftertaste during Lightning combat
-- Test Aftertaste during Lightning ultimate
-- Test stack persistence across turns
-- Test threshold bonus application
+## Related Tasks
+- This may relate to the action plugin system - on-hit effects might become action addons
+- Consider how this interacts with AOE pacing task
 
 ## Notes for Coder
-- Start with Aftertaste as the proof-of-concept
-- Don't migrate other effects yet - wait for pattern validation
-- Keep backward compatibility during refactor
-- Consider performance implications of registry lookups
-- Event-based triggers may need debouncing for high-frequency events
-- This is a refactoring task - behavior should not change, only organization
+- Aftertaste is NOT Lightning-specific - it uses random damage types
+- The backend logic works correctly - this is primarily a WebUI display issue
+- Focus on the display/metadata first, refactoring can come later
+- Coordinate with the user (@lunamidori5) who mentioned working on WebUI on-hit FX
