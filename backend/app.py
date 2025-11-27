@@ -166,7 +166,9 @@ async def validate_lrm_on_startup() -> None:
 
         # Log which type of LRM we're testing
         if openai_url != "unset":
-            log.info("Remote LRM configured (OPENAI_API_URL=%s). Testing connection...", openai_url)
+            # Sanitize openai_url to prevent log injection
+            sanitized_openai_url = openai_url.replace('\n', '').replace('\r', '')
+            log.info("Remote LRM configured (OPENAI_API_URL=%s). Testing connection...", sanitized_openai_url)
         elif torch_available:
             log.info("Local LRM configured (torch available). Testing model: %s...", model)
 
