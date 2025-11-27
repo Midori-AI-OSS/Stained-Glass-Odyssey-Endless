@@ -11,6 +11,7 @@ from services.run_configuration import RunModifierContext
 
 from autofighter.mapgen import MapNode
 from autofighter.party import Party
+from autofighter.passives import apply_rank_passives
 from autofighter.rooms.foes import SpawnTemplate
 from autofighter.rooms.foes.catalog import load_catalog
 from autofighter.rooms.foes.scaling import apply_attribute_scaling
@@ -176,6 +177,7 @@ class FoeFactory:
                 foe.rank = "glitched boss"
             else:
                 foe.rank = "boss"
+            apply_rank_passives(foe)
             return [foe]
 
         desired = _desired_count(
@@ -204,6 +206,7 @@ class FoeFactory:
                 foe.rank = "prime"
             elif is_glitched:
                 foe.rank = "glitched"
+            apply_rank_passives(foe)
             foes.append(foe)
         return foes
 

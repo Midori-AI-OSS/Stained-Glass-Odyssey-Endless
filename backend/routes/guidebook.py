@@ -8,6 +8,8 @@ from quart import jsonify
 from tracking import log_menu_action
 from tracking import log_overlay_action
 
+from autofighter.buffs import BuffRegistry
+from autofighter.debuffs import DebuffRegistry
 from autofighter.passives import discover as discover_passives
 from autofighter.rooms.shop import PRICE_BY_STARS
 from autofighter.rooms.shop import REROLL_COST
@@ -73,6 +75,38 @@ def _elemental_resistance_summary() -> str:
             relationships.append(f"{attacker}→{target}")
 
     return ", ".join(relationships)
+
+
+def _plugin_description(cls) -> str:
+    try:
+        return cls.get_description()
+    except NotImplementedError:
+        doc = getattr(cls, "__doc__", None)
+        if doc:
+            return doc.strip()
+        return cls.__name__.replace("_", " ").title()
+
+
+def _serialize_stat_plugins(entries: dict[str, type]) -> list[dict[str, Any]]:
+    serialized: list[dict[str, Any]] = []
+    for effect_id, cls in sorted(entries.items()):
+        try:
+            instance = cls()
+        except Exception:
+            # Skip malformed plugins but log later if necessary
+            continue
+        serialized.append(
+            {
+                "id": effect_id,
+                "name": getattr(instance, "name", effect_id.replace("_", " ").title()),
+                "description": _plugin_description(cls),
+                "stack_display": getattr(instance, "stack_display", "pips"),
+                "max_stacks": getattr(instance, "max_stacks", None),
+                "default_duration": getattr(instance, "duration", -1),
+                "stat_modifiers": dict(getattr(instance, "stat_modifiers", {})),
+            }
+        )
+    return serialized
 
 
 @bp.get("/damage-types")
@@ -369,9 +403,16 @@ async def effects() -> tuple[str, int, dict[str, Any]]:
                 except ImportError:
                     continue
 
+    buff_registry = BuffRegistry()
+    debuff_registry = DebuffRegistry()
+    buff_effects = _serialize_stat_plugins(buff_registry.all_buffs())
+    debuff_effects = _serialize_stat_plugins(debuff_registry.all_debuffs())
+
     return jsonify({
         "combat_effects": combat_effects,
         "dot_effects": dot_effects,
+        "buffs": buff_effects,
+        "debuffs": debuff_effects,
         "categories": {
             "combat_effects": "Special effects triggered during combat",
             "dot_effects": "Damage over time and debuff effects",

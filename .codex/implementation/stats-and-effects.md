@@ -61,6 +61,14 @@ roll, and the first stack always has at least a 1% chance even when resistance e
 
 Active effect names are mirrored in the `Stats` lists (`dots`, `hots`) for UI display. Battle snapshots aggregate effect details from each fighter's `effect_manager`, grouping DoTs and HoTs by ID with entries exposing `id`, `name`, `damage` or `healing`, remaining `turns`, the source's ID, and stack counts. Passive IDs are similarly collapsed into `{id, stacks}` objects in the serialized snapshot.
 
+## Buff & Debuff Plugins
+Short-lived stat adjustments now use dedicated plugins under `backend/plugins/effects/buffs/` and `backend/plugins/effects/debuffs/`. Each plugin inherits from `BuffBase` or `DebuffBase` (`backend/plugins/effects/_base.py`) and produces a `StatEffect` when applied. The base class exposes helpers for naming stacks, overriding durations, and scaling modifiers at call time.
+
+- Buffs cover common positive effects such as Attack Up, Defense Up, Speed Up, and crit modifiers.
+- Debuffs provide matching reductions plus status effects like Blind and Vulnerability.
+
+`BuffRegistry` and `DebuffRegistry` (`backend/autofighter/buffs.py`, `backend/autofighter/debuffs.py`) load these plugins via the shared `PluginLoader`. They expose helper methods to inspect available effects and apply them by ID with optional constructor overrides (`init_kwargs`) and stack metadata. This keeps discoverability on par with the DoT/HoT systems while remaining backwards-compatible with existing `StatEffect` call sites.
+
 ## Lightning Pop
 Lightning attacks trigger an extra pass over the target's active DoTs. Each effect deals 25% of its damage immediately while leaving remaining turns and stack counts untouched.
 

@@ -8,6 +8,10 @@ from typing import Callable
 
 from autofighter.action_queue import TURN_COUNTER_ID
 from autofighter.stats import BUS
+from plugins.actions import get_action_registry
+from plugins.actions.context import BattleContext
+from plugins.actions.normal.basic_attack import BasicAttackAction
+from plugins.actions.registry import ActionRegistry
 
 from ..pacing import _EXTRA_TURNS
 from ..pacing import TURN_PACING
@@ -46,6 +50,7 @@ class TurnLoopContext:
     battle_tasks: dict[str, Task[Any]]
     abort: Callable[[str], None]
     credited_foe_ids: set[str]
+    action_registry: ActionRegistry | None = None
     turn: int = 0
     action_turn: int = 0
 
@@ -79,6 +84,14 @@ async def initialize_turn_loop(
 ) -> TurnLoopContext:
     """Prepare the turn loop context and emit the initial progress update."""
 
+    # Get the global action registry or create a new one as fallback
+    action_registry = get_action_registry()
+    if action_registry is None:
+        # Fallback: create a new registry with just the basic attack
+        # This happens if auto-discovery failed or hasn't run yet
+        action_registry = ActionRegistry()
+        action_registry.register_action(BasicAttackAction)
+
     context = TurnLoopContext(
         room=room,
         party=party,
@@ -96,8 +109,14 @@ async def initialize_turn_loop(
         battle_tasks=battle_tasks,
         abort=abort,
         credited_foe_ids=set(),
+        action_registry=action_registry,
         turn=0,
         action_turn=0,
+    )
+
+    _register_special_abilities(
+        action_registry,
+        list(context.combat_party.members) + list(context.foes),
     )
 
     prepare_snapshot_overlay(
@@ -201,3 +220,59 @@ async def _send_initial_progress(context: TurnLoopContext) -> None:
         pacing = 1e-6
 
     await pace_sleep(hold_seconds / pacing)
+
+
+def _register_special_abilities(
+    registry: ActionRegistry,
+    combatants: list[Any],
+) -> None:
+    """Register character-specific special ability loadouts with the registry."""
+
+    if not combatants:
+        return
+    for entity in combatants:
+        ability_ids = getattr(entity, "special_abilities", None)
+        entity_id = str(getattr(entity, "id", ""))
+        if not entity_id or not ability_ids:
+            continue
+        registry.register_character_actions(entity_id, list(ability_ids))
+
+
+def create_battle_context(
+    turn_context: TurnLoopContext,
+    *,
+    phase: str,
+    actor: Any,
+    allies: list[Any],
+    enemies: list[Any],
+    effect_managers: dict[str, Any] | None = None,
+) -> BattleContext:
+    """Build a BattleContext from TurnLoopContext for action plugin execution."""
+
+    # Build effect manager dict from foe_effects list
+    if effect_managers is None:
+        effect_managers = {}
+        for member in turn_context.combat_party.members:
+            member_id = str(getattr(member, "id", id(member)))
+            effect_managers[member_id] = getattr(member, "_effect_manager", None)
+        for idx, foe in enumerate(turn_context.foes):
+            foe_id = str(getattr(foe, "id", id(foe)))
+            if idx < len(turn_context.foe_effects):
+                effect_managers[foe_id] = turn_context.foe_effects[idx]
+
+    return BattleContext(
+        turn=turn_context.turn,
+        run_id=turn_context.run_id or "unknown",
+        phase=phase,
+        actor=actor,
+        allies=allies,
+        enemies=enemies,
+        action_registry=turn_context.action_registry or ActionRegistry(),
+        passive_registry=turn_context.registry,
+        effect_managers=effect_managers,
+        summon_manager=None,  # TODO: Wire summon manager when available
+        event_bus=BUS,
+        enrage_state=turn_context.enrage_state,
+        visual_queue=turn_context.visual_queue,
+        damage_router=None,
+    )

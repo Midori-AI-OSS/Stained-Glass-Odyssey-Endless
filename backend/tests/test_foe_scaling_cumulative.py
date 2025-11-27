@@ -26,8 +26,6 @@ def test_foe_scaling_cumulative_rooms():
     foe2.set_base_stat('max_hp', 1000)
     foe2.hp = 1000
 
-    rooms_per_floor = MapGenerator.rooms_per_floor
-
     # Room 1 Floor 1 (cumulative room 1)
     node1 = MapNode(room_id=1, room_type="battle-normal", floor=1, index=1, loop=1, pressure=0)
 

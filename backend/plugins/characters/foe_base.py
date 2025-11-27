@@ -91,6 +91,7 @@ class FoeBase(Stats):
     passives: list[str] = field(default_factory=list)
     dots: list[str] = field(default_factory=list)
     hots: list[str] = field(default_factory=list)
+    special_abilities: list[str] = field(default_factory=list)
 
     stat_gain_map: dict[str, str] = field(default_factory=dict)
     stat_loss_map: dict[str, str] = field(default_factory=dict)

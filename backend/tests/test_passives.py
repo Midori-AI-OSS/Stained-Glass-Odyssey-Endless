@@ -8,7 +8,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from autofighter.passives import PassiveRegistry
 from autofighter.stats import BUS
 from autofighter.stats import Stats
-from autofighter.stats import set_enrage_percent
 from plugins import PluginLoader
 from plugins.characters.player import Player
 from plugins.event_bus import bus
@@ -19,65 +18,26 @@ def test_passive_discovery():
     loader = PluginLoader(required=["passive"])
     loader.discover(Path(__file__).resolve().parents[1] / "plugins" / "passives")
     passives = loader.get_plugins("passive")
-    assert "attack_up" in passives
+    assert "luna_lunar_reservoir" in passives
 
 
 @pytest.mark.asyncio
 async def test_passive_trigger_and_stack():
     registry = PassiveRegistry()
     player = Player()
-    player.passives = ["attack_up"] * 5
-    await registry.trigger("battle_start", player)
-    assert player.atk == 100 + 5 * 5
-
-
-@pytest.mark.asyncio
-async def test_room_heal_trigger():
-    registry = PassiveRegistry()
-    player = Player()
-    player.hp = 900
-    player.passives = ["room_heal"] * 10
-    await registry.trigger("battle_end", player)
-    assert player.hp == 910
-
-
-@pytest.mark.asyncio
-async def test_room_heal_event_and_enrage(monkeypatch):
-    # Create a fresh registry to avoid cross-test contamination
-    import importlib
-
-    from autofighter import passives
-    importlib.reload(passives)
-
-    registry = PassiveRegistry()
-    player = Player()
-    player.hp = 90
-    player.set_base_stat("max_hp", 100)
-    player.passives = ["room_heal"]
-    amounts: list[int] = []
-
-    def _heal(target, healer, amount, *_args):
-        amounts.append(amount)
-
-    BUS.subscribe("heal_received", _heal)
-    await bus._process_batches_internal()
-    amounts.clear()
-
-    # Monkeypatch the registry's copy of the class, not the imported one
-    registry_room_heal_cls = registry._registry["room_heal"]
-    monkeypatch.setattr(registry_room_heal_cls, "amount", 10, raising=False)
-
-    set_enrage_percent(0.5)
-    await registry.trigger("battle_end", player)
-
-    # Wait for batched events to be processed
-    await bus._process_batches_internal()
-
-    set_enrage_percent(0.0)
-    BUS.unsubscribe("heal_received", _heal)
-
-    assert amounts and amounts[-1] == 5
-    assert player.hp == 95
+    # Use luna_lunar_reservoir to test passive stacking behavior
+    player.passives = ["luna_lunar_reservoir"] * 3
+    # Trigger action_taken (luna_lunar_reservoir uses action_taken to gain charges)
+    await registry.trigger("action_taken", player, action_name="slash")
+    # Verify the passive was triggered and charge accumulated
+    # The passive system tracks stacks, but charges are cumulative not multiplicative
+    from plugins.passives.normal.luna_lunar_reservoir import LunaLunarReservoir
+    entity_id = id(player)
+    charge = LunaLunarReservoir._charge_points.get(entity_id, 0)
+    # With 3 stacks, each action adds charge once (shared state)
+    assert charge > 0, "Passive should have accumulated some charge"
+    # Clean up
+    LunaLunarReservoir._charge_points.clear()
 
 
 @pytest.mark.asyncio

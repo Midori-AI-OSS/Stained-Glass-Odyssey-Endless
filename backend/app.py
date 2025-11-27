@@ -139,6 +139,69 @@ async def prune_runs_before_serving() -> None:
 
 
 @app.before_serving
+async def validate_lrm_on_startup() -> None:
+    """Validate the configured LRM on startup to ensure it's ready and capable of reasoning."""
+    try:
+        # Check if torch is available for local models
+        torch_available = is_torch_available()
+
+        # Check if remote OpenAI is configured
+        openai_url = os.getenv("OPENAI_API_URL", "unset")
+
+        # Skip validation if neither remote nor local LRM is available
+        # Only log if we're actually skipping because nothing is configured
+        if openai_url == "unset" and not torch_available:
+            # No LRM configured at all - skip silently to avoid log spam
+            return
+
+        # Import here to avoid circular dependencies
+        from llms.loader import ModelName
+        from llms.loader import load_llm
+        from llms.loader import validate_lrm
+        from options import OptionKey
+        from options import get_option
+
+        # Get configured model or use default
+        model = get_option(OptionKey.LRM_MODEL, ModelName.OPENAI_20B.value)
+
+        # Log which type of LRM we're testing
+        if openai_url != "unset":
+            # Sanitize openai_url to prevent log injection
+            sanitized_openai_url = openai_url.replace('\n', '').replace('\r', '')
+            log.info("Remote LRM configured (OPENAI_API_URL=%s). Testing connection...", sanitized_openai_url)
+        elif torch_available:
+            log.info("Local LRM configured (torch available). Testing model: %s...", model)
+
+        # Load and validate the LRM
+        llm = await asyncio.to_thread(load_llm, model, validate=False)
+        is_valid = await validate_lrm(llm)
+
+        if is_valid:
+            log.info("✓ LRM validation passed - model is ready for reasoning tasks")
+        else:
+            log.warning("✗ LRM validation failed - model may not support reasoning properly")
+    except Exception as e:
+        log.warning("LRM validation failed with error: %s", e)
+        log.info("Server will continue starting. LRM may not be available.")
+
+
+
+@app.before_serving
+async def initialize_action_plugins() -> None:
+    """Initialize the action plugin system on application startup."""
+    try:
+        from plugins.actions import initialize_action_registry
+
+        registry = initialize_action_registry()
+        log.info("✓ Action plugin system initialized with %d actions",
+                 len(registry.get_actions_by_type("normal")))
+    except Exception as e:
+        log.error("Failed to initialize action plugins: %s", e)
+        # Don't fail startup - action system can fall back to manual registration
+        log.info("Server will continue starting. Action plugins may use manual registration.")
+
+
+@app.before_serving
 async def start_background_tasks() -> None:
     asyncio.create_task(_cleanup_loop())
 

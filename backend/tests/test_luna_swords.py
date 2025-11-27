@@ -111,7 +111,7 @@ async def test_luna_sword_hits_feed_passive_stacks():
     await BUS.emit_async("hit_landed", sword, target, 100, "attack", "test")
     after = LunaLunarReservoir.get_charge(luna)
 
-    assert after - before == 4
+    assert after - before == 1
     assert LunaLunarReservoir.get_charge(sword) == after
 
 
@@ -137,16 +137,16 @@ async def test_glitched_luna_sword_hits_double_charge():
     await BUS.emit_async("hit_landed", sword, target, 100, "attack", "test")
     after = LunaLunarReservoir.get_charge(luna)
 
-    assert after - before == 8
+    assert after - before == 2
 
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
     ("rank", "node_factory", "expected_gain", "damage"),
     [
-        ("prime boss", _boss_node, 20, 1),
-        ("glitched prime boss", _boss_node, 40, 6_400_000_000),
-        ("glitched prime champion", _normal_node, 40, 2_500_000),
+        ("prime boss", _boss_node, 5, 1),
+        ("glitched prime boss", _boss_node, 10, 6_400_000_000),
+        ("glitched prime champion", _normal_node, 10, 2_500_000),
     ],
 )
 async def test_prime_luna_sword_hits_gain_stacks_and_heal(rank, node_factory, expected_gain, damage):

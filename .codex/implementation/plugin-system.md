@@ -12,9 +12,11 @@ Describes how plugins are discovered, categorized, and connected to the event bu
 The following categories are bundled:
 
 - **Characters** – controllable and hostile combatants such as `Player` or `SlimeFoe`【F:backend/plugins/characters/player.py†L1-L24】【F:backend/plugins/characters/__init__.py†L66-L101】
-- **Passives** – always-on effects like `AttackUp`【F:backend/plugins/passives/attack_up.py†L1-L16】
+- **Passives** – always-on effects like `PlayerLevelUpBonus`【F:backend/plugins/passives/normal/player_level_up_bonus.py†L1-L49】
 - **DoTs** – damage-over-time effects such as `Bleed`【F:plugins/dots/bleed.py†L4-L15】
 - **HoTs** – healing-over-time effects such as `Regeneration`【F:plugins/hots/regeneration.py†L4-L9】
+- **Buffs** – reusable stat boosts like `AttackUp`, loaded from `backend/plugins/effects/buffs/` via `BuffRegistry`【F:backend/autofighter/buffs.py†L1-L52】
+- **Debuffs** – negative stat modifiers such as `Blind`, mirrored under `backend/plugins/effects/debuffs/` and exposed by `DebuffRegistry`【F:backend/autofighter/debuffs.py†L1-L52】
 - **Weapons** – attack implementations such as `SampleWeapon`【F:plugins/weapons/sample_weapon.py†L4-L8】
 - **Cards** – stat-boosting rewards like `MicroBlade`【F:backend/plugins/cards/a_micro_blade.py†L1-L12】
 - **Relics** – run-limited party buffs such as `BentDagger`【F:backend/plugins/relics/bent_dagger.py†L1-L9】

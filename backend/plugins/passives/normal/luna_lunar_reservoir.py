@@ -1,5 +1,4 @@
 from dataclasses import dataclass
-from math import ceil
 from typing import TYPE_CHECKING
 from typing import ClassVar
 
@@ -34,56 +33,16 @@ class LunaLunarReservoir:
         cls._events_registered = True
 
     @classmethod
-    def _rank_lower(cls, target: "Stats | None") -> str:
-        if target is None:
-            return ""
-        rank = getattr(target, "rank", "")
-        if not rank:
-            return ""
-        return str(rank).lower()
-
-    @classmethod
-    def _is_glitched_nonboss(cls, target: "Stats") -> bool:
-        lowered = cls._rank_lower(target)
-        return "glitched" in lowered and "boss" not in lowered
-
-    @classmethod
-    def _is_prime(cls, target: "Stats") -> bool:
-        return "prime" in cls._rank_lower(target)
-
-    @classmethod
     def _charge_multiplier(cls, charge_holder: "Stats") -> int:
-        multiplier = 2 if cls._is_glitched_nonboss(charge_holder) else 1
-        if cls._is_prime(charge_holder):
-            multiplier *= 5
-        return multiplier
+        """Base charge multiplier for normal tier."""
+        return 1
 
     @classmethod
     def _sword_charge_amount(cls, owner: "Stats | None") -> int:
+        """Base sword charge amount for normal tier."""
         if owner is None:
             return 0
-        per_hit = 4
-        lowered = cls._rank_lower(owner)
-        if "glitched" in lowered:
-            per_hit *= 2
-        if "prime" in lowered:
-            per_hit *= 5
-        return per_hit
-
-    @classmethod
-    async def _apply_prime_healing(cls, owner: "Stats", damage: int | None) -> bool:
-        if not cls._is_prime(owner):
-            return False
-        amount = damage or 0
-        heal = ceil(amount * 0.000001)
-        heal = max(1, min(32, heal))
-        await owner.apply_healing(
-            heal,
-            healer=owner,
-            source_type="passive",
-            source_name=cls.id,
-        )
-        return True
+        return 4
 
     @classmethod
     def _resolve_charge_holder(cls, target: "Stats") -> "Stats":
@@ -149,14 +108,25 @@ class LunaLunarReservoir:
         if actual_owner is None:
             return
         cls._ensure_charge_slot(actual_owner)
-        per_hit = cls._sword_charge_amount(actual_owner)
+
+        total_multiplier = 1
+        if hasattr(actual_owner, "passives"):
+            from autofighter.passives import discover
+            registry = discover()
+
+            for passive_id in actual_owner.passives:
+                if "luna_lunar_reservoir" in passive_id:
+                    variant_class = registry.get(passive_id)
+                    if variant_class is not None:
+                        multiplier = variant_class._charge_multiplier(actual_owner)
+                        total_multiplier *= multiplier
+
+        base_charge = 1
+        per_hit = base_charge * total_multiplier
+
         if not handled:
             cls.add_charge(actual_owner, per_hit)
-        if not bool(metadata_dict.get("prime_heal_handled")):
-            healed = await cls._apply_prime_healing(actual_owner, amount)
-            if isinstance(metadata, dict):
-                metadata["prime_heal_handled"] = True
-                metadata["prime_heal_success"] = healed
+
         helper = getattr(actual_owner, "_luna_sword_helper", None)
         try:
             if helper is not None and hasattr(helper, "sync_actions_per_turn"):
@@ -239,11 +209,6 @@ class LunaLunarReservoir:
         entity_id = cls._ensure_charge_slot(charge_target)
 
         multiplier = cls._charge_multiplier(charge_target)
-        damage = kwargs.get("damage")
-        try:
-            damage_value = int(damage)
-        except (TypeError, ValueError):
-            damage_value = 0
 
         if event == "ultimate_used":
             cls._charge_points[entity_id] += 64 * multiplier
@@ -254,9 +219,6 @@ class LunaLunarReservoir:
 
         current_charge = cls._charge_points[entity_id]
         cls._apply_actions(charge_target, current_charge)
-
-        if event == "hit_landed":
-            await cls._apply_prime_healing(charge_target, damage_value)
 
     async def on_turn_end(self, target: "Stats") -> None:
         """Keep the owner's action cadence in sync at turn end."""
