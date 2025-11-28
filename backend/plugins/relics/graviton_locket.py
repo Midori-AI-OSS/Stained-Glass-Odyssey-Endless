@@ -31,7 +31,9 @@ class GravitonLocket(RelicBase):
         """Apply gravity debuffs to enemies and drain HP while active."""
         await super().apply(party, stacks=stacks)
 
-        stacks = party.relics.count(self.id)
+        # Use passed stacks if available, otherwise count (for backward compat)
+        if stacks is None:
+            stacks = party.relics.count(self.id)
         spd_reduction = 0.30 * stacks  # 30% SPD reduction per stack
         defense_reduction = 0.12 * stacks  # 12% defense reduction per stack (increases damage taken)
         duration = 2 + stacks  # Base 2 turns + 1 per stack

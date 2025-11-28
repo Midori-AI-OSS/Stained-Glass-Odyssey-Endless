@@ -30,7 +30,9 @@ class OmegaCore(RelicBase):
         """Burst of power followed by increasing HP drain."""
         await super().apply(party, stacks=stacks)
 
-        stacks = party.relics.count(self.id)
+        # Use passed stacks if available, otherwise count (for backward compat)
+        if stacks is None:
+            stacks = party.relics.count(self.id)
         delay = 10 + 2 * (stacks - 1)
         mult = 6.0 + (stacks - 1)
         state = {"mods": {}, "turn": 0}

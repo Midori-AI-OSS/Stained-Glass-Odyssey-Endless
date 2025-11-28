@@ -27,7 +27,9 @@ class SoulPrism(RelicBase):
         """Revive fallen allies after battles with reduced Max HP."""
         await super().apply(party, stacks=stacks)
 
-        stacks = party.relics.count(self.id)
+        # Use passed stacks if available, otherwise count (for backward compat)
+        if stacks is None:
+            stacks = party.relics.count(self.id)
         penalty = 0.75 - 0.05 * (stacks - 1)
         multiplier = 1 - penalty
         buff = 0.05 + 0.02 * (stacks - 1)

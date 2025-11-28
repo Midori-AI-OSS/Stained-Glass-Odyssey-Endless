@@ -51,7 +51,9 @@ class CataclysmEngine(RelicBase):
     async def apply(self, party, *, stacks: int | None = None) -> None:
         await super().apply(party, stacks=stacks)
 
-        stacks = party.relics.count(self.id)
+        # Use passed stacks if available, otherwise count (for backward compat)
+        if stacks is None:
+            stacks = party.relics.count(self.id)
         if stacks <= 0:
             return
 

@@ -28,7 +28,9 @@ class BloodDebtTithe(RelicBase):
         """Set up defeat tracking and foe buffing."""
         await super().apply(party, stacks=stacks)
 
-        stacks = party.relics.count(self.id)
+        # Use passed stacks if available, otherwise count (for backward compat)
+        if stacks is None:
+            stacks = party.relics.count(self.id)
 
         # Get persistent defeat count from party's relic_persistent_state dictionary
         total_defeats = party.relic_persistent_state.get("blood_debt_tithe_total_defeats", 0)

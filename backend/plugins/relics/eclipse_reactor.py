@@ -30,7 +30,9 @@ class EclipseReactor(RelicBase):
     async def apply(self, party, *, stacks: int | None = None) -> None:  # type: ignore[override]
         await super().apply(party, stacks=stacks)
 
-        stacks = party.relics.count(self.id)
+        # Use passed stacks if available, otherwise count (for backward compat)
+        if stacks is None:
+            stacks = party.relics.count(self.id)
         state = getattr(party, "_eclipse_reactor_state", None)
         if state is None:
             state = {

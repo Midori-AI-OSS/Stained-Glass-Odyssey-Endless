@@ -25,7 +25,9 @@ class TimekeepersHourglass(RelicBase):
         party._t_hourglass_applied = True
         await super().apply(party, stacks=stacks)
 
-        stacks = party.relics.count(self.id)
+        # Use passed stacks if available, otherwise count (for backward compat)
+        if stacks is None:
+            stacks = party.relics.count(self.id)
         chance = 0.10 + 0.01 * (stacks - 1)
         chance = min(1.0, max(0.0, chance))
         boost = 1.0 + 0.20 * stacks

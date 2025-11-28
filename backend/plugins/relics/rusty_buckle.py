@@ -29,7 +29,9 @@ class RustyBuckle(RelicBase):
         """Bleed all allies and ping foes as party HP drops."""
         await super().apply(party, stacks=stacks)
 
-        stacks = party.relics.count(self.id)
+        # Use passed stacks if available, otherwise count (for backward compat)
+        if stacks is None:
+            stacks = party.relics.count(self.id)
         state = getattr(party, "_rusty_buckle_state", None)
 
         if state is None:
