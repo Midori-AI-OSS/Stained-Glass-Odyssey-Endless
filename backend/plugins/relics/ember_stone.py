@@ -24,8 +24,8 @@ class EmberStone(RelicBase):
         "Burns attackers when they hit low-HP allies"
     )
 
-    async def apply(self, party) -> None:
-        await super().apply(party)
+    async def apply(self, party, *, stacks: int | None = None) -> None:
+        await super().apply(party, stacks=stacks)
 
         state = getattr(party, "_ember_stone_state", None)
         stacks = party.relics.count(self.id)

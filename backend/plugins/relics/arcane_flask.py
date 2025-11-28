@@ -17,8 +17,8 @@ class ArcaneFlask(RelicBase):
     full_about: str = "After an Ultimate, grant a shield equal to 20% Max HP. Stacks additively (20% per stack)."
     summarized_about: str = "Grants shield based on max hp after using ultimate"
 
-    async def apply(self, party) -> None:
-        await super().apply(party)
+    async def apply(self, party, *, stacks: int | None = None) -> None:
+        await super().apply(party, stacks=stacks)
 
         stacks = party.relics.count(self.id)
         state = getattr(party, "_arcane_flask_state", None)

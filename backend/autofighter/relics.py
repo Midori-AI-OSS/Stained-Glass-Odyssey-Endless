@@ -52,8 +52,20 @@ def relic_choices(party: Party, stars: int, count: int = 3) -> list[RelicBase]:
     return random.sample(available, k=k)
 
 async def apply_relics(party: Party) -> None:
+    """Apply relic effects to the party.
+
+    Optimized to process each unique relic only once, passing the stack
+    count directly to avoid repeated counting.
+    """
     registry = _registry()
+    # Count stacks for each unique relic upfront
+    relic_counts: dict[str, int] = {}
     for rid in party.relics:
+        relic_counts[rid] = relic_counts.get(rid, 0) + 1
+
+    # Apply each unique relic once with its stack count
+    for rid, stacks in relic_counts.items():
         relic_cls = registry.get(rid)
         if relic_cls:
-            await relic_cls().apply(party)
+            relic = relic_cls()
+            await relic.apply(party, stacks=stacks)

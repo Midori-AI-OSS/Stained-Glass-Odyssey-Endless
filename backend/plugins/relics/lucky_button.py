@@ -18,8 +18,8 @@ class LuckyButton(RelicBase):
     full_about: str = "+3% Crit Rate per stack (multiplicative stacking); each missed critical hit is tracked and grants one stack of Critical Boost effect at the start of the next turn. The boost lasts until the end of that turn."
     summarized_about: str = "Boosts crit rate; missed crits grant a damage boost next turn"
 
-    async def apply(self, party) -> None:
-        await super().apply(party)
+    async def apply(self, party, *, stacks: int | None = None) -> None:
+        await super().apply(party, stacks=stacks)
 
         pending: dict[int, int] = {}
         active: dict[int, tuple[PlayerBase, CriticalBoost]] = {}

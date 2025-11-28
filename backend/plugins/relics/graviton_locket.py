@@ -27,9 +27,9 @@ class GravitonLocket(RelicBase):
         "drains party HP while gravity is active"
     )
 
-    async def apply(self, party) -> None:
+    async def apply(self, party, *, stacks: int | None = None) -> None:
         """Apply gravity debuffs to enemies and drain HP while active."""
-        await super().apply(party)
+        await super().apply(party, stacks=stacks)
 
         stacks = party.relics.count(self.id)
         spd_reduction = 0.30 * stacks  # 30% SPD reduction per stack

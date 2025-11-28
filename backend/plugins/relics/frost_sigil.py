@@ -21,8 +21,8 @@ class FrostSigil(RelicBase):
     )
     summarized_about: str = "Hits apply chill dealing aftertaste damage based on atk"
 
-    async def apply(self, party) -> None:
-        await super().apply(party)
+    async def apply(self, party, *, stacks: int | None = None) -> None:
+        await super().apply(party, stacks=stacks)
 
         party._frost_sigil_state = True
 

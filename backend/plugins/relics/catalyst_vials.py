@@ -22,8 +22,8 @@ class CatalystVials(RelicBase):
     )
     summarized_about: str = "Ally DoT ticks heal and boost effect hit rate"
 
-    async def apply(self, party) -> None:
-        await super().apply(party)
+    async def apply(self, party, *, stacks: int | None = None) -> None:
+        await super().apply(party, stacks=stacks)
 
         state = getattr(party, "_catalyst_vials_state", None)
         stacks = party.relics.count(self.id)

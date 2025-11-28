@@ -24,8 +24,8 @@ class SiegeBanner(RelicBase):
     )
     summarized_about: str = "Debuffs enemy def at battle start; killing enemies grants permanent atk and def boosts"
 
-    async def apply(self, party) -> None:
-        await super().apply(party)
+    async def apply(self, party, *, stacks: int | None = None) -> None:
+        await super().apply(party, stacks=stacks)
 
         stacks = party.relics.count(self.id)
 

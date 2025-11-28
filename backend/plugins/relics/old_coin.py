@@ -16,8 +16,8 @@ class OldCoin(RelicBase):
     full_about: str = "+3% gold earned per stack; first shop purchase refunded 3% of cost per stack."
     summarized_about: str = "Increases gold earned; refunds part of first shop purchase"
 
-    async def apply(self, party) -> None:
-        await super().apply(party)
+    async def apply(self, party, *, stacks: int | None = None) -> None:
+        await super().apply(party, stacks=stacks)
 
         stacks = party.relics.count(self.id)
         state = getattr(party, "_old_coin_state", None)

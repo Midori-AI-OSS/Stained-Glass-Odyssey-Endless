@@ -24,8 +24,8 @@ class CommandBeacon(RelicBase):
     )
     summarized_about: str = "Fastest ally sacrifices hp at turn start to boost other allies' speed"
 
-    async def apply(self, party) -> None:
-        await super().apply(party)
+    async def apply(self, party, *, stacks: int | None = None) -> None:
+        await super().apply(party, stacks=stacks)
 
         # Track active SPD buffs to remove them at turn end
         active_buffs: dict[int, tuple[object, object]] = {}

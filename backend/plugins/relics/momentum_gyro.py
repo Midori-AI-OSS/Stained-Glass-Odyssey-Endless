@@ -29,8 +29,8 @@ class MomentumGyro(RelicBase):
         "resets on target switch"
     )
 
-    async def apply(self, party) -> None:
-        await super().apply(party)
+    async def apply(self, party, *, stacks: int | None = None) -> None:
+        await super().apply(party, stacks=stacks)
 
         stacks = party.relics.count(self.id)
 

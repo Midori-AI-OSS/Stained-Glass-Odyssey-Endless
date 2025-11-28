@@ -18,8 +18,8 @@ class BentDagger(RelicBase):
     full_about: str = "+3% ATK per stack (multiplicative stacking); killing a foe grants the entire party +1% ATK permanently for the rest of combat. This buff stacks with each kill."
     summarized_about: str = "Boosts atk; killing enemies grants permanent atk boost"
 
-    async def apply(self, party) -> None:
-        await super().apply(party)
+    async def apply(self, party, *, stacks: int | None = None) -> None:
+        await super().apply(party, stacks=stacks)
 
         stacks = party.relics.count(self.id)
 

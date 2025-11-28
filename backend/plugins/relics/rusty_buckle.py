@@ -25,9 +25,9 @@ class RustyBuckle(RelicBase):
     )
     summarized_about: str = "Bleeds allies each turn; massive party hp loss triggers aftertaste volleys at enemies"
 
-    async def apply(self, party) -> None:
+    async def apply(self, party, *, stacks: int | None = None) -> None:
         """Bleed all allies and ping foes as party HP drops."""
-        await super().apply(party)
+        await super().apply(party, stacks=stacks)
 
         stacks = party.relics.count(self.id)
         state = getattr(party, "_rusty_buckle_state", None)

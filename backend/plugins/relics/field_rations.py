@@ -19,8 +19,8 @@ class FieldRations(RelicBase):
     full_about: str = "After each battle, heal 2% Max HP per stack and grant +1 ultimate charge per stack to all allies"
     summarized_about: str = "Heals and grants ultimate charge to all allies after each battle"
 
-    async def apply(self, party) -> None:
-        await super().apply(party)
+    async def apply(self, party, *, stacks: int | None = None) -> None:
+        await super().apply(party, stacks=stacks)
 
         # Use a state object to track stacks across multiple relic instances
         state = getattr(party, "_field_rations_state", None)

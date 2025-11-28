@@ -26,9 +26,9 @@ class OmegaCore(RelicBase):
         "Massively boosts all stats for entire fight but drains hp after delay"
     )
 
-    async def apply(self, party) -> None:
+    async def apply(self, party, *, stacks: int | None = None) -> None:
         """Burst of power followed by increasing HP drain."""
-        await super().apply(party)
+        await super().apply(party, stacks=stacks)
 
         stacks = party.relics.count(self.id)
         delay = 10 + 2 * (stacks - 1)

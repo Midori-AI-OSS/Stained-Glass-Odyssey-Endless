@@ -17,8 +17,8 @@ class CopperSiphon(RelicBase):
     full_about: str = "When an ally deals damage, heal them for 2% of damage per stack (min 1 HP); excess becomes shields."
     summarized_about: str = "Allies gain lifesteal when dealing damage; excess healing becomes shields"
 
-    async def apply(self, party) -> None:
-        await super().apply(party)
+    async def apply(self, party, *, stacks: int | None = None) -> None:
+        await super().apply(party, stacks=stacks)
 
         state = getattr(party, "_copper_siphon_state", None)
         stacks = party.relics.count(self.id)

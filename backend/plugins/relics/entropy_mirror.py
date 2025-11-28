@@ -30,8 +30,8 @@ class EntropyMirror(RelicBase):
         "Enemies gain atk but suffer recoil when dealing damage"
     )
 
-    async def apply(self, party) -> None:
-        await super().apply(party)
+    async def apply(self, party, *, stacks: int | None = None) -> None:
+        await super().apply(party, stacks=stacks)
 
         stacks = party.relics.count(self.id)
 

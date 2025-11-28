@@ -24,9 +24,9 @@ class BloodDebtTithe(RelicBase):
     )
     summarized_about: str = "Defeated foes grant rare drop rate; future foes are empowered based on defeats"
 
-    async def apply(self, party) -> None:
+    async def apply(self, party, *, stacks: int | None = None) -> None:
         """Set up defeat tracking and foe buffing."""
-        await super().apply(party)
+        await super().apply(party, stacks=stacks)
 
         stacks = party.relics.count(self.id)
 

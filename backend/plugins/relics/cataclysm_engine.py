@@ -48,8 +48,8 @@ class CataclysmEngine(RelicBase):
         "while bleeding HP each turn for escalating mitigation"
     )
 
-    async def apply(self, party) -> None:
-        await super().apply(party)
+    async def apply(self, party, *, stacks: int | None = None) -> None:
+        await super().apply(party, stacks=stacks)
 
         stacks = party.relics.count(self.id)
         if stacks <= 0:

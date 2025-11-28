@@ -43,13 +43,15 @@ class RelicBase:
     summarized_about: str = "Missing summarized relic description, please report this"
     preview_triggers: ClassVar[Sequence[RewardPreviewTrigger | dict[str, object]]] = ()
 
-    async def apply(self, party: Party) -> None:
+    async def apply(self, party: Party, *, stacks: int | None = None) -> None:
         from autofighter.stats import BUS  # Import here to avoid circular imports
 
         self._reset_subscriptions(party)
         log.info("Applying relic %s to party", self.id)
         mods = []
-        stacks = party.relics.count(self.id)
+        # Use provided stacks count if given, otherwise fall back to counting
+        if stacks is None:
+            stacks = party.relics.count(self.id)
 
         for member in party.members:
             log.debug("Applying relic to %s", getattr(member, "id", "member"))

@@ -21,8 +21,8 @@ class FeatherweightAnklet(RelicBase):
     full_about: str = "+2% SPD per relic stack (multiplicative stacking); each ally's first action per battle grants them +6% SPD per stack for 1 turn"
     summarized_about: str = "Boosts spd; first action each battle grants temporary spd burst"
 
-    async def apply(self, party) -> None:
-        await super().apply(party)
+    async def apply(self, party, *, stacks: int | None = None) -> None:
+        await super().apply(party, stacks=stacks)
 
         # Track which members have received the first-action burst this battle
         state = getattr(party, "_featherweight_anklet_state", None)

@@ -19,11 +19,11 @@ class TimekeepersHourglass(RelicBase):
     full_about: str = "Each turn, 10% base chance (+1% per extra stack) to grant ready allies +20% SPD per stack for 2 turns. Only affects allies who can act (alive with available actions)."
     summarized_about: str = "Each turn, chance to grant ready allies a brief speed boost"
 
-    async def apply(self, party) -> None:
+    async def apply(self, party, *, stacks: int | None = None) -> None:
         if getattr(party, "_t_hourglass_applied", False):
             return
         party._t_hourglass_applied = True
-        await super().apply(party)
+        await super().apply(party, stacks=stacks)
 
         stacks = party.relics.count(self.id)
         chance = 0.10 + 0.01 * (stacks - 1)

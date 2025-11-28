@@ -26,8 +26,8 @@ class EchoBell(RelicBase):
     )
     summarized_about: str = "First action each battle has a chance to trigger extra hits"
 
-    async def apply(self, party) -> None:
-        await super().apply(party)
+    async def apply(self, party, *, stacks: int | None = None) -> None:
+        await super().apply(party, stacks=stacks)
 
         state = getattr(party, "_echo_bell_state", None)
         stacks = party.relics.count(self.id)

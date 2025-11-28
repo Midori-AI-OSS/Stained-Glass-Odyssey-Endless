@@ -24,10 +24,10 @@ class GuardianCharm(RelicBase):
         "Grants def bonus to lowest-HP ally at battle start"
     )
 
-    async def apply(self, party) -> None:
+    async def apply(self, party, *, stacks: int | None = None) -> None:
         from autofighter.stats import BUS  # Import here to avoid circular imports
 
-        await super().apply(party)
+        await super().apply(party, stacks=stacks)
         if not party.members:
             return
         member = min(party.members, key=lambda m: m.hp)
