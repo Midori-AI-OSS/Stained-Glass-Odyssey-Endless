@@ -12,14 +12,27 @@
   $: latestError = errors.length > 0 ? errors[errors.length - 1] : null;
   $: issueUrl = latestError ? buildIssueUrl(latestError) : '';
 
+  // Maximum URL length for GitHub issues (conservative limit)
+  const MAX_URL_LENGTH = 6000;
+
   function buildIssueUrl(error) {
-    if (!error) return FEEDBACK_URL;
+    if (!error) return `${FEEDBACK_URL}`;
     const title = encodeURIComponent(`[Crash] ${error.message || 'Unknown error'}`);
-    const body = encodeURIComponent(formatIssueBody(error));
-    return `${FEEDBACK_URL}?title=${title}&body=${body}`;
+    let body = formatIssueBody(error);
+
+    // Truncate body if URL would be too long
+    const baseUrl = `${FEEDBACK_URL}?title=${title}&body=`;
+    const maxBodyLength = MAX_URL_LENGTH - baseUrl.length;
+
+    if (encodeURIComponent(body).length > maxBodyLength) {
+      // Truncate traceback first, keeping essential info
+      body = formatIssueBody(error, true);
+    }
+
+    return `${baseUrl}${encodeURIComponent(body)}`;
   }
 
-  function formatIssueBody(error) {
+  function formatIssueBody(error, truncate = false) {
     if (!error) return '';
 
     const lines = [
@@ -34,7 +47,12 @@
     ];
 
     if (error.traceback) {
-      lines.push('### Traceback', '```', error.traceback, '```', '');
+      let tb = error.traceback;
+      if (truncate && tb.length > 1500) {
+        // Keep first and last parts of traceback
+        tb = tb.substring(0, 700) + '\n\n... (truncated for URL length) ...\n\n' + tb.substring(tb.length - 700);
+      }
+      lines.push('### Traceback', '```', tb, '```', '');
     }
 
     if (error.context) {
@@ -46,7 +64,7 @@
         ''
       );
 
-      if (Array.isArray(error.context.source) && error.context.source.length > 0) {
+      if (!truncate && Array.isArray(error.context.source) && error.context.source.length > 0) {
         lines.push('### Source', '```');
         for (const line of error.context.source) {
           const marker = line.highlight ? '>' : ' ';
@@ -56,7 +74,7 @@
       }
     }
 
-    if (error.metadata && Object.keys(error.metadata).length > 0) {
+    if (!truncate && error.metadata && Object.keys(error.metadata).length > 0) {
       lines.push('### Metadata', '```json', JSON.stringify(error.metadata, null, 2), '```');
     }
 
@@ -67,12 +85,26 @@
     window.open(issueUrl, '_blank', 'noopener');
   }
 
+  let acknowledgeFailed = false;
+
   async function acknowledgeAndClose() {
+    acknowledgeFailed = false;
     try {
-      await fetch('/api/acknowledge-errors', { method: 'POST' });
+      const response = await fetch('/api/acknowledge-errors', { method: 'POST' });
+      if (!response.ok) {
+        acknowledgeFailed = true;
+        console.warn('Failed to acknowledge errors: server returned', response.status);
+        return; // Don't close if acknowledgment failed
+      }
     } catch (e) {
+      acknowledgeFailed = true;
       console.warn('Failed to acknowledge errors:', e);
+      return; // Don't close if network error
     }
+    dispatch('close');
+  }
+
+  function forceClose() {
     dispatch('close');
   }
 </script>
@@ -121,11 +153,15 @@
       <p class="additional-errors">+ {errors.length - 1} more error(s) from previous sessions</p>
     {/if}
 
+    {#if acknowledgeFailed}
+      <p class="ack-failed">Failed to clear errors from server. You can still dismiss this dialog.</p>
+    {/if}
+
     <div class="actions">
       <button class="btn primary" on:click={reportIssue}>
         Report on GitHub
       </button>
-      <button class="btn secondary" on:click={acknowledgeAndClose}>
+      <button class="btn secondary" on:click={acknowledgeFailed ? forceClose : acknowledgeAndClose}>
         Dismiss
       </button>
     </div>
@@ -260,6 +296,15 @@
     color: rgba(255, 255, 255, 0.6);
     margin: 0 0 1rem 0;
     font-style: italic;
+  }
+
+  .ack-failed {
+    font-size: 0.85rem;
+    color: #fca5a5;
+    margin: 0 0 0.75rem 0;
+    padding: 0.5rem;
+    background: rgba(220, 38, 38, 0.15);
+    border: 1px solid rgba(220, 38, 38, 0.3);
   }
 
   .actions {

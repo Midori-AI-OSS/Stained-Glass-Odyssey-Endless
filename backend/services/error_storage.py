@@ -22,6 +22,10 @@ log = logging.getLogger(__name__)
 ERROR_FILE = Path("data/errors.json")
 MAX_PERSISTED_ERRORS = 10
 
+# Holds the most recent error that hasn't been flushed yet.
+# This is safe in the async single-threaded Quart environment because
+# Python's GIL ensures atomic assignment, and the error handler runs
+# sequentially (one request at a time triggers the error handler).
 _pending_error: ErrorResponse | None = None
 
 
@@ -103,7 +107,11 @@ def has_previous_errors() -> bool:
 
 
 def _flush_pending_error() -> None:
-    """Atexit handler to ensure pending error is written on crash."""
+    """Atexit handler to ensure pending error is written on crash.
+
+    Note: This runs during interpreter shutdown, so logging may not work.
+    We use print() as a fallback for critical issues.
+    """
     global _pending_error
     if _pending_error is not None:
         try:
@@ -113,8 +121,18 @@ def _flush_pending_error() -> None:
             existing.last_crash = datetime.now(timezone.utc)
             existing.errors = existing.errors[-MAX_PERSISTED_ERRORS:]
             ERROR_FILE.write_text(existing.model_dump_json(indent=2))
-        except Exception:
-            pass
+        except OSError as e:
+            # File system errors are critical - try to report
+            try:
+                print(f"[error_storage] Failed to flush pending error to disk: {e}")
+            except Exception:
+                pass
+        except Exception as e:
+            # Other errors - try to report but don't crash
+            try:
+                print(f"[error_storage] Unexpected error during flush: {e}")
+            except Exception:
+                pass
 
 
 # Register atexit handler to flush any pending error before process exits
