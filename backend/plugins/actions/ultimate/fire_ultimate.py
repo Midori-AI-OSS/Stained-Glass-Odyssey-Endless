@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from autofighter.effects import EffectManager
 from plugins.actions.result import ActionResult
 from plugins.actions.ultimate import UltimateActionBase
 

@@ -25,11 +25,13 @@ class EventHorizon(RelicBase):
         "Damages foes and drains acting ally each ally turn"
     )
 
-    async def apply(self, party) -> None:
+    async def apply(self, party, *, stacks: int | None = None) -> None:
         """Set up turn-start gravity pulse system."""
-        await super().apply(party)
+        await super().apply(party, stacks=stacks)
 
-        stacks = party.relics.count(self.id)
+        # Use passed stacks if available, otherwise count (for backward compat)
+        if stacks is None:
+            stacks = party.relics.count(self.id)
         state = getattr(party, "_event_horizon_state", None)
 
         if state is None:

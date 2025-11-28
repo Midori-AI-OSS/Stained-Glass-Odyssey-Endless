@@ -29,10 +29,12 @@ class MomentumGyro(RelicBase):
         "resets on target switch"
     )
 
-    async def apply(self, party) -> None:
-        await super().apply(party)
+    async def apply(self, party, *, stacks: int | None = None) -> None:
+        await super().apply(party, stacks=stacks)
 
-        stacks = party.relics.count(self.id)
+        # Use passed stacks if available, otherwise count (for backward compat)
+        if stacks is None:
+            stacks = party.relics.count(self.id)
 
         # Track momentum chains per attacker: {attacker_id: {"target": target_id, "streak": int}}
         state = getattr(party, "_momentum_gyro_state", None)

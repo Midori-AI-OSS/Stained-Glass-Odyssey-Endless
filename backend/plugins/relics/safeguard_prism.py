@@ -27,8 +27,8 @@ class SafeguardPrism(RelicBase):
         "Grants emergency shield and mitigation when allies drop below a health threshold"
     )
 
-    async def apply(self, party) -> None:
-        await super().apply(party)
+    async def apply(self, party, *, stacks: int | None = None) -> None:
+        await super().apply(party, stacks=stacks)
 
         state = getattr(party, "_safeguard_prism_state", None)
         stacks = party.relics.count(self.id)

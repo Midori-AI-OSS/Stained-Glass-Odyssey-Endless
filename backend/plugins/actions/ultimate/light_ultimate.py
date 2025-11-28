@@ -8,9 +8,9 @@ from dataclasses import field
 
 from autofighter.effects import create_stat_buff
 from autofighter.stats import BUS
+from plugins.actions import TargetingRules
 from plugins.actions import TargetScope
 from plugins.actions import TargetSide
-from plugins.actions import TargetingRules
 from plugins.actions.result import ActionResult
 from plugins.actions.ultimate import UltimateActionBase
 

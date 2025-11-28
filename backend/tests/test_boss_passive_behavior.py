@@ -1,8 +1,9 @@
 """Behavior-focused checks for selected boss-tier passives."""
 
-import sys
 from pathlib import Path
-from unittest.mock import AsyncMock, patch
+import sys
+from unittest.mock import AsyncMock
+from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 

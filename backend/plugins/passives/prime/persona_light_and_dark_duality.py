@@ -2,7 +2,9 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 from autofighter.stat_effect import StatEffect
-from plugins.passives.normal.persona_light_and_dark_duality import PersonaLightAndDarkDuality
+from plugins.passives.normal.persona_light_and_dark_duality import (
+    PersonaLightAndDarkDuality,
+)
 
 if TYPE_CHECKING:
     from autofighter.stats import Stats

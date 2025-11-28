@@ -2,7 +2,6 @@ import importlib
 
 import pytest
 
-from autofighter.gacha import FIVE_STAR
 from autofighter.stats import BUS
 from autofighter.stats import Stats
 from plugins.characters.jennifer_feltmann import JenniferFeltmann

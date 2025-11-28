@@ -24,8 +24,8 @@ class PocketManual(RelicBase):
         "Boosts atk; every 10th hit triggers bonus Aftertaste damage"
     )
 
-    async def apply(self, party) -> None:
-        await super().apply(party)
+    async def apply(self, party, *, stacks: int | None = None) -> None:
+        await super().apply(party, stacks=stacks)
 
         counts: dict[int, int] = {}
         stacks = party.relics.count(self.id)

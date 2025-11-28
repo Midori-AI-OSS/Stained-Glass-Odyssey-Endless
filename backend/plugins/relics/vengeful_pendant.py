@@ -24,10 +24,12 @@ class VengefulPendant(RelicBase):
         "Reflects a portion of damage taken back to attackers"
     )
 
-    async def apply(self, party) -> None:
-        await super().apply(party)
+    async def apply(self, party, *, stacks: int | None = None) -> None:
+        await super().apply(party, stacks=stacks)
 
-        stacks = party.relics.count(self.id)
+        # Use passed stacks if available, otherwise count (for backward compat)
+        if stacks is None:
+            stacks = party.relics.count(self.id)
         state = getattr(party, "_vengeful_pendant_state", None)
 
         if state is None:

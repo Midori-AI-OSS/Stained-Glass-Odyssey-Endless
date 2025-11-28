@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from dataclasses import field
+from typing import TYPE_CHECKING
 from typing import ClassVar
 from typing import Mapping
-from typing import TYPE_CHECKING
 
 from autofighter.stat_effect import StatEffect
 

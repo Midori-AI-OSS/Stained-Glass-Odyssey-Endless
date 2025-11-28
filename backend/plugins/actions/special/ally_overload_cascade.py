@@ -7,9 +7,9 @@ from typing import Sequence
 
 from plugins.actions import ActionCostBreakdown
 from plugins.actions import ActionResult
+from plugins.actions import TargetingRules
 from plugins.actions import TargetScope
 from plugins.actions import TargetSide
-from plugins.actions import TargetingRules
 from plugins.actions.special import SpecialAbilityBase
 
 
