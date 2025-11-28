@@ -167,13 +167,13 @@ Create a new document in `.codex/implementation/` called `action-plugin-migratio
    - Performance implications
 
 ## Acceptance Criteria
-- [ ] All battle system files reviewed for hardcoded actions
-- [ ] All character files reviewed for special abilities
-- [ ] Card system reviewed for action patterns
-- [ ] Migration roadmap document created in `.codex/implementation/`
-- [ ] Each identified action has priority and complexity rating
-- [ ] Recommendations include specific file references
-- [ ] Document follows existing implementation doc format
+- [x] All battle system files reviewed for hardcoded actions
+- [x] All character files reviewed for special abilities
+- [x] Card system reviewed for action patterns
+- [x] Migration roadmap document created in `.codex/implementation/`
+- [x] Each identified action has priority and complexity rating
+- [x] Recommendations include specific file references
+- [x] Document follows existing implementation doc format
 
 ## Dependencies
 - Existing action plugin system documentation (`.codex/implementation/action-plugin-system.md`)

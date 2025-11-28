@@ -68,19 +68,19 @@ All seven damage-type ultimates are now implemented as action plugins and routed
 
 These damage-type-specific behaviors are still embedded in the damage type files:
 
-- **Light `on_action` healing/HoT** – `backend/plugins/damage_types/light.py:19-45`
+- **Light `on_action` healing/HoT** – `backend/plugins/damage_types/light.py` (method: `on_action`)
   - Category: `ActionType.SPECIAL`
   - Behavior: Heals allies under 25% HP, adds HoTs to all allies
   - Dependencies: `EffectManager`, `damage_effects.create_hot`, `pace_per_target`
   - Priority: Medium - could be extracted as a standalone action plugin
 
-- **Dark `on_action` drain-to-bonus** – `backend/plugins/damage_types/dark.py:18-44`
+- **Dark `on_action` drain-to-bonus** – `backend/plugins/damage_types/dark.py` (method: `on_action`)
   - Category: `ActionType.SPECIAL`
   - Behavior: Drains 10% HP from allies, provides damage bonus for next attack
   - Dependencies: `Stats.apply_cost_damage`, BUS subscription cleanup
   - Priority: Medium - complex state management makes this non-trivial
 
-- **Wind spread (AoE normal attack)** – `backend/plugins/damage_types/wind.py:11-45` + `player_turn.py:869-990`
+- **Wind spread (AoE normal attack)** – `backend/plugins/damage_types/wind.py` (`WindTurnSpread` class) + `player_turn.py` (`_handle_wind_spread` function)
   - Category: `ActionType.SPECIAL` with spread helper (`WindTurnSpread`)
   - Behavior: Normal attacks spread to additional targets with scaled damage
   - Dependencies: `_collect_wind_spread_targets`, `_handle_wind_spread`
@@ -88,7 +88,7 @@ These damage-type-specific behaviors are still embedded in the damage type files
 
 ### 4. Summon Creation Actions - NOT YET MIGRATED
 
-- **Luna sword summon creation** – `backend/plugins/characters/luna.py:48-180`
+- **Luna sword summon creation** – `backend/plugins/characters/luna.py` (`_LunaSwordCoordinator` class)
   - Category: `ActionType.SPECIAL`
   - Complexity: High (creates Summon instances, registers with coordinator, syncs action counts)
   - Dependencies: `SummonManager`, `_LunaSwordCoordinator`, passive registry
@@ -161,7 +161,7 @@ For characters with summon mechanics:
 - **Damage Type Wrappers**: Ultimate methods in damage type files delegate to action plugins via `run_ultimate_action()` utility
 
 ### Fallback Safety
-Both `player_turn.py:437-480` and `foe_turn.py:280-342` include fallback logic that still calls `Stats.apply_damage` directly if an action plugin fails. This ensures battles don't abort due to plugin errors.
+Both `player_turn.py` and `foe_turn.py` include fallback logic within the normal attack execution (in `_run_player_turn_iteration` and `_run_foe_turn_iteration` respectively) that still calls `Stats.apply_damage` directly if an action plugin fails. This ensures battles don't abort due to plugin errors.
 
 ### Event Coordination
 Action plugins must continue to emit `BUS` events (`action_used`, `hit_landed`, `damage_dealt`, etc.) because:
