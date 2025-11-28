@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from dataclasses import field
 
 from autofighter.stat_effect import StatEffect
 from plugins.actions import ActionCostBreakdown
@@ -26,10 +27,14 @@ class BeccaMenagerieConvergence(SpecialAbilityBase):
     )
     character_id: str = "becca"
     cooldown_turns: int = 4
-    cost: ActionCostBreakdown = ActionCostBreakdown(action_points=1)
-    targeting: TargetingRules = TargetingRules(
-        scope=TargetScope.SELF,
-        side=TargetSide.ALLY,
+    cost: ActionCostBreakdown = field(
+        default_factory=lambda: ActionCostBreakdown(action_points=1)
+    )
+    targeting: TargetingRules = field(
+        default_factory=lambda: TargetingRules(
+            scope=TargetScope.SELF,
+            side=TargetSide.ALLY,
+        )
     )
 
     async def execute(self, actor, targets, context):
