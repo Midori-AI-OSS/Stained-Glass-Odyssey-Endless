@@ -40,7 +40,7 @@ All four tasks in the action plugin system project are complete and have been mo
 
 1. **Research First** (`fd656d56-battle-logic-research-documentation.md`) - Document battle logic findings in this goal file ✅
 2. **Design Second** (`9a56e7d1-action-plugin-architecture-design.md`) - Create architecture based on research findings ✅
-3. **Loader Third** (`4afe1e97-action-plugin-loader-implementation.md`) - Build infrastructure for action plugins ⚠️ PARTIAL
+3. **Loader Third** (`4afe1e97-action-plugin-loader-implementation.md`) - Build infrastructure for action plugins ✅
 4. **Normal Attack Last** (`b60f5a58-normal-attack-plugin-extraction.md`) - Migrate first action as proof-of-concept ✅
 
 This order ensures each task builds on the knowledge and infrastructure from previous tasks.
