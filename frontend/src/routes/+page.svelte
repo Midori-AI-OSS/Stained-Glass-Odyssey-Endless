@@ -365,11 +365,32 @@
         }
       }
     }
+
+    // Check for previous crash errors from the backend
+    async function checkPreviousCrash() {
+      try {
+        const res = await fetch('/api/previous-errors');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.has_errors && Array.isArray(data.errors) && data.errors.length > 0) {
+            openOverlay('crash-recovery', { errors: data.errors });
+          }
+        }
+      } catch (e) {
+        // Backend not available yet, skip crash check
+        if (dev) {
+          console.warn('Failed to check for previous crash errors:', e);
+        }
+      }
+    }
     
     // Try to get backend flavor and sync with backend
     try {
       backendFlavor = await getBackendFlavor();
       window.backendFlavor = backendFlavor;
+      
+      // Check for previous crash errors before UI state sync
+      await checkPreviousCrash();
       
       // Backend is ready, try new UI state approach first
       startUIPolling();

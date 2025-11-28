@@ -1,0 +1,47 @@
+{
+  "errors": [
+    {
+      "id": "7505631c-8fd7-4208-bb59-d9772d9e149f",
+      "timestamp": "2025-11-28T05:38:15.353898Z",
+      "severity": "critical",
+      "message": "boom",
+      "traceback": "Traceback (most recent call last):\n  File \"/home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/.venv/lib/python3.12/site-packages/quart/app.py\", line 1500, in full_dispatch_request\n    result = await self.dispatch_request(request_context)\n             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/.venv/lib/python3.12/site-packages/quart/app.py\", line 1597, in dispatch_request\n    return await self.ensure_async(handler)(**request_.view_args)  # type: ignore[return-value]\n           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/tests/test_error_handler.py\", line 33, in explode\n    raise RuntimeError(\"boom\")\nRuntimeError: boom\n",
+      "context": {
+        "file": "/home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend/tests/test_error_handler.py",
+        "line": 33,
+        "function": "explode",
+        "source": [
+          {
+            "line": 31,
+            "code": "    @app_module.app.route(\"/explode\")",
+            "highlight": false
+          },
+          {
+            "line": 32,
+            "code": "    async def explode() -> None:",
+            "highlight": false
+          },
+          {
+            "line": 33,
+            "code": "        raise RuntimeError(\"boom\")",
+            "highlight": true
+          },
+          {
+            "line": 34,
+            "code": "",
+            "highlight": false
+          },
+          {
+            "line": 35,
+            "code": "    return app_module.app.test_client(), called",
+            "highlight": false
+          }
+        ]
+      },
+      "metadata": {
+        "type": "RuntimeError"
+      }
+    }
+  ],
+  "last_crash": "2025-11-28T05:38:15.354051Z"
+}
