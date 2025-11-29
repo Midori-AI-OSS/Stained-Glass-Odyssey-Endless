@@ -7,7 +7,7 @@
 High
 
 ## Status
-WIP
+COMPLETE
 
 ## Description
 When the backend crashes, the WebUI shows a 404 error instead of the actual error from the backend. This task aims to:
@@ -321,16 +321,32 @@ ${error?.traceback || 'No traceback available'}
 - `frontend/src/lib/components/ErrorOverlay.svelte` - Enhance for crash recovery
 
 ## Acceptance Criteria
-- [ ] All backend errors return standardized JSON format
-- [ ] Errors are persisted to `data/errors.json` on crash
-- [ ] Errors are loaded and checked on backend startup
-- [ ] Frontend checks for previous crash errors on load
-- [ ] Crash recovery modal shows error details
-- [ ] "Report on GitHub" button opens issue with pre-filled details
-- [ ] Users can dismiss the modal and clear persisted errors
-- [ ] Works for both API errors and unhandled exceptions
-- [ ] Error format includes traceback and source context
-- [ ] Linting passes for both backend and frontend
+- [x] All backend errors return standardized JSON format
+- [x] Errors are persisted to `data/errors.json` on crash
+- [x] Errors are loaded and checked on backend startup
+- [x] Frontend checks for previous crash errors on load
+- [x] Crash recovery modal shows error details
+- [x] "Report on GitHub" button opens issue with pre-filled details
+- [x] Users can dismiss the modal and clear persisted errors
+- [x] Works for both API errors and unhandled exceptions
+- [x] Error format includes traceback and source context
+- [x] Linting passes for both backend and frontend
+
+## Completion Notes (Auditor Verified 2025-11-29)
+
+### Implementation Verified:
+- `backend/models/errors.py` - Pydantic error models (ErrorResponse, PersistedErrors, etc.)
+- `backend/services/error_storage.py` - Error persistence service with atexit handler
+- `backend/app.py` - Global error handler, `/api/previous-errors`, `/api/acknowledge-errors`
+- `frontend/src/lib/components/CrashRecoveryOverlay.svelte` - Crash recovery UI
+- `backend/tests/test_error_persistence.py` - 22 comprehensive tests
+- `backend/tests/test_error_handler.py` - 2 additional tests
+
+### Tests Verified:
+```bash
+uv run pytest tests/test_error_persistence.py tests/test_error_handler.py -v
+# Result: 24 passed
+```
 
 ## Testing Requirements
 
