@@ -235,3 +235,23 @@ def compute_aoe_animation_time(hit_count: int) -> float:
 - Be careful with order-dependent effects (some passives may rely on hit order)
 - Consider adding a feature flag to toggle between old/new behavior for testing
 - Animation callbacks may need updates to reflect the new timing model
+
+## Implementation Guide Available
+**See:** `.codex/implementation/aoe-batched-pacing.md`
+
+A comprehensive implementation guide has been created (2025-12-03) that includes:
+- Detailed analysis of current pacing system
+- Complete code examples for all required changes
+- Testing strategy with unit and integration test templates
+- Risk analysis and rollback plan
+- Performance impact calculations (78-88% faster AOE)
+- Step-by-step rollout plan
+
+The guide provides ready-to-use code snippets for:
+- New `pace_aoe_batch()` function
+- Wind spread refactor
+- Ultimate action refactors
+- Test cases
+
+**Estimated implementation time:** 8-12 hours  
+**Risk level:** Medium (requires passive/animation testing)
