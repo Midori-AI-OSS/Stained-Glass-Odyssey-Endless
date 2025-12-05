@@ -12,7 +12,7 @@ jobs:
         variant: [non-llm, llm-cpu, llm-cuda, llm-amd]
         
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       
       - uses: astral-sh/setup-uv@v6.6.0
         with:
@@ -73,11 +73,9 @@ jobs:
         variant: [non-llm, llm-cpu, llm-cuda, llm-amd]
         
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       
       - uses: astral-sh/setup-uv@v3
-        with:
-          python-version: '3.12'
       
       - uses: oven-sh/setup-bun@v1
         with:
@@ -130,7 +128,7 @@ jobs:
     runs-on: ubuntu-latest
         
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       
       - uses: actions/setup-java@v4
         with:

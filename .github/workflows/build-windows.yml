@@ -10,24 +10,22 @@ jobs:
       fail-fast: false
       matrix:
         variant: [non-llm, llm-cpu, llm-cuda, llm-amd]
-        
+
     steps:
-      - uses: actions/checkout@v4
-      
+      - uses: actions/checkout@v6
+
       - uses: astral-sh/setup-uv@v3
-        with:
-          python-version: '3.12'
-      
+
       - name: Install bun
         run: |
           powershell -c "irm bun.sh/install.ps1|iex"
           echo "$env:USERPROFILE\.bun\bin" >> $env:GITHUB_PATH
-          
+
       - name: Setup backend environment
         working-directory: backend
         run: |
           uv sync
-          
+
       - name: Install backend variant dependencies
         working-directory: backend
         run: |
@@ -38,17 +36,17 @@ jobs:
           } elseif ("${{ matrix.variant }}" -eq "llm-amd") {
             uv sync --extra llm-amd
           }
-          
+
       - name: Install PyInstaller for backend
         working-directory: backend
         run: uv add --dev pyinstaller
-        
+
       - name: Build frontend
         working-directory: frontend
         run: |
           bun install
           bun run build
-          
+
       - name: Build backend executable
         working-directory: backend
         run: |
@@ -59,9 +57,9 @@ jobs:
             Get-ChildItem ../frontend/
             exit 1
           }
-          
+
           uv run pyinstaller --onefile --add-data "../frontend/build;frontend" --clean --name "midori-autofighter-${{ matrix.variant }}-windows" app.py
-          
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:

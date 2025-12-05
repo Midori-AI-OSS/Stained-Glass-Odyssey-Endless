@@ -9,7 +9,8 @@ jobs:
     container:
       image: archlinux:latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
+
       - name: Build PKGBUILD
         working-directory: packaging/aur
         run: |
