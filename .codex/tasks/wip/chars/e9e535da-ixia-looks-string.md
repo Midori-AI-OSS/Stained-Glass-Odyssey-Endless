@@ -1,12 +1,23 @@
 # Add Looks String to Ixia Character
 
-⚠️ **DO NOT WORK ON THIS TASK** - Awaiting character description from user.
-
 ## Description
 Add a `looks` field to the Ixia character class (`backend/plugins/characters/ixia.py`) following the format used in Luna, Ryne, Lady Light, and Lady Darkness.
 
 ## Background
 The repository is standardizing character descriptions by adding a `looks` string that provides detailed visual descriptions for each character. This supports future AI-powered features and provides rich context for character appearance.
+
+## Reference Images
+````carousel
+![Reference 1](/home/lunamidori/.gemini/antigravity/brain/ef61a3d6-395c-44c7-a4f7-9570162d8c99/uploaded_image_0_1765100113124.jpg)
+<!-- slide -->
+![Reference 2](/home/lunamidori/.gemini/antigravity/brain/ef61a3d6-395c-44c7-a4f7-9570162d8c99/uploaded_image_1_1765100113124.jpg)
+<!-- slide -->
+![Reference 3](/home/lunamidori/.gemini/antigravity/brain/ef61a3d6-395c-44c7-a4f7-9570162d8c99/uploaded_image_2_1765100113124.jpg)
+<!-- slide -->
+![Reference 4](/home/lunamidori/.gemini/antigravity/brain/ef61a3d6-395c-44c7-a4f7-9570162d8c99/uploaded_image_3_1765100113124.jpg)
+<!-- slide -->
+![Reference 5](/home/lunamidori/.gemini/antigravity/brain/ef61a3d6-395c-44c7-a4f7-9570162d8c99/uploaded_image_4_1765100113124.jpg)
+````
 
 ## Reference Examples
 See these files for the expected format:
@@ -53,5 +64,5 @@ Low - Quality of life improvement
 
 ## Notes
 - This is part of a batch update to add looks strings to all characters
-- User will provide the actual appearance description
+- User will provide the actual appearance description (PROVIDED - see images above)
 - Task should only add the field, not modify any game mechanics
