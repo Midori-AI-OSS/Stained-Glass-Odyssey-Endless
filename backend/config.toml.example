@@ -1,0 +1,122 @@
+# Midori AI AutoFighter - Agent Configuration
+# Copy this file to config.toml and customize for your setup
+# DO NOT commit config.toml with real API keys!
+
+[midori_ai_agent_base]
+# Backend selection: "openai", "huggingface", or "langchain"
+# - openai: For OpenAI API, Ollama, LocalAI, and compatible services
+# - huggingface: For local inference with HuggingFace models
+# - langchain: For Langchain-based providers
+backend = "openai"
+
+# Model name (backend-specific format)
+# Must be an LRM (Large Reasoning Model)
+# Check this vs your setup, Ollama needs "gpt-oss:20b" vs LocalAI wanting "gpt-oss-20b" or "gpt-4"
+# OpenAI backend examples: "gpt-oss:20b", "gpt-oss:120b", "gpt-5.1"
+# HuggingFace backend examples: "openai/gpt-oss-20b", "openai/gpt-oss-120b"
+# Langchain examples: depends on the specific provider
+model = "gpt-oss:20b"
+
+# API key
+# For local services, use "not-needed" or leave empty
+# For remote services, always use environment variables
+api_key = "sx-123456789"
+
+# Base URL for API (optional, uses defaults if not specified)
+# Known endpoints:
+#   - https://ai-proxy.midori-ai.xyz
+#   - https://api.groq.com/openai
+#   - https://openrouter.ai/api
+#   - https://api.arliai.com
+# Or use your computer's IP address (e.g., "http://192.168.1.100:11434/v1")
+base_url = "${OPENAI_API_URL}"
+
+# Optional: Reasoning effort configuration
+# Controls the depth of reasoning for compatible models
+[midori_ai_agent_base.reasoning_effort]
+# Reasoning effort level: "none", "minimal", "low", "medium", "high"
+# Set to "low" to minimize costs when using remote OpenAI systems
+effort = "low"
+
+# Backend-specific overrides (optional)
+# Settings here override base settings when that backend is used
+
+[midori_ai_agent_base.openai]
+# OpenAI-specific overrides
+# Uncomment and modify as needed for OpenAI backend
+# model = "gpt-oss:120b"     # Use different LRM model for OpenAI backend
+# temperature = 0.7          # Sampling temperature (0.0 = deterministic, 1.0 = creative)
+# max_tokens = 2048          # Maximum tokens in response
+
+[midori_ai_agent_base.huggingface]
+# HuggingFace-specific settings for local inference
+# Default model for local inference (overrides base model when using huggingface backend)
+# Must be an LRM (Large Reasoning Model)
+model = "openai/gpt-oss-20b"
+
+# Device selection: "auto", "cpu", "cuda", "mps"
+# - auto: Automatically select best available device
+# - cpu: Force CPU inference (slower but works everywhere)
+# - cuda: Use NVIDIA GPU (requires CUDA installation)
+# - mps: Use Apple Silicon GPU (macOS only)
+device = "auto"
+
+# Torch data type: "auto", "float16", "float32", "bfloat16"
+# - auto: Automatically select based on hardware
+# - float16: Half precision (faster, less memory, may reduce quality)
+# - float32: Full precision (slower, more memory, best quality)
+# - bfloat16: Brain float (good balance, requires compatible hardware)
+torch_dtype = "auto"
+
+# Maximum new tokens to generate in response
+max_new_tokens = 512
+
+# Sampling temperature (0.0 = deterministic, 1.0 = creative)
+temperature = 0.7
+
+# Quantization options for reduced memory usage
+# Enable 8-bit quantization (reduces memory usage by ~50%)
+load_in_8bit = false
+
+# Enable 4-bit quantization (reduces memory usage by ~75%)
+# Note: Cannot use both 8-bit and 4-bit simultaneously
+load_in_4bit = false
+
+[midori_ai_agent_base.langchain]
+# Langchain-specific settings
+# Uncomment and modify as needed for Langchain backend
+# model = "gpt-oss:20b"
+# temperature = 0.7
+# max_tokens = 2048
+
+# Usage Examples:
+# ----------------
+# 
+# 1. Remote LRM server (using your computer's IP):
+#    [midori_ai_agent_base]
+#    backend = "openai"
+#    model = "gpt-oss:20b"
+#    api_key = "not-needed"
+#    base_url = "http://192.168.1.100:11434/v1"
+# 
+# 2. Midori AI Proxy:
+#    [midori_ai_agent_base]
+#    backend = "openai"
+#    model = "gpt-oss:20b"
+#    api_key = "${OPENAI_API_KEY}"
+#    base_url = "https://ai-proxy.midori-ai.xyz"
+# 
+# 3. Local HuggingFace LRM:
+#    [midori_ai_agent_base]
+#    backend = "huggingface"
+#    model = "openai/gpt-oss-20b"
+#    
+#    [midori_ai_agent_base.huggingface]
+#    device = "cuda"
+#    torch_dtype = "float16"
+#    load_in_8bit = true
+# 
+# For more information, see:
+# - Backend README: backend/README.md
+# - Implementation docs: .codex/implementation/agent-config.md
+# - Agent framework docs: https://github.com/Midori-AI-OSS/agents-packages
