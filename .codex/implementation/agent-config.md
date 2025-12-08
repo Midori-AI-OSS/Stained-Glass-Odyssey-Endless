@@ -292,19 +292,25 @@ Returns current LRM configuration and available options.
 {
   "current_model": "openai/gpt-oss-20b",
   "current_backend": "auto",
+  "current_api_url": "http://localhost:11434/v1",
+  "current_api_key": "test...5678",
   "available_backends": ["auto", "openai", "huggingface"],
   "available_models": ["openai/gpt-oss-20b", "openai/gpt-oss-120b", "gguf", "remote-openai"]
 }
 ```
 
+**Note:** The API key is masked for security, showing only the first 4 and last 4 characters.
+
 #### POST /config/lrm
-Update model and/or backend configuration.
+Update model, backend, API URL, and/or API key configuration.
 
 **Request:**
 ```json
 {
   "model": "openai/gpt-oss-120b",  // optional
-  "backend": "openai"                // optional (auto, openai, or huggingface)
+  "backend": "openai",              // optional (auto, openai, or huggingface)
+  "api_url": "http://localhost:11434/v1",  // optional
+  "api_key": "your-api-key-here"    // optional
 }
 ```
 
@@ -312,7 +318,9 @@ Update model and/or backend configuration.
 ```json
 {
   "current_model": "openai/gpt-oss-120b",
-  "current_backend": "openai"
+  "current_backend": "openai",
+  "current_api_url": "http://localhost:11434/v1",
+  "current_api_key": "your...here"
 }
 ```
 
@@ -373,8 +381,12 @@ The `backend` parameter controls which agent framework backend is used:
 Runtime configuration changes are persisted to the database in the `options` table:
 - `lrm_backend`: Stores the backend selection
 - `lrm_model`: Stores the model name
+- `lrm_api_url`: Stores the API URL for OpenAI-compatible backends
+- `lrm_api_key`: Stores the API key (stored securely in encrypted database)
 
 These settings take precedence over config file and environment variables when the agent is loaded.
+
+**Security Note:** API keys are masked when returned via GET requests, showing only the first 4 and last 4 characters. The full key is stored securely in the encrypted SQLite database but never exposed in API responses.
 
 ### Implementation
 

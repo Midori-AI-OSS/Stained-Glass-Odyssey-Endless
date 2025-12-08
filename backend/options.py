@@ -9,6 +9,8 @@ OptionValue = TypeVar("OptionValue")
 class OptionKey(StrEnum):
     LRM_MODEL = "lrm_model"
     LRM_BACKEND = "lrm_backend"
+    LRM_API_URL = "lrm_api_url"
+    LRM_API_KEY = "lrm_api_key"
     TURN_PACING = "turn_pacing"
     CONCISE_DESCRIPTIONS = "concise_descriptions"
 

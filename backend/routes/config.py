@@ -23,8 +23,20 @@ _TURN_PACING_DEFAULT = 0.5
 
 @bp.get("/lrm")
 async def get_lrm_config() -> tuple[str, int, dict[str, object]]:
+    import os
+
     current_model = get_option(OptionKey.LRM_MODEL, ModelName.OPENAI_20B.value)
     current_backend = get_option(OptionKey.LRM_BACKEND, "auto")
+    current_api_url = get_option(OptionKey.LRM_API_URL, os.getenv("OPENAI_API_URL", ""))
+    current_api_key = get_option(OptionKey.LRM_API_KEY, os.getenv("OPENAI_API_KEY", ""))
+
+    # Mask the API key for security (only show first 4 and last 4 characters)
+    masked_api_key = ""
+    if current_api_key and len(current_api_key) > 8:
+        masked_api_key = current_api_key[:4] + "..." + current_api_key[-4:]
+    elif current_api_key:
+        masked_api_key = "***"
+
     available_backends = ["auto", "openai", "huggingface"]
 
     # Legacy: still provide available_models for backward compatibility
@@ -33,6 +45,8 @@ async def get_lrm_config() -> tuple[str, int, dict[str, object]]:
     payload = {
         "current_model": current_model,
         "current_backend": current_backend,
+        "current_api_url": current_api_url,
+        "current_api_key": masked_api_key,
         "available_backends": available_backends,
         "available_models": models,  # Legacy compatibility
     }
@@ -46,9 +60,13 @@ async def get_lrm_config() -> tuple[str, int, dict[str, object]]:
 
 @bp.post("/lrm")
 async def set_lrm_model() -> tuple[str, int, dict[str, str]]:
+    import os
+
     data = await request.get_json()
     model = data.get("model", "")
     backend = data.get("backend", None)
+    api_url = data.get("api_url", None)
+    api_key = data.get("api_key", None)
 
     # Validate model if provided
     if model and model not in [m.value for m in ModelName]:
@@ -74,10 +92,37 @@ async def set_lrm_model() -> tuple[str, int, dict[str, str]]:
         backend = get_option(OptionKey.LRM_BACKEND, "auto")
         old_backend = backend
 
+    # Update API URL if provided
+    if api_url is not None:
+        old_api_url = get_option(OptionKey.LRM_API_URL, os.getenv("OPENAI_API_URL", ""))
+        set_option(OptionKey.LRM_API_URL, api_url)
+    else:
+        api_url = get_option(OptionKey.LRM_API_URL, os.getenv("OPENAI_API_URL", ""))
+        old_api_url = api_url
+
+    # Update API key if provided
+    if api_key is not None:
+        old_api_key = get_option(OptionKey.LRM_API_KEY, os.getenv("OPENAI_API_KEY", ""))
+        set_option(OptionKey.LRM_API_KEY, api_key)
+    else:
+        api_key = get_option(OptionKey.LRM_API_KEY, os.getenv("OPENAI_API_KEY", ""))
+        old_api_key = api_key
+
+    # Mask the API key for security in response
+    masked_api_key = ""
+    if api_key and len(api_key) > 8:
+        masked_api_key = api_key[:4] + "..." + api_key[-4:]
+    elif api_key:
+        masked_api_key = "***"
+
     try:
         await log_settings_change("lrm_model", old_model, model)
         if backend != old_backend:
             await log_settings_change("lrm_backend", old_backend, backend)
+        if api_url != old_api_url:
+            await log_settings_change("lrm_api_url", old_api_url, api_url)
+        if api_key != old_api_key:
+            await log_settings_change("lrm_api_key", "***", "***")  # Don't log actual keys
         await log_menu_action("Settings", "update_lrm", {
             "old_model": old_model,
             "new_model": model,
@@ -87,7 +132,12 @@ async def set_lrm_model() -> tuple[str, int, dict[str, str]]:
     except Exception:
         pass
 
-    return jsonify({"current_model": model, "current_backend": backend})
+    return jsonify({
+        "current_model": model,
+        "current_backend": backend,
+        "current_api_url": api_url,
+        "current_api_key": masked_api_key,
+    })
 
 
 @bp.post("/lrm/test")

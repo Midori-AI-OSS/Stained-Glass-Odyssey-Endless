@@ -7,7 +7,7 @@
 Medium
 
 ## Status
-WIP
+COMPLETED
 
 ## Description
 Update LRM configuration endpoints in `routes/config.py` to work with the Agent Framework's backends and config system.
@@ -94,12 +94,24 @@ async def set_lrm_backend():
 ```
 
 ## Acceptance Criteria
-- [ ] GET /config/lrm returns backend info
-- [ ] POST /config/lrm/test uses agent framework
-- [ ] Backend selection endpoint added
-- [ ] Backward compatibility maintained
-- [ ] Tests updated
-- [ ] Linting passes
+- [x] GET /config/lrm returns backend info (including API URL and API key)
+- [x] POST /config/lrm/test uses agent framework
+- [x] Backend selection endpoint added
+- [x] API URL and API key configuration supported
+- [x] Backward compatibility maintained
+- [x] Tests updated
+- [x] Linting passes
+
+## Status
+COMPLETED - Ready for review
+
+## Completion Notes
+- Added LRM_API_URL and LRM_API_KEY option keys
+- GET /config/lrm now returns current_api_url and current_api_key (masked)
+- POST /config/lrm accepts optional api_url and api_key parameters
+- API keys are masked in responses for security (shows first 4 and last 4 chars)
+- All tests passing
+- All linting checks pass
 
 ## Dependencies
 - Requires: `32e92203-migrate-llm-loader.md`

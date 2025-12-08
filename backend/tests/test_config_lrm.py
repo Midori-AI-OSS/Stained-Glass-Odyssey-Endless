@@ -49,6 +49,8 @@ async def test_lrm_config_endpoints(app_with_db, monkeypatch):
     data = await resp.get_json()
     assert "current_model" in data
     assert "current_backend" in data
+    assert "current_api_url" in data
+    assert "current_api_key" in data
     assert "available_backends" in data
     assert "available_models" in data
     assert "auto" in data["available_backends"]
@@ -62,12 +64,25 @@ async def test_lrm_config_endpoints(app_with_db, monkeypatch):
     data = await resp.get_json()
     assert data["current_model"] == ModelName.OPENAI_120B.value
     assert "current_backend" in data
+    assert "current_api_url" in data
+    assert "current_api_key" in data
 
     # Test POST endpoint with backend
     resp = await client.post("/config/lrm", json={"backend": "openai"})
     data = await resp.get_json()
     assert data["current_backend"] == "openai"
     assert "current_model" in data
+    assert "current_api_url" in data
+    assert "current_api_key" in data
+
+    # Test POST endpoint with API URL and key
+    test_url = "http://localhost:11434/v1"
+    test_key = "test-api-key-12345678"
+    resp = await client.post("/config/lrm", json={"api_url": test_url, "api_key": test_key})
+    data = await resp.get_json()
+    assert data["current_api_url"] == test_url
+    # API key should be masked
+    assert data["current_api_key"] == "test...5678"
 
     # Test POST endpoint with both
     resp = await client.post("/config/lrm", json={"backend": "huggingface", "model": ModelName.OPENAI_20B.value})
