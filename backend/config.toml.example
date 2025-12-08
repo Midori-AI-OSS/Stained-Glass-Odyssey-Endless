@@ -11,15 +11,16 @@ backend = "openai"
 
 # Model name (backend-specific format)
 # Must be an LRM (Large Reasoning Model)
-# OpenAI backend examples: "gpt-oss:20b", "gpt-oss:120b"
+# Check this vs your setup, Ollama needs "gpt-oss:20b" vs LocalAI wanting "gpt-oss-20b" or "gpt-4"
+# OpenAI backend examples: "gpt-oss:20b", "gpt-oss:120b", "gpt-5.1"
 # HuggingFace backend examples: "openai/gpt-oss-20b", "openai/gpt-oss-120b"
 # Langchain examples: depends on the specific provider
 model = "gpt-oss:20b"
 
-# API key (use environment variable for security: ${OPENAI_API_KEY})
+# API key
 # For local services, use "not-needed" or leave empty
 # For remote services, always use environment variables
-api_key = "${OPENAI_API_KEY}"
+api_key = "sx-123456789"
 
 # Base URL for API (optional, uses defaults if not specified)
 # Known endpoints:
