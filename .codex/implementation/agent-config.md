@@ -91,7 +91,7 @@ For OpenAI API, Ollama, LocalAI, and compatible services.
 backend = "openai"
 model = "gpt-oss:20b"
 api_key = "${OPENAI_API_KEY}"
-base_url = "http://localhost:11434/v1"
+base_url = "http://192.168.1.100:11434/v1"
 ```
 
 ### 2. HuggingFace Backend (`backend = "huggingface"`)
@@ -106,7 +106,7 @@ For local inference with HuggingFace models.
 ```toml
 [midori_ai_agent_base]
 backend = "huggingface"
-model = "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
+model = "openai/gpt-oss-20b"
 
 [midori_ai_agent_base.huggingface]
 device = "cuda"
@@ -175,33 +175,31 @@ The script will:
    chmod 600 backend/config.toml
    ```
 
-4. **Rotate keys regularly** - Especially for production
-
 ## Common Configurations
 
-### Development with Ollama
+### Remote LRM Server (Using Your Computer's IP)
 ```toml
 [midori_ai_agent_base]
 backend = "openai"
-model = "llama3:8b"
+model = "gpt-oss:20b"
 api_key = "not-needed"
-base_url = "http://localhost:11434/v1"
+base_url = "http://192.168.1.100:11434/v1"
 ```
 
-### Production with OpenAI API
+### Midori AI Proxy
 ```toml
 [midori_ai_agent_base]
 backend = "openai"
-model = "gpt-4-turbo"
+model = "gpt-oss:20b"
 api_key = "${OPENAI_API_KEY}"
-base_url = "https://api.openai.com/v1"
+base_url = "https://ai-proxy.midori-ai.xyz"
 ```
 
 ### Local Inference (CPU)
 ```toml
 [midori_ai_agent_base]
 backend = "huggingface"
-model = "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
+model = "openai/gpt-oss-20b"
 
 [midori_ai_agent_base.huggingface]
 device = "cpu"
@@ -212,7 +210,7 @@ torch_dtype = "float32"
 ```toml
 [midori_ai_agent_base]
 backend = "huggingface"
-model = "meta-llama/Llama-2-7b-chat-hf"
+model = "openai/gpt-oss-20b"
 
 [midori_ai_agent_base.huggingface]
 device = "cuda"

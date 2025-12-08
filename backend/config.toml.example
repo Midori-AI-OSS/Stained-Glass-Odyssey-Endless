@@ -10,38 +10,32 @@
 backend = "openai"
 
 # Model name (backend-specific format)
-# OpenAI examples: "gpt-4", "gpt-4-turbo", "gpt-oss:20b", "carly-agi-pro"
-# HuggingFace examples: "TinyLlama/TinyLlama-1.1B-Chat-v1.0", "meta-llama/Llama-2-7b-chat-hf"
+# Must be an LRM (Large Reasoning Model)
+# OpenAI backend examples: "gpt-oss:20b", "gpt-oss:120b"
+# HuggingFace backend examples: "openai/gpt-oss-20b", "openai/gpt-oss-120b"
 # Langchain examples: depends on the specific provider
 model = "gpt-oss:20b"
 
 # API key (use environment variable for security: ${OPENAI_API_KEY})
-# For Ollama and similar local services, use "not-needed" or leave empty
-# For production deployments, always use environment variables
+# For local services, use "not-needed" or leave empty
+# For remote services, always use environment variables
 api_key = "${OPENAI_API_KEY}"
 
 # Base URL for API (optional, uses defaults if not specified)
-# Examples:
-#   OpenAI: "https://api.openai.com/v1"
-#   Ollama: "http://localhost:11434/v1"
-#   LocalAI: "http://localhost:8080/v1"
-#   Custom LLM server: "https://your-llm-server.com/v1"
+# Known endpoints:
+#   - https://ai-proxy.midori-ai.xyz
+#   - https://api.groq.com/openai
+#   - https://openrouter.ai/api
+#   - https://api.arliai.com
+# Or use your computer's IP address (e.g., "http://192.168.1.100:11434/v1")
 base_url = "${OPENAI_API_URL}"
 
 # Optional: Reasoning effort configuration
 # Controls the depth of reasoning for compatible models
 [midori_ai_agent_base.reasoning_effort]
 # Reasoning effort level: "none", "minimal", "low", "medium", "high"
-# Higher levels produce more detailed reasoning but take longer
-effort = "high"
-
-# Summary generation style: "auto", "concise", "detailed"
-# Controls how reasoning summaries are generated
-generate_summary = "detailed"
-
-# Summary detail level: "auto", "concise", "detailed"
-# Controls the verbosity of the final summary
-summary = "detailed"
+# Set to "low" to minimize costs when using remote OpenAI systems
+effort = "low"
 
 # Backend-specific overrides (optional)
 # Settings here override base settings when that backend is used
@@ -49,14 +43,15 @@ summary = "detailed"
 [midori_ai_agent_base.openai]
 # OpenAI-specific overrides
 # Uncomment and modify as needed for OpenAI backend
-# model = "gpt-4-turbo"      # Use different model for OpenAI backend
+# model = "gpt-oss:120b"     # Use different LRM model for OpenAI backend
 # temperature = 0.7          # Sampling temperature (0.0 = deterministic, 1.0 = creative)
 # max_tokens = 2048          # Maximum tokens in response
 
 [midori_ai_agent_base.huggingface]
 # HuggingFace-specific settings for local inference
 # Default model for local inference (overrides base model when using huggingface backend)
-model = "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
+# Must be an LRM (Large Reasoning Model)
+model = "openai/gpt-oss-20b"
 
 # Device selection: "auto", "cpu", "cuda", "mps"
 # - auto: Automatically select best available device
@@ -89,31 +84,31 @@ load_in_4bit = false
 [midori_ai_agent_base.langchain]
 # Langchain-specific settings
 # Uncomment and modify as needed for Langchain backend
-# model = "llama3:8b"
+# model = "gpt-oss:20b"
 # temperature = 0.7
 # max_tokens = 2048
 
 # Usage Examples:
 # ----------------
 # 
-# 1. Ollama (local LLM server):
+# 1. Remote LRM server (using your computer's IP):
 #    [midori_ai_agent_base]
 #    backend = "openai"
-#    model = "llama3:8b"
+#    model = "gpt-oss:20b"
 #    api_key = "not-needed"
-#    base_url = "http://localhost:11434/v1"
+#    base_url = "http://192.168.1.100:11434/v1"
 # 
-# 2. OpenAI API:
+# 2. Midori AI Proxy:
 #    [midori_ai_agent_base]
 #    backend = "openai"
-#    model = "gpt-4-turbo"
+#    model = "gpt-oss:20b"
 #    api_key = "${OPENAI_API_KEY}"
-#    base_url = "https://api.openai.com/v1"
+#    base_url = "https://ai-proxy.midori-ai.xyz"
 # 
-# 3. Local HuggingFace model:
+# 3. Local HuggingFace LRM:
 #    [midori_ai_agent_base]
 #    backend = "huggingface"
-#    model = "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
+#    model = "openai/gpt-oss-20b"
 #    
 #    [midori_ai_agent_base.huggingface]
 #    device = "cuda"
