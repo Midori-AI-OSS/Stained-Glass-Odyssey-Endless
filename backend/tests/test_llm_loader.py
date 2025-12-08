@@ -47,7 +47,7 @@ async def test_deepseek_loader(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(llms.safety, "ensure_ram", lambda required: None)
     monkeypatch.setattr(llms.safety, "pick_device", lambda: -1)
     def fake_pipeline(task: str, *, model: str, **kwargs: object) -> FakePipeline:
-        assert model == ModelName.DEEPSEEK.value
+        assert model == ModelName.OPENAI_20B.value
         assert kwargs.get("device") == -1
         return FakePipeline(" ds")
 
@@ -60,7 +60,7 @@ async def test_deepseek_loader(monkeypatch: pytest.MonkeyPatch) -> None:
 
     monkeypatch.setattr(llms.loader, "HuggingFacePipeline", lambda *, pipeline: DummyHF(pipeline))
     monkeypatch.setattr(llms.loader, "pipeline", fake_pipeline)
-    llm = load_llm(ModelName.DEEPSEEK.value)
+    llm = load_llm(ModelName.OPENAI_20B.value)
     result = await _collect(llm)
     assert result == "hi ds"
 
@@ -74,13 +74,13 @@ async def test_gemma_loader(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(llms.safety, "ensure_ram", lambda required: None)
     monkeypatch.setattr(llms.safety, "pick_device", lambda: -1)
     def fake_pipeline(task: str, *, model: str, **kwargs: object) -> FakePipeline:
-        assert model == ModelName.GEMMA.value
+        assert model == ModelName.OPENAI_120B.value
         assert kwargs.get("device") == -1
         return FakePipeline(" gm")
 
     monkeypatch.setattr(llms.loader, "HuggingFacePipeline", lambda *, pipeline: DummyHF(pipeline))
     monkeypatch.setattr(llms.loader, "pipeline", fake_pipeline)
-    llm = load_llm(ModelName.GEMMA.value)
+    llm = load_llm(ModelName.OPENAI_120B.value)
     result = await _collect(llm)
     assert result == "hi gm"
 
@@ -165,6 +165,6 @@ async def test_remote_openai_not_configured(monkeypatch: pytest.MonkeyPatch) -> 
     monkeypatch.setattr(llms.loader, "HuggingFacePipeline", lambda *, pipeline: DummyHF(pipeline))
     monkeypatch.setattr(llms.loader, "pipeline", fake_pipeline)
 
-    llm = load_llm(ModelName.DEEPSEEK.value)
+    llm = load_llm(ModelName.OPENAI_20B.value)
     result = await _collect(llm)
     assert result == "hi local"
