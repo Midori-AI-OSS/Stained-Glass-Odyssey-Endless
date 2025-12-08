@@ -27,13 +27,14 @@ The Midori AI Agent Framework provides a meta-package that bundles all necessary
 - **Easier Updates**: Update framework version instead of many packages
 - **Reduced Conflicts**: Framework handles dependency resolution
 - **Future-Proof**: New framework features automatically available
+- **Breaking Changes**: Intentionally breaking old code to find and fix issues faster
 
 ## Objectives
-1. Add `midori-ai-agents-all` package to dependencies
-2. Remove redundant individual packages
-3. Keep essential packages (torch, transformers) that are still needed
-4. Maintain all existing LLM functionality
-5. Ensure all optional dependency groups still work
+1. Add `midori-ai-agents-all` and `midori-ai-logger` packages to dependencies
+2. Remove ALL old LLM packages (breaking change)
+3. Keep essential packages (torch, transformers) for local model support
+4. **BREAK backward compatibility** - remove all old imports and code
+5. Use `uv add` to install dependencies properly
 
 ## Implementation Steps
 
@@ -48,15 +49,28 @@ Document which packages are:
 - Still needed (torch, transformers for local models)
 - No longer needed
 
-### Step 2: Update pyproject.toml
+### Step 2: Install Dependencies Using uv add
 
-Modify `backend/pyproject.toml`:
+Use `uv add` to properly install the agent framework:
+
+```bash
+cd backend
+
+# Add the agent framework meta-package
+uv add "git+https://github.com/Midori-AI-OSS/agents-packages.git#subdirectory=midori-ai-agents-all"
+
+# Add the logger package
+uv add "git+https://github.com/Midori-AI-OSS/agents-packages.git#subdirectory=logger"
+```
+
+Then manually update `backend/pyproject.toml` optional dependencies:
 
 ```toml
 [project.optional-dependencies]
 llm-cpu = [
-    # Core LLM framework
+    # Core LLM framework and logger
     "midori-ai-agents-all @ git+https://github.com/Midori-AI-OSS/agents-packages.git#subdirectory=midori-ai-agents-all",
+    "midori-ai-logger @ git+https://github.com/Midori-AI-OSS/agents-packages.git#subdirectory=logger",
     
     # Still needed for local model support
     "torch",
@@ -72,7 +86,7 @@ llm-cpu = [
 ]
 ```
 
-Remove these (now provided by midori-ai-agents-all):
+**REMOVE** these completely (breaking change):
 - `openai`
 - `openai-agents`
 - `langgraph`
@@ -113,23 +127,23 @@ Should see:
 - midori-ai-agents-all
 - And other midori-ai packages
 
-### Step 5: Test Imports
-Create a test script to verify imports work:
+### Step 5: Test Imports (Breaking Change Verification)
+Create a test script to verify NEW imports work and OLD imports FAIL:
 ```python
-# Test framework imports
+# Test NEW framework imports (should work)
 from midori_ai_agent_base import MidoriAiAgentProtocol, AgentPayload, AgentResponse
 from midori_ai_agent_base import get_agent, get_agent_from_config
 from midori_ai_agent_openai import OpenAIAgentsAdapter
 from midori_ai_agent_huggingface import HuggingFaceLocalAgent
-from midori_ai_agent_langchain import LangChainAdapter
+from midori_ai_logger import get_logger
 
-# Test that old imports still work (for backward compatibility testing)
-import openai
-from openai import AsyncOpenAI
-import langchain_core
-import transformers
+log = get_logger(__name__)
+log.info("New agent framework imports successful!")
 
-print("All imports successful!")
+# OLD imports should FAIL - we want this!
+# These should raise ImportError if properly removed:
+# import openai
+# import langchain_core
 ```
 
 Run test:
@@ -137,6 +151,8 @@ Run test:
 cd backend
 uv run python test_imports.py
 ```
+
+**Expected**: New imports work, old imports would fail (which is desired).
 
 ### Step 6: Update Build Configuration
 Check if build scripts reference specific packages:
@@ -170,15 +186,15 @@ llm-amd = [
 ```
 
 ## Acceptance Criteria
-- [ ] `midori-ai-agents-all` added to pyproject.toml
-- [ ] Redundant packages removed from pyproject.toml
+- [ ] `midori-ai-agents-all` and `midori-ai-logger` added using `uv add`
+- [ ] ALL old LLM packages removed from pyproject.toml (breaking change)
 - [ ] Essential packages (torch, transformers) retained
 - [ ] `uv lock` completes successfully
 - [ ] `uv sync --extra llm-cpu` completes successfully
 - [ ] All midori-ai packages are installed and importable
-- [ ] Old package imports still work (for transition period)
+- [ ] **Old package imports FAIL** (desired breaking change)
 - [ ] Build scripts updated if needed
-- [ ] GPU/AMD extras updated if they exist
+- [ ] GPU/AMD extras updated with logger package
 - [ ] No dependency conflicts reported
 - [ ] Documentation updated with new dependency info
 
@@ -191,25 +207,25 @@ cd backend
 rm -rf .venv uv.lock
 uv sync --extra llm-cpu
 
-# Verify all packages present
-uv pip list | grep -E "midori|langchain|openai|torch|transformers"
+# Verify midori packages present, old packages ABSENT
+uv pip list | grep midori  # Should show midori packages
+uv pip list | grep langchain  # Should show NOTHING (removed)
 ```
 
-### Import Tests
+### Import Tests (Breaking Change Verification)
 ```bash
-# Test framework imports
-uv run python -c "from midori_ai_agent_base import get_agent; print('Success')"
+# Test NEW framework imports (should succeed)
+uv run python -c "from midori_ai_agent_base import get_agent; from midori_ai_logger import get_logger; print('Success')"
 
-# Test old imports still work
-uv run python -c "import openai, langchain_core; print('Success')"
+# Test OLD imports FAIL (desired behavior)
+uv run python -c "import openai; print('Should not reach here')"  # Should error
+uv run python -c "import langchain_core; print('Should not reach here')"  # Should error
 ```
 
 ### Build Tests
 ```bash
-# Test non-LLM build still works
+# Test builds still work with new dependencies
 ./build.sh non-llm
-
-# Test LLM build still works (if time permits)
 ./build.sh llm-cpu
 ```
 
@@ -228,10 +244,12 @@ uv run python -c "import openai, langchain_core; print('Success')"
 - Build scripts: `build.sh`, `build/`, `packaging/`
 
 ## Notes for Coder
-- Use git+https URL format for direct installation from GitHub
+- Use `uv add` with git+https URL format for installation
 - The `#subdirectory=` part is critical for monorepo structure
+- **BREAK backward compatibility** - this is intentional to find issues faster
+- Remove ALL old LLM imports and references
 - Keep torch and transformers - they're needed by the huggingface backend
+- Add midori-ai-logger package for all logging (replace `print` statements)
 - The midori-ai-agents-all package is a meta-package that installs all other midori-ai packages
-- You can verify the meta-package contents by checking its pyproject.toml in the cloned agents-packages repo
 - Consider pinning to a specific version or tag for production (e.g., `@v1.0.0#subdirectory=...`)
-- The framework recommends v1 for version locking, but allows using main branch for latest features
+- Update `backend/AGENTS.md` has been updated with agent framework information
