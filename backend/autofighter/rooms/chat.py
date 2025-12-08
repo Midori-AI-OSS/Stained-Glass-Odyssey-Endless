@@ -4,8 +4,7 @@ from dataclasses import dataclass
 import json
 from typing import Any
 
-from llms.loader import ModelName
-from llms.loader import load_llm
+from llms.agent_loader import load_agent
 from options import get_option
 from tts import generate_voice
 
@@ -21,21 +20,53 @@ class ChatRoom(Room):
 
     async def resolve(self, party: Party, data: dict[str, Any]) -> dict[str, Any]:
         import asyncio
+        import os
+
+        from midori_ai_agent_base import AgentPayload
 
         registry = PassiveRegistry()
         for member in party.members:
             await registry.trigger("room_enter", member)
         message = data.get("message", "")
         party_data = [_serialize(p) for p in party.members]
-        model = get_option("lrm_model", ModelName.DEEPSEEK.value)
 
-        # Load LLM in thread pool to avoid blocking the event loop
-        llm = await asyncio.to_thread(load_llm, model)
-        payload = {"party": party_data, "message": message}
-        prompt = json.dumps(payload)
+        # Get configuration from options
+        model = get_option("lrm_model")
+        backend = get_option("lrm_backend")
+
+        # Set environment variables for API configuration if stored in options
+        api_url = get_option("lrm_api_url")
+        api_key = get_option("lrm_api_key")
+        if api_url:
+            os.environ["OPENAI_API_URL"] = api_url
+        if api_key:
+            os.environ["OPENAI_API_KEY"] = api_key
+
+        # Load agent using agent framework
+        # Pass None for backend to let agent_loader auto-detect, or use configured backend
+        agent = await load_agent(
+            backend=backend if backend and backend != "auto" else None,
+            model=model,
+        )
+
+        # Create structured payload with party context
+        payload = AgentPayload(
+            user_message=message,
+            thinking_blob="",
+            system_context=f"You are a character in an auto-battler game. Party: {json.dumps(party_data)}",
+            user_profile={},
+            tools_available=[],
+            session_id="chat-room",
+        )
+
+        # Get response using streaming or invoke
         reply = ""
-        async for chunk in llm.generate_stream(prompt):
-            reply += chunk
+        if await agent.supports_streaming():
+            async for chunk in agent.stream(payload):
+                reply += chunk
+        else:
+            response = await agent.invoke(payload)
+            reply = response.response
 
         voice_path: str | None = None
         sample = None
