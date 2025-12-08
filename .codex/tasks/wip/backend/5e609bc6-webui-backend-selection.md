@@ -10,109 +10,219 @@ Medium
 WIP
 
 ## Description
-Add a user interface in the WebUI to allow users to select between OpenAI and HuggingFace backends, configure OpenAI API URL (optional), and select appropriate models based on the chosen backend.
+Update the existing LRM settings UI in the WebUI to support backend selection between OpenAI and HuggingFace agents, configure OpenAI API URL (optional), and select appropriate models based on the chosen backend.
 
 ## Context
 After migrating to the Midori AI Agent Framework, the backend supports two agent backends:
 1. **OpenAI agents** - For users with OpenAI API or compatible servers (Ollama, LocalAI, etc.)
 2. **HuggingFace agents** - For local inference without external dependencies
 
-Currently, backend selection is done via environment variables. Users need a UI to configure this.
+**Existing UI Components:**
+- `frontend/src/lib/components/LLMSettings.svelte` - Current LRM model selection UI
+- `frontend/src/lib/components/SettingsMenu.svelte` - Settings menu that includes LLM settings
+- `frontend/src/lib/systems/api.js` - API functions: `getLrmConfig()`, `setLrmModel()`, `testLrmModel()`
+
+Currently, the UI only shows a model dropdown. It needs to be enhanced to support backend selection and optional API URL configuration.
 
 ## Rationale
 - **User-Friendly**: GUI instead of editing config files or env vars
 - **Flexibility**: Easy switching between local and remote backends
 - **Discoverability**: Users can see what options are available
 - **Validation**: UI can validate settings before saving
+- **Existing Foundation**: Build on existing LLMSettings component
 
 ## Objectives
-1. Add backend selection dropdown (OpenAI / HuggingFace)
+1. Enhance existing LLMSettings component to add backend selection dropdown (OpenAI / HuggingFace)
 2. Add OpenAI API URL input field (optional, for custom servers)
-3. Add model selection based on backend
-4. Save settings to backend config
-5. Show current backend status
-6. Use recommended model for HuggingFace (openai/gpt-oss-20b with high reasoning)
+3. Update model dropdown to show backend-appropriate models
+4. Update backend API to support new parameters
+5. Use recommended model for HuggingFace (openai/gpt-oss-20b with high reasoning)
 
 ## Implementation Steps
 
-### Step 1: Design UI Layout
-Add new settings section for agent backend:
-- Dropdown: Backend selection (OpenAI / HuggingFace)
-- Text input: OpenAI API URL (shown only when OpenAI selected)
-- Dropdown: Model selection (populated based on backend)
-- Button: Test connection
-- Status indicator: Current backend status
+### Step 1: Review Existing UI Components
+**Current implementation:**
+- `frontend/src/lib/components/LLMSettings.svelte` - Displays LRM model dropdown and test button
+  - Props: `lrmModel`, `lrmOptions`, `handleModelChange`, `handleTestModel`, `testReply`
+  - Currently shows only model selection
+- `frontend/src/lib/components/SettingsMenu.svelte` - Parent component managing settings
+  - Functions: `handleModelChange()`, `handleTestModel()`
+  - API calls: `getLrmConfig()`, `setLrmModel()`, `testLrmModel()`
+- `frontend/src/lib/systems/api.js` - API interface functions
+  - `getLrmConfig()` → GET `/config/lrm`
+  - `setLrmModel(model)` → POST `/config/lrm`
+  - `testLrmModel(prompt)` → POST `/config/lrm/test`
 
-### Step 2: Create Backend API Endpoints
-Add new endpoints in `backend/routes/config.py`:
+**Required enhancements:**
+1. Add backend selection dropdown to LLMSettings.svelte
+2. Add optional API URL input field
+3. Update model dropdown to filter by backend
+4. Extend backend API to return/accept backend and base_url parameters
+
+### Step 2: Update Backend API Endpoints
+Enhance existing `/config/lrm` endpoints in `backend/routes/config.py`:
 
 ```python
-@bp.get("/agent/backend")
-async def get_agent_backend():
-    """Get current agent backend configuration."""
+@bp.get("/lrm")
+async def get_lrm_config():
+    """Get current LRM configuration with backend info."""
     from llms.agent_loader import get_agent_config
     
     config = get_agent_config()
     
+    # Enhanced response with backend information
     payload = {
+        "current_model": config.model if config else os.getenv("AF_LLM_MODEL", "gpt-oss:20b"),
         "backend": config.backend if config else "openai",
-        "model": config.model if config else "gpt-oss:20b",
-        "base_url": config.base_url if config else None,
+        "base_url": config.base_url if config else os.getenv("OPENAI_API_URL"),
         "available_backends": ["openai", "huggingface"],
-        "recommended_models": {
+        "available_models": {
             "openai": ["gpt-oss:20b", "gpt-4", "gpt-3.5-turbo", "llama3:8b"],
             "huggingface": ["openai/gpt-oss-20b"],  # Recommended with high reasoning
         },
     }
+    try:
+        await log_menu_action("Settings", "view_lrm", {"backend": payload["backend"]})
+    except Exception:
+        pass
     return jsonify(payload)
 
 
-@bp.post("/agent/backend")
-async def set_agent_backend():
-    """Set agent backend configuration."""
+@bp.post("/lrm")
+async def set_lrm_model():
+    """Set LRM configuration including backend and model."""
     data = await request.get_json()
-    backend = data.get("backend", "openai")
-    model = data.get("model")
+    backend = data.get("backend")
+    model = data.get("model", "")
     base_url = data.get("base_url")
     
-    if backend not in ["openai", "huggingface"]:
+    # Validate backend if provided
+    if backend and backend not in ["openai", "huggingface"]:
         return jsonify({"error": "Invalid backend"}), 400
     
-    # Save to config or options
-    set_option("agent_backend", backend)
+    old_model = get_option(OptionKey.LRM_MODEL, ModelName.OPENAI_20B.value)
+    
+    # Save configuration
+    if backend:
+        set_option("agent_backend", backend)
     if model:
-        set_option("agent_model", model)
-    if base_url:
+        set_option(OptionKey.LRM_MODEL, model)
+    if base_url is not None:  # Allow clearing URL
         set_option("agent_base_url", base_url)
     
-    return jsonify({"backend": backend, "model": model, "base_url": base_url})
-
-
-@bp.post("/agent/test")
-async def test_agent_connection():
-    """Test agent connection with current settings."""
-    from llms.agent_loader import load_agent, validate_agent
-    
     try:
-        agent = await load_agent()
-        is_valid = await validate_agent(agent)
-        
-        if is_valid:
-            return jsonify({"status": "success", "message": "Connection successful"})
-        else:
-            return jsonify({"status": "error", "message": "Validation failed"}), 400
-    except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
+        await log_settings_change("lrm_config", old_model, {"backend": backend, "model": model})
+    except Exception:
+        pass
+    
+    return jsonify({
+        "current_model": model,
+        "backend": backend,
+        "base_url": base_url
+    })
 ```
 
-### Step 3: Create Frontend Component
-Create settings UI component (location depends on frontend framework):
+### Step 3: Update LLMSettings Component
+Enhance `frontend/src/lib/components/LLMSettings.svelte`:
+
+```svelte
+<script>
+  export let lrmModel = '';
+  export let lrmBackend = 'openai';  // NEW
+  export let lrmBaseUrl = '';  // NEW
+  export let lrmOptions = [];
+  export let availableBackends = ['openai', 'huggingface'];  // NEW
+  export let modelsByBackend = {};  // NEW
+  export let handleModelChange;
+  export let handleBackendChange;  // NEW
+  export let handleBaseUrlChange;  // NEW
+  export let handleTestModel;
+  export let testReply = '';
+  
+  // Filter models based on selected backend
+  $: filteredModels = modelsByBackend[lrmBackend] || lrmOptions;
+</script>
+
+<div class="settings-panel">
+  <!-- Backend Selection -->
+  <div class="control" title="Select agent backend type.">
+    <div class="control-left">
+      <span class="label">Backend</span>
+    </div>
+    <div class="control-right">
+      <select bind:value={lrmBackend} on:change={handleBackendChange}>
+        {#each availableBackends as backend}
+          <option value={backend}>
+            {backend === 'openai' ? 'OpenAI (API/Ollama/LocalAI)' : 'HuggingFace (Local)'}
+          </option>
+        {/each}
+      </select>
+    </div>
+  </div>
+  
+  <!-- API URL (only for OpenAI backend) -->
+  {#if lrmBackend === 'openai'}
+    <div class="control" title="Optional: Custom OpenAI-compatible API URL">
+      <div class="control-left">
+        <span class="label">API URL</span>
+      </div>
+      <div class="control-right">
+        <input 
+          type="text" 
+          bind:value={lrmBaseUrl} 
+          on:blur={handleBaseUrlChange}
+          placeholder="http://localhost:11434/v1 (optional)"
+        />
+      </div>
+    </div>
+  {/if}
+  
+  <!-- Model Selection -->
+  <div class="control" title="Select language reasoning model.">
+    <div class="control-left">
+      <span class="label">Model</span>
+    </div>
+    <div class="control-right">
+      <select bind:value={lrmModel} on:change={handleModelChange}>
+        {#each filteredModels as opt}
+          <option value={opt}>{opt}</option>
+        {/each}
+      </select>
+    </div>
+  </div>
+  
+  <!-- Test Model Button -->
+  <div class="control" title="Send a sample prompt to the selected model.">
+    <div class="control-left">
+      <span class="label">Test Model</span>
+    </div>
+    <div class="control-right">
+      <button class="icon-btn" on:click={handleTestModel}>Test</button>
+    </div>
+  </div>
+  
+  {#if testReply}
+    <p class="status" data-testid="lrm-test-reply">{testReply}</p>
+  {/if}
+</div>
+
+<style>
+  @import './settings-shared.css';
+  input[type="text"] {
+    width: 100%;
+    padding: 4px 8px;
+    border: 1px solid var(--border-color, #ccc);
+    border-radius: 4px;
+    background: var(--input-bg, #fff);
+    color: var(--text-color, #000);
+  }
+</style>
+```
+
+### Step 4: Update SettingsMenu Component
+Enhance handler functions in `frontend/src/lib/components/SettingsMenu.svelte`:
 
 ```javascript
-// Example structure (adapt to your frontend framework)
-async function loadAgentSettings() {
-    const response = await fetch('/config/agent/backend');
-    const data = await response.json();
     
     // Populate UI
     document.getElementById('backend-select').value = data.backend;
@@ -178,129 +288,147 @@ document.getElementById('backend-select').addEventListener('change', async (e) =
 });
 ```
 
-### Step 4: Add UI Elements
-Add HTML structure (adapt to your frontend):
+### Step 4: Update SettingsMenu Component
+Enhance handler functions in `frontend/src/lib/components/SettingsMenu.svelte`:
 
-```html
-<div class="agent-settings">
-    <h3>Agent Backend Settings</h3>
-    
-    <div class="form-group">
-        <label for="backend-select">Backend:</label>
-        <select id="backend-select">
-            <option value="openai">OpenAI (API / Ollama / LocalAI)</option>
-            <option value="huggingface">HuggingFace (Local Inference)</option>
-        </select>
-        <span class="help-text">
-            OpenAI for remote servers, HuggingFace for local models
-        </span>
-    </div>
-    
-    <div class="form-group" id="openai-url-field">
-        <label for="openai-url">OpenAI API URL (optional):</label>
-        <input type="text" id="openai-url" placeholder="http://localhost:11434/v1">
-        <span class="help-text">
-            Leave empty for OpenAI API, or enter custom URL (Ollama, LocalAI, etc.)
-        </span>
-    </div>
-    
-    <div class="form-group">
-        <label for="model-select">Model:</label>
-        <select id="model-select">
-            <!-- Populated dynamically based on backend -->
-        </select>
-        <span class="help-text">
-            HuggingFace: openai/gpt-oss-20b recommended (high reasoning)
-        </span>
-    </div>
-    
-    <div class="form-actions">
-        <button onclick="saveAgentSettings()">Save Settings</button>
-        <button onclick="testAgentConnection()">Test Connection</button>
-    </div>
-    
-    <div id="agent-status" class="status-indicator">
-        <!-- Status messages appear here -->
-    </div>
-</div>
+```javascript
+// Add new state variables after existing ones
+let lrmBackend = 'openai';
+let lrmBaseUrl = '';
+let modelsByBackend = {
+  openai: [],
+  huggingface: []
+};
+
+// Update onMount to load backend config
+onMount(async () => {
+  if (showLrm) {
+    try {
+      const cfg = await getLrmConfig();
+      lrmOptions = cfg?.available_models?.openai || [];
+      modelsByBackend = cfg?.available_models || {openai: [], huggingface: []};
+      lrmBackend = cfg?.backend || 'openai';
+      lrmBaseUrl = cfg?.base_url || '';
+      lrmModel = cfg?.current_model || lrmModel;
+      saveSettings({ lrmModel, lrmBackend, lrmBaseUrl });
+    } catch {
+      /* ignore */
+    }
+  }
+  // ... rest of onMount
+});
+
+// Add new handler for backend changes
+function handleBackendChange() {
+  saveSettings({ lrmBackend });
+  dispatch('save', { lrmBackend });
+  // Update model list based on backend
+  lrmOptions = modelsByBackend[lrmBackend] || [];
+  // Set recommended model for HuggingFace
+  if (lrmBackend === 'huggingface' && lrmOptions.includes('openai/gpt-oss-20b')) {
+    lrmModel = 'openai/gpt-oss-20b';
+    handleModelChange();
+  }
+  setLrmModel(lrmModel, lrmBackend, lrmBaseUrl).catch(() => {});
+}
+
+// Add handler for base URL changes
+function handleBaseUrlChange() {
+  saveSettings({ lrmBaseUrl });
+  dispatch('save', { lrmBaseUrl });
+  setLrmModel(lrmModel, lrmBackend, lrmBaseUrl).catch(() => {});
+}
+
+// Update existing handleModelChange to include backend info
+function handleModelChange() {
+  saveSettings({ lrmModel });
+  dispatch('save', { lrmModel });
+  setLrmModel(lrmModel, lrmBackend, lrmBaseUrl).catch(() => {});
+}
+
+// Update LLMSettings component props in template:
+// <LLMSettings
+//   {lrmModel}
+//   {lrmBackend}
+//   {lrmBaseUrl}
+//   {lrmOptions}
+//   availableBackends={['openai', 'huggingface']}
+//   {modelsByBackend}
+//   {handleModelChange}
+//   {handleBackendChange}
+//   {handleBaseUrlChange}
+//   {handleTestModel}
+//   {testReply}
+// />
 ```
 
-### Step 5: Add Styling
-Add CSS for the new UI elements:
+### Step 5: Update API Functions
+Modify `frontend/src/lib/systems/api.js`:
 
-```css
-.agent-settings {
-    padding: 20px;
-    background: var(--panel-bg);
-    border-radius: 8px;
+```javascript
+export async function getLrmConfig() {
+  // Enhanced to return backend info
+  return httpGet('/config/lrm', { cache: 'no-store' });
 }
 
-.form-group {
-    margin-bottom: 15px;
+export async function setLrmModel(model, backend = null, baseUrl = null) {
+  const payload = { model };
+  if (backend) payload.backend = backend;
+  if (baseUrl !== null) payload.base_url = baseUrl;
+  return httpPost('/config/lrm', payload);
 }
 
-.form-group label {
-    display: block;
-    margin-bottom: 5px;
-    font-weight: bold;
-}
-
-.form-group select,
-.form-group input {
-    width: 100%;
-    padding: 8px;
-    border-radius: 4px;
-    border: 1px solid var(--border-color);
-}
-
-.help-text {
-    display: block;
-    font-size: 0.9em;
-    color: var(--text-secondary);
-    margin-top: 4px;
-}
-
-.form-actions {
-    margin-top: 20px;
-    display: flex;
-    gap: 10px;
-}
-
-.status-indicator {
-    margin-top: 15px;
-    padding: 10px;
-    border-radius: 4px;
-}
-
-.status-indicator.success {
-    background: var(--success-bg);
-    color: var(--success-text);
-}
-
-.status-indicator.error {
-    background: var(--error-bg);
-    color: var(--error-text);
+// testLrmModel stays the same
+export async function testLrmModel(prompt) {
+  return httpPost('/config/lrm/test', { prompt });
 }
 ```
 
-### Step 6: Test UI
-1. Load settings page
-2. Verify backend dropdown shows options
-3. Switch between backends and verify model list updates
-4. Enter OpenAI URL and verify it's saved
-5. Test connection button works
-6. Verify settings persist after page reload
+### Step 6: Test UI Changes
+1. Start development server: `cd frontend && bun run dev`
+2. Open settings menu and navigate to LLM settings tab
+3. Verify new backend dropdown appears
+4. Switch between OpenAI and HuggingFace backends
+5. Verify model list updates based on backend selection
+6. For OpenAI backend: verify API URL field appears
+7. Enter custom URL and save
+8. Test connection button
+9. Verify settings persist after page reload
 
 ## Acceptance Criteria
-- [ ] Backend selection dropdown added (OpenAI / HuggingFace)
-- [ ] OpenAI API URL field added (optional)
-- [ ] Model selection dropdown populated based on backend
-- [ ] HuggingFace recommends openai/gpt-oss-20b model
-- [ ] Settings saved to backend config/options
-- [ ] Test connection button validates settings
-- [ ] UI shows current backend status
+- [ ] LLMSettings.svelte updated with backend selection
+- [ ] Backend dropdown added (OpenAI / HuggingFace)
+- [ ] OpenAI API URL field added (optional, shown only for OpenAI)
+- [ ] Model dropdown filters by selected backend
+- [ ] HuggingFace defaults to openai/gpt-oss-20b model
+- [ ] Backend API endpoints updated to accept backend/base_url
+- [ ] SettingsMenu.svelte updated with new handlers
+- [ ] api.js updated to pass backend parameters
+- [ ] Settings saved and persisted
+- [ ] Test button works with new configuration
 - [ ] URL field shown only when OpenAI backend selected
-- [ ] Settings persist across page reloads
+- [ ] Frontend linting passes (bun run lint)
+
+## Testing Requirements
+
+### Manual Testing
+1. Open settings menu → LLM tab
+2. Select OpenAI backend, enter custom URL, save
+3. Test connection with valid/invalid URLs
+4. Switch to HuggingFace backend
+5. Verify recommended model is selected
+6. Save and reload page - verify settings persist
+7. Test with no URL (should use default OpenAI API)
+
+### Integration Testing
+1. Verify backend actually uses selected settings
+2. Test chat with different backends
+3. Verify error handling for invalid settings
+
+## Dependencies
+- Requires: `32e92203-migrate-llm-loader.md` (agent loader must exist)
+- Requires: `656b2a7e-create-config-support.md` (config system helpful)
+- Related: `96e5fdb9-update-config-routes.md` (shares backend endpoints)
 - [ ] UI integrated into existing settings page
 - [ ] Linting passes (frontend linter)
 
@@ -325,17 +453,22 @@ Add CSS for the new UI elements:
 - Related: `96e5fdb9-update-config-routes.md` (may share code)
 
 ## References
-- Backend: `backend/routes/config.py`
-- Agent loader: `backend/llms/agent_loader.py`
-- Frontend settings: (location varies by framework)
-- Agent framework: [Midori AI agents-packages](https://github.com/Midori-AI-OSS/agents-packages)
+- **Existing Components**:
+  - `frontend/src/lib/components/LLMSettings.svelte` - Current LRM UI (to be enhanced)
+  - `frontend/src/lib/components/SettingsMenu.svelte` - Parent settings component
+  - `frontend/src/lib/systems/api.js` - API interface functions
+- **Backend**:
+  - `backend/routes/config.py` - Config endpoints (to be enhanced)
+  - `backend/llms/agent_loader.py` - Agent loader
+- **Framework**: [Midori AI agents-packages](https://github.com/Midori-AI-OSS/agents-packages)
 
 ## Notes for Coder
-- Adapt code examples to match your frontend framework (Svelte, React, Vue, etc.)
-- Use existing settings page UI patterns
-- For HuggingFace, emphasize openai/gpt-oss-20b as recommended model
-- OpenAI URL is optional - empty means use default OpenAI API
-- Test connection should provide clear error messages
-- Consider adding a loading spinner during test
-- Save API keys separately (don't expose in UI)
-- Consider adding tooltips explaining each option
+- **Build on existing UI**: Enhance LLMSettings.svelte, don't create from scratch
+- **Svelte patterns**: Use existing component patterns and styling from settings-shared.css
+- **Backend dropdown**: "openai" for OpenAI/Ollama/LocalAI, "huggingface" for local inference
+- **HuggingFace default**: openai/gpt-oss-20b is the recommended model with high reasoning
+- **API URL**: Optional field, empty means use default OpenAI API
+- **Test button**: Reuse existing testLrmModel functionality
+- **Settings persistence**: Use existing saveSettings() system in SettingsMenu
+- **Model filtering**: Update model list dynamically when backend changes
+- **Error handling**: Provide clear error messages for connection failures

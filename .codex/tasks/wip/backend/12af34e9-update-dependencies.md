@@ -127,8 +127,8 @@ Should see:
 - midori-ai-agents-all
 - And other midori-ai packages
 
-### Step 5: Test Imports (Breaking Change Verification)
-Create a test script to verify NEW imports work and OLD imports FAIL:
+### Step 5: Test Imports (Framework Verification)
+Create a test script to verify NEW framework imports work:
 ```python
 # Test NEW framework imports (should work)
 from midori_ai_agent_base import MidoriAiAgentProtocol, AgentPayload, AgentResponse
@@ -140,10 +140,10 @@ from midori_ai_logger import get_logger
 log = get_logger(__name__)
 log.info("New agent framework imports successful!")
 
-# OLD imports should FAIL - we want this!
-# These should raise ImportError if properly removed:
-# import openai
-# import langchain_core
+# Note: The meta package (midori-ai-agents-all) includes openai and some
+# langchain packages as dependencies, so those imports will still work.
+# The breaking change is in the API - old code using load_llm() will break,
+# not the imports themselves.
 ```
 
 Run test:
@@ -152,7 +152,9 @@ cd backend
 uv run python test_imports.py
 ```
 
-**Expected**: New imports work, old imports would fail (which is desired).
+**Expected**: New framework imports work. Note that openai and some langchain packages
+are included by the meta package, so checking import failures is not the right test.
+The breaking change is at the API level (load_llm vs load_agent).
 
 ### Step 6: Update Build Configuration
 Check if build scripts reference specific packages:
@@ -192,7 +194,7 @@ llm-amd = [
 - [ ] `uv lock` completes successfully
 - [ ] `uv sync --extra llm-cpu` completes successfully
 - [ ] All midori-ai packages are installed and importable
-- [ ] **Old package imports FAIL** (desired breaking change)
+- [ ] New framework imports work correctly
 - [ ] Build scripts updated if needed
 - [ ] GPU/AMD extras updated with logger package
 - [ ] No dependency conflicts reported
@@ -207,19 +209,18 @@ cd backend
 rm -rf .venv uv.lock
 uv sync --extra llm-cpu
 
-# Verify midori packages present, old packages ABSENT
+# Verify midori packages present
 uv pip list | grep midori  # Should show midori packages
-uv pip list | grep langchain  # Should show NOTHING (removed)
 ```
 
-### Import Tests (Breaking Change Verification)
+### Import Tests (Framework Verification)
 ```bash
 # Test NEW framework imports (should succeed)
 uv run python -c "from midori_ai_agent_base import get_agent; from midori_ai_logger import get_logger; print('Success')"
 
-# Test OLD imports FAIL (desired behavior)
-uv run python -c "import openai; print('Should not reach here')"  # Should error
-uv run python -c "import langchain_core; print('Should not reach here')"  # Should error
+# Note: The meta package includes openai and some langchain packages as dependencies,
+# so import tests are not the right way to verify breaking changes. The breaking change
+# is at the API level (load_llm() vs load_agent()), not package availability.
 ```
 
 ### Build Tests

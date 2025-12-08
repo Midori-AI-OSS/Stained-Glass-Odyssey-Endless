@@ -47,7 +47,7 @@ When working on agent-related code:
    ```
 
 2. **Report issues** to the framework, not this repo:
-   - Agent framework issues: `.codex/agents-packages/issues` (in framework repo)
+   - Agent framework issues: `.codex/subrepo/agents-packages/issues` (in this repo)
    - AutoFighter integration issues: Standard issue tracker
 
 3. **Primary backend**: Midori AI OpenAI agents system
