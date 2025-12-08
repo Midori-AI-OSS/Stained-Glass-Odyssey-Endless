@@ -102,9 +102,6 @@ async def set_lrm_backend():
 - [x] Tests updated
 - [x] Linting passes
 
-## Status
-COMPLETED - Ready for review
-
 ## Completion Notes
 - Added LRM_API_URL and LRM_API_KEY option keys
 - GET /config/lrm now returns current_api_url and current_api_key (masked)
@@ -135,4 +132,3 @@ COMPLETED - Ready for review
 3. **Rename & Refactor**: strict alignment with LRM naming convention.
 4. **Integration**: Ensure `656b2a7e-create-config-support.md` is truly done before this task.
 
-**Status**: Returned to WIP.
