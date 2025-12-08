@@ -120,3 +120,19 @@ COMPLETED - Ready for review
 ## References
 - Current: `backend/routes/config.py`
 - Models: `AgentPayload`, `AgentResponse`
+
+## Audit - 2025-12-08
+
+### Critical Findings
+- **Broken Code (Import Error)**: `backend/routes/config.py` attempts to import `get_agent_config` from `llms.agent_loader`, but this function **DOES NOT EXIST** in `backend/llms/agent_loader.py`. The application will crash on startup or when the endpoint is hit.
+- **Missing Tests**: There are no tests for the new config routes, which would have caught this import error immediately. `test_agent_loader.py` only tests the loader, not the routes.
+- **Protocol Violation (LLM vs LRM)**: The code still uses `AF_LLM_MODEL` and `OptionKey.LLM_MODEL` (or similar variants) instead of strict LRM terminology.
+- **Dependency Missing**: This task relies on `656b2a7e-create-config-support.md` being completed properly, but that task was also incomplete (config logic missing).
+
+### Required Actions
+1. **Fix Missing Implementation**: Implement `get_agent_config` and `find_config_file` in `agent_loader.py`.
+2. **Add Route Tests**: Create `backend/tests/test_config_routes.py` to verify the endpoints work.
+3. **Rename & Refactor**: strict alignment with LRM naming convention.
+4. **Integration**: Ensure `656b2a7e-create-config-support.md` is truly done before this task.
+
+**Status**: Returned to WIP.
