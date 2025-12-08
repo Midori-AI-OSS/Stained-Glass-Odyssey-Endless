@@ -28,7 +28,7 @@ midori-ai-logger = { git = "https://github.com/Midori-AI-OSS/agents-packages.git
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["autofighter", "plugins"]
+include = ["autofighter", "plugins", "llms"]
 
 [dependency-groups]
 dev = [

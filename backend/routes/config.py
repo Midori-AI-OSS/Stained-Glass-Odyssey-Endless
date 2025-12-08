@@ -54,13 +54,48 @@ async def set_lrm_model() -> tuple[str, int, dict[str, str]]:
 async def test_lrm_model() -> tuple[str, int, dict[str, str]]:
     import asyncio
 
+    from llms.agent_loader import load_agent
+    from llms.agent_loader import validate_agent
     from llms.loader import load_llm
     from llms.loader import validate_lrm
 
     data = await request.get_json()
     prompt = data.get("prompt", "")
     model = get_option(OptionKey.LRM_MODEL, ModelName.OPENAI_20B.value)
+    use_agent = data.get("use_agent", False)  # Optional flag to use agent framework
 
+    # Try agent framework first if requested or if agent framework is available
+    if use_agent:
+        try:
+            # Load agent using the new framework
+            agent = await load_agent(model=model, validate=False)
+
+            # Validate agent if no custom prompt provided
+            if not prompt:
+                is_valid = await validate_agent(agent)
+                if not is_valid:
+                    return jsonify({"error": "Agent validation failed"}), 400
+                return jsonify({"response": "Agent validation passed", "is_lrm": True, "backend": "agent"})
+
+            # Generate response to custom prompt using agent
+            from midori_ai_agent_base import AgentPayload
+
+            payload = AgentPayload(
+                user_message=prompt,
+                thinking_blob="",
+                system_context="You are a helpful assistant for the AutoFighter game.",
+                user_profile={},
+                tools_available=[],
+                session_id="test",
+            )
+
+            response = await agent.invoke(payload)
+            return jsonify({"response": response.response, "backend": "agent"})
+        except ImportError:
+            # Fall back to old loader if agent framework not available
+            pass
+
+    # Use legacy LLM loader
     # Load LLM in thread pool to avoid blocking the event loop
     llm = await asyncio.to_thread(load_llm, model, validate=False)
 
@@ -69,13 +104,13 @@ async def test_lrm_model() -> tuple[str, int, dict[str, str]]:
         is_valid = await validate_lrm(llm)
         if not is_valid:
             return jsonify({"error": "Model validation failed - may not be an LRM"}), 400
-        return jsonify({"response": "Model validation passed", "is_lrm": True})
+        return jsonify({"response": "Model validation passed", "is_lrm": True, "backend": "legacy"})
 
     # Otherwise, generate response to custom prompt
     reply = ""
     async for chunk in llm.generate_stream(prompt):
         reply += chunk
-    return jsonify({"response": reply})
+    return jsonify({"response": reply, "backend": "legacy"})
 
 
 @bp.get("/turn_pacing")
