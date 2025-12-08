@@ -6,9 +6,6 @@
 ## Priority
 Medium
 
-## Status
-COMPLETED
-
 ## Description
 Update `autofighter/rooms/chat.py` to use the Agent Framework's `AgentPayload` and `AgentResponse` instead of the custom streaming interface.
 

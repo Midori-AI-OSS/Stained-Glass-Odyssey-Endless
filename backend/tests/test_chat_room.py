@@ -69,9 +69,14 @@ async def test_chat_room_uses_selected_model(monkeypatch, setup_db):
         return agent
 
     monkeypatch.setattr("autofighter.rooms.chat.load_agent", fake_loader)
+
+    # Create a member with character attributes
     member = Stats()
     member.id = "test_member"
     member.instance_id = "test_member"
+    member.name = "TestChar"
+    member.summarized_about = "A test character"
+    member.looks = "A generic appearance"
     party = Party(members=[member])
 
     # Create a simple mock node
@@ -80,9 +85,15 @@ async def test_chat_room_uses_selected_model(monkeypatch, setup_db):
 
     room = ChatRoom(node=node)
     result = await room.resolve(party, {"message": "hi"})
-    assert result["response"] == "reply"
+
+    # Response should include character name
+    assert "TestChar:" in result["response"]
+    assert "reply" in result["response"]
     assert "hi" in calls["user_message"]
     assert calls["model"] == "gemma:2b"
+    # Verify system context includes character info
+    assert "You are TestChar" in calls["system_context"]
+    assert "A test character" in calls["system_context"]
 
     # Clean up
     del sys.modules["midori_ai_agent_base"]

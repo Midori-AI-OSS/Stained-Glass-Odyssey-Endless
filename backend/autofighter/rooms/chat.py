@@ -1,12 +1,17 @@
 from __future__ import annotations
 
+import asyncio
 from dataclasses import dataclass
-import json
+import os
+from typing import TYPE_CHECKING
 from typing import Any
 
 from llms.agent_loader import load_agent
 from options import get_option
 from tts import generate_voice
+
+if TYPE_CHECKING:
+    from midori_ai_agent_base import AgentPayload
 
 from ..party import Party
 from ..passives import PassiveRegistry
@@ -18,10 +23,30 @@ from .utils import _serialize
 class ChatRoom(Room):
     """Chat rooms forward a single message to an LLM character."""
 
-    async def resolve(self, party: Party, data: dict[str, Any]) -> dict[str, Any]:
-        import asyncio
-        import os
+    def _build_character_context(self, member: Any) -> str:
+        """Build system context for a character with their personality and appearance.
 
+        Args:
+            member: Party member with character attributes
+
+        Returns:
+            Formatted system context string
+        """
+        char_name = getattr(member, "name", "Unknown")
+        about = getattr(member, "summarized_about", getattr(member, "full_about", ""))
+        looks = getattr(member, "looks", "")
+
+        context_parts = [f"You are {char_name}."]
+
+        if about:
+            context_parts.append(f"Here is some info about you: {about}")
+
+        if looks:
+            context_parts.append(f"This is how you look: {looks}")
+
+        return " ".join(context_parts)
+
+    async def resolve(self, party: Party, data: dict[str, Any]) -> dict[str, Any]:
         from midori_ai_agent_base import AgentPayload
 
         registry = PassiveRegistry()
@@ -49,30 +74,41 @@ class ChatRoom(Room):
             model=model,
         )
 
-        # Create structured payload with party context
-        payload = AgentPayload(
-            user_message=message,
-            thinking_blob="",
-            system_context=f"You are a character in an auto-battler game. Party: {json.dumps(party_data)}",
-            user_profile={},
-            tools_available=[],
-            session_id="chat-room",
-        )
+        # Generate responses for each party member
+        replies = []
+        for member in party.members:
+            # Build character-specific system context
+            system_context = self._build_character_context(member)
 
-        # Get response using streaming or invoke
-        reply = ""
-        if await agent.supports_streaming():
-            async for chunk in agent.stream(payload):
-                reply += chunk
-        else:
-            response = await agent.invoke(payload)
-            reply = response.response
+            # Create structured payload for this member
+            payload = AgentPayload(
+                user_message=message,
+                thinking_blob="",
+                system_context=system_context,
+                user_profile={},
+                tools_available=[],
+                session_id=f"chat-{getattr(member, 'id', 'unknown')}",
+            )
+
+            # Get response using streaming or invoke
+            reply = ""
+            if await agent.supports_streaming():
+                async for chunk in agent.stream(payload):
+                    reply += chunk
+            else:
+                response = await agent.invoke(payload)
+                reply = response.response
+
+            replies.append(f"{getattr(member, 'name', 'Unknown')}: {reply}")
+
+        # Combine all replies
+        combined_reply = "\n\n".join(replies)
 
         voice_path: str | None = None
         sample = None
         if party.members:
             sample = getattr(party.members[0], "voice_sample", None)
-        audio = await asyncio.to_thread(generate_voice, reply, sample)
+        audio = await asyncio.to_thread(generate_voice, combined_reply, sample)
         if audio:
             from pathlib import Path
 
@@ -84,7 +120,7 @@ class ChatRoom(Room):
         return {
             "result": "chat",
             "message": message,
-            "response": reply,
+            "response": combined_reply,
             "voice": voice_path,
             "party": party_data,
             "gold": party.gold,
