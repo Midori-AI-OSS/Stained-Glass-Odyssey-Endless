@@ -4,6 +4,7 @@ This script validates the structure and contents of a config.toml file
 to ensure it contains valid configuration for the agent framework.
 
 Usage:
+    cd backend
     uv run python scripts/validate_config.py [config_path]
 
 Examples:
@@ -12,11 +13,7 @@ Examples:
     uv run python scripts/validate_config.py ../config.toml
 """
 
-from pathlib import Path
 import sys
-
-# Add parent directory to path to allow imports
-sys.path.insert(0, str(Path(__file__).parent.parent))
 
 
 def validate_config(config_path: str = "config.toml") -> bool:
@@ -54,9 +51,9 @@ def validate_config(config_path: str = "config.toml") -> bool:
         return False
     except FileNotFoundError:
         print(f"✗ Config file not found: {config_path}")
-        print(
-            f"  Create one by copying: cp {Path(config_path).stem}.example {config_path}"
-        )
+        # Suggest copying from .example file
+        example_path = f"{config_path}.example"
+        print(f"  Create one by copying: cp {example_path} {config_path}")
         return False
     except Exception as e:
         print(f"✗ Config validation failed: {e}")
