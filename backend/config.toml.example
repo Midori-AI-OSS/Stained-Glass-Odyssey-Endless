@@ -1,0 +1,126 @@
+# Midori AI AutoFighter - Agent Configuration
+# Copy this file to config.toml and customize for your setup
+# DO NOT commit config.toml with real API keys!
+
+[midori_ai_agent_base]
+# Backend selection: "openai", "huggingface", or "langchain"
+# - openai: For OpenAI API, Ollama, LocalAI, and compatible services
+# - huggingface: For local inference with HuggingFace models
+# - langchain: For Langchain-based providers
+backend = "openai"
+
+# Model name (backend-specific format)
+# OpenAI examples: "gpt-4", "gpt-4-turbo", "gpt-oss:20b", "carly-agi-pro"
+# HuggingFace examples: "TinyLlama/TinyLlama-1.1B-Chat-v1.0", "meta-llama/Llama-2-7b-chat-hf"
+# Langchain examples: depends on the specific provider
+model = "gpt-oss:20b"
+
+# API key (use environment variable for security: ${OPENAI_API_KEY})
+# For Ollama and similar local services, use "not-needed" or leave empty
+# For production deployments, always use environment variables
+api_key = "${OPENAI_API_KEY}"
+
+# Base URL for API (optional, uses defaults if not specified)
+# Examples:
+#   OpenAI: "https://api.openai.com/v1"
+#   Ollama: "http://localhost:11434/v1"
+#   LocalAI: "http://localhost:8080/v1"
+#   Custom LLM server: "https://your-llm-server.com/v1"
+base_url = "${OPENAI_API_URL}"
+
+# Optional: Reasoning effort configuration
+# Controls the depth of reasoning for compatible models
+[midori_ai_agent_base.reasoning_effort]
+# Reasoning effort level: "none", "minimal", "low", "medium", "high"
+# Higher levels produce more detailed reasoning but take longer
+effort = "high"
+
+# Summary generation style: "auto", "concise", "detailed"
+# Controls how reasoning summaries are generated
+generate_summary = "detailed"
+
+# Summary detail level: "auto", "concise", "detailed"
+# Controls the verbosity of the final summary
+summary = "detailed"
+
+# Backend-specific overrides (optional)
+# Settings here override base settings when that backend is used
+
+[midori_ai_agent_base.openai]
+# OpenAI-specific overrides
+# Uncomment and modify as needed for OpenAI backend
+# model = "gpt-4-turbo"      # Use different model for OpenAI backend
+# temperature = 0.7          # Sampling temperature (0.0 = deterministic, 1.0 = creative)
+# max_tokens = 2048          # Maximum tokens in response
+
+[midori_ai_agent_base.huggingface]
+# HuggingFace-specific settings for local inference
+# Default model for local inference (overrides base model when using huggingface backend)
+model = "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
+
+# Device selection: "auto", "cpu", "cuda", "mps"
+# - auto: Automatically select best available device
+# - cpu: Force CPU inference (slower but works everywhere)
+# - cuda: Use NVIDIA GPU (requires CUDA installation)
+# - mps: Use Apple Silicon GPU (macOS only)
+device = "auto"
+
+# Torch data type: "auto", "float16", "float32", "bfloat16"
+# - auto: Automatically select based on hardware
+# - float16: Half precision (faster, less memory, may reduce quality)
+# - float32: Full precision (slower, more memory, best quality)
+# - bfloat16: Brain float (good balance, requires compatible hardware)
+torch_dtype = "auto"
+
+# Maximum new tokens to generate in response
+max_new_tokens = 512
+
+# Sampling temperature (0.0 = deterministic, 1.0 = creative)
+temperature = 0.7
+
+# Quantization options for reduced memory usage
+# Enable 8-bit quantization (reduces memory usage by ~50%)
+load_in_8bit = false
+
+# Enable 4-bit quantization (reduces memory usage by ~75%)
+# Note: Cannot use both 8-bit and 4-bit simultaneously
+load_in_4bit = false
+
+[midori_ai_agent_base.langchain]
+# Langchain-specific settings
+# Uncomment and modify as needed for Langchain backend
+# model = "llama3:8b"
+# temperature = 0.7
+# max_tokens = 2048
+
+# Usage Examples:
+# ----------------
+# 
+# 1. Ollama (local LLM server):
+#    [midori_ai_agent_base]
+#    backend = "openai"
+#    model = "llama3:8b"
+#    api_key = "not-needed"
+#    base_url = "http://localhost:11434/v1"
+# 
+# 2. OpenAI API:
+#    [midori_ai_agent_base]
+#    backend = "openai"
+#    model = "gpt-4-turbo"
+#    api_key = "${OPENAI_API_KEY}"
+#    base_url = "https://api.openai.com/v1"
+# 
+# 3. Local HuggingFace model:
+#    [midori_ai_agent_base]
+#    backend = "huggingface"
+#    model = "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
+#    
+#    [midori_ai_agent_base.huggingface]
+#    device = "cuda"
+#    torch_dtype = "float16"
+#    load_in_8bit = true
+# 
+# For more information, see:
+# - Backend README: backend/README.md
+# - Implementation docs: .codex/implementation/agent-config.md
+# - Agent framework docs: https://github.com/Midori-AI-OSS/agents-packages
