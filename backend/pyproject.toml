@@ -22,6 +22,10 @@ build-backend = "setuptools.build_meta"
 [tool.uv]
 compile-bytecode = true
 
+[tool.uv.sources]
+midori-ai-agents-all = { git = "https://github.com/Midori-AI-OSS/agents-packages.git", subdirectory = "midori-ai-agents-all" }
+midori-ai-logger = { git = "https://github.com/Midori-AI-OSS/agents-packages.git", subdirectory = "logger" }
+
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["autofighter", "plugins"]
@@ -37,67 +41,55 @@ windows-encryption = [
 ]
 
 llm-cpu = [
+    # Core LLM framework and logger
+    "midori-ai-agents-all",
+    "midori-ai-logger",
+    
+    # Still needed for local model support
     "torch",
     "torchaudio",
     "torchvision",
-    "chatterbox-tts",
-    "openai",
-    "openai-agents",
-    "langgraph",
-    "langchain-core",
-    "langchain-openai",
-    "langchain-ollama",
-    "langchain-localai",
-    "langchain-community",
-    "langchain-chroma",
-    "langchain-huggingface",
-    "langchain-text-splitters",
-    "pillow",
     "transformers",
     "sentence-transformers",
     "accelerate",
+    
+    # TTS support (commented out due to dependency conflicts - to be resolved)
+    # "chatterbox-tts",
+    "pillow",
 ]
 
 llm-cuda = [
+    # Core LLM framework and logger
+    "midori-ai-agents-all",
+    "midori-ai-logger",
+    
+    # Still needed for local model support with CUDA
     "torch",
     "torchaudio",
     "torchvision",
-    "chatterbox-tts",
-    "openai",
-    "openai-agents",
-    "langgraph",
-    "langchain-core",
-    "langchain-openai",
-    "langchain-ollama",
-    "langchain-localai",
-    "langchain-community",
-    "langchain-chroma",
-    "langchain-huggingface",
-    "langchain-text-splitters",
-    "pillow",
     "transformers",
     "sentence-transformers",
     "accelerate",
+    
+    # TTS support (commented out due to dependency conflicts - to be resolved)
+    # "chatterbox-tts",
+    "pillow",
 ]
 
 llm-amd = [
+    # Core LLM framework and logger
+    "midori-ai-agents-all",
+    "midori-ai-logger",
+    
+    # Still needed for local model support with AMD
     "torch",
     "torchaudio",
     "torchvision",
-    "chatterbox-tts",
-    "openai",
-    "openai-agents",
-    "langgraph",
-    "langchain-core",
-    "langchain-openai",
-    "langchain-ollama",
-    "langchain-localai",
-    "langchain-community",
-    "langchain-chroma",
-    "langchain-huggingface",
-    "langchain-text-splitters",
-    "pillow",
     "transformers",
     "sentence-transformers",
     "accelerate",
+    
+    # TTS support (commented out due to dependency conflicts - to be resolved)
+    # "chatterbox-tts",
+    "pillow",
 ]
