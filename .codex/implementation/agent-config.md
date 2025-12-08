@@ -277,3 +277,105 @@ Planned improvements for the config system:
 - [Agent Framework Migration](./agent-framework.md) (future)
 - [LLM Loader Implementation](../backend/llms/agent_loader.py) (future)
 - [Backend README](../../backend/README.md)
+
+## Runtime Configuration API
+
+In addition to the config file, AutoFighter provides REST API endpoints for runtime configuration management. These endpoints allow the frontend to discover and modify LRM settings without restarting the server.
+
+### Endpoints
+
+#### GET /config/lrm
+Returns current LRM configuration and available options.
+
+**Response:**
+```json
+{
+  "current_model": "openai/gpt-oss-20b",
+  "current_backend": "auto",
+  "available_backends": ["auto", "openai", "huggingface"],
+  "available_models": ["openai/gpt-oss-20b", "openai/gpt-oss-120b", "gguf", "remote-openai"]
+}
+```
+
+#### POST /config/lrm
+Update model and/or backend configuration.
+
+**Request:**
+```json
+{
+  "model": "openai/gpt-oss-120b",  // optional
+  "backend": "openai"                // optional (auto, openai, or huggingface)
+}
+```
+
+**Response:**
+```json
+{
+  "current_model": "openai/gpt-oss-120b",
+  "current_backend": "openai"
+}
+```
+
+#### POST /config/lrm/backend
+Update backend only (convenience endpoint).
+
+**Request:**
+```json
+{
+  "backend": "huggingface"  // required: auto, openai, or huggingface
+}
+```
+
+**Response:**
+```json
+{
+  "current_backend": "huggingface"
+}
+```
+
+#### POST /config/lrm/test
+Test the current LRM configuration with an optional custom prompt.
+
+**Request:**
+```json
+{
+  "prompt": "Hello, how are you?"  // optional
+}
+```
+
+**Response:**
+```json
+{
+  "response": "I'm doing well, thank you!",
+  "backend": "agent"  // or "legacy" if agent framework not available
+}
+```
+
+### Backend Selection
+
+The `backend` parameter controls which agent framework backend is used:
+
+- **`auto`** (default): Automatically selects backend based on environment
+  - Uses OpenAI backend if `OPENAI_API_URL` is set
+  - Falls back to HuggingFace backend if torch is available
+  - This is the recommended setting for most use cases
+
+- **`openai`**: Forces use of OpenAI-compatible backend
+  - Used for OpenAI API, Ollama, LocalAI, etc.
+  - Requires `OPENAI_API_URL` environment variable
+
+- **`huggingface`**: Forces use of HuggingFace local inference
+  - Requires torch and transformers libraries
+  - Runs model locally on CPU or GPU
+
+### Storage
+
+Runtime configuration changes are persisted to the database in the `options` table:
+- `lrm_backend`: Stores the backend selection
+- `lrm_model`: Stores the model name
+
+These settings take precedence over config file and environment variables when the agent is loaded.
+
+### Implementation
+
+Configuration endpoints are implemented in `backend/routes/config.py` using the options system defined in `backend/options.py`. The endpoints support both the legacy LLM loader and the new agent framework, with automatic fallback for backward compatibility.
