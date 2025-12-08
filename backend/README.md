@@ -26,9 +26,7 @@ exported backup after a restart if they want to pick up a suspended run.
 
 AutoFighter uses the [Midori AI Agent Framework](https://github.com/Midori-AI-OSS/agents-packages) for LLM/LRM management. Configuration is supported via `config.toml` file or environment variables.
 
-### Configuration Options
-
-#### Option 1: Config File (Recommended)
+### Configuration
 
 1. Copy the example config:
    ```bash
@@ -55,20 +53,6 @@ AutoFighter uses the [Midori AI Agent Framework](https://github.com/Midori-AI-OS
    uv run python scripts/validate_config.py
    ```
 
-#### Option 2: Environment Variables
-
-Set these environment variables:
-- `OPENAI_API_URL` - Base URL for API (e.g., `http://localhost:11434/v1` for Ollama)
-- `OPENAI_API_KEY` - API key (use `"not-needed"` for local services like Ollama)
-- `AF_LLM_MODEL` - Model name (e.g., `llama3:8b`, `gpt-4-turbo`)
-
-Example:
-```bash
-export OPENAI_API_URL="http://localhost:11434/v1"
-export OPENAI_API_KEY="not-needed"
-export AF_LLM_MODEL="llama3:8b"
-```
-
 ### Supported Backends
 
 1. **OpenAI** - For OpenAI API, Ollama, LocalAI, and compatible services
@@ -94,8 +78,7 @@ Settings are resolved in this order (highest to lowest priority):
 1. Function arguments in code
 2. Config file backend-specific section
 3. Config file base section
-4. Environment variables
-5. Built-in defaults
+4. Built-in defaults
 
 For complete configuration documentation, see [.codex/implementation/agent-config.md](../.codex/implementation/agent-config.md).
 
