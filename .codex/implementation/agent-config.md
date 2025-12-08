@@ -27,7 +27,7 @@ The configuration uses TOML format with a hierarchical structure:
 ```toml
 [midori_ai_agent_base]
 backend = "openai"              # Backend selection
-model = "gpt-oss:20b"          # Model name
+model = "gpt-5"          # Model name
 api_key = "${OPENAI_API_KEY}"  # API key (with env var substitution)
 base_url = "${OPENAI_API_URL}" # Base URL (with env var substitution)
 ```
@@ -36,9 +36,7 @@ base_url = "${OPENAI_API_URL}" # Base URL (with env var substitution)
 
 ```toml
 [midori_ai_agent_base.reasoning_effort]
-effort = "high"                # Reasoning depth
-generate_summary = "detailed"  # Summary generation style
-summary = "detailed"           # Summary detail level
+effort = "low"                # Reasoning depth
 ```
 
 ### Backend-Specific Overrides
@@ -89,7 +87,7 @@ For OpenAI API, Ollama, LocalAI, and compatible services.
 ```toml
 [midori_ai_agent_base]
 backend = "openai"
-model = "gpt-oss:20b"
+model = "gpt-5"
 api_key = "${OPENAI_API_KEY}"
 base_url = "http://192.168.1.100:11434/v1"
 ```
@@ -125,7 +123,7 @@ For Langchain-based providers.
 ```toml
 [midori_ai_agent_base]
 backend = "langchain"
-model = "llama3:8b"
+model = "openai/gpt-5"
 ```
 
 ## Configuration Priority
