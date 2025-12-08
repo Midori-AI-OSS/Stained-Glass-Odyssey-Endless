@@ -40,16 +40,17 @@ async def test_lrm_config_endpoints(app_with_db, monkeypatch):
 
     resp = await client.get("/config/lrm")
     data = await resp.get_json()
-    assert data["current_model"] == ModelName.DEEPSEEK.value
-    assert ModelName.GEMMA.value in data["available_models"]
+    # Use actual model names from current loader.py
+    assert data["current_model"] == ModelName.OPENAI_20B.value
+    assert ModelName.OPENAI_120B.value in data["available_models"]
 
-    resp = await client.post("/config/lrm", json={"model": ModelName.GEMMA.value})
+    resp = await client.post("/config/lrm", json={"model": ModelName.OPENAI_120B.value})
     data = await resp.get_json()
-    assert data["current_model"] == ModelName.GEMMA.value
+    assert data["current_model"] == ModelName.OPENAI_120B.value
 
     calls = {}
 
-    def fake_loader(model: str):
+    def fake_loader(model: str, validate: bool = True):
         calls["model"] = model
         return FakeLLM()
 
@@ -57,7 +58,7 @@ async def test_lrm_config_endpoints(app_with_db, monkeypatch):
     resp = await client.post("/config/lrm/test", json={"prompt": "hi"})
     data = await resp.get_json()
     assert data["response"] == "echo:hi"
-    assert calls["model"] == ModelName.GEMMA.value
+    assert calls["model"] == ModelName.OPENAI_120B.value
 
 
 @pytest.mark.asyncio

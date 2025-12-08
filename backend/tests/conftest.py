@@ -200,6 +200,16 @@ def _ensure_options_stub() -> None:
 
 
 def _ensure_llm_stub() -> None:
+    # Try to import the real llms package first
+    try:
+        import llms
+        import llms.loader
+        import llms.torch_checker
+        # Real package exists, don't stub it
+        return
+    except ImportError:
+        pass
+
     if "llms.loader" in sys.modules:
         return
 
