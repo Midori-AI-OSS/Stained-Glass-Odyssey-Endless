@@ -28,12 +28,7 @@ AutoFighter uses the [Midori AI Agent Framework](https://github.com/Midori-AI-OS
 
 ### Configuration
 
-1. Copy the example config:
-   ```bash
-   cp config.toml.example config.toml
-   ```
-
-2. Edit `config.toml` with your settings:
+1. Edit `config.toml` with your settings (optional, defaults provided):
    ```toml
    [midori_ai_agent_base]
    backend = "openai"
@@ -42,13 +37,13 @@ AutoFighter uses the [Midori AI Agent Framework](https://github.com/Midori-AI-OS
    base_url = "${OPENAI_API_URL}"
    ```
 
-3. Set any referenced environment variables:
+2. Set any referenced environment variables:
    ```bash
    export OPENAI_API_URL="http://localhost:11434/v1"
    export OPENAI_API_KEY="not-needed"
    ```
 
-4. Validate your config:
+3. Validate your config:
    ```bash
    uv run python scripts/validate_config.py
    ```
@@ -78,7 +73,8 @@ Settings are resolved in this order (highest to lowest priority):
 1. Function arguments in code
 2. Config file backend-specific section
 3. Config file base section
-4. Built-in defaults
+4. Environment variables
+5. Built-in defaults
 
 For complete configuration documentation, see [.codex/implementation/agent-config.md](../.codex/implementation/agent-config.md).
 

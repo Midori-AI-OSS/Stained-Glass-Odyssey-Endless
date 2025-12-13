@@ -15,12 +15,21 @@ if TYPE_CHECKING:
 
 # Import agent framework dependencies
 try:
-    from midori_ai_agent_base import get_agent
+    from midori_ai_agent_base import (
+        get_agent,
+        get_agent_from_config,
+        load_agent_config,
+    )
     from midori_ai_logger import get_logger
+
+    if TYPE_CHECKING:
+        from midori_ai_agent_base import AgentConfig
 
     _AGENT_FRAMEWORK_AVAILABLE = True
 except ImportError:
     get_agent = None
+    get_agent_from_config = None
+    load_agent_config = None
     get_logger = None
     _AGENT_FRAMEWORK_AVAILABLE = False
 
@@ -33,10 +42,32 @@ else:
     log = logging.getLogger(__name__)
 
 
+def find_config_file() -> Path | None:
+    """Find config.toml in backend directory or parent directories.
+
+    Returns:
+        Path to config.toml if found, None otherwise
+    """
+    from pathlib import Path
+
+    # Start from backend directory
+    current = Path(__file__).parent.parent
+
+    # Search upward for config.toml
+    for _ in range(5):  # Max 5 levels up
+        config_path = current / "config.toml"
+        if config_path.exists():
+            return config_path
+        current = current.parent
+
+    return None
+
+
 async def load_agent(
     backend: str | None = None,
     model: str | None = None,
     validate: bool = True,
+    use_config: bool = True,
 ) -> MidoriAiAgentProtocol:
     """Load an agent using the Midori AI Agent Framework.
 
@@ -45,10 +76,11 @@ async def load_agent(
 
     Args:
         backend: Backend type ("openai" or "huggingface")
-                 If None, auto-selects: openai if URL set, else huggingface if torch available
+                 If None, auto-selects based on config or environment
         model: Model name to use
-               If None, uses environment variable or default
+               If None, uses config or environment variable
         validate: Whether to validate the agent after loading
+        use_config: Whether to try loading from config.toml
 
     Returns:
         Agent implementing MidoriAiAgentProtocol
@@ -60,6 +92,28 @@ async def load_agent(
     if not _AGENT_FRAMEWORK_AVAILABLE:
         msg = "Agent framework is not available. Install with: uv sync --extra llm-cpu"
         raise ImportError(msg)
+
+    # Try loading from config file first
+    if use_config:
+        config_path = find_config_file()
+        if config_path:
+            log.info(f"Loading agent from config: {config_path}")
+            try:
+                agent = await get_agent_from_config(
+                    config_path=str(config_path),
+                    backend=backend,  # Allow override
+                    model=model,  # Allow override
+                )
+                if validate:
+                    log.info(f"Agent loaded from config: {config_path}")
+                return agent
+            except Exception as e:
+                log.warning(
+                    f"Failed to load from config: {e}, falling back to env vars"
+                )
+
+    # Fall back to environment variables
+    log.info("Loading agent from environment variables")
 
     # Auto-detect backend: prioritize OpenAI, fallback to HuggingFace
     if backend is None:
@@ -97,6 +151,25 @@ async def load_agent(
     return agent
 
 
+def get_agent_config() -> AgentConfig | None:
+    """Get current agent configuration from file.
+
+    Returns:
+        AgentConfig if config file exists, None otherwise
+    """
+    config_path = find_config_file()
+    if config_path:
+        if load_agent_config is None:
+            return None
+            
+        try:
+            return load_agent_config(config_path=str(config_path))
+        except Exception as e:
+            log.error(f"Failed to load config: {e}")
+            return None
+    return None
+
+
 async def validate_agent(agent: MidoriAiAgentProtocol) -> bool:
     """Validate that an agent is working correctly.
 
@@ -129,14 +202,18 @@ async def validate_agent(agent: MidoriAiAgentProtocol) -> bool:
 
         # Check if response is longer than 5 characters
         if len(response.response) > 5:
-            log.info(f"Agent validation passed. Response length: {len(response.response)}")
+            log.info(
+                f"Agent validation passed. Response length: {len(response.response)}"
+            )
             return True
         else:
-            log.warning(f"Agent validation failed. Response too short: {response.response}")
+            log.warning(
+                f"Agent validation failed. Response too short: {response.response}"
+            )
             return False
     except Exception as e:
         log.error(f"Agent validation failed with error: {e}")
         return False
 
 
-__all__ = ["load_agent", "validate_agent"]
+__all__ = ["load_agent", "get_agent_config", "find_config_file", "validate_agent"]

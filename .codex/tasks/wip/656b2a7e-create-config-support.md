@@ -42,7 +42,7 @@ The Agent Framework provides a `config.toml` file system that:
 ## Implementation Steps
 
 ### Step 1: Create Config Template
-Create `backend/config.toml.example`:
+Create `backend/config.toml`:
 
 ```toml
 # Midori AI AutoFighter - Agent Configuration
