@@ -9,6 +9,38 @@ High
 ## Status
 WIP - Needs Redesign
 
+## CODER NOTES (2025-12-14)
+
+**Current Assessment**: This task requires significant architectural design work that goes beyond simple code implementation. The current description proposes a sophisticated per-character agent system with:
+- Vector memory management (Midori AI Vector Manager)
+- Context management (Midori AI Context Manager)  
+- Event-driven character responses
+- Response caching
+- Plugin integration for custom triggers
+
+**Recommendation**: This should be broken down into multiple smaller tasks:
+1. Design document for per-character agent architecture
+2. Prototype single-character agent with memory
+3. Event bus integration design
+4. Response caching strategy
+5. Full implementation after design approval
+
+**Blocking Issues**:
+- No design consensus on architecture
+- Requires integration of Vector Manager (not currently in dependencies)
+- Requires Context Manager configuration
+- Complex interaction with existing party/character systems
+
+**Suggested Next Steps**:
+1. Create design proposal document
+2. Get Task Master/Architect review
+3. Break into implementable subtasks
+4. Add required dependencies to pyproject.toml
+
+This task should remain in WIP until architectural decisions are finalized.
+
+---
+
 ## Description
 Redesign the chat room system to use a more sophisticated per-character agent architecture with Midori AI Vector Manager for memory management and event-driven character interactions.
 

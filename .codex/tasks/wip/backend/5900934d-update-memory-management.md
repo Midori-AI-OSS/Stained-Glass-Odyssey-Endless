@@ -9,6 +9,35 @@ Medium
 ## Status
 WIP
 
+## CODER NOTES (2025-12-14)
+
+**Current Assessment**: This task is blocked by the chat room redesign task (c0f04e25-update-chat-room). Memory management integration requires a clear understanding of where and how agents will be used.
+
+**Agent Framework Memory Features Available**:
+- `memory` field in AgentPayload (list of MemoryEntryData)
+- Structured conversation history support
+- Compatible with midori-ai-agent-context-manager for persistence
+
+**Simple Implementation Path** (if chat room redesign deferred):
+1. Add memory field to existing agent calls in routes/config.py test endpoint
+2. Store last N messages in session/party object
+3. Convert to MemoryEntryData format when calling agent
+
+**Complex Implementation Path** (requires chat room redesign):
+1. Per-character agent with persistent memory
+2. Vector storage for long-term context
+3. Context manager for conversation threads
+4. Event-driven memory updates
+
+**Recommendation**: Keep in WIP until chat room architectural decisions are made. Consider implementing simple path first for proof-of-concept.
+
+**Dependencies**:
+- Blocked by: c0f04e25-update-chat-room (architectural design)
+- Optional: midori-ai-agent-context-manager package (not yet in pyproject.toml)
+- Optional: midori-ai-vector-manager package (not yet in pyproject.toml)
+
+---
+
 ## Description
 Integrate the Agent Framework's memory management features with AutoFighter's existing memory systems. The framework provides a `memory` field in `AgentPayload` and integrates with `midori-ai-agent-context-manager`.
 

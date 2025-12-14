@@ -9,6 +9,43 @@ Medium
 ## Status
 WIP
 
+## CODER NOTES (2025-12-14)
+
+**Current Assessment**: This task depends on the action plugin system being stable and fully operational. According to GOAL-action-plugin-system.md, all 4 foundational tasks are marked as "IN REVIEW" but not yet finalized.
+
+**Dependencies**:
+- Action plugin system must be reviewed and approved
+- BasicAttackAction pattern should be validated in production
+- Turn loop integration must be stable
+- ActionRegistry auto-discovery must be working reliably
+
+**Blocking Issues**:
+- Action plugin system still in review (not production-ready)
+- No decision on ability selection UI in turn loop
+- Character ability unlocking/cooldown system not designed
+- Unclear how summon-based abilities (Luna's swords) fit the action plugin pattern
+
+**Recommended Approach**:
+1. Wait for action plugin system to move from review to production
+2. Monitor any issues found during action plugin review
+3. Create prototype with 1-2 simple abilities (single-target damage)
+4. Test in actual battles to validate pattern
+5. Only then proceed with full migration
+
+**Complexity Estimate**: 
+- Simple abilities (buffs/debuffs): ~30 min each
+- Complex abilities (summons, multi-stage): 2-4 hours each
+- Total for full roster: ~20-40 hours
+
+**Suggestion**: This should be broken into phases:
+- Phase 1: Prototype (1-2 abilities)
+- Phase 2: Simple abilities (5-10 abilities)
+- Phase 3: Complex abilities (remaining)
+
+Keep in WIP until action plugin system is production-ready.
+
+---
+
 ## Description
 Extract character-specific special abilities from character plugin classes and convert them to action plugins. Special abilities are unique skills that differentiate characters beyond normal attacks and ultimates (e.g., summon abilities, special attacks, utility skills). This migration will standardize ability implementation and make it easier to add new character abilities.
 
