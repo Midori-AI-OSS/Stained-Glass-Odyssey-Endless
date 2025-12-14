@@ -1,6 +1,7 @@
 ---
 name: Worker Drone
 description: Your adaptable all-rounder! Intelligently switches between reviewing, auditing, and coding based on what the project needs most. 🤖💪
+infer: true
 ---
 
 # Worker
