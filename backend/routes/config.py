@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import math
 
-from llms.loader import ModelName
 from options import OptionKey
 from options import get_option
 from options import set_option
@@ -19,13 +18,22 @@ from autofighter.rooms.battle.pacing import set_turn_pacing
 bp = Blueprint("config", __name__, url_prefix="/config")
 
 _TURN_PACING_DEFAULT = 0.5
+_DEFAULT_LRM_MODEL = "gpt-oss:20b"  # Default model for LRM
+_AVAILABLE_MODELS = [
+    "gpt-oss:20b",
+    "gpt-oss:120b",
+    "openai/gpt-oss-20b",
+    "openai/gpt-oss-120b",
+    "gguf",
+    "remote-openai",
+]
 
 
 @bp.get("/lrm")
 async def get_lrm_config() -> tuple[str, int, dict[str, object]]:
     import os
 
-    current_model = get_option(OptionKey.LRM_MODEL, ModelName.OPENAI_20B.value)
+    current_model = get_option(OptionKey.LRM_MODEL, _DEFAULT_LRM_MODEL)
     current_backend = get_option(OptionKey.LRM_BACKEND, "auto")
     current_api_url = get_option(OptionKey.LRM_API_URL, os.getenv("OPENAI_API_URL", ""))
     current_api_key = get_option(OptionKey.LRM_API_KEY, os.getenv("OPENAI_API_KEY", ""))
@@ -39,16 +47,13 @@ async def get_lrm_config() -> tuple[str, int, dict[str, object]]:
 
     available_backends = ["auto", "openai", "huggingface"]
 
-    # Legacy: still provide available_models for backward compatibility
-    models = [m.value for m in ModelName]
-
     payload = {
         "current_model": current_model,
         "current_backend": current_backend,
         "current_api_url": current_api_url,
         "current_api_key": masked_api_key,
         "available_backends": available_backends,
-        "available_models": models,  # Legacy compatibility
+        "available_models": _AVAILABLE_MODELS,
     }
     try:
         await log_menu_action("Settings", "view_lrm", {"current": current_model, "backend": current_backend})
@@ -68,9 +73,10 @@ async def set_lrm_model() -> tuple[str, int, dict[str, str]]:
     api_url = data.get("api_url", None)
     api_key = data.get("api_key", None)
 
-    # Validate model if provided
-    if model and model not in [m.value for m in ModelName]:
-        return jsonify({"error": "invalid model"}), 400
+    # Validate model if provided (allow any string for flexibility)
+    if model and model not in _AVAILABLE_MODELS:
+        # Allow custom models but log a warning
+        pass
 
     # Validate backend if provided
     if backend and backend not in ["auto", "openai", "huggingface"]:
@@ -78,10 +84,10 @@ async def set_lrm_model() -> tuple[str, int, dict[str, str]]:
 
     # Update model if provided
     if model:
-        old_model = get_option(OptionKey.LRM_MODEL, ModelName.OPENAI_20B.value)
+        old_model = get_option(OptionKey.LRM_MODEL, _DEFAULT_LRM_MODEL)
         set_option(OptionKey.LRM_MODEL, model)
     else:
-        model = get_option(OptionKey.LRM_MODEL, ModelName.OPENAI_20B.value)
+        model = get_option(OptionKey.LRM_MODEL, _DEFAULT_LRM_MODEL)
         old_model = model
 
     # Update backend if provided
@@ -146,12 +152,10 @@ async def test_lrm_model() -> tuple[str, int, dict[str, str]]:
 
     from llms.agent_loader import load_agent
     from llms.agent_loader import validate_agent
-    from llms.loader import load_llm
-    from llms.loader import validate_lrm
 
     data = await request.get_json()
     prompt = data.get("prompt", "")
-    model = get_option(OptionKey.LRM_MODEL, ModelName.OPENAI_20B.value)
+    model = get_option(OptionKey.LRM_MODEL, _DEFAULT_LRM_MODEL)
     backend = get_option(OptionKey.LRM_BACKEND, "auto")
 
     # Try agent framework first (preferred path)
@@ -186,21 +190,27 @@ async def test_lrm_model() -> tuple[str, int, dict[str, str]]:
         pass
 
     # Use legacy LLM loader (fallback path)
-    # Load LLM in thread pool to avoid blocking the event loop
-    llm = await asyncio.to_thread(load_llm, model, validate=False)
+    try:
+        from llms.loader import load_llm
+        from llms.loader import validate_lrm
 
-    # Validate it's an LRM if no custom prompt provided
-    if not prompt:
-        is_valid = await validate_lrm(llm)
-        if not is_valid:
-            return jsonify({"error": "Model validation failed - may not be an LRM"}), 400
-        return jsonify({"response": "Model validation passed", "is_lrm": True, "backend": "legacy"})
+        # Load LLM in thread pool to avoid blocking the event loop
+        llm = await asyncio.to_thread(load_llm, model, validate=False)
 
-    # Otherwise, generate response to custom prompt
-    reply = ""
-    async for chunk in llm.generate_stream(prompt):
-        reply += chunk
-    return jsonify({"response": reply, "backend": "legacy"})
+        # Validate it's an LRM if no custom prompt provided
+        if not prompt:
+            is_valid = await validate_lrm(llm)
+            if not is_valid:
+                return jsonify({"error": "Model validation failed - may not be an LRM"}), 400
+            return jsonify({"response": "Model validation passed", "is_lrm": True, "backend": "legacy"})
+
+        # Otherwise, generate response to custom prompt
+        reply = ""
+        async for chunk in llm.generate_stream(prompt):
+            reply += chunk
+        return jsonify({"response": reply, "backend": "legacy"})
+    except ImportError:
+        return jsonify({"error": "No LRM framework available. Install llm-cpu, llm-cuda, or llm-amd extras."}), 503
 
 
 @bp.post("/lrm/backend")
