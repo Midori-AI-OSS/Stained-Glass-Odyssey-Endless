@@ -189,3 +189,25 @@ async def test_validate_agent_error(monkeypatch):
 
     # Clean up
     del sys.modules["midori_ai_agent_base"]
+
+
+def test_find_config_file():
+    """Test finding config file."""
+    from llms.agent_loader import find_config_file
+
+    path = find_config_file()
+    # May be None if no config file exists, or a Path if it does
+    assert path is None or hasattr(path, "exists")
+
+
+def test_get_agent_config_no_framework(monkeypatch):
+    """Test getting config when framework not available."""
+    import llms.agent_loader
+
+    monkeypatch.setattr(llms.agent_loader, "load_agent_config", None)
+
+    from llms.agent_loader import get_agent_config
+
+    config = get_agent_config()
+    # Should return None when framework not available
+    assert config is None

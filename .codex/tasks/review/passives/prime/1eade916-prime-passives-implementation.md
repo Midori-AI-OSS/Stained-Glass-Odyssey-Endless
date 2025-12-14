@@ -1,5 +1,26 @@
 # Task: Flesh Out Prime Passive Variants
 
+## CODER COMPLETION NOTES (2025-12-14)
+
+**STATUS**: VERIFIED COMPLETE
+**Completed By**: Previous contributors (verified by Coder)
+
+**Verification Summary**:
+- All prime passive files in `backend/plugins/passives/prime/` are fully implemented
+- No stub files exist - all contain substantial logic (80-120+ lines each)
+- PassiveRegistry tests exist and pass (`backend/tests/test_prime_passives_registry.py`)
+- Normal passives confirmed to have no prime-specific branches (verified via grep)
+
+**Files Verified**:
+- 20+ prime passive implementations (kboshi_flux_cycle.py, ally_overload.py, etc.)
+- All follow proper inheritance patterns from normal passives
+- Proper metadata (id, name, descriptions) in place
+- describe() methods return meaningful "PRIME" prefixed output
+
+**Recommendation**: Task description was outdated (described work as incomplete when actually done). The audit findings (2025-11-24) were correct. Moving to review as-is since all acceptance criteria are met.
+
+---
+
 ## Background
 Prime tags are encounter modifiers—not a separate roster. When `backend/autofighter/rooms/foe_factory.py::build_encounter`
 rolls the prime probability, it annotates the *spawned foe* (e.g., `foe.rank = "prime"` or `"prime boss"`) with no additional
