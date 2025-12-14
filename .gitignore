@@ -37,3 +37,11 @@ frontend/logs/
 
 # Error persistence data (generated at runtime)
 backend/data/errors.json
+
+# Agent configuration (may contain secrets)
+config.toml
+backend/config.toml
+
+# But keep the example
+!config.toml.example
+!backend/config.toml.example

@@ -6,6 +6,7 @@ Framework, supporting multiple backends (OpenAI, HuggingFace, etc.).
 from __future__ import annotations
 
 import os
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from .torch_checker import is_torch_available
@@ -15,11 +16,9 @@ if TYPE_CHECKING:
 
 # Import agent framework dependencies
 try:
-    from midori_ai_agent_base import (
-        get_agent,
-        get_agent_from_config,
-        load_agent_config,
-    )
+    from midori_ai_agent_base import get_agent
+    from midori_ai_agent_base import get_agent_from_config
+    from midori_ai_agent_base import load_agent_config
     from midori_ai_logger import get_logger
 
     if TYPE_CHECKING:
@@ -48,7 +47,6 @@ def find_config_file() -> Path | None:
     Returns:
         Path to config.toml if found, None otherwise
     """
-    from pathlib import Path
 
     # Start from backend directory
     current = Path(__file__).parent.parent
@@ -161,7 +159,7 @@ def get_agent_config() -> AgentConfig | None:
     if config_path:
         if load_agent_config is None:
             return None
-            
+
         try:
             return load_agent_config(config_path=str(config_path))
         except Exception as e:
