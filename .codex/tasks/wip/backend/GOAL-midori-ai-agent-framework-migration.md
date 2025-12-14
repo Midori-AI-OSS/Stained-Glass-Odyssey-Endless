@@ -2,13 +2,13 @@
 
 ## COMPLETION STATUS (2025-12-14)
 
-**Overall Status**: CORE FOUNDATION COMPLETE ✅
+**Overall Status**: CORE FOUNDATION COMPLETE WITH ISSUES ⚠️
 
-**Completed Tasks** (6/8):
+**Completed Tasks** (5/8):
 1. ✅ Update dependencies - Agent framework packages in pyproject.toml
 2. ✅ Migrate LLM loader - agent_loader.py fully implemented
-3. ✅ Create config support - config.toml system complete
-4. ✅ Update config routes - GET/POST /config/lrm using agent framework
+3. ⚠️ Create config support - config.toml system complete BUT security issue (config.toml tracked in git)
+4. ❌ Update config routes - NOT IMPLEMENTED (routes/config.py never updated)
 5. ✅ Update tests - test_agent_loader.py with 9 passing tests
 6. ✅ Update documentation - Comprehensive docs created
 
@@ -16,15 +16,25 @@
 7. 🔄 Update chat room - Needs major architectural redesign (c0f04e25)
 8. 🔄 Update memory management - Depends on chat room redesign (5900934d)
 
+**Critical Issues**:
+- 🔴 SECURITY: backend/config.toml is tracked in git despite .gitignore (must fix with `git rm --cached`)
+- 🔴 BROKEN TASK: Task 96e5fdb9 marked complete but routes/config.py was never modified
+
 **Files Modified/Created**:
 - `backend/llms/agent_loader.py` - Core agent loading functionality
 - `backend/config.toml.example` - Configuration template
+- `backend/config.toml` - ⚠️ SHOULD NOT BE IN GIT
 - `backend/scripts/validate_config.py` - Config validation
 - `.codex/implementation/agent-framework.md` - Implementation documentation
 - `.codex/implementation/agent-migration-guide.md` - Migration guide
 - `.codex/implementation/agent-config.md` - Config documentation
 - `backend/tests/test_agent_loader.py` - 9 passing tests
 - `.gitignore` - Exclude config.toml from version control
+
+**Required Fixes Before Approval**:
+1. Remove config.toml from git tracking: `git rm --cached backend/config.toml`
+2. Either implement task 96e5fdb9 OR move it back to WIP with honest status
+3. Update completion claims to reflect actual status (5/8 = 62.5%, not 6/8 = 75%)
 
 **Next Steps for Chat Room & Memory**:
 - Chat room task requires per-character agent architecture design

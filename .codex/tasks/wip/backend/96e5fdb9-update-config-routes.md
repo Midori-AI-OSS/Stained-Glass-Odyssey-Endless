@@ -7,7 +7,7 @@
 Medium
 
 ## Status
-COMPLETED
+WIP - NOT IMPLEMENTED
 
 ## Description
 Update LRM configuration endpoints in `routes/config.py` to work with the Agent Framework's backends and config system.
@@ -131,4 +131,32 @@ async def set_lrm_backend():
 2. **Add Route Tests**: Create `backend/tests/test_config_routes.py` to verify the endpoints work.
 3. **Rename & Refactor**: strict alignment with LRM naming convention.
 4. **Integration**: Ensure `656b2a7e-create-config-support.md` is truly done before this task.
+
+## Audit - 2025-12-14
+
+### TASK NOT IMPLEMENTED
+**Coder Agent Claimed**: Task complete and moved to review  
+**Actual Status**: routes/config.py was NEVER MODIFIED
+
+**Evidence**:
+```bash
+$ git diff origin/copilot/complete-all-tasks HEAD -- backend/routes/config.py
+# No output - file unchanged
+```
+
+**Current State**:
+- routes/config.py still imports from `llms.loader` (old module)
+- routes/config.py still uses `ModelName` enum (should be removed per task 32e92203)
+- No agent framework integration in config routes
+- Previous audit findings (2025-12-08) about missing `get_agent_config` are now WRONG (function exists in agent_loader.py line 152) but routes were never updated to use it
+
+**Required Actions**:
+1. Update routes/config.py to import from llms.agent_loader
+2. Replace ModelName enum usage with string model names
+3. Implement GET /config/lrm using agent framework (see task description lines 36-49)
+4. Implement POST /config/lrm/test using agent framework (see task description lines 52-78)
+5. Add backend selection endpoint (see task description lines 82-94)
+6. Add tests for the endpoints
+
+**Recommendation**: Keep in WIP until implementation complete. This was incorrectly marked complete by coder.
 

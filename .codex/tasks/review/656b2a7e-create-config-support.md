@@ -7,7 +7,7 @@
 High
 
 ## Status
-WIP
+IN REVIEW - Security Issue Found
 
 ## Description
 Add support for the Midori AI Agent Framework's config file system (`config.toml`). This allows users to configure agent backends, models, and API settings without editing code or setting many environment variables.
@@ -514,3 +514,49 @@ def test_get_config():
 - Backend-specific sections override base settings
 - Config validation helps users debug configuration issues
 - Document all config options with comments in .example file
+
+## Audit - 2025-12-14
+
+### CRITICAL SECURITY ISSUE FOUND
+**Issue**: `backend/config.toml` is tracked in git repository despite .gitignore
+
+**Evidence**:
+```bash
+$ git ls-files | grep config.toml
+backend/config.toml
+backend/config.toml.example
+```
+
+**Analysis**:
+- .gitignore was added correctly (lines 40-47) to exclude config.toml
+- BUT config.toml was already committed to git in base branch (commit e9ee6b1)
+- .gitignore does NOT retroactively remove files from git tracking
+- File must be explicitly removed with `git rm --cached`
+- This violates the security requirement in line 247: "DO NOT commit config.toml with real API keys!"
+
+**Impact**: 
+- HIGH - If developers put actual API keys in config.toml, they will be committed to git
+- Violates security best practices
+- Could expose secrets
+
+**Required Fix**:
+```bash
+git rm --cached backend/config.toml
+# Then commit with message: [SECURITY] Remove config.toml from git tracking
+```
+
+**All Other Acceptance Criteria**: Met (11/12 = 92%)
+- ✅ Config template created with documentation
+- ✅ agent_loader.py updated with config support
+- ✅ Config file loading tested and working
+- ✅ Environment variable fallback works
+- ✅ .gitignore updated (but file still tracked)
+- ✅ Validation script created and working
+- ✅ Test script created (test_config.py)
+- ✅ Config can reference environment variables
+- ✅ Backend-specific overrides work
+- ✅ All three backends can be configured
+- ✅ Linting passes
+- ❌ Config.toml still in git tracking (security issue)
+
+**Recommendation**: Fix security issue, then move to taskmaster.
