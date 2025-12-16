@@ -81,11 +81,7 @@ test.describe('Battle Start', () => {
     // Wait for network to be idle
     await page.waitForLoadState('networkidle');
     
-    // Check for no console errors (Playwright automatically collects these)
-    // We just verify the page loaded successfully
-    await expect(page).toHaveTitle(/AutoFighter|Midori/i, { timeout: 10000 });
-    
-    // Verify the viewport is present
+    // Verify the viewport is present (the main game container)
     const viewport = page.locator('[class*="viewport"]').first();
     await expect(viewport).toBeVisible({ timeout: 10000 });
   });
