@@ -146,10 +146,22 @@ async def load_agent(
     )
 
     if validate:
-        log.info(f"Agent loaded: backend={backend}, model={model}")
+        sanitized_backend = sanitize_log_str(backend) if backend else backend
+        sanitized_model = sanitize_log_str(model) if model else model
+        log.info(f"Agent loaded: backend={sanitized_backend}, model={sanitized_model}")
 
     return agent
 
+
+def sanitize_log_str(value: str) -> str:
+    """
+    Sanitize a string for logging by removing line breaks and carriage return characters
+    and making control characters explicit for audit log clarity.
+    """
+    if not isinstance(value, str):
+        value = str(value)
+    # Remove \r and \n, and optionally other non-printable control characters
+    return value.replace('\r', '').replace('\n', '')
 
 def get_agent_config() -> AgentConfig | None:
     """Get current agent configuration from file.
