@@ -1,0 +1,132 @@
+name: E2E Tests - Sub Agent 1
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - 'frontend/**'
+      - 'backend/**'
+      - '.github/workflows/e2e-test-1.yml'
+
+jobs:
+  e2e-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: [non-llm, llm-cpu, llm-cuda]
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+      
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v6.6.0
+        with:
+          python-version: '3.12'
+      
+      - name: Setup bun
+        uses: oven-sh/setup-bun@v2.0.2
+        with:
+          bun-version: latest
+      
+      - name: Setup Python environment
+        working-directory: backend
+        run: |
+          uv sync
+      
+      - name: Install backend variant dependencies
+        working-directory: backend
+        run: |
+          case "${{ matrix.variant }}" in
+            "llm-cpu")
+              uv sync --extra llm-cpu
+              ;;
+            "llm-cuda")
+              uv sync --extra llm-cuda
+              ;;
+            "llm-amd")
+              uv sync --extra llm-amd
+              ;;
+          esac
+      
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: |
+          bun install
+      
+      - name: Install Playwright browsers
+        working-directory: frontend
+        run: |
+          bunx playwright install --with-deps chromium
+      
+      - name: Build frontend
+        working-directory: frontend
+        run: |
+          bun run build
+      
+      - name: Start backend server
+        working-directory: backend
+        run: |
+          # Start backend in background
+          uv run app.py &
+          BACKEND_PID=$!
+          echo "BACKEND_PID=$BACKEND_PID" >> $GITHUB_ENV
+          
+          # Wait for backend to be ready
+          echo "Waiting for backend to start..."
+          for i in {1..30}; do
+            if curl -s http://localhost:59002/ > /dev/null; then
+              echo "Backend is ready!"
+              break
+            fi
+            echo "Attempt $i/30: Backend not ready yet..."
+            sleep 2
+          done
+          
+          # Verify backend is responding
+          curl -f http://localhost:59002/ || (echo "Backend failed to start" && exit 1)
+      
+      - name: Run Playwright tests
+        working-directory: frontend
+        run: |
+          bunx playwright test
+        env:
+          CI: true
+      
+      - name: Upload Playwright report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: playwright-report-${{ matrix.variant }}
+          path: frontend/playwright-report/
+          retention-days: 7
+      
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results-${{ matrix.variant }}
+          path: frontend/test-results/
+          retention-days: 7
+      
+      - name: Upload UI screenshots
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ui-screenshots-${{ matrix.variant }}
+          path: frontend/screenshots/
+          retention-days: 7
+      
+      - name: Cleanup
+        if: always()
+        run: |
+          # Stop backend if still running
+          if [ ! -z "$BACKEND_PID" ]; then
+            kill $BACKEND_PID 2>/dev/null || true
+          fi
+          # Also kill any remaining processes on the ports
+          pkill -f "app.py" || true
+          pkill -f "vite" || true
