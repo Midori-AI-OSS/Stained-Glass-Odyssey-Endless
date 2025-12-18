@@ -13,10 +13,10 @@ Tests the complete flow of starting a battle in the game:
 Captures screenshots of all major UI screens for visual regression testing and documentation:
 - **Main Menu**: Initial game screen
 - **Run Start Flow**: All 4 steps of the new run wizard
-- **Pull/Gacha Menu**: Character gacha system (if accessible)
-- **Inventory**: Player inventory screen (if accessible)
-- **Guidebook**: Game guide and documentation (if accessible)
-- **Settings**: Game settings panel (if accessible)
+- **Warp/Gacha**: Character gacha/warp system
+- **Inventory**: Player inventory screen
+- **Guidebook**: Game guide and documentation
+- **Settings**: Game settings panel
 
 Screenshots are saved to `frontend/screenshots/` and uploaded as artifacts in CI.
 
