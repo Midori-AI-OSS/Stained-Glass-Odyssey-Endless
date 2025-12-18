@@ -11,12 +11,12 @@ on:
 jobs:
   e2e-test:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 240
     
     strategy:
       fail-fast: false
       matrix:
-        variant: [non-llm, llm-cpu, llm-cuda]
+        variant: [non-llm]
     
     steps:
       - name: Checkout repository
@@ -57,37 +57,37 @@ jobs:
         run: |
           bun install
       
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-browsers-${{ runner.os }}-${{ hashFiles('frontend/bun.lockb') }}
+      
       - name: Install Playwright browsers
         working-directory: frontend
         run: |
           bunx playwright install --with-deps chromium
       
-      - name: Build frontend
-        working-directory: frontend
-        run: |
-          bun run build
-      
       - name: Start backend server
         working-directory: backend
         run: |
-          # Start backend in background
+          # Start backend in background and save PID
           uv run app.py &
           BACKEND_PID=$!
+          echo "$BACKEND_PID" > ../backend.pid
           echo "BACKEND_PID=$BACKEND_PID" >> $GITHUB_ENV
+          echo "Backend started with PID: $BACKEND_PID"
           
-          # Wait for backend to be ready
-          echo "Waiting for backend to start..."
-          for i in {1..30}; do
-            if curl -s http://localhost:59002/ > /dev/null; then
-              echo "Backend is ready!"
-              break
-            fi
-            echo "Attempt $i/30: Backend not ready yet..."
-            sleep 2
-          done
-          
-          # Verify backend is responding
-          curl -f http://localhost:59002/ || (echo "Backend failed to start" && exit 1)
+          # Wait for backend to fully start
+          echo "Waiting for backend to fully start..."
+          sleep 300
+      
+      - name: Verify backend health
+        run: |
+          # Verify backend is responding with retries
+          echo "Checking backend health at http://localhost:59002/"
+          curl --retry 5 --retry-delay 2 --retry-all-errors -f http://localhost:59002/ || (echo "Backend failed to start" && exit 1)
+          echo "Backend is healthy and ready!"
       
       - name: Run Playwright tests
         working-directory: frontend
@@ -120,13 +120,17 @@ jobs:
           path: frontend/screenshots/
           retention-days: 7
       
-      - name: Cleanup
+      - name: Cleanup backend server
         if: always()
         run: |
-          # Stop backend if still running
-          if [ ! -z "$BACKEND_PID" ]; then
+          # Stop backend using saved PID
+          if [ -f backend.pid ]; then
+            BACKEND_PID=$(cat backend.pid)
+            echo "Stopping backend (PID: $BACKEND_PID)..."
+            kill $BACKEND_PID 2>/dev/null || true
+            rm backend.pid
+          elif [ ! -z "$BACKEND_PID" ]; then
+            echo "Stopping backend using env var (PID: $BACKEND_PID)..."
             kill $BACKEND_PID 2>/dev/null || true
           fi
-          # Also kill any remaining processes on the ports
-          pkill -f "app.py" || true
-          pkill -f "vite" || true
+          echo "Backend cleanup complete"

@@ -37,3 +37,6 @@ frontend/logs/
 
 # Error persistence data (generated at runtime)
 backend/data/errors.json
+
+# CI/CD generated files
+backend.pid
