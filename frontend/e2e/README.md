@@ -9,6 +9,17 @@ Tests the complete flow of starting a battle in the game:
 - **Battle Start Test**: Navigates to the home page, clicks the Run button, starts a new run, and verifies battle UI appears
 - **Smoke Test**: Verifies the application loads without errors and displays the viewport
 
+### screenshot-capture.spec.js
+Captures screenshots of all major UI screens for visual regression testing and documentation:
+- **Main Menu**: Initial game screen
+- **Run Start Flow**: All 4 steps of the new run wizard
+- **Pull/Gacha Menu**: Character gacha system (if accessible)
+- **Inventory**: Player inventory screen (if accessible)
+- **Guidebook**: Game guide and documentation (if accessible)
+- **Settings**: Game settings panel (if accessible)
+
+Screenshots are saved to `frontend/screenshots/` and uploaded as artifacts in CI.
+
 ## Running Tests Locally
 
 ### Prerequisites
