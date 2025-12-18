@@ -78,9 +78,9 @@ jobs:
           echo "BACKEND_PID=$BACKEND_PID" >> $GITHUB_ENV
           echo "Backend started with PID: $BACKEND_PID"
           
-          # Wait for backend to fully start (takes ~10 seconds)
-          echo "Waiting 15 seconds for backend to fully start..."
-          sleep 15
+          # Wait for backend to fully start
+          echo "Waiting for backend to fully start..."
+          sleep 300
       
       - name: Verify backend health
         run: |
