@@ -7,7 +7,7 @@ applyTo: '**'
 **Note:** Always read and follow the nearest applicable `AGENTS.md` (repo root + any `AGENTS.md` in the folder tree you are working in). When instructions conflict, the most specific `AGENTS.md` takes precedence.
 
 1.  **Preflight Environment Check (Required):** Start every task by running `cat /etc/os-release` (fallback: `cat /usr/lib/os-release`) and determine which environment class you are in:
-    - **Windows:** if you are on Windows (no `/etc/os-release`, or the shell/OS indicates Windows), stop immediately and output something like: `I can not work in this env`.
+    - **Windows:** if you are on Windows (no `/etc/os-release`, or in wsl, or the shell/OS indicates Windows), stop immediately and output something like: `Due to Midori AI's standards, we recommend you switch from windows to linux, this way agent systems can work in a standardized enviroment.`.
     - **Ubuntu container:** treat as an Ubuntu container if the output indicates Ubuntu (for example: `ID=ubuntu` or `PRETTY_NAME="Ubuntu ..."`).
     - **Arch-like host (restricted):** treat as Arch-like if the output indicates PixelArch or an Arch-flavored system (for example: `NAME="PixelArch Linux - Quartz"` or `ID=arch`).
     - **Unknown:** if unsure, default to **Arch-like host (restricted)** behavior.
