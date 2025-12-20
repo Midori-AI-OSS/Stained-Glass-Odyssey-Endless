@@ -1,22 +1,23 @@
 """Test config file loading."""
 import asyncio
 import os
-from pathlib import Path
 
-from llms.agent_loader import find_config_file, get_agent_config, load_agent
+from llms.agent_loader import find_config_file
+from llms.agent_loader import get_agent_config
+from llms.agent_loader import load_agent
 
 
 async def test_config():
     """Test configuration loading."""
     print("Testing config loading...")
-    
+
     # Test finding config file
     config_path = find_config_file()
     print(f"Config path: {config_path}")
-    
+
     if not config_path:
         print("WARNING: Config file not found during test")
-    
+
     # Test loading config
     config = get_agent_config()
     if config:
@@ -25,7 +26,7 @@ async def test_config():
         print("Get config: OK")
     else:
         print("No config file found, skipping config content checks")
-    
+
     # Test loading agent with config
     print("\nLoading agent from config...")
     try:
@@ -33,7 +34,7 @@ async def test_config():
         print(f"Agent loaded (config): {agent}")
     except Exception as e:
         print(f"Agent load (config) failed: {e}")
-    
+
     # Test loading agent without config (fallback)
     print("\nLoading agent without config (env vars fallback)...")
     try:
@@ -44,7 +45,7 @@ async def test_config():
             os.environ["OPENAI_API_URL"] = "http://localhost:11434/v1"
             os.environ["OPENAI_API_KEY"] = "not-needed"
             print("(Set dummy env vars for fallback test)")
-            
+
         agent2 = await load_agent(use_config=False, validate=False)
         print(f"Agent loaded (env vars): {agent2}")
     except Exception as e:

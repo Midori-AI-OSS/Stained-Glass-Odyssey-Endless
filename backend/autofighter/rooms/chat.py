@@ -4,8 +4,7 @@ from dataclasses import dataclass
 import json
 from typing import Any
 
-from llms.loader import ModelName
-from llms.loader import load_llm
+from llms import load_agent
 from options import get_option
 from tts import generate_voice
 
@@ -27,15 +26,32 @@ class ChatRoom(Room):
             await registry.trigger("room_enter", member)
         message = data.get("message", "")
         party_data = [_serialize(p) for p in party.members]
-        model = get_option("lrm_model", ModelName.DEEPSEEK.value)
+        model = get_option("lrm_model", "openai/gpt-oss-20b")
 
-        # Load LLM in thread pool to avoid blocking the event loop
-        llm = await asyncio.to_thread(load_llm, model)
-        payload = {"party": party_data, "message": message}
-        prompt = json.dumps(payload)
-        reply = ""
-        async for chunk in llm.generate_stream(prompt):
-            reply += chunk
+        # Load agent (already async)
+        agent = await load_agent(model=model)
+        payload_data = {"party": party_data, "message": message}
+        prompt_text = json.dumps(payload_data)
+
+        # Create agent payload
+        try:
+            from midori_ai_agent_base import AgentPayload
+
+            payload = AgentPayload(
+                user_message=prompt_text,
+                thinking_blob="",
+                system_context="You are a character in the AutoFighter game chat room.",
+                user_profile={},
+                tools_available=[],
+                session_id="chat_room",
+            )
+
+            reply = ""
+            async for chunk in agent.stream(payload):
+                reply += chunk
+        except ImportError:
+            # Fallback if agent framework not available
+            reply = "Agent framework not available"
 
         voice_path: str | None = None
         sample = None

@@ -2,7 +2,6 @@
 
 import asyncio
 import copy
-from enum import Enum
 import json
 import os
 from pathlib import Path
@@ -218,18 +217,10 @@ def _ensure_llm_stub() -> None:
         llms = types.ModuleType("llms")
         sys.modules["llms"] = llms
 
-    loader = types.ModuleType("llms.loader")
-
-    class ModelName(str, Enum):
-        DEEPSEEK = "deepseek-ai/DeepSeek-R1-Distill-Qwen-7B"
-        GEMMA = "google/gemma-3-4b-it"
-        GGUF = "gguf"
-
-    loader.ModelName = ModelName  # type: ignore[attr-defined]
-    loader.pipeline = lambda *args, **kwargs: None  # noqa: E731
-    loader.load_llm = lambda *args, **kwargs: None  # noqa: E731
-    sys.modules["llms.loader"] = loader
-    setattr(llms, "loader", loader)
+    # Mock load_agent instead of load_llm
+    llms.load_agent = lambda *args, **kwargs: None  # noqa: E731
+    llms.validate_agent = lambda *args, **kwargs: True  # noqa: E731
+    llms.get_agent_config = lambda *args, **kwargs: None  # noqa: E731
 
     torch_checker = types.ModuleType("llms.torch_checker")
     torch_checker.is_torch_available = lambda: False  # noqa: E731

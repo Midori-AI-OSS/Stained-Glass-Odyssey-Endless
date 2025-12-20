@@ -58,18 +58,15 @@ if "options" not in sys.modules:
     _options.get_option = get_option
     sys.modules["options"] = _options
 
-if "llms.loader" not in sys.modules:
+if "llms" not in sys.modules:
     llms_module = types.ModuleType("llms")
-    loader_module = types.ModuleType("llms.loader")
-    loader_module.ModelName = type("ModelName", (), {})
-    loader_module.load_llm = lambda *args, **kwargs: None
-    loader_module._IMPORT_ERROR = None
+    llms_module.load_agent = lambda *args, **kwargs: None
+    llms_module.validate_agent = lambda *args, **kwargs: True
+    llms_module.get_agent_config = lambda *args, **kwargs: None
     torch_checker_module = types.ModuleType("llms.torch_checker")
     torch_checker_module.is_torch_available = lambda: False
-    llms_module.loader = loader_module
     llms_module.torch_checker = torch_checker_module
     sys.modules["llms"] = llms_module
-    sys.modules["llms.loader"] = loader_module
     sys.modules["llms.torch_checker"] = torch_checker_module
 
 if "tts" not in sys.modules:
