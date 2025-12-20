@@ -7,7 +7,22 @@
 High
 
 ## Status
-WIP
+WIP - Execution Plan Created
+
+> **📋 TASK MASTER UPDATE (2025-12-20)**  
+> Comprehensive execution plan and quick reference created:
+> - **Full Plan**: [2792ed45-llm-loader-migration-execution-plan.md](./2792ed45-llm-loader-migration-execution-plan.md)
+> - **Quick Ref**: [dba02b8a-llm-loader-quick-reference.md](./dba02b8a-llm-loader-quick-reference.md)
+>
+> **Key Findings**:
+> - ✅ `agent_loader.py` is already complete and functional
+> - 🔧 14 call sites need migration (6 production, 8 test files)
+> - ⏱️ Estimated effort: 9-13 hours in 8 phases
+> - ⚠️ This is a BREAKING CHANGE migration (intentional)
+>
+> **Prerequisites**: Task 12af34e9-update-dependencies.md must be verified complete
+>
+> **Ready for Coder Assignment**: See execution plan for detailed phase breakdown
 
 ## Description
 Replace the custom `backend/llms/loader.py` module with the Midori AI Agent Framework's standardized agent interface. This eliminates custom wrappers and protocols in favor of the framework's `MidoriAiAgentProtocol`, `AgentPayload`, and `AgentResponse`.
