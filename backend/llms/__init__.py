@@ -18,9 +18,3 @@ __all__ = [
     "is_torch_available",
     "require_torch",
 ]
-
-# OLD INTERFACES REMOVED:
-# - load_llm() - REMOVED, use load_agent() instead
-# - SupportsStream - REMOVED, use MidoriAiAgentProtocol instead
-# - ModelName - REMOVED, use string literals instead
-# - validate_lrm() - REMOVED, use validate_agent() instead

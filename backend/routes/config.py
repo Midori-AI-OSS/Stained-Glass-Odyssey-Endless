@@ -25,7 +25,7 @@ async def get_lrm_config() -> tuple[str, int, dict[str, object]]:
     import os
 
     current_model = get_option(OptionKey.LRM_MODEL, "openai/gpt-oss-20b")
-    current_backend = get_option(OptionKey.LRM_BACKEND, "auto")
+    current_backend = get_option(OptionKey.LRM_BACKEND, "huggingface")
     current_api_url = get_option(OptionKey.LRM_API_URL, os.getenv("OPENAI_API_URL", ""))
     current_api_key = get_option(OptionKey.LRM_API_KEY, os.getenv("OPENAI_API_KEY", ""))
 
@@ -38,9 +38,9 @@ async def get_lrm_config() -> tuple[str, int, dict[str, object]]:
 
     available_backends = ["auto", "openai", "huggingface"]
 
-    # Common model names for backward compatibility
+    # Default HuggingFace models (20b is default unless user requests 120b)
     available_models = [
-        "openai/gpt-oss-20b",
+        "openai/gpt-oss-20b",  # Default for HuggingFace
         "openai/gpt-oss-120b",
         "gpt-oss:20b",
         "gpt-oss:120b",
@@ -72,18 +72,21 @@ async def set_lrm_model() -> tuple[str, int, dict[str, str]]:
     api_url = data.get("api_url", None)
     api_key = data.get("api_key", None)
 
-    # Common valid models (no longer using ModelName enum)
-    valid_models = [
-        "openai/gpt-oss-20b",
-        "openai/gpt-oss-120b",
-        "gpt-oss:20b",
-        "gpt-oss:120b",
-    ]
+    # Get current backend to determine validation rules
+    current_backend = backend if backend else get_option(OptionKey.LRM_BACKEND, "huggingface")
 
-    # Validate model if provided
-    if model and model not in valid_models:
-        # Allow any model string (for flexibility), just warn
-        pass
+    # For OpenAI backend, allow any model (to support newer models like GPT-5+)
+    # For HuggingFace, validate against known models
+    if current_backend == "huggingface" and model:
+        valid_huggingface_models = [
+            "openai/gpt-oss-20b",  # Default for HuggingFace
+            "openai/gpt-oss-120b",
+            "gpt-oss:20b",
+            "gpt-oss:120b",
+        ]
+        if model not in valid_huggingface_models:
+            return jsonify({"error": f"invalid model for huggingface backend: {model}"}), 400
+    # For OpenAI backend, accept any model string (for flexibility with new models)
 
     # Validate backend if provided
     if backend and backend not in ["auto", "openai", "huggingface"]:
@@ -99,10 +102,10 @@ async def set_lrm_model() -> tuple[str, int, dict[str, str]]:
 
     # Update backend if provided
     if backend:
-        old_backend = get_option(OptionKey.LRM_BACKEND, "auto")
+        old_backend = get_option(OptionKey.LRM_BACKEND, "huggingface")
         set_option(OptionKey.LRM_BACKEND, backend)
     else:
-        backend = get_option(OptionKey.LRM_BACKEND, "auto")
+        backend = get_option(OptionKey.LRM_BACKEND, "huggingface")
         old_backend = backend
 
     # Update API URL if provided
