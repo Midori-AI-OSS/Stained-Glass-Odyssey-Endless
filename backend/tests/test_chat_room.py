@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from llms.loader import ModelName
 from options import set_option
 import pytest
 
@@ -11,12 +10,12 @@ from autofighter.rooms.chat import ChatRoom
 from autofighter.stats import Stats
 
 
-class FakeLLM:
+class FakeAgent:
     def __init__(self, calls: dict[str, str]) -> None:
         self._calls = calls
 
-    async def generate_stream(self, text: str):
-        self._calls["prompt"] = text
+    async def stream(self, payload):
+        self._calls["prompt"] = payload.user_message if hasattr(payload, 'user_message') else str(payload)
         yield "reply"
 
 
@@ -26,7 +25,7 @@ def setup_db(tmp_path, monkeypatch):
     monkeypatch.setenv("AF_DB_PATH", str(db_path))
     monkeypatch.setenv("AF_DB_KEY", "k")
     monkeypatch.syspath_prepend(Path(__file__).resolve().parents[1])
-    set_option("lrm_model", ModelName.GEMMA.value)
+    set_option("lrm_model", "google/gemma-3-4b-it")
     return db_path
 
 
@@ -34,15 +33,15 @@ def setup_db(tmp_path, monkeypatch):
 async def test_chat_room_uses_selected_model(monkeypatch, setup_db):
     calls: dict[str, str] = {}
 
-    def fake_loader(model: str):
+    async def fake_loader(model: str = None, **kwargs):
         calls["model"] = model
-        return FakeLLM(calls)
+        return FakeAgent(calls)
 
-    monkeypatch.setattr("autofighter.rooms.chat.load_llm", fake_loader)
+    monkeypatch.setattr("autofighter.rooms.chat.load_agent", fake_loader)
     member = Stats()
     party = Party(members=[member])
     room = ChatRoom()
     result = await room.resolve(party, {"message": "hi"})
     assert result["response"] == "reply"
     assert "hi" in calls["prompt"]
-    assert calls["model"] == ModelName.GEMMA.value
+    assert calls["model"] == "google/gemma-3-4b-it"

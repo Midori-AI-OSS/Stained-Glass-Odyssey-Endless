@@ -1,64 +1,41 @@
-"""Test to reproduce the accelerate dependency issue."""
+"""Test agent loader dependencies."""
 from pathlib import Path
 import sys
 
 import pytest
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
-from llms.loader import ModelName
 
 
-def test_accelerate_missing_error() -> None:
-    """Test that reproduces the accelerate dependency error."""
-    # This test demonstrates the issue when accelerate is not installed
-    # and device_map="auto" is used
+@pytest.mark.asyncio
+async def test_agent_loader_without_framework() -> None:
+    """Test that agent loader raises ImportError when framework not available."""
     from unittest.mock import patch
 
-    # Mock transformers.pipeline to raise the actual accelerate error
-    def mock_pipeline(*args, **kwargs):
-        if "device_map" in kwargs and kwargs["device_map"] == "auto":
-            raise ImportError(
-                "Using `low_cpu_mem_usage=True` or a `device_map` requires Accelerate: `pip install 'accelerate>=0.26.0'`"
-            )
-        return None
+    # Mock the agent framework as not available
+    with patch("llms.agent_loader._AGENT_FRAMEWORK_AVAILABLE", False):
+        from llms import load_agent
 
-    with patch("llms.loader.pipeline", side_effect=mock_pipeline):
-        with patch("llms.loader._IMPORT_ERROR", None):
-            with patch("llms.loader.model_memory_requirements", return_value=(0, 0)):
-                with patch("llms.loader.ensure_ram"):
-                    with patch("llms.loader.pick_device", return_value=0):  # This triggers device_map="auto"
-                        from llms.loader import load_llm
-
-                        # This should raise the ImportError about accelerate
-                        with pytest.raises(ImportError, match="Accelerate"):
-                            load_llm(ModelName.DEEPSEEK.value)
+        # This should raise ImportError about agent framework
+        with pytest.raises(ImportError, match="Agent framework is not available"):
+            await load_agent()
 
 
-def test_accelerate_not_needed_with_explicit_device() -> None:
-    """Test that accelerate is not needed when using explicit device."""
+@pytest.mark.asyncio
+async def test_agent_loader_with_framework_available() -> None:
+    """Test that agent loader works when framework is available."""
+    from unittest.mock import AsyncMock
     from unittest.mock import MagicMock
     from unittest.mock import patch
 
-    mock_pipeline_instance = MagicMock()
-    mock_pipeline_instance.task = "text-generation"
-    mock_pipeline_instance.model = MagicMock()
-    mock_pipeline_instance.model.name_or_path = "fake"
+    mock_agent = MagicMock()
+    mock_get_agent = AsyncMock(return_value=mock_agent)
 
-    def mock_pipeline(*args, **kwargs):
-        # Should not raise error when device is explicit (not device_map="auto")
-        if "device" in kwargs and kwargs["device"] == -1:
-            return mock_pipeline_instance
-        raise ValueError("Unexpected kwargs")
+    with patch("llms.agent_loader._AGENT_FRAMEWORK_AVAILABLE", True):
+        with patch("llms.agent_loader.get_agent", mock_get_agent):
+            from llms import load_agent
 
-    with patch("llms.loader.pipeline", side_effect=mock_pipeline):
-        with patch("llms.loader._IMPORT_ERROR", None):
-            with patch("llms.loader.model_memory_requirements", return_value=(0, 0)):
-                with patch("llms.loader.ensure_ram"):
-                    with patch("llms.loader.pick_device", return_value=-1):  # This triggers device=-1
-                        with patch("llms.loader.HuggingFacePipeline") as mock_hf:
-                            mock_hf.return_value = MagicMock()
-                            from llms.loader import load_llm
-
-                            # This should work without accelerate
-                            llm = load_llm(ModelName.DEEPSEEK.value)
-                            assert llm is not None
+            # This should work with framework available
+            agent = await load_agent(model="test-model")
+            assert agent is not None
+            assert agent == mock_agent

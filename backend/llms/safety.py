@@ -1,5 +1,4 @@
 import os
-from typing import Any
 
 from .torch_checker import is_torch_available
 
@@ -18,11 +17,6 @@ try:
     from huggingface_hub import HfApi
 except Exception:  # pragma: no cover - optional dependency
     HfApi = None
-
-try:  # pragma: no cover - optional dependency
-    import gguf  # type: ignore
-except Exception:  # pragma: no cover - optional dependency
-    gguf = None
 
 
 def get_available_memory() -> int:
@@ -86,40 +80,10 @@ def model_memory_requirements(model: str) -> tuple[int, int]:
     return int(size * 2), int(size)
 
 
-def _layer_count(path: str) -> int:
-    """Return transformer layer count if metadata is available."""
-    if gguf is None:
-        return 0
-    try:  # pragma: no cover - optional dependency
-        reader = gguf.GGUFReader(path)
-        return int(reader.get_meta("llama.block_count", 0))
-    except Exception:  # pragma: no cover - optional dependency
-        return 0
-
-
-def gguf_strategy(path: str) -> dict[str, Any]:
-    """Select LlamaCpp kwargs based on available memory."""
-    try:
-        size = os.path.getsize(path)
-    except OSError:
-        size = 0
-    ensure_ram(size)
-    vram = get_available_vram()
-    if vram is None or size == 0:
-        return {"n_gpu_layers": 0}
-    if vram >= size:
-        return {"n_gpu_layers": -1}
-    layers = _layer_count(path)
-    per_layer = size / (layers or 100)
-    n_gpu_layers = int(vram / per_layer)
-    return {"n_gpu_layers": max(0, n_gpu_layers)}
-
-
 __all__ = [
     "ensure_ram",
     "get_available_memory",
     "get_available_vram",
-    "gguf_strategy",
     "model_memory_requirements",
     "pick_device",
 ]

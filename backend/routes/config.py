@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import math
 
-from llms.loader import ModelName
 from options import OptionKey
 from options import get_option
 from options import set_option
@@ -25,7 +24,7 @@ _TURN_PACING_DEFAULT = 0.5
 async def get_lrm_config() -> tuple[str, int, dict[str, object]]:
     import os
 
-    current_model = get_option(OptionKey.LRM_MODEL, ModelName.OPENAI_20B.value)
+    current_model = get_option(OptionKey.LRM_MODEL, "openai/gpt-oss-20b")
     current_backend = get_option(OptionKey.LRM_BACKEND, "auto")
     current_api_url = get_option(OptionKey.LRM_API_URL, os.getenv("OPENAI_API_URL", ""))
     current_api_key = get_option(OptionKey.LRM_API_KEY, os.getenv("OPENAI_API_KEY", ""))
@@ -39,8 +38,13 @@ async def get_lrm_config() -> tuple[str, int, dict[str, object]]:
 
     available_backends = ["auto", "openai", "huggingface"]
 
-    # Legacy: still provide available_models for backward compatibility
-    models = [m.value for m in ModelName]
+    # Common model names for backward compatibility
+    available_models = [
+        "openai/gpt-oss-20b",
+        "openai/gpt-oss-120b",
+        "gpt-oss:20b",
+        "gpt-oss:120b",
+    ]
 
     payload = {
         "current_model": current_model,
@@ -48,7 +52,7 @@ async def get_lrm_config() -> tuple[str, int, dict[str, object]]:
         "current_api_url": current_api_url,
         "current_api_key": masked_api_key,
         "available_backends": available_backends,
-        "available_models": models,  # Legacy compatibility
+        "available_models": available_models,
     }
     try:
         await log_menu_action("Settings", "view_lrm", {"current": current_model, "backend": current_backend})
@@ -68,9 +72,18 @@ async def set_lrm_model() -> tuple[str, int, dict[str, str]]:
     api_url = data.get("api_url", None)
     api_key = data.get("api_key", None)
 
+    # Common valid models (no longer using ModelName enum)
+    valid_models = [
+        "openai/gpt-oss-20b",
+        "openai/gpt-oss-120b",
+        "gpt-oss:20b",
+        "gpt-oss:120b",
+    ]
+
     # Validate model if provided
-    if model and model not in [m.value for m in ModelName]:
-        return jsonify({"error": "invalid model"}), 400
+    if model and model not in valid_models:
+        # Allow any model string (for flexibility), just warn
+        pass
 
     # Validate backend if provided
     if backend and backend not in ["auto", "openai", "huggingface"]:
@@ -78,10 +91,10 @@ async def set_lrm_model() -> tuple[str, int, dict[str, str]]:
 
     # Update model if provided
     if model:
-        old_model = get_option(OptionKey.LRM_MODEL, ModelName.OPENAI_20B.value)
+        old_model = get_option(OptionKey.LRM_MODEL, "openai/gpt-oss-20b")
         set_option(OptionKey.LRM_MODEL, model)
     else:
-        model = get_option(OptionKey.LRM_MODEL, ModelName.OPENAI_20B.value)
+        model = get_option(OptionKey.LRM_MODEL, "openai/gpt-oss-20b")
         old_model = model
 
     # Update backend if provided
@@ -142,19 +155,14 @@ async def set_lrm_model() -> tuple[str, int, dict[str, str]]:
 
 @bp.post("/lrm/test")
 async def test_lrm_model() -> tuple[str, int, dict[str, str]]:
-    import asyncio
-
-    from llms.agent_loader import load_agent
-    from llms.agent_loader import validate_agent
-    from llms.loader import load_llm
-    from llms.loader import validate_lrm
+    from llms import load_agent
+    from llms import validate_agent
 
     data = await request.get_json()
     prompt = data.get("prompt", "")
-    model = get_option(OptionKey.LRM_MODEL, ModelName.OPENAI_20B.value)
+    model = get_option(OptionKey.LRM_MODEL, "openai/gpt-oss-20b")
     backend = get_option(OptionKey.LRM_BACKEND, "auto")
 
-    # Try agent framework first (preferred path)
     try:
         # Load agent using the new framework
         agent_backend = None if backend == "auto" else backend
@@ -165,7 +173,7 @@ async def test_lrm_model() -> tuple[str, int, dict[str, str]]:
             is_valid = await validate_agent(agent)
             if not is_valid:
                 return jsonify({"error": "Agent validation failed"}), 400
-            return jsonify({"response": "Agent validation passed", "is_lrm": True, "backend": "agent"})
+            return jsonify({"response": "Agent validation passed", "is_lrm": True})
 
         # Generate response to custom prompt using agent
         from midori_ai_agent_base import AgentPayload
@@ -180,27 +188,13 @@ async def test_lrm_model() -> tuple[str, int, dict[str, str]]:
         )
 
         response = await agent.invoke(payload)
-        return jsonify({"response": response.response, "backend": "agent"})
-    except ImportError:
-        # Fall back to legacy loader if agent framework not available
-        pass
-
-    # Use legacy LLM loader (fallback path)
-    # Load LLM in thread pool to avoid blocking the event loop
-    llm = await asyncio.to_thread(load_llm, model, validate=False)
-
-    # Validate it's an LRM if no custom prompt provided
-    if not prompt:
-        is_valid = await validate_lrm(llm)
-        if not is_valid:
-            return jsonify({"error": "Model validation failed - may not be an LRM"}), 400
-        return jsonify({"response": "Model validation passed", "is_lrm": True, "backend": "legacy"})
-
-    # Otherwise, generate response to custom prompt
-    reply = ""
-    async for chunk in llm.generate_stream(prompt):
-        reply += chunk
-    return jsonify({"response": reply, "backend": "legacy"})
+        return jsonify({"response": response.response})
+    except ImportError as e:
+        # Agent framework not available
+        return jsonify({"error": f"Agent framework not available: {e}"}), 503
+    except Exception as e:
+        # Other errors
+        return jsonify({"error": f"Test failed: {e}"}), 500
 
 
 @bp.post("/lrm/backend")

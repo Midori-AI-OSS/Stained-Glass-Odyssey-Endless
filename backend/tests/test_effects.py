@@ -37,12 +37,10 @@ options_module.get_option = _options_get_option
 sys.modules.setdefault("options", options_module)
 
 llms_module = types.ModuleType("llms")
-llms_loader = types.ModuleType("llms.loader")
-llms_loader.ModelName = type("ModelName", (), {})
-llms_loader.load_llm = lambda *_, **__: None
-llms_module.loader = llms_loader
+llms_module.load_agent = lambda *_, **__: None
+llms_module.validate_agent = lambda *_, **__: True
+llms_module.get_agent_config = lambda *_, **__: None
 sys.modules.setdefault("llms", llms_module)
-sys.modules.setdefault("llms.loader", llms_loader)
 
 tts_module = types.ModuleType("tts")
 tts_module.generate_voice = lambda *_, **__: None

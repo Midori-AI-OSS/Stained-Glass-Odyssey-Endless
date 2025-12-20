@@ -203,14 +203,13 @@ async def validate_lrm_on_startup() -> None:
             return
 
         # Import here to avoid circular dependencies
-        from llms.loader import ModelName
-        from llms.loader import load_llm
-        from llms.loader import validate_lrm
+        from llms import load_agent
+        from llms import validate_agent
         from options import OptionKey
         from options import get_option
 
         # Get configured model or use default
-        model = get_option(OptionKey.LRM_MODEL, ModelName.OPENAI_20B.value)
+        model = get_option(OptionKey.LRM_MODEL, "openai/gpt-oss-20b")
 
         # Log which type of LRM we're testing
         if openai_url != "unset":
@@ -220,9 +219,9 @@ async def validate_lrm_on_startup() -> None:
         elif torch_available:
             log.info("Local LRM configured (torch available). Testing model: %s...", model)
 
-        # Load and validate the LRM
-        llm = await asyncio.to_thread(load_llm, model, validate=False)
-        is_valid = await validate_lrm(llm)
+        # Load and validate the agent (load_agent is already async)
+        agent = await load_agent(model=model, validate=False)
+        is_valid = await validate_agent(agent)
 
         if is_valid:
             log.info("✓ LRM validation passed - model is ready for reasoning tasks")

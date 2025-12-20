@@ -1,29 +1,26 @@
-"""LLM and agent loading utilities."""
+"""LLM and agent loading utilities - NEW AGENT FRAMEWORK ONLY."""
 
-# New agent framework interface (recommended)
+# New agent framework interface (ONLY interface now)
+from .agent_loader import get_agent_config
 from .agent_loader import load_agent
 from .agent_loader import validate_agent
-
-# Legacy LLM loader interface (deprecated, use agent_loader instead)
-from .loader import ModelName
-from .loader import SupportsStream
-from .loader import load_llm
-from .loader import validate_lrm
 
 # Keep existing utilities
 from .torch_checker import is_torch_available
 from .torch_checker import require_torch
 
 __all__ = [
-    # New agent framework interface (recommended)
+    # New interface (breaking change - old code must update)
     "load_agent",
     "validate_agent",
-    # Legacy interface (deprecated)
-    "load_llm",
-    "validate_lrm",
-    "ModelName",
-    "SupportsStream",
+    "get_agent_config",
     # Utilities
     "is_torch_available",
     "require_torch",
 ]
+
+# OLD INTERFACES REMOVED:
+# - load_llm() - REMOVED, use load_agent() instead
+# - SupportsStream - REMOVED, use MidoriAiAgentProtocol instead
+# - ModelName - REMOVED, use string literals instead
+# - validate_lrm() - REMOVED, use validate_agent() instead
