@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 import math
 import random
-from dataclasses import dataclass
 
 from autofighter.stats import BUS
 from plugins import damage_effects

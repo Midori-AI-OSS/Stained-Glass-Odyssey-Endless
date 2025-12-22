@@ -11,7 +11,6 @@ Midori AI AutoFighter is being rebuilt as a web application with a Svelte fronte
 ```
 frontend/   # Svelte frontend
 backend/    # Quart backend and game logic
-build/      # Build scripts and configuration
 .codex/     # Documentation and contributor guides
 ```
 
@@ -205,12 +204,11 @@ The rotating 6★ headliner banners now spotlight Lady Fire and Ice, Lady Storm,
 
 ### Standalone Builds
 
-The repository includes automated GitHub Actions workflows to build standalone game executables for multiple platforms. See [BUILD.md](BUILD.md) for complete documentation.
+The repository supports building standalone game executables for Linux and macOS. See [BUILD.md](BUILD.md) for complete documentation.
 
 #### Available Builds
-- **Windows** (4 variants): non-llm, llm-cpu, llm-cuda, llm-amd
 - **Linux** (4 variants): non-llm, llm-cpu, llm-cuda, llm-amd
-- **Android**: Currently seeking testers for mobile builds
+- **macOS** (4 variants): non-llm, llm-cpu, llm-cuda, llm-amd
 
 #### Quick Local Build
 ```bash
@@ -221,18 +219,7 @@ The repository includes automated GitHub Actions workflows to build standalone g
 ./build.sh llm-cpu
 ```
 
-Builds are created for version tags and can be manually triggered via workflow dispatch. Download the latest builds from the [Releases page](../../releases).
-
-### Desktop Builds
-
-Scripts under `build/desktop/` package the app for Windows and Linux. Each script builds a Docker image that compiles the Python backend with PyInstaller and bundles the Svelte frontend with Tauri.
-
-```bash
-./build/desktop/build-windows.sh   # outputs .exe to desktop-dist/windows
-./build/desktop/build-linux.sh     # outputs .AppImage and .tar.gz to desktop-dist/linux
-```
-
-See `.codex/instructions/building-desktop.md` for details.
+Builds can be manually created with the build script. Download the latest builds from the [Releases page](../../releases) if available.
 
 ### Package Installation
 

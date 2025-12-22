@@ -8,19 +8,20 @@ jobs:
     name: Frontend Tests & Linting
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: oven-sh/setup-bun@v1
+      - uses: actions/checkout@v6
+
+      - uses: oven-sh/setup-bun@v2.0.2
         with:
           bun-version: latest
-      
+
       - name: Install frontend dependencies
         working-directory: frontend
         run: bun install
-      
+
       - name: Run frontend linting
         working-directory: frontend
         run: bunx eslint .
-      
+
       - name: Run all frontend tests
         working-directory: frontend
         run: bun test tests/

@@ -3,13 +3,14 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from dataclasses import field
 from typing import Sequence
 
 from plugins.actions import ActionCostBreakdown
 from plugins.actions import ActionResult
+from plugins.actions import TargetingRules
 from plugins.actions import TargetScope
 from plugins.actions import TargetSide
-from plugins.actions import TargetingRules
 from plugins.actions.special import SpecialAbilityBase
 
 
@@ -44,11 +45,15 @@ class AllyOverloadCascade(SpecialAbilityBase):
     )
     character_id: str = "ally"
     cooldown_turns: int = 3
-    cost: ActionCostBreakdown = ActionCostBreakdown(action_points=1)
-    targeting: TargetingRules = TargetingRules(
-        scope=TargetScope.MULTI,
-        side=TargetSide.ENEMY,
-        max_targets=2,
+    cost: ActionCostBreakdown = field(
+        default_factory=lambda: ActionCostBreakdown(action_points=1)
+    )
+    targeting: TargetingRules = field(
+        default_factory=lambda: TargetingRules(
+            scope=TargetScope.MULTI,
+            side=TargetSide.ENEMY,
+            max_targets=2,
+        )
     )
 
     async def execute(self, actor, targets, context):

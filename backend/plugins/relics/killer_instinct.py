@@ -19,10 +19,12 @@ class KillerInstinct(RelicBase):
     full_about: str = "Ultimates grant +75% ATK per stack for the turn; kills grant +50% SPD per stack for two turns"
     summarized_about: str = "Ultimates boost atk; kills boost spd"
 
-    async def apply(self, party) -> None:
-        await super().apply(party)
+    async def apply(self, party, *, stacks: int | None = None) -> None:
+        await super().apply(party, stacks=stacks)
 
-        stacks = party.relics.count(self.id)
+        # Use passed stacks if available, otherwise count (for backward compat)
+        if stacks is None:
+            stacks = party.relics.count(self.id)
         state = getattr(party, "_killer_instinct_state", None)
 
         if state is None:

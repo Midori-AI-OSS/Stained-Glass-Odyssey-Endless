@@ -23,11 +23,13 @@ class SoulPrism(RelicBase):
     )
     summarized_about: str = "Boosts def and mitigation; revives fallen allies with hp penalty and buffs"
 
-    async def apply(self, party) -> None:
+    async def apply(self, party, *, stacks: int | None = None) -> None:
         """Revive fallen allies after battles with reduced Max HP."""
-        await super().apply(party)
+        await super().apply(party, stacks=stacks)
 
-        stacks = party.relics.count(self.id)
+        # Use passed stacks if available, otherwise count (for backward compat)
+        if stacks is None:
+            stacks = party.relics.count(self.id)
         penalty = 0.75 - 0.05 * (stacks - 1)
         multiplier = 1 - penalty
         buff = 0.05 + 0.02 * (stacks - 1)

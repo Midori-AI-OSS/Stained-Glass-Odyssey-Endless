@@ -16,8 +16,8 @@ class ThreadbareCloak(RelicBase):
     full_about: str = "At battle start, all allies gain a shield equal to 3% Max HP per relic stack. Shields stack additively with multiple copies."
     summarized_about: str = "Grants shield at battle start based on max hp"
 
-    async def apply(self, party) -> None:
-        await super().apply(party)
+    async def apply(self, party, *, stacks: int | None = None) -> None:
+        await super().apply(party, stacks=stacks)
 
         applied = getattr(party, "_threadbare_cloak_stacks", 0)
         stacks = party.relics.count(self.id)

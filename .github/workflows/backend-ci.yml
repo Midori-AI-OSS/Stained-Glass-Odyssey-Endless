@@ -8,18 +8,19 @@ jobs:
     name: Backend Tests & Linting
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
+
       - uses: astral-sh/setup-uv@v6.6.0
         with:
           python-version: '3.12'
-      
+
       - name: Install backend dependencies
         working-directory: backend
         run: uv sync
-      
+
       - name: Run backend linting
         run: uvx ruff check backend
-      
+
       - name: Run all backend tests
         working-directory: backend
         run: uv run pytest tests/

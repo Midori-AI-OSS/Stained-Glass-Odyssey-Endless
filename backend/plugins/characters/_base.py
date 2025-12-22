@@ -439,20 +439,41 @@ class PlayerBase(Stats):
             return {"text": response, "voice": None}
 
         try:
-            from llms.loader import load_llm
-            llm = await asyncio.to_thread(load_llm)
+            from llms import load_agent
+            from midori_ai_agent_base import AgentPayload
+
+            agent = await load_agent()
         except Exception:
-            class _LLM:
-                async def generate_stream(self, text: str):
+            # Fallback if agent framework not available
+            class _Agent:
+                async def stream(self, payload):
                     yield ""
 
-            llm = _LLM()
+            agent = _Agent()
 
         context = self.lrm_memory.load_memory_variables({}).get("history", "")
-        prompt = f"{context}\n{message}".strip()
+        prompt_text = f"{context}\n{message}".strip()
+
+        # Create agent payload
+        try:
+            from midori_ai_agent_base import AgentPayload
+
+            payload = AgentPayload(
+                user_message=prompt_text,
+                thinking_blob="",
+                system_context="You are a character in the AutoFighter game.",
+                user_profile={},
+                tools_available=[],
+                session_id=f"character_{getattr(self, 'id', type(self).__name__)}",
+            )
+        except ImportError:
+            # If AgentPayload not available, use fallback
+            payload = None
+
         chunks: list[str] = []
-        async for chunk in llm.generate_stream(prompt):
-            chunks.append(chunk)
+        if payload:
+            async for chunk in agent.stream(payload):
+                chunks.append(chunk)
         response = "".join(chunks)
 
         voice_path: str | None = None

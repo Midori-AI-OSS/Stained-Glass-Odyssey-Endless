@@ -1,9 +1,7 @@
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from plugins.passives.normal.lady_darkness_eclipsing_veil import (
-    LadyDarknessEclipsingVeil,
-)
+from plugins.passives.normal.lady_darkness_eclipsing_veil import LadyDarknessEclipsingVeil
 
 if TYPE_CHECKING:
     from autofighter.stats import Stats

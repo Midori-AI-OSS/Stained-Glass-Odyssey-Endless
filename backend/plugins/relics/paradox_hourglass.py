@@ -26,11 +26,13 @@ class ParadoxHourglass(RelicBase):
         "May sacrifice allies at battle start to supercharge survivors and shred foe defense"
     )
 
-    async def apply(self, party) -> None:
+    async def apply(self, party, *, stacks: int | None = None) -> None:
         """On battle start possibly sacrifices allies for massive buffs."""
-        await super().apply(party)
+        await super().apply(party, stacks=stacks)
 
-        stacks = party.relics.count(self.id)
+        # Use passed stacks if available, otherwise count (for backward compat)
+        if stacks is None:
+            stacks = party.relics.count(self.id)
         state: dict[str, dict] = {"buffs": {}, "foe": {}}
 
         async def _battle_start(entity) -> None:

@@ -9,6 +9,8 @@ from error_context import format_exception_with_context
 # Import torch checker early to perform the one-time check
 from llms.torch_checker import is_torch_available
 from logging_config import configure_logging
+from models.errors import ErrorSeverity
+from models.errors import create_error_response
 from quart import Quart
 from quart import Response
 from quart import jsonify
@@ -38,6 +40,10 @@ from runs.party_manager import _describe_passives  # noqa: F401
 from runs.party_manager import _load_player_customization  # noqa: F401
 from runs.party_manager import load_party  # noqa: F401
 from runs.party_manager import save_party  # noqa: F401
+from services.error_storage import clear_errors
+from services.error_storage import get_previous_errors
+from services.error_storage import has_previous_errors
+from services.error_storage import persist_error
 from services.run_service import prune_runs_on_startup
 from werkzeug.exceptions import HTTPException
 
@@ -110,13 +116,26 @@ async def handle_exception(e: Exception):
     log.exception(e)
     response: Response
     if isinstance(e, HTTPException):
-        response = jsonify({"error": str(e)})
+        response = jsonify({"error": str(e), "status": "error"})
         response.status_code = e.code or 500
     else:
         traceback_text, context = format_exception_with_context(e)
-        payload = {"error": str(e), "traceback": traceback_text}
-        if context:
-            payload["context"] = context
+
+        # Create standardized error response
+        error = create_error_response(
+            message=str(e),
+            traceback_text=traceback_text,
+            context=context,
+            severity=ErrorSeverity.CRITICAL,
+            exc_type=type(e).__name__,
+        )
+
+        # Persist error for crash recovery
+        persist_error(error)
+
+        # Return standardized response format
+        payload = error.model_dump(mode="json")
+        payload["status"] = "error"
         response = jsonify(payload)
         response.status_code = 500
         await request_shutdown()
@@ -131,6 +150,35 @@ async def _cleanup_loop() -> None:
     while True:
         await asyncio.sleep(300)
         await cleanup_battle_state()
+
+
+@app.before_serving
+async def check_previous_crash() -> None:
+    """Check for errors from previous crash and log them."""
+    if has_previous_errors():
+        errors = get_previous_errors()
+        log.warning(
+            "Found %d error(s) from previous session. "
+            "Users can view via GET /api/previous-errors",
+            len(errors),
+        )
+
+
+@app.get("/api/previous-errors")
+async def api_get_previous_errors() -> Response:
+    """Return errors from previous crash for display."""
+    errors = get_previous_errors()
+    return jsonify({
+        "errors": errors,
+        "has_errors": len(errors) > 0,
+    })
+
+
+@app.post("/api/acknowledge-errors")
+async def api_acknowledge_errors() -> Response:
+    """Clear persisted errors after user acknowledges."""
+    clear_errors()
+    return jsonify({"status": "ok"})
 
 
 @app.before_serving
@@ -155,14 +203,13 @@ async def validate_lrm_on_startup() -> None:
             return
 
         # Import here to avoid circular dependencies
-        from llms.loader import ModelName
-        from llms.loader import load_llm
-        from llms.loader import validate_lrm
+        from llms import load_agent
+        from llms import validate_agent
         from options import OptionKey
         from options import get_option
 
         # Get configured model or use default
-        model = get_option(OptionKey.LRM_MODEL, ModelName.OPENAI_20B.value)
+        model = get_option(OptionKey.LRM_MODEL, "openai/gpt-oss-20b")
 
         # Log which type of LRM we're testing
         if openai_url != "unset":
@@ -172,9 +219,9 @@ async def validate_lrm_on_startup() -> None:
         elif torch_available:
             log.info("Local LRM configured (torch available). Testing model: %s...", model)
 
-        # Load and validate the LRM
-        llm = await asyncio.to_thread(load_llm, model, validate=False)
-        is_valid = await validate_lrm(llm)
+        # Load and validate the agent (load_agent is already async)
+        agent = await load_agent(model=model, validate=False)
+        is_valid = await validate_agent(agent)
 
         if is_valid:
             log.info("✓ LRM validation passed - model is ready for reasoning tasks")

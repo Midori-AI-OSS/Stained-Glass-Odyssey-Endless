@@ -139,6 +139,6 @@ class LadyWindTempestGuardBoss(LadyWindTempestGuard):
     @classmethod
     def get_description(cls) -> str:
         return (
-            "[BOSS] Gust stacks grant 1.5× dodge, mitigation, speed, and attack bonuses; stored stacks heal for 7.5% of damage taken per stack before being consumed." 
+            "[BOSS] Gust stacks grant 1.5× dodge, mitigation, speed, and attack bonuses; stored stacks heal for 7.5% of damage taken per stack before being consumed."
             "Critical hits still cash out gusts for Wind Slash, but the lingering defenses are much thicker."
         )

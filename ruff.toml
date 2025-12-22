@@ -1,4 +1,4 @@
-line-length = 88
+line-length = 250
 target-version = "py312"
 
 # Exclude legacy folder from all linting

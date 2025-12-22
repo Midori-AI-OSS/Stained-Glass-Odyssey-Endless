@@ -26,9 +26,9 @@ class NullLantern(RelicBase):
         "Removes shops and rests; battles grant pull tokens but enemies grow stronger with each fight"
     )
 
-    async def apply(self, party) -> None:
+    async def apply(self, party, *, stacks: int | None = None) -> None:
         """Disable shops/rests, buff foes, and award pull tokens."""
-        await super().apply(party)
+        await super().apply(party, stacks=stacks)
 
         party.no_shops = True
         party.no_rests = True

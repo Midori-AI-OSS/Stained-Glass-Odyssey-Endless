@@ -46,7 +46,7 @@ class JenniferFeltmann(PlayerBase):
     gacha_rarity = 5
     damage_type: DamageTypeBase = field(default_factory=Dark)
     passives: list[str] = field(default_factory=lambda: ["bad_student"])
-    voice_gender = "female_midrange"
+    voice_gender: str | None = field(default="female")
 
     def __post_init__(self) -> None:
         super().__post_init__()

@@ -17,8 +17,8 @@ class HerbalCharm(RelicBase):
     full_about: str = "Heals all allies for 0.5% Max HP at the start of each turn. Stacks additively."
     summarized_about: str = "Heals all allies slightly at the start of each turn"
 
-    async def apply(self, party) -> None:
-        await super().apply(party)
+    async def apply(self, party, *, stacks: int | None = None) -> None:
+        await super().apply(party, stacks=stacks)
 
         state = getattr(party, "_herbal_charm_state", None)
         stacks = party.relics.count(self.id)

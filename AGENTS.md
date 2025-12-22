@@ -13,6 +13,7 @@ This document summarizes common development practices for all services in this r
   - Other subfolders: `requests/`, `prototyping/`, etc. for planning, feedback, and prototyping notes.
 - **Never edit files in `.codex/audit/` unless you are in Auditor mode.**
 - **`.github/`**: Workflow guidelines and UX standards.
+- When entering any folder, check for a `AGENTS.md` file in that folder and read it before starting any work there.
 
 ---
 

@@ -1,0 +1,44 @@
+# Midori AI AutoFighter - Agent Configuration
+# This file is used to configure the Agent Framework backend and models.
+
+[midori_ai_agent_base]
+# Backend selection: "openai", "huggingface", or "langchain"
+# Default is "openai" which works for OpenAI API, Ollama, and LocalAI
+backend = "openai"
+
+# Model name (backend-specific)
+# OpenAI/Ollama examples: "gpt-4", "gpt-oss:20b", "llama3:8b"
+# HuggingFace examples: "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
+model = "gpt-oss:20b"
+
+# API key (use environment variable for security: ${OPENAI_API_KEY})
+# For Ollama and similar local servers, this can be empty or "not-needed"
+api_key = "${OPENAI_API_KEY}"
+
+# Base URL for API
+# Examples:
+#   OpenAI: "https://api.openai.com/v1"
+#   Ollama: "http://localhost:11434/v1"
+base_url = "${OPENAI_API_URL}"
+
+# Reasoning effort configuration
+[midori_ai_agent_base.reasoning_effort]
+effort = "high"              # Options: "none", "minimal", "low", "medium", "high"
+generate_summary = "detailed" # Options: "auto", "concise", "detailed"
+summary = "detailed"         # Options: "auto", "concise", "detailed"
+
+# Backend-specific overrides (optional)
+# Settings here override base settings when that backend is selected using 'backend = ...' above
+
+[midori_ai_agent_base.openai]
+# OpenAI-specific overrides
+# model = "gpt-4-turbo"
+
+[midori_ai_agent_base.huggingface]
+# HuggingFace-specific settings (local inference)
+# model = "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
+# device = "auto"               # Options: "auto", "cpu", "cuda", "mps"
+# max_new_tokens = 512
+
+[midori_ai_agent_base.langchain]
+# Langchain-specific settings

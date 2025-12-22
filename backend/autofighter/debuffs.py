@@ -1,12 +1,11 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Mapping
 from typing import TYPE_CHECKING
-
-from plugins import PluginLoader
+from typing import Mapping
 
 from autofighter.stat_effect import StatEffect
+from plugins import PluginLoader
 
 if TYPE_CHECKING:
     from autofighter.stats import Stats

@@ -96,9 +96,7 @@ class MapGenerator:
             if context_dict is not None:
                 self._raw_context = context_dict
             try:
-                from services.run_configuration import (
-                    RunModifierContext,  # local import to avoid cycle
-                )
+                from services.run_configuration import RunModifierContext  # local import to avoid cycle
 
                 if isinstance(modifier_context, RunModifierContext):
                     self._context = modifier_context
@@ -153,9 +151,7 @@ class MapGenerator:
         prime_stacks = 0
         glitched_stacks = 0
         try:
-            from services.run_configuration import (
-                get_modifier_snapshot,  # local import to avoid cycle
-            )
+            from services.run_configuration import get_modifier_snapshot  # local import to avoid cycle
 
             prime_summary = get_modifier_snapshot(self.configuration, "foe_prime_rate")
             glitched_summary = get_modifier_snapshot(self.configuration, "foe_glitched_rate")

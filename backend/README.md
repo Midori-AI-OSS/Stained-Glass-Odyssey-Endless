@@ -22,15 +22,65 @@ logs remain on disk, and telemetry records each removed run as an "aborted"
 outcome so analytics timelines stay consistent. Operators must restore an
 exported backup after a restart if they want to pick up a suspended run.
 
+## Agent Configuration
+
+AutoFighter uses the [Midori AI Agent Framework](https://github.com/Midori-AI-OSS/agents-packages) for LLM/LRM management. Configuration is supported via `config.toml` file or environment variables.
+
+### Configuration
+
+1. Edit `config.toml` with your settings (optional, defaults provided):
+   ```toml
+   [midori_ai_agent_base]
+   backend = "openai"
+   model = "gpt-oss:20b"
+   api_key = "${OPENAI_API_KEY}"
+   base_url = "${OPENAI_API_URL}"
+   ```
+
+2. Set any referenced environment variables:
+   ```bash
+   export OPENAI_API_URL="http://localhost:11434/v1"
+   export OPENAI_API_KEY="not-needed"
+   ```
+
+3. Validate your config:
+   ```bash
+   uv run python scripts/validate_config.py
+   ```
+
+### Supported Backends
+
+1. **OpenAI** - For OpenAI API, Ollama, LocalAI, and compatible services
+2. **HuggingFace** - For local inference with HuggingFace models (requires `llm-cpu` extras)
+3. **Langchain** - For Langchain-based providers
+
+### Installing LLM Dependencies
+
+```bash
+# For CPU-based local inference
+uv sync --extra llm-cpu
+
+# For CUDA (NVIDIA GPU) inference
+uv sync --extra llm-cuda
+
+# For AMD GPU inference
+uv sync --extra llm-amd
+```
+
+### Configuration Priority
+
+Settings are resolved in this order (highest to lowest priority):
+1. Function arguments in code
+2. Config file backend-specific section
+3. Config file base section
+4. Environment variables
+5. Built-in defaults
+
+For complete configuration documentation, see [.codex/implementation/agent-config.md](../.codex/implementation/agent-config.md).
+
 ## LLM Loader
 
-`backend/llms/loader.py` provides a LangChain-based loader for local models. Select a backend with `AF_LLM_MODEL`:
-
-- `deepseek-ai/DeepSeek-R1-Distill-Qwen-7B`
-- `google/gemma-3-4b-it`
-- `gguf` (requires `AF_GGUF_PATH` pointing to the model file)
-
-`load_llm()` returns an object exposing an asynchronous `generate_stream` method.
+`backend/llms/loader.py` provides a LangChain-based loader for local models. This is the current implementation and will be migrated to use the agent framework in a future update.
 
 ## Text-to-Speech
 

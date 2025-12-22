@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import math
 
-from llms.loader import ModelName
 from options import OptionKey
 from options import get_option
 from options import set_option
@@ -23,11 +22,40 @@ _TURN_PACING_DEFAULT = 0.5
 
 @bp.get("/lrm")
 async def get_lrm_config() -> tuple[str, int, dict[str, object]]:
-    current = get_option(OptionKey.LRM_MODEL, ModelName.OPENAI_20B.value)
-    models = [m.value for m in ModelName]
-    payload = {"current_model": current, "available_models": models}
+    import os
+
+    current_model = get_option(OptionKey.LRM_MODEL, "openai/gpt-oss-20b")
+    current_backend = get_option(OptionKey.LRM_BACKEND, "huggingface")
+    current_api_url = get_option(OptionKey.LRM_API_URL, os.getenv("OPENAI_API_URL", ""))
+    current_api_key = get_option(OptionKey.LRM_API_KEY, os.getenv("OPENAI_API_KEY", ""))
+
+    # Mask the API key for security (only show first 4 and last 4 characters)
+    masked_api_key = ""
+    if current_api_key and len(current_api_key) > 8:
+        masked_api_key = current_api_key[:4] + "..." + current_api_key[-4:]
+    elif current_api_key:
+        masked_api_key = "***"
+
+    available_backends = ["auto", "openai", "huggingface"]
+
+    # Default HuggingFace models (20b is default unless user requests 120b)
+    available_models = [
+        "openai/gpt-oss-20b",  # Default for HuggingFace
+        "openai/gpt-oss-120b",
+        "gpt-oss:20b",
+        "gpt-oss:120b",
+    ]
+
+    payload = {
+        "current_model": current_model,
+        "current_backend": current_backend,
+        "current_api_url": current_api_url,
+        "current_api_key": masked_api_key,
+        "available_backends": available_backends,
+        "available_models": available_models,
+    }
     try:
-        await log_menu_action("Settings", "view_lrm", {"current": current})
+        await log_menu_action("Settings", "view_lrm", {"current": current_model, "backend": current_backend})
         await log_overlay_action("settings", {"section": "lrm"})
     except Exception:
         pass
@@ -36,46 +64,161 @@ async def get_lrm_config() -> tuple[str, int, dict[str, object]]:
 
 @bp.post("/lrm")
 async def set_lrm_model() -> tuple[str, int, dict[str, str]]:
+    import os
+
     data = await request.get_json()
     model = data.get("model", "")
-    if model not in [m.value for m in ModelName]:
-        return jsonify({"error": "invalid model"}), 400
-    old_value = get_option(OptionKey.LRM_MODEL, ModelName.OPENAI_20B.value)
-    set_option(OptionKey.LRM_MODEL, model)
+    backend = data.get("backend", None)
+    api_url = data.get("api_url", None)
+    api_key = data.get("api_key", None)
+
+    # Get current backend to determine validation rules
+    current_backend = backend if backend else get_option(OptionKey.LRM_BACKEND, "huggingface")
+
+    # For OpenAI backend, allow any model (to support newer models like GPT-5+)
+    # For HuggingFace, validate against known models
+    if current_backend == "huggingface" and model:
+        valid_huggingface_models = [
+            "openai/gpt-oss-20b",  # Default for HuggingFace
+            "openai/gpt-oss-120b",
+            "gpt-oss:20b",
+            "gpt-oss:120b",
+        ]
+        if model not in valid_huggingface_models:
+            return jsonify({"error": f"invalid model for huggingface backend: {model}"}), 400
+    # For OpenAI backend, accept any model string (for flexibility with new models)
+
+    # Validate backend if provided
+    if backend and backend not in ["auto", "openai", "huggingface"]:
+        return jsonify({"error": "invalid backend"}), 400
+
+    # Update model if provided
+    if model:
+        old_model = get_option(OptionKey.LRM_MODEL, "openai/gpt-oss-20b")
+        set_option(OptionKey.LRM_MODEL, model)
+    else:
+        model = get_option(OptionKey.LRM_MODEL, "openai/gpt-oss-20b")
+        old_model = model
+
+    # Update backend if provided
+    if backend:
+        old_backend = get_option(OptionKey.LRM_BACKEND, "huggingface")
+        set_option(OptionKey.LRM_BACKEND, backend)
+    else:
+        backend = get_option(OptionKey.LRM_BACKEND, "huggingface")
+        old_backend = backend
+
+    # Update API URL if provided
+    if api_url is not None:
+        old_api_url = get_option(OptionKey.LRM_API_URL, os.getenv("OPENAI_API_URL", ""))
+        set_option(OptionKey.LRM_API_URL, api_url)
+    else:
+        api_url = get_option(OptionKey.LRM_API_URL, os.getenv("OPENAI_API_URL", ""))
+        old_api_url = api_url
+
+    # Update API key if provided
+    if api_key is not None:
+        old_api_key = get_option(OptionKey.LRM_API_KEY, os.getenv("OPENAI_API_KEY", ""))
+        set_option(OptionKey.LRM_API_KEY, api_key)
+    else:
+        api_key = get_option(OptionKey.LRM_API_KEY, os.getenv("OPENAI_API_KEY", ""))
+        old_api_key = api_key
+
+    # Mask the API key for security in response
+    masked_api_key = ""
+    if api_key and len(api_key) > 8:
+        masked_api_key = api_key[:4] + "..." + api_key[-4:]
+    elif api_key:
+        masked_api_key = "***"
+
     try:
-        await log_settings_change("lrm_model", old_value, model)
-        await log_menu_action("Settings", "update_lrm", {"old": old_value, "new": model})
+        await log_settings_change("lrm_model", old_model, model)
+        if backend != old_backend:
+            await log_settings_change("lrm_backend", old_backend, backend)
+        if api_url != old_api_url:
+            await log_settings_change("lrm_api_url", old_api_url, api_url)
+        if api_key != old_api_key:
+            await log_settings_change("lrm_api_key", "***", "***")  # Don't log actual keys
+        await log_menu_action("Settings", "update_lrm", {
+            "old_model": old_model,
+            "new_model": model,
+            "old_backend": old_backend,
+            "new_backend": backend,
+        })
     except Exception:
         pass
-    return jsonify({"current_model": model})
+
+    return jsonify({
+        "current_model": model,
+        "current_backend": backend,
+        "current_api_url": api_url,
+        "current_api_key": masked_api_key,
+    })
 
 
 @bp.post("/lrm/test")
 async def test_lrm_model() -> tuple[str, int, dict[str, str]]:
-    import asyncio
-
-    from llms.loader import load_llm
-    from llms.loader import validate_lrm
+    from llms import load_agent
+    from llms import validate_agent
 
     data = await request.get_json()
     prompt = data.get("prompt", "")
-    model = get_option(OptionKey.LRM_MODEL, ModelName.OPENAI_20B.value)
+    model = get_option(OptionKey.LRM_MODEL, "openai/gpt-oss-20b")
+    backend = get_option(OptionKey.LRM_BACKEND, "auto")
 
-    # Load LLM in thread pool to avoid blocking the event loop
-    llm = await asyncio.to_thread(load_llm, model, validate=False)
+    try:
+        # Load agent using the new framework
+        agent_backend = None if backend == "auto" else backend
+        agent = await load_agent(backend=agent_backend, model=model, validate=False)
 
-    # Validate it's an LRM if no custom prompt provided
-    if not prompt:
-        is_valid = await validate_lrm(llm)
-        if not is_valid:
-            return jsonify({"error": "Model validation failed - may not be an LRM"}), 400
-        return jsonify({"response": "Model validation passed", "is_lrm": True})
+        # Validate agent if no custom prompt provided
+        if not prompt:
+            is_valid = await validate_agent(agent)
+            if not is_valid:
+                return jsonify({"error": "Agent validation failed"}), 400
+            return jsonify({"response": "Agent validation passed", "is_lrm": True})
 
-    # Otherwise, generate response to custom prompt
-    reply = ""
-    async for chunk in llm.generate_stream(prompt):
-        reply += chunk
-    return jsonify({"response": reply})
+        # Generate response to custom prompt using agent
+        from midori_ai_agent_base import AgentPayload
+
+        payload = AgentPayload(
+            user_message=prompt,
+            thinking_blob="",
+            system_context="You are a helpful assistant for the AutoFighter game.",
+            user_profile={},
+            tools_available=[],
+            session_id="test",
+        )
+
+        response = await agent.invoke(payload)
+        return jsonify({"response": response.response})
+    except ImportError as e:
+        # Agent framework not available
+        return jsonify({"error": f"Agent framework not available: {e}"}), 503
+    except Exception as e:
+        # Other errors
+        return jsonify({"error": f"Test failed: {e}"}), 500
+
+
+@bp.post("/lrm/backend")
+async def set_lrm_backend() -> tuple[str, int, dict[str, str]]:
+    data = await request.get_json()
+    backend = data.get("backend", "")
+
+    # Validate backend
+    if backend not in ["auto", "openai", "huggingface"]:
+        return jsonify({"error": "invalid backend. Must be one of: auto, openai, huggingface"}), 400
+
+    old_backend = get_option(OptionKey.LRM_BACKEND, "auto")
+    set_option(OptionKey.LRM_BACKEND, backend)
+
+    try:
+        await log_settings_change("lrm_backend", old_backend, backend)
+        await log_menu_action("Settings", "update_lrm_backend", {"old": old_backend, "new": backend})
+    except Exception:
+        pass
+
+    return jsonify({"current_backend": backend})
 
 
 @bp.get("/turn_pacing")

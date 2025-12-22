@@ -22,10 +22,12 @@ class GreedEngine(RelicBase):
         "Lose hp on each action but gain significantly more gold and rare drops"
     )
 
-    async def apply(self, party) -> None:
-        await super().apply(party)
+    async def apply(self, party, *, stacks: int | None = None) -> None:
+        await super().apply(party, stacks=stacks)
 
-        stacks = party.relics.count(self.id)
+        # Use passed stacks if available, otherwise count (for backward compat)
+        if stacks is None:
+            stacks = party.relics.count(self.id)
         gold_bonus = 0.5 + 0.25 * (stacks - 1)
         hp_loss = 0.01 + 0.005 * (stacks - 1)
         rdr_bonus = 0.005 + 0.001 * (stacks - 1)

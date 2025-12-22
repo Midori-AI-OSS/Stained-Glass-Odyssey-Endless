@@ -27,8 +27,8 @@ class EchoingDrum(RelicBase):
     )
     summarized_about: str = "First attack each battle has a chance to trigger extra hits and boost atk"
 
-    async def apply(self, party) -> None:
-        await super().apply(party)
+    async def apply(self, party, *, stacks: int | None = None) -> None:
+        await super().apply(party, stacks=stacks)
 
         state = getattr(party, "_echoing_drum_state", None)
         stacks = party.relics.count(self.id)

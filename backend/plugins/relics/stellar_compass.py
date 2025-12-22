@@ -25,8 +25,8 @@ class StellarCompass(RelicBase):
         "Critical hits grant permanent atk and gold rate increases"
     )
 
-    async def apply(self, party) -> None:
-        await super().apply(party)
+    async def apply(self, party, *, stacks: int | None = None) -> None:
+        await super().apply(party, stacks=stacks)
 
         state = getattr(party, "_stellar_compass_state", None)
         if state is None:

@@ -1175,8 +1175,10 @@
     position: absolute;
     bottom: 4px;
     right: 4px;
+    left: 4px; /* Constrain left side to prevent overflow */
     display: flex;
     align-items: flex-end;
+    justify-content: flex-end; /* Keep right alignment */
     gap: 6px;
     pointer-events: none;
     z-index: 3;
@@ -1188,6 +1190,10 @@
     display: flex;
     gap: 2px;
     pointer-events: none;
+    /* Constrain width to prevent overflow */
+    max-width: calc(var(--portrait-size) * 0.45);
+    flex-wrap: wrap;
+    justify-content: flex-end;
   }
   .passive {
     background: var(--glass-bg);
@@ -1363,6 +1369,22 @@
   .modern-fighter-card.medium .ult-gauge :global(.ult-icon) {
     width: 25%;
     height: 25%;
+  }
+  
+  /* Summons (medium size) get tighter passive indicator layout */
+  .modern-fighter-card.medium .passive-indicators {
+    max-width: calc(var(--portrait-size) * 0.5);
+  }
+  
+  .modern-fighter-card.medium .passive {
+    padding: 0 3px;
+    min-width: 12px;
+    height: 12px;
+    font-size: 0.75rem;
+  }
+  
+  .modern-fighter-card.medium .passive.number-mode {
+    padding: 0 4px;
   }
   .ult-gauge.ult-ready :global(.ult-icon) { opacity: 0.8; }
   .ult-gauge.reduced :global(.ult-icon) {

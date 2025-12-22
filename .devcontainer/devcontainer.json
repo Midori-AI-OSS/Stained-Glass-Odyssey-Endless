@@ -1,13 +1,35 @@
 // For format details, see https://aka.ms/devcontainer.json. For config options, see the
-// README at: https://github.com/devcontainers/templates/tree/main/src/alpine
+// README at: https://github.com/devcontainers/templates/tree/main/src/ubuntu
 {
-	"name": "PixelArch Linux",
+	"name": "Ubuntu",
 	// Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
-	"image": "lunamidori5/pixelarch:topaz",
-	"features": {}
+	"image": "mcr.microsoft.com/devcontainers/base:jammy",
+	"customizations": {
+		"vscode": {
+			"extensions": [
+				"openai.chatgpt",
+				"ms-python.vscode-pylance",
+				"ms-python.python",
+				"ms-python.debugpy",
+				"ms-python.vscode-python-envs"
+			]
+		}
+	},
+	"features": {
+		"ghcr.io/devcontainers/features/git-lfs:1": {},
+		"ghcr.io/devcontainers/features/github-cli:1": {},
+		"ghcr.io/devcontainers/features/node:1": {},
+		"ghcr.io/devcontainers/features/python:1": {},
+		"ghcr.io/devcontainers/features/rust:1": {},
+		"ghcr.io/devcontainers-extra/features/bun-package:1": {},
+		"ghcr.io/devcontainer-community/devcontainer-features/astral.sh-uv:1": {}
+	},
 
 	// Features to add to the dev container. More info: https://containers.dev/features.
 	// "features": {},
+
+	// Create a user-level symlink from ~/.codex to the workspace .codex
+	"postCreateCommand": "bash -lc 'if [ -e \"$HOME/.codex\" ] && [ ! -L \"$HOME/.codex\" ]; then rm -rf \"$HOME/.codex\" && echo \"Removed $HOME/.codex (deleted existing folder)\"; fi; ln -sfn /workspaces/Carly-AGI/Discord-Bot-Main/.codex \"$HOME/.codex\" && echo \"Linked $HOME/.codex -> /workspaces/Carly-AGI/Discord-Bot-Main/.codex\"'"
 
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
 	// "forwardPorts": [],

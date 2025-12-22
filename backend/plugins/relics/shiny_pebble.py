@@ -21,8 +21,8 @@ class ShinyPebble(RelicBase):
     )
     summarized_about: str = "Boosts def; first hit on each ally grants mitigation burst"
 
-    async def apply(self, party) -> None:
-        await super().apply(party)
+    async def apply(self, party, *, stacks: int | None = None) -> None:
+        await super().apply(party, stacks=stacks)
 
         state = getattr(party, "_shiny_pebble_state", None)
         if state is None:

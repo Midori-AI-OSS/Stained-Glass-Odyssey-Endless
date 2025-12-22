@@ -23,9 +23,7 @@ from autofighter.rooms.battle.turn_loop import player_turn  # noqa: E402
 from autofighter.summons.base import Summon  # noqa: E402
 from autofighter.summons.manager import SummonManager  # noqa: E402
 from plugins.characters.luna import Luna  # noqa: E402
-from plugins.passives.normal.luna_lunar_reservoir import (  # noqa: E402
-    LunaLunarReservoir,
-)
+from plugins.passives.normal.luna_lunar_reservoir import LunaLunarReservoir  # noqa: E402
 
 
 class DummyEffectManager:

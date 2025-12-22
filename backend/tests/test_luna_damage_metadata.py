@@ -1,8 +1,6 @@
 import pytest
 
-from autofighter.rooms.battle.turn_loop.player_turn import (
-    prepare_action_attack_metadata,
-)
+from autofighter.rooms.battle.turn_loop.player_turn import prepare_action_attack_metadata
 from autofighter.stats import BUS
 from autofighter.stats import Stats
 from autofighter.stats import calc_animation_time

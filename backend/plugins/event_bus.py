@@ -67,9 +67,7 @@ def _get_fast_batch_interval() -> float:
 
     if _FAST_BATCH_INTERVAL is None:
         try:
-            from autofighter.rooms.battle.pacing import (
-                YIELD_DELAY as pacing_yield_delay,
-            )
+            from autofighter.rooms.battle.pacing import YIELD_DELAY as pacing_yield_delay
         except Exception:  # pragma: no cover - fallback when dependency unavailable
             pacing_yield_delay = 0.001
 

@@ -254,9 +254,7 @@ def load_party(run_id: str) -> Party:
     theme_payload: Any = {}
     daily_bonus = 0.0
     try:
-        from services.login_reward_service import (
-            get_daily_rdr_bonus_sync,  # local import to avoid circular dependency
-        )
+        from services.login_reward_service import get_daily_rdr_bonus_sync  # local import to avoid circular dependency
         from services.login_reward_service import get_daily_theme_bonuses_sync
 
         daily_bonus = float(get_daily_rdr_bonus_sync())

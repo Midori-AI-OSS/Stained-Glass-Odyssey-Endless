@@ -54,6 +54,46 @@ Example:
 ./build.sh llm-cpu windows
 ```
 
+### Running End-to-End Tests
+
+The repository includes Playwright-based end-to-end tests that verify the complete game flow across all variants.
+
+#### Local E2E Testing
+```bash
+# Install frontend dependencies including Playwright
+cd frontend
+bun install
+
+# Install Playwright browsers
+bunx playwright install --with-deps chromium
+
+# Start the backend in one terminal
+cd backend
+uv run app.py
+
+# In another terminal, run Playwright tests
+cd frontend
+bunx playwright test
+
+# View test report
+bunx playwright show-report
+```
+
+#### E2E Tests in CI
+
+The repository includes two GitHub Actions workflows for E2E testing:
+- `.github/workflows/e2e-test-1.yml` - First sub-agent workflow
+- `.github/workflows/e2e-test-2.yml` - Second sub-agent workflow
+
+Each workflow tests 3 game variants in parallel (non-llm, llm-cpu, llm-cuda) using a matrix strategy. Each variant is tested as an independent "sub-agent" that:
+1. Sets up the environment with appropriate dependencies
+2. Builds the frontend
+3. Starts the backend server
+4. Runs Playwright tests against the running application
+5. Uploads test artifacts (reports, videos, screenshots) on failure
+
+To trigger these workflows manually, go to the Actions tab in GitHub and select "Run workflow".
+
 ## Tool Detection Behavior
 
 ### Backend (Python)
@@ -70,6 +110,15 @@ Example:
 The GitHub Actions CI workflow uses modern tools:
 - Backend: `setup-uv@v3` action installs `uv`
 - Frontend: `setup-bun@v1` action installs `bun`
+
+### Available Workflows
+
+1. **backend-ci.yml** - Backend linting and unit tests
+2. **frontend-ci.yml** - Frontend linting and unit tests  
+3. **e2e-test-1.yml** - End-to-end tests with Playwright (sub-agent 1)
+4. **e2e-test-2.yml** - End-to-end tests with Playwright (sub-agent 2)
+
+The E2E test workflows use a matrix strategy to test 3 game variants (non-llm, llm-cpu, llm-cuda) in parallel, with each variant running as an independent job.
 
 Local development scripts automatically adapt to available tools, ensuring compatibility across different environments.
 

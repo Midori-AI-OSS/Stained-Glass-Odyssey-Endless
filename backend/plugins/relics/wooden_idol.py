@@ -19,8 +19,8 @@ class WoodenIdol(RelicBase):
     full_about: str = "+3% Effect Res per stack (multiplicative); resisting a debuff grants +1% Effect Res per stack next turn"
     summarized_about: str = "Boosts effect res; resisting debuffs grants effect res bonus next turn"
 
-    async def apply(self, party) -> None:
-        await super().apply(party)
+    async def apply(self, party, *, stacks: int | None = None) -> None:
+        await super().apply(party, stacks=stacks)
 
         pending: dict[int, float] = {}
         active: dict[int, tuple[PlayerBase, object]] = {}

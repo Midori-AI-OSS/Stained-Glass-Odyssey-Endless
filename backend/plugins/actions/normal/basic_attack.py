@@ -62,9 +62,7 @@ class BasicAttackAction(ActionBase):
         multi-hit/spread handling, DoT application, and passive triggers.
         """
 
-        from autofighter.rooms.battle.turn_loop.player_turn import (
-            prepare_action_attack_metadata,
-        )
+        from autofighter.rooms.battle.turn_loop.player_turn import prepare_action_attack_metadata
 
         result = ActionResult(success=True)
 

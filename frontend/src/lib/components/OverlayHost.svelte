@@ -26,6 +26,7 @@
   import BackendShutdownOverlay from './BackendShutdownOverlay.svelte';
   import FloatingLoot from './FloatingLoot.svelte';
   import CombatViewer from './CombatViewer.svelte';
+  import CrashRecoveryOverlay from './CrashRecoveryOverlay.svelte';
   import { getReviewKeyTransition } from './reviewCache.js';
   import { rewardOpen as computeRewardOpen } from '../systems/viewportState.js';
   import { getBattleSummary } from '../systems/uiApi.js';
@@ -336,6 +337,14 @@
     message={$overlayData.message || 'An unexpected error occurred.'}
     traceback={$overlayData.traceback || ''}
     context={$overlayData.context ?? null}
+    reducedMotion={overlayReducedMotion}
+    on:close={() => dispatch('back')}
+  />
+{/if}
+
+{#if $overlayView === 'crash-recovery'}
+  <CrashRecoveryOverlay
+    errors={$overlayData.errors || []}
     reducedMotion={overlayReducedMotion}
     on:close={() => dispatch('back')}
   />

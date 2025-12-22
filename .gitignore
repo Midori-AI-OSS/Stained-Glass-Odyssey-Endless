@@ -34,3 +34,9 @@ logs/
 backend/logs/
 frontend/logs/
 !frontend/src/routes/logs/
+
+# Error persistence data (generated at runtime)
+backend/data/errors.json
+
+# CI/CD generated files
+backend.pid

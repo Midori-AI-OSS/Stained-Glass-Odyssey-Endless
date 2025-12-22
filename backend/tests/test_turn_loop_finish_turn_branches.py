@@ -11,9 +11,7 @@ if _PROJECT_ROOT not in sys.path:
 
 from autofighter.rooms.battle.turn_loop import foe_turn  # noqa: E402
 from autofighter.rooms.battle.turn_loop import player_turn  # noqa: E402
-from autofighter.rooms.battle.turn_loop.initialization import (
-    TurnLoopContext,  # noqa: E402
-)
+from autofighter.rooms.battle.turn_loop.initialization import TurnLoopContext  # noqa: E402
 
 
 class DummyRegistry:

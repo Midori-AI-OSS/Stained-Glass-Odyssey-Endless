@@ -3,13 +3,14 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from dataclasses import field
 
 from autofighter.stat_effect import StatEffect
 from plugins.actions import ActionCostBreakdown
 from plugins.actions import ActionResult
+from plugins.actions import TargetingRules
 from plugins.actions import TargetScope
 from plugins.actions import TargetSide
-from plugins.actions import TargetingRules
 from plugins.actions.special import SpecialAbilityBase
 
 
@@ -35,12 +36,16 @@ class CarlyGuardianBarrier(SpecialAbilityBase):
     description: str = "Project a luminous bulwark that heals and grants mitigation to an ally."
     character_id: str = "carly"
     cooldown_turns: int = 3
-    cost: ActionCostBreakdown = ActionCostBreakdown(action_points=1)
-    targeting: TargetingRules = TargetingRules(
-        scope=TargetScope.SINGLE,
-        side=TargetSide.ALLY,
-        max_targets=1,
-        allow_self=True,
+    cost: ActionCostBreakdown = field(
+        default_factory=lambda: ActionCostBreakdown(action_points=1)
+    )
+    targeting: TargetingRules = field(
+        default_factory=lambda: TargetingRules(
+            scope=TargetScope.SINGLE,
+            side=TargetSide.ALLY,
+            max_targets=1,
+            allow_self=True,
+        )
     )
 
     async def execute(self, actor, targets, context):
