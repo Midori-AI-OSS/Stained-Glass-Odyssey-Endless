@@ -1,5 +1,8 @@
 name: E2E Tests - Sub Agent 1
 
+permissions:
+  contents: read
+
 on:
   workflow_dispatch:
   pull_request:
