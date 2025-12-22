@@ -1,4 +1,4 @@
-line-length = 88
+line-length = 120
 target-version = "py312"
 
 # Exclude legacy folder from all linting
@@ -45,5 +45,5 @@ backend = [
 
 [lint.isort]
 known-first-party = ["autofighter", "plugins"]
-force-single-line = true
+force-single-line = false
 force-sort-within-sections = true

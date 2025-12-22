@@ -1,6 +1,5 @@
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 from autofighter.stat_effect import StatEffect
 from plugins.passives.normal.carly_guardians_aegis import CarlyGuardiansAegis

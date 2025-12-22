@@ -1,13 +1,10 @@
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
-from typing import Mapping
+from typing import TYPE_CHECKING, Mapping
 from weakref import ref
 
 from autofighter.stat_effect import StatEffect
 from autofighter.stats import BUS
-from plugins.passives.normal.lady_darkness_eclipsing_veil import (
-    LadyDarknessEclipsingVeil,
-)
+from plugins.passives.normal.lady_darkness_eclipsing_veil import LadyDarknessEclipsingVeil
 
 if TYPE_CHECKING:
     from autofighter.stats import Stats
