@@ -3,7 +3,7 @@
 # Build script for Midori AutoFighter
 # Usage: ./build.sh [variant] [platform]
 # Variants: non-llm, llm-cpu, llm-cuda, llm-amd
-# Platforms: linux, windows, android (auto-detected if not specified)
+# Platforms: linux, darwin (macOS) - auto-detected if not specified
 
 set -e
 
@@ -12,49 +12,7 @@ PLATFORM=${2:-$(uname -s | tr '[:upper:]' '[:lower:]')}
 
 echo "Building Midori AutoFighter - Variant: $VARIANT, Platform: $PLATFORM"
 
-# Handle Android builds separately using Capacitor
-if [ "$PLATFORM" = "android" ]; then
-    echo "Building Android APK..."
-    
-    # Build frontend
-    echo "Building frontend..."
-    cd frontend
-    
-    # Detect available Node tools
-    if command -v bun >/dev/null 2>&1; then
-        echo "Using bun for Android frontend build"
-        bun install
-        bun run build
-    else
-        echo "bun not found, using npm for Android frontend build"
-        npm install
-        npm run build
-    fi
-    
-    cd ..
-    
-    # Build mobile app
-    echo "Building mobile app with Capacitor..."
-    cd build/mobile
-    
-    # Use the same Node tool detection for mobile build
-    if command -v bun >/dev/null 2>&1; then
-        bun install
-        bun run sync
-    else
-        npm install
-        npm run sync
-    fi
-    
-    cd android
-    ./gradlew assembleDebug
-    
-    echo "Android build completed!"
-    echo "Output: build/mobile/android/app/build/outputs/apk/debug/"
-    exit 0
-fi
-
-# Desktop builds (Windows/Linux) - build backend + frontend
+# Desktop builds (Linux/macOS) - build backend + frontend
 echo "Building desktop application..."
 
 # Build frontend first
@@ -146,17 +104,10 @@ else
   echo "Building executable..."
   PYTHON_RUN="python3 -m"
 fi
-DATA_ARGS="--add-data ../frontend/build"
-if [ "$PLATFORM" = "windows" ]; then
-    DATA_ARGS="$DATA_ARGS;frontend"
-else
-    DATA_ARGS="$DATA_ARGS:frontend"
-fi
+
+DATA_ARGS="--add-data ../frontend/build:frontend"
 
 OUTPUT_NAME="midori-autofighter-$VARIANT-$PLATFORM"
-if [ "$PLATFORM" = "windows" ]; then
-    OUTPUT_NAME="$OUTPUT_NAME.exe"
-fi
 
 echo "Building: $OUTPUT_NAME"
 $PYTHON_RUN pyinstaller --onefile $DATA_ARGS --clean --name "$OUTPUT_NAME" app.py

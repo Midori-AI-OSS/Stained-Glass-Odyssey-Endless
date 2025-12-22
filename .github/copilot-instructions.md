@@ -8,13 +8,12 @@
 
 ## Repository Overview
 
-Midori AI AutoFighter is a web-based auto-battler game with a Svelte frontend and Python Quart backend. The repository includes automated builds for Windows, Linux, and Android platforms with optional LLM (Language Model) support.
+Midori AI AutoFighter is a web-based auto-battler game with a Svelte frontend and Python Quart backend. The repository supports local builds for Linux and macOS with optional LLM (Language Model) support.
 
 ### Directory Structure
 - `backend/` - Python Quart backend with game logic and AI features
 - `frontend/` - Svelte frontend with responsive design  
 - `legacy/` - Previous Pygame version (read-only, do not modify)
-- `build/` - Build scripts and configuration
 - `.codex/` - Documentation and contributor guides
 
 ## Required Tools Installation
@@ -47,7 +46,6 @@ Tools are now autoinstalled into your dev env.
 
 # Build for specific platform
 ./build.sh non-llm linux
-./build.sh non-llm windows
 ```
 
 **Timeout Warning**: Set timeout to 120+ seconds for non-LLM builds.
@@ -61,14 +59,6 @@ Tools are now autoinstalled into your dev env.
 ```
 
 **CRITICAL TIMEOUT WARNING**: LLM builds take 10-15 minutes or longer due to PyTorch and transformer dependencies. Set timeout to 1200+ seconds (20+ minutes). DO NOT cancel these builds.
-
-#### Android Builds (EXPERIMENTAL)
-```bash
-# Android non-llm build only
-./build.sh non-llm android
-```
-
-**Status**: Android builds are experimental and may fail due to SDL/pygame compatibility issues. Only non-LLM variant is supported.
 
 **Expected Output**: 
 - Non-LLM build: ~549MB executable in `backend/dist/midori-autofighter-non-llm-linux`
@@ -189,8 +179,7 @@ ls -la build/
 
 ### Supported Platforms
 - **Linux**: All variants supported
-- **Windows**: All variants supported
-- **Android**: Only non-llm variant supported
+- **macOS**: All variants supported
 
 ## Known Issues and Limitations
 

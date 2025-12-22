@@ -19,9 +19,7 @@ class WindTurnSpread:
         target_index: int,
         target_foe: Any,
     ) -> list[tuple[Any, Any]]:
-        from autofighter.rooms.battle.turn_loop.player_turn import (
-            _collect_wind_spread_targets,
-        )
+        from autofighter.rooms.battle.turn_loop.player_turn import _collect_wind_spread_targets
 
         return _collect_wind_spread_targets(context, target_index, target_foe)
 
