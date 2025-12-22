@@ -1,5 +1,6 @@
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
+from typing import Optional
 
 from autofighter.stat_effect import StatEffect
 from plugins.passives.normal.graygray_counter_maestro import GraygrayCounterMaestro

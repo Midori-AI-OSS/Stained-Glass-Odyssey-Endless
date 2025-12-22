@@ -1,7 +1,9 @@
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
+from typing import Optional
 
-from autofighter.effects import DamageOverTime, HealingOverTime
+from autofighter.effects import DamageOverTime
+from autofighter.effects import HealingOverTime
 from autofighter.stat_effect import StatEffect
 from plugins.passives.normal.lady_of_fire_infernal_momentum import LadyOfFireInfernalMomentum
 

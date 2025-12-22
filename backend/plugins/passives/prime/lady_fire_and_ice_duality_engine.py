@@ -1,5 +1,6 @@
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Iterable
+from typing import TYPE_CHECKING
+from typing import Iterable
 
 from autofighter.effects import HealingOverTime
 from autofighter.stat_effect import StatEffect

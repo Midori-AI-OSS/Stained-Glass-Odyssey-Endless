@@ -1,5 +1,6 @@
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, ClassVar
+from typing import TYPE_CHECKING
+from typing import ClassVar
 
 from autofighter.stat_effect import StatEffect
 

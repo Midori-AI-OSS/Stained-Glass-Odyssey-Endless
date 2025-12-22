@@ -1,5 +1,6 @@
 from dataclasses import dataclass
-from typing import TYPE_CHECKING, Mapping
+from typing import TYPE_CHECKING
+from typing import Mapping
 from weakref import ref
 
 from autofighter.stat_effect import StatEffect
