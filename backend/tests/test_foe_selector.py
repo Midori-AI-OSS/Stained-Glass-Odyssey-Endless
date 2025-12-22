@@ -4,10 +4,7 @@ from typing import Callable
 
 import pytest
 
-from autofighter.rooms.foes.selector import _choose_template
-from autofighter.rooms.foes.selector import _desired_count
-from autofighter.rooms.foes.selector import _sample_templates
-from autofighter.rooms.foes.selector import _weight_for_template
+from autofighter.rooms.foes.selector import _choose_template, _desired_count, _sample_templates, _weight_for_template
 
 
 @dataclass(frozen=True)

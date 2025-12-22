@@ -4,8 +4,7 @@ import pytest
 from tests.helpers import call_maybe_async
 
 from autofighter.effects import EffectManager
-from autofighter.stats import BUS
-from autofighter.stats import Stats
+from autofighter.stats import BUS, Stats
 from plugins.damage_types.light import Light
 from plugins.dots.bleed import Bleed
 from plugins.hots.radiant_regeneration import RadiantRegeneration

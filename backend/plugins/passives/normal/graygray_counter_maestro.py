@@ -1,7 +1,5 @@
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
-from typing import ClassVar
-from typing import Optional
+from typing import TYPE_CHECKING, ClassVar, Optional
 
 from autofighter.stat_effect import StatEffect
 
@@ -121,8 +119,7 @@ class GraygrayCounterMaestro:
         action_name: str,
     ) -> None:
         try:
-            from autofighter.stats import is_battle_active
-            from autofighter.stats import set_battle_active
+            from autofighter.stats import is_battle_active, set_battle_active
         except ModuleNotFoundError:
             is_battle_active = None
             set_battle_active = None

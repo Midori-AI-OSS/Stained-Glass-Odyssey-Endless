@@ -653,9 +653,7 @@ async def test_summon_inherits_beneficial_effects(monkeypatch):
     summoner.add_effect(buff_effect)
 
     # Add EffectManager with HOT and StatModifier
-    from autofighter.effects import EffectManager
-    from autofighter.effects import HealingOverTime
-    from autofighter.effects import StatModifier
+    from autofighter.effects import EffectManager, HealingOverTime, StatModifier
     summoner.effect_manager = EffectManager(summoner)
 
     # Add HOT (beneficial)
@@ -751,9 +749,7 @@ async def test_summon_does_not_inherit_harmful_effects(monkeypatch):
     summoner.add_effect(debuff_effect)
 
     # Add EffectManager with DOT and harmful StatModifier
-    from autofighter.effects import DamageOverTime
-    from autofighter.effects import EffectManager
-    from autofighter.effects import StatModifier
+    from autofighter.effects import DamageOverTime, EffectManager, StatModifier
     summoner.effect_manager = EffectManager(summoner)
 
     # Add DOT (harmful)

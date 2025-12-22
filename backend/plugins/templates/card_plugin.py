@@ -1,5 +1,4 @@
-from dataclasses import dataclass
-from dataclasses import field
+from dataclasses import dataclass, field
 import logging
 
 from plugins.cards._base import CardBase

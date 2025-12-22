@@ -5,12 +5,8 @@ import pytest
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 
-from autofighter.rooms.battle.pacing import YIELD_MULTIPLIER
-from autofighter.rooms.battle.pacing import impact_pause
-from autofighter.stats import DEFAULT_ANIMATION_DURATION
-from autofighter.stats import DEFAULT_ANIMATION_PER_TARGET
-from autofighter.stats import Stats
-from autofighter.stats import calc_animation_time
+from autofighter.rooms.battle.pacing import YIELD_MULTIPLIER, impact_pause
+from autofighter.stats import DEFAULT_ANIMATION_DURATION, DEFAULT_ANIMATION_PER_TARGET, Stats, calc_animation_time
 
 
 def test_animation_time_scaling() -> None:

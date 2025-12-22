@@ -12,11 +12,8 @@ sys.path.append(str(Path(__file__).resolve().parents[3]))
 from services.run_configuration import RunModifierContext
 
 from autofighter.mapgen import MapNode
-from autofighter.rooms.foe_factory import ROOM_BALANCE_CONFIG
-from autofighter.rooms.foe_factory import FoeFactory
-from autofighter.rooms.foes.scaling import calculate_cumulative_rooms
-from autofighter.rooms.foes.scaling import compute_base_multiplier
-from autofighter.rooms.foes.scaling import enforce_thresholds
+from autofighter.rooms.foe_factory import ROOM_BALANCE_CONFIG, FoeFactory
+from autofighter.rooms.foes.scaling import calculate_cumulative_rooms, compute_base_multiplier, enforce_thresholds
 from autofighter.stats import Stats
 from plugins.characters.foe_base import FoeBase
 

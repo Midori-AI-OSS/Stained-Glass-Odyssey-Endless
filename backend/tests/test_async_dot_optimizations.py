@@ -6,9 +6,7 @@ Test to verify async optimization improvements for DOT effects.
 import pytest
 from tests.helpers import call_maybe_async
 
-from autofighter.effects import DamageOverTime
-from autofighter.effects import EffectManager
-from autofighter.effects import HealingOverTime
+from autofighter.effects import DamageOverTime, EffectManager, HealingOverTime
 import autofighter.stats as stats
 from autofighter.stats import Stats
 

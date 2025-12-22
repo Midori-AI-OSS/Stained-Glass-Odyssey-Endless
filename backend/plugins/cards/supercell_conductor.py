@@ -1,10 +1,8 @@
 from __future__ import annotations
 
 from contextlib import suppress
-from dataclasses import dataclass
-from dataclasses import field
-from typing import Any
-from typing import Iterable
+from dataclasses import dataclass, field
+from typing import Any, Iterable
 
 from autofighter.stat_effect import StatEffect
 from autofighter.stats import BUS

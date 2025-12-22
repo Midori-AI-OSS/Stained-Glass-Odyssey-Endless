@@ -2,8 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Collection
-from collections.abc import Mapping
+from collections.abc import Collection, Mapping
 import random
 from typing import Any
 

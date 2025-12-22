@@ -3,13 +3,9 @@ import pytest
 from autofighter.rooms.battle.turn_loop.player_turn import (
     prepare_action_attack_metadata,
 )
-from autofighter.stats import BUS
-from autofighter.stats import Stats
-from autofighter.stats import calc_animation_time
-from autofighter.stats import set_battle_active
+from autofighter.stats import BUS, Stats, calc_animation_time, set_battle_active
 from plugins.characters import luna as luna_module
-from plugins.characters.luna import Luna
-from plugins.characters.luna import _LunaSwordCoordinator
+from plugins.characters.luna import Luna, _LunaSwordCoordinator
 
 
 @pytest.mark.asyncio

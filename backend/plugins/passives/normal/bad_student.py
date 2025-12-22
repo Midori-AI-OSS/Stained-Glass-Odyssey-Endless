@@ -2,10 +2,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 import random
-from typing import TYPE_CHECKING
-from typing import ClassVar
-from weakref import ReferenceType
-from weakref import ref
+from typing import TYPE_CHECKING, ClassVar
+from weakref import ReferenceType, ref
 
 from autofighter.stat_effect import StatEffect
 from autofighter.stats import BUS

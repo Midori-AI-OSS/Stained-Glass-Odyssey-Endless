@@ -1,14 +1,12 @@
 from collections.abc import Mapping
 from contextlib import suppress
-from dataclasses import dataclass
-from dataclasses import field
+from dataclasses import dataclass, field
 from importlib import import_module
 from pkgutil import iter_modules
 from typing import Any
 
 from autofighter.stats import BUS
-from plugins.cards._base import CardBase
-from plugins.cards._base import safe_async_task
+from plugins.cards._base import CardBase, safe_async_task
 from plugins.damage_effects import DOT_FACTORIES
 import plugins.dots as dots_pkg
 

@@ -1,6 +1,5 @@
 from dataclasses import dataclass
-from typing import Any
-from typing import ClassVar
+from typing import Any, ClassVar
 
 from autofighter.effects import DamageOverTime
 from autofighter.stats import BUS

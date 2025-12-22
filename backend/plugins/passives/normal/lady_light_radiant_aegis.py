@@ -1,14 +1,9 @@
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
-from typing import Callable
-from typing import ClassVar
-from typing import Mapping
-from typing import Optional
+from typing import TYPE_CHECKING, Callable, ClassVar, Mapping, Optional
 from weakref import ref
 
 from autofighter.stat_effect import StatEffect
-from autofighter.stats import BUS
-from autofighter.stats import get_enrage_percent
+from autofighter.stats import BUS, get_enrage_percent
 
 if TYPE_CHECKING:
     from autofighter.stats import Stats

@@ -19,8 +19,7 @@ async def test_prune_runs_on_startup_clears_persistent_and_cached_state(monkeypa
     sys.modules.pop("tracking", None)
 
     # Ensure the save manager will pick up the new database path.
-    from runs import encryption
-    from runs import lifecycle
+    from runs import encryption, lifecycle
     from tracking import manager as tracking_manager
 
     tracking_manager.TRACKING_MANAGER = None

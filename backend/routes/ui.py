@@ -7,42 +7,37 @@ import sys
 from typing import Any
 
 from error_context import format_exception_with_context
-from quart import Blueprint
-from quart import jsonify
-from quart import request
+from quart import Blueprint, jsonify, request
 from runs.encryption import get_save_manager
-from runs.lifecycle import REWARD_STEP_BATTLE_REVIEW
-from runs.lifecycle import REWARD_STEP_CARDS
-from runs.lifecycle import REWARD_STEP_DROPS
-from runs.lifecycle import REWARD_STEP_RELICS
-from runs.lifecycle import battle_snapshots
-from runs.lifecycle import battle_tasks
-from runs.lifecycle import ensure_reward_progression
-from runs.lifecycle import load_map
-from runs.lifecycle import normalise_reward_step
-from runs.lifecycle import save_map
+from runs.lifecycle import (
+    REWARD_STEP_BATTLE_REVIEW,
+    REWARD_STEP_CARDS,
+    REWARD_STEP_DROPS,
+    REWARD_STEP_RELICS,
+    battle_snapshots,
+    battle_tasks,
+    ensure_reward_progression,
+    load_map,
+    normalise_reward_step,
+    save_map,
+)
 from runs.party_manager import load_party
 from services.asset_service import get_asset_manifest
-from services.reward_service import cancel_reward
-from services.reward_service import confirm_reward
-from services.reward_service import select_card
-from services.reward_service import select_relic
-from services.room_service import BATTLE_ROOM_TYPES
-from services.room_service import room_action
-from services.run_configuration import METADATA_VERSION
-from services.run_configuration import RunModifierContext
-from services.run_configuration import get_run_configuration_metadata
-from services.run_service import advance_room
-from services.run_service import backup_save
-from services.run_service import get_battle_events
-from services.run_service import get_battle_summary
-from services.run_service import restore_save
-from services.run_service import shutdown_run
-from services.run_service import start_run
-from services.run_service import update_party
-from services.run_service import wipe_save
-from tracking import log_game_action
-from tracking import log_menu_action
+from services.reward_service import cancel_reward, confirm_reward, select_card, select_relic
+from services.room_service import BATTLE_ROOM_TYPES, room_action
+from services.run_configuration import METADATA_VERSION, RunModifierContext, get_run_configuration_metadata
+from services.run_service import (
+    advance_room,
+    backup_save,
+    get_battle_events,
+    get_battle_summary,
+    restore_save,
+    shutdown_run,
+    start_run,
+    update_party,
+    wipe_save,
+)
+from tracking import log_game_action, log_menu_action
 
 from autofighter.rooms.shop import serialize_shop_payload
 

@@ -7,8 +7,7 @@ from dataclasses import dataclass
 import pytest
 
 from autofighter.stats import Stats
-from plugins.actions import ActionBase
-from plugins.actions import ActionType
+from plugins.actions import ActionBase, ActionType
 from plugins.actions.registry import ActionRegistry
 from plugins.actions.result import ActionResult
 

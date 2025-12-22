@@ -1,10 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import Awaitable
-from typing import Callable
+from typing import TYPE_CHECKING, Any, Awaitable, Callable
 
 from autofighter.action_queue import TURN_COUNTER_ID
 from autofighter.stats import BUS
@@ -13,12 +10,8 @@ from plugins.actions.context import BattleContext
 from plugins.actions.normal.basic_attack import BasicAttackAction
 from plugins.actions.registry import ActionRegistry
 
-from ..pacing import _EXTRA_TURNS
-from ..pacing import TURN_PACING
-from ..pacing import pace_sleep
-from ..turns import prepare_snapshot_overlay
-from ..turns import push_progress_update
-from ..turns import register_snapshot_entities
+from ..pacing import _EXTRA_TURNS, TURN_PACING, pace_sleep
+from ..turns import prepare_snapshot_overlay, push_progress_update, register_snapshot_entities
 
 if TYPE_CHECKING:
     from asyncio import Task

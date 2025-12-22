@@ -1,12 +1,8 @@
 from __future__ import annotations
 
-from dataclasses import asdict
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from random import Random
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import ClassVar
-from typing import Mapping
+from typing import TYPE_CHECKING, Any, ClassVar, Mapping
 
 if TYPE_CHECKING:  # pragma: no cover - import only for type checking
     from services.run_configuration import RunModifierContext

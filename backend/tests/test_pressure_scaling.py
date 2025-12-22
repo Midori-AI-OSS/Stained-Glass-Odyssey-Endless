@@ -3,8 +3,7 @@ import pytest
 from autofighter.mapgen import MapNode
 from autofighter.party import Party
 from autofighter.rooms.battle.core import BattleRoom
-from autofighter.rooms.utils import _build_foes
-from autofighter.rooms.utils import _scale_stats
+from autofighter.rooms.utils import _build_foes, _scale_stats
 from autofighter.stats import Stats
 from plugins.characters.foe_base import FoeBase
 

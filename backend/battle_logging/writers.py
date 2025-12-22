@@ -11,10 +11,8 @@ from typing import Optional
 
 from autofighter.stats import BUS
 
-from .handlers import AsyncQueueListener
-from .handlers import TimedMemoryHandler
-from .summary import BattleEvent
-from .summary import BattleSummary
+from .handlers import AsyncQueueListener, TimedMemoryHandler
+from .summary import BattleEvent, BattleSummary
 
 
 class BattleLogger:

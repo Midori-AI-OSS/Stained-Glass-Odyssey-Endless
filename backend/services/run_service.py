@@ -9,40 +9,40 @@ import random
 import time
 from uuid import uuid4
 
-from battle_logging.writers import end_run_logging
-from battle_logging.writers import start_run_logging
-from runs.encryption import get_fernet
-from runs.encryption import get_save_manager
-from runs.lifecycle import battle_snapshots
-from runs.lifecycle import emit_battle_end_for_runs
-from runs.lifecycle import empty_reward_staging
-from runs.lifecycle import has_pending_rewards
-from runs.lifecycle import load_map
-from runs.lifecycle import purge_all_run_state
-from runs.lifecycle import purge_run_state
-from runs.lifecycle import save_map
-from runs.party_manager import _assign_damage_type
-from runs.party_manager import _describe_passives
-from runs.party_manager import _load_player_customization
-from runs.party_manager import load_party
-from tracking import log_game_action
-from tracking import log_menu_action
-from tracking import log_play_session_end
-from tracking import log_play_session_start
-from tracking import log_run_end
-from tracking import log_run_start
+from battle_logging.writers import end_run_logging, start_run_logging
+from runs.encryption import get_fernet, get_save_manager
+from runs.lifecycle import (
+    battle_snapshots,
+    emit_battle_end_for_runs,
+    empty_reward_staging,
+    has_pending_rewards,
+    load_map,
+    purge_all_run_state,
+    purge_run_state,
+    save_map,
+)
+from runs.party_manager import _assign_damage_type, _describe_passives, _load_player_customization, load_party
+from tracking import (
+    log_game_action,
+    log_menu_action,
+    log_play_session_end,
+    log_play_session_start,
+    log_run_end,
+    log_run_start,
+)
 
 from autofighter.mapgen import MapGenerator
 from autofighter.party import Party
-from autofighter.rooms import _choose_foe
-from autofighter.rooms import _serialize
+from autofighter.rooms import _choose_foe, _serialize
 from plugins import characters as player_plugins
 from services.login_reward_service import record_room_completion
 from services.room_service import BATTLE_ROOM_TYPES
-from services.run_configuration import RunConfigurationSelection
-from services.run_configuration import apply_player_modifier_context
-from services.run_configuration import build_run_modifier_context
-from services.run_configuration import validate_run_configuration
+from services.run_configuration import (
+    RunConfigurationSelection,
+    apply_player_modifier_context,
+    build_run_modifier_context,
+    validate_run_configuration,
+)
 from services.user_level_service import get_user_level
 
 log = logging.getLogger(__name__)

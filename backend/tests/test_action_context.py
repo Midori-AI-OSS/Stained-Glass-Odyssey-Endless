@@ -8,10 +8,7 @@ import contextlib
 import pytest
 
 from autofighter.effects import EffectManager
-from autofighter.stats import BUS
-from autofighter.stats import Stats
-from autofighter.stats import get_enrage_percent
-from autofighter.stats import set_enrage_percent
+from autofighter.stats import BUS, Stats, get_enrage_percent, set_enrage_percent
 from plugins.actions.context import BattleContext
 from plugins.actions.registry import ActionRegistry
 from plugins.event_bus import bus

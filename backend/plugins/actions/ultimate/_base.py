@@ -2,18 +2,11 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from dataclasses import field
+from dataclasses import dataclass, field
 import inspect
-from typing import TYPE_CHECKING
-from typing import Sequence
+from typing import TYPE_CHECKING, Sequence
 
-from plugins.actions._base import ActionBase
-from plugins.actions._base import ActionCostBreakdown
-from plugins.actions._base import ActionType
-from plugins.actions._base import TargetingRules
-from plugins.actions._base import TargetScope
-from plugins.actions._base import TargetSide
+from plugins.actions._base import ActionBase, ActionCostBreakdown, ActionType, TargetingRules, TargetScope, TargetSide
 
 if TYPE_CHECKING:  # pragma: no cover - type checking only
     from autofighter.stats import Stats

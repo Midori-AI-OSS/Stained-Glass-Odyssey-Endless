@@ -3,8 +3,7 @@ from unittest.mock import AsyncMock
 import pytest
 
 from autofighter.party import Party
-from autofighter.stats import BUS
-from autofighter.stats import Stats
+from autofighter.stats import BUS, Stats
 from plugins.relics.pocket_manual import PocketManual
 
 

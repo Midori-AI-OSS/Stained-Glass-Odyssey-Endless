@@ -2,10 +2,8 @@ import pytest
 
 from autofighter.effects import EffectManager
 from autofighter.passives import PassiveRegistry
-from autofighter.stats import Stats
-from autofighter.stats import set_battle_active
-from plugins.damage_types import ALL_DAMAGE_TYPES
-from plugins.damage_types import load_damage_type
+from autofighter.stats import Stats, set_battle_active
+from plugins.damage_types import ALL_DAMAGE_TYPES, load_damage_type
 from plugins.damage_types.generic import Generic
 
 

@@ -3,14 +3,11 @@
 from __future__ import annotations
 
 import contextlib
-from dataclasses import dataclass
-from dataclasses import field
+from dataclasses import dataclass, field
 
 from autofighter.effects import create_stat_buff
 from autofighter.stats import BUS
-from plugins.actions import TargetingRules
-from plugins.actions import TargetScope
-from plugins.actions import TargetSide
+from plugins.actions import TargetingRules, TargetScope, TargetSide
 from plugins.actions.result import ActionResult
 from plugins.actions.ultimate import UltimateActionBase
 

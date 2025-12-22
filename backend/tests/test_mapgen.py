@@ -5,11 +5,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from collections import Counter
 
-from services.run_configuration import build_run_modifier_context
-from services.run_configuration import validate_run_configuration
+from services.run_configuration import build_run_modifier_context, validate_run_configuration
 
-from autofighter.mapgen import MapGenerator
-from autofighter.mapgen import MapNode
+from autofighter.mapgen import MapGenerator, MapNode
 
 
 class _BossRushParty:

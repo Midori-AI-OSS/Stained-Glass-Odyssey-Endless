@@ -6,8 +6,7 @@ from unittest.mock import patch
 import pytest
 
 from autofighter.party import Party
-from autofighter.stats import BUS
-from autofighter.stats import set_battle_active
+from autofighter.stats import BUS, set_battle_active
 from plugins.cards.arc_lightning import ArcLightning
 from plugins.characters._base import PlayerBase
 from plugins.characters.foe_base import FoeBase

@@ -7,14 +7,12 @@ import logging
 import math
 from typing import Any
 
-from services.run_configuration import RunModifierContext
-from services.run_configuration import apply_player_modifier_context
+from services.run_configuration import RunModifierContext, apply_player_modifier_context
 
 from autofighter.effects import create_stat_buff
 from autofighter.party import Party
 from autofighter.passives import PassiveRegistry
-from autofighter.stats import Stats
-from autofighter.stats import apply_status_hooks
+from autofighter.stats import Stats, apply_status_hooks
 from plugins import characters as player_plugins
 from plugins.characters._base import PlayerBase
 from plugins.damage_types import load_damage_type
@@ -256,8 +254,8 @@ def load_party(run_id: str) -> Party:
     try:
         from services.login_reward_service import (
             get_daily_rdr_bonus_sync,  # local import to avoid circular dependency
+            get_daily_theme_bonuses_sync,
         )
-        from services.login_reward_service import get_daily_theme_bonuses_sync
 
         daily_bonus = float(get_daily_rdr_bonus_sync())
         theme_payload = get_daily_theme_bonuses_sync()

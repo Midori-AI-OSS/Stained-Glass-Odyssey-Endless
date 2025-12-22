@@ -5,22 +5,20 @@ from dataclasses import fields
 import json
 import logging
 import math
-from typing import Dict
-from typing import List
+from typing import Dict, List
 
-from quart import Blueprint
-from quart import jsonify
-from quart import request
+from quart import Blueprint, jsonify, request
 from runs.encryption import get_save_manager
-from runs.party_manager import _apply_character_customization
-from runs.party_manager import _apply_player_customization
-from runs.party_manager import _apply_player_upgrades
-from runs.party_manager import _assign_damage_type
-from runs.party_manager import _load_character_customization
-from runs.party_manager import _load_player_customization
+from runs.party_manager import (
+    _apply_character_customization,
+    _apply_player_customization,
+    _apply_player_upgrades,
+    _assign_damage_type,
+    _load_character_customization,
+    _load_player_customization,
+)
 from services.user_level_service import get_user_state
-from tracking import log_menu_action
-from tracking import log_overlay_action
+from tracking import log_menu_action, log_overlay_action
 
 from autofighter.gacha import GachaManager
 from autofighter.stats import apply_status_hooks

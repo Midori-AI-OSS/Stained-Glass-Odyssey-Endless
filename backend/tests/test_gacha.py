@@ -218,8 +218,7 @@ async def test_expired_banners_pick_owned_and_unowned(app_with_db, monkeypatch):
 
     manager = app_module.GachaManager(app_module.get_save_manager())
 
-    from autofighter.gacha import FIVE_STAR
-    from autofighter.gacha import SIX_STAR
+    from autofighter.gacha import FIVE_STAR, SIX_STAR
 
     featured_pool = list(dict.fromkeys([*FIVE_STAR, *SIX_STAR]))
     if len(featured_pool) < 2:

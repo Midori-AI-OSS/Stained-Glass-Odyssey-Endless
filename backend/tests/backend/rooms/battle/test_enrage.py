@@ -7,9 +7,7 @@ from typing import Any
 
 import pytest
 
-from autofighter.rooms.battle.enrage import EnrageState
-from autofighter.rooms.battle.enrage import apply_enrage_bleed
-from autofighter.rooms.battle.enrage import update_enrage_state
+from autofighter.rooms.battle.enrage import EnrageState, apply_enrage_bleed, update_enrage_state
 
 
 class DummyMod:

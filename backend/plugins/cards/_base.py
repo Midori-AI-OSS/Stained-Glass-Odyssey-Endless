@@ -1,18 +1,12 @@
 import asyncio
 from collections.abc import Callable
-from dataclasses import dataclass
-from dataclasses import field
+from dataclasses import dataclass, field
 import logging
-from typing import Any
-from typing import ClassVar
-from typing import Sequence
+from typing import Any, ClassVar, Sequence
 
-from autofighter.effects import EffectManager
-from autofighter.effects import create_stat_buff
+from autofighter.effects import EffectManager, create_stat_buff
 from autofighter.party import Party
-from autofighter.reward_preview import RewardPreviewPayload
-from autofighter.reward_preview import RewardPreviewTrigger
-from autofighter.reward_preview import build_preview_from_effects
+from autofighter.reward_preview import RewardPreviewPayload, RewardPreviewTrigger, build_preview_from_effects
 
 log = logging.getLogger(__name__)
 
@@ -144,8 +138,7 @@ class CardBase:
         Returns:
             summarized_about if user has concise mode enabled, otherwise full_about
         """
-        from options import OptionKey
-        from options import get_option
+        from options import OptionKey, get_option
 
         concise = get_option(OptionKey.CONCISE_DESCRIPTIONS, "false").lower() == "true"
         if concise:

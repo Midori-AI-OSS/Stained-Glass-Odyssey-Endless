@@ -1,14 +1,9 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING
-from typing import ClassVar
-from typing import Dict
-from typing import List
-from typing import Optional
+from typing import TYPE_CHECKING, ClassVar, Dict, List, Optional
 
-from autofighter.stats import BUS
-from autofighter.stats import Stats
+from autofighter.stats import BUS, Stats
 from plugins.damage_types._base import DamageTypeBase
 
 from .base import Summon

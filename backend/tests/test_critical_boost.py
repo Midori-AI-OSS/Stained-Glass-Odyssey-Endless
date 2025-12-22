@@ -2,8 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from autofighter.stats import BUS
-from autofighter.stats import Stats
+from autofighter.stats import BUS, Stats
 from plugins.effects.critical_boost import CriticalBoost
 from plugins.plugin_loader import PluginLoader
 

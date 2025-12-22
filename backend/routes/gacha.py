@@ -3,13 +3,9 @@ from __future__ import annotations
 import asyncio
 from dataclasses import asdict
 
-from quart import Blueprint
-from quart import jsonify
-from quart import request
+from quart import Blueprint, jsonify, request
 from runs.encryption import get_save_manager
-from tracking import log_character_pull
-from tracking import log_menu_action
-from tracking import log_overlay_action
+from tracking import log_character_pull, log_menu_action, log_overlay_action
 
 from autofighter.gacha import GachaManager
 

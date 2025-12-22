@@ -4,17 +4,13 @@ from __future__ import annotations
 
 from collections.abc import Mapping as ABCMapping
 from dataclasses import dataclass
-from datetime import UTC
-from datetime import datetime
+from datetime import UTC, datetime
 import hashlib
 import json
 import math
-from typing import Any
-from typing import Iterable
-from typing import Mapping
+from typing import Any, Iterable, Mapping
 
-from autofighter.effects import DIMINISHING_RETURNS_CONFIG
-from autofighter.effects import calculate_diminishing_returns
+from autofighter.effects import DIMINISHING_RETURNS_CONFIG, calculate_diminishing_returns
 
 METADATA_VERSION = "2025.03"
 

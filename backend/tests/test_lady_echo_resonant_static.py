@@ -7,10 +7,8 @@ import random
 import pytest
 from tests.helpers import call_maybe_async
 
-from autofighter.effects import DamageOverTime
-from autofighter.effects import EffectManager
-from autofighter.stats import BUS
-from autofighter.stats import Stats
+from autofighter.effects import DamageOverTime, EffectManager
+from autofighter.stats import BUS, Stats
 from plugins.damage_types.lightning import Lightning
 from plugins.passives.normal.lady_echo_resonant_static import LadyEchoResonantStatic
 

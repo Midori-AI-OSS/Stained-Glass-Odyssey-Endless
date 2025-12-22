@@ -5,10 +5,8 @@ from dataclasses import fields
 import random
 from typing import Any
 
-from autofighter.effects import calculate_diminishing_returns
-from autofighter.effects import get_current_stat_value
-from autofighter.mapgen import MapGenerator
-from autofighter.mapgen import MapNode
+from autofighter.effects import calculate_diminishing_returns, get_current_stat_value
+from autofighter.mapgen import MapGenerator, MapNode
 from autofighter.stats import Stats
 from plugins.characters.foe_base import FoeBase
 

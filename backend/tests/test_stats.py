@@ -1,8 +1,6 @@
 import pytest
 
-from autofighter.stats import Stats
-from autofighter.stats import get_enrage_percent
-from autofighter.stats import set_enrage_percent
+from autofighter.stats import Stats, get_enrage_percent, set_enrage_percent
 
 
 @pytest.mark.asyncio

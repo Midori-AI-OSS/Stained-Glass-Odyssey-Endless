@@ -1,5 +1,4 @@
-from dataclasses import dataclass
-from dataclasses import field
+from dataclasses import dataclass, field
 
 from autofighter.stats import BUS
 from plugins.characters._base import PlayerBase

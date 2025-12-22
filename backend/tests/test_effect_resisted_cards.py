@@ -6,8 +6,7 @@ import pytest
 from tests.helpers import call_maybe_async
 
 from autofighter.effects import EffectManager
-from autofighter.stats import BUS
-from autofighter.stats import Stats
+from autofighter.stats import BUS, Stats
 from plugins.cards.calm_beads import CalmBeads
 from plugins.cards.polished_shield import PolishedShield
 from plugins.damage_types.fire import Fire

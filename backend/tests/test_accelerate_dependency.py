@@ -36,8 +36,7 @@ def test_accelerate_missing_error() -> None:
 
 def test_accelerate_not_needed_with_explicit_device() -> None:
     """Test that accelerate is not needed when using explicit device."""
-    from unittest.mock import MagicMock
-    from unittest.mock import patch
+    from unittest.mock import MagicMock, patch
 
     mock_pipeline_instance = MagicMock()
     mock_pipeline_instance.task = "text-generation"

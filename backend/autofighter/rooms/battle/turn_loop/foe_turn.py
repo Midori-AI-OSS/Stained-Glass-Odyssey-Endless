@@ -8,27 +8,15 @@ import random
 from typing import Any
 
 from autofighter.effects import EffectManager
-from autofighter.stats import BUS
-from autofighter.stats import calc_animation_time
+from autofighter.stats import BUS, calc_animation_time
 from autofighter.summons.manager import SummonManager
 
 from ..logging import queue_log
-from ..pacing import _EXTRA_TURNS
-from ..pacing import YIELD_MULTIPLIER
-from ..pacing import _pace
-from ..pacing import impact_pause
-from ..pacing import pace_sleep
+from ..pacing import _EXTRA_TURNS, YIELD_MULTIPLIER, _pace, impact_pause, pace_sleep
 from ..turn_helpers import credit_if_dead
-from ..turns import canonical_entity_pair
-from ..turns import mutate_snapshot_overlay
-from ..turns import push_progress_update
-from ..turns import register_snapshot_entities
-from .initialization import TurnLoopContext
-from .initialization import create_battle_context
-from .timeouts import TURN_TIMEOUT_SECONDS
-from .timeouts import TurnTimeoutError
-from .timeouts import identify_actor
-from .timeouts import write_timeout_log
+from ..turns import canonical_entity_pair, mutate_snapshot_overlay, push_progress_update, register_snapshot_entities
+from .initialization import TurnLoopContext, create_battle_context
+from .timeouts import TURN_TIMEOUT_SECONDS, TurnTimeoutError, identify_actor, write_timeout_log
 from .turn_end import finish_turn
 
 log = logging.getLogger("autofighter.rooms.battle.turn_loop")

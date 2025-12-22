@@ -7,11 +7,8 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from runs.lifecycle import battle_snapshots
-from runs.lifecycle import load_map
-from runs.lifecycle import save_map
-from services.room_service import battle_room
-from services.room_service import boss_room
+from runs.lifecycle import battle_snapshots, load_map, save_map
+from services.room_service import battle_room, boss_room
 from services.run_service import start_run
 
 

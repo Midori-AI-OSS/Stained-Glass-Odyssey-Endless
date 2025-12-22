@@ -3,9 +3,7 @@ import types
 
 import pytest
 
-from autofighter.stats import BUS
-from autofighter.stats import Stats
-from autofighter.stats import set_battle_active
+from autofighter.stats import BUS, Stats, set_battle_active
 from plugins.damage_types.ice import Ice
 
 

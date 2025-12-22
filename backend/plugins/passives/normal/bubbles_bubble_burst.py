@@ -1,12 +1,10 @@
 from dataclasses import dataclass
 from random import choice
-from typing import TYPE_CHECKING
-from typing import ClassVar
+from typing import TYPE_CHECKING, ClassVar
 
 from autofighter.effects import EffectManager
 from autofighter.stat_effect import StatEffect
-from plugins.damage_types import ALL_DAMAGE_TYPES
-from plugins.damage_types import load_damage_type
+from plugins.damage_types import ALL_DAMAGE_TYPES, load_damage_type
 
 if TYPE_CHECKING:
     from autofighter.stats import Stats

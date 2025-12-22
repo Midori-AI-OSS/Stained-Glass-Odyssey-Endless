@@ -3,12 +3,7 @@ import importlib.util
 from pathlib import Path
 
 import pytest
-from runs.lifecycle import battle_locks
-from runs.lifecycle import battle_snapshots
-from runs.lifecycle import battle_tasks
-from runs.lifecycle import cleanup_battle_state
-from runs.lifecycle import load_map
-from runs.lifecycle import save_map
+from runs.lifecycle import battle_locks, battle_snapshots, battle_tasks, cleanup_battle_state, load_map, save_map
 from services.run_service import start_run
 
 

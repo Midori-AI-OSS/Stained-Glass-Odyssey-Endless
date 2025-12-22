@@ -1,6 +1,5 @@
 from runs import encryption as enc
-from runs.encryption import get_fernet
-from runs.encryption import get_save_manager
+from runs.encryption import get_fernet, get_save_manager
 
 
 def test_get_save_manager(tmp_path, monkeypatch):

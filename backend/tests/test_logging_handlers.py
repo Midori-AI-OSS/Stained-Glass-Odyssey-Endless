@@ -1,8 +1,7 @@
 import logging
 import queue
 
-from battle_logging.handlers import AsyncQueueListener
-from battle_logging.handlers import TimedMemoryHandler
+from battle_logging.handlers import AsyncQueueListener, TimedMemoryHandler
 
 
 def test_handlers_initialize(tmp_path):

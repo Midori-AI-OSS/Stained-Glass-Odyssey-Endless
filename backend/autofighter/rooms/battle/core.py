@@ -2,8 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Awaitable
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 import random
 from typing import Any
@@ -13,9 +12,7 @@ from autofighter.mapgen import MapNode
 from ...party import Party
 from .. import Room
 from .engine import run_battle
-from .enrage import ENRAGE_TURNS_BOSS
-from .enrage import ENRAGE_TURNS_NORMAL
-from .enrage import compute_enrage_threshold
+from .enrage import ENRAGE_TURNS_BOSS, ENRAGE_TURNS_NORMAL, compute_enrage_threshold
 from .setup import setup_battle
 
 # Expose module-level random so existing tests can patch deterministic rolls.
@@ -39,8 +36,7 @@ class BattleRoom(Room):
     ) -> dict[str, Any]:
         """Resolve the battle by delegating to the async engine."""
 
-        from runs.lifecycle import battle_snapshots
-        from runs.lifecycle import battle_tasks
+        from runs.lifecycle import battle_snapshots, battle_tasks
 
         start_gold = party.gold
         setup_data = await setup_battle(

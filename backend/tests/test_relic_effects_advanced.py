@@ -14,12 +14,9 @@ if _PROJECT_ROOT not in sys.path:
     sys.path.append(_PROJECT_ROOT)
 
 from autofighter.party import Party
-from autofighter.relics import apply_relics
-from autofighter.relics import award_relic
+from autofighter.relics import apply_relics, award_relic
 from autofighter.rooms.battle.turn_loop import player_turn
-from autofighter.stats import BUS
-from autofighter.stats import Stats
-from autofighter.stats import set_battle_active
+from autofighter.stats import BUS, Stats, set_battle_active
 from plugins.characters._base import PlayerBase
 from plugins.effects.aftertaste import Aftertaste
 import plugins.event_bus as event_bus_module

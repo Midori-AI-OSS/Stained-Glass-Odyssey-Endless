@@ -1,6 +1,5 @@
 import asyncio
-from dataclasses import dataclass
-from dataclasses import field
+from dataclasses import dataclass, field
 import logging
 
 from autofighter.effects import EffectManager

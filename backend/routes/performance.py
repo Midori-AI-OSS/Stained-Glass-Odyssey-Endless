@@ -5,10 +5,8 @@ Provides real-time metrics about event bus performance and health.
 import time
 import tracemalloc
 
-from quart import Blueprint
-from quart import jsonify
-from runs.lifecycle import cleanup_battle_state
-from runs.lifecycle import get_battle_state_sizes
+from quart import Blueprint, jsonify
+from runs.lifecycle import cleanup_battle_state, get_battle_state_sizes
 
 from autofighter.stats import BUS
 

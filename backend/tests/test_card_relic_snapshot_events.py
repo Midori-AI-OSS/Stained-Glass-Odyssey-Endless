@@ -32,10 +32,8 @@ from runs.lifecycle import battle_snapshots
 
 from autofighter.party import Party
 from autofighter.rooms.battle import events as battle_events
-from autofighter.rooms.battle.turns import prepare_snapshot_overlay
-from autofighter.rooms.battle.turns import register_snapshot_entities
-from autofighter.stats import BUS
-from autofighter.stats import Stats
+from autofighter.rooms.battle.turns import prepare_snapshot_overlay, register_snapshot_entities
+from autofighter.stats import BUS, Stats
 
 
 class _StubCard:

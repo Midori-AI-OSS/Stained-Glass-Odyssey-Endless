@@ -9,10 +9,7 @@ from error_context import format_exception_with_context
 # Import torch checker early to perform the one-time check
 from llms.torch_checker import is_torch_available
 from logging_config import configure_logging
-from quart import Quart
-from quart import Response
-from quart import jsonify
-from quart import request
+from quart import Quart, Response, jsonify, request
 from routes.assets import bp as assets_bp
 from routes.catalog import bp as catalog_bp
 from routes.config import bp as config_bp
@@ -24,20 +21,26 @@ from routes.players import bp as players_bp
 from routes.rewards import bp as rewards_bp
 from routes.tracking import bp as tracking_bp
 from routes.ui import bp as ui_bp
-from runs.encryption import get_fernet  # noqa: F401
-from runs.encryption import get_save_manager  # noqa: F401
-from runs.lifecycle import _run_battle  # noqa: F401
-from runs.lifecycle import battle_snapshots  # noqa: F401
-from runs.lifecycle import battle_tasks  # noqa: F401
-from runs.lifecycle import cleanup_battle_state
-from runs.lifecycle import load_map  # noqa: F401
-from runs.lifecycle import save_map  # noqa: F401
-from runs.party_manager import _apply_player_customization  # noqa: F401
-from runs.party_manager import _assign_damage_type  # noqa: F401
-from runs.party_manager import _describe_passives  # noqa: F401
-from runs.party_manager import _load_player_customization  # noqa: F401
-from runs.party_manager import load_party  # noqa: F401
-from runs.party_manager import save_party  # noqa: F401
+from runs.encryption import (
+    get_fernet,  # noqa: F401
+    get_save_manager,  # noqa: F401
+)
+from runs.lifecycle import (
+    _run_battle,  # noqa: F401
+    battle_snapshots,  # noqa: F401
+    battle_tasks,  # noqa: F401
+    cleanup_battle_state,
+    load_map,  # noqa: F401
+    save_map,  # noqa: F401
+)
+from runs.party_manager import (
+    _apply_player_customization,  # noqa: F401
+    _assign_damage_type,  # noqa: F401
+    _describe_passives,  # noqa: F401
+    _load_player_customization,  # noqa: F401
+    load_party,  # noqa: F401
+    save_party,  # noqa: F401
+)
 from services.run_service import prune_runs_on_startup
 from werkzeug.exceptions import HTTPException
 
@@ -155,11 +158,8 @@ async def validate_lrm_on_startup() -> None:
             return
 
         # Import here to avoid circular dependencies
-        from llms.loader import ModelName
-        from llms.loader import load_llm
-        from llms.loader import validate_lrm
-        from options import OptionKey
-        from options import get_option
+        from llms.loader import ModelName, load_llm, validate_lrm
+        from options import OptionKey, get_option
 
         # Get configured model or use default
         model = get_option(OptionKey.LRM_MODEL, ModelName.OPENAI_20B.value)

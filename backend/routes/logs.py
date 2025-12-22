@@ -3,9 +3,7 @@ from __future__ import annotations
 import asyncio
 from pathlib import Path
 
-from quart import Blueprint
-from quart import jsonify
-from quart import send_file
+from quart import Blueprint, jsonify, send_file
 from services.run_service import get_battle_summary
 
 bp = Blueprint("logs", __name__, url_prefix="/logs")

@@ -1,10 +1,8 @@
-from dataclasses import dataclass
-from dataclasses import field
+from dataclasses import dataclass, field
 
 from autofighter.party import Party
 from autofighter.stats import BUS
-from plugins.cards._base import CardBase
-from plugins.cards._base import safe_async_task
+from plugins.cards._base import CardBase, safe_async_task
 
 
 @dataclass

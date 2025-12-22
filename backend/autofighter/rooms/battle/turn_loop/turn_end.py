@@ -2,13 +2,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from ..pacing import _EXTRA_TURNS
-from ..pacing import YIELD_MULTIPLIER
-from ..pacing import _pace
-from ..pacing import pace_sleep
-from ..turns import canonical_entity_pair
-from ..turns import dispatch_turn_end_snapshot
-from ..turns import push_progress_update
+from ..pacing import _EXTRA_TURNS, YIELD_MULTIPLIER, _pace, pace_sleep
+from ..turns import canonical_entity_pair, dispatch_turn_end_snapshot, push_progress_update
 from .initialization import TurnLoopContext
 
 

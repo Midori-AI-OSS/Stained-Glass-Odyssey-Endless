@@ -7,8 +7,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from autofighter.mapgen import MapNode
 from autofighter.party import Party
-from autofighter.rooms import foe_factory
-from autofighter.rooms import utils
+from autofighter.rooms import foe_factory, utils
 from autofighter.rooms.battle import setup as battle_setup
 from plugins.characters import Player
 from plugins.characters.luna import Luna

@@ -2,9 +2,7 @@ import sys
 
 import pytest
 
-from autofighter.stats import Stats
-from autofighter.stats import set_battle_active
-from autofighter.stats import set_enrage_percent
+from autofighter.stats import Stats, set_battle_active, set_enrage_percent
 
 
 @pytest.mark.asyncio

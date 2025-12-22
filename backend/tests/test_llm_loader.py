@@ -1,6 +1,5 @@
 import llms.loader
-from llms.loader import ModelName
-from llms.loader import load_llm
+from llms.loader import ModelName, load_llm
 import llms.safety
 import pytest
 

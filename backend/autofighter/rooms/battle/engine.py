@@ -3,17 +3,13 @@
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Awaitable
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 import logging
-from typing import TYPE_CHECKING
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from battle_logging.writers import end_battle_logging
-from services.user_level_service import gain_user_exp
-from services.user_level_service import get_user_level
-from tracking import log_battle_summary
-from tracking import log_game_action
+from services.user_level_service import gain_user_exp, get_user_level
+from tracking import log_battle_summary, log_game_action
 
 from autofighter.stats import set_enrage_percent
 from autofighter.summons.base import Summon
@@ -21,17 +17,14 @@ from autofighter.summons.manager import SummonManager
 
 from ...party import Party
 from . import snapshots as _snapshots
-from .events import handle_battle_end
-from .events import handle_battle_start
+from .events import handle_battle_end, handle_battle_start
 from .pacing import _EXTRA_TURNS
-from .progress import build_action_queue_snapshot
-from .progress import collect_summon_snapshots
+from .progress import build_action_queue_snapshot, collect_summon_snapshots
 from .resolution import resolve_rewards
 from .setup import BattleSetupResult
 from .turn_loop import run_turn_loop
 from .turn_loop.timeouts import TurnTimeoutError
-from .turns import EnrageState
-from .turns import push_progress_update
+from .turns import EnrageState, push_progress_update
 
 if TYPE_CHECKING:
     from .core import BattleRoom

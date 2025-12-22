@@ -3,16 +3,14 @@
 from __future__ import annotations
 
 from collections import defaultdict
-from typing import TYPE_CHECKING
-from typing import Sequence
+from typing import TYPE_CHECKING, Sequence
 
 from ._base import ActionType
 
 if TYPE_CHECKING:  # pragma: no cover - type checking only
     from autofighter.stats import Stats
 
-    from ._base import ActionBase
-    from ._base import ActionType
+    from ._base import ActionBase, ActionType
 
 
 class ActionRegistry:

@@ -4,8 +4,7 @@ import random
 import pytest
 
 from autofighter.effects import EffectManager
-from autofighter.stats import BUS
-from autofighter.stats import Stats
+from autofighter.stats import BUS, Stats
 from plugins.damage_types.lightning import Lightning
 from plugins.dots.abyssal_corruption import AbyssalCorruption
 from plugins.dots.blazing_torment import BlazingTorment

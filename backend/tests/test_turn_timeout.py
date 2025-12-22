@@ -17,8 +17,10 @@ if _PROJECT_ROOT not in sys.path:
 
 from battle_logging.summary import BattleEvent  # noqa: E402
 
-from autofighter.rooms.battle.turn_loop import TurnTimeoutError  # noqa: E402
-from autofighter.rooms.battle.turn_loop import player_turn  # noqa: E402
+from autofighter.rooms.battle.turn_loop import (
+    TurnTimeoutError,  # noqa: E402
+    player_turn,  # noqa: E402
+)
 from autofighter.rooms.battle.turn_loop import timeouts as turn_timeouts  # noqa: E402
 
 

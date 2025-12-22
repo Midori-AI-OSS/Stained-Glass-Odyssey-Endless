@@ -1,13 +1,15 @@
 import math
 
 import pytest
-from services.run_configuration import RunModifierContext
-from services.run_configuration import apply_player_modifier_context
-from services.run_configuration import build_run_modifier_context
-from services.run_configuration import get_modifier_snapshot
-from services.run_configuration import get_room_overrides
-from services.run_configuration import get_shop_modifier_summaries
-from services.run_configuration import validate_run_configuration
+from services.run_configuration import (
+    RunModifierContext,
+    apply_player_modifier_context,
+    build_run_modifier_context,
+    get_modifier_snapshot,
+    get_room_overrides,
+    get_shop_modifier_summaries,
+    validate_run_configuration,
+)
 
 from autofighter.stats import Stats
 

@@ -1,10 +1,7 @@
 import asyncio
-from dataclasses import dataclass
-from dataclasses import field
+from dataclasses import dataclass, field
 import random
-from typing import Callable
-from typing import Optional
-from typing import Union
+from typing import Callable, Optional, Union
 
 from rich.console import Console
 
@@ -230,8 +227,7 @@ class DamageOverTime:
 
     async def tick(self, target: Stats, *_: object) -> bool:
         try:
-            from autofighter.rooms.battle.pacing import YIELD_MULTIPLIER
-            from autofighter.rooms.battle.pacing import pace_sleep
+            from autofighter.rooms.battle.pacing import YIELD_MULTIPLIER, pace_sleep
         except (ImportError, ModuleNotFoundError):
             YIELD_MULTIPLIER = 0.0
 
@@ -303,8 +299,7 @@ class HealingOverTime:
 
     async def tick(self, target: Stats, *_: object) -> bool:
         try:
-            from autofighter.rooms.battle.pacing import YIELD_MULTIPLIER
-            from autofighter.rooms.battle.pacing import pace_sleep
+            from autofighter.rooms.battle.pacing import YIELD_MULTIPLIER, pace_sleep
         except (ImportError, ModuleNotFoundError):
             YIELD_MULTIPLIER = 0.0
 
@@ -595,8 +590,7 @@ class EffectManager:
 
     async def tick(self, others: Optional["EffectManager"] = None) -> None:
         try:
-            from autofighter.rooms.battle.pacing import YIELD_MULTIPLIER
-            from autofighter.rooms.battle.pacing import pace_sleep
+            from autofighter.rooms.battle.pacing import YIELD_MULTIPLIER, pace_sleep
         except (ImportError, ModuleNotFoundError):
             YIELD_MULTIPLIER = 0.0
 

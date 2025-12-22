@@ -1,7 +1,6 @@
 import pytest
 
-from autofighter.stats import BUS
-from autofighter.stats import Stats
+from autofighter.stats import BUS, Stats
 from plugins.actions.registry import ActionRegistry
 from plugins.actions.ultimate.dark_ultimate import DarkUltimate
 from plugins.actions.ultimate.fire_ultimate import FireUltimate

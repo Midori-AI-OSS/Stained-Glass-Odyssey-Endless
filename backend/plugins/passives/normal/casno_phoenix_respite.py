@@ -1,9 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
-from typing import Callable
-from typing import ClassVar
+from typing import TYPE_CHECKING, Callable, ClassVar
 from weakref import ref
 
 from autofighter.effects import HealingOverTime

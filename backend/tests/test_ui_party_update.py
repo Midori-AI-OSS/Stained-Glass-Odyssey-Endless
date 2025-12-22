@@ -17,10 +17,14 @@ sys.modules.pop("tracking", None)
 sys.modules.pop("battle_logging", None)
 sys.modules.pop("battle_logging.writers", None)
 from routes.ui import bp as ui_bp  # noqa: E402
-from runs.lifecycle import load_map  # noqa: E402
-from runs.lifecycle import save_map  # noqa: E402
-from runs.party_manager import load_party  # noqa: E402
-from runs.party_manager import save_party  # noqa: E402
+from runs.lifecycle import (
+    load_map,  # noqa: E402
+    save_map,  # noqa: E402
+)
+from runs.party_manager import (
+    load_party,  # noqa: E402
+    save_party,  # noqa: E402
+)
 
 from autofighter.mapgen import MapNode  # noqa: E402
 

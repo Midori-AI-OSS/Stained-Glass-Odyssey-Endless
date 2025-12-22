@@ -1,6 +1,5 @@
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
-from typing import ClassVar
+from typing import TYPE_CHECKING, ClassVar
 
 from autofighter.stat_effect import StatEffect
 from plugins.passives.normal.persona_light_and_dark_duality import (

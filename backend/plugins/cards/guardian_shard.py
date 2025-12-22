@@ -1,5 +1,4 @@
-from dataclasses import dataclass
-from dataclasses import field
+from dataclasses import dataclass, field
 
 from autofighter.stat_effect import StatEffect
 from autofighter.stats import BUS

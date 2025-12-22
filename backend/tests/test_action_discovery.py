@@ -2,13 +2,8 @@
 
 from __future__ import annotations
 
-from plugins.actions import ActionRegistry
-from plugins.actions import discover
-from plugins.actions import get_action_registry
-from plugins.actions import initialize_action_registry
-from plugins.actions.utils import get_character_action
-from plugins.actions.utils import get_default_action
-from plugins.actions.utils import list_available_actions
+from plugins.actions import ActionRegistry, discover, get_action_registry, initialize_action_registry
+from plugins.actions.utils import get_character_action, get_default_action, list_available_actions
 
 
 def test_discover_actions():

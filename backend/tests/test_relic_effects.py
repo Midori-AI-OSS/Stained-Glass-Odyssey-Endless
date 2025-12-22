@@ -4,11 +4,9 @@ from math import isclose
 import pytest
 
 from autofighter.party import Party
-from autofighter.relics import apply_relics
-from autofighter.relics import award_relic
+from autofighter.relics import apply_relics, award_relic
 import autofighter.stats as stats_module
-from autofighter.stats import BUS
-from autofighter.stats import Stats
+from autofighter.stats import BUS, Stats
 from autofighter.summons.manager import SummonManager
 from plugins.characters._base import PlayerBase
 from plugins.characters.becca import Becca

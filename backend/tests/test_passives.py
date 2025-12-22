@@ -6,8 +6,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from autofighter.passives import PassiveRegistry
-from autofighter.stats import BUS
-from autofighter.stats import Stats
+from autofighter.stats import BUS, Stats
 from plugins import PluginLoader
 from plugins.characters.player import Player
 from plugins.event_bus import bus

@@ -6,9 +6,7 @@ from collections.abc import Mapping
 import logging
 import math
 import random
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import Sequence
+from typing import TYPE_CHECKING, Any, Sequence
 
 from autofighter.cards import card_choices
 from autofighter.relics import relic_choices
@@ -19,12 +17,14 @@ from plugins.relics.fallback_essence import FallbackEssence
 
 from ...party import Party
 from . import snapshots as _snapshots
-from .rewards import _apply_rdr_to_stars
-from .rewards import _calc_gold
-from .rewards import _pick_card_stars
-from .rewards import _pick_item_stars
-from .rewards import _pick_relic_stars
-from .rewards import _roll_relic_drop
+from .rewards import (
+    _apply_rdr_to_stars,
+    _calc_gold,
+    _pick_card_stars,
+    _pick_item_stars,
+    _pick_relic_stars,
+    _roll_relic_drop,
+)
 
 if TYPE_CHECKING:
     from battle_logging.writers import BattleLogger

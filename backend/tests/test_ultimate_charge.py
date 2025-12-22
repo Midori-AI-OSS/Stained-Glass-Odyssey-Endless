@@ -1,9 +1,7 @@
 import pytest
 
 from autofighter.rooms.utils import _serialize
-from autofighter.stats import BUS
-from autofighter.stats import Stats
-from autofighter.stats import set_battle_active
+from autofighter.stats import BUS, Stats, set_battle_active
 from plugins.characters._base import PlayerBase
 from plugins.characters.luna import Luna
 from plugins.damage_types.generic import Generic

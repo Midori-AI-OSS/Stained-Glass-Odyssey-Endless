@@ -8,8 +8,7 @@ import pytest
 
 from autofighter.effects import EffectManager
 from autofighter.passives import PassiveRegistry
-from autofighter.rooms.battle.turn_loop.initialization import create_battle_context
-from autofighter.rooms.battle.turn_loop.initialization import initialize_turn_loop
+from autofighter.rooms.battle.turn_loop.initialization import create_battle_context, initialize_turn_loop
 from autofighter.stats import Stats
 from plugins.actions.registry import ActionRegistry
 

@@ -9,8 +9,7 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import Callable
-from typing import Any
-from typing import TypeVar
+from typing import Any, TypeVar
 
 from autofighter.save_manager import SaveManager
 

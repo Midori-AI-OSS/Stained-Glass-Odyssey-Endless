@@ -3,18 +3,11 @@ from __future__ import annotations
 import math
 
 from llms.loader import ModelName
-from options import OptionKey
-from options import get_option
-from options import set_option
-from quart import Blueprint
-from quart import jsonify
-from quart import request
-from tracking import log_menu_action
-from tracking import log_overlay_action
-from tracking import log_settings_change
+from options import OptionKey, get_option, set_option
+from quart import Blueprint, jsonify, request
+from tracking import log_menu_action, log_overlay_action, log_settings_change
 
-from autofighter.rooms.battle.pacing import refresh_turn_pacing
-from autofighter.rooms.battle.pacing import set_turn_pacing
+from autofighter.rooms.battle.pacing import refresh_turn_pacing, set_turn_pacing
 
 bp = Blueprint("config", __name__, url_prefix="/config")
 
@@ -54,8 +47,7 @@ async def set_lrm_model() -> tuple[str, int, dict[str, str]]:
 async def test_lrm_model() -> tuple[str, int, dict[str, str]]:
     import asyncio
 
-    from llms.loader import load_llm
-    from llms.loader import validate_lrm
+    from llms.loader import load_llm, validate_lrm
 
     data = await request.get_json()
     prompt = data.get("prompt", "")

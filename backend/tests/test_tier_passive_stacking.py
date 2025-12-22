@@ -10,8 +10,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from autofighter.passives import PassiveRegistry
-from autofighter.passives import apply_rank_passives
+from autofighter.passives import PassiveRegistry, apply_rank_passives
 from plugins.characters.ixia import Ixia
 from plugins.characters.luna import Luna
 

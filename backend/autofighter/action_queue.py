@@ -2,11 +2,9 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from dataclasses import field
+from dataclasses import dataclass, field
 
-from .stats import GAUGE_START
-from .stats import Stats
+from .stats import GAUGE_START, Stats
 
 TURN_COUNTER_ID = "turn_counter"
 

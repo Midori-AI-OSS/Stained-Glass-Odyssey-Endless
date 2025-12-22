@@ -26,8 +26,7 @@ def test_enhanced_enrage_damage_multipliers():
     turns_in_enrage = 5
 
     # Check damage taken multiplier (should be 1.35 * 5 = 6.75x increase)
-    from autofighter.stats import get_enrage_percent
-    from autofighter.stats import set_enrage_percent
+    from autofighter.stats import get_enrage_percent, set_enrage_percent
     set_enrage_percent(1.35 * turns_in_enrage)
 
     expected_damage_taken_mult = 1.0 + (1.35 * turns_in_enrage)  # 1 + 6.75 = 7.75x
@@ -76,8 +75,7 @@ def test_enrage_data_format():
 
 def test_enrage_scaling_bounds():
     """Test enrage scaling with extreme values."""
-    from autofighter.stats import get_enrage_percent
-    from autofighter.stats import set_enrage_percent
+    from autofighter.stats import get_enrage_percent, set_enrage_percent
 
     # Test with very high enrage turns (should still work)
     extreme_turns = 100

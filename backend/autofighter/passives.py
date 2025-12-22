@@ -3,10 +3,7 @@ from __future__ import annotations
 from collections import Counter
 import logging
 from pathlib import Path
-from typing import Any
-from typing import Awaitable
-from typing import Callable
-from typing import Optional
+from typing import Any, Awaitable, Callable, Optional
 
 from plugins import PluginLoader
 

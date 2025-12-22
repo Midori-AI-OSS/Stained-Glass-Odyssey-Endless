@@ -5,14 +5,10 @@ from __future__ import annotations
 import asyncio
 import math
 
-from options import OptionKey
-from options import get_option
+from options import OptionKey, get_option
 
 from autofighter.action_queue import ActionQueue
-from autofighter.stats import BUS
-from autofighter.stats import DEFAULT_ANIMATION_PER_TARGET
-from autofighter.stats import Stats
-from autofighter.stats import calc_animation_time
+from autofighter.stats import BUS, DEFAULT_ANIMATION_PER_TARGET, Stats, calc_animation_time
 
 DEFAULT_TURN_PACING = 0.5
 _MIN_TURN_PACING = 0.05

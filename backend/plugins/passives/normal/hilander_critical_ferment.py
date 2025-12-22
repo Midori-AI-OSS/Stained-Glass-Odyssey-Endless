@@ -1,7 +1,6 @@
 from dataclasses import dataclass
 import random
-from typing import TYPE_CHECKING
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 from weakref import ref
 
 from autofighter.stat_effect import StatEffect

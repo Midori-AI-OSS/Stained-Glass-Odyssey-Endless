@@ -2,12 +2,9 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from dataclasses import field
+from dataclasses import dataclass, field
 from types import MethodType
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import Sequence
+from typing import TYPE_CHECKING, Any, Sequence
 
 from autofighter.effects import EffectManager
 from autofighter.summons.manager import SummonManager

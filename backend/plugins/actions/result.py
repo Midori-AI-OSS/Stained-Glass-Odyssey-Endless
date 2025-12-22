@@ -2,10 +2,8 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from dataclasses import field
-from typing import TYPE_CHECKING
-from typing import Any
+from dataclasses import dataclass, field
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:  # pragma: no cover - type checking only
     pass

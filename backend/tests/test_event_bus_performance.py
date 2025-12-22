@@ -6,12 +6,8 @@ import time
 
 import pytest
 
-from autofighter.rooms.battle.pacing import DOUBLE_YIELD_DELAY
-from autofighter.rooms.battle.pacing import YIELD_DELAY
-from autofighter.rooms.battle.pacing import YIELD_MULTIPLIER
-from autofighter.rooms.battle.pacing import pace_sleep
-from autofighter.stats import BUS
-from autofighter.stats import Stats
+from autofighter.rooms.battle.pacing import DOUBLE_YIELD_DELAY, YIELD_DELAY, YIELD_MULTIPLIER, pace_sleep
+from autofighter.stats import BUS, Stats
 
 
 class TestEventBusPerformance:

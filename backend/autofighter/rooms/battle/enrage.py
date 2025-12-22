@@ -6,11 +6,7 @@ import asyncio
 from dataclasses import dataclass
 import logging
 from types import ModuleType
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import Callable
-from typing import MutableSequence
-from typing import Sequence
+from typing import TYPE_CHECKING, Any, Callable, MutableSequence, Sequence
 
 ENRAGE_TURNS_NORMAL = 100
 ENRAGE_TURNS_BOSS = 500

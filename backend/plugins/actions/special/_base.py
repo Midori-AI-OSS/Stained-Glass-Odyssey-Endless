@@ -4,8 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from plugins.actions._base import ActionBase
-from plugins.actions._base import ActionType
+from plugins.actions._base import ActionBase, ActionType
 
 
 @dataclass(kw_only=True, slots=True)

@@ -3,9 +3,7 @@ from __future__ import annotations
 from collections.abc import Mapping as MappingABC
 from dataclasses import dataclass
 import random
-from typing import Any
-from typing import Collection
-from typing import Mapping
+from typing import Any, Collection, Mapping
 
 from services.run_configuration import RunModifierContext
 
@@ -14,16 +12,15 @@ from autofighter.party import Party
 from autofighter.passives import apply_rank_passives
 from autofighter.rooms.foes import SpawnTemplate
 from autofighter.rooms.foes.catalog import load_catalog
-from autofighter.rooms.foes.scaling import apply_attribute_scaling
-from autofighter.rooms.foes.scaling import apply_base_debuffs
-from autofighter.rooms.foes.scaling import apply_permanent_scaling
-from autofighter.rooms.foes.scaling import calculate_cumulative_rooms
-from autofighter.rooms.foes.scaling import compute_base_multiplier
-from autofighter.rooms.foes.scaling import enforce_thresholds
-from autofighter.rooms.foes.selector import _choose_template
-from autofighter.rooms.foes.selector import _desired_count
-from autofighter.rooms.foes.selector import _sample_templates
-from autofighter.rooms.foes.selector import _weight_for_template
+from autofighter.rooms.foes.scaling import (
+    apply_attribute_scaling,
+    apply_base_debuffs,
+    apply_permanent_scaling,
+    calculate_cumulative_rooms,
+    compute_base_multiplier,
+    enforce_thresholds,
+)
+from autofighter.rooms.foes.selector import _choose_template, _desired_count, _sample_templates, _weight_for_template
 from autofighter.stats import Stats
 from plugins.characters.foe_base import FoeBase
 

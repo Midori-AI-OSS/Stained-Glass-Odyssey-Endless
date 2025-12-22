@@ -3,8 +3,7 @@ import asyncio
 import pytest
 
 from autofighter.party import Party
-from autofighter.relics import apply_relics
-from autofighter.relics import award_relic
+from autofighter.relics import apply_relics, award_relic
 from autofighter.stats import BUS
 from plugins.characters._base import PlayerBase
 from plugins.characters.foe_base import FoeBase

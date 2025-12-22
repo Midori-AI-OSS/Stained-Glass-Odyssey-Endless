@@ -1,9 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
-from typing import Any
-from typing import Callable
-from typing import Optional
+from typing import Any, Callable, Optional
 
 from autofighter.cards import _registry as _card_registry
 from autofighter.relics import _registry as _relic_registry
@@ -11,8 +9,7 @@ from autofighter.stats import BUS
 
 from ...stats import Stats
 from . import snapshots as _snapshots
-from .pacing import YIELD_MULTIPLIER
-from .pacing import pace_sleep
+from .pacing import YIELD_MULTIPLIER, pace_sleep
 
 mutate_snapshot_overlay = _snapshots.mutate_snapshot_overlay
 canonical_entity_id = _snapshots.canonical_entity_id

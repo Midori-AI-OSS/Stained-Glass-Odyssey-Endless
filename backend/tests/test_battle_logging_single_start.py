@@ -1,8 +1,7 @@
 import json
 
 from battle_logging import writers as battle_logging
-from battle_logging.writers import RunLogger
-from battle_logging.writers import end_run_logging
+from battle_logging.writers import RunLogger, end_run_logging
 import pytest
 
 from autofighter.mapgen import MapNode

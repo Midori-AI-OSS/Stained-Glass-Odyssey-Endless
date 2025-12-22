@@ -14,8 +14,7 @@ import autofighter.rooms.battle.core as rooms_module
 import plugins.event_bus as event_bus_module
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
-from autofighter.stats import BUS
-from autofighter.stats import Stats
+from autofighter.stats import BUS, Stats
 from plugins.characters._base import PlayerBase
 from plugins.effects.critical_boost import CriticalBoost
 

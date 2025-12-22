@@ -9,8 +9,10 @@ _PROJECT_ROOT = str(Path(__file__).resolve().parents[1])
 if _PROJECT_ROOT not in sys.path:
     sys.path.append(_PROJECT_ROOT)
 
-from autofighter.rooms.battle.turn_loop import foe_turn  # noqa: E402
-from autofighter.rooms.battle.turn_loop import player_turn  # noqa: E402
+from autofighter.rooms.battle.turn_loop import (
+    foe_turn,  # noqa: E402
+    player_turn,  # noqa: E402
+)
 from autofighter.rooms.battle.turn_loop.initialization import (
     TurnLoopContext,  # noqa: E402
 )

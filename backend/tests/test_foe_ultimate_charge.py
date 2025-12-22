@@ -1,8 +1,7 @@
 
 import pytest
 
-from autofighter.stats import BUS
-from autofighter.stats import Stats
+from autofighter.stats import BUS, Stats
 from plugins.characters._base import PlayerBase
 from plugins.characters.foe_base import FoeBase
 from plugins.damage_types.generic import Generic

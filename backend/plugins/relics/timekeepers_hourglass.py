@@ -1,10 +1,8 @@
-from dataclasses import dataclass
-from dataclasses import field
+from dataclasses import dataclass, field
 import inspect
 import random
 
-from autofighter.effects import StatModifier
-from autofighter.effects import create_stat_buff
+from autofighter.effects import StatModifier, create_stat_buff
 from plugins.relics._base import RelicBase
 
 

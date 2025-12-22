@@ -5,11 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from autofighter.stat_effect import StatEffect
-from plugins.actions import ActionCostBreakdown
-from plugins.actions import ActionResult
-from plugins.actions import TargetingRules
-from plugins.actions import TargetScope
-from plugins.actions import TargetSide
+from plugins.actions import ActionCostBreakdown, ActionResult, TargetingRules, TargetScope, TargetSide
 from plugins.actions.special import SpecialAbilityBase
 
 

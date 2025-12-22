@@ -7,8 +7,7 @@ import pytest
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 import llms.torch_checker as torch_checker
 
-from autofighter.stats import BUS
-from autofighter.stats import Stats
+from autofighter.stats import BUS, Stats
 from autofighter.summons.manager import SummonManager
 
 

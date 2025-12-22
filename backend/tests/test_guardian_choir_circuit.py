@@ -3,8 +3,7 @@ import math
 import sys
 import types
 
-from autofighter.cards import apply_cards
-from autofighter.cards import award_card
+from autofighter.cards import apply_cards, award_card
 from autofighter.party import Party
 from autofighter.stats import BUS
 from plugins.characters._base import PlayerBase

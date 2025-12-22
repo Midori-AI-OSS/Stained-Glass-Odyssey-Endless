@@ -1,14 +1,9 @@
 import asyncio
-from dataclasses import dataclass
-from dataclasses import field
+from dataclasses import dataclass, field
 
-from autofighter.effects import EffectManager
-from autofighter.effects import create_stat_buff
-from autofighter.stats import BUS
-from autofighter.stats import GAUGE_START
-from autofighter.stats import Stats
-from plugins.cards._base import CardBase
-from plugins.cards._base import safe_async_task
+from autofighter.effects import EffectManager, create_stat_buff
+from autofighter.stats import BUS, GAUGE_START, Stats
+from plugins.cards._base import CardBase, safe_async_task
 
 
 @dataclass

@@ -1,7 +1,6 @@
 import pytest
 
-from autofighter.stats import Stats
-from autofighter.stats import set_battle_active
+from autofighter.stats import Stats, set_battle_active
 import plugins.damage_types.dark as dark_module
 from plugins.damage_types.dark import Dark
 

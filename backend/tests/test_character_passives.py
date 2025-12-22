@@ -5,12 +5,9 @@ import random
 import pytest
 from tests.helpers import call_maybe_async
 
-from autofighter.effects import EffectManager
-from autofighter.effects import HealingOverTime
+from autofighter.effects import EffectManager, HealingOverTime
 from autofighter.passives import PassiveRegistry
-from autofighter.stats import BUS
-from autofighter.stats import Stats
-from autofighter.stats import set_battle_active
+from autofighter.stats import BUS, Stats, set_battle_active
 from plugins.damage_types.generic import Generic
 from plugins.effects.aftertaste import Aftertaste
 from plugins.event_bus import bus

@@ -1,5 +1,4 @@
-from dataclasses import dataclass
-from dataclasses import field
+from dataclasses import dataclass, field
 
 from autofighter.stats import BUS
 from plugins.cards._base import CardBase
@@ -52,8 +51,7 @@ class EnduringWill(CardBase):
                     mitigation_bonus_pending = False
                     for member in party.members:
                         # Apply +0.002 mitigation (0.2% - small bonus appropriate for 1-star card)
-                        from autofighter.effects import EffectManager
-                        from autofighter.effects import create_stat_buff
+                        from autofighter.effects import EffectManager, create_stat_buff
                         mgr = getattr(member, "effect_manager", None)
                         if mgr is None:
                             mgr = EffectManager(member)

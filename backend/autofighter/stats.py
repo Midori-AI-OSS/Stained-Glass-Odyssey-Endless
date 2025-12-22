@@ -1,14 +1,12 @@
 from collections.abc import Callable
-from dataclasses import dataclass
-from dataclasses import field
+from dataclasses import dataclass, field
 import importlib
 from itertools import count
 import logging
 import math
 import random
 import sys
-from typing import Optional
-from typing import Union
+from typing import Optional, Union
 from weakref import WeakValueDictionary
 
 from autofighter.stat_effect import StatEffect

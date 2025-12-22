@@ -3,18 +3,14 @@ from __future__ import annotations
 from importlib import import_module
 from typing import Any
 
-from quart import Blueprint
-from quart import jsonify
-from tracking import log_menu_action
-from tracking import log_overlay_action
+from quart import Blueprint, jsonify
+from tracking import log_menu_action, log_overlay_action
 
 from autofighter.buffs import BuffRegistry
 from autofighter.debuffs import DebuffRegistry
 from autofighter.passives import discover as discover_passives
-from autofighter.rooms.shop import PRICE_BY_STARS
-from autofighter.rooms.shop import REROLL_COST
-from plugins.damage_types import ALL_DAMAGE_TYPES
-from plugins.damage_types import load_damage_type
+from autofighter.rooms.shop import PRICE_BY_STARS, REROLL_COST
+from plugins.damage_types import ALL_DAMAGE_TYPES, load_damage_type
 
 bp = Blueprint("guidebook", __name__, url_prefix="/guidebook")
 

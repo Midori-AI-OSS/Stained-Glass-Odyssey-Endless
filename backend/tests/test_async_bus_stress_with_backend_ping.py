@@ -10,10 +10,8 @@ import time
 
 import pytest
 
-from autofighter.rooms.battle.pacing import YIELD_MULTIPLIER
-from autofighter.rooms.battle.pacing import pace_sleep
-from autofighter.stats import BUS
-from autofighter.stats import Stats
+from autofighter.rooms.battle.pacing import YIELD_MULTIPLIER, pace_sleep
+from autofighter.stats import BUS, Stats
 from plugins.damage_types.dark import Dark
 
 

@@ -2,18 +2,18 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from dataclasses import field
-from typing import TYPE_CHECKING
-from typing import Sequence
+from dataclasses import dataclass, field
+from typing import TYPE_CHECKING, Sequence
 
-from plugins.actions import ActionAnimationPlan
-from plugins.actions import ActionBase
-from plugins.actions import ActionCostBreakdown
-from plugins.actions import ActionType
-from plugins.actions import TargetingRules
-from plugins.actions import TargetScope
-from plugins.actions import TargetSide
+from plugins.actions import (
+    ActionAnimationPlan,
+    ActionBase,
+    ActionCostBreakdown,
+    ActionType,
+    TargetingRules,
+    TargetScope,
+    TargetSide,
+)
 from plugins.actions.result import ActionResult
 
 if TYPE_CHECKING:  # pragma: no cover - type checking only

@@ -4,8 +4,7 @@ from dataclasses import dataclass
 import json
 from typing import Any
 
-from llms.loader import ModelName
-from llms.loader import load_llm
+from llms.loader import ModelName, load_llm
 from options import get_option
 from tts import generate_voice
 

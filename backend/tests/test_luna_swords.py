@@ -5,8 +5,7 @@ import pytest
 from autofighter.mapgen import MapNode
 from autofighter.party import Party
 from autofighter.rooms.battle.setup import setup_battle
-from autofighter.stats import BUS
-from autofighter.stats import Stats
+from autofighter.stats import BUS, Stats
 from autofighter.summons.manager import SummonManager
 from plugins.characters.luna import Luna
 from plugins.passives.normal.luna_lunar_reservoir import LunaLunarReservoir

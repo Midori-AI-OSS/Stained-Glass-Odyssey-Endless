@@ -1,13 +1,10 @@
-from dataclasses import dataclass
-from dataclasses import field
+from dataclasses import dataclass, field
 import logging
 import random
 
 from autofighter.stats import BUS
-from plugins.cards._base import CardBase
-from plugins.cards._base import safe_async_task
-from plugins.damage_types import load_damage_type
-from plugins.damage_types import random_damage_type
+from plugins.cards._base import CardBase, safe_async_task
+from plugins.damage_types import load_damage_type, random_damage_type
 
 log = logging.getLogger(__name__)
 

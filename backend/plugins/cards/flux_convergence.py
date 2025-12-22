@@ -1,9 +1,7 @@
-from dataclasses import dataclass
-from dataclasses import field
+from dataclasses import dataclass, field
 import logging
 
-from autofighter.effects import EffectManager
-from autofighter.effects import create_stat_buff
+from autofighter.effects import EffectManager, create_stat_buff
 from autofighter.stats import BUS
 from plugins.cards._base import CardBase
 from plugins.damage_types.dark import Dark
@@ -179,8 +177,7 @@ class FluxConvergence(CardBase):
                     source.damage_type = damage_type
 
                 try:
-                    from autofighter.stats import is_battle_active
-                    from autofighter.stats import set_battle_active
+                    from autofighter.stats import is_battle_active, set_battle_active
                 except ModuleNotFoundError:
                     is_battle_active = None
                     set_battle_active = None

@@ -2,22 +2,15 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 import copy
-from dataclasses import dataclass
-from dataclasses import field
-from dataclasses import fields
+from dataclasses import dataclass, field, fields
 import logging
 import math
 import numbers
-from typing import TYPE_CHECKING
-from typing import Callable
-from typing import ClassVar
-from typing import Collection
-from typing import Mapping
+from typing import TYPE_CHECKING, Callable, ClassVar, Collection, Mapping
 
 from autofighter.character import CharacterType
 from autofighter.mapgen import MapNode
-from autofighter.stats import BUS
-from autofighter.stats import Stats
+from autofighter.stats import BUS, Stats
 from plugins.damage_types import random_damage_type
 from plugins.damage_types._base import DamageTypeBase
 

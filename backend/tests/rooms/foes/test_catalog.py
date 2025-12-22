@@ -20,8 +20,10 @@ user_level_module.get_user_level = lambda *_, **__: 1
 sys.modules.setdefault("services.user_level_service", user_level_module)
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 
-from autofighter.rooms.foes import SpawnTemplate  # noqa: E402
-from autofighter.rooms.foes import load_catalog  # noqa: E402
+from autofighter.rooms.foes import (
+    SpawnTemplate,  # noqa: E402
+    load_catalog,  # noqa: E402
+)
 from plugins.characters.foe_base import FoeBase  # noqa: E402
 from plugins.characters.player import Player  # noqa: E402
 from plugins.characters.slime import Slime  # noqa: E402

@@ -7,8 +7,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from autofighter.mapgen import MapNode
 from autofighter.party import Party
 from autofighter.rooms.utils import _choose_foe
-from plugins import characters
-from plugins import themedadj
+from plugins import characters, themedadj
 from plugins.characters import Player
 
 

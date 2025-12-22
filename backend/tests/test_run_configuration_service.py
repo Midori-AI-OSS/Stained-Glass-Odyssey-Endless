@@ -1,6 +1,5 @@
 import pytest
-from services.run_configuration import get_run_configuration_metadata
-from services.run_configuration import validate_run_configuration
+from services.run_configuration import get_run_configuration_metadata, validate_run_configuration
 from services.run_service import start_run
 from test_app import app_with_db as _app_with_db  # reuse database-backed app fixture
 

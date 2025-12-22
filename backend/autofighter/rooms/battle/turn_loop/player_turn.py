@@ -12,31 +12,30 @@ from autofighter.summons.manager import SummonManager
 from plugins.actions import TargetScope
 
 from ..logging import queue_log
-from ..pacing import _EXTRA_TURNS
-from ..pacing import TURN_PACING
-from ..pacing import YIELD_MULTIPLIER
-from ..pacing import _pace
-from ..pacing import animation_per_target_duration
-from ..pacing import clear_extra_turns_for
-from ..pacing import compute_multi_hit_timing
-from ..pacing import impact_pause
-from ..pacing import pace_per_target
-from ..pacing import pace_sleep
+from ..pacing import (
+    _EXTRA_TURNS,
+    TURN_PACING,
+    YIELD_MULTIPLIER,
+    _pace,
+    animation_per_target_duration,
+    clear_extra_turns_for,
+    compute_multi_hit_timing,
+    impact_pause,
+    pace_per_target,
+    pace_sleep,
+)
 from ..targeting import select_aggro_target
-from ..turn_helpers import credit_if_dead
-from ..turn_helpers import remove_dead_foes
-from ..turns import apply_enrage_bleed
-from ..turns import canonical_entity_pair
-from ..turns import mutate_snapshot_overlay
-from ..turns import push_progress_update
-from ..turns import register_snapshot_entities
-from ..turns import update_enrage_state
-from .initialization import TurnLoopContext
-from .initialization import create_battle_context
-from .timeouts import TURN_TIMEOUT_SECONDS
-from .timeouts import TurnTimeoutError
-from .timeouts import identify_actor
-from .timeouts import write_timeout_log
+from ..turn_helpers import credit_if_dead, remove_dead_foes
+from ..turns import (
+    apply_enrage_bleed,
+    canonical_entity_pair,
+    mutate_snapshot_overlay,
+    push_progress_update,
+    register_snapshot_entities,
+    update_enrage_state,
+)
+from .initialization import TurnLoopContext, create_battle_context
+from .timeouts import TURN_TIMEOUT_SECONDS, TurnTimeoutError, identify_actor, write_timeout_log
 from .turn_end import finish_turn
 
 log = logging.getLogger("autofighter.rooms.battle.turn_loop")

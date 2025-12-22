@@ -6,11 +6,9 @@ import pytest
 
 from autofighter.cards import apply_cards as cards_module_apply_cards
 from autofighter.cards import award_card
-from autofighter.effects import DamageOverTime
-from autofighter.effects import EffectManager
+from autofighter.effects import DamageOverTime, EffectManager
 from autofighter.party import Party
-from autofighter.stats import BUS
-from autofighter.stats import Stats
+from autofighter.stats import BUS, Stats
 
 
 @pytest.mark.asyncio

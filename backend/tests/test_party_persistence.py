@@ -1,7 +1,6 @@
 import pytest
 from runs.party_manager import load_party
-from services.run_configuration import build_run_modifier_context
-from services.run_configuration import validate_run_configuration
+from services.run_configuration import build_run_modifier_context, validate_run_configuration
 from services.user_level_service import get_user_level
 from test_app import app_with_db  # noqa: F401, F811
 

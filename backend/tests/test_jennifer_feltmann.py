@@ -2,8 +2,7 @@ import importlib
 
 import pytest
 
-from autofighter.stats import BUS
-from autofighter.stats import Stats
+from autofighter.stats import BUS, Stats
 from plugins.characters.jennifer_feltmann import JenniferFeltmann
 from plugins.damage_types.dark import Dark
 from plugins.passives.glitched.bad_student import BadStudentGlitched

@@ -6,8 +6,7 @@ import pytest
 
 sys.path.append(str(Path(__file__).resolve().parents[1]))
 from llms.loader import ModelName
-from options import OptionKey
-from options import set_option
+from options import OptionKey, set_option
 
 from autofighter.rooms.battle import pacing as pacing_module
 

@@ -1,7 +1,6 @@
 import asyncio
 
-from autofighter.stats import BUS
-from autofighter.stats import set_battle_active
+from autofighter.stats import BUS, set_battle_active
 from plugins.characters._base import PlayerBase
 from plugins.damage_types.generic import Generic
 from plugins.event_bus import bus as _bus

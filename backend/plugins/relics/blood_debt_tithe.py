@@ -1,10 +1,8 @@
 """Blood Debt Tithe relic: escalating loot and foe power."""
 
-from dataclasses import dataclass
-from dataclasses import field
+from dataclasses import dataclass, field
 
-from autofighter.effects import EffectManager
-from autofighter.effects import create_stat_buff
+from autofighter.effects import EffectManager, create_stat_buff
 from autofighter.stats import BUS
 from plugins.relics._base import RelicBase
 

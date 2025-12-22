@@ -1,8 +1,6 @@
-from dataclasses import dataclass
-from dataclasses import field
+from dataclasses import dataclass, field
 
-from autofighter.stats import BUS
-from autofighter.stats import Stats
+from autofighter.stats import BUS, Stats
 
 
 @dataclass

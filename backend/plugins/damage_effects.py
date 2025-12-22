@@ -3,8 +3,7 @@ from __future__ import annotations
 from collections.abc import Callable
 import logging
 
-from autofighter.effects import DamageOverTime
-from autofighter.effects import HealingOverTime
+from autofighter.effects import DamageOverTime, HealingOverTime
 from autofighter.stats import Stats
 from plugins.dots.abyssal_corruption import AbyssalCorruption
 from plugins.dots.blazing_torment import BlazingTorment

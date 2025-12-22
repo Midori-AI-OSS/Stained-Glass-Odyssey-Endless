@@ -18,8 +18,10 @@ from autofighter.passives import PassiveRegistry  # noqa: E402
 from autofighter.rooms.battle import events as battle_events  # noqa: E402
 from autofighter.rooms.battle import progress as battle_progress  # noqa: E402
 from autofighter.rooms.battle import snapshots as battle_snapshots  # noqa: E402
-from autofighter.rooms.battle.turn_loop import foe_turn  # noqa: E402
-from autofighter.rooms.battle.turn_loop import player_turn  # noqa: E402
+from autofighter.rooms.battle.turn_loop import (
+    foe_turn,  # noqa: E402
+    player_turn,  # noqa: E402
+)
 from autofighter.summons.base import Summon  # noqa: E402
 from autofighter.summons.manager import SummonManager  # noqa: E402
 from plugins.characters.luna import Luna  # noqa: E402

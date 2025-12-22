@@ -2,8 +2,7 @@ import math
 
 import pytest
 
-from autofighter.action_queue import TURN_COUNTER_ID
-from autofighter.action_queue import ActionQueue
+from autofighter.action_queue import TURN_COUNTER_ID, ActionQueue
 from autofighter.rooms.battle.progress import build_action_queue_snapshot
 from autofighter.rooms.battle.turns import _advance_visual_queue
 from autofighter.stats import Stats

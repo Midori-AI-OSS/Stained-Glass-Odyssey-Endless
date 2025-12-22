@@ -1,13 +1,11 @@
-from dataclasses import dataclass
-from dataclasses import field
+from dataclasses import dataclass, field
 from math import ceil
 import random
 
 from autofighter.stat_effect import StatEffect
 from autofighter.stats import BUS
 from plugins.effects.aftertaste import Aftertaste
-from plugins.relics._base import RelicBase
-from plugins.relics._base import safe_async_task
+from plugins.relics._base import RelicBase, safe_async_task
 
 # Global flag to prevent infinite echo loops
 _echo_processing = False

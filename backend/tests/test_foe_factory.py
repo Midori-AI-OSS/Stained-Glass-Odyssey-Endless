@@ -22,18 +22,24 @@ sys.modules.setdefault("services.user_level_service", user_level_module)
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 import pytest  # noqa: E402
-from services.run_configuration import build_run_modifier_context  # noqa: E402
-from services.run_configuration import validate_run_configuration  # noqa: E402
+from services.run_configuration import (
+    build_run_modifier_context,  # noqa: E402
+    validate_run_configuration,  # noqa: E402
+)
 
 from autofighter.mapgen import MapNode  # noqa: E402
 from autofighter.party import Party  # noqa: E402
 from autofighter.rooms import _build_foes  # noqa: E402
-from autofighter.rooms.foe_factory import ROOM_BALANCE_CONFIG  # noqa: E402
-from autofighter.rooms.foe_factory import SpawnTemplate  # noqa: E402
-from autofighter.rooms.foe_factory import get_foe_factory  # noqa: E402
+from autofighter.rooms.foe_factory import (
+    ROOM_BALANCE_CONFIG,  # noqa: E402
+    SpawnTemplate,  # noqa: E402
+    get_foe_factory,  # noqa: E402
+)
 from autofighter.rooms.foes.selector import _desired_count  # noqa: E402
-from plugins.characters import CHARACTER_FOES  # noqa: E402
-from plugins.characters import Player  # noqa: E402
+from plugins.characters import (
+    CHARACTER_FOES,  # noqa: E402
+    Player,  # noqa: E402
+)
 from plugins.characters.slime import Slime  # noqa: E402
 
 

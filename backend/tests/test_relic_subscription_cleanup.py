@@ -5,10 +5,8 @@ from __future__ import annotations
 import pytest
 
 from autofighter.party import Party
-from autofighter.relics import apply_relics
-from autofighter.relics import award_relic
-from autofighter.stats import BUS
-from autofighter.stats import Stats
+from autofighter.relics import apply_relics, award_relic
+from autofighter.stats import BUS, Stats
 from plugins import event_bus as event_bus_module
 from plugins.relics._base import RelicBase
 

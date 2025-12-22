@@ -5,11 +5,8 @@ import asyncio
 import pytest
 
 from autofighter.party import Party
-from autofighter.relics import apply_relics
-from autofighter.relics import award_relic
-from autofighter.stats import BUS
-from autofighter.stats import Stats
-from autofighter.stats import set_battle_active
+from autofighter.relics import apply_relics, award_relic
+from autofighter.stats import BUS, Stats, set_battle_active
 
 
 @pytest.mark.asyncio

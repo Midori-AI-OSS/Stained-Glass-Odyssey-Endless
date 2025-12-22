@@ -10,8 +10,7 @@ sys.path.append(str(Path(__file__).resolve().parents[1]))
 import llms.torch_checker as torch_checker
 
 from autofighter.party import Party
-from autofighter.stats import BUS
-from autofighter.stats import set_battle_active
+from autofighter.stats import BUS, set_battle_active
 from plugins.cards.equilibrium_prism import EquilibriumPrism
 from plugins.cards.phantom_ally import PhantomAlly
 from plugins.cards.reality_split import RealitySplit

@@ -2,11 +2,9 @@ from __future__ import annotations
 
 import asyncio
 
-from autofighter.cards import apply_cards
-from autofighter.cards import award_card
+from autofighter.cards import apply_cards, award_card
 from autofighter.party import Party
-from autofighter.stats import BUS
-from autofighter.stats import set_battle_active
+from autofighter.stats import BUS, set_battle_active
 from plugins.characters._base import PlayerBase
 from plugins.damage_types.generic import Generic
 from plugins.event_bus import bus as _bus

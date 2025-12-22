@@ -22,10 +22,7 @@ class LightningUltimate(UltimateActionBase):
     damage_type_id: str = "Lightning"
 
     async def execute(self, actor, targets, context):
-        from autofighter.rooms.battle.pacing import TURN_PACING
-        from autofighter.rooms.battle.pacing import YIELD_MULTIPLIER
-        from autofighter.rooms.battle.pacing import pace_per_target
-        from autofighter.rooms.battle.pacing import pace_sleep
+        from autofighter.rooms.battle.pacing import TURN_PACING, YIELD_MULTIPLIER, pace_per_target, pace_sleep
         from autofighter.rooms.battle.targeting import select_aggro_target
         from autofighter.rooms.battle.turn_loop import TURN_TIMEOUT_SECONDS
 

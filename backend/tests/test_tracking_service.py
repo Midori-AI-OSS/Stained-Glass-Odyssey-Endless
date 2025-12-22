@@ -7,16 +7,18 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 sys.modules.pop("tracking", None)
 
-from tracking import log_battle_summary
-from tracking import log_card_acquisition
-from tracking import log_deck_change
-from tracking import log_game_action
-from tracking import log_menu_action
-from tracking import log_play_session_end
-from tracking import log_play_session_start
-from tracking import log_relic_acquisition
-from tracking import log_run_end
-from tracking import log_run_start
+from tracking import (
+    log_battle_summary,
+    log_card_acquisition,
+    log_deck_change,
+    log_game_action,
+    log_menu_action,
+    log_play_session_end,
+    log_play_session_start,
+    log_relic_acquisition,
+    log_run_end,
+    log_run_start,
+)
 from tracking.db import sqlcipher3
 from tracking.manager import get_tracking_manager
 

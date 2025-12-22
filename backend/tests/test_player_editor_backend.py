@@ -14,8 +14,7 @@ Example:
 
 import json
 import sys
-from typing import Any
-from typing import Dict
+from typing import Any, Dict
 import urllib.error
 import urllib.parse
 import urllib.request

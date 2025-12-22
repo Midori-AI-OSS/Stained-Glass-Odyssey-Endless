@@ -8,8 +8,7 @@ sys.path.append(str(Path(__file__).resolve().parents[1]))
 def test_accelerate_fix_verification() -> None:
     """Test that verifies accelerate dependency is available when needed."""
     # Mock the transformers.pipeline to simulate using device_map="auto"
-    from unittest.mock import MagicMock
-    from unittest.mock import patch
+    from unittest.mock import MagicMock, patch
 
     mock_pipeline_instance = MagicMock()
     mock_pipeline_instance.task = "text-generation"
@@ -32,8 +31,7 @@ def test_accelerate_fix_verification() -> None:
                     with patch("llms.loader.pick_device", return_value=0):  # This triggers device_map="auto"
                         with patch("llms.loader.HuggingFacePipeline") as mock_hf:
                             mock_hf.return_value = MagicMock()
-                            from llms.loader import ModelName
-                            from llms.loader import load_llm
+                            from llms.loader import ModelName, load_llm
 
                             # This should now work without error
                             llm = load_llm(ModelName.DEEPSEEK.value)

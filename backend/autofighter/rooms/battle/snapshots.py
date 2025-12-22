@@ -1,8 +1,7 @@
 from __future__ import annotations
 
 from collections import deque
-from typing import Any
-from typing import Iterable
+from typing import Any, Iterable
 import weakref
 
 from autofighter.party import Party

@@ -9,18 +9,19 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 sys.modules.pop("services", None)
-from runs.lifecycle import RECENT_FOE_COOLDOWN  # noqa: E402
-from runs.lifecycle import battle_snapshots  # noqa: E402
-from runs.lifecycle import battle_tasks  # noqa: E402
-from runs.lifecycle import load_map  # noqa: E402
-from runs.lifecycle import save_map  # noqa: E402
+from runs.lifecycle import (
+    RECENT_FOE_COOLDOWN,  # noqa: E402
+    battle_snapshots,  # noqa: E402
+    battle_tasks,  # noqa: E402
+    load_map,  # noqa: E402
+    save_map,  # noqa: E402
+)
 from services.room_service import battle_room  # noqa: E402
 from services.run_service import start_run  # noqa: E402
 
 from autofighter.mapgen import MapNode
 from autofighter.party import Party
-from autofighter.rooms import BattleRoom
-from autofighter.rooms import utils
+from autofighter.rooms import BattleRoom, utils
 from autofighter.stats import Stats
 from plugins.characters import Player
 

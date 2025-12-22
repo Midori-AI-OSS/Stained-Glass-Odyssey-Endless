@@ -1,8 +1,7 @@
 import asyncio
 
 import pytest
-from runs.lifecycle import cleanup_battle_state
-from runs.lifecycle import get_battle_state_sizes
+from runs.lifecycle import cleanup_battle_state, get_battle_state_sizes
 
 
 @pytest.mark.asyncio

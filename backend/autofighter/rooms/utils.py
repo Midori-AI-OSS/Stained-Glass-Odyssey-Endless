@@ -1,17 +1,14 @@
 from __future__ import annotations
 
 from dataclasses import fields
-from typing import Any
-from typing import Collection
-from typing import Mapping
+from typing import Any, Collection, Mapping
 
 from plugins.characters.foe_base import FoeBase
 
 from ..mapgen import MapNode
 from ..party import Party
 from ..passives import PassiveRegistry
-from ..stats import GAUGE_START
-from ..stats import Stats
+from ..stats import GAUGE_START, Stats
 from .foe_factory import get_foe_factory
 
 

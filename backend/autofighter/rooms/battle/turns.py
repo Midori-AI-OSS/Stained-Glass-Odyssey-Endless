@@ -2,18 +2,11 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import Awaitable
-from typing import Callable
-from typing import MutableMapping
-from typing import Sequence
+from typing import TYPE_CHECKING, Any, Awaitable, Callable, MutableMapping, Sequence
 
-from autofighter.effects import DamageOverTime
-from autofighter.effects import create_stat_buff
+from autofighter.effects import DamageOverTime, create_stat_buff
 
-from ...stats import Stats
-from ...stats import set_enrage_percent
+from ...stats import Stats, set_enrage_percent
 from . import enrage as _enrage
 from . import snapshots as _snapshots
 from .events import register_event_handlers

@@ -2,15 +2,11 @@
 
 from __future__ import annotations
 
-from abc import ABC
-from abc import abstractmethod
-from dataclasses import dataclass
-from dataclasses import field
+from abc import ABC, abstractmethod
+from dataclasses import dataclass, field
 from enum import StrEnum
 import math
-from typing import TYPE_CHECKING
-from typing import ClassVar
-from typing import Sequence
+from typing import TYPE_CHECKING, ClassVar, Sequence
 
 if TYPE_CHECKING:  # pragma: no cover - type checking only
     from autofighter.stats import Stats

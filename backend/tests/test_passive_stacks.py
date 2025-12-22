@@ -1,8 +1,7 @@
 import pytest
 
 from autofighter.passives import PassiveRegistry
-from autofighter.stats import BUS
-from autofighter.stats import Stats
+from autofighter.stats import BUS, Stats
 from plugins.damage_types.generic import Generic
 
 

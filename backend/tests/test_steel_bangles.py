@@ -2,12 +2,10 @@ import asyncio
 
 import pytest
 
-from autofighter.cards import apply_cards
-from autofighter.cards import award_card
+from autofighter.cards import apply_cards, award_card
 from autofighter.effects import EffectManager
 from autofighter.party import Party
-from autofighter.stats import BUS
-from autofighter.stats import Stats
+from autofighter.stats import BUS, Stats
 import plugins.cards.steel_bangles as steel_bangles_module
 
 

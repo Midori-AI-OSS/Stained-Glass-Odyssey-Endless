@@ -10,17 +10,14 @@ from __future__ import annotations
 from dataclasses import dataclass
 import logging
 import random
-from typing import TYPE_CHECKING
-from typing import Optional
+from typing import TYPE_CHECKING, Optional
 
 from autofighter.stats import Stats
-from plugins.damage_types import get_damage_type
-from plugins.damage_types import random_damage_type
+from plugins.damage_types import get_damage_type, random_damage_type
 from plugins.damage_types._base import DamageTypeBase
 
 if TYPE_CHECKING:
-    from autofighter.effects import HealingOverTime
-    from autofighter.effects import StatModifier
+    from autofighter.effects import HealingOverTime, StatModifier
     from autofighter.stat_effect import StatEffect
 
 log = logging.getLogger(__name__)

@@ -12,8 +12,7 @@ if _PROJECT_ROOT not in sys.path:
     sys.path.append(_PROJECT_ROOT)
 
 from autofighter.party import Party
-from autofighter.relics import apply_relics
-from autofighter.relics import award_relic
+from autofighter.relics import apply_relics, award_relic
 import autofighter.stats as stats_module
 from autofighter.stats import BUS
 from plugins.characters._base import PlayerBase

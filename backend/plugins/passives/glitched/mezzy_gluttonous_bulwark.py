@@ -1,8 +1,7 @@
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from plugins.passives.normal.mezzy_gluttonous_bulwark import SAFE_MAX_HP_FLOOR
-from plugins.passives.normal.mezzy_gluttonous_bulwark import MezzyGluttonousBulwark
+from plugins.passives.normal.mezzy_gluttonous_bulwark import SAFE_MAX_HP_FLOOR, MezzyGluttonousBulwark
 
 if TYPE_CHECKING:
     from autofighter.stats import Stats

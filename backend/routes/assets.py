@@ -2,9 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from quart import Blueprint
-from quart import jsonify
-from quart import send_from_directory
+from quart import Blueprint, jsonify, send_from_directory
 
 bp = Blueprint("assets", __name__)
 

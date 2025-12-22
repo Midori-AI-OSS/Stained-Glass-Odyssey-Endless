@@ -3,14 +3,7 @@
 from __future__ import annotations
 
 import asyncio
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import Iterable
-from typing import MutableMapping
-from typing import NotRequired
-from typing import Protocol
-from typing import Sequence
-from typing import TypedDict
+from typing import TYPE_CHECKING, Any, Iterable, MutableMapping, NotRequired, Protocol, Sequence, TypedDict
 
 from autofighter.action_queue import TURN_COUNTER_ID
 from autofighter.summons.base import Summon

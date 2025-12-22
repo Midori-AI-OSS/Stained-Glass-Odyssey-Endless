@@ -1,8 +1,7 @@
 """Custom logging handlers for battle logs."""
 
 import logging
-from logging.handlers import MemoryHandler
-from logging.handlers import QueueListener
+from logging.handlers import MemoryHandler, QueueListener
 import threading
 
 

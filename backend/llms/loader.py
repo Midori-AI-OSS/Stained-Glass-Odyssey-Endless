@@ -5,8 +5,7 @@ import logging
 import os
 from typing import Protocol
 
-from .torch_checker import is_torch_available
-from .torch_checker import require_torch
+from .torch_checker import is_torch_available, require_torch
 
 log = logging.getLogger(__name__)
 
@@ -24,8 +23,7 @@ else:
 
 # Import OpenAI and agents independently of torch
 try:
-    from agents import ModelSettings
-    from agents import OpenAIChatCompletionsModel
+    from agents import ModelSettings, OpenAIChatCompletionsModel
     from openai import AsyncOpenAI
     from openai.types.shared import Reasoning
     _OPENAI_AVAILABLE = True
@@ -36,9 +34,11 @@ except ImportError:
     OpenAIChatCompletionsModel = None
     _OPENAI_AVAILABLE = False
 
-from .safety import gguf_strategy  # noqa: E402
-from .safety import model_memory_requirements  # noqa: E402
-from .safety import pick_device  # noqa: E402
+from .safety import (
+    gguf_strategy,  # noqa: E402
+    model_memory_requirements,  # noqa: E402
+    pick_device,  # noqa: E402
+)
 
 
 class SupportsStream(Protocol):

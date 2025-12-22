@@ -5,8 +5,7 @@ import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from autofighter.mapgen import MapGenerator
-from autofighter.mapgen import MapNode
+from autofighter.mapgen import MapGenerator, MapNode
 from autofighter.rooms.utils import _scale_stats
 from plugins.characters.foe_base import FoeBase
 

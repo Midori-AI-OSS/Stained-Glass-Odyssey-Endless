@@ -29,9 +29,7 @@ def app_with_db(tmp_path, monkeypatch):
 
 @pytest.mark.asyncio
 async def test_advance_room_requires_reward_selection(app_with_db):
-    from runs.lifecycle import battle_snapshots
-    from runs.lifecycle import load_map
-    from runs.lifecycle import save_map
+    from runs.lifecycle import battle_snapshots, load_map, save_map
 
     app = app_with_db
     client = app.test_client()
@@ -159,9 +157,7 @@ async def test_advance_room_requires_reward_selection(app_with_db):
 
 @pytest.mark.asyncio
 async def test_staged_relic_is_confirmed_during_advance(app_with_db):
-    from runs.lifecycle import battle_snapshots
-    from runs.lifecycle import load_map
-    from runs.lifecycle import save_map
+    from runs.lifecycle import battle_snapshots, load_map, save_map
 
     app = app_with_db
     client = app.test_client()
@@ -215,8 +211,7 @@ async def test_staged_relic_is_confirmed_during_advance(app_with_db):
 
 @pytest.mark.asyncio
 async def test_advance_room_emits_progression_payload(app_with_db):
-    from runs.lifecycle import load_map
-    from runs.lifecycle import save_map
+    from runs.lifecycle import load_map, save_map
 
     app = app_with_db
     client = app.test_client()
@@ -259,9 +254,7 @@ async def test_advance_room_emits_progression_payload(app_with_db):
 
 @pytest.mark.asyncio
 async def test_card_selection_unlocks_advancement(app_with_db):
-    from runs.lifecycle import battle_snapshots
-    from runs.lifecycle import load_map
-    from runs.lifecycle import save_map
+    from runs.lifecycle import battle_snapshots, load_map, save_map
     from runs.party_manager import load_party
 
     app = app_with_db
@@ -337,9 +330,7 @@ async def test_card_selection_unlocks_advancement(app_with_db):
 async def test_confirm_route_blocks_duplicate_attempts(
     app_with_db, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    from runs.lifecycle import battle_snapshots
-    from runs.lifecycle import load_map
-    from runs.lifecycle import save_map
+    from runs.lifecycle import battle_snapshots, load_map, save_map
     from services import reward_service
 
     app = app_with_db

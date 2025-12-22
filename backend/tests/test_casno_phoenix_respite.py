@@ -1,7 +1,6 @@
 import pytest
 
-from autofighter.stats import BUS
-from autofighter.stats import Stats
+from autofighter.stats import BUS, Stats
 from plugins.damage_types.generic import Generic
 from plugins.passives.normal.casno_phoenix_respite import CasnoPhoenixRespite
 

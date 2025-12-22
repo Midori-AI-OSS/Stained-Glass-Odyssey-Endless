@@ -1,13 +1,9 @@
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING
-from typing import Any
-from typing import Awaitable
-from typing import Callable
+from typing import TYPE_CHECKING, Any, Awaitable, Callable
 
-from .cleanup import battle_active
-from .cleanup import cleanup_after_round
+from .cleanup import battle_active, cleanup_after_round
 from .foe_turn import execute_foe_phase
 from .initialization import initialize_turn_loop
 from .player_turn import execute_player_phase

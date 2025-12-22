@@ -1,15 +1,10 @@
 from __future__ import annotations
 
-from dataclasses import dataclass
-from dataclasses import field
-from typing import Any
-from typing import Dict
-from typing import List
+from dataclasses import dataclass, field
+from typing import Any, Dict, List
 
-from autofighter.effects import EffectManager
-from autofighter.effects import create_stat_buff
-from autofighter.stats import BUS
-from autofighter.stats import Stats
+from autofighter.effects import EffectManager, create_stat_buff
+from autofighter.stats import BUS, Stats
 from plugins.cards._base import CardBase
 from plugins.characters.foe_base import FoeBase
 from plugins.dots.abyssal_weakness import AbyssalWeakness

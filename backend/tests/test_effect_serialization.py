@@ -1,9 +1,7 @@
 import pytest
 from tests.helpers import call_maybe_async
 
-from autofighter.effects import DamageOverTime
-from autofighter.effects import EffectManager
-from autofighter.effects import HealingOverTime
+from autofighter.effects import DamageOverTime, EffectManager, HealingOverTime
 from autofighter.rooms.utils import _serialize
 from autofighter.stats import Stats
 

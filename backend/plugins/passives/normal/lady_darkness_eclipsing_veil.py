@@ -1,9 +1,5 @@
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
-from typing import Callable
-from typing import ClassVar
-from typing import Iterable
-from typing import Mapping
+from typing import TYPE_CHECKING, Callable, ClassVar, Iterable, Mapping
 from weakref import ref
 
 from autofighter.stat_effect import StatEffect

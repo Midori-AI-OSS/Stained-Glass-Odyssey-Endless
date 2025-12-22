@@ -7,24 +7,19 @@ from dataclasses import dataclass
 import inspect
 from typing import Sequence
 
-from battle_logging.writers import BattleLogger
-from battle_logging.writers import start_battle_logging
+from battle_logging.writers import BattleLogger, start_battle_logging
 
 from autofighter.action_queue import ActionQueue
 from autofighter.cards import apply_cards
-from autofighter.effects import EffectManager
-from autofighter.effects import StatModifier
+from autofighter.effects import EffectManager, StatModifier
 from autofighter.mapgen import MapNode
 from autofighter.party import Party
-from autofighter.passives import PassiveRegistry
-from autofighter.passives import apply_rank_passives
+from autofighter.passives import PassiveRegistry, apply_rank_passives
 from autofighter.relics import apply_relics
-from autofighter.stats import GAUGE_START
-from autofighter.stats import Stats
+from autofighter.stats import GAUGE_START, Stats
 from autofighter.summons.manager import SummonManager
 
-from ..utils import _build_foes
-from ..utils import _scale_stats
+from ..utils import _build_foes, _scale_stats
 from .pacing import set_visual_queue
 
 

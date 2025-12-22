@@ -4,13 +4,11 @@ from __future__ import annotations
 
 import asyncio
 from dataclasses import asdict
-from datetime import datetime
-from datetime import timezone
+from datetime import datetime, timezone
 import json
 import logging
 from pathlib import Path
-from typing import Any
-from typing import Iterable
+from typing import Any, Iterable
 
 from battle_logging.writers import get_current_run_logger
 

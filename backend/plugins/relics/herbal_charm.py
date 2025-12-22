@@ -1,9 +1,7 @@
-from dataclasses import dataclass
-from dataclasses import field
+from dataclasses import dataclass, field
 
 from autofighter.stats import BUS
-from plugins.relics._base import RelicBase
-from plugins.relics._base import safe_async_task
+from plugins.relics._base import RelicBase, safe_async_task
 
 
 @dataclass

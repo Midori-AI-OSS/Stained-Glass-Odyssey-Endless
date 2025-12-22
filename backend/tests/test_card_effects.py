@@ -5,14 +5,11 @@ import pytest
 from tests.helpers import call_maybe_async
 
 from autofighter.action_queue import ActionQueue
-from autofighter.cards import apply_cards
-from autofighter.cards import award_card
-from autofighter.effects import DamageOverTime
-from autofighter.effects import EffectManager
+from autofighter.cards import apply_cards, award_card
+from autofighter.effects import DamageOverTime, EffectManager
 from autofighter.party import Party
 from autofighter.rooms import battle as battle_module
-from autofighter.stats import BUS
-from autofighter.stats import GAUGE_START
+from autofighter.stats import BUS, GAUGE_START
 from plugins.characters._base import PlayerBase
 
 

@@ -3,8 +3,7 @@ from dataclasses import dataclass
 import math
 
 from autofighter.effects import DamageOverTime
-from autofighter.stats import BUS
-from autofighter.stats import Stats
+from autofighter.stats import BUS, Stats
 from plugins import damage_effects
 from plugins.damage_types._base import DamageTypeBase
 from plugins.event_bus import bus as _event_bus

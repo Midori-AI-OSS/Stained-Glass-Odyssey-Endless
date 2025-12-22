@@ -1,5 +1,4 @@
-from autofighter.passives import PassiveRegistry
-from autofighter.passives import apply_rank_passives
+from autofighter.passives import PassiveRegistry, apply_rank_passives
 
 PRIME_VARIANTS = {
     "advanced_combat_synergy": "advanced_combat_synergy_prime",

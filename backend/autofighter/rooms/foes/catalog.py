@@ -2,13 +2,9 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from dataclasses import field
+from dataclasses import dataclass, field
 from pathlib import Path
-from typing import TYPE_CHECKING
-from typing import Callable
-from typing import Collection
-from typing import Iterable
+from typing import TYPE_CHECKING, Callable, Collection, Iterable
 
 from plugins import characters as character_plugins
 from plugins.characters.foe_base import FoeBase

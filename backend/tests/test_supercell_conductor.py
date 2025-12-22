@@ -8,8 +8,7 @@ sys.path.append(str(Path(__file__).resolve().parents[1]))
 import llms.torch_checker as torch_checker
 
 from autofighter.party import Party
-from autofighter.stats import BUS
-from autofighter.stats import set_battle_active
+from autofighter.stats import BUS, set_battle_active
 from plugins.cards.supercell_conductor import SupercellConductor
 from plugins.characters.ally import Ally
 from plugins.characters.becca import Becca

@@ -1,8 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import TYPE_CHECKING
-from typing import Mapping
+from typing import TYPE_CHECKING, Mapping
 
 from autofighter.stat_effect import StatEffect
 from plugins import PluginLoader

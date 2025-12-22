@@ -4,19 +4,15 @@ from __future__ import annotations
 
 import asyncio
 from collections import OrderedDict
-from collections.abc import Awaitable
-from collections.abc import Callable
-from collections.abc import Iterable
+from collections.abc import Awaitable, Callable, Iterable
 import gc
 import json
 import logging
-from typing import Any
-from typing import Mapping
+from typing import Any, Mapping
 
 from battle_logging.writers import end_run_logging
 from services.run_configuration import RunModifierContext
-from tracking import log_play_session_end
-from tracking import log_run_end
+from tracking import log_play_session_end, log_run_end
 
 from autofighter.gacha import GachaManager
 from autofighter.mapgen import MapNode

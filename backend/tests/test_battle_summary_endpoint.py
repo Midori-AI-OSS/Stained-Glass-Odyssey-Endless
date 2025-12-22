@@ -4,8 +4,7 @@ import shutil
 from battle_logging.writers import BattleLogger
 import pytest
 
-from autofighter.stats import BUS
-from autofighter.stats import Stats
+from autofighter.stats import BUS, Stats
 
 
 @pytest.mark.asyncio

@@ -1,9 +1,7 @@
-from dataclasses import dataclass
-from dataclasses import field
+from dataclasses import dataclass, field
 import random
 
-from autofighter.stats import DEFAULT_ANIMATION_DURATION
-from autofighter.stats import Stats
+from autofighter.stats import DEFAULT_ANIMATION_DURATION, Stats
 from plugins.damage_types.dark import Dark
 from plugins.damage_types.fire import Fire
 from plugins.damage_types.ice import Ice
@@ -66,8 +64,7 @@ class Aftertaste:
         return [int(self.base_pot * self.rng.uniform(0.1, 1.5)) for _ in range(self.hits)]
 
     async def apply(self, attacker: Stats, target: Stats) -> list[int]:
-        from autofighter.rooms.battle.pacing import TURN_PACING
-        from autofighter.rooms.battle.pacing import pace_sleep
+        from autofighter.rooms.battle.pacing import TURN_PACING, pace_sleep
 
         results: list[int] = []
         try:

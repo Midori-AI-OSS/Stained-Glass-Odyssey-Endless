@@ -5,8 +5,7 @@ import math
 import random
 from typing import Any
 
-from services.run_configuration import RunModifierContext
-from services.run_configuration import get_shop_modifier_summaries
+from services.run_configuration import RunModifierContext, get_shop_modifier_summaries
 
 from ..cards import card_choices
 from ..party import Party

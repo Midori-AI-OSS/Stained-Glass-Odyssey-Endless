@@ -1,7 +1,6 @@
 import asyncio
 
-from autofighter.cards import apply_cards
-from autofighter.cards import award_card
+from autofighter.cards import apply_cards, award_card
 from autofighter.party import Party
 from autofighter.stats import Stats
 from plugins import event_bus as event_bus_module

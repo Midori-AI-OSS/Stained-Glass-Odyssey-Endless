@@ -1,12 +1,8 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
-from typing import ClassVar
-from typing import Iterable
-from typing import Sequence
-from weakref import ReferenceType
-from weakref import ref
+from typing import TYPE_CHECKING, ClassVar, Iterable, Sequence
+from weakref import ReferenceType, ref
 
 from autofighter.stat_effect import StatEffect
 from autofighter.stats import BUS

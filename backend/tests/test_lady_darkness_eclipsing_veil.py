@@ -1,7 +1,6 @@
 import pytest
 
-from autofighter.stats import BUS
-from autofighter.stats import Stats
+from autofighter.stats import BUS, Stats
 from plugins.passives.normal.lady_darkness_eclipsing_veil import (
     LadyDarknessEclipsingVeil,
 )

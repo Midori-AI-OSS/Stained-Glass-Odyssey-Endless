@@ -34,9 +34,11 @@ tracking_module.log_run_end = lambda *args, **kwargs: None  # noqa: E731
 from runs.lifecycle import battle_snapshots as run_snapshots
 
 from autofighter.rooms.battle import snapshots as battle_snapshots
-from autofighter.rooms.battle.progress import build_action_queue_snapshot
-from autofighter.rooms.battle.progress import build_battle_progress_payload
-from autofighter.rooms.battle.progress import collect_summon_snapshots
+from autofighter.rooms.battle.progress import (
+    build_action_queue_snapshot,
+    build_battle_progress_payload,
+    collect_summon_snapshots,
+)
 from autofighter.rooms.battle.turns import EnrageState
 from autofighter.stats import Stats
 from autofighter.summons.manager import SummonManager

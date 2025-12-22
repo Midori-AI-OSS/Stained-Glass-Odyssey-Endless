@@ -6,22 +6,14 @@ import random
 
 import pytest
 from runs.lifecycle import load_map
-from runs.party_manager import load_party
-from runs.party_manager import save_party
+from runs.party_manager import load_party, save_party
 from services.room_service import shop_room
-from services.run_configuration import build_run_modifier_context
-from services.run_configuration import validate_run_configuration
-from services.run_service import advance_room
-from services.run_service import start_run
+from services.run_configuration import build_run_modifier_context, validate_run_configuration
+from services.run_service import advance_room, start_run
 
-from autofighter.mapgen import MapGenerator
-from autofighter.mapgen import MapNode
+from autofighter.mapgen import MapGenerator, MapNode
 from autofighter.party import Party
-from autofighter.rooms.shop import PRICE_BY_STARS
-from autofighter.rooms.shop import REROLL_COST
-from autofighter.rooms.shop import ShopRoom
-from autofighter.rooms.shop import _taxed_price
-from autofighter.rooms.shop import serialize_shop_payload
+from autofighter.rooms.shop import PRICE_BY_STARS, REROLL_COST, ShopRoom, _taxed_price, serialize_shop_payload
 from plugins.characters._base import PlayerBase
 
 

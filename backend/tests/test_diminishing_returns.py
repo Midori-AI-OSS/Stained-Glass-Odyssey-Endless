@@ -1,9 +1,7 @@
 """Tests for the diminishing returns buff scaling system."""
 
 
-from autofighter.effects import calculate_diminishing_returns
-from autofighter.effects import create_stat_buff
-from autofighter.effects import get_current_stat_value
+from autofighter.effects import calculate_diminishing_returns, create_stat_buff, get_current_stat_value
 from autofighter.stats import Stats
 
 

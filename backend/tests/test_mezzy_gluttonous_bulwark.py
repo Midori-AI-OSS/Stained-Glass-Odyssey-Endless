@@ -1,8 +1,7 @@
 import pytest
 
 from autofighter.stats import Stats
-from plugins.passives.normal.mezzy_gluttonous_bulwark import SAFE_MAX_HP_FLOOR
-from plugins.passives.normal.mezzy_gluttonous_bulwark import MezzyGluttonousBulwark
+from plugins.passives.normal.mezzy_gluttonous_bulwark import SAFE_MAX_HP_FLOOR, MezzyGluttonousBulwark
 
 
 @pytest.mark.asyncio

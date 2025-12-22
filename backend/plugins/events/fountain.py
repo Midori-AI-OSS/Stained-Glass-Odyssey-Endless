@@ -1,7 +1,6 @@
 import random
 
-from autofighter.events import Event
-from autofighter.events import EventOption
+from autofighter.events import Event, EventOption
 from autofighter.stats import Stats
 
 

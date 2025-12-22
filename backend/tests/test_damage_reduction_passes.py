@@ -1,7 +1,6 @@
 import pytest
 
-from autofighter.stats import get_enrage_percent
-from autofighter.stats import set_battle_active
+from autofighter.stats import get_enrage_percent, set_battle_active
 from plugins.characters.carly import Carly
 
 

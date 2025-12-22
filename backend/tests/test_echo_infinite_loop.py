@@ -13,8 +13,10 @@ if _PROJECT_ROOT not in sys.path:
     sys.path.append(_PROJECT_ROOT)
 
 from autofighter.party import Party  # noqa: E402
-from autofighter.relics import apply_relics  # noqa: E402
-from autofighter.relics import award_relic  # noqa: E402
+from autofighter.relics import (
+    apply_relics,  # noqa: E402
+    award_relic,  # noqa: E402
+)
 from autofighter.stats import BUS  # noqa: E402
 from plugins.characters._base import PlayerBase  # noqa: E402
 import plugins.event_bus as event_bus_module  # noqa: E402

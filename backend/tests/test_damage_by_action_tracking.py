@@ -5,9 +5,7 @@ from typing import DefaultDict
 
 import pytest
 
-from autofighter.stats import BUS
-from autofighter.stats import Stats
-from autofighter.stats import set_battle_active
+from autofighter.stats import BUS, Stats, set_battle_active
 from plugins.characters.carly import Carly
 from plugins.characters.slime import Slime
 

@@ -3,10 +3,7 @@ from __future__ import annotations
 import asyncio
 
 import pytest
-from runs.lifecycle import battle_snapshots
-from runs.lifecycle import battle_tasks
-from runs.lifecycle import load_map
-from runs.lifecycle import save_map
+from runs.lifecycle import battle_snapshots, battle_tasks, load_map, save_map
 from test_app import app_with_db as _app_with_db  # noqa: F401
 
 app_with_db = _app_with_db

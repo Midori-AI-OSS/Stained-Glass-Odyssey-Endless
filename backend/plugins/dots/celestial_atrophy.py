@@ -1,7 +1,5 @@
 
-from autofighter.effects import DamageOverTime
-from autofighter.effects import StatModifier
-from autofighter.effects import create_stat_buff
+from autofighter.effects import DamageOverTime, StatModifier, create_stat_buff
 
 
 class CelestialAtrophy(DamageOverTime):

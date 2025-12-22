@@ -1,10 +1,7 @@
 from __future__ import annotations
 
-from quart import Blueprint
-from quart import jsonify
-from quart import request
-from services.login_reward_service import claim_login_reward
-from services.login_reward_service import get_login_reward_status
+from quart import Blueprint, jsonify, request
+from services.login_reward_service import claim_login_reward, get_login_reward_status
 from services.reward_service import acknowledge_loot as acknowledge_loot_service
 from services.reward_service import cancel_reward as cancel_reward_service
 from services.reward_service import confirm_reward as confirm_reward_service
