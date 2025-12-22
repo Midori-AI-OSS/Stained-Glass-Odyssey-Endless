@@ -6,9 +6,7 @@ from typing import TYPE_CHECKING
 from plugins import PluginLoader
 
 if TYPE_CHECKING:
-    from autofighter.rooms.foes.scaling import (
-        apply_permanent_scaling as ApplyPermanentScaling,
-    )
+    from autofighter.rooms.foes.scaling import apply_permanent_scaling as ApplyPermanentScaling
 
 
 _apply_permanent_scaling: "ApplyPermanentScaling | None" = None
@@ -52,9 +50,7 @@ def stat_buff(cls):
             global _apply_permanent_scaling
 
             if _apply_permanent_scaling is None:
-                from autofighter.rooms.foes.scaling import (
-                    apply_permanent_scaling as _imported_apply_permanent_scaling,
-                )
+                from autofighter.rooms.foes.scaling import apply_permanent_scaling as _imported_apply_permanent_scaling
 
                 _apply_permanent_scaling = _imported_apply_permanent_scaling
 

@@ -6,9 +6,7 @@ import types
 from autofighter.effects import EffectManager
 from autofighter.party import Party
 from plugins.characters._base import PlayerBase
-from plugins.passives.normal.lady_of_fire_infernal_momentum import (
-    LadyOfFireInfernalMomentum,
-)
+from plugins.passives.normal.lady_of_fire_infernal_momentum import LadyOfFireInfernalMomentum
 
 
 def setup_event_loop():

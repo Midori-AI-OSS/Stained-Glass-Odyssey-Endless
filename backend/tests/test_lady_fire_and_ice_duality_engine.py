@@ -8,9 +8,7 @@ from autofighter.party import Party
 from plugins.characters._base import PlayerBase
 from plugins.damage_types.fire import Fire
 from plugins.damage_types.ice import Ice
-from plugins.passives.normal.lady_fire_and_ice_duality_engine import (
-    LadyFireAndIceDualityEngine,
-)
+from plugins.passives.normal.lady_fire_and_ice_duality_engine import LadyFireAndIceDualityEngine
 
 
 def setup_event_loop():

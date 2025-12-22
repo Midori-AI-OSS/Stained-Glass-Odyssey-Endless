@@ -1,19 +1,19 @@
 # Building Desktop Packages
 
-Docker-based tooling in `build/desktop/` produces native binaries for Windows and Linux.
+Desktop builds for Linux and macOS can be created using the `build.sh` script.
 
 ## Usage
 
-Run the helper scripts from the repository root:
+Run the helper script from the repository root:
 
 ```bash
-./build/desktop/build-windows.sh   # writes .exe to desktop-dist/windows
-./build/desktop/build-linux.sh     # writes .AppImage and .tar.gz to desktop-dist/linux
+./build.sh non-llm linux     # builds non-llm variant for Linux
+./build.sh llm-cpu linux      # builds with CPU-based LLM support
 ```
 
-Each script builds a container that:
+The script:
 
 1. Compiles the Python backend with PyInstaller using `uv`.
-2. Bundles the Svelte frontend with Tauri and `bun`.
+2. Bundles the Svelte frontend with `bun`.
 
-Artifacts are copied to the `desktop-dist/` folder on the host.
+Artifacts are written to `backend/dist/` on the host.

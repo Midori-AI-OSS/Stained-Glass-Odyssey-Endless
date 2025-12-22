@@ -2,9 +2,7 @@ import pytest
 
 from autofighter.stats import BUS
 from autofighter.stats import Stats
-from plugins.passives.normal.lady_darkness_eclipsing_veil import (
-    LadyDarknessEclipsingVeil,
-)
+from plugins.passives.normal.lady_darkness_eclipsing_veil import LadyDarknessEclipsingVeil
 
 
 def _reset_veil_state() -> None:

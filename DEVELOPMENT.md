@@ -117,8 +117,6 @@ The GitHub Actions CI workflow uses modern tools:
 2. **frontend-ci.yml** - Frontend linting and unit tests  
 3. **e2e-test-1.yml** - End-to-end tests with Playwright (sub-agent 1)
 4. **e2e-test-2.yml** - End-to-end tests with Playwright (sub-agent 2)
-5. **build-all-platforms.yml** - Build executables for all platforms and variants
-6. **build-linux.yml** / **build-windows.yml** / **build-android.yml** - Platform-specific builds
 
 The E2E test workflows use a matrix strategy to test 3 game variants (non-llm, llm-cpu, llm-cuda) in parallel, with each variant running as an independent job.
 
