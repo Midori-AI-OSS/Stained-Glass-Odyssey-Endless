@@ -2,7 +2,6 @@ import asyncio
 from dataclasses import dataclass
 
 from autofighter.effects import DamageOverTime
-from autofighter.stats import BUS
 from plugins import damage_effects
 from plugins.damage_types._base import DamageTypeBase
 
