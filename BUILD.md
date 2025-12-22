@@ -2,10 +2,11 @@
 
 This document describes how to build Midori AutoFighter locally for development and testing.
 
+**Note:** Midori AI only supports Linux. Windows builds are not supported.
+
 ## Build Variants
 
-### Platforms
-- **Windows** (x64)
+### Platform
 - **Linux** (x64)
 
 ### Configurations
@@ -21,22 +22,9 @@ This document describes how to build Midori AutoFighter locally for development 
 - [bun](https://bun.sh/) for JavaScript dependency management
 - Python 3.12+
 
-### Quick Build
-Use the provided build script:
-
-```bash
-# Build non-llm variant for current platform
-./build.sh
-
-# Build specific variant
-./build.sh llm-cpu
-
-# Build for specific platform
-./build.sh non-llm linux
-./build.sh llm-cuda windows
-```
-
 ### Manual Build Process
+
+**Important:** The frontend must be built first, as the backend build process requires the compiled frontend files.
 
 1. **Build frontend:**
    ```bash
@@ -67,11 +55,8 @@ Use the provided build script:
 
 5. **Build executable:**
    ```bash
-   # Linux/macOS
+   # Linux
    uv run pyinstaller --onefile --add-data ../frontend/build:frontend --clean --name midori-autofighter-non-llm-linux app.py
-   
-   # Windows
-   uv run pyinstaller --onefile --add-data ../frontend/build;frontend --clean --name midori-autofighter-non-llm-windows app.py
    ```
 
 ### Dependencies by Variant
@@ -90,11 +75,9 @@ Use the provided build script:
 
 ### Common Issues
 
-1. **Missing Frontend Build**: Ensure you build the frontend before building the backend executable.
+1. **Missing Frontend Build**: Ensure you build the frontend **before** building the backend executable. The backend build process requires the compiled frontend files in `frontend/build/`.
 
 2. **Large Build Size**: LLM variants will be significantly larger (1GB+) due to PyTorch and model dependencies.
-
-3. **Windows Builds on Linux**: Local cross-compilation requires Wine or a Windows virtual machine.
 
 ### Build Optimization
 

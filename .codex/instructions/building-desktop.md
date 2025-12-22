@@ -1,21 +1,20 @@
 # Building Desktop Packages
 
-**Note:** The Docker-based desktop build tooling has been removed. Please use the local build script `./build.sh` instead.
+**Note:** The Docker-based desktop build tooling has been removed. Midori AI only supports Linux builds.
 
-## Usage
+## Build Instructions
 
-Run the build script from the repository root:
+Follow the manual build process described in `BUILD.md` in the repository root.
 
-```bash
-# Build non-llm variant for current platform
-./build.sh
+### Prerequisites
+- [uv](https://github.com/astral-sh/uv) for Python dependency management
+- [bun](https://bun.sh/) for JavaScript dependency management
+- Python 3.12+
 
-# Build specific variant
-./build.sh llm-cpu
+### Build Process
 
-# Build for specific platform
-./build.sh non-llm linux
-./build.sh llm-cuda windows
-```
+1. Build the frontend first
+2. Setup backend environment
+3. Build the backend executable
 
-See `BUILD.md` in the repository root for complete build instructions.
+See `BUILD.md` in the repository root for complete step-by-step instructions.
