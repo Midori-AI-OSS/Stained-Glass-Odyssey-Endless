@@ -1,4 +1,6 @@
 name: E2E Tests - Sub Agent 2
+permissions:
+  contents: read
 
 on:
   workflow_dispatch:
