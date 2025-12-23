@@ -16,12 +16,13 @@ Quick Run (developer)
 1. Create/activate a virtual environment and install dependencies (example):
 
 ```bash
+cd idle_game
 python -m venv .venv
 source .venv/bin/activate
 pip install pyside6
 ```
 
-2. Run the GUI from the repository root:
+2. Run the GUI:
 
 ```bash
 python main.py
