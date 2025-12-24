@@ -1,23 +1,24 @@
-from PySide6.QtWidgets import (
-    QMainWindow,
-    QWidget,
-    QVBoxLayout,
-    QScrollArea,
-    QGridLayout,
-    QLabel,
-    QPushButton,
-    QFrame,
-    QHBoxLayout,
-    QSpinBox,
-    QCheckBox,
-)
-from PySide6.QtCore import Qt, QSize, Signal
-from PySide6.QtGui import QPixmap, QIcon, QColor
+from pathlib import Path
+
 from idle_game.core.game_state import GameState
 from idle_game.gui.character_window import CharacterWindow
 from idle_game.gui.fight_window import FightWindow
 from idle_game.gui.widgets import PulseProgressBar
-from pathlib import Path
+from PySide6.QtCore import Qt
+from PySide6.QtCore import Signal
+from PySide6.QtGui import QColor
+from PySide6.QtGui import QPixmap
+from PySide6.QtWidgets import QCheckBox
+from PySide6.QtWidgets import QFrame
+from PySide6.QtWidgets import QGridLayout
+from PySide6.QtWidgets import QHBoxLayout
+from PySide6.QtWidgets import QLabel
+from PySide6.QtWidgets import QMainWindow
+from PySide6.QtWidgets import QPushButton
+from PySide6.QtWidgets import QScrollArea
+from PySide6.QtWidgets import QSpinBox
+from PySide6.QtWidgets import QVBoxLayout
+from PySide6.QtWidgets import QWidget
 
 
 class CharacterCard(QFrame):

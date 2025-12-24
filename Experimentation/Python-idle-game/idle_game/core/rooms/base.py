@@ -22,7 +22,7 @@ class RoomResult(Enum):
 @dataclass
 class Room:
     """Base class for all room types."""
-    
+
     room_id: int
     room_type: str
     floor: int
@@ -31,7 +31,7 @@ class Room:
     completed: bool = False
     result: RoomResult | None = None
     rewards: dict[str, Any] | None = None
-    
+
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for serialization."""
         return {
@@ -44,13 +44,13 @@ class Room:
             "result": self.result.value if self.result else None,
             "rewards": self.rewards or {},
         }
-    
+
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> Room:
         """Create from dictionary."""
         result_str = data.get("result")
         result = RoomResult(result_str) if result_str else None
-        
+
         return cls(
             room_id=data.get("room_id", 0),
             room_type=data.get("room_type", "battle-weak"),
@@ -61,19 +61,19 @@ class Room:
             result=result,
             rewards=data.get("rewards"),
         )
-    
+
     def is_battle(self) -> bool:
         """Check if this is a battle room."""
         return self.room_type.startswith("battle")
-    
+
     def is_shop(self) -> bool:
         """Check if this is a shop room."""
         return self.room_type == "shop"
-    
+
     def is_rest(self) -> bool:
         """Check if this is a rest room."""
         return self.room_type == "rest"
-    
+
     def is_boss(self) -> bool:
         """Check if this is a boss battle."""
         return "boss" in self.room_type
@@ -82,16 +82,16 @@ class Room:
 @dataclass
 class BattleRoom(Room):
     """Battle room with enemy information."""
-    
+
     enemy_ids: list[str] | None = None
     enemy_count: int = 0
     difficulty: str = "normal"  # weak, normal, elite, prime, boss
-    
+
     def __post_init__(self):
         """Initialize battle-specific fields."""
         if not self.enemy_ids:
             self.enemy_ids = []
-        
+
         # Determine difficulty from room type
         if "weak" in self.room_type:
             self.difficulty = "weak"
@@ -103,7 +103,7 @@ class BattleRoom(Room):
             self.difficulty = "boss"
         else:
             self.difficulty = "normal"
-    
+
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for serialization."""
         data = super().to_dict()
@@ -113,13 +113,13 @@ class BattleRoom(Room):
             "difficulty": self.difficulty,
         })
         return data
-    
+
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> BattleRoom:
         """Create from dictionary."""
         result_str = data.get("result")
         result = RoomResult(result_str) if result_str else None
-        
+
         return cls(
             room_id=data.get("room_id", 0),
             room_type=data.get("room_type", "battle-weak"),
@@ -138,17 +138,17 @@ class BattleRoom(Room):
 @dataclass
 class ShopRoom(Room):
     """Shop room with purchasable items."""
-    
+
     items_available: list[dict[str, Any]] | None = None
     items_purchased: list[str] | None = None
-    
+
     def __post_init__(self):
         """Initialize shop-specific fields."""
         if not self.items_available:
             self.items_available = []
         if not self.items_purchased:
             self.items_purchased = []
-    
+
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for serialization."""
         data = super().to_dict()
@@ -157,13 +157,13 @@ class ShopRoom(Room):
             "items_purchased": self.items_purchased or [],
         })
         return data
-    
+
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> ShopRoom:
         """Create from dictionary."""
         result_str = data.get("result")
         result = RoomResult(result_str) if result_str else None
-        
+
         return cls(
             room_id=data.get("room_id", 0),
             room_type=data.get("room_type", "shop"),
@@ -181,10 +181,10 @@ class ShopRoom(Room):
 @dataclass
 class RestRoom(Room):
     """Rest room for healing and recovery."""
-    
+
     heal_amount: int = 0
     heal_percentage: float = 0.5  # Heal 50% by default
-    
+
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for serialization."""
         data = super().to_dict()
@@ -193,13 +193,13 @@ class RestRoom(Room):
             "heal_percentage": self.heal_percentage,
         })
         return data
-    
+
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> RestRoom:
         """Create from dictionary."""
         result_str = data.get("result")
         result = RoomResult(result_str) if result_str else None
-        
+
         return cls(
             room_id=data.get("room_id", 0),
             room_type=data.get("room_type", "rest"),

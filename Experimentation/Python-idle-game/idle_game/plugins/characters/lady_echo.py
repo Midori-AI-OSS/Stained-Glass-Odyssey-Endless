@@ -1,12 +1,14 @@
 """Character plugin: LadyEcho."""
-from dataclasses import dataclass, field
+from dataclasses import dataclass
+from dataclasses import field
+
 from plugins.characters._base import IdleCharacter
 
 
 @dataclass
 class LadyEcho(IdleCharacter):
     """Character: LadyEcho."""
-    
+
     id: str = "lady_echo"
     name: str = "LadyEcho"
     short_lore: str = """A brilliant Aasimar inventor whose lightning echoes reverberate across the battlefield, each use costing her time from her age."""

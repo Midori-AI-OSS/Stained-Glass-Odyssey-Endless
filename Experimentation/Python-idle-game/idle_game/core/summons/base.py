@@ -5,8 +5,9 @@ Simplified from backend/autofighter/summons/base.py.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+from dataclasses import field
 import random
-from dataclasses import dataclass, field
 from typing import Any
 
 from ..stats import Stats
@@ -20,7 +21,7 @@ class Summon(Stats):
     They act in combat like regular characters but may disappear after
     a certain number of turns or when defeated.
     """
-    
+
     # Summon-specific properties
     instance_id: str = ""
     summoner_id: str = ""
@@ -28,19 +29,19 @@ class Summon(Stats):
     summon_source: str = "unknown"  # card/passive/relic that created this
     is_temporary: bool = True
     turns_remaining: int = -1  # -1 for permanent, >0 for temporary
-    
+
     # Summon AI behavior
     ai_behavior: str = field(default="aggressive", init=False)
     target_priority: str = field(default="random", init=False)
-    
+
     def __post_init__(self):
         """Initialize summon with proper inheritance from summoner."""
         super().__post_init__()
-        
+
         # Mark this as a summon for identification
         if not self.instance_id:
             self.instance_id = f"{self.summoner_id}_{self.summon_type}_{random.randint(1000, 9999)}"
-    
+
     @classmethod
     def create_from_summoner(
         cls,
@@ -66,7 +67,7 @@ class Summon(Stats):
         base_hp = int(summoner.max_hp * stat_multiplier)
         base_atk = int(summoner.atk * stat_multiplier)
         base_def = int(summoner.defense * stat_multiplier)
-        
+
         # Create the summon instance
         summon = cls(
             hp=base_hp,
@@ -77,14 +78,14 @@ class Summon(Stats):
             turns_remaining=turns_remaining,
             is_temporary=turns_remaining != -1,
         )
-        
+
         # Set base stats after creation (they have init=False)
         summon._base_max_hp = base_hp
         summon._base_atk = base_atk
         summon._base_defense = base_def
-        
+
         return summon
-    
+
     def tick_turn(self) -> bool:
         """Decrement turn counter if temporary.
         
@@ -93,25 +94,25 @@ class Summon(Stats):
         """
         if not self.is_temporary or self.turns_remaining < 0:
             return True
-        
+
         self.turns_remaining -= 1
-        
+
         return self.turns_remaining > 0
-    
+
     def is_alive(self) -> bool:
         """Check if summon is still alive."""
         return self.hp > 0
-    
+
     def should_despawn(self) -> bool:
         """Check if summon should be removed from combat."""
         if not self.is_alive():
             return True
-        
+
         if self.is_temporary and self.turns_remaining <= 0:
             return True
-        
+
         return False
-    
+
     def to_dict(self) -> dict[str, Any]:
         """Convert summon to dictionary for serialization.
         
@@ -133,7 +134,7 @@ class Summon(Stats):
             "ai_behavior": self.ai_behavior,
             "target_priority": self.target_priority,
         }
-    
+
     @classmethod
     def from_dict(cls, data: dict[str, Any]) -> Summon:
         """Create summon from dictionary.
@@ -154,12 +155,12 @@ class Summon(Stats):
             is_temporary=data.get("is_temporary", True),
             turns_remaining=data.get("turns_remaining", -1),
         )
-        
+
         # Set base stats after creation (they have init=False)
         summon._base_max_hp = data.get("max_hp", 100)
         summon._base_atk = data.get("atk", 10)
         summon._base_defense = data.get("defense", 10)
         summon.ai_behavior = data.get("ai_behavior", "aggressive")
         summon.target_priority = data.get("target_priority", "random")
-        
+
         return summon

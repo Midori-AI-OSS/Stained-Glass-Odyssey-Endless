@@ -1,12 +1,14 @@
 """Character plugin: Ryne."""
-from dataclasses import dataclass, field
+from dataclasses import dataclass
+from dataclasses import field
+
 from plugins.characters._base import IdleCharacter
 
 
 @dataclass
 class Ryne(IdleCharacter):
     """Character: Ryne."""
-    
+
     id: str = "ryne"
     name: str = "Ryne"
     short_lore: str = """An Oracle of Light who leads restoration missions with calm resolve, channeling light through twin blades with agile precision."""

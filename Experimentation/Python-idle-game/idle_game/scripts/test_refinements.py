@@ -1,11 +1,11 @@
-import sys
 from pathlib import Path
+import sys
 
 sys.path.append(str(Path(__file__).parent.parent.parent))
 
-from PySide6.QtWidgets import QApplication
 from idle_game.core.game_state import GameState
 from idle_game.gui.character_window import CharacterWindow
+from PySide6.QtWidgets import QApplication
 
 
 def test_refinements():
@@ -55,7 +55,7 @@ def test_refinements():
     if runtime["exp"] > 0:
         print("PASS: EXP gained when viewing.")
     else:
-        print(f"FAIL: No EXP gained when viewing.")
+        print("FAIL: No EXP gained when viewing.")
 
     # 3. Test UI / Stats text
     print("\n--- Testing UI Stats ---")

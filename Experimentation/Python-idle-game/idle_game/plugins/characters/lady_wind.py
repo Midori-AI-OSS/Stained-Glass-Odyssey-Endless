@@ -1,12 +1,14 @@
 """Character plugin: LadyWind."""
-from dataclasses import dataclass, field
+from dataclasses import dataclass
+from dataclasses import field
+
 from plugins.characters._base import IdleCharacter
 
 
 @dataclass
 class LadyWind(IdleCharacter):
     """Character: LadyWind."""
-    
+
     id: str = "lady_wind"
     name: str = "LadyWind"
     short_lore: str = """Lady Lightning's twin sister, an Aasimar aeromancer cloaked in bleeding winds who guards allies with precision despite her chaotic experiments."""

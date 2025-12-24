@@ -1,12 +1,14 @@
 """Character plugin: Casno."""
-from dataclasses import dataclass, field
+from dataclasses import dataclass
+from dataclasses import field
+
 from plugins.characters._base import IdleCharacter
 
 
 @dataclass
 class Casno(IdleCharacter):
     """Character: Casno."""
-    
+
     id: str = "casno"
     name: str = "Casno"
     short_lore: str = """A stoic veteran pyrokinetic who weaponizes recovery, taking tactical breaths to heal and strengthen before erupting back into combat."""

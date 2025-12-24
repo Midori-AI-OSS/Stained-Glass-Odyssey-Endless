@@ -1,34 +1,37 @@
 """Base character class for idle game plugins."""
-from dataclasses import dataclass, field
-from typing import Any, Dict, List
+from dataclasses import dataclass
+from dataclasses import field
+from typing import Any
+from typing import Dict
+from typing import List
 
 
 @dataclass
 class IdleCharacter:
     """Base class for idle game character plugins."""
-    
+
     plugin_type = "character"
-    
+
     # Required attributes
     id: str = ""
     name: str = ""
-    
+
     # Lore and description
     short_lore: str = ""
     full_lore: str = ""
-    
+
     # Character type and rarity
     char_type: str = "C"
     gacha_rarity: int = 0
-    
+
     # Combat attributes
     damage_type: str = "Physical"
     passives: List[str] = field(default_factory=list)
     special_abilities: List[str] = field(default_factory=list)
-    
+
     # UI attributes
     ui: Dict[str, Any] = field(default_factory=dict)
-    
+
     # Base stats
     base_stats: Dict[str, Any] = field(
         default_factory=lambda: {
@@ -46,11 +49,11 @@ class IdleCharacter:
             "vitality": 1.0,
         }
     )
-    
+
     # Growth and metadata
     growth: Dict[str, Any] = field(default_factory=dict)
     metadata: Dict[str, Any] = field(default_factory=dict)
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert character to dictionary format used by game state."""
         return {

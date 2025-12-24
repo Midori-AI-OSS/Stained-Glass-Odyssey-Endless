@@ -6,7 +6,6 @@ import logging
 from pathlib import Path
 import sys
 from types import ModuleType
-from typing import Any
 
 log = logging.getLogger(__name__)
 

@@ -3,19 +3,17 @@
 Tests stat modifiers, DoT/HoT effects, buffs, debuffs, and passives.
 """
 
-import pytest
 
 from core.buffs import BuffBase
 from core.buffs import BuffRegistry
 from core.debuffs import DebuffBase
-from core.debuffs import DebuffRegistry
 from core.effect_manager import EffectManager
-from core.effects import calculate_diminishing_returns
-from core.effects import create_stat_buff
 from core.effects import DamageOverTime
-from core.effects import get_current_stat_value
 from core.effects import HealingOverTime
 from core.effects import StatModifier
+from core.effects import calculate_diminishing_returns
+from core.effects import create_stat_buff
+from core.effects import get_current_stat_value
 from core.passives import PassiveRegistry
 from core.passives import apply_rank_passives
 from core.passives import resolve_passives_for_rank
@@ -26,7 +24,7 @@ def create_test_stats(**kwargs) -> Stats:
     """Helper to create a Stats object with custom base values."""
     stats = Stats()
     stats.__post_init__()
-    
+
     # Set base stats using internal attributes
     if 'base_atk' in kwargs:
         stats._base_atk = kwargs['base_atk']
@@ -36,7 +34,7 @@ def create_test_stats(**kwargs) -> Stats:
         stats._base_max_hp = kwargs['base_max_hp']
     if 'hp' in kwargs:
         stats.hp = kwargs['hp']
-    
+
     return stats
 
 
@@ -73,7 +71,7 @@ class TestGetCurrentStatValue:
     def test_get_standard_stats(self):
         """Should retrieve standard stat values."""
         stats = create_test_stats(base_atk=200, base_defense=150, hp=1000)
-        
+
         assert get_current_stat_value(stats, "max_hp") == stats.max_hp
         assert get_current_stat_value(stats, "atk") == stats.atk
         assert get_current_stat_value(stats, "defense") == stats.defense
@@ -93,7 +91,7 @@ class TestStatModifier:
         """Should apply additive stat changes."""
         stats = create_test_stats(base_atk=100)
         initial_atk = stats.atk
-        
+
         mod = StatModifier(
             stats=stats,
             name="test_buff",
@@ -103,14 +101,14 @@ class TestStatModifier:
             bypass_diminishing=True,
         )
         mod.apply()
-        
+
         assert stats.atk > initial_atk
 
     def test_apply_multiplicative_change(self):
         """Should apply multiplicative stat changes."""
         stats = create_test_stats(base_atk=100)
         initial_atk = stats.atk
-        
+
         mod = StatModifier(
             stats=stats,
             name="test_buff",
@@ -120,14 +118,14 @@ class TestStatModifier:
             bypass_diminishing=True,
         )
         mod.apply()
-        
+
         assert stats.atk > initial_atk
 
     def test_remove_effect(self):
         """Should remove effect from stats."""
         stats = create_test_stats(base_atk=100)
         initial_atk = stats.atk
-        
+
         mod = StatModifier(
             stats=stats,
             name="test_buff",
@@ -138,14 +136,14 @@ class TestStatModifier:
         )
         mod.apply()
         mod.remove()
-        
+
         assert stats.atk == initial_atk
 
     def test_tick_decrements_duration(self):
         """Should decrement duration on tick."""
         stats = Stats()
         stats.__post_init__()
-        
+
         mod = StatModifier(
             stats=stats,
             name="test_buff",
@@ -154,7 +152,7 @@ class TestStatModifier:
             deltas={"atk": 50},
         )
         mod.apply()
-        
+
         assert mod.turns == 3
         result = mod.tick()
         assert result is True
@@ -163,7 +161,7 @@ class TestStatModifier:
     def test_tick_removes_when_expired(self):
         """Should remove effect when duration reaches 0."""
         stats = create_test_stats(base_atk=100)
-        
+
         mod = StatModifier(
             stats=stats,
             name="test_buff",
@@ -173,7 +171,7 @@ class TestStatModifier:
             bypass_diminishing=True,
         )
         mod.apply()
-        
+
         result = mod.tick()
         assert result is False
         assert mod.turns == 0
@@ -185,7 +183,7 @@ class TestCreateStatBuff:
     def test_create_with_deltas(self):
         """Should create buff with additive deltas."""
         stats = create_test_stats(base_atk=100)
-        
+
         buff = create_stat_buff(
             stats,
             name="attack_boost",
@@ -193,7 +191,7 @@ class TestCreateStatBuff:
             atk=50,
             bypass_diminishing=True,
         )
-        
+
         assert isinstance(buff, StatModifier)
         assert buff.name == "attack_boost"
         assert buff.turns == 3
@@ -201,7 +199,7 @@ class TestCreateStatBuff:
     def test_create_with_multipliers(self):
         """Should create buff with multipliers."""
         stats = create_test_stats(base_atk=100)
-        
+
         buff = create_stat_buff(
             stats,
             name="attack_mult",
@@ -209,7 +207,7 @@ class TestCreateStatBuff:
             atk_mult=1.5,
             bypass_diminishing=True,
         )
-        
+
         assert buff.multipliers is not None
         assert "atk" in buff.multipliers
 
@@ -221,17 +219,17 @@ class TestDamageOverTime:
         """Should apply damage on tick."""
         stats = Stats(hp=1000)
         stats.__post_init__()
-        
+
         dot = DamageOverTime(
             name="Burn",
             damage=50,
             turns=3,
             id="burn_1",
         )
-        
+
         initial_hp = stats.hp
         result = dot.tick(stats)
-        
+
         assert result is True
         assert stats.hp < initial_hp
         assert dot.turns == 2
@@ -240,14 +238,14 @@ class TestDamageOverTime:
         """Should expire after duration ends."""
         stats = Stats(hp=1000)
         stats.__post_init__()
-        
+
         dot = DamageOverTime(
             name="Burn",
             damage=50,
             turns=1,
             id="burn_1",
         )
-        
+
         result = dot.tick(stats)
         assert result is False
         assert dot.turns == 0
@@ -256,14 +254,14 @@ class TestDamageOverTime:
         """Should stop ticking if target dies."""
         stats = Stats(hp=10)
         stats.__post_init__()
-        
+
         dot = DamageOverTime(
             name="Burn",
             damage=500,
             turns=3,
             id="burn_1",
         )
-        
+
         result = dot.tick(stats)
         assert stats.hp == 0
         assert result is False
@@ -276,17 +274,17 @@ class TestHealingOverTime:
         """Should apply healing on tick."""
         stats = Stats(hp=500)
         stats.__post_init__()
-        
+
         hot = HealingOverTime(
             name="Regen",
             healing=50,
             turns=3,
             id="regen_1",
         )
-        
+
         initial_hp = stats.hp
         result = hot.tick(stats)
-        
+
         assert result is True
         assert stats.hp > initial_hp
         assert hot.turns == 2
@@ -295,14 +293,14 @@ class TestHealingOverTime:
         """Should expire after duration ends."""
         stats = Stats(hp=500)
         stats.__post_init__()
-        
+
         hot = HealingOverTime(
             name="Regen",
             healing=50,
             turns=1,
             id="regen_1",
         )
-        
+
         result = hot.tick(stats)
         assert result is False
         assert hot.turns == 0
@@ -321,37 +319,37 @@ class TestBuffSystem:
     def test_buff_apply_to_stats(self):
         """Should apply buff to stats object."""
         stats = create_test_stats(base_atk=100)
-        
+
         buff = BuffBase(
             id="atk_up",
             name="Attack Up",
             stat_modifiers={"atk": 50},
             duration=3,
         )
-        
+
         initial_atk = stats.atk
         effect = buff.apply(stats)
-        
+
         assert effect is not None
         assert stats.atk > initial_atk
 
     def test_buff_registry_registration(self):
         """Should register and retrieve buffs."""
         registry = BuffRegistry()
-        
+
         class TestBuff(BuffBase):
             pass
-        
+
         registry.register("test", TestBuff)
         retrieved = registry.get_buff("test")
-        
+
         assert retrieved == TestBuff
 
     def test_buff_registry_apply(self):
         """Should apply buff via registry."""
         registry = BuffRegistry()
         stats = create_test_stats(base_atk=100)
-        
+
         class TestBuff(BuffBase):
             def __init__(self):
                 super().__init__(
@@ -359,10 +357,10 @@ class TestBuffSystem:
                     name="Test Buff",
                     stat_modifiers={"atk": 50},
                 )
-        
+
         registry.register("test_buff", TestBuff)
         effect = registry.apply_buff("test_buff", stats)
-        
+
         assert effect is not None
 
 
@@ -378,17 +376,17 @@ class TestDebuffSystem:
     def test_debuff_apply_negative_modifier(self):
         """Should apply negative stat modifier."""
         stats = create_test_stats(base_atk=100)
-        
+
         debuff = DebuffBase(
             id="atk_down",
             name="Attack Down",
             stat_modifiers={"atk": -30},
             duration=3,
         )
-        
+
         initial_atk = stats.atk
         effect = debuff.apply(stats)
-        
+
         assert effect is not None
         assert stats.atk < initial_atk
 
@@ -401,15 +399,15 @@ class TestEffectManager:
         stats = Stats(hp=1000)
         stats.__post_init__()
         manager = EffectManager(stats)
-        
+
         dot = DamageOverTime(name="Burn", damage=50, turns=3, id="burn_1")
         manager.add_dot(dot)
-        
+
         assert len(manager.dots) == 1
-        
+
         initial_hp = stats.hp
         manager.tick_dots()
-        
+
         assert stats.hp < initial_hp
         assert len(manager.dots) == 1  # Still active
 
@@ -418,15 +416,15 @@ class TestEffectManager:
         stats = Stats(hp=500)
         stats.__post_init__()
         manager = EffectManager(stats)
-        
+
         hot = HealingOverTime(name="Regen", healing=50, turns=3, id="regen_1")
         manager.add_hot(hot)
-        
+
         assert len(manager.hots) == 1
-        
+
         initial_hp = stats.hp
         manager.tick_hots()
-        
+
         assert stats.hp > initial_hp
         assert len(manager.hots) == 1
 
@@ -434,7 +432,7 @@ class TestEffectManager:
         """Should process all effect types."""
         stats = create_test_stats(hp=1000, base_atk=100)
         manager = EffectManager(stats)
-        
+
         dot = DamageOverTime(name="Burn", damage=50, turns=2, id="burn_1")
         hot = HealingOverTime(name="Regen", healing=30, turns=2, id="regen_1")
         mod = StatModifier(
@@ -444,13 +442,13 @@ class TestEffectManager:
             id="test_buff_1",
             deltas={"atk": 50},
         )
-        
+
         manager.add_dot(dot)
         manager.add_hot(hot)
         manager.add_modifier(mod)
-        
+
         results = manager.tick_all()
-        
+
         assert "dots_expired" in results
         assert "hots_expired" in results
         assert "mods_expired" in results
@@ -460,15 +458,15 @@ class TestEffectManager:
         stats = Stats(hp=1000)
         stats.__post_init__()
         manager = EffectManager(stats)
-        
+
         dot = DamageOverTime(name="Burn", damage=50, turns=3, id="burn_1")
         hot = HealingOverTime(name="Regen", healing=50, turns=3, id="regen_1")
-        
+
         manager.add_dot(dot)
         manager.add_hot(hot)
-        
+
         manager.cleanup()
-        
+
         assert len(manager.dots) == 0
         assert len(manager.hots) == 0
         assert len(manager.mods) == 0
@@ -480,73 +478,73 @@ class TestPassiveSystem:
     def test_passive_registry_registration(self):
         """Should register and retrieve passives."""
         registry = PassiveRegistry()
-        
+
         class TestPassive:
             id = "test_passive"
             trigger = "turn_start"
-        
+
         registry.register("test_passive", TestPassive)
         retrieved = registry.get_passive("test_passive")
-        
+
         assert retrieved == TestPassive
 
     def test_trigger_passive_with_matching_event(self):
         """Should trigger passive for matching event."""
         registry = PassiveRegistry()
-        
+
         triggered = []
-        
+
         class TestPassive:
             trigger = "battle_start"
-            
+
             def apply(self, owner, **kwargs):
                 triggered.append(owner)
-        
+
         registry.register("test", TestPassive)
-        
+
         class MockOwner:
             passives = ["test"]
-        
+
         owner = MockOwner()
         registry.trigger("battle_start", owner)
-        
+
         assert len(triggered) == 1
 
     def test_resolve_passives_for_rank(self):
         """Should resolve tier-specific passive variants."""
         registry = PassiveRegistry()
-        
+
         # Register base and tier variants
         class BasePassive:
             pass
-        
+
         class GlitchedPassive:
             pass
-        
+
         registry.register("test_passive", BasePassive)
         registry.register("test_passive_glitched", GlitchedPassive)
-        
+
         result = resolve_passives_for_rank("test_passive", "glitched", registry)
         assert result == ["test_passive_glitched"]
 
     def test_apply_rank_passives(self):
         """Should apply rank-specific passive transformations."""
         registry = PassiveRegistry()
-        
+
         class BasePassive:
             pass
-        
+
         class BossPassive:
             pass
-        
+
         registry.register("test_passive", BasePassive)
         registry.register("test_passive_boss", BossPassive)
-        
+
         class MockFoe:
             rank = "boss"
             passives = ["test_passive"]
-        
+
         foe = MockFoe()
         apply_rank_passives(foe, registry)
-        
+
         assert foe.passives == ["test_passive_boss"]

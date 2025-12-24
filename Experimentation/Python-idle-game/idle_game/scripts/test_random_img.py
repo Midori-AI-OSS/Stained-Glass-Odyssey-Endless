@@ -1,11 +1,11 @@
-import sys
 from pathlib import Path
+import sys
 
 # Add project root to path
 sys.path.append(str(Path(__file__).parent.parent.parent))
 
+
 from idle_game.core.game_state import GameState
-import os
 
 
 def test_random_image():

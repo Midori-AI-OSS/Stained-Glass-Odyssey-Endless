@@ -1,18 +1,23 @@
-from PySide6.QtWidgets import (
-    QWidget,
-    QVBoxLayout,
-    QLabel,
-    QHBoxLayout,
-    QPushButton,
-    QFrame,
-)
-from PySide6.QtCore import Qt, QTimer, QPropertyAnimation, QPoint, QEasingCurve, Signal
-from PySide6.QtGui import QPixmap, QFont
 from pathlib import Path
+import random
+from typing import Any
+from typing import Dict
+
 from idle_game.core.save_manager import SaveManager
 from idle_game.gui.widgets import PulseProgressBar
-from typing import Dict, Any
-import random
+from PySide6.QtCore import QEasingCurve
+from PySide6.QtCore import QPropertyAnimation
+from PySide6.QtCore import Qt
+from PySide6.QtCore import QTimer
+from PySide6.QtCore import Signal
+from PySide6.QtGui import QFont
+from PySide6.QtGui import QPixmap
+from PySide6.QtWidgets import QFrame
+from PySide6.QtWidgets import QHBoxLayout
+from PySide6.QtWidgets import QLabel
+from PySide6.QtWidgets import QPushButton
+from PySide6.QtWidgets import QVBoxLayout
+from PySide6.QtWidgets import QWidget
 
 
 class FightWindow(QWidget):

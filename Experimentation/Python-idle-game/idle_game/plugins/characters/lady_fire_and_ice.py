@@ -1,12 +1,14 @@
 """Character plugin: LadyFireAndIce."""
-from dataclasses import dataclass, field
+from dataclasses import dataclass
+from dataclasses import field
+
 from plugins.characters._base import IdleCharacter
 
 
 @dataclass
 class LadyFireAndIce(IdleCharacter):
     """Character: LadyFireAndIce."""
-    
+
     id: str = "lady_fire_and_ice"
     name: str = "LadyFireAndIce"
     short_lore: str = """A dual-natured elemental master who switches between volcanic fury and arctic precision, creating devastating thermal shocks."""

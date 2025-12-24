@@ -5,8 +5,9 @@ Adapted from backend/autofighter/mapgen.py without async dependencies.
 
 from __future__ import annotations
 
+from dataclasses import asdict
+from dataclasses import dataclass
 import random
-from dataclasses import asdict, dataclass
 from typing import Any
 
 
@@ -38,7 +39,7 @@ class MapNode:
             tags = (raw_tags,)
         else:
             tags = ()
-        
+
         return cls(
             room_id=data.get('room_id', 0),
             room_type=data.get('room_type', 'battle-weak'),
@@ -53,9 +54,9 @@ class MapNode:
 
 class MapGenerator:
     """Generates floor maps with various room types."""
-    
+
     ROOMS_PER_FLOOR = 15  # Simplified from 100
-    
+
     def __init__(
         self,
         seed: str | None = None,
@@ -91,9 +92,9 @@ class MapGenerator:
         """
         if boss_rush:
             return self._generate_boss_rush_floor()
-        
+
         nodes: list[MapNode] = []
-        
+
         # Start room
         nodes.append(
             MapNode(
@@ -105,18 +106,18 @@ class MapGenerator:
                 pressure=self.pressure,
             )
         )
-        
+
         # Middle rooms
         middle_count = self.ROOMS_PER_FLOOR - 2
         room_types = self._generate_middle_rooms(middle_count)
-        
+
         for idx, room_type in enumerate(room_types, start=1):
             tags: tuple[str, ...] = ()
             if room_type == "battle-prime":
                 tags = ("prime",)
             elif room_type == "battle-elite":
                 tags = ("elite",)
-            
+
             nodes.append(
                 MapNode(
                     room_id=idx,
@@ -128,7 +129,7 @@ class MapGenerator:
                     tags=tags,
                 )
             )
-        
+
         # Boss room
         nodes.append(
             MapNode(
@@ -140,7 +141,7 @@ class MapGenerator:
                 pressure=self.pressure,
             )
         )
-        
+
         return nodes
 
     def _generate_middle_rooms(self, count: int) -> list[str]:
@@ -153,49 +154,49 @@ class MapGenerator:
             List of room type strings
         """
         room_types: list[str] = []
-        
+
         # Add 1-2 shops
         shop_count = 1 if count > 5 else 0
         room_types.extend(["shop"] * shop_count)
-        
+
         # Add 1 rest room every 3 floors
         if self.floor % 3 == 0 and count > 3:
             room_types.append("rest")
-        
+
         # Fill remaining with battles
         remaining = count - len(room_types)
-        
+
         # Distribution: 60% normal, 30% weak, 10% elite/prime
         normal_count = int(remaining * 0.6)
         weak_count = int(remaining * 0.3)
         elite_count = remaining - normal_count - weak_count
-        
+
         room_types.extend(["battle-normal"] * normal_count)
         room_types.extend(["battle-weak"] * weak_count)
-        
+
         # Alternate between elite and prime for variety
         for i in range(elite_count):
             if i % 2 == 0:
                 room_types.append("battle-elite")
             else:
                 room_types.append("battle-prime")
-        
+
         # Shuffle to randomize order
         self._rand.shuffle(room_types)
-        
+
         # Ensure shops appear in latter half
         shops = [rt for rt in room_types if rt == "shop"]
         if shops:
             non_shops = [rt for rt in room_types if rt != "shop"]
             midpoint = len(non_shops) // 2
             room_types = non_shops[:midpoint] + shops + non_shops[midpoint:]
-        
+
         return room_types
 
     def _generate_boss_rush_floor(self) -> list[MapNode]:
         """Generate a floor with only boss battles."""
         nodes: list[MapNode] = []
-        
+
         for index in range(self.ROOMS_PER_FLOOR):
             room_type = "start" if index == 0 else "battle-boss"
             nodes.append(
@@ -208,5 +209,5 @@ class MapGenerator:
                     pressure=self.pressure,
                 )
             )
-        
+
         return nodes

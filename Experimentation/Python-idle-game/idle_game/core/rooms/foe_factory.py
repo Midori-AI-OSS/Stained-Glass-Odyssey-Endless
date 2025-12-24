@@ -30,10 +30,10 @@ def create_foe(
     base_hp = 100
     base_atk = 10
     base_def = 5
-    
+
     # Scale by floor
     floor_multiplier = 1.0 + (floor - 1) * 0.15
-    
+
     # Scale by difficulty
     difficulty_multipliers = {
         "weak": 0.7,
@@ -43,13 +43,13 @@ def create_foe(
         "boss": 3.0,
     }
     diff_mult = difficulty_multipliers.get(difficulty, 1.0)
-    
+
     # Scale by pressure
     pressure_mult = 1.0 + (pressure * 0.1)
-    
+
     # Calculate final stats
     total_mult = floor_multiplier * diff_mult * pressure_mult
-    
+
     foe = {
         "id": foe_id,
         "name": foe_id.replace("_", " ").title(),
@@ -63,7 +63,7 @@ def create_foe(
         "is_boss": difficulty == "boss",
         "is_elite": difficulty in ("elite", "prime", "boss"),
     }
-    
+
     return foe
 
 
@@ -94,7 +94,7 @@ def generate_enemy_party(
             enemy_count = random.randint(2, 3)
         else:  # weak
             enemy_count = random.randint(1, 2)
-    
+
     # Pool of enemy types
     enemy_types = [
         "slime",
@@ -108,7 +108,7 @@ def generate_enemy_party(
         "demon",
         "dragon",
     ]
-    
+
     # Select appropriate enemies based on floor
     if floor <= 3:
         available = enemy_types[:4]
@@ -118,21 +118,21 @@ def generate_enemy_party(
         available = enemy_types[:8]
     else:
         available = enemy_types
-    
+
     # Generate enemies
     enemies: list[dict[str, Any]] = []
-    
+
     for i in range(enemy_count):
         enemy_type = random.choice(available)
         foe_id = f"{enemy_type}_{floor}_{i}"
-        
+
         enemy = create_foe(
             foe_id=foe_id,
             floor=floor,
             difficulty=difficulty,
             pressure=pressure,
         )
-        
+
         enemies.append(enemy)
-    
+
     return enemies

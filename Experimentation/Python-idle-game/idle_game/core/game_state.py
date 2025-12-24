@@ -1,4 +1,3 @@
-import json
 from pathlib import Path
 import random
 from typing import Any
@@ -9,9 +8,9 @@ from PySide6.QtCore import QObject
 from PySide6.QtCore import QTimer
 from PySide6.QtCore import Signal
 
+from ..plugins.plugin_loader import PluginLoader
 from .mapgen import MapGenerator
 from .summons.manager import SummonManager
-from ..plugins.plugin_loader import PluginLoader
 
 
 class GameState(QObject):
@@ -72,24 +71,24 @@ class GameState(QObject):
             # Initialize plugin loader
             loader = PluginLoader()
             loader.discover(str(plugins_path))
-            
+
             # Get character plugins
             character_plugins = loader.get_plugins("character")
-            
+
             if not character_plugins:
                 print("Error: No character plugins found")
                 return
-            
+
             self.characters = []
             self.characters_map = {}
 
             for plugin_id, plugin_class in character_plugins.items():
                 # Instantiate the character plugin
                 char_instance = plugin_class()
-                
+
                 # Convert to dictionary
                 char = char_instance.to_dict()
-                
+
                 # Ensure metadata exists for randomization check
                 char.setdefault("metadata", {})
 

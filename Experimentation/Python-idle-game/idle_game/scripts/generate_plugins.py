@@ -1,8 +1,9 @@
 """Generate idle game character plugins from backend plugins."""
 import ast
-import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
+from typing import Dict
+from typing import Optional
 
 # Backend plugins directory
 BACKEND_PLUGINS_DIR = Path(__file__).parent.parent.parent.parent.parent / "backend" / "plugins" / "characters"
@@ -178,7 +179,7 @@ def parse_backend_character(file_path: Path) -> Optional[Dict[str, Any]]:
     assets_dir = Path(__file__).parent.parent / "assets" / "characters"
     portrait_dir = assets_dir / data["id"]
     portrait_file = assets_dir / f"{data['id']}.png"
-    
+
     if portrait_dir.exists() and portrait_dir.is_dir():
         data["ui"]["portrait"] = str(portrait_dir)
     elif portrait_file.exists():
@@ -195,7 +196,7 @@ def generate_character_plugin(data: Dict[str, Any]) -> str:
             return "[]"
         items = ", ".join(f'"{item}"' if isinstance(item, str) else str(item) for item in lst)
         return f"[{items}]"
-    
+
     def format_dict(d):
         if not d:
             return "{}"
@@ -206,7 +207,7 @@ def generate_character_plugin(data: Dict[str, Any]) -> str:
             else:
                 items.append(f'"{k}": {v}')
         return "{" + ", ".join(items) + "}"
-    
+
     # Build the class
     code = f'''"""Character plugin: {data['name']}."""
 from dataclasses import dataclass, field
@@ -227,24 +228,24 @@ class {data['name'].replace(" ", "")}(IdleCharacter):
     passives: list = field(default_factory=lambda: {format_list(data['passives'])})
     special_abilities: list = field(default_factory=lambda: {format_list(data['special_abilities'])})
 '''
-    
+
     # Add UI if present
     if data.get("ui"):
         code += f'    ui: dict = field(default_factory=lambda: {format_dict(data["ui"])})\n'
-    
+
     # Add base stats
-    code += f'    base_stats: dict = field(default_factory=lambda: {{\n'
+    code += '    base_stats: dict = field(default_factory=lambda: {\n'
     for key, val in data["base_stats"].items():
         code += f'        "{key}": {val},\n'
     code += '    })\n'
-    
+
     return code
 
 
 def main():
     """Generate all character plugins."""
     IDLE_PLUGINS_DIR.mkdir(parents=True, exist_ok=True)
-    
+
     generated = 0
     for file_path in BACKEND_PLUGINS_DIR.glob("*.py"):
         if (
@@ -254,7 +255,7 @@ def main():
             or file_path.name == "player.py"
         ):
             continue
-        
+
         print(f"Processing {file_path.name}...")
         data = parse_backend_character(file_path)
         if data:
@@ -264,7 +265,7 @@ def main():
                 f.write(code)
             print(f"  Generated {output_file.name}")
             generated += 1
-    
+
     print(f"\nGenerated {generated} character plugins")
 
 

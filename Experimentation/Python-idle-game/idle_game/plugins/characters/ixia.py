@@ -1,12 +1,14 @@
 """Character plugin: Ixia."""
-from dataclasses import dataclass, field
+from dataclasses import dataclass
+from dataclasses import field
+
 from plugins.characters._base import IdleCharacter
 
 
 @dataclass
 class Ixia(IdleCharacter):
     """Character: Ixia."""
-    
+
     id: str = "ixia"
     name: str = "Ixia"
     short_lore: str = """A diminutive lightning-wielder who channels tremendous electrical power, proving that strength isn't measured by size."""

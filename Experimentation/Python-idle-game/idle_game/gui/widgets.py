@@ -1,8 +1,13 @@
-from PySide6.QtWidgets import QProgressBar, QStylePainter, QStyleOptionProgressBar
-from PySide6.QtCore import Qt, QPropertyAnimation, Property, QRect
-from PySide6.QtGui import QPainter, QLinearGradient, QColor
-
 import random
+
+from PySide6.QtCore import Property
+from PySide6.QtCore import QPropertyAnimation
+from PySide6.QtCore import QRect
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QColor
+from PySide6.QtGui import QLinearGradient
+from PySide6.QtGui import QPainter
+from PySide6.QtWidgets import QProgressBar
 
 
 class PulseProgressBar(QProgressBar):
@@ -95,7 +100,7 @@ class PulseProgressBar(QProgressBar):
         c = self._pulse_color
         highlight = QColor(c.red(), c.green(), c.blue(), 0)
         mid_shine = c
-        
+
         gradient.setColorAt(0, highlight)
         gradient.setColorAt(0.4, mid_shine)
         gradient.setColorAt(0.6, mid_shine) # Wider peak for better visibility
@@ -114,7 +119,7 @@ class PulseProgressBar(QProgressBar):
         top_line_gradient.setColorAt(0, QColor(255, 255, 255, 0))
         top_line_gradient.setColorAt(0.5, top_line_color)
         top_line_gradient.setColorAt(1, QColor(255, 255, 255, 0))
-        
+
         painter.setBrush(top_line_gradient)
         painter.drawRect(QRect(0, 0, rect.width(), 2))
 

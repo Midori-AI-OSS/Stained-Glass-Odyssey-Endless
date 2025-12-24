@@ -1,12 +1,14 @@
 """Character plugin: Kboshi."""
-from dataclasses import dataclass, field
+from dataclasses import dataclass
+from dataclasses import field
+
 from plugins.characters._base import IdleCharacter
 
 
 @dataclass
 class Kboshi(IdleCharacter):
     """Character: Kboshi."""
-    
+
     id: str = "kboshi"
     name: str = "Kboshi"
     short_lore: str = """A master of dark energy who channels void forces through cyclical attacks, tearing at reality with perpetual loops of destruction."""

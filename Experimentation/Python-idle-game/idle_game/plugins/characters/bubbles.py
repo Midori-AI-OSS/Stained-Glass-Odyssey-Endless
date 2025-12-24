@@ -1,12 +1,14 @@
 """Character plugin: Bubbles."""
-from dataclasses import dataclass, field
+from dataclasses import dataclass
+from dataclasses import field
+
 from plugins.characters._base import IdleCharacter
 
 
 @dataclass
 class Bubbles(IdleCharacter):
     """Character: Bubbles."""
-    
+
     id: str = "bubbles"
     name: str = "Bubbles"
     short_lore: str = """An enthusiastic aquatic fighter who creates cascading bubble explosions, turning playful attacks into devastating chain reactions."""

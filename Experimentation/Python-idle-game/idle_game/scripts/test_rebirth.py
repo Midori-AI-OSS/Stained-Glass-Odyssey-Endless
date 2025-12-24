@@ -1,11 +1,11 @@
-import sys
 from pathlib import Path
+import sys
 
 sys.path.append(str(Path(__file__).parent.parent.parent))
 
-from PySide6.QtWidgets import QApplication
 from idle_game.core.game_state import GameState
 from idle_game.gui.character_window import CharacterWindow
+from PySide6.QtWidgets import QApplication
 
 
 def test_rebirth():

@@ -1,12 +1,14 @@
 import ast
+from dataclasses import asdict
+from dataclasses import dataclass
+from dataclasses import field
 import json
-import os
-import re
-from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any, Dict, List, Optional
-
 import shutil
+from typing import Any
+from typing import Dict
+from typing import List
+from typing import Optional
 
 # Constants
 PLUGIN_DIR = Path("/tmp/Midori-AI-AutoFighter/backend/plugins/characters")

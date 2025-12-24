@@ -4,10 +4,7 @@ Tests action queue, battle initialization, turn execution, damage calculation,
 and reward generation.
 """
 
-import pytest
-
 from core.action_queue import ActionQueue
-from core.action_queue import TURN_COUNTER_ID
 from core.battle.engine import BattleResult
 from core.battle.engine import finalize_battle
 from core.battle.engine import run_battle
@@ -17,13 +14,11 @@ from core.battle.events import handle_battle_start
 from core.battle.events import handle_damage_dealt
 from core.battle.foe_turn import execute_foe_turn
 from core.battle.initialization import EnrageState
-from core.battle.initialization import TurnLoopContext
 from core.battle.initialization import initialize_turn_loop
 from core.battle.player_turn import execute_player_turn
 from core.battle.resolution import calculate_battle_rewards
-from core.stats import GAUGE_START
 from core.stats import Stats
-
+import pytest
 
 # Fixtures
 

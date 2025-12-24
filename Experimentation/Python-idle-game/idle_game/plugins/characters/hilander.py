@@ -1,12 +1,14 @@
 """Character plugin: Hilander."""
-from dataclasses import dataclass, field
+from dataclasses import dataclass
+from dataclasses import field
+
 from plugins.characters._base import IdleCharacter
 
 
 @dataclass
 class Hilander(IdleCharacter):
     """Character: Hilander."""
-    
+
     id: str = "hilander"
     name: str = "Hilander"
     short_lore: str = """A passionate brewmaster who treats combat like a brewing process, creating explosive combinations through critical ferment techniques."""

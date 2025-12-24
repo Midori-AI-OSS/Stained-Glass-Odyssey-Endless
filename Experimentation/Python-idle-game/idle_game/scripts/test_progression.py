@@ -1,5 +1,5 @@
-import sys
 from pathlib import Path
+import sys
 
 sys.path.append(str(Path(__file__).parent.parent.parent))
 
@@ -24,7 +24,7 @@ def test_progression():
     final_atk = char["base_stats"]["atk"]
     final_mit = char["base_stats"].get("mitigation", 0)
 
-    print(f"\nFinal State after 50 Levels:")
+    print("\nFinal State after 50 Levels:")
     print(f"Level: {char['runtime']['level']}")
     print(
         f"ATK: {initial_atk:.2f} -> {final_atk:.2f} (Gain: {final_atk-initial_atk:.2f})"

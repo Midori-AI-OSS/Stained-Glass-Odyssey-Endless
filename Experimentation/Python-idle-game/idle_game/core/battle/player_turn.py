@@ -5,7 +5,6 @@ Simplified for Qt-based idle game (synchronous, basic AI for now).
 """
 
 import random
-from typing import Any
 
 from ..stats import Stats
 from .events import handle_damage_dealt

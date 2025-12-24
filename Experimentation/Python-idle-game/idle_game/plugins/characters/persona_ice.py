@@ -1,12 +1,14 @@
 """Character plugin: PersonaIce."""
-from dataclasses import dataclass, field
+from dataclasses import dataclass
+from dataclasses import field
+
 from plugins.characters._base import IdleCharacter
 
 
 @dataclass
 class PersonaIce(IdleCharacter):
     """Character: PersonaIce."""
-    
+
     id: str = "persona_ice"
     name: str = "PersonaIce"
     short_lore: str = """A disciplined cryokinetic tank who shields his sisters with protective frost that hardens against blows and heals allies."""

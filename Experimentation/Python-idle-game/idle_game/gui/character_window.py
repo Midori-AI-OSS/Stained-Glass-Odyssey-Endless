@@ -1,16 +1,17 @@
-from PySide6.QtWidgets import QWidget, QVBoxLayout, QLabel, QHBoxLayout, QPushButton
-from PySide6.QtCore import (
-    Qt,
-    QPropertyAnimation,
-    QVariantAnimation,
-    QPoint,
-    Property,
-    Signal,
-)
-from PySide6.QtGui import QPixmap, QColor
 from pathlib import Path
+
 from idle_game.core.save_manager import SaveManager
 from idle_game.gui.widgets import PulseProgressBar
+from PySide6.QtCore import Qt
+from PySide6.QtCore import QVariantAnimation
+from PySide6.QtCore import Signal
+from PySide6.QtGui import QColor
+from PySide6.QtGui import QPixmap
+from PySide6.QtWidgets import QHBoxLayout
+from PySide6.QtWidgets import QLabel
+from PySide6.QtWidgets import QPushButton
+from PySide6.QtWidgets import QVBoxLayout
+from PySide6.QtWidgets import QWidget
 
 
 class CharacterWindow(QWidget):

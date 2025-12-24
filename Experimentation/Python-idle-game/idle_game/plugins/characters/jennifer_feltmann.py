@@ -1,12 +1,14 @@
 """Character plugin: Jennifer Feltmann."""
-from dataclasses import dataclass, field
+from dataclasses import dataclass
+from dataclasses import field
+
 from plugins.characters._base import IdleCharacter
 
 
 @dataclass
 class JenniferFeltmann(IdleCharacter):
     """Character: Jennifer Feltmann."""
-    
+
     id: str = "jennifer_feltmann"
     name: str = "Jennifer Feltmann"
     short_lore: str = """A veteran programming and robotics teacher who channels twenty years of classroom management into debilitating 'bad student' debuffs that bring chaos to a grinding halt."""

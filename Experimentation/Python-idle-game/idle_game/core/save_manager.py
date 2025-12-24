@@ -23,7 +23,7 @@ class SaveManager:
             save_data["floor"] = getattr(game_state, "current_floor", 1)
             save_data["loop"] = getattr(game_state, "current_loop", 1)
             save_data["room_index"] = getattr(game_state, "current_room_index", 0)
-            
+
             # Save summons if manager exists
             if hasattr(game_state, "summon_manager") and game_state.summon_manager:
                 save_data["summons"] = game_state.summon_manager.to_dict()

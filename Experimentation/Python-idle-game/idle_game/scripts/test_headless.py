@@ -1,6 +1,5 @@
-import sys
 from pathlib import Path
-import time
+import sys
 
 # Add project root
 sys.path.append(str(Path(__file__).parent.parent))

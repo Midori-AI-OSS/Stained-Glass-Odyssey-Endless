@@ -1,12 +1,14 @@
 """Character plugin: Carly."""
-from dataclasses import dataclass, field
+from dataclasses import dataclass
+from dataclasses import field
+
 from plugins.characters._base import IdleCharacter
 
 
 @dataclass
 class Carly(IdleCharacter):
     """Character: Carly."""
-    
+
     id: str = "carly"
     name: str = "Carly"
     short_lore: str = """A sim human guardian whose core programming is protection, converting offensive power into brilliant light barriers that keep everyone safe."""

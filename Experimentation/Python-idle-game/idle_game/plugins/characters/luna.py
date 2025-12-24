@@ -1,12 +1,14 @@
 """Character plugin: Luna."""
-from dataclasses import dataclass, field
+from dataclasses import dataclass
+from dataclasses import field
+
 from plugins.characters._base import IdleCharacter
 
 
 @dataclass
 class Luna(IdleCharacter):
     """Character: Luna."""
-    
+
     id: str = "luna"
     name: str = "Luna"
     short_lore: str = """A precise starlit scholar who fights with moonlight magic and calculated blade work, controlling the battlefield like a clockmaker in a storm."""

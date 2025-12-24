@@ -8,8 +8,6 @@ import math
 import random
 from typing import Any
 
-from ..stats import Stats
-
 # Base reward constants
 BASE_GOLD_MIN = 10
 BASE_GOLD_MAX = 50
