@@ -9,6 +9,9 @@ from PySide6.QtCore import QObject
 from PySide6.QtCore import QTimer
 from PySide6.QtCore import Signal
 
+from .mapgen import MapGenerator
+from .summons.manager import SummonManager
+
 
 class GameState(QObject):
     # Signal when character data is loaded
@@ -36,6 +39,14 @@ class GameState(QObject):
         self.rr_penalty_stacks: Dict[str, int] = {}
 
         self.mods = {"shared_exp": False, "risk_reward": {"enabled": False, "level": 1}}
+
+        # Wave 4 Systems: Map generation and summons
+        self.map_generator: MapGenerator | None = None
+        self.current_floor: int = 1
+        self.current_loop: int = 1
+        self.current_map: List[Any] = []  # MapNodes
+        self.current_room_index: int = 0
+        self.summon_manager: SummonManager = SummonManager()
 
         self.timer = QTimer()
         self.timer.timeout.connect(self._on_tick)
