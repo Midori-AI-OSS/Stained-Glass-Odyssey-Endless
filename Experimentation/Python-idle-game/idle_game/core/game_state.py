@@ -11,6 +11,7 @@ from PySide6.QtCore import Signal
 
 from .mapgen import MapGenerator
 from .summons.manager import SummonManager
+from ..plugins.plugin_loader import PluginLoader
 
 
 class GameState(QObject):
@@ -60,21 +61,35 @@ class GameState(QObject):
             self.active_viewing_ids.remove(char_id)
 
     def load_characters(self):
-        """Loads character data from the extracted JSON."""
-        data_path = Path(__file__).parent.parent / "data" / "characters.json"
+        """Loads character data from plugins."""
+        plugins_path = Path(__file__).parent.parent / "plugins" / "characters"
 
-        if not data_path.exists():
-            print(f"Error: Data file not found at {data_path}")
+        if not plugins_path.exists():
+            print(f"Error: Plugins directory not found at {plugins_path}")
             return
 
         try:
-            with open(data_path, "r", encoding="utf-8") as f:
-                raw_characters_data = json.load(f)
-
+            # Initialize plugin loader
+            loader = PluginLoader()
+            loader.discover(str(plugins_path))
+            
+            # Get character plugins
+            character_plugins = loader.get_plugins("character")
+            
+            if not character_plugins:
+                print("Error: No character plugins found")
+                return
+            
             self.characters = []
             self.characters_map = {}
 
-            for char in raw_characters_data:
+            for plugin_id, plugin_class in character_plugins.items():
+                # Instantiate the character plugin
+                char_instance = plugin_class()
+                
+                # Convert to dictionary
+                char = char_instance.to_dict()
+                
                 # Ensure metadata exists for randomization check
                 char.setdefault("metadata", {})
 
