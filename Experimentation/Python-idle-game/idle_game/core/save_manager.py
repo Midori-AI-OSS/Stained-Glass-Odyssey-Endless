@@ -1,6 +1,6 @@
 import json
 from pathlib import Path
-from typing import Dict, Any
+from typing import Any
 
 
 class SaveManager:
@@ -8,8 +8,8 @@ class SaveManager:
     SETTINGS_FILE = Path(__file__).parent.parent / "data" / "settings.json"
 
     @staticmethod
-    def save_game(characters: list[dict[str, Any]], party: list[str]):
-        """Saves character runtime stats and the active party."""
+    def save_game(characters: list[dict[str, Any]], party: list[str], game_state: Any = None):
+        """Saves character runtime stats, active party, and new systems (map, summons)."""
         save_data = {"characters": {}, "party": party}
         for char in characters:
             save_data["characters"][char["id"]] = {
@@ -17,6 +17,16 @@ class SaveManager:
                 "base_stats": char.get("base_stats", {}),
                 "metadata": char.get("metadata", {}),
             }
+
+        # Save Wave 4 systems if game_state provided
+        if game_state is not None:
+            save_data["floor"] = getattr(game_state, "current_floor", 1)
+            save_data["loop"] = getattr(game_state, "current_loop", 1)
+            save_data["room_index"] = getattr(game_state, "current_room_index", 0)
+            
+            # Save summons if manager exists
+            if hasattr(game_state, "summon_manager") and game_state.summon_manager:
+                save_data["summons"] = game_state.summon_manager.to_dict()
 
         try:
             # Ensure data dir exists
