@@ -1,8 +1,13 @@
 import json
 from pathlib import Path
-from typing import Dict, Any, List
 import random
-from PySide6.QtCore import QObject, Signal, Slot, QTimer
+from typing import Any
+from typing import Dict
+from typing import List
+
+from PySide6.QtCore import QObject
+from PySide6.QtCore import QTimer
+from PySide6.QtCore import Signal
 
 
 class GameState(QObject):
@@ -120,13 +125,13 @@ class GameState(QObject):
                 portrait_path = char.get("ui", {}).get("portrait")
                 if portrait_path:
                     p = Path(portrait_path)
-                    
+
                     # Convert relative paths to absolute based on project root
                     if not p.is_absolute():
                         # Assuming paths are relative to the parent of idle_game directory
                         project_root = Path(__file__).parent.parent.parent
                         p = project_root / portrait_path
-                    
+
                     if p.exists() and p.is_dir():
                         # It's a directory, pick a random PNG
                         pngs = list(p.glob("*.png"))
@@ -149,7 +154,7 @@ class GameState(QObject):
     def _on_tick(self):
         """Called every second to update game state."""
         self.tick_count += 1
-        
+
         # Load characters if not already loaded
         if not self.characters:
             self.load_characters()
@@ -162,34 +167,34 @@ class GameState(QObject):
         rr_mod = self.mods.get("risk_reward", {})
         is_rr_active = rr_mod.get("enabled", False)
         rr_level = rr_mod.get("level", 1)
-        
+
         shared_bonus = 0.0
         if is_shared_exp_active:
             for vid in self.active_viewing_ids:
                 vchar = self.characters_map.get(vid)
                 if not vchar: continue
-                
+
                 v_rt = vchar["runtime"]
                 v_exp_mult = v_rt.get("exp_multiplier", 1.0)
                 v_c_mult = 1.0
-                
-                if (vchar["id"] in self.fight_boost_expiry and 
+
+                if (vchar["id"] in self.fight_boost_expiry and
                     self.tick_count < self.fight_boost_expiry[vchar["id"]]):
                     v_c_mult = 2.0
-                elif (vchar["id"] in self.fight_debuff_expiry and 
+                elif (vchar["id"] in self.fight_debuff_expiry and
                       self.tick_count < self.fight_debuff_expiry[vchar["id"]]):
                     v_c_mult = 0.25
-                
+
                 shared_bonus += (v_exp_mult * v_c_mult) * 0.01
 
         needs_save = False
         any_idle = not self.active_viewing_ids
-        
+
         for char_id, char in self.characters_map.items():
             runtime = char["runtime"]
             exp_mult = runtime.get("exp_multiplier", 1.0)
             req_mult = runtime.get("req_multiplier", 1.0)
-            
+
             # 1. Combat Multiplier
             combat_mult = 1.0
             if char_id in self.fight_boost_expiry:
@@ -216,7 +221,7 @@ class GameState(QObject):
             # 3. EXP Gain Logic
             is_viewed = char_id in self.active_viewing_ids
             gain = 0.0
-            
+
             if is_shared_exp_active:
                 if is_viewed: gain = (exp_mult * combat_mult) * 0.45
             elif is_viewed:
@@ -231,10 +236,10 @@ class GameState(QObject):
             eff = self.get_effective_stats(char)
             regain = eff.get("regain", 0)
             if "Light" in char.get("damage_type", ""): regain *= 15.0
-            
+
             hp_tick = regain / 10.0
             if any_idle: hp_tick += 5.0
-            
+
             runtime["hp"] = min(runtime["max_hp"], runtime["hp"] + hp_tick)
 
             # 5. Risk & Reward Drain
@@ -242,7 +247,7 @@ class GameState(QObject):
                 drain = 1.5 * rr_level
                 prev_hp = runtime["hp"]
                 runtime["hp"] = max(0.0, runtime["hp"] - drain)
-                
+
                 if runtime["hp"] == 0 and prev_hp > 0:
                     self.rr_penalty_stacks[char_id] = self.rr_penalty_stacks.get(char_id, 0) + 1
                     self.rr_penalty_expiry[char_id] = max(self.tick_count, self.rr_penalty_expiry.get(char_id, 0)) + (35 * 60 * 10)
@@ -253,7 +258,7 @@ class GameState(QObject):
             if runtime["exp"] >= max_exp:
                 self.level_up_character(char)
                 needs_save = True
-                
+
                 lvl = runtime["level"]
                 tax = 1.5 ** ((lvl - 50) // 5) if lvl >= 50 else 1.0
                 runtime["next_req"] = (lvl * 30 * req_mult * tax) * random.uniform(0.95, 1.05)
