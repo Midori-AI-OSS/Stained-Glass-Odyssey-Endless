@@ -1,4 +1,4 @@
-# Midori AI AutoFighter
+# Stained Glass Odyssey: Endless
 
 A web-based auto-battler game featuring strategic party management, elemental combat, and character progression.
 
