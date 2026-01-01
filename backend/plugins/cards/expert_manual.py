@@ -22,7 +22,7 @@ class ExpertManual(CardBase):
 
         extra_xp_used = set()
 
-        async def _on_kill(target, killer, damage, death_type, details):
+        async def _on_kill(target, killer, damage, _death_type, details):
             # Check if killer is one of our party members
             if killer in party.members:
                 killer_id = id(killer)

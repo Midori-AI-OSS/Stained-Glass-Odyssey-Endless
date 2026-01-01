@@ -390,12 +390,7 @@ async function ensureRewardAdvanceAllowed({ skipRewardCheck = false } = {}) {
     return;
   }
 
-  let latestState;
-  try {
-    latestState = await getUIState();
-  } catch (error) {
-    throw error;
-  }
+  let latestState = await getUIState();
 
   const latestRoomData = latestState?.game_state?.current_state?.room_data ?? initialRoomData;
   if (latestRoomData && latestRoomData !== initialRoomData && typeof runState?.setRoomData === 'function') {

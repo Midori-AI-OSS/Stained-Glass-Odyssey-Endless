@@ -8,7 +8,6 @@ import pytest
 from core.buffs import BuffBase
 from core.buffs import BuffRegistry
 from core.debuffs import DebuffBase
-from core.debuffs import DebuffRegistry
 from core.effect_manager import EffectManager
 from core.effects import calculate_diminishing_returns
 from core.effects import create_stat_buff

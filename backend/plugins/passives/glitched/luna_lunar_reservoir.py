@@ -23,7 +23,7 @@ class LunaLunarReservoirGlitched(LunaLunarReservoir):
     stack_display = "number"
 
     @classmethod
-    def _charge_multiplier(cls, charge_holder: "Stats") -> int:
+    def _charge_multiplier(cls, _charge_holder: "Stats") -> int:
         """Glitched variant always has 2x charge multiplier."""
         return 2
 

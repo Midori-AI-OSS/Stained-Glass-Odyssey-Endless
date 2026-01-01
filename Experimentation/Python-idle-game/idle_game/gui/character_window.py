@@ -3,7 +3,6 @@ from PySide6.QtCore import (
     Qt,
     QPropertyAnimation,
     QVariantAnimation,
-    QPoint,
     Property,
     Signal,
 )

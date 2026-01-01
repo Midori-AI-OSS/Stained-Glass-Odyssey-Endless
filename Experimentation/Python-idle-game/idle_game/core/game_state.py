@@ -382,10 +382,6 @@ class GameState(QObject):
         self.save_game_state()  # Save rebirth
         return True
 
-        # Autosave every 60 ticks
-        if self.tick_count % 60 == 0:
-            self.save_game_state()
-
     def save_game_state(self):
         from idle_game.core.save_manager import SaveManager
 

@@ -81,7 +81,7 @@ class MomentumGyro(RelicBase):
             chain_entry["target"] = None
 
         async def _on_damage_dealt(
-            attacker, target, damage, damage_type, source, source_action, action_name, details=None
+            attacker, target, damage, damage_type, source, _source_action, action_name, details=None
         ):
             """Track consecutive hits on the same target and apply momentum bonuses."""
             # Check if attacker is a party member

@@ -22,7 +22,7 @@ class PlayerLevelUpBonusGlitched(PlayerLevelUpBonus):
     max_stacks = 1
     stack_display = "spinner"
 
-    async def apply(self, target: "Stats", new_level: int) -> None:
+    async def apply(self, target: "Stats", _new_level: int) -> None:
         """Apply DOUBLED level-up gains (0.70 multiplier instead of 0.35)."""
         # DOUBLED: 70% bonus instead of 35%
         level_up_bonus = StatEffect(
