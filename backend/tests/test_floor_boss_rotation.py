@@ -1,16 +1,13 @@
-import asyncio
-from pathlib import Path
+from pathlib import Path  # noqa: E402
 import sys
 
-import pytest
-
-from autofighter.stats import Stats
-from plugins.characters import CHARACTER_FOES
-
-sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 sys.modules.pop("services", None)
 sys.modules.pop("runs", None)
 
+import asyncio  # noqa: E402
+
+import pytest  # noqa: E402
 from runs.lifecycle import load_map  # noqa: E402
 from runs.lifecycle import save_map  # noqa: E402
 from services.room_service import battle_snapshots  # noqa: E402
@@ -18,7 +15,10 @@ from services.room_service import battle_tasks  # noqa: E402
 from services.room_service import boss_room  # noqa: E402
 from services.run_service import advance_room  # noqa: E402
 from services.run_service import start_run  # noqa: E402
-from test_app import app_with_db as _app_with_db  # noqa: F401
+from test_app import app_with_db as _app_with_db  # noqa: E402
+
+from autofighter.stats import Stats  # noqa: E402
+from plugins.characters import CHARACTER_FOES  # noqa: E402
 
 app_with_db = _app_with_db
 

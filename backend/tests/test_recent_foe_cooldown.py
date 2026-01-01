@@ -1,14 +1,14 @@
-import asyncio
-import importlib.util
-from pathlib import Path
-import random
+from pathlib import Path  # noqa: E402
 import sys
 
-import pytest
-
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-
 sys.modules.pop("services", None)
+
+import asyncio  # noqa: E402
+import importlib.util  # noqa: E402
+import random  # noqa: E402
+
+import pytest  # noqa: E402
 from runs.lifecycle import RECENT_FOE_COOLDOWN  # noqa: E402
 from runs.lifecycle import battle_snapshots  # noqa: E402
 from runs.lifecycle import battle_tasks  # noqa: E402
@@ -17,12 +17,12 @@ from runs.lifecycle import save_map  # noqa: E402
 from services.room_service import battle_room  # noqa: E402
 from services.run_service import start_run  # noqa: E402
 
-from autofighter.mapgen import MapNode
-from autofighter.party import Party
-from autofighter.rooms import BattleRoom
-from autofighter.rooms import utils
-from autofighter.stats import Stats
-from plugins.characters import Player
+from autofighter.mapgen import MapNode  # noqa: E402
+from autofighter.party import Party  # noqa: E402
+from autofighter.rooms import BattleRoom  # noqa: E402
+from autofighter.rooms import utils  # noqa: E402
+from autofighter.stats import Stats  # noqa: E402
+from plugins.characters import Player  # noqa: E402
 
 
 @pytest.fixture()

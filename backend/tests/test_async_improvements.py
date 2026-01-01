@@ -1,5 +1,3 @@
-import pytest
-
 #!/usr/bin/env python3
 """
 Simple test to verify async database operations work correctly.
@@ -10,11 +8,11 @@ asynchronously without blocking the event loop.
 
 import asyncio
 from pathlib import Path
-
-# Simple minimal setup for testing
 import sys
 import tempfile
 import time
+
+import pytest
 
 sys.path.insert(0, '/home/runner/work/Midori-AI-AutoFighter/Midori-AI-AutoFighter/backend')
 

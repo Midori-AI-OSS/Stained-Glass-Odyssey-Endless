@@ -1,5 +1,3 @@
-import pytest
-
 #!/usr/bin/env python3
 """
 Test script to measure performance improvements with async optimizations.
@@ -8,6 +6,7 @@ Test script to measure performance improvements with async optimizations.
 import asyncio
 import time
 
+import pytest
 from tests.helpers import call_maybe_async
 
 from autofighter.effects import DamageOverTime

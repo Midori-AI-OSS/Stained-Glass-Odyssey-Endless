@@ -1,16 +1,17 @@
-import importlib.util
-from pathlib import Path
-import random
+from pathlib import Path  # noqa: E402
 import sys
 import types
 
-import pytest
-
 sys.modules.setdefault("llms.torch_checker", types.SimpleNamespace(is_torch_available=lambda: False))
 
-from autofighter.mapgen import MapNode
-from autofighter.party import Party
-from plugins.characters import Player
+import importlib.util  # noqa: E402
+import random  # noqa: E402
+
+import pytest  # noqa: E402
+
+from autofighter.mapgen import MapNode  # noqa: E402
+from autofighter.party import Party  # noqa: E402
+from plugins.characters import Player  # noqa: E402
 
 spec = importlib.util.spec_from_file_location(
     "autofighter.rooms.utils",
