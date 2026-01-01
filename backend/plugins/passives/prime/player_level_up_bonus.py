@@ -19,7 +19,7 @@ class PlayerLevelUpBonusPrime(PlayerLevelUpBonus):
     max_stacks = 1
     stack_display = "spinner"
 
-    async def apply(self, target: "Stats", new_level: int) -> None:
+    async def apply(self, target: "Stats", _new_level: int) -> None:
         bonus = StatEffect(
             name=f"{self.id}_level_bonus",
             stat_modifiers={

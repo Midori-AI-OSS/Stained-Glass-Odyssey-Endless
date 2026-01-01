@@ -33,7 +33,7 @@ class LunaLunarReservoir:
         cls._events_registered = True
 
     @classmethod
-    def _charge_multiplier(cls, charge_holder: "Stats") -> int:
+    def _charge_multiplier(cls, _charge_holder: "Stats") -> int:
         """Base charge multiplier for normal tier."""
         return 1
 

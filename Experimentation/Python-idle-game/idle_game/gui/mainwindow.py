@@ -11,8 +11,8 @@ from PySide6.QtWidgets import (
     QSpinBox,
     QCheckBox,
 )
-from PySide6.QtCore import Qt, QSize, Signal
-from PySide6.QtGui import QPixmap, QIcon, QColor
+from PySide6.QtCore import Qt, Signal
+from PySide6.QtGui import QPixmap, QColor
 from idle_game.core.game_state import GameState
 from idle_game.gui.character_window import CharacterWindow
 from idle_game.gui.fight_window import FightWindow

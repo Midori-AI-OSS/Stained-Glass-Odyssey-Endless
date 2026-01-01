@@ -104,7 +104,7 @@ class EntropyMirror(RelicBase):
             )
 
         async def _on_damage_dealt(
-            attacker, target, damage, damage_type, source, source_action, action_name, details=None
+            attacker, target, damage, damage_type, source, _source_action, action_name, details=None
         ):
             """Apply recoil when foes deal damage."""
             from plugins.characters.foe_base import FoeBase

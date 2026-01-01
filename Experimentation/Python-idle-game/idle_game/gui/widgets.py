@@ -1,4 +1,4 @@
-from PySide6.QtWidgets import QProgressBar, QStylePainter, QStyleOptionProgressBar
+from PySide6.QtWidgets import QProgressBar
 from PySide6.QtCore import Qt, QPropertyAnimation, Property, QRect
 from PySide6.QtGui import QPainter, QLinearGradient, QColor
 

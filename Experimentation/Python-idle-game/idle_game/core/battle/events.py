@@ -174,8 +174,8 @@ def handle_shield_applied(
 def handle_effect_applied(
     source: Stats,
     target: Stats,
-    effect_type: str,
-    effect_data: dict[str, Any],
+    _effect_type: str,
+    _effect_data: dict[str, Any],
     context: Any = None,
 ) -> None:
     """Handle effect application (buffs/debuffs).

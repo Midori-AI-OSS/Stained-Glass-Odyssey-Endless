@@ -24,7 +24,7 @@ class LunaLunarReservoirPrime(LunaLunarReservoir):
     stack_display = "number"
 
     @classmethod
-    def _charge_multiplier(cls, charge_holder: "Stats") -> int:
+    def _charge_multiplier(cls, _charge_holder: "Stats") -> int:
         """Prime variant has 5x charge multiplier."""
         return 5
 

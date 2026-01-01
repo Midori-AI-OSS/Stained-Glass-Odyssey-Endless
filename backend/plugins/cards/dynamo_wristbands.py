@@ -26,7 +26,7 @@ class DynamoWristbands(CardBase):
         active_stacks: dict[int, int] = {}
 
         async def _on_damage_dealt(
-            attacker, target, damage, damage_type, source, source_action, action_name, details=None
+            attacker, target, damage, damage_type, source, _source_action, action_name, details=None
         ):
             """Grant crit rate buff when ally deals Lightning damage."""
             # Check if attacker is one of our party members

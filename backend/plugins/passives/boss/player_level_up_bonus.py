@@ -19,7 +19,7 @@ class PlayerLevelUpBonusBoss(PlayerLevelUpBonus):
     max_stacks = 1
     stack_display = "spinner"
 
-    async def apply(self, target: "Stats", new_level: int) -> None:
+    async def apply(self, target: "Stats", _new_level: int) -> None:
         multiplier = 0.525
         gains = target.level_up_gains
         level_up_bonus = StatEffect(

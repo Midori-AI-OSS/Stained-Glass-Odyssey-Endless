@@ -17,7 +17,7 @@ class PlayerLevelUpBonus:
     max_stacks = 1  # Only one instance per character
     stack_display = "spinner"
 
-    async def apply(self, target: "Stats", new_level: int) -> None:
+    async def apply(self, target: "Stats", _new_level: int) -> None:
         """Apply enhanced level-up gains for Player (1.35x multiplier).
 
         Args:

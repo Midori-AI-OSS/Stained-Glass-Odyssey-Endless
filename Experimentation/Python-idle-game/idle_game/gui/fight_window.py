@@ -6,7 +6,7 @@ from PySide6.QtWidgets import (
     QPushButton,
     QFrame,
 )
-from PySide6.QtCore import Qt, QTimer, QPropertyAnimation, QPoint, QEasingCurve, Signal
+from PySide6.QtCore import Qt, QTimer, QPropertyAnimation, QEasingCurve, Signal
 from PySide6.QtGui import QPixmap, QFont
 from pathlib import Path
 from idle_game.core.save_manager import SaveManager

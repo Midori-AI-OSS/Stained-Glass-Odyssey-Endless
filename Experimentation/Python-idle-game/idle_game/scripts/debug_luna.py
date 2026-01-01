@@ -1,5 +1,4 @@
 from pathlib import Path
-import os
 
 path = Path("/tmp/Midori-AI-AutoFighter/frontend/src/lib/assets/characters/luna")
 print(f"Checking {path}")
