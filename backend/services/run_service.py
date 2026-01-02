@@ -107,6 +107,24 @@ async def _validate_party_members(members: list[str]) -> None:
     ):
         raise ValueError("invalid party")
 
+    export_names = getattr(
+        player_plugins, "_PLAYABLE_EXPORTS", tuple(player_plugins.__all__)
+    )
+    valid_character_ids: set[str] = set()
+    for name in export_names:
+        cls = getattr(player_plugins, name, None)
+        if cls is None:
+            continue
+        if getattr(cls, "plugin_type", "player") != "player":
+            continue
+        cid = getattr(cls, "id", name)
+        if cid:
+            valid_character_ids.add(cid)
+
+    for mid in members:
+        if mid not in valid_character_ids:
+            raise ValueError("invalid party")
+
     def get_owned_players():
         with get_save_manager().connection() as conn:
             cur = conn.execute("SELECT id FROM owned_players")

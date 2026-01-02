@@ -11,7 +11,6 @@ PRIME_VARIANTS = {
     "graygray_counter_maestro": "graygray_counter_maestro_prime",
     "hilander_critical_ferment": "hilander_critical_ferment_prime",
     "ixia_tiny_titan": "ixia_tiny_titan_prime",
-    "kboshi_flux_cycle": "kboshi_flux_cycle_prime",
     "lady_darkness_eclipsing_veil": "lady_darkness_eclipsing_veil_prime",
     "lady_echo_resonant_static": "lady_echo_resonant_static_prime",
     "lady_fire_and_ice_duality_engine": "lady_fire_and_ice_duality_engine_prime",
@@ -47,4 +46,3 @@ def test_apply_rank_passives_maps_prime_variants():
         foe.passives = [base_id]
         apply_rank_passives(foe)
         assert prime_id in foe.passives
-

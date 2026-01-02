@@ -30,7 +30,7 @@ class AdvancedCombatSynergyBoss(AdvancedCombatSynergy):
 
         if hit_target and damage > 0 and hit_target.hp < (hit_target.max_hp * 0.5):
             for ally in party:
-                if ally != target and ally.hp > 0:
+                if ally is not target and ally.hp > 0:
                     effect = StatEffect(
                         name=f"{self.id}_ally_atk_boost",
                         stat_modifiers={"atk": 15},
