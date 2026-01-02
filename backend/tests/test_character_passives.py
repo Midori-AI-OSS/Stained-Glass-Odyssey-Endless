@@ -3,6 +3,7 @@ import math
 import random
 
 import pytest
+
 from tests.helpers import call_maybe_async
 
 from autofighter.effects import EffectManager
@@ -14,9 +15,12 @@ from autofighter.stats import set_battle_active
 from plugins.damage_types.generic import Generic
 from plugins.effects.aftertaste import Aftertaste
 from plugins.event_bus import bus
+from plugins.passives.boss.luna_lunar_reservoir import LunaLunarReservoirBoss
+from plugins.passives.glitched.luna_lunar_reservoir import LunaLunarReservoirGlitched
 from plugins.passives.normal.ally_overload import AllyOverload
 from plugins.passives.normal.hilander_critical_ferment import HilanderCriticalFerment
 from plugins.passives.normal.luna_lunar_reservoir import LunaLunarReservoir
+from plugins.passives.prime.luna_lunar_reservoir import LunaLunarReservoirPrime
 
 
 @pytest.mark.asyncio
@@ -151,14 +155,14 @@ async def test_luna_lunar_reservoir_no_turn_end_drain():
 @pytest.mark.asyncio
 async def test_luna_glitched_nonboss_actions_double_charge():
     """Glitched non-boss Luna should gain double charge from actions and ultimates."""
-    passive = LunaLunarReservoir()
+    passive = LunaLunarReservoirGlitched()
 
     LunaLunarReservoir._charge_points.clear()
     LunaLunarReservoir._swords_by_owner.clear()
 
     try:
         luna = Stats(hp=1000, damage_type=Generic())
-        luna.rank = "glitched champion"
+        luna.passives = [LunaLunarReservoirGlitched.id]
 
         starting_charge = LunaLunarReservoir.get_charge(luna)
         await passive.apply(luna, event="action_taken")
@@ -180,33 +184,42 @@ async def test_luna_glitched_nonboss_actions_double_charge():
     ("rank", "expected_multiplier", "damage"),
     [
         ("prime", 5, 1),
-        ("glitched prime champion", 10, 2_500_000),
-        ("prime boss", 5, 12_345_678_901),
+        ("glitched prime champion", 7, 2_500_000),
+        ("prime boss", 6, 12_345_678_901),
     ],
 )
 async def test_luna_prime_hit_landed_heals_and_stacks(rank, expected_multiplier, damage):
     """Prime Luna variants should lifesteal and gain multiplied charge on hits."""
-
-    passive = LunaLunarReservoir()
 
     LunaLunarReservoir._charge_points.clear()
     LunaLunarReservoir._swords_by_owner.clear()
 
     try:
         luna = Stats(hp=1000, damage_type=Generic())
-        luna.passives = ["luna_lunar_reservoir"]
         luna.rank = rank
         luna.hp = luna.max_hp - 100
+
+        variants = []
+        if "glitched" in rank:
+            variants.append(LunaLunarReservoirGlitched())
+        if "prime" in rank:
+            variants.append(LunaLunarReservoirPrime())
+        if "boss" in rank:
+            variants.append(LunaLunarReservoirBoss())
+        luna.passives = [variant.id for variant in variants]
 
         before_charge = LunaLunarReservoir.get_charge(luna)
         before_hp = luna.hp
 
-        await passive.apply(luna, event="hit_landed", damage=damage)
+        for variant in variants:
+            await variant.apply(luna, event="hit_landed", damage=damage)
 
         after_charge = LunaLunarReservoir.get_charge(luna)
         expected_heal = max(1, min(32, math.ceil(damage * 0.000001)))
+        expected_charge_gain = sum(type(variant)._charge_multiplier(luna) for variant in variants)
 
-        assert after_charge - before_charge == expected_multiplier
+        assert expected_charge_gain == expected_multiplier
+        assert after_charge - before_charge == expected_charge_gain
         assert luna.hp - before_hp == expected_heal
     finally:
         LunaLunarReservoir._charge_points.clear()
@@ -465,35 +478,6 @@ async def test_hilander_cleanup_on_defeat():
         if hasattr(hilander, "_hilander_crit_cb"):
             BUS.unsubscribe("critical_hit", getattr(hilander, "_hilander_crit_cb"))
             delattr(hilander, "_hilander_crit_cb")
-
-
-@pytest.mark.asyncio
-async def test_kboshi_flux_cycle_passive():
-    """Test Kboshi's Flux Cycle passive element switching."""
-    registry = PassiveRegistry()
-
-    # Create Kboshi with the passive
-    kboshi = Stats(hp=1000, damage_type=Generic())
-    kboshi.passives = ["kboshi_flux_cycle"]
-
-    # Trigger turn start multiple times to test element switching
-    switched_count = 0
-    attempts = 20  # Test multiple times since switching is probabilistic (80%)
-
-    for _ in range(attempts):
-        prev_type = kboshi.damage_type.id
-        await registry.trigger("turn_start", kboshi)
-
-        # Check if type changed
-        if kboshi.damage_type.id != prev_type:
-            switched_count += 1
-
-    # With 80% switch chance over 20 attempts, we should see multiple switches
-    assert switched_count > 0, "Kboshi should switch damage types occasionally"
-
-    # Verify the damage type is one of the valid types
-    valid_types = ["Fire", "Ice", "Wind", "Lightning", "Light", "Dark"]
-    assert kboshi.damage_type.id in valid_types, f"Damage type should be one of {valid_types}, got {kboshi.damage_type.id}"
 
 
 @pytest.mark.asyncio

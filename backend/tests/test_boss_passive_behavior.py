@@ -3,7 +3,6 @@
 from pathlib import Path
 import sys
 from unittest.mock import AsyncMock
-from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
@@ -12,11 +11,9 @@ import pytest
 from autofighter.stats import Stats
 from plugins.passives.boss.advanced_combat_synergy import AdvancedCombatSynergyBoss
 from plugins.passives.boss.ally_overload import AllyOverloadBoss
-from plugins.passives.boss.kboshi_flux_cycle import KboshiFluxCycleBoss
 from plugins.passives.boss.lady_wind_tempest_guard import LadyWindTempestGuardBoss
 from plugins.passives.normal.advanced_combat_synergy import AdvancedCombatSynergy
 from plugins.passives.normal.ally_overload import AllyOverload
-from plugins.passives.normal.kboshi_flux_cycle import KboshiFluxCycle
 from plugins.passives.normal.lady_wind_tempest_guard import LadyWindTempestGuard
 
 
@@ -32,15 +29,6 @@ def reset_overload_state() -> None:
 
     for attr in ("_overload_charge", "_overload_active", "_add_hot_backup", "_battle_end_handlers"):
         setattr(AllyOverload, attr, {})
-
-
-def reset_flux_cycle_stacks() -> None:
-    """Clear damage/HoT stack history for Kboshi Flux Cycle."""
-
-    KboshiFluxCycle._damage_stacks = {}
-    KboshiFluxCycle._hot_stacks = {}
-    KboshiFluxCycleBoss._damage_stacks = {}
-    KboshiFluxCycleBoss._hot_stacks = {}
 
 
 def reset_tempest_guard_state() -> None:
@@ -174,48 +162,6 @@ async def test_ally_overload_boss_charge_threshold() -> None:
 
 
 @pytest.mark.asyncio
-async def test_kboshi_flux_cycle_boss_bonus_scaling() -> None:
-    """Failed rotations grant larger attack and HoT bonuses for the boss variant."""
-
-    reset_flux_cycle_stacks()
-
-    boss_target = Stats()
-    boss_target.set_base_stat("atk", 120)
-    boss_passive = KboshiFluxCycleBoss()
-    with patch("plugins.passives.boss.kboshi_flux_cycle.random.random", return_value=0.95):
-        await boss_passive.apply(boss_target)
-
-    boss_effect = next(
-        effect
-        for effect in boss_target.get_active_effects()
-        if effect.name.endswith("_damage_bonus_1")
-    )
-    assert boss_effect.stat_modifiers["atk"] == pytest.approx(36)
-    assert boss_target.effect_manager is not None
-    assert boss_target.effect_manager.hots[-1].healing == pytest.approx(
-        boss_target.max_hp * 0.075
-    )
-
-    reset_flux_cycle_stacks()
-    normal_target = Stats()
-    normal_target.set_base_stat("atk", 120)
-    normal_passive = KboshiFluxCycle()
-    with patch("plugins.passives.normal.kboshi_flux_cycle.random.random", return_value=0.95):
-        await normal_passive.apply(normal_target)
-
-    normal_effect = next(
-        effect
-        for effect in normal_target.get_active_effects()
-        if effect.name.endswith("_damage_bonus_1")
-    )
-    assert normal_effect.stat_modifiers["atk"] == pytest.approx(24)
-    assert normal_target.effect_manager is not None
-    assert normal_target.effect_manager.hots[-1].healing == pytest.approx(
-        normal_target.max_hp * 0.05
-    )
-
-
-@pytest.mark.asyncio
 async def test_lady_wind_tempest_guard_boss_defense_and_heal() -> None:
     """Storm guard stacks deliver stronger defenses and heals than the normal version."""
 
@@ -295,4 +241,3 @@ async def test_lady_wind_tempest_guard_boss_defense_and_heal() -> None:
         cleanup = cls._cleanup_callbacks.pop(id(target), None)
         if cleanup is not None:
             cleanup()
-

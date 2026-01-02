@@ -157,14 +157,13 @@ class LunaLunarReservoirGlitched(LunaLunarReservoir):
 
 ## Implementation Status
 
-### Completed Glitched Variants (22 characters)
+### Completed Glitched Variants (21 characters)
 - ✅ Ally Overload – doubled charge gain and cap
 - ✅ Becca Menagerie Bond – doubled spirit bonuses per stack
 - ✅ Bubbles Bubble Burst – doubled attack bonuses even past soft caps
 - ✅ Carly Guardian's Aegis – doubled healing (20% of defense)
 - ✅ Graygray Counter Maestro – doubled counter damage potential
 - ✅ Hilander Critical Ferment – doubled crit chance/damage boosts
-- ✅ Kboshi Flux Cycle – doubled damage bonus, HoT, and mitigation debuff
 - ✅ Lady Darkness Eclipsing Veil – doubled DoT siphoning to 2%
 - ✅ Lady Echo Resonant Static – doubled streak bonuses on repeated hits
 - ✅ Lady Fire and Ice Duality Engine – doubled flux stack benefits
