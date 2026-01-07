@@ -19,7 +19,6 @@ try:
     from midori_ai_agent_base import get_agent
     from midori_ai_agent_base import get_agent_from_config
     from midori_ai_agent_base import load_agent_config
-    from midori_ai_logger import get_logger
 
     if TYPE_CHECKING:
         from midori_ai_agent_base import AgentConfig
@@ -29,16 +28,12 @@ except ImportError:
     get_agent = None
     get_agent_from_config = None
     load_agent_config = None
-    get_logger = None
     _AGENT_FRAMEWORK_AVAILABLE = False
 
-# Fallback to standard logging if midori_ai_logger not available
-if _AGENT_FRAMEWORK_AVAILABLE:
-    log = get_logger(__name__)
-else:
-    import logging
+# Use standard logging (midori_ai_logger doesn't export get_logger)
+import logging
 
-    log = logging.getLogger(__name__)
+log = logging.getLogger(__name__)
 
 
 def find_config_file() -> Path | None:
