@@ -14,8 +14,9 @@ from quart import Blueprint
 # Create blueprint
 bp = Blueprint("players", __name__)
 
-# Import route handlers (registers routes with blueprint)
-# These imports register routes with the blueprint
+# Import route handlers after blueprint creation to avoid circular imports.
+# Each handler module imports bp via 'from . import bp' to register routes,
+# so bp must be created before importing the handler modules.
 from . import catalog  # noqa: F401
 from . import editor  # noqa: F401
 from . import materials  # noqa: F401
