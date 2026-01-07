@@ -26,7 +26,7 @@ class ChatRoom(Room):
             await registry.trigger("room_enter", member)
         message = data.get("message", "")
         party_data = [_serialize(p) for p in party.members]
-        model = get_option("lrm_model", "openai/gpt-oss-20b")
+        model = await get_option("lrm_model", "openai/gpt-oss-20b")
 
         # Load agent (already async)
         agent = await load_agent(model=model)

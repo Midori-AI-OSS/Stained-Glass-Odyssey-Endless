@@ -94,11 +94,24 @@ async def request_shutdown() -> None:
 
 @app.get("/")
 async def status() -> Response:
+    """Health check endpoint returning server status.
+
+    Returns:
+        JSON response with status and backend flavor identifier.
+    """
     return jsonify({"status": "ok", "flavor": BACKEND_FLAVOR})
 
 
 @app.after_request
 async def add_cors_headers(response):
+    """Add CORS headers to all responses.
+
+    Args:
+        response: The response object to modify.
+
+    Returns:
+        Response object with CORS headers added.
+    """
     response.headers["Access-Control-Allow-Origin"] = "*"
     response.headers["Access-Control-Allow-Headers"] = "Content-Type"
     response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
@@ -107,12 +120,26 @@ async def add_cors_headers(response):
 
 @app.before_request
 async def handle_cors_preflight():
+    """Handle CORS preflight OPTIONS requests.
+
+    Returns:
+        Empty response with 204 status for OPTIONS requests, None otherwise.
+    """
     if request.method == "OPTIONS":
         return "", 204
 
 
 @app.errorhandler(Exception)
 async def handle_exception(e: Exception):
+    """Global exception handler for all unhandled errors.
+
+    Args:
+        e: The exception that was raised.
+
+    Returns:
+        JSON error response with appropriate status code and CORS headers.
+        For critical errors, triggers graceful shutdown.
+    """
     log.exception(e)
     response: Response
     if isinstance(e, HTTPException):
@@ -147,6 +174,10 @@ async def handle_exception(e: Exception):
 
 
 async def _cleanup_loop() -> None:
+    """Background task that periodically cleans up stale battle state.
+
+    Runs every 5 minutes (300 seconds) to remove expired battle data.
+    """
     while True:
         await asyncio.sleep(300)
         await cleanup_battle_state()
@@ -183,6 +214,10 @@ async def api_acknowledge_errors() -> Response:
 
 @app.before_serving
 async def prune_runs_before_serving() -> None:
+    """Clean up stale game runs during application startup.
+
+    Removes incomplete or expired run data before accepting requests.
+    """
     await prune_runs_on_startup()
 
 
@@ -209,7 +244,7 @@ async def validate_lrm_on_startup() -> None:
         from options import get_option
 
         # Get configured model or use default
-        model = get_option(OptionKey.LRM_MODEL, "openai/gpt-oss-20b")
+        model = await get_option(OptionKey.LRM_MODEL, "openai/gpt-oss-20b")
 
         # Log which type of LRM we're testing
         if openai_url != "unset":
@@ -250,6 +285,10 @@ async def initialize_action_plugins() -> None:
 
 @app.before_serving
 async def start_background_tasks() -> None:
+    """Initialize and start background maintenance tasks.
+
+    Spawns the cleanup loop task for periodic state maintenance.
+    """
     asyncio.create_task(_cleanup_loop())
 
 

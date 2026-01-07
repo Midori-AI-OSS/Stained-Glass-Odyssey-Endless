@@ -145,9 +145,9 @@ class CardBase:
             summarized_about if user has concise mode enabled, otherwise full_about
         """
         from options import OptionKey
-        from options import get_option
+        from options import get_option_sync
 
-        concise = get_option(OptionKey.CONCISE_DESCRIPTIONS, "false").lower() == "true"
+        concise = get_option_sync(OptionKey.CONCISE_DESCRIPTIONS, "false").lower() == "true"
         if concise:
             return self.summarized_about
         return self.full_about
