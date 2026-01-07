@@ -3,7 +3,6 @@ import math
 import random
 
 import pytest
-
 from tests.helpers import call_maybe_async
 
 from autofighter.effects import EffectManager

@@ -22,12 +22,23 @@ _TURN_PACING_DEFAULT = 0.5
 
 @bp.get("/lrm")
 async def get_lrm_config() -> tuple[str, int, dict[str, object]]:
+    """Get current Language Reasoning Model (LRM) configuration.
+
+    Returns:
+        JSON response containing:
+        - current_model: Currently selected LRM model name
+        - current_backend: Backend provider (auto/openai/huggingface)
+        - current_api_url: API endpoint URL (for OpenAI backend)
+        - current_api_key: Masked API key for security
+        - available_backends: List of supported backend options
+        - available_models: List of available model names
+    """
     import os
 
-    current_model = get_option(OptionKey.LRM_MODEL, "openai/gpt-oss-20b")
-    current_backend = get_option(OptionKey.LRM_BACKEND, "huggingface")
-    current_api_url = get_option(OptionKey.LRM_API_URL, os.getenv("OPENAI_API_URL", ""))
-    current_api_key = get_option(OptionKey.LRM_API_KEY, os.getenv("OPENAI_API_KEY", ""))
+    current_model = await get_option(OptionKey.LRM_MODEL, "openai/gpt-oss-20b")
+    current_backend = await get_option(OptionKey.LRM_BACKEND, "huggingface")
+    current_api_url = await get_option(OptionKey.LRM_API_URL, os.getenv("OPENAI_API_URL", ""))
+    current_api_key = await get_option(OptionKey.LRM_API_KEY, os.getenv("OPENAI_API_KEY", ""))
 
     # Mask the API key for security (only show first 4 and last 4 characters)
     masked_api_key = ""
@@ -64,6 +75,20 @@ async def get_lrm_config() -> tuple[str, int, dict[str, object]]:
 
 @bp.post("/lrm")
 async def set_lrm_model() -> tuple[str, int, dict[str, str]]:
+    """Update Language Reasoning Model (LRM) configuration settings.
+
+    Request body should contain:
+        model (optional): Model name to use
+        backend (optional): Backend provider (auto/openai/huggingface)
+        api_url (optional): API endpoint URL for OpenAI backend
+        api_key (optional): API key for authentication
+
+    Returns:
+        JSON response with updated configuration and masked API key.
+
+    Raises:
+        400: If invalid model or backend specified.
+    """
     import os
 
     data = await request.get_json()
@@ -73,7 +98,7 @@ async def set_lrm_model() -> tuple[str, int, dict[str, str]]:
     api_key = data.get("api_key", None)
 
     # Get current backend to determine validation rules
-    current_backend = backend if backend else get_option(OptionKey.LRM_BACKEND, "huggingface")
+    current_backend = backend if backend else await get_option(OptionKey.LRM_BACKEND, "huggingface")
 
     # For OpenAI backend, allow any model (to support newer models like GPT-5+)
     # For HuggingFace, validate against known models
@@ -94,34 +119,34 @@ async def set_lrm_model() -> tuple[str, int, dict[str, str]]:
 
     # Update model if provided
     if model:
-        old_model = get_option(OptionKey.LRM_MODEL, "openai/gpt-oss-20b")
-        set_option(OptionKey.LRM_MODEL, model)
+        old_model = await get_option(OptionKey.LRM_MODEL, "openai/gpt-oss-20b")
+        await set_option(OptionKey.LRM_MODEL, model)
     else:
-        model = get_option(OptionKey.LRM_MODEL, "openai/gpt-oss-20b")
+        model = await get_option(OptionKey.LRM_MODEL, "openai/gpt-oss-20b")
         old_model = model
 
     # Update backend if provided
     if backend:
-        old_backend = get_option(OptionKey.LRM_BACKEND, "huggingface")
-        set_option(OptionKey.LRM_BACKEND, backend)
+        old_backend = await get_option(OptionKey.LRM_BACKEND, "huggingface")
+        await set_option(OptionKey.LRM_BACKEND, backend)
     else:
-        backend = get_option(OptionKey.LRM_BACKEND, "huggingface")
+        backend = await get_option(OptionKey.LRM_BACKEND, "huggingface")
         old_backend = backend
 
     # Update API URL if provided
     if api_url is not None:
-        old_api_url = get_option(OptionKey.LRM_API_URL, os.getenv("OPENAI_API_URL", ""))
-        set_option(OptionKey.LRM_API_URL, api_url)
+        old_api_url = await get_option(OptionKey.LRM_API_URL, os.getenv("OPENAI_API_URL", ""))
+        await set_option(OptionKey.LRM_API_URL, api_url)
     else:
-        api_url = get_option(OptionKey.LRM_API_URL, os.getenv("OPENAI_API_URL", ""))
+        api_url = await get_option(OptionKey.LRM_API_URL, os.getenv("OPENAI_API_URL", ""))
         old_api_url = api_url
 
     # Update API key if provided
     if api_key is not None:
-        old_api_key = get_option(OptionKey.LRM_API_KEY, os.getenv("OPENAI_API_KEY", ""))
-        set_option(OptionKey.LRM_API_KEY, api_key)
+        old_api_key = await get_option(OptionKey.LRM_API_KEY, os.getenv("OPENAI_API_KEY", ""))
+        await set_option(OptionKey.LRM_API_KEY, api_key)
     else:
-        api_key = get_option(OptionKey.LRM_API_KEY, os.getenv("OPENAI_API_KEY", ""))
+        api_key = await get_option(OptionKey.LRM_API_KEY, os.getenv("OPENAI_API_KEY", ""))
         old_api_key = api_key
 
     # Mask the API key for security in response
@@ -158,13 +183,28 @@ async def set_lrm_model() -> tuple[str, int, dict[str, str]]:
 
 @bp.post("/lrm/test")
 async def test_lrm_model() -> tuple[str, int, dict[str, str]]:
+    """Test the configured LRM with validation or custom prompt.
+
+    Request body can contain:
+        prompt (optional): Custom prompt to test. If omitted, runs validation.
+
+    Returns:
+        JSON response with:
+        - response: Generated text response or validation result
+        - is_lrm (optional): True if validation passed
+
+    Raises:
+        400: If agent validation fails.
+        500: If test execution fails.
+        503: If agent framework is not available.
+    """
     from llms import load_agent
     from llms import validate_agent
 
     data = await request.get_json()
     prompt = data.get("prompt", "")
-    model = get_option(OptionKey.LRM_MODEL, "openai/gpt-oss-20b")
-    backend = get_option(OptionKey.LRM_BACKEND, "auto")
+    model = await get_option(OptionKey.LRM_MODEL, "openai/gpt-oss-20b")
+    backend = await get_option(OptionKey.LRM_BACKEND, "auto")
 
     try:
         # Load agent using the new framework
@@ -202,6 +242,17 @@ async def test_lrm_model() -> tuple[str, int, dict[str, str]]:
 
 @bp.post("/lrm/backend")
 async def set_lrm_backend() -> tuple[str, int, dict[str, str]]:
+    """Update the LRM backend provider.
+
+    Request body should contain:
+        backend: Backend provider (auto/openai/huggingface)
+
+    Returns:
+        JSON response with current_backend value.
+
+    Raises:
+        400: If invalid backend specified.
+    """
     data = await request.get_json()
     backend = data.get("backend", "")
 
@@ -209,8 +260,8 @@ async def set_lrm_backend() -> tuple[str, int, dict[str, str]]:
     if backend not in ["auto", "openai", "huggingface"]:
         return jsonify({"error": "invalid backend. Must be one of: auto, openai, huggingface"}), 400
 
-    old_backend = get_option(OptionKey.LRM_BACKEND, "auto")
-    set_option(OptionKey.LRM_BACKEND, backend)
+    old_backend = await get_option(OptionKey.LRM_BACKEND, "auto")
+    await set_option(OptionKey.LRM_BACKEND, backend)
 
     try:
         await log_settings_change("lrm_backend", old_backend, backend)
@@ -223,6 +274,13 @@ async def set_lrm_backend() -> tuple[str, int, dict[str, str]]:
 
 @bp.get("/turn_pacing")
 async def get_turn_pacing() -> tuple[str, int, dict[str, float]]:
+    """Get current battle turn pacing configuration.
+
+    Returns:
+        JSON response with:
+        - turn_pacing: Current pacing value (seconds between turns)
+        - default: Default pacing value
+    """
     value = refresh_turn_pacing()
     payload = {"turn_pacing": value, "default": _TURN_PACING_DEFAULT}
     try:
@@ -235,6 +293,17 @@ async def get_turn_pacing() -> tuple[str, int, dict[str, float]]:
 
 @bp.post("/turn_pacing")
 async def update_turn_pacing() -> tuple[str, int, dict[str, float]]:
+    """Update battle turn pacing configuration.
+
+    Request body should contain:
+        turn_pacing: New pacing value in seconds (must be >= 0)
+
+    Returns:
+        JSON response with updated turn_pacing value.
+
+    Raises:
+        400: If turn_pacing missing or invalid.
+    """
     data = await request.get_json()
     if not isinstance(data, dict) or "turn_pacing" not in data:
         return jsonify({"error": "turn_pacing is required"}), 400
@@ -250,9 +319,9 @@ async def update_turn_pacing() -> tuple[str, int, dict[str, float]]:
     if requested <= 0:
         return jsonify({"error": "turn_pacing must be positive"}), 400
 
-    old = get_option(OptionKey.TURN_PACING, f"{_TURN_PACING_DEFAULT}")
+    old = await get_option(OptionKey.TURN_PACING, f"{_TURN_PACING_DEFAULT}")
     value = set_turn_pacing(requested)
-    set_option(OptionKey.TURN_PACING, f"{value}")
+    await set_option(OptionKey.TURN_PACING, f"{value}")
     try:
         await log_settings_change("turn_pacing", old, value)
         await log_menu_action("Settings", "update_turn_pacing", {"old": old, "new": value})
@@ -263,7 +332,13 @@ async def update_turn_pacing() -> tuple[str, int, dict[str, float]]:
 
 @bp.get("/concise_descriptions")
 async def get_concise_descriptions() -> tuple[str, int, dict[str, bool]]:
-    value = get_option(OptionKey.CONCISE_DESCRIPTIONS, "false")
+    """Get current concise descriptions setting.
+
+    Returns:
+        JSON response with:
+        - enabled: Whether concise descriptions are enabled (boolean)
+    """
+    value = await get_option(OptionKey.CONCISE_DESCRIPTIONS, "false")
     enabled = value.lower() == "true"
     payload = {"enabled": enabled}
     try:
@@ -276,13 +351,24 @@ async def get_concise_descriptions() -> tuple[str, int, dict[str, bool]]:
 
 @bp.post("/concise_descriptions")
 async def update_concise_descriptions() -> tuple[str, int, dict[str, bool]]:
+    """Update concise descriptions setting.
+
+    Request body should contain:
+        enabled: Boolean flag to enable/disable concise descriptions
+
+    Returns:
+        JSON response with updated enabled value.
+
+    Raises:
+        400: If enabled field is missing or not boolean.
+    """
     data = await request.get_json()
     if not isinstance(data, dict) or "enabled" not in data:
         return jsonify({"error": "enabled is required"}), 400
 
     enabled = bool(data["enabled"])
-    old = get_option(OptionKey.CONCISE_DESCRIPTIONS, "false")
-    set_option(OptionKey.CONCISE_DESCRIPTIONS, "true" if enabled else "false")
+    old = await get_option(OptionKey.CONCISE_DESCRIPTIONS, "false")
+    await set_option(OptionKey.CONCISE_DESCRIPTIONS, "true" if enabled else "false")
     try:
         await log_settings_change("concise_descriptions", old, enabled)
         await log_menu_action("Settings", "update_concise_descriptions", {"old": old, "new": enabled})

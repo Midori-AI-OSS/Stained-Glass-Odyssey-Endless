@@ -142,7 +142,7 @@ async def test_duplicate_pull_awards_stat_levels(app_with_db):
         resp = await client.post("/gacha/pull", json={"count": 1})
 
     data = await resp.get_json()
-    from routes.players import UPGRADEABLE_STATS
+    from routes.players.materials import UPGRADEABLE_STATS
 
     awarded = data["results"][0].get("stat_levels_awarded")
     assert awarded == len(UPGRADEABLE_STATS) * 5

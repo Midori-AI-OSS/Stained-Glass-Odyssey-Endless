@@ -116,9 +116,9 @@ class RelicBase:
             stack-specific formatting
         """
         from options import OptionKey
-        from options import get_option
+        from options import get_option_sync
 
-        concise = get_option(OptionKey.CONCISE_DESCRIPTIONS, "false").lower() == "true"
+        concise = get_option_sync(OptionKey.CONCISE_DESCRIPTIONS, "false").lower() == "true"
         if concise:
             # Concise mode: never show stack information
             return self.summarized_about

@@ -25,6 +25,9 @@ select = [
 "**/tests/**" = ["N802", "N803", "N806", "B010"]
 "**/test_*.py" = ["N802", "N803", "N806", "B010"]
 
+# Blueprint __init__ files require imports after blueprint creation to avoid circular imports
+"backend/routes/*/__init__.py" = ["E402"]
+
 # Backend has more comprehensive rules
 backend = [
     "F",    # Pyflakes errors
