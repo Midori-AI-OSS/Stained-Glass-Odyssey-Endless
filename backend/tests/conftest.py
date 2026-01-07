@@ -653,6 +653,8 @@ _ensure_runs_module()
 def pytest_configure(config):  # noqa: D401
     config.addinivalue_line("markers", "asyncio: mark test as running in asyncio loop")
     config.addinivalue_line("markers", "stress: mark test as stress test (run manually, not in CI)")
+    config.addinivalue_line("markers", "llm_real: mark test as requiring real LLM dependencies and inference")
+    config.addinivalue_line("markers", "slow: mark test as slow running (>10 seconds)")
 
 
 def pytest_pyfunc_call(pyfuncitem):  # noqa: D401
