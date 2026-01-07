@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Mapping
 from typing import Any
 
 from quart import jsonify
@@ -11,8 +12,10 @@ from runs.lifecycle import REWARD_STEP_BATTLE_REVIEW
 from runs.lifecycle import REWARD_STEP_CARDS
 from runs.lifecycle import REWARD_STEP_DROPS
 from runs.lifecycle import REWARD_STEP_RELICS
+from runs.lifecycle import battle_snapshots
 from runs.lifecycle import ensure_reward_progression
 from runs.lifecycle import load_map
+from runs.lifecycle import normalise_reward_step
 from runs.lifecycle import save_map
 from services.reward_service import cancel_reward
 from services.reward_service import confirm_reward
