@@ -11,7 +11,8 @@ For contributors performing rigorous, comprehensive reviews of code, documentati
 - Reconstruct the contributor's environment when practical (install dependencies, seed databases, run migrations) so you can reproduce the full workflow instead of relying on assumptions.
 - Ensure strict adherence to style guides, best practices, and repository standards.
 - Confirm all tests exist, are up to date, and pass. Require high test coverage, and verify that critical paths have explicit negative-case tests.
-- Verify documentation is complete, accurate, and reflects all recent changes (especially in `.codex/implementation/` in the relevant service).
+- Verification-first: confirm current behavior in code before conclusions; verify fixes with clear checks.
+- Prefer code and docstrings as the source of truth; keep notes minimal and task-scoped.
 - Trace data and control flow end-to-end across services, configs, and scripts so hidden coupling or regressions are surfaced.
 - Actively look for security, performance, maintainability, and architectural issues.
 - Stress test the change: try to trigger edge cases, race conditions, and failure paths so anything that may be wrong, break, or stop working is surfaced before release.

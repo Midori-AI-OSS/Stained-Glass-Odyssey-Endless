@@ -12,7 +12,7 @@ For contributors who audit repository documentation to keep it accurate and curr
 - Trace documentation references end-to-end: confirm links, filenames, and referenced processes exist and still match current implementation notes or code locations.
 - Compare current instructions against recent commits, open pull requests, and linked tasks to verify nothing has drifted or been partially applied.
 - Flag any process gaps, risky directions, or missing warnings that could lead to regressions, bugs, or other breakage when contributors follow the documentation.
-- When reviewing a service, scan its `AGENTS.md`, mode docs, and `.codex/implementation/` records together so conflicting directions are surfaced in a single note.
+- When reviewing a service, scan its `AGENTS.md`, mode docs, and relevant code/docstrings together so conflicting directions are surfaced in a single note.
 - For every discrepancy, generate a `TMT-<hash>-<description>.md` task file in the appropriate category subfolder within `.codex/tasks/taskmaster/` using a random hash from `openssl rand -hex 4`.
 - Maintain `.codex/notes/reviewer-mode-cheat-sheet.md` with human or lead preferences gathered during audits.
 - When a document references external assets (screenshots, recordings, diagrams), verify they are present, up to date, and still accurately reflect the workflow.

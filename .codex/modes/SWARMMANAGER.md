@@ -2,7 +2,7 @@
 
 > **FIRST STEP:** Always review `.codex/notes/swarmmanager-mode-cheat-sheet.md` before starting dispatch work. Reference it throughout the session for dispatch sizing, specialist boundaries, and error recovery protocols. Update it at session end with new learnings.
 
-> **Note:** Keep role documentation and update requests inside the relevant service's `.codex/instructions/` directory. When revising task routing logic or dispatch processes, coordinate with the Manager and Task Master so updates are reflected in active tasks or follow-up requests. Never modify `.codex/audit/` unless you are also in Auditor Mode.
+> **Note:** Prefer updating `AGENTS.md` and the relevant mode files directly when guidance changes. Keep notes minimal and task-scoped (use `/tmp/agents-artifacts/` if needed). When revising task routing logic or dispatch processes, coordinate with the Manager and Task Master so updates are reflected in active tasks or follow-up requests. Never modify `.codex/audit/` unless you are also in Auditor Mode.
 
 > **Important:** Swarm Managers monitor task states and dispatch work to specialist agents using the **Codex MCP tool** (`mcp_codexmcp_codex`). They do **not** perform coding, testing, auditing, or documentation tasks directly—instead, they route tasks to the appropriate specialists via automated Codex sessions with swarm-level configurations.
 
@@ -123,7 +123,7 @@ The Swarm Manager uses **three levels** of task dispatch based on execution spee
   - Documentation updates → Dispatch to Coder with `low` level
 - Never code, test, audit, or document directly—always dispatch to the appropriate specialist via Codex MCP tool.
 - Monitor dispatch results and re-route tasks if specialists report blockers or need handoffs.
-- Keep dispatch logs and routing decisions documented in `.codex/instructions/swarm/` for future reference.
+- Keep dispatch logs and routing decisions in the task files (or `/tmp/agents-artifacts/` when a task-scoped artifact is required).
 - Keep the Swarm Manager cheat sheet (`.codex/notes/swarmmanager-mode-cheat-sheet.md`) current with quick reminders and key workflows.
 - Ignore time limits—task monitoring and dispatch can take as long as needed to ensure proper routing.
 
@@ -132,7 +132,7 @@ The Swarm Manager uses **three levels** of task dispatch based on execution spee
 - Invoke the Codex MCP tool (`mcp_codexmcp_codex`) with appropriate swarm level parameters based on task risk assessment.
 - Monitor task file movements between status folders to detect when tasks transition (e.g., from wip to review).
 - Re-route tasks when specialists report blockers, dependencies, or need handoffs to other modes.
-- Document dispatch patterns, routing decisions, and lessons learned in `.codex/instructions/swarm/`.
+- Keep dispatch patterns and routing decisions minimal and task-scoped (prefer task files; use `/tmp/agents-artifacts/` when required).
 - Track which tasks are currently assigned to which specialists to prevent duplicate dispatches.
 - Handle edge cases where task location is unclear or requires manual intervention.
 - Report dispatch statistics and routing efficiency to help optimize task flow.
@@ -141,7 +141,7 @@ The Swarm Manager uses **three levels** of task dispatch based on execution spee
 ## Communication
 - Log all Codex MCP tool invocations (parameters, swarm levels, prompts) in task files or designated logs for audit trails.
 - Report task routing statistics, swarm level distribution, and bottlenecks to the team in status updates.
-- Share dispatch patterns and best practices in `.codex/instructions/swarm/` for future reference.
+- Keep dispatch summaries in task files; avoid long-lived documentation artifacts unless explicitly requested.
 - Notify Task Master when tasks are stuck in a state for too long or need manual intervention.
 - Provide clear dispatch summaries showing which tasks were routed to which specialists, at which swarm level, and why.
 

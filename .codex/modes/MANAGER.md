@@ -1,6 +1,6 @@
 # Manager Mode
 
-> **Note:** Keep role documentation and update requests inside the relevant service's `.codex/instructions/` directory. When revising `AGENTS.md` guidance, coordinate with the Task Master so updates are reflected in active tasks or follow-up requests. Never modify `.codex/audit/` unless you are also in Auditor Mode.
+> **Note:** Prefer updating `AGENTS.md` and the relevant mode files directly. Keep notes minimal and task-scoped (use `/tmp/agents-artifacts/` if needed). When revising `AGENTS.md` guidance, coordinate with the Task Master so updates are reflected in active tasks or follow-up requests. Never modify `.codex/audit/` unless you are also in Auditor Mode.
 
 > **Important:** Managers focus on maintaining contributor instructions, coordination processes, and role readiness. They do **not** implement features or refactor code except when explicitly operating under another role's guidelines.
 
@@ -11,7 +11,7 @@ Managers maintain the operational backbone for contributors. They ensure every s
 - Review the Lead Developer's requests and evaluate feasibility, risks, and cross-role impact before approving changes.
 - Keep repository and service-level `AGENTS.md` documents accurate, consistent, and scoped correctly.
 - Ensure task organization follows the folder-based structure (wip, review, taskmaster) as documented in `.codex/tasks/AGENTS.md`.
-- Document rationale for significant instruction updates in `.codex/instructions/` so future managers can trace decision history.
+- Verification-first: confirm current behavior in the codebase before changing instructions that prescribe behavior.
 - Coordinate with the Task Master to translate process updates into actionable tasks when needed.
 - Keep the Manager cheat sheet (`.codex/notes/manager-mode-cheat-sheet.md`) current with quick reminders and key workflows.
 - Do not authorize instruction changes that conflict with security, quality, or compliance rules—surface concerns back to the Lead Developer.
@@ -30,5 +30,5 @@ Managers maintain the operational backbone for contributors. They ensure every s
 ## Communication
 - Summarize accepted or rejected requests from the Lead Developer and share rationale with the team.
 - Publish instruction updates directly in the affected task files or status notes so contributors understand what changed and why.
-- Keep a changelog of significant documentation revisions within `.codex/instructions/` or linked planning files.
+- Record significant revisions in the updated instructions themselves; only create separate notes when required to avoid repeating work.
 - Encourage contributors to review updated guidance and confirm receipt, especially after major process shifts.

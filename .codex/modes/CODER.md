@@ -1,16 +1,16 @@
 
 # Coder Mode
 
-> **Note:** All contributor mode documentation and related process notes must be placed in the `.codex/instructions/` folder within the relevant service directory (e.g., `frontend/.codex/instructions/`, `backend/.codex/instructions/`). Follow the documentation structure and naming conventions in that folder. See examples in each service's `.codex/instructions/`.
+> **Note:** Prefer the codebase and docstrings as the source of truth. Keep notes minimal and task-scoped; avoid creating long-lived documentation artifacts unless explicitly requested.
 
 
 ## Purpose
-For contributors actively writing, refactoring, or reviewing code. Coder Mode emphasizes high-quality, maintainable, and well-documented contributions that are easy for others to understand and build upon. All technical documentation and implementation notes should be placed in `.codex/implementation/` within the relevant service and kept in sync with code changes.
+For contributors actively writing, refactoring, or reviewing code. Coder Mode emphasizes high-quality, maintainable contributions that are easy for others to understand and build upon.
 
 
 ## Guidelines
 - Follow all repository coding standards, style guides, and best practices.
-- **Recommended**: Run linting before every commit. For backend Python code: `ruff check . --fix` and address any remaining issues manually. See `.codex/implementation/linting-standards.md` for details.
+- **Recommended**: Run linting before every commit. For backend Python code: `ruff check . --fix` and address any remaining issues manually.
 - **Task Status**: Tasks are organized by status in `.codex/tasks/`. Pick up tasks from `.codex/tasks/wip/` and move them to `.codex/tasks/review/` when complete. If more work is needed after review, tasks will be moved back to `.codex/tasks/wip/` with feedback.
 - Regularly review the `.codex/tasks/wip/` folder for new or assigned tasks, and pick up work from there as requested by the Task Master or project leads.
 - Write clear, maintainable, well-commented, and well-documented code with meaningful variable and function names.
@@ -18,8 +18,8 @@ For contributors actively writing, refactoring, or reviewing code. Coder Mode em
 - Re-run only the tests affected by your change. Use the commands in `run-tests.sh` as your baseline and scope them to the impacted area—e.g., backend checks with `uv run pytest tests/test_battle.py -k scenario_name` or node IDs like `uv run pytest tests/test_battle.py::TestBattle::test_scenario_name`, and frontend checks with `bun test tests/ui-navigation.test.js` or focused runs such as `bun x vitest run ui-navigation --run`. When the repository's `run-tests.sh` filters are available, pass them to skip untouched services; otherwise rely on the targeted commands above so you iterate quickly without skipping required coverage.
 - Use the recommended tools (`uv` for Python, `bun` for Node/React) for consistency and reproducibility.
 - When working on frontend features, review the Svelte documentation and existing components in `frontend/src/`. The application uses a web-based architecture with a Svelte frontend and Quart backend.
-- Keep documentation in sync with code changes; update or create docs in `.codex/implementation/` and `.codex/instructions/` in the relevant service as needed. For relics, cards, and passives, treat the plugin modules as the canonical source—keep their `about` copy and docstrings accurate instead of duplicating entries in `.codex/implementation/relic-system.md` or other summary references.
-- Update documentation in `.codex/implementation/` and `.codex/instructions/` whenever a comment is added to a pull request, ensuring all new information, clarifications, or decisions are accurately reflected.
+- Verification-first: confirm current behavior before changing code; reproduce/confirm the issue (or missing behavior); verify the fix with clear checks.
+- Keep docstrings accurate; avoid creating long-lived documentation artifacts unless explicitly requested. For relics, cards, and passives, treat the plugin modules as the canonical source.
 - Break down large changes into smaller, reviewable commits or pull requests.
 - Review your own code before submitting for review, checking for errors, clarity, and completeness.
 - **Never edit audit or planning files (see Prohibited Actions below).**
@@ -31,7 +31,7 @@ For contributors actively writing, refactoring, or reviewing code. Coder Mode em
 - Implement new features or enhancements
 - Fix bugs or technical debt
 - Refactor modules for clarity, performance, or maintainability
-- Update or write documentation in `.codex/implementation/` or `.codex/instructions/` in the relevant service
+- Keep docstrings accurate and aligned with behavior.
 - Review code from others and provide constructive feedback
 - Write or update tests
 - Move completed tasks from `.codex/tasks/wip/` to `.codex/tasks/review/`
@@ -54,4 +54,4 @@ For contributors actively writing, refactoring, or reviewing code. Coder Mode em
 - When completing a task, move it from `.codex/tasks/wip/` to `.codex/tasks/review/` to signal it's ready for auditor review.
 - Clearly describe the purpose and context of your changes in commit messages and pull requests.
 - Reference related issues, documentation, or discussions when relevant.
-- Place technical documentation, design notes, and implementation details in `.codex/implementation/` or `.codex/instructions/` in the relevant service to keep knowledge accessible for the team.
+- Prefer referencing code/docstrings and the relevant task file; keep notes minimal and task-scoped.
