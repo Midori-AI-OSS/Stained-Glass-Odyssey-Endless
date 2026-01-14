@@ -26,8 +26,8 @@ RUN yay -Syu --noconfirm npm && yay -Yccc --noconfirm
 # Install unzip
 RUN yay -Syu --noconfirm unzip && yay -Yccc --noconfirm
 
-# Install Bun.js from AUR
-RUN yay -S --noconfirm bun-bin && yay -Yccc --noconfirm
+# Install Bun.js
+RUN yay -S --noconfirm bun && yay -Yccc --noconfirm
 
 WORKDIR /app
 EXPOSE 59001
